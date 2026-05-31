@@ -430,6 +430,8 @@ def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_
         mlx_scorer=_ToyMlxScorer(mx),
         acquisition_config=Z8FullVideoVjpAcquisitionConfig(pair_chunk_size=1),
         scorer_hw=(16, 16),
+        pose_axis_count=3,
+        pose_inverse_variance=(1.0, 2.0, 4.0),
         artifact_dir=tmp_path / "provider_artifacts",
     )
     bundle = provider(0, archive)
@@ -442,6 +444,8 @@ def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_
     assert bundle["budget_spend_authority"] is True
     assert bundle["budget_spend_blockers"] == []
     assert bundle["pose_surface_authority"] is True
+    assert bundle["pose_axis_count"] == 3
+    assert bundle["pose_inverse_variance"] == [1.0, 2.0, 4.0]
     assert bundle["joint_weight"].shape == reference_pairs.shape
     assert Path(bundle["surface_provider_bundle_manifest"]["manifest_path"]).is_file()
 

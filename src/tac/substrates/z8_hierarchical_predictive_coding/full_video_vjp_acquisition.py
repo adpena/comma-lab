@@ -746,6 +746,8 @@ def build_z8_full_video_mlx_surface_provider(
     rgb_value_range: float = 255.0,
     scorer_hw: tuple[int, int] = (384, 512),
     seg_margin_delta: float = 1.0,
+    pose_axis_count: int = 6,
+    pose_inverse_variance: Sequence[float] = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
     pose_null_threshold: float = 1e-8,
     artifact_dir: str | Path | None = None,
 ):
@@ -800,6 +802,8 @@ def build_z8_full_video_mlx_surface_provider(
                     rgb_value_range=rgb_value_range,
                     scorer_hw=scorer_hw,
                     seg_margin_delta=seg_margin_delta,
+                    pose_axis_count=int(pose_axis_count),
+                    pose_inverse_variance=tuple(float(v) for v in pose_inverse_variance),
                     pose_null_threshold=pose_null_threshold,
                 ),
                 archive_runtime_candidate_pairs_rgb=candidate_pairs,

@@ -80,6 +80,11 @@ def _surface_for_archive(
         "optimizer_update_semantics": SINGLE_UPDATE_AFTER_FULL_REDUCTION,
         "full_video_reduction_complete": True,
         "budget_spend_authority": True,
+        "pose_surface_kind": "per_axis_posenet_jacobian_mahalanobis_v1",
+        "pose_surface_authority": True,
+        "pose_axis_count": 6,
+        "pose_inverse_variance": [1.0] * 6,
+        "pose_surface_blockers": [],
     }
 
 
@@ -110,6 +115,7 @@ def test_joint_p18_p19_deadzone_mutates_wavelet_details_and_reduces_rate() -> No
     assert result["distortion_report"]["max_abs_delta"] > 0.0
     assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
     assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
+    assert result["surface_true_p19_report"]["true_p19_pose_surface"] is True
     np.testing.assert_allclose(
         mutated_pyramids[0]["frame_0_top_ll"],
         original_pyramids[0]["frame_0_top_ll"],
@@ -147,9 +153,39 @@ def test_joint_p18_p19_deadzone_materializer_emits_byte_closed_archive(
     assert Path(manifest["archive_zip_path"]).is_file()
     assert Path(manifest["manifest_path"]).is_file()
     assert manifest["receiver_proof_executed"] is False
+    assert manifest["inflate_runtime_benchmark_executed"] is False
+    assert manifest["inflate_runtime_benchmark_work_order"]["schema"] == (
+        "z8_inflate_runtime_benchmark_work_order.v1"
+    )
+    assert manifest["inflate_runtime_benchmark_work_order"]["command"][1] == (
+        "tools/benchmark_z8_submission_inflate_runtime.py"
+    )
     assert manifest["exact_axis_blocker"] == ("receiver_proof_and_contest_cpu_cuda_eval_not_executed")
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_joint_materializer_rejects_legacy_non_true_p19_surface() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+    surface = _surface_for_archive(archive_bytes, joint_weight, pose_null_mask)
+    surface["pose_surface_kind"] = "scalar_first6_pose_mse_vjp_proxy_v1"
+    surface["pose_surface_authority"] = False
+    surface["pose_axis_count"] = 1
+    surface["pose_inverse_variance"] = [1.0]
+    surface["pose_surface_blockers"] = ["p19_pose_surface_not_true_per_axis_jacobian"]
+
+    with pytest.raises(ValueError, match="z8_joint_surface_pose_kind_not_true_p19"):
+        apply_joint_p18_p19_deadzone_to_z8_archive(
+            archive_bytes,
+            joint_weight=surface,
+            config=Z8JointCoefficientWaterfillConfig(
+                joint_weight_quantile=1.0,
+                coefficient_deadzone_quantile=1.0,
+                quantization_step=0.25,
+            ),
+        )
 
 
 def test_quantized_detail_entropy_codec_roundtrips_pair_pyramids() -> None:
@@ -397,6 +433,7 @@ def test_storage_only_entropy_transcode_does_not_require_surface() -> None:
     assert result["full_video_surface_coverage_report"]["storage_only_no_surface_required"] is True
     assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
     assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
+    assert result["surface_true_p19_report"]["true_p19_pose_surface"] is True
     assert result["rate_report"]["after_detail_codec_summary"]["float32_detail_subband_count"] == 0
 
 
@@ -481,9 +518,17 @@ def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
         row["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"]
         for row in manifest["accepted_candidates"]
     )
+    assert all(
+        row["surface_true_p19_report"]["true_p19_pose_surface"]
+        for row in manifest["accepted_candidates"]
+    )
     assert Path(manifest["candidate_bin_path"]).is_file()
     assert Path(manifest["archive_zip_path"]).is_file()
     assert Path(manifest["manifest_path"]).is_file()
+    assert manifest["inflate_runtime_benchmark_executed"] is False
+    assert manifest["inflate_runtime_benchmark_work_order"]["schema"] == (
+        "z8_inflate_runtime_benchmark_work_order.v1"
+    )
     assert (
         manifest["cumulative_rate_report"]["final_archive_bytes"]
         <= manifest["cumulative_rate_report"]["original_archive_bytes"]
@@ -732,6 +777,10 @@ def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
         optimizer_update_semantics=np.asarray(surface["optimizer_update_semantics"]),
         full_video_reduction_complete=np.asarray(surface["full_video_reduction_complete"]),
         budget_spend_authority=np.asarray(surface["budget_spend_authority"]),
+        pose_surface_kind=np.asarray(surface["pose_surface_kind"]),
+        pose_surface_authority=np.asarray(surface["pose_surface_authority"]),
+        pose_axis_count=np.asarray(surface["pose_axis_count"]),
+        pose_inverse_variance=np.asarray(surface["pose_inverse_variance"], dtype=np.float64),
     )
 
     loaded = load_joint_p18_p19_surface_file(surface_path)
@@ -747,3 +796,4 @@ def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
 
     assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
     assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
+    assert result["surface_true_p19_report"]["true_p19_pose_surface"] is True

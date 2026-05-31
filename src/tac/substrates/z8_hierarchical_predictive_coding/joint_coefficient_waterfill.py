@@ -39,6 +39,9 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     reconstruct_pair_rgb_from_pyramid,
     summarize_wavelet_blob_detail_codecs,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.inflate_runtime_benchmark import (
+    benchmark_z8_submission_inflate_runtime,
+)
 from tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter import (
     WaveletDetail2D,
 )
@@ -66,6 +69,8 @@ FALSE_AUTHORITY: dict[str, bool] = {
 FULL_VIDEO_EVIDENCE_SCOPE = "full_video"
 FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION = "full_video_exact_accumulation"
 SINGLE_UPDATE_AFTER_FULL_REDUCTION = "single_update_after_all_pair_shards_reduce"
+TRUE_P19_POSE_SURFACE_KIND = "per_axis_posenet_jacobian_mahalanobis_v1"
+P19_POSE_SURFACE_BLOCKER = "p19_pose_surface_not_true_per_axis_jacobian"
 
 
 @dataclass(frozen=True)
@@ -82,12 +87,18 @@ class Z8JointCoefficientWaterfillConfig:
     require_full_video_surface_coverage: bool = True
     require_surface_archive_freshness: bool = True
     require_exact_full_video_gradient_reduction: bool = True
+    require_true_p19_pose_surface: bool = True
     measure_receiver_distortion: bool = True
     mutate_coefficients: bool = True
     entropy_code_quantized_details: bool = False
     entropy_detail_quantization_step: float | None = None
     entropy_detail_quantization_steps: Mapping[str, float] | None = None
     lossless_brotli_precondition_details: bool = False
+    emit_inflate_runtime_benchmark_work_order: bool = True
+    run_inflate_runtime_benchmark: bool = False
+    inflate_runtime_benchmark_timeout_seconds: float = 1800.0
+    inflate_runtime_benchmark_auth_window_seconds: float = 1800.0
+    inflate_runtime_benchmark_device: str = "cpu"
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -110,6 +121,12 @@ class Z8JointCoefficientWaterfillConfig:
                 raise ValueError("entropy_detail_quantization_step and entropy_detail_quantization_steps are exclusive")
         if self.entropy_code_quantized_details and self.lossless_brotli_precondition_details:
             raise ValueError("entropy_code_quantized_details and lossless_brotli_precondition_details are exclusive")
+        if self.run_inflate_runtime_benchmark and not self.emit_archive_zip:
+            raise ValueError("run_inflate_runtime_benchmark requires emit_archive_zip")
+        if self.inflate_runtime_benchmark_timeout_seconds <= 0.0:
+            raise ValueError("inflate_runtime_benchmark_timeout_seconds must be positive")
+        if self.inflate_runtime_benchmark_auth_window_seconds <= 0.0:
+            raise ValueError("inflate_runtime_benchmark_auth_window_seconds must be positive")
 
 
 @dataclass(frozen=True)
@@ -140,6 +157,7 @@ class Z8JointCoefficientRelinearizationSearchConfig:
     require_full_video_surface_coverage: bool = True
     require_surface_archive_freshness: bool = True
     require_exact_full_video_gradient_reduction: bool = True
+    require_true_p19_pose_surface: bool = True
     local_replay_prefilter_top_k: int | None = None
     skip_receiver_mse_proxy_when_full_video_replay: bool = True
     mutate_coefficients: bool = True
@@ -148,6 +166,11 @@ class Z8JointCoefficientRelinearizationSearchConfig:
     entropy_detail_quantization_steps: Mapping[str, float] | None = None
     measure_receiver_mse_proxy: bool = True
     lossless_brotli_precondition_details: bool = False
+    emit_inflate_runtime_benchmark_work_order: bool = True
+    run_inflate_runtime_benchmark: bool = False
+    inflate_runtime_benchmark_timeout_seconds: float = 1800.0
+    inflate_runtime_benchmark_auth_window_seconds: float = 1800.0
+    inflate_runtime_benchmark_device: str = "cpu"
 
     def __post_init__(self) -> None:
         if self.max_iterations <= 0:
@@ -187,6 +210,12 @@ class Z8JointCoefficientRelinearizationSearchConfig:
                 raise ValueError("entropy_detail_quantization_step and entropy_detail_quantization_steps are exclusive")
         if self.entropy_code_quantized_details and self.lossless_brotli_precondition_details:
             raise ValueError("entropy_code_quantized_details and lossless_brotli_precondition_details are exclusive")
+        if self.run_inflate_runtime_benchmark and not self.emit_archive_zip:
+            raise ValueError("run_inflate_runtime_benchmark requires emit_archive_zip")
+        if self.inflate_runtime_benchmark_timeout_seconds <= 0.0:
+            raise ValueError("inflate_runtime_benchmark_timeout_seconds must be positive")
+        if self.inflate_runtime_benchmark_auth_window_seconds <= 0.0:
+            raise ValueError("inflate_runtime_benchmark_auth_window_seconds must be positive")
 
 
 def _as_bool_mask(value: Any | None) -> np.ndarray | None:
@@ -276,6 +305,11 @@ def _surface_payload(
             "optimizer_update_semantics": _surface_string(surface.get("optimizer_update_semantics")),
             "full_video_reduction_complete": _surface_bool(surface.get("full_video_reduction_complete")),
             "budget_spend_authority": _surface_bool(surface.get("budget_spend_authority")),
+            "pose_surface_kind": _surface_string(surface.get("pose_surface_kind")),
+            "pose_surface_authority": _surface_bool(surface.get("pose_surface_authority")),
+            "pose_axis_count": surface.get("pose_axis_count"),
+            "pose_inverse_variance": surface.get("pose_inverse_variance"),
+            "pose_surface_blockers": list(surface.get("pose_surface_blockers") or []),
         }
     if isinstance(surface, tuple) and len(surface) == 2:
         return _surface_payload(
@@ -298,6 +332,11 @@ def _surface_payload(
         "optimizer_update_semantics": None,
         "full_video_reduction_complete": None,
         "budget_spend_authority": None,
+        "pose_surface_kind": None,
+        "pose_surface_authority": None,
+        "pose_axis_count": None,
+        "pose_inverse_variance": None,
+        "pose_surface_blockers": [],
     }
 
 
@@ -337,6 +376,10 @@ def load_joint_p18_p19_surface_file(path: str | Path) -> dict[str, Any]:
                     None,
                 ),
                 "budget_spend_authority": data.get("budget_spend_authority", None),
+                "pose_surface_kind": data.get("pose_surface_kind", None),
+                "pose_surface_authority": data.get("pose_surface_authority", None),
+                "pose_axis_count": data.get("pose_axis_count", None),
+                "pose_inverse_variance": data.get("pose_inverse_variance", None),
             }
         )
     if p.suffix == ".npy":
@@ -447,6 +490,50 @@ def _surface_gradient_reduction_report(
         "full_video_reduction_complete": full_video_reduction_complete,
         "budget_spend_authority": budget_spend_authority,
         "exact_full_video_gradient_reduction": not blockers,
+        "blockers": blockers,
+    }
+
+
+def _surface_true_p19_report(
+    *,
+    surface_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    pose_kind = _surface_string(surface_payload.get("pose_surface_kind"))
+    pose_authority = _surface_bool(surface_payload.get("pose_surface_authority"))
+    pose_blockers = [str(item) for item in surface_payload.get("pose_surface_blockers") or []]
+    raw_axis_count = surface_payload.get("pose_axis_count")
+    raw_inverse_variance = surface_payload.get("pose_inverse_variance")
+    try:
+        axis_count = int(np.asarray(raw_axis_count).reshape(-1)[0]) if raw_axis_count is not None else None
+    except (TypeError, ValueError, IndexError):
+        axis_count = None
+    inverse_variance = (
+        np.asarray(raw_inverse_variance, dtype=np.float64).reshape(-1)
+        if raw_inverse_variance is not None
+        else np.zeros((0,), dtype=np.float64)
+    )
+    blockers: list[str] = []
+    if pose_kind != TRUE_P19_POSE_SURFACE_KIND:
+        blockers.append(f"z8_joint_surface_pose_kind_not_true_p19:{pose_kind}")
+    if pose_authority is not True:
+        blockers.append("z8_joint_surface_pose_authority_missing")
+    if axis_count != 6:
+        blockers.append(f"z8_joint_surface_pose_axis_count_not_six:{axis_count}")
+    if inverse_variance.size != 6:
+        blockers.append("z8_joint_surface_pose_inverse_variance_not_six_axis")
+    elif not np.all(np.isfinite(inverse_variance)):
+        blockers.append("z8_joint_surface_pose_inverse_variance_nonfinite")
+    elif np.any(inverse_variance <= 0.0):
+        blockers.append("z8_joint_surface_pose_inverse_variance_nonpositive")
+    blockers.extend(pose_blockers)
+    return {
+        "schema": "z8_joint_p18_p19_true_pose_surface_report.v1",
+        "required_pose_surface_kind": TRUE_P19_POSE_SURFACE_KIND,
+        "pose_surface_kind": pose_kind,
+        "pose_surface_authority": pose_authority,
+        "pose_axis_count": axis_count,
+        "pose_inverse_variance": [float(v) for v in inverse_variance.tolist()],
+        "true_p19_pose_surface": not blockers,
         "blockers": blockers,
     }
 
@@ -824,6 +911,85 @@ def _local_replay_blockers(report: Mapping[str, Any]) -> list[str]:
     return blockers
 
 
+def _inflate_runtime_benchmark_work_order(
+    *,
+    out_dir: Path,
+    submission_dir: Path,
+    config: Z8JointCoefficientWaterfillConfig | Z8JointCoefficientRelinearizationSearchConfig,
+    run_label: str,
+) -> dict[str, Any]:
+    file_list = out_dir / f"{run_label}_inflate_benchmark_file_list.txt"
+    if not file_list.exists():
+        file_list.write_text("0\n", encoding="utf-8")
+    output_dir = out_dir / f"{run_label}_inflate_runtime_benchmark_output"
+    report_path = out_dir / f"{run_label}_inflate_runtime_benchmark.json"
+    command = [
+        ".venv/bin/python",
+        "tools/benchmark_z8_submission_inflate_runtime.py",
+        "--inflate-sh",
+        (submission_dir / "inflate.sh").as_posix(),
+        "--archive-dir",
+        submission_dir.as_posix(),
+        "--file-list",
+        file_list.as_posix(),
+        "--output-dir",
+        output_dir.as_posix(),
+        "--timeout-seconds",
+        str(float(config.inflate_runtime_benchmark_timeout_seconds)),
+        "--auth-eval-window-seconds",
+        str(float(config.inflate_runtime_benchmark_auth_window_seconds)),
+        "--inflate-device",
+        str(config.inflate_runtime_benchmark_device),
+        "--out-json",
+        report_path.as_posix(),
+    ]
+    return {
+        "schema": "z8_inflate_runtime_benchmark_work_order.v1",
+        "purpose": (
+            "Measure candidate receiver decode pressure through the real "
+            "inflate.sh contract before exact-axis promotion."
+        ),
+        "axis_tag": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "run_label": run_label,
+        "inflate_sh": (submission_dir / "inflate.sh").as_posix(),
+        "archive_dir": submission_dir.as_posix(),
+        "file_list": file_list.as_posix(),
+        "output_dir": output_dir.as_posix(),
+        "report_path": report_path.as_posix(),
+        "command": command,
+        "run_requested": bool(config.run_inflate_runtime_benchmark),
+        "timeout_seconds": float(config.inflate_runtime_benchmark_timeout_seconds),
+        "auth_eval_window_seconds": float(config.inflate_runtime_benchmark_auth_window_seconds),
+        "inflate_device": str(config.inflate_runtime_benchmark_device),
+    }
+
+
+def _maybe_run_inflate_runtime_benchmark(
+    work_order: Mapping[str, Any],
+    *,
+    config: Z8JointCoefficientWaterfillConfig | Z8JointCoefficientRelinearizationSearchConfig,
+) -> dict[str, Any] | None:
+    if not config.run_inflate_runtime_benchmark:
+        return None
+    report = benchmark_z8_submission_inflate_runtime(
+        inflate_sh=Path(str(work_order["inflate_sh"])),
+        archive_dir=Path(str(work_order["archive_dir"])),
+        file_list=Path(str(work_order["file_list"])),
+        output_dir=Path(str(work_order["output_dir"])),
+        timeout_seconds=float(config.inflate_runtime_benchmark_timeout_seconds),
+        auth_eval_window_seconds=float(config.inflate_runtime_benchmark_auth_window_seconds),
+        inflate_device=str(config.inflate_runtime_benchmark_device),
+    )
+    report_path = Path(str(work_order["report_path"]))
+    write_json(report_path, report)
+    report["report_path"] = report_path.as_posix()
+    write_json(report_path, report)
+    return report
+
+
 def apply_joint_p18_p19_deadzone_to_z8_archive(
     archive_bytes: bytes,
     *,
@@ -867,6 +1033,9 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
             and not gradient_reduction_report["exact_full_video_gradient_reduction"]
         ):
             raise ValueError(",".join(str(item) for item in gradient_reduction_report["blockers"]))
+        true_p19_report = _surface_true_p19_report(surface_payload=surface)
+        if cfg.require_true_p19_pose_surface and not true_p19_report["true_p19_pose_surface"]:
+            raise ValueError(",".join(str(item) for item in true_p19_report["blockers"]))
     else:
         joint_surface = np.zeros((), dtype=np.float64)
         safe_mask = None
@@ -889,6 +1058,17 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
             "linearization_archive_sha": None,
             "evidence_scope": "storage_only_no_surface_required",
             "fresh_for_current_archive": True,
+            "blockers": [],
+            "storage_only_no_surface_required": True,
+        }
+        true_p19_report = {
+            "schema": "z8_joint_p18_p19_true_pose_surface_report.v1",
+            "required_pose_surface_kind": TRUE_P19_POSE_SURFACE_KIND,
+            "pose_surface_kind": "storage_only_no_surface_required",
+            "pose_surface_authority": None,
+            "pose_axis_count": None,
+            "pose_inverse_variance": [],
+            "true_p19_pose_surface": True,
             "blockers": [],
             "storage_only_no_surface_required": True,
         }
@@ -1009,6 +1189,7 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         "full_video_surface_coverage_report": coverage_report,
         "surface_freshness_report": freshness_report,
         "surface_gradient_reduction_report": gradient_reduction_report,
+        "surface_true_p19_report": true_p19_report,
         "axis_tag": "[macOS-CPU advisory]",
         "allowed_use": "local_z8_rate_attack_materialization_and_acquisition_signal",
         "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
@@ -1042,6 +1223,8 @@ def materialize_joint_p18_p19_deadzone_candidate(
     archive_zip_path: Path | None = None
     archive_sha256: str | None = None
     archive_zip_bytes: int | None = None
+    inflate_runtime_benchmark_work_order: dict[str, Any] | None = None
+    inflate_runtime_benchmark_report: dict[str, Any] | None = None
     if cfg.emit_archive_zip:
         archive_zip_path, archive_sha256, archive_zip_bytes = export_z8hpc1_archive_bytes(
             mutated_archive,
@@ -1052,6 +1235,17 @@ def materialize_joint_p18_p19_deadzone_candidate(
             emit_runtime_payload_bridge_report=cfg.emit_receiver_proof,
             retain_receiver_proof_output=False,
         )
+        if cfg.emit_inflate_runtime_benchmark_work_order:
+            inflate_runtime_benchmark_work_order = _inflate_runtime_benchmark_work_order(
+                out_dir=out_dir,
+                submission_dir=out_dir / "submission",
+                config=cfg,
+                run_label="z8_joint_p18_p19_deadzone",
+            )
+            inflate_runtime_benchmark_report = _maybe_run_inflate_runtime_benchmark(
+                inflate_runtime_benchmark_work_order,
+                config=cfg,
+            )
     manifest = {
         "schema": Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA,
         "candidate_bin_path": candidate_bin.as_posix(),
@@ -1061,6 +1255,9 @@ def materialize_joint_p18_p19_deadzone_candidate(
         "archive_zip_sha256": archive_sha256,
         "archive_zip_bytes": archive_zip_bytes,
         "receiver_proof_executed": bool(cfg.emit_receiver_proof),
+        "inflate_runtime_benchmark_work_order": inflate_runtime_benchmark_work_order,
+        "inflate_runtime_benchmark_report": inflate_runtime_benchmark_report,
+        "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
         "exact_axis_blocker": (
             None if cfg.emit_receiver_proof else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
         ),
@@ -1220,6 +1417,7 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         "full_video_surface_coverage_report": result["full_video_surface_coverage_report"],
                         "surface_freshness_report": result["surface_freshness_report"],
                         "surface_gradient_reduction_report": result["surface_gradient_reduction_report"],
+                        "surface_true_p19_report": result["surface_true_p19_report"],
                         "coefficient_summary": {
                             key: value for key, value in result["coefficient_report"].items() if key != "subband_stats"
                         },
@@ -1349,6 +1547,8 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
     archive_zip_path: Path | None = None
     archive_sha256: str | None = None
     archive_zip_bytes: int | None = None
+    inflate_runtime_benchmark_work_order: dict[str, Any] | None = None
+    inflate_runtime_benchmark_report: dict[str, Any] | None = None
     if cfg.emit_archive_zip:
         archive_zip_path, archive_sha256, archive_zip_bytes = export_z8hpc1_archive_bytes(
             final_archive,
@@ -1359,6 +1559,17 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
             emit_runtime_payload_bridge_report=cfg.emit_receiver_proof,
             retain_receiver_proof_output=False,
         )
+        if cfg.emit_inflate_runtime_benchmark_work_order:
+            inflate_runtime_benchmark_work_order = _inflate_runtime_benchmark_work_order(
+                out_dir=out_dir,
+                submission_dir=out_dir / "submission",
+                config=cfg,
+                run_label="z8_joint_p18_p19_relinearized_search",
+            )
+            inflate_runtime_benchmark_report = _maybe_run_inflate_runtime_benchmark(
+                inflate_runtime_benchmark_work_order,
+                config=cfg,
+            )
 
     manifest = {key: value for key, value in result.items() if key != "final_archive_bytes_payload"}
     manifest.update(
@@ -1370,6 +1581,9 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
             "archive_zip_sha256": archive_sha256,
             "archive_zip_bytes": archive_zip_bytes,
             "receiver_proof_executed": bool(cfg.emit_receiver_proof),
+            "inflate_runtime_benchmark_work_order": inflate_runtime_benchmark_work_order,
+            "inflate_runtime_benchmark_report": inflate_runtime_benchmark_report,
+            "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
             "exact_axis_blocker": (
                 None if cfg.emit_receiver_proof else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
             ),

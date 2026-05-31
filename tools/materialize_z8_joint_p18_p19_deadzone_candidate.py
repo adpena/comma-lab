@@ -43,6 +43,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--allow-without-pose-null-mask", action="store_true")
     parser.add_argument(
+        "--allow-non-true-p19-surface",
+        action="store_true",
+        help="Allow legacy/scalar pose proxy surfaces. Exact Z8 codec work keeps this off.",
+    )
+    parser.add_argument(
         "--allow-broadcast-surface",
         action="store_true",
         help="Allow exploratory pair-broadcast surfaces; exact acquisition keeps this off.",
@@ -89,6 +94,22 @@ def build_parser() -> argparse.ArgumentParser:
             "This is reversible and preserves coefficient signal exactly."
         ),
     )
+    parser.add_argument(
+        "--skip-inflate-runtime-benchmark-work-order",
+        action="store_true",
+        help="Do not emit the advisory full inflate.sh runtime benchmark work order.",
+    )
+    parser.add_argument(
+        "--run-inflate-runtime-benchmark",
+        action="store_true",
+        help=(
+            "Run the advisory full inflate.sh benchmark immediately. This can "
+            "write contest-sized raw output."
+        ),
+    )
+    parser.add_argument("--inflate-runtime-benchmark-timeout-seconds", type=float, default=1800.0)
+    parser.add_argument("--inflate-runtime-benchmark-auth-window-seconds", type=float, default=1800.0)
+    parser.add_argument("--inflate-runtime-benchmark-device", default="cpu")
     return parser
 
 
@@ -114,10 +135,20 @@ def main() -> int:
         mutate_coefficients=not args.no_mutate_coefficients,
         require_full_video_surface_coverage=not args.allow_broadcast_surface,
         require_surface_archive_freshness=not args.allow_stale_surface,
+        require_true_p19_pose_surface=not args.allow_non_true_p19_surface,
         entropy_code_quantized_details=bool(args.entropy_code_quantized_details),
         entropy_detail_quantization_step=args.entropy_detail_quantization_step,
         entropy_detail_quantization_steps=entropy_detail_quantization_steps,
         lossless_brotli_precondition_details=bool(args.lossless_brotli_precondition_details),
+        emit_inflate_runtime_benchmark_work_order=not args.skip_inflate_runtime_benchmark_work_order,
+        run_inflate_runtime_benchmark=bool(args.run_inflate_runtime_benchmark),
+        inflate_runtime_benchmark_timeout_seconds=float(
+            args.inflate_runtime_benchmark_timeout_seconds
+        ),
+        inflate_runtime_benchmark_auth_window_seconds=float(
+            args.inflate_runtime_benchmark_auth_window_seconds
+        ),
+        inflate_runtime_benchmark_device=str(args.inflate_runtime_benchmark_device),
     )
     manifest = materialize_joint_p18_p19_deadzone_candidate(
         args.archive_bin.read_bytes(),

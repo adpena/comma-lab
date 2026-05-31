@@ -91,6 +91,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-pairs", type=int, default=None)
     parser.add_argument("--allow-without-pose-null-mask", action="store_true")
     parser.add_argument(
+        "--allow-non-true-p19-surface",
+        action="store_true",
+        help="Allow legacy/scalar pose proxy surfaces. Exact Z8 codec work keeps this off.",
+    )
+    parser.add_argument(
         "--allow-broadcast-surface",
         action="store_true",
         help="Allow exploratory pair-broadcast surfaces; exact acquisition keeps this off.",
@@ -138,6 +143,22 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--skip-inflate-runtime-benchmark-work-order",
+        action="store_true",
+        help="Do not emit the advisory full inflate.sh runtime benchmark work order.",
+    )
+    parser.add_argument(
+        "--run-inflate-runtime-benchmark",
+        action="store_true",
+        help=(
+            "Run the advisory full inflate.sh benchmark on the final candidate "
+            "immediately. This can write contest-sized raw output."
+        ),
+    )
+    parser.add_argument("--inflate-runtime-benchmark-timeout-seconds", type=float, default=1800.0)
+    parser.add_argument("--inflate-runtime-benchmark-auth-window-seconds", type=float, default=1800.0)
+    parser.add_argument("--inflate-runtime-benchmark-device", default="cpu")
+    parser.add_argument(
         "--mlx-reference-pairs-npy",
         type=Path,
         help=(
@@ -149,6 +170,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mlx-rgb-value-range", type=float, default=255.0)
     parser.add_argument("--mlx-scorer-hw", default="384,512")
     parser.add_argument("--mlx-seg-margin-delta", type=float, default=1.0)
+    parser.add_argument(
+        "--mlx-pose-axis-count",
+        type=int,
+        default=6,
+        help="Number of PoseNet output axes for archive-fresh MLX true-P19 provider.",
+    )
+    parser.add_argument(
+        "--mlx-pose-inverse-variance",
+        default="1,1,1,1,1,1",
+        help=(
+            "Comma-separated inverse-variance weights for the MLX provider's "
+            "Mahalanobis P19 surface."
+        ),
+    )
     parser.add_argument("--mlx-pose-null-threshold", type=float, default=1e-8)
     parser.add_argument("--mlx-artifact-dir", type=Path, default=None)
     parser.add_argument(
@@ -166,6 +201,15 @@ def _parse_hw(text: str) -> tuple[int, int]:
     if len(parts) != 2:
         raise ValueError("expected H,W")
     return int(parts[0]), int(parts[1])
+
+
+def _parse_float_tuple(text: str) -> tuple[float, ...]:
+    values = tuple(float(part.strip()) for part in str(text).split(",") if part.strip())
+    if not values:
+        raise ValueError("expected comma-separated floats")
+    if any(value <= 0.0 for value in values):
+        raise ValueError("inverse-variance values must be positive")
+    return values
 
 
 def main() -> int:
@@ -200,6 +244,8 @@ def main() -> int:
                 rgb_value_range=float(args.mlx_rgb_value_range),
                 scorer_hw=_parse_hw(args.mlx_scorer_hw),
                 seg_margin_delta=float(args.mlx_seg_margin_delta),
+                pose_axis_count=int(args.mlx_pose_axis_count),
+                pose_inverse_variance=_parse_float_tuple(args.mlx_pose_inverse_variance),
                 pose_null_threshold=float(args.mlx_pose_null_threshold),
                 artifact_dir=args.mlx_artifact_dir,
             )
@@ -231,6 +277,7 @@ def main() -> int:
         emit_receiver_proof=args.emit_receiver_proof,
         require_full_video_surface_coverage=not args.allow_broadcast_surface,
         require_surface_archive_freshness=not args.allow_stale_surfaces,
+        require_true_p19_pose_surface=not args.allow_non_true_p19_surface,
         local_replay_prefilter_top_k=args.local_replay_prefilter_top_k,
         skip_receiver_mse_proxy_when_full_video_replay=not args.measure_receiver_mse_proxy_with_mlx_replay,
         mutate_coefficients=not args.no_mutate_coefficients,
@@ -239,6 +286,15 @@ def main() -> int:
         entropy_detail_quantization_steps=entropy_detail_quantization_steps,
         measure_receiver_mse_proxy=not args.skip_receiver_mse_proxy,
         lossless_brotli_precondition_details=bool(args.lossless_brotli_precondition_details),
+        emit_inflate_runtime_benchmark_work_order=not args.skip_inflate_runtime_benchmark_work_order,
+        run_inflate_runtime_benchmark=bool(args.run_inflate_runtime_benchmark),
+        inflate_runtime_benchmark_timeout_seconds=float(
+            args.inflate_runtime_benchmark_timeout_seconds
+        ),
+        inflate_runtime_benchmark_auth_window_seconds=float(
+            args.inflate_runtime_benchmark_auth_window_seconds
+        ),
+        inflate_runtime_benchmark_device=str(args.inflate_runtime_benchmark_device),
     )
     manifest = materialize_joint_p18_p19_relinearized_deadzone_search(
         args.archive_bin.read_bytes(),
