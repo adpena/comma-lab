@@ -64041,11 +64041,11 @@
       "id": "lane_pr110_opt11_multi_mode_per_pair_composition_l0_scaffold_20260530",
       "name": "PR110-OPT-11 multi-mode-per-pair composition L0 SCAFFOLD",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "L0 SCAFFOLD: substrate package (4 files 1100+ LOC) + trainer (270 LOC) + recipe + driver + 36 dedicated tests pass + MLX-LOCAL smoke green archive_bytes=593 composition_distinct_output=PASS"
         },
         "real_archive_empirical": {
           "status": false,
@@ -64068,15 +64068,17 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Per-substrate symposium memo + retroactive sweep memo + companion landing memo in same commit batch"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "L0 SCAFFOLD per task 1323 + Wave N+34 analytical foundation. archive_bytes_added=~600B per Catalog #220 SCAFFOLD_DEFERRED_INTEGRATION_OK. distinguishing_feature_name=per_pair_multi_mode_composition per Catalog #272. score_improvement_mechanism_status=SCAFFOLD_DEFERRED_INTEGRATION_OK. inflate_consumer_function=_emit_synthetic_raw_output L0 sentinel. byte_mutation_smoke_passes=False L1 op-routable per Catalog #139. # SCAFFOLD_DEFERRED_INTEGRATION_OK:l0_scaffold_research_only_canonical_apparatus_landed_l1_promotion_wires_real_pr110_base_pair_reconstruction_per_phase_2_council_symposium_catalog_325",
+      "research_only": true,
+      "lane_class": "substrate_engineering"
     },
     {
       "id": "lane_wave_n31_diamond_hunt_historical_defer_orphan_reactivation_audit_20260530",
@@ -64160,6 +64162,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z4_atick_redlich_l1_scaffold_resume_20260530",
+      "name": "Z4 Atick-Redlich L1 SCAFFOLD resume",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/time_traveler_l5_z4/ canonical L1 SCAFFOLD complete (archive + inflate + score_aware_loss + archive_candidate + 25/25 tests PASS verifying decorrelator bytes operationally consumed at inflate); recipe research_only=true + dispatch_enabled=false per CLAUDE.md non-negotiable; canonical equation z4_atick_redlich_per_pair_latent_decorrelator_cooperative_receiver_savings_v1 registered"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z4_atick_redlich_l1_scaffold_resume_landed_20260530.md + .omx/research/retroactive_sweep_for_z4_atick_redlich_l1_scaffold_resume_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -64169,5 +64212,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T00:05:29Z"
+  "updated_at": "2026-05-31T00:15:41Z"
 }

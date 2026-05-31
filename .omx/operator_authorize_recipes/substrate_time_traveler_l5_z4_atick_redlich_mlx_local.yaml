@@ -1,0 +1,252 @@
+schema_version: 1
+name: substrate_time_traveler_l5_z4_atick_redlich_mlx_local
+lane_id: lane_z4_atick_redlich_l1_scaffold_resume_20260530
+# Z4 Atick-Redlich L1 SCAFFOLD landed 2026-05-30 per task #1490 PARTIAL
+# crash-recovery + lane `lane_z4_atick_redlich_l1_scaffold_resume_20260530`.
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# non-negotiable: this recipe is `research_only: true` + `dispatch_enabled:
+# false` until L2 paired-CUDA promotion lands per Catalog #233 4-gate
+# canonical contract.
+#
+# Per CLAUDE.md "Forbidden premature KILL without research exhaustion": NO
+# kill verdict implied — this is canonical L1 SCAFFOLD + reactivation
+# criteria pinned below.
+research_only: true
+dispatch_enabled: false
+smoke_only: false
+smoke_validation_contract: contest_cuda_auth_eval_v1
+summary: |
+  Z4 Atick-Redlich cooperative-receiver substrate (time_traveler_l5_z4) —
+  L1 SCAFFOLD landed 2026-05-30 per task #1490 PARTIAL crash-recovery.
+
+  Distinguishing primitive (per Catalog #272): the Atick-Redlich 1990
+  spatial decorrelation filter ``W_AR`` (latent_dim x latent_dim) applied
+  at the per-pair latent surface BEFORE decoder forward. This is the
+  per-substrate distinguishing-feature payload that the inflate runtime
+  consumes operationally — mutate any byte of the decorrelator_blob ⇒
+  rendered RGB frames change byte-for-byte (verified empirically via
+  `test_archive_decorrelator_bytes_are_consumed_at_inflate`).
+
+  Per CLAUDE.md "Grand Council" Atick + Redlich seats + canonical
+  equation #344 entries `atick_redlich_*` + per-substrate symposium #850
+  ATW V2 reactivation: this substrate operationalizes Atick & Redlich 1990
+  "Towards a Theory of Early Visual Processing" + "Convergent algorithm
+  for sensory receptive field development" — the canonical retinal
+  mutual-information whitening primitive — as a per-pair-latent
+  decorrelation filter that minimizes ``I(X; T) - beta * I(T; Y)``
+  where T is the latent encoding, X is the input frame, Y is the
+  scorer-derived signal.
+
+  Per Catalog #311 spatial-Atick-Redlich amendment: this substrate is
+  ADMISSIBLE without temporal ego-motion conditioning because the 1990
+  paper's canonical claim is SPATIAL retinal MI (NOT temporal predictive
+  coding which is Z6's territory).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+active_dispatch_contract: z4_atick_redlich_l1_scaffold_research_only
+dispatch_contracts:
+  - id: z4_atick_redlich_l1_scaffold_research_only
+    archive_role: monolithic_z4atr1_self_contained
+    builder_surface: src/tac/substrates/time_traveler_l5_z4/archive_candidate.py
+    status: l1_scaffold_research_only
+    exact_eval_path: |
+      archive.zip -> submissions/<sub>/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+      (BLOCKED at L1: trainer not yet authored; canonical Catalog #233 4-gate
+      L2 promotion contract requires (smoke_green + tier_c_density +
+      auth_eval_100ep_archive + custody_validator); reactivation criteria
+      pinned below.)
+
+cost_band:
+  epochs: 200
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.50
+  estimated_usd_max: 10.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.180, 0.195]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Catalog #324: predicted band is mathematical derivation from
+  Atick-Redlich 1990 retinal MI canonical (decorrelation as
+  whitening-importance prior on per-pair latents) + Tishby-Zaslavsky
+  2015 IB framework + analogy to sister Z4 cooperative_receiver_loss
+  prediction. Before promotion or full-run score-band authority, measure
+  Tier-C density on the post-training Z4 Atick-Redlich smoke archive and
+  replace this pending status with validated_post_training + artifact
+  path. Until then the band is planning-only, NOT dispatch / promotion
+  authority.
+smoke_score_band: [0.15, 0.50]
+predicted_delta: "-0.005 to -0.012 vs PR101 0.1933 baseline [mathematical-derivation; cooperative-receiver-primitive]"
+predicted_delta_basis: |
+  CLAUDE.md "Grand Council" Atick + Redlich seats + per-substrate
+  symposium #850 ATW V2 reactivation + sister Z4 cooperative_receiver_loss
+  trainer empirical anchor (`feedback_z4_z5_phase_2_council_deliberation_landed_20260515.md`)
+horizon_class: frontier_pursuit
+literature_anchor: |
+  Atick & Redlich (1990) "Towards a Theory of Early Visual Processing"
+    Neural Computation 2(3):308-320 (cooperative-receiver decorrelation
+    theorem);
+  Atick & Redlich (1993) "Convergent algorithm for sensory receptive
+    field development" (canonical retinal MI whitening primitive);
+  Tishby & Zaslavsky (2015) "Deep learning and the information
+    bottleneck principle" (IB framework T = latent encoding; Y = scorer
+    output; cooperative-receiver canonical formulation);
+  Wyner & Ziv (1976) "The rate-distortion function for source coding with
+    side information at the decoder" (sister scorer-as-side-information);
+  Catalog #311 spatial-Atick-Redlich amendment (admissibility without
+    temporal ego-motion conditioning);
+  Per-substrate symposium memo #850 ATW V2 reactivation + Catalog #344
+    canonical equation `atick_redlich_cooperative_receiver_savings_v1`.
+
+source_supports: |
+  Atick & Redlich 1990 + 1993 derive the cooperative-receiver
+  decorrelation theorem for the retinal layer as an OPTIMAL information-
+  preserving primitive under a fixed coding budget. Tishby-Zaslavsky
+  2015 formalizes the IB framework that this substrate operationalizes
+  as a score-aware Lagrangian.
+
+paper_claim_scope: |
+  The canonical Atick-Redlich claim is about RETINAL receptive-field
+  development under SPATIAL mutual-information constraints. The 1990
+  paper does NOT make a contest-archive-byte-savings claim; the
+  derivation from "decorrelation primitive" to "byte savings on
+  Pact contest scorer" is OUR proof obligation (per Pact-must-prove
+  below).
+
+pact_must_prove: |
+  Empirical paired-CUDA + paired-CPU auth-eval on the Z4 Atick-Redlich
+  trained archive vs PR101 0.1933 baseline. Specifically:
+  (a) byte-mutation smoke per Catalog #272 (verified empirically at L1);
+  (b) Tier-C density post-training measurement per Catalog #324 + #319;
+  (c) paired CPU + CUDA score per Catalog #246 + "Submission auth eval —
+      BOTH CPU AND CUDA" non-negotiable;
+  (d) probe-disambiguator: ablation `apply_decorrelator=True` vs `False`
+      arbitrates cooperative-receiver vs vanilla-latent-decoder
+      hypotheses.
+
+decode_complexity_evidence: |
+  Inflate runtime is contest-compliant per Catalog #146 + Catalog #205
+  (CPU/CUDA only; no MPS); the decorrelator load + apply is a single
+  Linear projection of latent_dim x latent_dim (32x32 fp16 = 2KB), and
+  the decoder is 5 PixelShuffle blocks at canonical PR95-family
+  architecture per L18.
+
+risk: |
+  L1 SCAFFOLD research-only state. The substrate is NOT contest-CUDA
+  dispatch-eligible until:
+  - Trainer (`experiments/train_substrate_time_traveler_l5_z4_atick_redlich.py`)
+    is authored per `experiments/train_substrate_z4_cooperative_receiver_loss.py`
+    sister pattern;
+  - Per-substrate symposium per Catalog #325 6-step contract is convened
+    (cargo-cult audit + 9-dim checklist + observability surface +
+    sextet pact + reactivation criteria + Tier-C validation);
+  - Paired-CUDA + paired-CPU auth-eval lands on archive sha;
+  - probe-disambiguator ablation arbitrates the Atick-Redlich
+    cooperative-receiver vs vanilla-latent-decoder hypotheses.
+
+  Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+  this is NOT a kill verdict — this is canonical L1 SCAFFOLD per
+  CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+  non-negotiable with explicit L2 reactivation criteria pinned.
+
+envelope_status: "RESEARCH-ONLY at L1; dispatch_enabled=false; L2 paid dispatch is operator-routable per Catalog #313 PROCEED probe outcome."
+
+remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z4_atick_redlich.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_time_traveler_l5_z4_atick_redlich.sh
+  cost_band_trainer: experiments/train_substrate_time_traveler_l5_z4_atick_redlich.py
+  cost_band_epochs: 200
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_time_traveler_l5_z4_atick_redlich.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/time_traveler_l5_z4/__init__.py
+  - src/tac/substrates/time_traveler_l5_z4/architecture.py
+  - src/tac/substrates/time_traveler_l5_z4/archive.py
+  - src/tac/substrates/time_traveler_l5_z4/inflate.py
+  - src/tac/substrates/time_traveler_l5_z4/score_aware_loss.py
+  - src/tac/substrates/time_traveler_l5_z4/archive_candidate.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+  - src/tac/codec/cooperative_receiver/__init__.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
+
+env_overrides:
+  Z4ATR_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  Z4ATR_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  Z4ATR_OUTPUT_DIR: /workspace/pact/lane_substrate_z4_atick_redlich_results/output
+  Z4ATR_EPOCHS: "200"
+  Z4ATR_BATCH_SIZE: "4"
+  Z4ATR_LR: "5e-4"
+  Z4ATR_LATENT_DIM: "32"
+  Z4ATR_EMBED_DIM: "48"
+  Z4ATR_NUM_UPSAMPLE_BLOCKS: "5"
+  Z4ATR_BETA_SEG: "100.0"
+  Z4ATR_GAMMA_POSE: "3.1622776601683795"
+  Z4ATR_DELTA_COOP_RECEIVER: "0.05"
+  Z4ATR_BETA_ATICK_REDLICH: "0.5"
+  # Tier-1 engineering primitives per Catalogs #172/#178/#179/#228 — wired
+  # via canonical build_optimized_training_context + autocast_aware_forward
+  # when trainer is authored.
+  Z4ATR_ENABLE_AUTOCAST_FP16: "true"
+  Z4ATR_ENABLE_TF32: "true"
+  Z4ATR_ENABLE_TORCH_COMPILE: "true"
+  Z4ATR_ENABLE_GT_SCORER_CACHE: "true"
+  LOCAL_CUDA_WORKER: "1"
+  SMOKE_ONLY: "0"
+
+dependencies:
+  - scripts/remote_lane_substrate_time_traveler_l5_z4_atick_redlich.sh
+  - upstream/videos/0.mkv
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  Z4 Atick-Redlich L1 SCAFFOLD landed 2026-05-30 per task #1490 PARTIAL
+  crash-recovery + lane `lane_z4_atick_redlich_l1_scaffold_resume_20260530`.
+
+  Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
+  `research_only: true` + `dispatch_enabled: false` until L2 paired-CUDA
+  promotion contract per Catalog #233 4-gate canonical.
+
+  Reactivation criteria for L2 promotion (canonical 4-gate per
+  Catalog #233):
+  1. **Smoke green**: Modal T4 smoke at 100ep with `--smoke` produces
+     archive in [50_000, 250_000] bytes + roundtrip passes.
+  2. **Tier-C density measurement**: post-training Tier-C density
+     measurement on the smoke archive per Catalog #324 + #319.
+  3. **100ep auth-eval anchor**: byte-deterministic archive (sha256
+     stable across re-runs) + auth_eval JSON.
+  4. **Custody validated per Catalog #127**: evidence_grade matches
+     axis + hardware (paired CUDA + CPU per Catalog #246 + "Submission
+     auth eval — BOTH CPU AND CUDA").
+
+  Cross-ref:
+    src/tac/substrates/time_traveler_l5_z4/__init__.py (Catalog #124 8 fields)
+    src/tac/substrates/z4_cooperative_receiver_loss/ (sister Z4 substrate
+      with cooperative-receiver-LOSS-only intervention vs THIS substrate's
+      cooperative-receiver-DECORRELATOR primitive at the latent surface)
+    feedback_z4_z5_phase_2_council_deliberation_landed_20260515.md
+      (sister Z4 Phase 2 Council 11/11 unanimous LIFT verdict)
+    .omx/research/cascade_c_prime_frame_1_segnet_waterfill_atick_redlich_full_scorer_attack_landed_20260526.md
+      (Atick-Redlich asymmetric channel sister landing 2026-05-26)
