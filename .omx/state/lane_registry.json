@@ -64436,12 +64436,53 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "17 dedicated NO-FAKE tests pass (real non-zero per-axis + categorical-logits gradient + both heads train + deterministic argmax eval vs Gumbel-STE training + stabilizer no-NaN + SegNet-only fail-closed); 356 sister mlx_score_aware pass 0 regressions; 3-axis adversarial review (math/drift/NO-FAKE) in landing memo"
         },
         "memory_entry": {
           "status": true,
           "evidence": "feedback_dreamer_v3_rssm_real_hinton_l1_long_mlx_landed_20260530.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_stc_clean_source_filler_delta_over_selfcomp_20260530",
+      "name": "Filler-STC DELTA over Selfcomp grayscale-LUT",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/probe_stc_clean_source_filler_delta_over_selfcomp.py + 9 tests; $0 CPU disambiguator over REAL selfcomp bytes; rate-axis VIABLE, transfer DEFERRED"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
         },
         "deploy_runbook": {
           "status": false,
@@ -64458,5 +64499,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T02:20:53Z"
+  "updated_at": "2026-05-31T02:27:33Z"
 }
