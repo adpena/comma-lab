@@ -12,8 +12,39 @@ from tac.optimization.joint_p18_p19_waterfill import (
     JointP18P19WaterfillConfig,
     build_joint_p18_p19_waterfill_surface,
     mahalanobis_pose_jacobian_norm,
+    require_fresh_joint_surface,
     require_full_video_joint_surface,
+    surface_is_stale_for_archive,
 )
+
+
+def _full_video_surface(
+    *,
+    linearization_archive_sha: str | None = None,
+) -> dict:
+    """Helper: a full-video-COVERAGE-authoritative 2-atom surface."""
+
+    if linearization_archive_sha is None:
+        sha = None
+    else:
+        aliases = {
+            "archiveA": "a" * 64,
+            "archiveB": "b" * 64,
+        }
+        sha = aliases.get(linearization_archive_sha, linearization_archive_sha)
+    seg = np.array([0.01, 0.02], dtype=np.float64)
+    pose_j = np.zeros((2, 1), dtype=np.float64)
+    return build_joint_p18_p19_waterfill_surface(
+        segnet_argmax_gradient=seg,
+        pose_jacobian=pose_j,
+        config=JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+            full_video_atom_count=seg.size,
+            linearization_archive_sha=sha,
+        ),
+    )
 
 
 def test_joint_p18_p19_weight_uses_segnet_and_pose_mahalanobis_terms() -> None:
@@ -93,7 +124,10 @@ def test_joint_p18_p19_requires_full_video_authority_for_budget_spend() -> None:
     require_full_video_joint_surface(authoritative)
     assert authoritative["full_video_authority"] is True
     assert authoritative["full_video_authority_blockers"] == []
-    assert authoritative["ready_for_budget_spend"] is True
+    assert authoritative["ready_for_budget_spend"] is False
+    assert "joint_p18_p19_linearization_archive_sha_missing" in authoritative[
+        "fresh_surface_blockers"
+    ]
 
 
 def test_joint_p18_p19_rejects_partial_full_video_coverage() -> None:
@@ -138,3 +172,97 @@ def test_mahalanobis_pose_norm_rejects_shape_mismatch() -> None:
             np.zeros((2, 3)),
             np.ones((2,)),
         )
+
+
+def test_surface_carries_local_tangent_plane_markers_and_pinned_sha() -> None:
+    sha = "d" * 64
+    surface = _full_video_surface(linearization_archive_sha=sha)
+    assert surface["surface_is_local_tangent_plane"] is True
+    assert surface["recompute_required_after_archive_mutation"] is True
+    assert surface["linearization_archive_sha"] == sha
+
+
+def test_surface_is_stale_for_archive_detects_accepted_mutation() -> None:
+    archive_a = "a" * 64
+    archive_b = "b" * 64
+    surface = _full_video_surface(linearization_archive_sha=archive_a)
+    # The decision was about to mutate the archive it was linearized at -> fresh.
+    assert surface_is_stale_for_archive(surface, archive_a) is False
+    # After an accepted mutation produces a new archive sha -> stale tangent plane.
+    assert surface_is_stale_for_archive(surface, archive_b) is True
+
+
+def test_surface_is_stale_for_archive_unpinned_is_stale() -> None:
+    surface = _full_video_surface(linearization_archive_sha=None)
+    # No pinned linearization point means the tangent plane cannot prove freshness.
+    assert surface_is_stale_for_archive(surface, "a" * 64) is True
+
+
+def test_require_fresh_joint_surface_refuses_stale_tangent_plane() -> None:
+    archive_a = "a" * 64
+    archive_b = "b" * 64
+    surface = _full_video_surface(linearization_archive_sha=archive_a)
+    require_fresh_joint_surface(surface, current_archive_sha=archive_a)  # fresh: ok
+    with pytest.raises(
+        JointP18P19WaterfillAuthorityError,
+        match="stale_tangent_plane",
+    ):
+        require_fresh_joint_surface(surface, current_archive_sha=archive_b)
+
+
+def test_require_fresh_joint_surface_refuses_unpinned_surface() -> None:
+    surface = _full_video_surface(linearization_archive_sha=None)
+    with pytest.raises(
+        JointP18P19WaterfillAuthorityError,
+        match="linearization_archive_sha_missing",
+    ):
+        require_fresh_joint_surface(surface, current_archive_sha="a" * 64)
+
+
+def test_config_rejects_blank_linearization_sha() -> None:
+    with pytest.raises(ValueError, match="linearization_archive_sha"):
+        JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            linearization_archive_sha="   ",
+        )
+
+
+def test_coverage_and_freshness_are_orthogonal_and_both_required() -> None:
+    """Full-video COVERAGE (codex) and FRESH tangent plane (fresh-surface) are
+    orthogonal budget-spend gates: spend is authoritative only when BOTH pass.
+
+    This is the headline NO-FAKE guard for the full-video joint-backprop
+    authority: a surface can pass one gate and still be refused by the other.
+    """
+
+    # (1) Full-video coverage authoritative BUT stale: coverage gate passes,
+    #     freshness gate REFUSES (linearized at archiveA, deciding on archiveB).
+    archive_a = "a" * 64
+    archive_b = "b" * 64
+    stale_full = _full_video_surface(linearization_archive_sha=archive_a)
+    require_full_video_joint_surface(stale_full)  # coverage: ok
+    with pytest.raises(JointP18P19WaterfillAuthorityError, match="stale_tangent_plane"):
+        require_fresh_joint_surface(stale_full, current_archive_sha=archive_b)
+
+    # (2) Fresh tangent plane BUT crop/window-only coverage: freshness gate
+    #     passes, coverage gate REFUSES (proposal_only scope, no full coverage).
+    seg = np.array([0.01, 0.02], dtype=np.float64)
+    crop_fresh = build_joint_p18_p19_waterfill_surface(
+        segnet_argmax_gradient=seg,
+        pose_jacobian=np.zeros((2, 1), dtype=np.float64),
+        config=JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            linearization_archive_sha=archive_a,
+        ),
+    )
+    require_fresh_joint_surface(crop_fresh, current_archive_sha=archive_a)  # fresh: ok
+    with pytest.raises(JointP18P19WaterfillAuthorityError, match="not_full_video_scope"):
+        require_full_video_joint_surface(crop_fresh)
+
+    # (3) Full-video coverage AND fresh: BOTH gates pass -> budget-spend ready.
+    spendable = _full_video_surface(linearization_archive_sha=archive_a)
+    require_full_video_joint_surface(spendable)
+    require_fresh_joint_surface(spendable, current_archive_sha=archive_a)
+    assert spendable["ready_for_budget_spend"] is True

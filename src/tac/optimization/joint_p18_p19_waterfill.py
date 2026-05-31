@@ -11,6 +11,26 @@ below a configured threshold. For Z8 this is the bit allocator for the
 rate-binding wavelet-codec attack: low joint-weight atoms are the safe
 dead-zone/coarsening set, while high joint-weight atoms protect the already good
 SegNet/PoseNet distortion.
+
+The surface is a LOCAL TANGENT PLANE of the full-video contest action ``S_full``
+at the archive it was linearized at (``linearization_archive_sha``). Per the
+full-video joint-backprop authority (architecture memo correction footer
+2026-05-31): every repair / allocation / quantizer decision must ultimately see
+the whole-video score functional, not a frozen local map. After each ACCEPTED
+archive mutation the surface is STALE and MUST be recomputed; the full-video
+inflate/eval replay ledger -- never the stale tangent plane -- is the authority
+path. Two orthogonal budget-spend gates apply:
+
+- ``require_full_video_joint_surface`` enforces full-video COVERAGE
+  (``evidence_scope == full_video`` and ``observed_atom_count`` covers the
+  whole video) -- refuses crop/window-only gradients.
+- ``require_fresh_joint_surface`` / ``surface_is_stale_for_archive`` enforce the
+  FRESH-SURFACE (trust-region) discipline -- refuses a tangent plane linearized
+  at a different archive than the one a decision is about to mutate.
+
+Budget spend is authoritative only when BOTH gates pass: full-video coverage AND
+fresh-vs-current-archive. All surfaces remain ``[macOS-MLX research-signal]`` /
+non-promotable; the surface proposes local moves, the full-video replay ratifies.
 """
 
 from __future__ import annotations
@@ -36,6 +56,11 @@ class JointP18P19WaterfillAuthorityError(ValueError):
     """Raised when a joint P18/P19 surface is used beyond its evidence scope."""
 
 
+def _looks_like_sha256(value: str | None) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
 @dataclass(frozen=True)
 class JointP18P19WaterfillConfig:
     """Configuration for joint SegNet/PoseNet water-fill surfaces."""
@@ -46,6 +71,7 @@ class JointP18P19WaterfillConfig:
     d_pose_floor: float = 1e-12
     evidence_scope: str = PROPOSAL_ONLY_SCOPE
     full_video_atom_count: int | None = None
+    linearization_archive_sha: str | None = None
 
     def __post_init__(self) -> None:
         if self.d_pose < 0.0:
@@ -64,6 +90,12 @@ class JointP18P19WaterfillConfig:
             )
         if self.full_video_atom_count is not None and self.full_video_atom_count <= 0:
             raise ValueError("full_video_atom_count must be positive when provided")
+        if self.linearization_archive_sha is not None and not _looks_like_sha256(
+            self.linearization_archive_sha
+        ):
+            raise ValueError(
+                "linearization_archive_sha must be a 64-character hex sha256 when provided"
+            )
 
     @property
     def pose_ail_gain(self) -> float:
@@ -106,6 +138,12 @@ def _full_video_authority_blockers(
     return blockers
 
 
+def _fresh_surface_blockers(linearization_archive_sha: str | None) -> list[str]:
+    if not _looks_like_sha256(linearization_archive_sha):
+        return ["joint_p18_p19_linearization_archive_sha_missing"]
+    return []
+
+
 def require_full_video_joint_surface(
     surface: dict[str, Any],
     *,
@@ -117,6 +155,59 @@ def require_full_video_joint_surface(
     if surface.get("full_video_authority") is not True or blockers:
         detail = ",".join(str(blocker) for blocker in blockers) or "full_video_authority_false"
         raise JointP18P19WaterfillAuthorityError(f"{context}: {detail}")
+
+
+def surface_is_stale_for_archive(
+    surface: dict[str, Any],
+    current_archive_sha: str,
+) -> bool:
+    """Return whether ``surface`` is a stale tangent plane for ``current_archive_sha``.
+
+    A joint P18/P19 surface is a LOCAL TANGENT PLANE of the full-video action
+    ``S_full`` at the archive it was linearized at. After an accepted archive
+    mutation the tangent plane no longer describes the new archive, so the
+    surface is stale and the solver MUST recompute P18 + P19 on the new archive
+    before the next decision (the fresh-surface / trust-region discipline).
+
+    Returns ``True`` (stale) when the surface is unpinned or when its pinned
+    ``linearization_archive_sha`` differs from ``current_archive_sha``. Unpinned
+    surfaces are treated as stale because they cannot prove which archive
+    produced their tangent plane.
+    """
+
+    if not _looks_like_sha256(current_archive_sha):
+        raise ValueError("current_archive_sha must be a 64-character hex sha256")
+    pinned = surface.get("linearization_archive_sha")
+    return str(pinned or "").strip().lower() != current_archive_sha.strip().lower()
+
+
+def require_fresh_joint_surface(
+    surface: dict[str, Any],
+    *,
+    current_archive_sha: str,
+    context: str = "joint_p18_p19_waterfill_surface",
+) -> None:
+    """Refuse budget spend from a tangent plane linearized at a different archive.
+
+    This is the FRESH-SURFACE budget-spend gate, orthogonal to
+    ``require_full_video_joint_surface`` (which enforces full-video COVERAGE).
+    Budget spend is authoritative only when BOTH gates pass: full-video coverage
+    AND fresh-vs-current-archive. Per the full-video joint-backprop authority,
+    the surface must have a pinned ``linearization_archive_sha`` equal to the
+    archive the decision is about to mutate -- otherwise the move is being made
+    on a stale (or unprovable) tangent plane instead of the full-video ledger.
+    """
+    pinned = surface.get("linearization_archive_sha")
+    if not _looks_like_sha256(pinned):
+        raise JointP18P19WaterfillAuthorityError(
+            f"{context}: joint_p18_p19_surface_linearization_archive_sha_missing"
+        )
+    if surface_is_stale_for_archive(surface, current_archive_sha):
+        raise JointP18P19WaterfillAuthorityError(
+            f"{context}: joint_p18_p19_surface_stale_tangent_plane:"
+            f"linearized_at={pinned}:"
+            f"current_archive={current_archive_sha}"
+        )
 
 
 def build_joint_p18_p19_waterfill_surface(
@@ -150,9 +241,11 @@ def build_joint_p18_p19_waterfill_surface(
         observed_atom_count=observed_atom_count,
         full_video_atom_count=config.full_video_atom_count,
     )
+    fresh_blockers = _fresh_surface_blockers(config.linearization_archive_sha)
     pose_null_mask = pose_norm <= float(config.pose_null_threshold)
     rate_attack_deadzone_mask = pose_null_mask & (joint <= np.median(joint))
     distortion_protect_mask = ~rate_attack_deadzone_mask
+    ready_for_budget_spend = not authority_blockers and not fresh_blockers
     return {
         "schema": JOINT_P18_P19_WATERFILL_SCHEMA,
         "formula": JOINT_P18_P19_WEIGHT_FORMULA,
@@ -170,7 +263,12 @@ def build_joint_p18_p19_waterfill_surface(
         ),
         "full_video_authority": not authority_blockers,
         "full_video_authority_blockers": authority_blockers,
-        "ready_for_budget_spend": not authority_blockers,
+        "linearization_archive_sha": config.linearization_archive_sha,
+        "surface_is_local_tangent_plane": True,
+        "recompute_required_after_archive_mutation": True,
+        "fresh_surface_authority": not fresh_blockers,
+        "fresh_surface_blockers": fresh_blockers,
+        "ready_for_budget_spend": ready_for_budget_spend,
         "segnet_term": seg_term,
         "pose_mahalanobis_norm": pose_norm,
         "pose_term": pose_term,
@@ -190,10 +288,12 @@ __all__ = [
     "JOINT_P18_P19_RATE_ATTACK_ROLE",
     "JOINT_P18_P19_WATERFILL_SCHEMA",
     "JOINT_P18_P19_WEIGHT_FORMULA",
+    "PROPOSAL_ONLY_SCOPE",
     "JointP18P19WaterfillAuthorityError",
     "JointP18P19WaterfillConfig",
-    "PROPOSAL_ONLY_SCOPE",
     "build_joint_p18_p19_waterfill_surface",
     "mahalanobis_pose_jacobian_norm",
+    "require_fresh_joint_surface",
     "require_full_video_joint_surface",
+    "surface_is_stale_for_archive",
 ]

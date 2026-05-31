@@ -262,3 +262,99 @@ confirmation of the current near-lossless substrate.
 4. Only after M1 shows a pose-protected rate recovery: M2, then M3, then a single
    paired CPU+CUDA ratification (Catalog #246, ≤$20) on the best byte-closed
    candidate. No PR; 0.189 gate holds.
+
+---
+
+## CORRECTION FOOTER — full-video joint backprop is the authority (APPEND-ONLY, 2026-05-31, per Catalog #110/#113 HISTORICAL_PROVENANCE)
+
+Operator binding correction 2026-05-31 (verbatim, two messages):
+
+> "doesn't repair and gradient and backprop and waterfill and all have to
+> backprop against full video"
+
+> "The mathematically correct object is full-video, joint backprop of the
+> contest action: every repair/allocation/quantizer decision should ultimately
+> see the whole video score functional, not a frozen local map. The practical
+> implementation is a stochastic approximation to that: MLX VJP on
+> frame/pair/region batches, STE through quantization/archive boundaries,
+> repeated relinearization, and mandatory periodic full-video archive
+> inflate/eval replay so minibatch gradients cannot drift into a local trick.
+> That is exactly why I added the fresh-surface requirement to the Z8 iterative
+> search. A "waterfill" map is only a local tangent plane; after each accepted
+> archive mutation we need to recompute the P18/P19 surface and keep the
+> full-video ledger as the authority path."
+
+This SUPERSEDES any reading of §M1/M2/M3, §N1/N2/N3 null-subset detection,
+§reverse water-fill, or §repair (DROP-MANY) as per-pair-isolated or
+per-frame-isolated optimization. The binding is:
+
+1. **The authority object is `S_full`.** The optimized functional is the
+   full-video contest action
+   `S_full = 100·d_seg(θ) + sqrt(10·d_pose(θ)) + 25·B(θ)/N`
+   evaluated over ALL 1200 frames / 600 pairs / the ONE byte-closed archive.zip
+   — never a per-pair or per-frame proxy. Every repair, allocation, and
+   quantizer decision is a derivative of `S_full`.
+
+2. **The joint `w_i` IS the full-video per-byte master gradient (not two
+   hand-mixed maps).**
+   `w_i = |∂S_full/∂x_i| = 100·|∂d_seg/∂x_i| + (5/sqrt(10·d_pose))·|∂d_pose/∂x_i| + (25/N)·∂B/∂x_i`.
+   Because shared decoder / codebook / latent bytes decode into *every* frame,
+   each component is a SUM over all frames `x_i` participates in. **P18** (the
+   SegNet argmax-flip term `100·|∂d_seg/∂x_i|`) and **P19** (the PoseNet
+   Mahalanobis/AIL null-subset term `(5/sqrt(10·d_pose))·||J_pose,i||_{Σ⁻¹}`) are
+   the two COMPONENTS of ONE full-video master gradient — not two independent
+   maps to blend by hand. This is the formal reason
+   `tools/extract_master_gradient.py` + `.omx/state/master_gradient_anchors.jsonl`
+   are the canonical full-video ledger; the solver consumes that ledger, it does
+   not recompute a per-pair-local approximation of it.
+
+3. **Practical stochastic approximation (the implementable surrogate of the
+   ideal):**
+   - **MLX VJP** (`mx.vjp` / value-and-grad) on frame / pair / region
+     minibatches — an unbiased stochastic estimate of `∂S_full/∂θ`.
+   - **STE** (straight-through estimator) through every quantization and
+     archive-packing boundary so the gradient reaches the bytes the contest
+     actually charges (`25·B/N`).
+   - **Repeated relinearization** (M2 IRLS/EM) — the AIL gain
+     `5/sqrt(10·d_pose)` and the byte-cost term are nonlinear, so a single
+     tangent plane is wrong away from the current point; refit.
+   - **Mandatory periodic full-video archive inflate/eval REPLAY.** The
+     minibatch surrogate is trusted only as long as a periodic FULL-video
+     `inflate.sh → upstream/evaluate.py` (the byte-closed archive, all frames)
+     confirms the minibatch trajectory. The replay ledger is the anti-drift
+     authority: a minibatch step that "improves" the proxy but the full-video
+     replay does NOT confirm is a local trick (PR97-class single-axis
+     cargo-cult) and is rejected.
+
+4. **Fresh-surface requirement (the local-tangent-plane / trust-region
+   discipline).** A waterfill / P18/P19 surface is a LOCAL TANGENT PLANE of
+   `S_full` at the archive it was linearized at. After EACH accepted archive
+   mutation the surface is STALE — recompute P18 (SegNet argmax-flip) and P19
+   (PoseNet null-subset + Mahalanobis) on the NEW archive before the next
+   decision. The full-video inflate/eval ledger, not the stale tangent plane, is
+   the authority path. This is the same fresh-surface requirement the operator
+   added to the Z8 iterative search.
+
+5. **Forbidden cargo-cult: per-pair-local-linearization as the objective.**
+   Treating a frozen per-pair gradient map as the optimization *target* (rather
+   than as one minibatch sample of `∂S_full/∂θ` that must be periodically
+   reconciled against the full-video replay) is the forbidden pattern. It drops
+   the cross-frame coupling of shared bytes and mis-ranks which bytes to
+   dead-zone vs protect. M1 / M2 / M3 + N1 / N2 / N3 + water-fill + repair ALL
+   carry this contract.
+
+### Consumer contract (binds `tac.optimization.joint_p18_p19_waterfill` + the #1592 solver)
+
+- The gradients fed to `build_joint_p18_p19_waterfill_surface(...)` MUST be
+  full-video master-gradient components (the SUM-over-frames form), not
+  per-pair-isolated tangents.
+- The returned surface is a LOCAL TANGENT PLANE: it carries
+  `surface_is_local_tangent_plane=True` +
+  `recompute_required_after_archive_mutation=True` + the
+  `linearization_archive_sha` it was linearized at. The solver MUST recompute it
+  after each accepted archive mutation
+  (`surface_is_stale_for_archive(surface, new_archive_sha) == True`).
+- The full-video inflate/eval REPLAY ledger is the authority; the surface is the
+  local move *proposer* only — never the score authority. All surfaces remain
+  `[macOS-MLX research-signal]` / non-promotable per Catalog #127/#192/#317/#323/#341
+  until a paired CPU+CUDA full-video replay ratifies a byte-closed candidate.
