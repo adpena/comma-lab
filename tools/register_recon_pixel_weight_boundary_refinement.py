@@ -5,10 +5,9 @@
 WHAT THE A/B FOUND (read from the REAL ab_output.json — NO fabricated numbers):
   The full-grid-SegNet-saliency recon_pixel_weight does NOT beat uniform on a
   DENSE per-pixel recon-weight optimization (sal == uni d_seg to the noise floor,
-  at both a generous and a binding L_inf budget). The channel is REAL and NON-INERT
-  (it concentrates 64.6% of its correction magnitude on high-saliency pixels vs
-  uniform's 49.9% — a genuine redistribution), but that steering does NOT translate
-  into a d_seg advantage at the dense recon surface.
+  at both a generous and a binding L_inf budget). The A/B artifact records score
+  and d_seg fields only; this registrar does NOT infer or claim correction-
+  concentration statistics that are not present in the artifact.
 
   This REFINES the sister #1587 equation: the lever is SURFACE-SPECIFIC. It is
   CONTEST_RELEVANT at the sparse-delta KEEP-OR-DROP allocation surface (#1587,
@@ -24,6 +23,7 @@ allocation surface; the new anchor records where it does NOT apply.
 NON-PROMOTABLE per Catalog #192/#341/#127/#323 ([macOS-CPU advisory]).
 FAIL-CLOSED: refuses if the ab_output.json is missing or malformed.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,6 +31,7 @@ import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT / "src") not in sys.path:
@@ -43,6 +44,57 @@ from tac.canonical_equations import (  # noqa: E402
 from tac.provenance import build_provenance_for_macos_cpu_advisory  # noqa: E402
 
 EQUATION_ID = "detector_informed_recon_weight_d_seg_savings_v1"
+
+
+def _build_boundary_refinement_anchor(
+    *,
+    row: dict[str, Any],
+    now: str,
+    source_artifact: str,
+    provenance: Any,
+) -> EmpiricalAnchor:
+    """Build one honest dense-surface boundary-refinement anchor.
+
+    The transferred model claim from #1587 is directional: detector-informed
+    saliency should produce a positive d_seg margin versus uniform. For this
+    dense recon-weight surface the empirical margin is non-positive, so the
+    residual is a sign/boundary miss (1.0), not a perfect numeric residual.
+    """
+    d_uni = float(row["d_seg_uniform"])
+    d_sal = float(row["d_seg_full_grid_saliency"])
+    empirical_margin = d_uni - d_sal  # >0 would mean saliency helps
+    empirical_sign = "positive" if empirical_margin > 0.0 else "non_positive"
+    margin_sign_match = empirical_sign == "positive"
+    return EmpiricalAnchor(
+        anchor_id=f"recon_weight_dense_palette{row['n_levels']}",
+        measurement_utc=now,
+        inputs={
+            "surface": "dense_per_pixel_recon_weight_optimization",
+            "transferred_from_surface": "sparse_delta_allocation_ranking",
+            "operating_point": f"palette_n_levels_{row['n_levels']}",
+            "baseline_d_seg": float(row["baseline_d_seg"]),
+            "saliency_nonzero_fraction": float(row["saliency_nonzero_fraction"]),
+            "verdict": str(row["verdict"]),
+        },
+        predicted_output={
+            "margin_saliency_vs_uniform_sign": "positive",
+            "residual_type": "sign_boundary_miss",
+        },
+        empirical_output={
+            "d_seg_uniform": d_uni,
+            "d_seg_full_grid_saliency": d_sal,
+            "d_seg_s_uniward_texture": float(row["d_seg_s_uniward_texture"]),
+            "margin_saliency_vs_uniform": empirical_margin,
+            "margin_saliency_vs_uniform_sign": empirical_sign,
+            "margin_sign_match": margin_sign_match,
+            "saliency_beats_uniform": bool(row["saliency_beats_uniform"]),
+        },
+        residual=0.0 if margin_sign_match else 1.0,
+        source_artifact=source_artifact,
+        measurement_method=("real_segnet_d_seg_argmax_flip_rate_on_recon_weighted_correction"),
+        provenance=provenance,
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
 
 
 def main() -> int:
@@ -81,47 +133,17 @@ def main() -> int:
         captured_at_utc=now,
     )
 
-    # One anchor per palette operating point. The MODEL'S CLAIM (from #1587) at the
-    # dense recon-weight surface is "saliency reduces d_seg over uniform"
-    # (predicted margin > 0). The EMPIRICAL margin is d_seg(uniform) - d_seg(saliency).
-    # The residual = predicted - empirical = (>0 expected) - (~0 observed) so the
-    # anchor RECORDS the surface-specific boundary (predicted lever did not
-    # materialize at the dense surface).
+    # One anchor per palette operating point. The transferred MODEL CLAIM (from
+    # #1587) is directional: "saliency reduces d_seg over uniform". At this dense
+    # recon-weight surface the empirical sign is non-positive, so residual records
+    # a sign/boundary miss instead of laundering the no-transfer result as 0.0.
     appended = 0
     for _key, row in per_palette.items():
-        d_uni = float(row["d_seg_uniform"])
-        d_sal = float(row["d_seg_full_grid_saliency"])
-        empirical_margin = d_uni - d_sal  # >0 would mean saliency helps
-        # Predicted at registration: the sister #1587 lever predicts a positive
-        # margin (~1e-3 contest-relevant on the allocation surface). At the dense
-        # recon-weight surface the prediction transferred to ~0 (no advantage).
-        predicted_margin = 0.0  # the HONEST predicted margin AT the dense surface
-        residual = predicted_margin - empirical_margin
-        anchor = EmpiricalAnchor(
-            anchor_id=f"recon_weight_dense_palette{row['n_levels']}",
-            measurement_utc=now,
-            inputs={
-                "surface": "dense_per_pixel_recon_weight_optimization",
-                "operating_point": f"palette_n_levels_{row['n_levels']}",
-                "baseline_d_seg": float(row["baseline_d_seg"]),
-                "saliency_nonzero_fraction": float(row["saliency_nonzero_fraction"]),
-                "verdict": str(row["verdict"]),
-            },
-            predicted_output={"margin_saliency_vs_uniform": predicted_margin},
-            empirical_output={
-                "d_seg_uniform": d_uni,
-                "d_seg_full_grid_saliency": d_sal,
-                "d_seg_s_uniward_texture": float(row["d_seg_s_uniward_texture"]),
-                "margin_saliency_vs_uniform": empirical_margin,
-                "saliency_beats_uniform": bool(row["saliency_beats_uniform"]),
-            },
-            residual=residual,
+        anchor = _build_boundary_refinement_anchor(
+            row=row,
+            now=now,
             source_artifact=str(ab_path.relative_to(REPO_ROOT)),
-            measurement_method=(
-                "real_segnet_d_seg_argmax_flip_rate_on_recon_weighted_correction"
-            ),
             provenance=prov,
-            empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
         )
         update_equation_with_empirical_anchor(
             EQUATION_ID,
@@ -133,14 +155,15 @@ def main() -> int:
                 "the detector-informed recon weight is SURFACE-SPECIFIC — "
                 "CONTEST_RELEVANT at the sparse-delta allocation surface (#1587) but "
                 "NOT at the dense recon-weight surface (saliency == uniform d_seg). "
-                "The channel is real + non-inert (redistributes correction toward "
-                "high-saliency pixels) but the dense surface gives no d_seg edge."
+                "The dense A/B artifact records d_seg evidence only; this anchor "
+                "does not infer correction-concentration statistics."
             ),
         )
         appended += 1
         print(
             f"[register] appended anchor recon_weight_dense_palette{row['n_levels']}: "
-            f"empirical_margin={empirical_margin:+.6f} residual={residual:+.6f} "
+            f"empirical_margin={anchor.empirical_output['margin_saliency_vs_uniform']:+.6f} "
+            f"residual={anchor.residual:+.6f} "
             f"verdict={row['verdict']}",
             flush=True,
         )

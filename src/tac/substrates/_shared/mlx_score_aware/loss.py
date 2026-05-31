@@ -17,6 +17,7 @@ scorer-blind smoke tests.
 
 [verified-against: tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss.score_teacher_distillation_loss canonical scorer surrogate]
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -96,43 +97,40 @@ def _prepare_recon_pixel_weight(bundle: RendererBundle, frame_shape: Any) -> Any
     if nd == 2:  # (H, W) -> (1, H, W, 1)
         if w_arr.shape != (h, w):
             raise MlxScoreAwareHarnessError(
-                f"recon_pixel_weight (H,W) must match decoded frame ({h},{w}); "
-                f"got {tuple(w_arr.shape)}"
+                f"recon_pixel_weight (H,W) must match decoded frame ({h},{w}); got {tuple(w_arr.shape)}"
             )
         w_arr = w_arr.reshape(1, h, w, 1)
     elif nd == 3:  # (H, W, C) -> (1, H, W, C) with C in {1, 3}
         wh, ww, wc = w_arr.shape
         if (wh, ww) != (h, w) or wc not in (1, 3):
             raise MlxScoreAwareHarnessError(
-                f"recon_pixel_weight (H,W,C) must be ({h},{w},1) or ({h},{w},3); "
-                f"got {tuple(w_arr.shape)}"
+                f"recon_pixel_weight (H,W,C) must be ({h},{w},1) or ({h},{w},3); got {tuple(w_arr.shape)}"
             )
         w_arr = w_arr.reshape(1, h, w, wc)
     elif nd == 4:  # (1, H, W, C) -> as-is with leading dim 1 and C in {1, 3}
         lb, wh, ww, wc = w_arr.shape
         if lb != 1 or (wh, ww) != (h, w) or wc not in (1, 3):
             raise MlxScoreAwareHarnessError(
-                f"recon_pixel_weight (B,H,W,C) must be (1,{h},{w},1) or "
-                f"(1,{h},{w},3); got {tuple(w_arr.shape)}"
+                f"recon_pixel_weight (B,H,W,C) must be (1,{h},{w},1) or (1,{h},{w},3); got {tuple(w_arr.shape)}"
             )
     else:
         raise MlxScoreAwareHarnessError(
-            "recon_pixel_weight must be (H,W) / (H,W,C) / (1,H,W,C); got ndim="
-            f"{nd} shape={tuple(w_arr.shape)}"
+            f"recon_pixel_weight must be (H,W) / (H,W,C) / (1,H,W,C); got ndim={nd} shape={tuple(w_arr.shape)}"
         )
     # Non-negative + finite invariants (the map is a re-weight, not a mask).
     if float(mx.min(w_arr)) < 0.0:
-        raise MlxScoreAwareHarnessError(
-            "recon_pixel_weight must be non-negative (it is a per-pixel weight)."
-        )
+        raise MlxScoreAwareHarnessError("recon_pixel_weight must be non-negative (it is a per-pixel weight).")
     if not bool(mx.all(mx.isfinite(w_arr))):
         raise MlxScoreAwareHarnessError("recon_pixel_weight must be finite.")
+    if float(mx.mean(w_arr)) <= 0.0:
+        raise MlxScoreAwareHarnessError(
+            "recon_pixel_weight must have positive total mass; all-zero maps "
+            "silently disable reconstruction instead of re-weighting it."
+        )
     return w_arr
 
 
-def _weighted_recon(
-    bundle: RendererBundle, rgb: Any, gt: Any, weight: Any
-) -> Any:
+def _weighted_recon(bundle: RendererBundle, rgb: Any, gt: Any, weight: Any) -> Any:
     """Per-pixel weighted reconstruction MSE for one frame.
 
     ``mean(w * (rgb - gt)^2)`` with the canonical ``"mean"`` normalization
@@ -241,9 +239,7 @@ def score_aware_loss(
                 )
             seg_rgb = rgb_1 if bundle.segnet_teacher_frame_index == 1 else rgb_0
             student_logits = head(seg_rgb)
-            teacher_logits = mx.stop_gradient(
-                bundle.scorer_teacher.teacher_logits_for_indices(idx)
-            )
+            teacher_logits = mx.stop_gradient(bundle.scorer_teacher.teacher_logits_for_indices(idx))
             distill = score_teacher_distillation_loss(
                 student_logits=student_logits,
                 teacher_logits=teacher_logits,
@@ -297,14 +293,10 @@ def score_aware_loss(
                 "should have rejected this."
             )
         student_pose = pose_head(rgb_0, rgb_1)
-        teacher_pose = mx.stop_gradient(
-            bundle.pose_scorer_teacher.teacher_pose_for_indices(idx)
-        )
+        teacher_pose = mx.stop_gradient(bundle.pose_scorer_teacher.teacher_pose_for_indices(idx))
         # Standardize per-dim by the teacher's per-dim std (canonical scale-
         # stable pose objective) when the teacher cache supplies it.
-        per_dim_scale = getattr(
-            bundle.pose_scorer_teacher, "per_dim_scale", None
-        )
+        per_dim_scale = getattr(bundle.pose_scorer_teacher, "per_dim_scale", None)
         pose_distill = pose_distillation_mse_loss(
             student_pose=student_pose,
             teacher_pose=teacher_pose,
@@ -378,11 +370,7 @@ def build_mlx_segnet_pair_teacher(
     )
 
     mx = require_mlx_for_harness()
-    tgt = (
-        bundle.target_rgb_1
-        if bundle.segnet_teacher_frame_index == 1
-        else bundle.target_rgb_0
-    )
+    tgt = bundle.target_rgb_1 if bundle.segnet_teacher_frame_index == 1 else bundle.target_rgb_0
     n_pairs, h, w, _c = tgt.shape
     if (h, w) != (384, 512):
         raise MlxScoreAwareHarnessError(
@@ -485,17 +473,12 @@ def build_mlx_posenet_pair_teacher(
         )
     if n_pairs != n_pairs_1:
         raise MlxScoreAwareHarnessError(
-            f"target_rgb_0 ({n_pairs}) and target_rgb_1 ({n_pairs_1}) pair "
-            "counts must match."
+            f"target_rgb_0 ({n_pairs}) and target_rgb_1 ({n_pairs_1}) pair counts must match."
         )
     t0 = time.time()
     upstream_path = Path(upstream_dir)
     posenet_path = upstream_path / "models" / "posenet.safetensors"
-    posenet_sha = (
-        hashlib.sha256(posenet_path.read_bytes()).hexdigest()
-        if posenet_path.is_file()
-        else None
-    )
+    posenet_sha = hashlib.sha256(posenet_path.read_bytes()).hexdigest() if posenet_path.is_file() else None
     posenet, _segnet = load_default_scorers(str(upstream_path), device=device)
     posenet.eval()
     pose_dims = int(bundle.pose_dims)
@@ -519,8 +502,7 @@ def build_mlx_posenet_pair_teacher(
             out = posenet(x_pre)  # dict; 'pose' head (b, 12)
             if pose_dims > int(out["pose"].shape[-1]):
                 raise MlxScoreAwareHarnessError(
-                    f"bundle.pose_dims={pose_dims} exceeds PoseNet pose head "
-                    f"width {int(out['pose'].shape[-1])}."
+                    f"bundle.pose_dims={pose_dims} exceeds PoseNet pose head width {int(out['pose'].shape[-1])}."
                 )
             pose = out["pose"][..., :pose_dims]  # (b, pose_dims)
             pose_chunks.append(pose.detach().cpu().numpy().astype(np.float32))

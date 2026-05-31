@@ -21,6 +21,7 @@ pixels. These tests verify REAL behavior (Class-2 NO-FAKE per CLAUDE.md
 
 MLX-bound; skips cleanly on non-Apple-Silicon CI.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -114,9 +115,7 @@ def test_default_off_is_byte_identical_uniform_recon() -> None:
     gt_1 = bundle.target_rgb_1[idx]
     uniform = mx.mean((rgb_0 - gt_0) ** 2) + mx.mean((rgb_1 - gt_1) ** 2)
     mx.eval(uniform)
-    assert float(parts["recon"].item()) == pytest.approx(
-        float(uniform.item()), rel=0, abs=0
-    )
+    assert float(parts["recon"].item()) == pytest.approx(float(uniform.item()), rel=0, abs=0)
 
 
 def _decode(bundle, idx):
@@ -162,19 +161,14 @@ def test_non_uniform_weight_changes_recon_loss() -> None:
     w_right[:, :, :256, :] = 0.2
     w_right[:, :, 256:, :] = 5.0  # emphasize the low-error RIGHT half
 
-    recon_left = float(
-        _weighted_recon(bundle, rgb, gt, mx.array(w_left)).item()
-    )
-    recon_right = float(
-        _weighted_recon(bundle, rgb, gt, mx.array(w_right)).item()
-    )
+    recon_left = float(_weighted_recon(bundle, rgb, gt, mx.array(w_left)).item())
+    recon_right = float(_weighted_recon(bundle, rgb, gt, mx.array(w_right)).item())
     # Not NaN, all positive.
     assert recon_left > 0.0 and recon_right > 0.0 and uniform > 0.0
     # The channel is a REAL re-weight: emphasizing the high-error region RAISES
     # the loss above uniform; emphasizing the low-error region LOWERS it.
     assert recon_left > uniform > recon_right, (
-        f"recon_pixel_weight is a no-op or inverted: left={recon_left} "
-        f"uniform={uniform} right={recon_right}"
+        f"recon_pixel_weight is a no-op or inverted: left={recon_left} uniform={uniform} right={recon_right}"
     )
 
 
@@ -201,9 +195,7 @@ def test_constant_weight_with_mean_normalize_matches_uniform() -> None:
     uniform = mx.mean((rgb_0 - gt_0) ** 2) + mx.mean((rgb_1 - gt_1) ** 2)
     # Constant weight via the channel helper, on the SAME frames.
     w = mx.full((1, 384, 512, 1), 3.7)
-    weighted = _weighted_recon(bundle, rgb_0, gt_0, w) + _weighted_recon(
-        bundle, rgb_1, gt_1, w
-    )
+    weighted = _weighted_recon(bundle, rgb_0, gt_0, w) + _weighted_recon(bundle, rgb_1, gt_1, w)
     mx.eval(uniform, weighted)
     assert float(weighted.item()) == pytest.approx(float(uniform.item()), rel=1e-5)
 
@@ -286,6 +278,15 @@ def test_prepare_weight_rejects_non_finite() -> None:
 
 
 @mlx_only
+def test_prepare_weight_rejects_zero_total_mass() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_bundle(recon_pixel_weight=mx.zeros((384, 512)))
+    with pytest.raises(MlxScoreAwareHarnessError, match="positive total mass"):
+        _prepare_recon_pixel_weight(bundle, (4, 384, 512, 3))
+
+
+@mlx_only
 def test_prepare_weight_rejects_bad_ndim() -> None:
     import mlx.core as mx
 
@@ -322,9 +323,7 @@ def test_gradient_flows_to_renderer_not_weight() -> None:
 
     w = np.ones((384, 512), dtype=np.float32)
     w[:, :256] = 4.0
-    bundle = _tiny_bundle(
-        recon_pixel_weight=mx.array(w), recon_pixel_weight_normalize="mean", seed=5
-    )
+    bundle = _tiny_bundle(recon_pixel_weight=mx.array(w), recon_pixel_weight_normalize="mean", seed=5)
     idx = mx.array([0, 1], dtype=mx.int32)
 
     # Canonical adapter pattern: nn.value_and_grad(model, closure) where the
@@ -352,6 +351,47 @@ def test_gradient_flows_to_renderer_not_weight() -> None:
     assert flat, "no renderer gradients collected"
     total_abs = sum(float(mx.sum(mx.abs(g)).item()) for g in flat)
     assert total_abs > 0.0, "renderer gradient is identically zero (channel inert)"
+
+
+@mlx_only
+def test_score_loss_gradient_is_blocked_to_recon_pixel_weight() -> None:
+    """The full score_aware_loss path must stop gradients into the weight map."""
+    import mlx.core as mx
+
+    class _FixedRenderer:
+        def __call__(self, idx):
+            b = idx.shape[0]
+            # Spatially nonuniform output so removing stop_gradient would create
+            # a nonzero d(loss)/d(weight) under mean normalization.
+            x = mx.linspace(0.0, 255.0, 512)
+            y = mx.linspace(0.0, 255.0, 384).reshape(384, 1)
+            plane = ((x + y) / 2.0).astype(mx.float32)
+            frame0 = mx.broadcast_to(plane.reshape(1, 1, 384, 512), (b, 3, 384, 512))
+            frame1 = mx.broadcast_to((255.0 - plane).reshape(1, 1, 384, 512), (b, 3, 384, 512))
+            return mx.stack([frame0, frame1], axis=1)
+
+    rng = np.random.default_rng(19)
+    targets0 = mx.array(rng.random((2, 384, 512, 3)).astype(np.float32))
+    targets1 = mx.array(rng.random((2, 384, 512, 3)).astype(np.float32))
+    idx = mx.array([0, 1], dtype=mx.int32)
+
+    def _loss_for_weight(weight):
+        bundle = RendererBundle(
+            model=_FixedRenderer(),
+            target_rgb_0=targets0,
+            target_rgb_1=targets1,
+            num_pairs=2,
+            forward_convention="call_b2chw_255",
+            distillation_weight=0.0,
+            recon_pixel_weight=weight,
+            recon_pixel_weight_normalize="mean",
+        )
+        total, _ = score_aware_loss(bundle, idx)
+        return total
+
+    grad = mx.grad(_loss_for_weight)(mx.ones((384, 512), dtype=mx.float32))
+    mx.eval(grad)
+    assert float(mx.sum(mx.abs(grad)).item()) == pytest.approx(0.0, abs=0.0)
 
 
 @mlx_only
