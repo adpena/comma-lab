@@ -121,24 +121,19 @@ from __future__ import annotations
 
 # Public API surface per Catalog #335 + Catalog #265 canonical contract pattern.
 __all__ = [
-    # Canonical config + result dataclasses
-    "PR110OPT11Config",
-    "PR110OPT11Result",
-    # Canonical entry point
-    "apply_substrate_to_pr110_canonical",
-    # Canonical helpers
-    "build_substrate_default_config",
-    "verify_canonical_multi_mode_composition",
-    "CANONICAL_ORTHOGONAL_FAMILY_PAIRS",
-    # Archive grammar constants (re-exported from archive_grammar)
     "ARCHIVE_MAGIC",
     "ARCHIVE_VERSION",
-    "OPT11MMP_HEADER_FMT",
-    "OPT11MMP_HEADER_LEN",
-    # Canonical defaults
+    "CANONICAL_ORTHOGONAL_FAMILY_PAIRS",
+    "DEFAULT_MODES_PER_PAIR",
     "DEFAULT_PR110_BASE_PAIRS",
     "DEFAULT_SELECTOR_BITS_PER_MODE",
-    "DEFAULT_MODES_PER_PAIR",
+    "OPT11MMP_HEADER_FMT",
+    "OPT11MMP_HEADER_LEN",
+    "PR110OPT11Config",
+    "PR110OPT11Result",
+    "apply_substrate_to_pr110_canonical",
+    "build_substrate_default_config",
+    "verify_canonical_multi_mode_composition",
 ]
 
 # Archive grammar constants re-exported for canonical Catalog #335 contract

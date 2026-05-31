@@ -47,7 +47,6 @@ from tac.substrates.pr110_opt11_multi_mode_per_pair_composition.substrate import
     _mode_indices_in_family,
 )
 
-
 # =========================================================================
 # Canonical archive grammar contracts (Catalog #146 frozen-offset discipline)
 # =========================================================================

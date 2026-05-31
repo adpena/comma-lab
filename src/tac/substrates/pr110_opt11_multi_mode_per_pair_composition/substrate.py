@@ -21,8 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -32,7 +31,6 @@ from tac.provenance import (
     build_provenance_for_predicted,
     provenance_to_dict,
 )
-
 
 # Canonical 22-mode menu per Wave N+34 source
 # experiments/results/frame_exploit_segnet_posenet_20260514_pr101_mps600_codex/pair_component_rows.jsonl

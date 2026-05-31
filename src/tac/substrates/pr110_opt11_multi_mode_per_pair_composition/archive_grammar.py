@@ -58,7 +58,6 @@ from __future__ import annotations
 
 import struct
 
-
 # Canonical magic = 8 bytes (OPT11MMP = OPT11 Multi-Mode Per-pair).
 ARCHIVE_MAGIC: bytes = b"OPT11MMP"
 ARCHIVE_VERSION: int = 1
