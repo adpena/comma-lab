@@ -587,6 +587,12 @@ def _region_patch_module_source(
 
 
 def _patch_inflate_source(source: str) -> str:
+    if "import os\n" not in source:
+        import_anchor_sys = "import sys\n"
+        if import_anchor_sys in source:
+            source = source.replace(import_anchor_sys, "import os\n" + import_anchor_sys, 1)
+        else:
+            source = "import os\n" + source
     import_anchor = "from model import HNeRVDecoder  # type: ignore[import-not-found]\n"
     if "from region_waterfill_patch import apply_region_waterfill" not in source:
         if import_anchor not in source:
@@ -611,6 +617,31 @@ def _patch_inflate_source(source: str) -> str:
         if call_anchor not in source:
             raise ScorerRegionWaterfillError("inflate.py selector call anchor not found")
         source = source.replace(call_anchor, call_insert, 1)
+    max_pairs_anchor = "    n_pairs = int(meta[\"n_pairs\"])\n"
+    max_pairs_insert = (
+        max_pairs_anchor
+        +
+        "    n_pairs_to_render = n_pairs\n"
+        "    local_acquisition_max_pairs = os.environ.get('PACT_LOCAL_ACQUISITION_MAX_PAIRS')\n"
+        "    if local_acquisition_max_pairs:\n"
+        "        try:\n"
+        "            n_pairs_to_render = max(1, min(n_pairs, int(local_acquisition_max_pairs)))\n"
+        "        except ValueError as exc:\n"
+        "            raise ValueError('PACT_LOCAL_ACQUISITION_MAX_PAIRS must be an integer') from exc\n"
+    )
+    if "PACT_LOCAL_ACQUISITION_MAX_PAIRS" not in source and max_pairs_anchor in source:
+        source = source.replace(max_pairs_anchor, max_pairs_insert, 1)
+        loop_anchor = (
+            "        for i in range(0, n_pairs, 16):\n"
+            "            j = min(i + 16, n_pairs)\n"
+        )
+        if loop_anchor in source:
+            source = source.replace(
+                loop_anchor,
+                "        for i in range(0, n_pairs_to_render, 16):\n"
+                "            j = min(i + 16, n_pairs_to_render)\n",
+                1,
+            )
     return source
 
 
@@ -662,10 +693,10 @@ def build_frame1_region_waterfill_runtime_patch(
         encoding="utf-8",
     )
     inflate_path = output_dir / "inflate.py"
-    inflate_path.write_text(
-        _patch_inflate_source(inflate_path.read_text(encoding="utf-8")),
-        encoding="utf-8",
+    patched_inflate_source = _patch_inflate_source(
+        inflate_path.read_text(encoding="utf-8")
     )
+    inflate_path.write_text(patched_inflate_source, encoding="utf-8")
 
     payload = {
         "schema": FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA,
@@ -688,6 +719,10 @@ def build_frame1_region_waterfill_runtime_patch(
         "segnet_region_waterfill": _artifact_record(segnet_region_waterfill, repo_root=repo_root),
         "runtime_patch": _artifact_record(patch_path, repo_root=repo_root),
         "patched_inflate": _artifact_record(inflate_path, repo_root=repo_root),
+        "local_acquisition_max_pairs_env": "PACT_LOCAL_ACQUISITION_MAX_PAIRS",
+        "local_acquisition_max_pairs_env_supported": (
+            "range(0, n_pairs_to_render, 16)" in patched_inflate_source
+        ),
         "patched_pair_count": len(rows),
         "regions_per_pair": max(1, int(regions_per_pair)),
         "rgb_delta": [int(v) for v in rgb_delta],

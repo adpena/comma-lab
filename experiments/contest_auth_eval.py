@@ -1345,7 +1345,8 @@ def _inflate_env_for_device_policy(
 
 def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
                  video_names_file: Path, *, timeout: int = 1800,
-                 extra_env: dict[str, str] | None = None) -> float:
+                 extra_env: dict[str, str] | None = None,
+                 expected_num_frames: int = 1200) -> float:
     """Invoke the submission's inflate.sh. Contest budget: 30 min on T4.
     Default timeout here is 30 min (1800s); pass --inflate-timeout for
     longer development runs.
@@ -1401,7 +1402,9 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
     # version stripped the parent dir and missed nested .raw files.
     test_videos = [n.strip() for n in video_names_file.read_text().splitlines()
                    if n.strip()]
-    OUT_W, OUT_H, NUM_FRAMES = 1164, 874, 1200
+    OUT_W, OUT_H, NUM_FRAMES = 1164, 874, int(expected_num_frames)
+    if NUM_FRAMES < 1:
+        raise RuntimeError(f"[inflate] expected_num_frames must be >= 1, got {NUM_FRAMES}")
     EXPECTED_RAW_BYTES = OUT_W * OUT_H * NUM_FRAMES * 3  # 3,663,237,120
     missing: list[str] = []
     wrong_size: list[tuple[str, int, int]] = []
@@ -1426,7 +1429,7 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
         details = ", ".join(f"{n}={a}B (expected {e}B)" for n, a, e in wrong_size[:3])
         raise RuntimeError(
             f"[inflate] WRONG-SIZE .raw file(s): {details}. Each must be "
-            f"{EXPECTED_RAW_BYTES:,} bytes (1164x874x1200x3). Likely "
+            f"{EXPECTED_RAW_BYTES:,} bytes (1164x874x{NUM_FRAMES}x3). Likely "
             f"truncated mid-decode."
         )
     print(f"[inflate] produced {len(test_videos)} .raw file(s), each "

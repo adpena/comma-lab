@@ -378,6 +378,7 @@ def test_chain_queue_can_close_local_component_learning_loop(
         "local_mlx_component_response"
     ]
     assert by_id["plan_local_component_artifact_retention"]["requires"] == [
+        "local_cpu_contest_drift_eureka",
         "build_scorer_response_dataset"
     ]
     assert by_id["emit_scorer_region_exact_ready_bridge_inputs"]["requires"] == [
@@ -400,6 +401,85 @@ def test_chain_queue_can_close_local_component_learning_loop(
     assert queue["metadata"]["include_mlx_component_response"] is True
     assert queue["metadata"]["include_scorer_response_dataset"] is True
     assert queue["metadata"]["include_local_component_retention_plan"] is True
+
+
+def test_chain_queue_can_gate_local_cpu_from_mlx_first_acquisition(
+    tmp_path: Path,
+) -> None:
+    submission = _source_submission(tmp_path)
+    p18 = tmp_path / "p18.json"
+    _write_json(
+        p18,
+        {
+            "schema": P18_SEGNET_REGION_WATERFILL_SCHEMA,
+            "rows": [
+                {
+                    "pair_id": 0,
+                    "regions256": [
+                        {
+                            "box": {"x0": 0.0, "y0": 0.0, "x1": 0.25, "y1": 0.25},
+                            "class_id": 0,
+                        }
+                    ],
+                }
+            ],
+            **FALSE_AUTHORITY,
+        },
+    )
+
+    queue = build_scorer_region_selector_chain_queue(
+        repo_root=tmp_path,
+        queue_id="chain_q",
+        source_submission_dir=submission,
+        output_root=tmp_path / "chain_out",
+        full_frame_inflate_parity_proof=tmp_path / "parity.json",
+        segnet_region_masks=p18,
+        materialize_receiver_patch=True,
+        prove_receiver_patch_output_change=True,
+        receiver_patch_output_change_file_list_entries=("0.raw",),
+        receiver_patch_output_change_expected_file_list_sha256="a" * 64,
+        receiver_patch_output_change_expected_entry_count=1,
+        receiver_patch_output_change_file_list_source="tests/full_frame_file_list.txt",
+        include_local_component_loop=True,
+        include_mlx_component_response=True,
+        mlx_first_acquisition=True,
+        mlx_cpu_gate_max_score_delta=0.01,
+        include_scorer_response_dataset=True,
+        include_local_component_retention_plan=True,
+        scorer_response_baseline_score=0.1919853363,
+        scales=(64,),
+        alphas=(1,),
+        codec_families=("fec10_adaptive_blend",),
+    )
+
+    by_id = {step["id"]: step for step in queue["experiments"][0]["steps"]}
+    assert by_id["build_mlx_component_cache"]["requires"] == [
+        "prove_receiver_patch_full_frame_output_change"
+    ]
+    assert "tools/materialize_mlx_scorer_cache_from_submission.py" in by_id[
+        "build_mlx_component_cache"
+    ]["command"]
+    cache_command = by_id["build_mlx_component_cache"]["command"]
+    assert "--max-pairs" in cache_command
+    assert cache_command[cache_command.index("--max-pairs") + 1] == "12"
+    assert "--local-acquisition-max-pairs" in cache_command
+    assert cache_command[cache_command.index("--local-acquisition-max-pairs") + 1] == "12"
+    assert "--local-cpu-advisory" not in by_id["build_mlx_component_cache"]["command"]
+    assert "tools/run_mlx_scorer_response_from_cache.py" in by_id[
+        "local_mlx_component_response"
+    ]["command"]
+    assert "--allow-unaudited-candidate-cache-debug" in by_id[
+        "local_mlx_component_response"
+    ]["command"]
+    assert by_id["mlx_cpu_spend_gate"]["requires"] == ["local_mlx_component_response"]
+    assert "--max-score-delta" in by_id["mlx_cpu_spend_gate"]["command"]
+    assert by_id["local_cpu_component_spot_check"]["requires"] == ["mlx_cpu_spend_gate"]
+    assert by_id["plan_local_component_artifact_retention"]["requires"] == [
+        "local_cpu_contest_drift_eureka",
+        "build_scorer_response_dataset",
+    ]
+    assert queue["metadata"]["mlx_first_acquisition"] is True
+    assert queue["metadata"]["local_cpu_gate_policy"].startswith("full local CPU")
 
 
 def test_chain_report_selects_repack_only_when_positive_and_receiver_closed(
@@ -598,8 +678,12 @@ def test_frame1_region_waterfill_runtime_patch_materializes_submission(
         encoding="utf-8",
     )
     (submission / "inflate.py").write_text(
+        "import sys\n"
         "from model import HNeRVDecoder  # type: ignore[import-not-found]\n"
         "def f():\n"
+        "    n_pairs = int(meta[\"n_pairs\"])\n"
+        "        for i in range(0, n_pairs, 16):\n"
+        "            j = min(i + 16, n_pairs)\n"
         "            rounded = apply_pr101_selector_to_frames(\n"
         "                rounded,\n"
         "                selector_kind,\n"
@@ -639,10 +723,14 @@ def test_frame1_region_waterfill_runtime_patch_materializes_submission(
 
     assert payload["schema"] == FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA
     assert payload["patched_pair_count"] == 1
+    assert payload["local_acquisition_max_pairs_env_supported"] is True
     assert (tmp_path / "patched" / "src" / "region_waterfill_patch.py").is_file()
     assert not (tmp_path / "patched" / "runtime_consumption_proof.json").exists()
     assert payload["runtime_consumption_proof_present"] is False
     inflate = (tmp_path / "patched" / "inflate.py").read_text(encoding="utf-8")
+    assert "import os" in inflate
+    assert "PACT_LOCAL_ACQUISITION_MAX_PAIRS" in inflate
+    assert "range(0, n_pairs_to_render, 16)" in inflate
     assert "from region_waterfill_patch import apply_region_waterfill" in inflate
     assert "apply_region_waterfill(rounded, pair_start=i)" in inflate
     assert payload["ready_for_exact_eval_dispatch"] is False

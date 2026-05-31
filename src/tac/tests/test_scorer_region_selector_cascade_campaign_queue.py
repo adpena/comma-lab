@@ -98,6 +98,8 @@ def test_campaign_queue_builds_independent_variants_and_harvest_dependency(
         receiver_patch_output_change_file_list_source="tests/file_list.txt",
         include_local_component_loop=True,
         include_mlx_component_response=True,
+        mlx_first_acquisition=True,
+        mlx_cpu_gate_max_score_delta=0.01,
         include_scorer_response_dataset=True,
         include_local_component_retention_plan=True,
         scorer_response_baseline_score=0.1919853363,
@@ -108,6 +110,8 @@ def test_campaign_queue_builds_independent_variants_and_harvest_dependency(
 
     assert queue["metadata"]["schema"] == SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_QUEUE_METADATA_SCHEMA
     assert queue["metadata"]["variant_count"] == 2
+    assert queue["metadata"]["exact_auth_policy"]["mlx_first_acquisition"] is True
+    assert queue["metadata"]["exact_auth_policy"]["cpu_gate_only_after_mlx_spend_gate"] is True
     assert queue["controls"]["max_concurrency"]["local_cpu"] == 2
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 1
     variant_experiments = [
@@ -121,6 +125,8 @@ def test_campaign_queue_builds_independent_variants_and_harvest_dependency(
         assert "grouped-cascade-campaign" in experiment["tags"]
         step_ids = [step["id"] for step in experiment["steps"]]
         assert "materialize_p19_posenet_null_pairs" in step_ids
+        by_id = {step["id"]: step for step in experiment["steps"]}
+        assert by_id["local_cpu_component_spot_check"]["requires"] == ["mlx_cpu_spend_gate"]
         assert "build_scorer_response_dataset" in step_ids
         patch_step = next(
             step

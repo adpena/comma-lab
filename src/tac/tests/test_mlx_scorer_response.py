@@ -17,9 +17,11 @@ from tac.local_acceleration.mlx_scorer_response import (
     CANDIDATE_CACHE_TRANSFER_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
     LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER,
+    ScorerInputCache,
     build_mlx_scorer_response_payload,
     load_scorer_input_cache,
 )
+from tac.local_acceleration import mlx_scorer_response
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -503,6 +505,37 @@ def test_mlx_scorer_response_cli_can_score_deterministic_pair_window(tmp_path: P
     assert payload["avg_segnet_dist"] == 0.0
 
 
+def test_mlx_scorer_response_pairing_accepts_candidate_subset_by_pair_indices(
+    tmp_path: Path,
+) -> None:
+    reference = _memory_cache(
+        tmp_path / "reference",
+        pair_indices=[[0, 1], [2, 3], [8, 9], [20, 21]],
+    )
+    candidate = _memory_cache(
+        tmp_path / "candidate",
+        pair_indices=[[0, 1], [8, 9], [20, 21]],
+    )
+
+    plan = mlx_scorer_response._build_cache_pairing_plan(reference, candidate)
+
+    assert plan.alignment_mode == "candidate_subset_by_pair_indices"
+    assert plan.pair_indices_equal is False
+    assert plan.reference_row_indices.tolist() == [0, 2, 3]
+
+
+def test_mlx_scorer_response_pairing_rejects_missing_candidate_pair(tmp_path: Path) -> None:
+    reference = _memory_cache(tmp_path / "reference", pair_indices=[[0, 1], [2, 3]])
+    candidate = _memory_cache(tmp_path / "candidate", pair_indices=[[0, 1], [4, 5]])
+
+    try:
+        mlx_scorer_response._build_cache_pairing_plan(reference, candidate)
+    except ValueError as exc:
+        assert "missing from reference" in str(exc)
+    else:
+        raise AssertionError("candidate subset with missing pair was accepted")
+
+
 def test_mlx_scorer_response_rejects_invalid_pair_window_before_loading() -> None:
     try:
         build_mlx_scorer_response_payload(
@@ -686,6 +719,18 @@ def _write_test_cache(
     if audited:
         _stamp_auth_eval_identity(path)
     return path
+
+
+def _memory_cache(path: Path, *, pair_indices: list[list[int]]) -> ScorerInputCache:
+    n = len(pair_indices)
+    return ScorerInputCache(
+        root=path,
+        manifest={},
+        segnet_last_rgb=np.zeros((n, 3, 4, 5), dtype=np.float32),
+        posenet_yuv6_pair=np.zeros((n, 12, 4, 5), dtype=np.float32),
+        pair_indices=np.asarray(pair_indices, dtype=np.int64),
+        cache_integrity={"passed": True, "blockers": []},
+    )
 
 
 def _stamp_auth_eval_identity(path: Path) -> None:

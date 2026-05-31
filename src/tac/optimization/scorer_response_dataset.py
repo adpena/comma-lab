@@ -544,8 +544,7 @@ def _require_mlx_response_false_authority(
     cache_identity = payload.get("cache_identity")
     if not isinstance(cache_identity, dict):
         raise ScorerResponseDatasetError(f"{label} cache_identity must be an object")
-    if cache_identity.get("pair_indices_equal") is not True:
-        raise ScorerResponseDatasetError(f"{label} cache_identity.pair_indices_equal must be true")
+    _require_mlx_cache_pair_alignment(payload, cache_identity, label=label)
     for side in ("reference", "candidate"):
         item = cache_identity.get(side)
         if not isinstance(item, dict):
@@ -582,6 +581,51 @@ def _require_mlx_response_false_authority(
                     raise ScorerResponseDatasetError(
                         f"{label} cache_identity.{side}.array_sha256.{key} must be sha256"
                     )
+
+
+def _require_mlx_cache_pair_alignment(
+    payload: dict[str, Any],
+    cache_identity: dict[str, Any],
+    *,
+    label: str,
+) -> None:
+    if cache_identity.get("pair_indices_equal") is True:
+        return
+
+    mode = cache_identity.get("pair_index_alignment_mode")
+    if mode != "candidate_subset_by_pair_indices":
+        raise ScorerResponseDatasetError(
+            f"{label} cache_identity.pair_indices_equal must be true or "
+            "pair_index_alignment_mode must be candidate_subset_by_pair_indices"
+        )
+    row_hash = cache_identity.get("reference_row_indices_sha256")
+    if not isinstance(row_hash, str) or not _is_sha256(row_hash):
+        raise ScorerResponseDatasetError(
+            f"{label} cache_identity.reference_row_indices_sha256 must be sha256"
+        )
+    reference_row_window = cache_identity.get("reference_row_window")
+    if (
+        not isinstance(reference_row_window, list)
+        or len(reference_row_window) != 2
+        or _as_int(reference_row_window[0]) is None
+        or _as_int(reference_row_window[1]) is None
+    ):
+        raise ScorerResponseDatasetError(
+            f"{label} cache_identity.reference_row_window must be a length-2 int list"
+        )
+    n_samples = _as_int(payload.get("n_samples"))
+    candidate_cache_pairs = _as_int(payload.get("candidate_cache_pairs"))
+    reference_cache_pairs = _as_int(payload.get("reference_cache_pairs"))
+    if n_samples is None or n_samples <= 0:
+        raise ScorerResponseDatasetError(f"{label} n_samples must be a positive int")
+    if candidate_cache_pairs != n_samples:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate_cache_pairs must equal n_samples for subset alignment"
+        )
+    if reference_cache_pairs is None or reference_cache_pairs < candidate_cache_pairs:
+        raise ScorerResponseDatasetError(
+            f"{label} reference_cache_pairs must cover candidate_cache_pairs"
+        )
 
 
 def _require_mlx_finite(payload: dict[str, Any], key: str, *, label: str) -> None:
@@ -657,7 +701,7 @@ def _mlx_scorer_response_candidate_item(
         "response_family": response_family,
         "summary": {
             "component": "mlx_scorer_response",
-            "pair_indices": payload.get("pair_window"),
+            "pair_indices": payload.get("source_pair_window") or payload.get("pair_window"),
         },
     }
     parent = {
@@ -676,7 +720,10 @@ def _mlx_scorer_response_candidate_item(
         "hardware_substrate": payload.get("hardware_substrate"),
         "batch_pairs": payload.get("batch_pairs"),
         "n_samples": payload.get("n_samples"),
+        "candidate_cache_pairs": payload.get("candidate_cache_pairs"),
+        "reference_cache_pairs": payload.get("reference_cache_pairs"),
         "pair_window": payload.get("pair_window"),
+        "source_pair_window": payload.get("source_pair_window"),
         "start_pair": payload.get("start_pair"),
         "max_pairs": payload.get("max_pairs"),
         "elapsed_seconds": payload.get("elapsed_seconds"),
@@ -1111,7 +1158,21 @@ def normalize_response_row(
         "source_hardware_substrate": parent.get("hardware_substrate"),
         "source_batch_pairs": _as_int(_first_present(parent.get("batch_pairs"), candidate.get("batch_pairs"))),
         "source_n_samples": source_n_samples,
-        "source_pair_window": _first_present(parent.get("pair_window"), candidate.get("pair_window")),
+        "source_pair_window": _first_present(
+            parent.get("source_pair_window"),
+            parent.get("pair_window"),
+            candidate.get("pair_window"),
+        ),
+        "source_cache_pair_window": _first_present(
+            parent.get("pair_window"),
+            candidate.get("pair_window"),
+        ),
+        "source_pair_index_alignment_mode": _get_path(
+            parent,
+            ("cache_identity", "pair_index_alignment_mode"),
+        ),
+        "source_candidate_cache_pairs": _as_int(parent.get("candidate_cache_pairs")),
+        "source_reference_cache_pairs": _as_int(parent.get("reference_cache_pairs")),
         "source_start_pair": _as_int(_first_present(parent.get("start_pair"), candidate.get("start_pair"))),
         "source_max_pairs": _as_int(_first_present(parent.get("max_pairs"), candidate.get("max_pairs"))),
         "source_elapsed_seconds": _as_float(_first_present(parent.get("elapsed_seconds"), candidate.get("elapsed_seconds"))),

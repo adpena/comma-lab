@@ -57,6 +57,15 @@ class ScorerInputCache:
     cache_integrity: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class CachePairingPlan:
+    """Reference-row alignment for a candidate scorer-input cache."""
+
+    alignment_mode: str
+    reference_row_indices: np.ndarray
+    pair_indices_equal: bool
+
+
 def load_scorer_input_cache(cache_dir: str | Path, *, mmap_mode: str | None = "r") -> ScorerInputCache:
     """Load a full tensor scorer-input cache and validate basic shape contracts."""
 
@@ -145,7 +154,7 @@ def build_mlx_scorer_response_payload(
 
     reference = load_scorer_input_cache(reference_cache_dir)
     candidate = load_scorer_input_cache(candidate_cache_dir)
-    _validate_cache_pairing(reference, candidate)
+    pairing_plan = _build_cache_pairing_plan(reference, candidate)
     candidate_cache_identity_mode = _validate_candidate_transfer_cache(
         candidate,
         allow_unaudited_candidate_cache_debug=allow_unaudited_candidate_cache_debug,
@@ -156,7 +165,7 @@ def build_mlx_scorer_response_payload(
     dist = _load_upstream_distortion_net(Path(repo_root).resolve())
     pose_chunks: list[np.ndarray] = []
     seg_chunks: list[np.ndarray] = []
-    total_pair_count = int(reference.pair_indices.shape[0])
+    total_pair_count = int(candidate.pair_indices.shape[0])
     start = int(start_pair)
     if start >= total_pair_count:
         raise ValueError(f"start_pair {start} is outside cache pair count {total_pair_count}")
@@ -170,8 +179,9 @@ def build_mlx_scorer_response_payload(
             start=1,
         ):
             stop = min(stop_exclusive, batch_start + int(batch_pairs))
-            ref_pose = np.asarray(reference.posenet_yuv6_pair[batch_start:stop], dtype=np.float32)
-            ref_seg = np.asarray(reference.segnet_last_rgb[batch_start:stop], dtype=np.float32)
+            ref_rows = pairing_plan.reference_row_indices[batch_start:stop]
+            ref_pose = np.asarray(reference.posenet_yuv6_pair[ref_rows], dtype=np.float32)
+            ref_seg = np.asarray(reference.segnet_last_rgb[ref_rows], dtype=np.float32)
             cand_pose = np.asarray(candidate.posenet_yuv6_pair[batch_start:stop], dtype=np.float32)
             cand_seg = np.asarray(candidate.segnet_last_rgb[batch_start:stop], dtype=np.float32)
             ref_outputs = run_mlx_distortion_scorer_nchw(
@@ -258,9 +268,15 @@ def build_mlx_scorer_response_payload(
         "score_rate_contribution": rate_contribution,
         "n_samples": pair_count,
         "total_cache_pairs": total_pair_count,
+        "candidate_cache_pairs": total_pair_count,
+        "reference_cache_pairs": int(reference.pair_indices.shape[0]),
         "start_pair": start,
         "max_pairs": None if max_pairs is None else int(max_pairs),
         "pair_window": [start, stop_exclusive],
+        "source_pair_window": [
+            candidate.pair_indices[start].tolist(),
+            candidate.pair_indices[stop_exclusive - 1].tolist(),
+        ],
         "batch_pairs": int(batch_pairs),
         "elapsed_seconds": elapsed,
         "components": {
@@ -273,7 +289,15 @@ def build_mlx_scorer_response_payload(
         "cache_identity": {
             "reference": reference_cache_identity,
             "candidate": candidate_cache_identity,
-            "pair_indices_equal": True,
+            "pair_indices_equal": pairing_plan.pair_indices_equal,
+            "pair_index_alignment_mode": pairing_plan.alignment_mode,
+            "reference_row_indices_sha256": _array_sha256(
+                pairing_plan.reference_row_indices.astype(np.int64, copy=False)
+            ),
+            "reference_row_window": [
+                int(pairing_plan.reference_row_indices[start]),
+                int(pairing_plan.reference_row_indices[stop_exclusive - 1]),
+            ],
         },
         "cache_integrity": {
             "reference": reference.cache_integrity,
@@ -481,19 +505,61 @@ def _verify_cache_integrity(
     return result
 
 
-def _validate_cache_pairing(reference: ScorerInputCache, candidate: ScorerInputCache) -> None:
-    if reference.segnet_last_rgb.shape != candidate.segnet_last_rgb.shape:
+def _build_cache_pairing_plan(reference: ScorerInputCache, candidate: ScorerInputCache) -> CachePairingPlan:
+    """Build a fail-closed row-alignment plan from candidate pairs to reference rows."""
+
+    if reference.segnet_last_rgb.shape[1:] != candidate.segnet_last_rgb.shape[1:]:
         raise ValueError(
             "reference/candidate segnet shape mismatch: "
             f"{reference.segnet_last_rgb.shape} vs {candidate.segnet_last_rgb.shape}"
         )
-    if reference.posenet_yuv6_pair.shape != candidate.posenet_yuv6_pair.shape:
+    if reference.posenet_yuv6_pair.shape[1:] != candidate.posenet_yuv6_pair.shape[1:]:
         raise ValueError(
             "reference/candidate posenet shape mismatch: "
             f"{reference.posenet_yuv6_pair.shape} vs {candidate.posenet_yuv6_pair.shape}"
         )
-    if not np.array_equal(reference.pair_indices, candidate.pair_indices):
-        raise ValueError("reference/candidate pair_indices differ")
+
+    pair_indices_equal = (
+        reference.pair_indices.shape == candidate.pair_indices.shape
+        and np.array_equal(reference.pair_indices, candidate.pair_indices)
+    )
+    if pair_indices_equal:
+        return CachePairingPlan(
+            alignment_mode="exact_row_match",
+            reference_row_indices=np.arange(candidate.pair_indices.shape[0], dtype=np.int64),
+            pair_indices_equal=True,
+        )
+
+    reference_rows_by_pair: dict[tuple[int, int], int] = {}
+    for row_index, pair in enumerate(np.asarray(reference.pair_indices, dtype=np.int64)):
+        key = (int(pair[0]), int(pair[1]))
+        if key in reference_rows_by_pair:
+            raise ValueError(f"reference pair_indices contain duplicate pair {key}")
+        reference_rows_by_pair[key] = row_index
+
+    seen_candidate_pairs: set[tuple[int, int]] = set()
+    reference_row_indices: list[int] = []
+    missing_pairs: list[tuple[int, int]] = []
+    for pair in np.asarray(candidate.pair_indices, dtype=np.int64):
+        key = (int(pair[0]), int(pair[1]))
+        if key in seen_candidate_pairs:
+            raise ValueError(f"candidate pair_indices contain duplicate pair {key}")
+        seen_candidate_pairs.add(key)
+        reference_row = reference_rows_by_pair.get(key)
+        if reference_row is None:
+            missing_pairs.append(key)
+        else:
+            reference_row_indices.append(reference_row)
+    if missing_pairs:
+        preview = missing_pairs[:8]
+        suffix = "" if len(missing_pairs) <= 8 else f" ... +{len(missing_pairs) - 8} more"
+        raise ValueError(f"candidate pair_indices missing from reference cache: {preview}{suffix}")
+
+    return CachePairingPlan(
+        alignment_mode="candidate_subset_by_pair_indices",
+        reference_row_indices=np.asarray(reference_row_indices, dtype=np.int64),
+        pair_indices_equal=False,
+    )
 
 
 def _validate_candidate_transfer_cache(

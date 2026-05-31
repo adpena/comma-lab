@@ -757,6 +757,41 @@ def test_build_response_dataset_accepts_direct_mlx_scorer_response_payload(tmp_p
     )
 
 
+def test_build_response_dataset_accepts_direct_mlx_subset_pair_alignment(tmp_path) -> None:
+    path = tmp_path / "mlx_response_subset.json"
+    payload = _mlx_response_payload()
+    payload["start_pair"] = 0
+    payload["max_pairs"] = 4
+    payload["n_samples"] = 4
+    payload["candidate_cache_pairs"] = 4
+    payload["reference_cache_pairs"] = 600
+    payload["pair_window"] = [0, 4]
+    payload["source_pair_window"] = [[0, 1], [6, 7]]
+    payload["cache_identity"]["pair_indices_equal"] = False
+    payload["cache_identity"]["pair_index_alignment_mode"] = "candidate_subset_by_pair_indices"
+    payload["cache_identity"]["reference_row_indices_sha256"] = "5" * 64
+    payload["cache_identity"]["reference_row_window"] = [0, 3]
+    payload["cache_identity"]["candidate"]["pair_count"] = 4
+    payload["cache_identity"]["candidate"]["segnet_last_rgb_shape"] = [4, 3, 384, 512]
+    payload["cache_identity"]["candidate"]["posenet_yuv6_pair_shape"] = [4, 12, 192, 256]
+    payload["cache_identity"]["candidate"]["pair_indices_shape"] = [4, 2]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+
+    assert dataset["summary"]["row_count"] == 1
+    row = dataset["rows"][0]
+    assert row["source_pair_window"] == [[0, 1], [6, 7]]
+    assert row["source_cache_pair_window"] == [0, 4]
+    assert row["source_pair_index_alignment_mode"] == "candidate_subset_by_pair_indices"
+    assert row["source_candidate_cache_pairs"] == 4
+    assert row["source_reference_cache_pairs"] == 600
+    assert row["pair_indices"] == [[0, 1], [6, 7]]
+
+
 def test_build_response_dataset_preserves_zero_source_start_pair(tmp_path) -> None:
     path = tmp_path / "mlx_response_pair_zero.json"
     payload = _mlx_response_payload()

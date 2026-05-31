@@ -429,6 +429,8 @@ def build_scorer_region_selector_cascade_campaign_queue(
     local_component_inflate_timeout_seconds: int = 1800,
     local_component_evaluate_timeout_seconds: int = 1800,
     include_mlx_component_response: bool = False,
+    mlx_first_acquisition: bool = False,
+    mlx_cpu_gate_max_score_delta: float = 0.0,
     mlx_reference_cache_dir: str | Path = DEFAULT_MLX_REFERENCE_CACHE_DIR,
     mlx_device: str = "gpu",
     mlx_cache_batch_pairs: int = 1,
@@ -527,6 +529,8 @@ def build_scorer_region_selector_cascade_campaign_queue(
                 local_component_evaluate_timeout_seconds
             ),
             include_mlx_component_response=include_mlx_component_response,
+            mlx_first_acquisition=mlx_first_acquisition,
+            mlx_cpu_gate_max_score_delta=mlx_cpu_gate_max_score_delta,
             mlx_reference_cache_dir=mlx_reference_cache_dir,
             mlx_device=mlx_device,
             mlx_cache_batch_pairs=mlx_cache_batch_pairs,
@@ -743,6 +747,9 @@ def build_scorer_region_selector_cascade_campaign_queue(
                 "cpu_before_cuda": True,
                 "requires_local_cpu_before_exact_auth": bool(include_local_component_loop),
                 "mlx_is_acquisition_signal_only": bool(include_mlx_component_response),
+                "mlx_first_acquisition": bool(mlx_first_acquisition),
+                "cpu_gate_only_after_mlx_spend_gate": bool(mlx_first_acquisition),
+                "mlx_cpu_gate_max_score_delta": float(mlx_cpu_gate_max_score_delta),
                 "dispatch_source": "per_variant_scorer_region_exact_ready_bridge",
             },
             "acquisition_policy": {

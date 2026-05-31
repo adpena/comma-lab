@@ -421,6 +421,8 @@ def build_scorer_region_selector_chain_queue(
     local_component_inflate_timeout_seconds: int = 1800,
     local_component_evaluate_timeout_seconds: int = 1800,
     include_mlx_component_response: bool = False,
+    mlx_first_acquisition: bool = False,
+    mlx_cpu_gate_max_score_delta: float = 0.0,
     mlx_reference_cache_dir: str | Path = DEFAULT_MLX_REFERENCE_CACHE_DIR,
     mlx_device: str = "gpu",
     mlx_cache_batch_pairs: int = 1,
@@ -561,6 +563,14 @@ def build_scorer_region_selector_chain_queue(
     if include_mlx_component_response and not include_local_component_loop:
         raise ScorerRegionSelectorChainQueueError(
             "include_mlx_component_response requires include_local_component_loop"
+        )
+    if mlx_first_acquisition and not include_mlx_component_response:
+        raise ScorerRegionSelectorChainQueueError(
+            "mlx_first_acquisition requires include_mlx_component_response"
+        )
+    if mlx_first_acquisition and scorer_response_baseline_score is None:
+        raise ScorerRegionSelectorChainQueueError(
+            "mlx_first_acquisition requires scorer_response_baseline_score"
         )
     if include_scorer_response_dataset and not include_mlx_component_response:
         raise ScorerRegionSelectorChainQueueError(
@@ -705,6 +715,9 @@ def build_scorer_region_selector_chain_queue(
     mlx_cache_audit = local_component_dir / "mlx_scorer_input_cache_audit.json"
     mlx_response = local_component_dir / "mlx_scorer_response.json"
     mlx_components_dir = local_component_dir / "mlx_components"
+    mlx_first_work_dir = local_component_dir / "mlx_first_inflate_only_work"
+    mlx_first_cache_report = local_component_dir / "mlx_first_cache_materialization.json"
+    mlx_cpu_spend_gate = local_component_dir / "mlx_cpu_spend_gate.json"
     scorer_response_dataset = local_component_dir / "scorer_response_dataset.json"
     scorer_response_dataset_md = local_component_dir / "scorer_response_dataset.md"
     scorer_response_consumer_routing = (
@@ -723,6 +736,9 @@ def build_scorer_region_selector_chain_queue(
     mlx_cache_audit_ref = _repo_rel(mlx_cache_audit, repo_root)
     mlx_response_ref = _repo_rel(mlx_response, repo_root)
     mlx_components_dir_ref = _repo_rel(mlx_components_dir, repo_root)
+    mlx_first_work_ref = _repo_rel(mlx_first_work_dir, repo_root)
+    mlx_first_cache_report_ref = _repo_rel(mlx_first_cache_report, repo_root)
+    mlx_cpu_spend_gate_ref = _repo_rel(mlx_cpu_spend_gate, repo_root)
     scorer_response_dataset_ref = _repo_rel(scorer_response_dataset, repo_root)
     scorer_response_dataset_md_ref = _repo_rel(scorer_response_dataset_md, repo_root)
     scorer_response_consumer_routing_ref = _repo_rel(
@@ -775,14 +791,21 @@ def build_scorer_region_selector_chain_queue(
         if prove_receiver_patch_output_change
         else "materialize_frame1_region_waterfill_runtime_patch"
     )
-    if include_scorer_response_dataset:
-        local_component_loop_terminal_step = "build_scorer_response_dataset"
+    local_cpu_component_requires = (
+        ["mlx_cpu_spend_gate"] if mlx_first_acquisition else [local_component_anchor_step]
+    )
+    if include_local_component_loop:
+        local_component_loop_terminal_steps = ["local_cpu_contest_drift_eureka"]
+        if include_scorer_response_dataset:
+            local_component_loop_terminal_steps.append("build_scorer_response_dataset")
+        elif include_mlx_component_response and mlx_first_acquisition:
+            local_component_loop_terminal_steps.append("local_mlx_component_response")
+    elif include_scorer_response_dataset:
+        local_component_loop_terminal_steps = ["build_scorer_response_dataset"]
     elif include_mlx_component_response:
-        local_component_loop_terminal_step = "local_mlx_component_response"
-    elif include_local_component_loop:
-        local_component_loop_terminal_step = "local_cpu_contest_drift_eureka"
+        local_component_loop_terminal_steps = ["local_mlx_component_response"]
     else:
-        local_component_loop_terminal_step = local_component_anchor_step
+        local_component_loop_terminal_steps = [local_component_anchor_step]
 
     retention_include_kinds = [
         "local_cpu_advisory_inflated_raw",
@@ -905,6 +928,14 @@ def build_scorer_region_selector_chain_queue(
                 prove_receiver_patch_output_change
             ),
             "include_local_component_loop": bool(include_local_component_loop),
+            "mlx_first_acquisition": bool(mlx_first_acquisition),
+            "mlx_cpu_gate_max_score_delta": float(mlx_cpu_gate_max_score_delta),
+            "mlx_cpu_spend_gate_path": (
+                mlx_cpu_spend_gate_ref if mlx_first_acquisition else None
+            ),
+            "mlx_first_cache_materialization_report_path": (
+                mlx_first_cache_report_ref if mlx_first_acquisition else None
+            ),
             "local_component_advisory_path": (
                 local_component_advisory_ref if include_local_component_loop else None
             ),
@@ -942,6 +973,11 @@ def build_scorer_region_selector_chain_queue(
                 else None
             ),
             "local_mlx_or_cpu_first": True,
+            "local_cpu_gate_policy": (
+                "full local CPU scorer runs only after MLX response passes spend gate"
+                if mlx_first_acquisition
+                else "legacy local CPU advisory precedes MLX response cache extraction"
+            ),
             "budget_spend_allowed": False,
             "ready_for_budget_spend": False,
             "ready_for_exact_eval_dispatch": False,
@@ -1344,7 +1380,7 @@ def build_scorer_region_selector_chain_queue(
                             {
                                 "id": "local_cpu_component_spot_check",
                                 "kind": "command",
-                                "requires": [local_component_anchor_step],
+                                "requires": local_cpu_component_requires,
                                 "command": [
                                     ".venv/bin/python",
                                     "experiments/contest_auth_eval.py",
@@ -1454,39 +1490,96 @@ def build_scorer_region_selector_chain_queue(
                             {
                                 "id": "build_mlx_component_cache",
                                 "kind": "command",
-                                "requires": [
-                                    "local_cpu_component_spot_check",
-                                    "local_cpu_contest_drift_eureka",
-                                ],
-                                "command": [
-                                    ".venv/bin/python",
-                                    "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
-                                    "--local-cpu-advisory",
-                                    local_component_advisory_ref,
-                                    "--output-cache-dir",
-                                    mlx_cache_dir_ref,
-                                    "--audit-output",
-                                    mlx_cache_audit_ref,
-                                    "--expected-pair-count",
-                                    "600",
-                                    "--batch-pairs",
-                                    str(int(mlx_cache_batch_pairs)),
-                                    "--allow-large-tensor-cache",
-                                    "--stamp-cache-manifest-on-pass",
-                                    "--reuse-valid-cache",
-                                ],
+                                "requires": (
+                                    [local_component_anchor_step]
+                                    if mlx_first_acquisition
+                                    else [
+                                        "local_cpu_component_spot_check",
+                                        "local_cpu_contest_drift_eureka",
+                                    ]
+                                ),
+                                "command": (
+                                    [
+                                        ".venv/bin/python",
+                                        "tools/materialize_mlx_scorer_cache_from_submission.py",
+                                        "--archive",
+                                        _repo_rel(
+                                            receiver_patch_submission_dir / "archive.zip",
+                                            repo_root,
+                                        ),
+                                        "--submission-dir",
+                                        receiver_patch_submission_ref,
+                                        "--upstream-dir",
+                                        local_component_upstream_ref,
+                                        "--video-names-file",
+                                        local_component_video_names_ref,
+                                        "--output-cache-dir",
+                                        mlx_cache_dir_ref,
+                                        "--work-dir",
+                                        mlx_first_work_ref,
+                                        "--report-output",
+                                        mlx_first_cache_report_ref,
+                                        "--inflate-timeout",
+                                        str(int(local_component_inflate_timeout_seconds)),
+                                        "--batch-pairs",
+                                        str(int(mlx_cache_batch_pairs)),
+                                        *(
+                                            ["--max-pairs", str(int(mlx_max_pairs))]
+                                            if mlx_max_pairs is not None
+                                            else []
+                                        ),
+                                        *(
+                                            [
+                                                "--local-acquisition-max-pairs",
+                                                str(int(mlx_max_pairs)),
+                                            ]
+                                            if mlx_max_pairs is not None
+                                            else []
+                                        ),
+                                        "--allow-large-tensor-cache",
+                                        "--force",
+                                    ]
+                                    if mlx_first_acquisition
+                                    else [
+                                        ".venv/bin/python",
+                                        "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
+                                        "--local-cpu-advisory",
+                                        local_component_advisory_ref,
+                                        "--output-cache-dir",
+                                        mlx_cache_dir_ref,
+                                        "--audit-output",
+                                        mlx_cache_audit_ref,
+                                        "--expected-pair-count",
+                                        "600",
+                                        "--batch-pairs",
+                                        str(int(mlx_cache_batch_pairs)),
+                                        "--allow-large-tensor-cache",
+                                        "--stamp-cache-manifest-on-pass",
+                                        "--reuse-valid-cache",
+                                    ]
+                                ),
                                 "resources": {"kind": "local_cpu"},
                                 "timeout_seconds": 1800,
                                 "postconditions": [
-                                    {
-                                        "type": "json_equals",
-                                        "path": mlx_cache_audit_ref,
-                                        "key": "passed",
-                                        "equals": True,
-                                    },
+                                    *(
+                                        []
+                                        if mlx_first_acquisition
+                                        else [
+                                            {
+                                                "type": "json_equals",
+                                                "path": mlx_cache_audit_ref,
+                                                "key": "passed",
+                                                "equals": True,
+                                            }
+                                        ]
+                                    ),
                                     {
                                         "type": "json_false_authority",
-                                        "path": mlx_cache_audit_ref,
+                                        "path": (
+                                            mlx_first_cache_report_ref
+                                            if mlx_first_acquisition
+                                            else mlx_cache_audit_ref
+                                        ),
                                     },
                                     {
                                         "type": "json_false_authority",
@@ -1494,9 +1587,20 @@ def build_scorer_region_selector_chain_queue(
                                     },
                                 ],
                                 "telemetry": {
-                                    "artifact_paths": [mlx_cache_dir_ref, mlx_cache_audit_ref],
+                                    "artifact_paths": [
+                                        mlx_cache_dir_ref,
+                                        (
+                                            mlx_first_cache_report_ref
+                                            if mlx_first_acquisition
+                                            else mlx_cache_audit_ref
+                                        ),
+                                    ],
                                     "input_artifact_paths": [
-                                        local_component_advisory_ref,
+                                        (
+                                            receiver_patch_submission_ref
+                                            if mlx_first_acquisition
+                                            else local_component_advisory_ref
+                                        ),
                                     ],
                                     "include_postcondition_paths": True,
                                     "recursive": True,
@@ -1507,39 +1611,78 @@ def build_scorer_region_selector_chain_queue(
                                 "id": "local_mlx_component_response",
                                 "kind": "command",
                                 "requires": ["build_mlx_component_cache"],
-                                "command": [
-                                    ".venv/bin/python",
-                                    "tools/run_mlx_scorer_response_from_local_advisory.py",
-                                    "--local-cpu-advisory",
-                                    local_component_advisory_ref,
-                                    "--reference-cache-dir",
-                                    mlx_reference_cache_ref,
-                                    "--candidate-cache-dir",
-                                    mlx_cache_dir_ref,
-                                    "--output",
-                                    mlx_response_ref,
-                                    "--repo-root",
-                                    ".",
-                                    "--batch-pairs",
-                                    str(int(mlx_batch_pairs)),
-                                    "--device",
-                                    str(mlx_device),
-                                    "--allow-local-cpu-advisory-cache-identity",
-                                    "--components-dir",
-                                    mlx_components_dir_ref,
-                                    "--response-family",
-                                    "scorer_region_frame1_waterfill_patch",
-                                    *(
-                                        ["--allow-gpu-research-signal"]
-                                        if str(mlx_device) == "gpu"
-                                        else []
-                                    ),
-                                    *(
-                                        ["--max-pairs", str(int(mlx_max_pairs))]
-                                        if mlx_max_pairs is not None
-                                        else []
-                                    ),
-                                ],
+                                "command": (
+                                    [
+                                        ".venv/bin/python",
+                                        "tools/run_mlx_scorer_response_from_cache.py",
+                                        "--reference-cache-dir",
+                                        mlx_reference_cache_ref,
+                                        "--candidate-cache-dir",
+                                        mlx_cache_dir_ref,
+                                        "--archive",
+                                        _repo_rel(
+                                            receiver_patch_submission_dir / "archive.zip",
+                                            repo_root,
+                                        ),
+                                        "--output",
+                                        mlx_response_ref,
+                                        "--repo-root",
+                                        ".",
+                                        "--batch-pairs",
+                                        str(int(mlx_batch_pairs)),
+                                        "--device",
+                                        str(mlx_device),
+                                        "--allow-unaudited-candidate-cache-debug",
+                                        "--components-dir",
+                                        mlx_components_dir_ref,
+                                        "--response-family",
+                                        "scorer_region_frame1_waterfill_patch",
+                                        *(
+                                            ["--allow-gpu-research-signal"]
+                                            if str(mlx_device) == "gpu"
+                                            else []
+                                        ),
+                                        *(
+                                            ["--max-pairs", str(int(mlx_max_pairs))]
+                                            if mlx_max_pairs is not None
+                                            else []
+                                        ),
+                                    ]
+                                    if mlx_first_acquisition
+                                    else [
+                                        ".venv/bin/python",
+                                        "tools/run_mlx_scorer_response_from_local_advisory.py",
+                                        "--local-cpu-advisory",
+                                        local_component_advisory_ref,
+                                        "--reference-cache-dir",
+                                        mlx_reference_cache_ref,
+                                        "--candidate-cache-dir",
+                                        mlx_cache_dir_ref,
+                                        "--output",
+                                        mlx_response_ref,
+                                        "--repo-root",
+                                        ".",
+                                        "--batch-pairs",
+                                        str(int(mlx_batch_pairs)),
+                                        "--device",
+                                        str(mlx_device),
+                                        "--allow-local-cpu-advisory-cache-identity",
+                                        "--components-dir",
+                                        mlx_components_dir_ref,
+                                        "--response-family",
+                                        "scorer_region_frame1_waterfill_patch",
+                                        *(
+                                            ["--allow-gpu-research-signal"]
+                                            if str(mlx_device) == "gpu"
+                                            else []
+                                        ),
+                                        *(
+                                            ["--max-pairs", str(int(mlx_max_pairs))]
+                                            if mlx_max_pairs is not None
+                                            else []
+                                        ),
+                                    ]
+                                ),
                                 "resources": {
                                     "kind": (
                                         "local_mlx"
@@ -1566,7 +1709,11 @@ def build_scorer_region_selector_chain_queue(
                                         mlx_components_dir_ref,
                                     ],
                                     "input_artifact_paths": [
-                                        local_component_advisory_ref,
+                                        (
+                                            mlx_first_cache_report_ref
+                                            if mlx_first_acquisition
+                                            else local_component_advisory_ref
+                                        ),
                                         mlx_cache_dir_ref,
                                     ],
                                     "include_postcondition_paths": True,
@@ -1574,6 +1721,51 @@ def build_scorer_region_selector_chain_queue(
                                     "max_recursive_entries": 64,
                                 },
                             },
+                            *(
+                                [
+                                    {
+                                        "id": "mlx_cpu_spend_gate",
+                                        "kind": "command",
+                                        "requires": ["local_mlx_component_response"],
+                                        "command": [
+                                            ".venv/bin/python",
+                                            "tools/gate_mlx_scorer_response_for_cpu_spend.py",
+                                            "--mlx-response",
+                                            mlx_response_ref,
+                                            "--output",
+                                            mlx_cpu_spend_gate_ref,
+                                            "--baseline-score",
+                                            str(float(scorer_response_baseline_score or 0.0)),
+                                            "--max-score-delta",
+                                            str(float(mlx_cpu_gate_max_score_delta)),
+                                            "--min-samples",
+                                            "1",
+                                            "--overwrite",
+                                        ],
+                                        "resources": {"kind": "local_cpu"},
+                                        "timeout_seconds": 120,
+                                        "postconditions": [
+                                            {
+                                                "type": "json_equals",
+                                                "path": mlx_cpu_spend_gate_ref,
+                                                "key": "cpu_gate_allowed",
+                                                "equals": True,
+                                            },
+                                            {
+                                                "type": "json_false_authority",
+                                                "path": mlx_cpu_spend_gate_ref,
+                                            },
+                                        ],
+                                        "telemetry": {
+                                            "artifact_paths": [mlx_cpu_spend_gate_ref],
+                                            "input_artifact_paths": [mlx_response_ref],
+                                            "include_postcondition_paths": True,
+                                        },
+                                    }
+                                ]
+                                if mlx_first_acquisition
+                                else []
+                            ),
                         ]
                         if include_mlx_component_response
                         else []
@@ -1633,7 +1825,7 @@ def build_scorer_region_selector_chain_queue(
                             {
                                 "id": "plan_local_component_artifact_retention",
                                 "kind": "command",
-                                "requires": [local_component_loop_terminal_step],
+                                "requires": local_component_loop_terminal_steps,
                                 "command": retention_cmd,
                                 "resources": {"kind": "local_io_heavy"},
                                 "timeout_seconds": 1200,
@@ -1670,7 +1862,7 @@ def build_scorer_region_selector_chain_queue(
                                 "requires": (
                                     ["plan_local_component_artifact_retention"]
                                     if include_local_component_retention_plan
-                                    else [local_component_loop_terminal_step]
+                                    else local_component_loop_terminal_steps
                                 ),
                                 "command": exact_ready_bridge_cmd,
                                 "resources": {"kind": "local_cpu"},
