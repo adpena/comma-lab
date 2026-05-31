@@ -64819,6 +64819,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z8_hier_pc_full_stack_longrun_20260531",
+      "name": "Z8 hierarchical-PC full-stack long run (real teacher + tau-anneal + cosine; MLX-LOCAL)",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tau-anneal + cosine wire-in landed; mlx_renderer.py notify_global_epoch + set_anneal_schedule + current_gumbel_temperature; 8/8 tau-anneal tests pass; 330 Z8 regression pass; real-teacher long run completed 2000ep [macOS-MLX research-signal] .omx/research/z8_hier_pc_full_stack_longrun_20260531/run/training_artifact.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z8_hier_pc_full_stack_longrun_landed_20260531.md + .omx/research/z8_yousfi_suniward_cost_map_training_weight_design_20260531.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MLX-LOCAL real-teacher (real SegNet KL T=2.0 + real PoseNet pose-MSE) 600-pair 2000-epoch run w/ Gumbel tau-anneal 1.0->0.1 (closes comment-only-contract bug) + warmup 50 + cosine LR. Per-axis honest result: pose 104.6->0.07 (categorical hierarchical-PC SOLVES pose), seg 6.45->2.68 STILL descending (structural ceiling = binding constraint, canonical finding). Non-promotable [macOS-MLX research-signal] per Catalog #192/#341. DELIVERABILITY BLOCKER: no MLX->PyTorch export bridge for Z8 + _full_main does not emit contest archive (posterior refused no_archive_emitted_at_l2). research_only=true."
+    },
+    {
+      "id": "lane_optimal_teacher_and_sensitivity_tools_20260531",
+      "name": "Optimal scorer-teacher design + multi-granularity sensitivity tools",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/multi_granularity_sensitivity.py + tools/multi_granularity_sensitivity_report.py + 26 tests pass; real fec6 byte-axis sensitivity $0"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff clean; pure-math kernels verify argmax-flip boundary band + out//2 pose window + 100*d_seg/sqrt(10*d_pose) per-pair"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/optimal_scorer_teacher_design_20260531T103350Z.md + feedback memo"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "z8_schedule_provenance_hardening_20260531",
+      "name": "Z8 schedule provenance hardening",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff+pytest z8 schedule hardening"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_z8_schedule_provenance_hardening_20260531T104216Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -64828,5 +64951,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T10:37:36Z"
+  "updated_at": "2026-05-31T10:42:31Z"
 }
