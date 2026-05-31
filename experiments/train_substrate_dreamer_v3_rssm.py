@@ -243,8 +243,53 @@ def _build_parser() -> argparse.ArgumentParser:
         "--distillation-weight",
         type=float,
         default=0.5,
-        help="Weight on the gradient-reachable Hinton-KL T=2.0 scorer "
-        "surrogate term in the MLX --full score-aware loss (0.0 disables).",
+        help="Weight on the gradient-reachable Hinton-KL T=2.0 SegNet scorer "
+        "teacher term in the MLX --full score-aware loss (0.0 disables).",
+    )
+    p.add_argument(
+        "--pose-distillation-weight",
+        type=float,
+        default=1.0,
+        help="Weight on the REAL PoseNet pose-MSE distillation term (the "
+        "pose-axis the mock teacher leaves at 0; sister of Z7-Mamba-2).",
+    )
+    p.add_argument(
+        "--allow-mock-scorer-teacher",
+        action="store_true",
+        help=(
+            "Allow the deterministic MOCK scorer teacher (smoke-only). When "
+            "OMITTED (default) the REAL SegNet + PoseNet Hinton-distilled "
+            "teachers are built so the pose-axis is non-zero (sister of the "
+            "Z7-Mamba-2 real-Hinton pattern, commit 8fa8fcfda). The mock path "
+            "leaves pose=0 (phantom-provenance per Catalog #322)."
+        ),
+    )
+    # --- Wave N+11 stabilizer knobs (sister of Z7-Mamba-2 stabilizer) ---
+    p.add_argument(
+        "--grad-clip-max-norm",
+        type=float,
+        default=1.0,
+        help="Wave N+11 stabilizer: grad-clip max L2 norm (<=0 disables).",
+    )
+    p.add_argument(
+        "--warmup-epochs",
+        type=int,
+        default=5,
+        help="Wave N+11 stabilizer: LR warmup epochs.",
+    )
+    p.add_argument(
+        "--weight-decay",
+        type=float,
+        default=1e-4,
+        help="Wave N+11 stabilizer: AdamW weight decay.",
+    )
+    p.add_argument(
+        "--optimizer-kind",
+        type=str,
+        default="adamw",
+        choices=("adamw", "rmsprop"),
+        help="MLX optimizer kind (Wave N+11 stabilizer default adamw; "
+        "rmsprop opt-in per Mamba-2 stability finding).",
     )
     p.add_argument(
         "--pr95-faithful-curriculum-enabled",
@@ -492,9 +537,16 @@ def _full_main(args: argparse.Namespace) -> int:
     1. Real contest-video targets via ``decode_mlx_targets`` (Catalog #114; the
        prior "real frame loader" deferral is now satisfied — NO synthetic in
        non-smoke per CLAUDE.md "Forbidden make_synthetic_pair_batch").
-    2. Gradient-reachable score-aware loss (reconstruction MSE + Hinton-KL
-       T=2.0 scorer surrogate) — the prior "score-aware loss" deferral is now
-       satisfied (Catalog #164 sister discipline; MLX-native gradient path).
+    2. Gradient-reachable score-aware loss (reconstruction MSE + REAL
+       Hinton-distilled SegNet KL T=2.0 teacher + REAL PoseNet pose-MSE
+       teacher) — the prior "score-aware loss" deferral is now satisfied
+       (Catalog #164 sister discipline; MLX-native gradient path). REAL-HINTON
+       WAVE 2026-05-30 (sister of Z7-Mamba-2 commit 8fa8fcfda): the trainer now
+       builds the REAL SegNet + PoseNet pair teachers (``build_mlx_segnet_pair_teacher``
+       + ``build_mlx_posenet_pair_teacher``) when ``distillation_weight > 0`` AND
+       NOT ``--allow-mock-scorer-teacher`` so the pose-axis is NON-ZERO (the mock
+       path left pose=0 = phantom-provenance per Catalog #322), plus the Wave
+       N+11 stabilizer (grad-clip / warmup / weight-decay / adamw).
     3. Canonical EMA shadow / OOM-safe step / telemetry / Provenance /
        posterior anchor via ``run_long_training``.
 
@@ -521,8 +573,16 @@ def _full_main(args: argparse.Namespace) -> int:
     """
     from tac.substrates._shared.mlx_score_aware_full_main import (
         RendererBundle,
+        build_mlx_posenet_pair_teacher,
+        build_mlx_segnet_pair_teacher,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        DEFAULT_POSE_DIMS,
+        DEFAULT_SEGNET_CLASSES,
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
     )
 
     if mx is None:
@@ -548,6 +608,60 @@ def _full_main(args: argparse.Namespace) -> int:
         output_height=out_h,
         output_width=out_w,
     )
+    # ------------------------------------------------------------------
+    # Canonical REAL Hinton-distilled scorer teacher wiring (sister of the
+    # Z7-Mamba-2 real-Hinton pattern, commit 8fa8fcfda + Catalog #164). When
+    # distillation_weight > 0 AND the operator did NOT pass
+    # --allow-mock-scorer-teacher, build the REAL SegNet (KL T=2.0) +
+    # PoseNet (pose-MSE) pair teachers via the canonical builders (which take
+    # a teacher-LESS bundle as their positional arg). The mock path leaves
+    # pose=0 (phantom-provenance per Catalog #322); the real path produces a
+    # NON-ZERO pose-axis (the actual ego-motion signal). The bundle's
+    # __post_init__ fail-closed invariants require BOTH the SegNet teacher +
+    # learnable_student_head AND the PoseNet teacher + learnable_pose_student_head
+    # (PoseNet is dominant at the frontier).
+    # ------------------------------------------------------------------
+    scorer_teacher = None
+    pose_scorer_teacher = None
+    learnable_student_head = None
+    learnable_pose_student_head = None
+    pose_distillation_weight = 0.0
+    if (
+        float(args.distillation_weight) > 0.0
+        and not bool(args.allow_mock_scorer_teacher)
+    ):
+        # Teacher-LESS bundle is the canonical positional arg for the builders
+        # (the call_b2chw_255 forward convention + 384x512 targets match the
+        # SegNet/PoseNet eval resolution exactly; zero adapter).
+        bundle_no_teacher = RendererBundle(
+            model=model,
+            target_rgb_0=target_rgb_0,
+            target_rgb_1=target_rgb_1,
+            num_pairs=int(args.num_pairs),
+            forward_convention="call_b2chw_255",
+            distillation_weight=0.0,
+            pose_distillation_weight=0.0,
+            pose_dims=DEFAULT_POSE_DIMS,
+        )
+        scorer_teacher = build_mlx_segnet_pair_teacher(
+            bundle_no_teacher,
+            device="cpu",  # CLAUDE.md "MPS auth eval is NOISE" — CPU teacher only.
+        )
+        pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+            bundle_no_teacher,
+            device="cpu",
+        )
+        learnable_student_head = build_learnable_student_head(
+            num_classes=DEFAULT_SEGNET_CLASSES,
+            in_channels=3,
+            seed=int(args.seed),
+        )
+        learnable_pose_student_head = build_learnable_pose_student_head(
+            pose_dims=DEFAULT_POSE_DIMS,
+            seed=int(args.seed),
+        )
+        pose_distillation_weight = float(args.pose_distillation_weight)
+
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
@@ -555,7 +669,20 @@ def _full_main(args: argparse.Namespace) -> int:
         num_pairs=int(args.num_pairs),
         forward_convention="call_b2chw_255",
         distillation_weight=float(args.distillation_weight),
+        scorer_teacher=scorer_teacher,
+        learnable_student_head=learnable_student_head,
+        pose_distillation_weight=pose_distillation_weight,
+        pose_scorer_teacher=pose_scorer_teacher,
+        learnable_pose_student_head=learnable_pose_student_head,
+        pose_dims=DEFAULT_POSE_DIMS,
+        allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
     )
+
+    # Wave N+11 stabilizer recipe (sister of Z7-Mamba-2): grad-clip +
+    # warmup + weight-decay + adamw + EMA 0.997 are forwarded to the
+    # canonical harness (NOT the RendererBundle, which is the
+    # substrate-UNIQUE axis only).
+    grad_clip = float(args.grad_clip_max_norm)
     artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
         substrate_id="dreamer_v3_rssm",
@@ -571,12 +698,22 @@ def _full_main(args: argparse.Namespace) -> int:
         pr95_curriculum_total_epochs=getattr(
             args, "pr95_curriculum_total_epochs", None
         ),
+        # Wave N+11 stabilizer recipe (sister of Z7-Mamba-2 commit 8fa8fcfda).
+        ema_decay=0.997,
+        grad_clip_max_norm=(grad_clip if grad_clip > 0.0 else None),
+        warmup_epochs=int(args.warmup_epochs),
+        weight_decay=float(args.weight_decay),
+        optimizer_kind=str(args.optimizer_kind),
         notes=(
             "DreamerV3 RSSM MLX-first score-aware full training via canonical "
             "mlx_score_aware_full_main harness; real contest video + "
-            "reconstruction + Hinton-KL T=2.0 scorer surrogate; non-promotable "
-            "[macOS-MLX research-signal] per Catalog #192/#317/#341; per-axis + "
-            "MLX->PyTorch bridge + paired CUDA/CPU anchor DEFERRED to sister L2."
+            "reconstruction + REAL Hinton-distilled SegNet (KL T=2.0) + REAL "
+            "PoseNet (pose-MSE) teachers (sister of Z7-Mamba-2 real-Hinton "
+            "commit 8fa8fcfda; pose-axis NON-ZERO) + Wave N+11 stabilizer "
+            "(grad-clip + warmup + weight-decay + adamw + EMA 0.997); "
+            "non-promotable [macOS-MLX research-signal] per Catalog "
+            "#192/#317/#341; MLX->PyTorch bridge + paired CUDA/CPU anchor "
+            "DEFERRED to sister L2."
         ),
     )
     print(
