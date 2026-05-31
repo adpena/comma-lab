@@ -17,6 +17,13 @@ from comma_lab.scheduler.scorer_region_selector_chain_queue import (
     DEFAULT_MLX_REFERENCE_CACHE_DIR,
     build_scorer_region_selector_chain_queue,
 )
+from tac.optimization.contest_space_action import (
+    CONTEST_RATE_DENOM_BYTES,
+    RATE_SCORE_PER_BYTE,
+    build_contest_space_action_functional,
+    build_hydration_contract,
+    build_rate_distortion_action_row,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -26,13 +33,6 @@ from tac.optimization.scorer_region_operator_contract import (
     build_scorer_region_operator_contract,
 )
 from tac.repo_io import sha256_file
-from tac.optimization.contest_space_action import (
-    CONTEST_RATE_DENOM_BYTES,
-    RATE_SCORE_PER_BYTE,
-    build_contest_space_action_functional,
-    build_hydration_contract,
-    build_rate_distortion_action_row,
-)
 from tac.substrates.uniward_per_pixel_distortion.weight_map import (
     compute_per_pixel_uniward_weight_map_numpy,
 )
@@ -45,6 +45,9 @@ SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_REPORT_SCHEMA = (
 )
 SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA = (
     "scorer_region_selector_cascade_acquisition_policy.v1"
+)
+SCORER_REGION_SELECTOR_CASCADE_SELECTION_MANIFEST_SCHEMA = (
+    "scorer_region_selector_cascade_selection_manifest.v1"
 )
 
 SUPPORTED_REPACK_ORDERS = frozenset({"p11_then_p15_then_receiver_patch"})
@@ -1428,6 +1431,7 @@ def _summarize_pixel_gradient_cache(
         "available": True,
         "path": _repo_rel(resolved, repo_root),
         "bytes": resolved.stat().st_size,
+        "sha256": sha256_file(resolved),
         "shape": [int(dim) for dim in weight.shape],
         "source_axis": "[macOS-MLX research-signal]",
         "authority_boundary": (
@@ -1445,6 +1449,74 @@ def _summarize_pixel_gradient_cache(
         "blockers": ["pixel_gradient_cache_is_partial_sample_not_full_contest_video"],
         **FALSE_AUTHORITY,
     }
+
+
+def _prior_blockers(prior: Mapping[str, Any], *, source_name: str) -> list[str]:
+    blockers = []
+    if prior.get("available") is not True:
+        blockers.append(f"{source_name}_prior_unavailable")
+    prior_blockers = prior.get("blockers")
+    if isinstance(prior_blockers, list):
+        blockers.extend(str(item) for item in prior_blockers if str(item))
+    if prior.get("available") is True and not prior.get("sha256"):
+        blockers.append(f"{source_name}_sha256_missing_or_skipped")
+    return ordered_unique(blockers)
+
+
+def _build_selection_manifest(
+    *,
+    master_gradient: Mapping[str, Any],
+    pixel_gradient: Mapping[str, Any],
+) -> dict[str, Any]:
+    master_blockers = _prior_blockers(master_gradient, source_name="master_gradient")
+    pixel_blockers = _prior_blockers(pixel_gradient, source_name="pixel_gradient")
+    pose_pair_source_ready = not master_blockers
+    region_source_ready = not pixel_blockers
+    blockers = ordered_unique([*master_blockers, *pixel_blockers])
+    selection_ready = pose_pair_source_ready and region_source_ready
+    manifest = {
+        "schema": SCORER_REGION_SELECTOR_CASCADE_SELECTION_MANIFEST_SCHEMA,
+        "selection_ready": selection_ready,
+        "selection_ready_blockers": blockers,
+        "pose_pair_source": (
+            "master_gradient_pose_null_bottom_decile"
+            if pose_pair_source_ready
+            else "blocked_until_archive_specific_master_gradient_manifest"
+        ),
+        "pose_pair_source_ready": pose_pair_source_ready,
+        "pose_pair_source_blockers": master_blockers,
+        "region_source": (
+            "uniward_pixel_gradient_safe_regions"
+            if region_source_ready
+            else "blocked_until_full_video_pixel_gradient_manifest"
+        ),
+        "region_source_ready": region_source_ready,
+        "region_source_blockers": pixel_blockers,
+        "master_gradient_prior_path": master_gradient.get("path"),
+        "master_gradient_prior_sha256": master_gradient.get("sha256"),
+        "master_gradient_prior_shape": master_gradient.get("shape"),
+        "pixel_gradient_prior_path": pixel_gradient.get("path"),
+        "pixel_gradient_prior_sha256": pixel_gradient.get("sha256"),
+        "pixel_gradient_prior_shape": pixel_gradient.get("shape"),
+        "mathematical_basis": (
+            "select pair and region atoms only from replayable, archive-bound gradient "
+            "manifests before optimizing expected Delta S across P18/P19/P11 stacks"
+        ),
+        "contract_requirements": {
+            "archive_bound_candidate_contract": True,
+            "receiver_runtime_proof": True,
+            "local_cpu_gate": True,
+            "exact_auth_before_score_or_promotion": True,
+        },
+        "allowed_use": "queue_compilation_policy_or_migration_blocker",
+        "forbidden_use": "score_claim_rank_kill_budget_spend_or_exact_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        manifest,
+        context="scorer_region_selector_cascade_selection_manifest",
+    )
+    return manifest
 
 
 def build_scorer_region_selector_cascade_acquisition_policy(
@@ -1509,6 +1581,10 @@ def build_scorer_region_selector_cascade_acquisition_policy(
     pixel_gradient = _summarize_pixel_gradient_cache(
         repo_root=repo_root,
         cache_path=pixel_gradient_cache_path,
+    )
+    selection_manifest = _build_selection_manifest(
+        master_gradient=master_gradient,
+        pixel_gradient=pixel_gradient,
     )
     all_cpu_observed_failed = bool(local_cpu_rows) and not passed_rows
     if passed_rows:
@@ -1580,9 +1656,12 @@ def build_scorer_region_selector_cascade_acquisition_policy(
         "contest_space_action_functional": contest_action_functional,
         "master_gradient_prior": master_gradient,
         "pixel_gradient_prior": pixel_gradient,
+        "selection_manifest": selection_manifest,
         "next_queue_policy": {
             "mode": next_mode,
             "operator_family_status": family_status,
+            "selection_manifest_ready": selection_manifest["selection_ready"],
+            "selection_manifest_blockers": selection_manifest["selection_ready_blockers"],
             "local_cpu_gate_required": True,
             "post_cpu_mlx_authority_weight": 0.0 if split_count else None,
             "mlx_role": "broad_vectorized_acquisition_only",
@@ -1591,8 +1670,8 @@ def build_scorer_region_selector_cascade_acquisition_policy(
                 "RGB/YUV-delta, and repack-order chains; do not rank isolated leaves"
             ),
             "preferred_next_grid": {
-                "pose_pair_source": "master_gradient_pose_null_bottom_decile",
-                "region_source": "uniward_pixel_gradient_safe_regions",
+                "pose_pair_source": selection_manifest["pose_pair_source"],
+                "region_source": selection_manifest["region_source"],
                 "receiver_patch_delta_space": ["rgb"],
                 "receiver_patch_max_pairs": [4, 8, 12],
                 "receiver_patch_regions_per_pair": [1],
@@ -1625,9 +1704,10 @@ def build_scorer_region_selector_cascade_acquisition_policy(
 
 
 __all__ = [
+    "SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA",
     "SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_QUEUE_METADATA_SCHEMA",
     "SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_REPORT_SCHEMA",
-    "SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA",
+    "SCORER_REGION_SELECTOR_CASCADE_SELECTION_MANIFEST_SCHEMA",
     "ScorerRegionSelectorCascadeCampaignQueueError",
     "build_scorer_region_selector_cascade_acquisition_policy",
     "build_scorer_region_selector_cascade_campaign_queue",

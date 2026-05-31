@@ -70,6 +70,17 @@ extra bytes required to break even. The functional is explicitly
 planning-only: score, promotion, rank/kill, and exact-dispatch authority remain
 false until CPU/CUDA auth eval produces a byte-closed contest-axis artifact.
 
+2026-05-31T10:54Z follow-up: the acquisition policy now emits a
+`scorer_region_selector_cascade_selection_manifest.v1` before any grouped
+P18/P19/P11/P15 next-grid can be interpreted as executable. The current
+manifest correctly fails closed because the master-gradient prior is not an
+archive-specific hashed selection manifest and the UNIWARD pixel-gradient cache
+is only a partial-sample research prior. Until those blockers clear, the
+preferred pose/region sources are explicit `blocked_until_*` sentinels rather
+than launchable selector names. This preserves the MLX-positive signal as an
+acquisition prior without letting it become budget, score, or exact-dispatch
+authority.
+
 ## Current Blocker
 
 The P18/P19/P11/P15 receiver-closed cascade is not exact-auth ready from the

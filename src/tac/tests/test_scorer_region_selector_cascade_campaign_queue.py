@@ -8,6 +8,7 @@ from comma_lab.scheduler.scorer_region_selector_cascade_campaign_queue import (
     SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA,
     SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_QUEUE_METADATA_SCHEMA,
     SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_REPORT_SCHEMA,
+    SCORER_REGION_SELECTOR_CASCADE_SELECTION_MANIFEST_SCHEMA,
     build_scorer_region_selector_cascade_acquisition_policy,
     build_scorer_region_selector_cascade_campaign_queue,
     build_scorer_region_selector_cascade_campaign_report,
@@ -359,6 +360,24 @@ def test_acquisition_policy_consumes_cpu_negative_and_gradient_priors(tmp_path: 
     assert policy["master_gradient_prior"]["shape"] == [4, 3, 3]
     assert policy["pixel_gradient_prior"]["available"] is True
     assert policy["pixel_gradient_prior"]["shape"] == [2, 4, 4]
+    selection = policy["selection_manifest"]
+    assert selection["schema"] == SCORER_REGION_SELECTOR_CASCADE_SELECTION_MANIFEST_SCHEMA
+    assert selection["selection_ready"] is False
+    assert "archive_specific_master_gradient_anchor_missing_for_current_campaign" in selection[
+        "selection_ready_blockers"
+    ]
+    assert "pixel_gradient_cache_is_partial_sample_not_full_contest_video" in selection[
+        "selection_ready_blockers"
+    ]
+    assert "master_gradient_sha256_missing_or_skipped" in selection["selection_ready_blockers"]
+    assert selection["pose_pair_source"] == (
+        "blocked_until_archive_specific_master_gradient_manifest"
+    )
+    assert selection["region_source"] == "blocked_until_full_video_pixel_gradient_manifest"
+    assert policy["next_queue_policy"]["selection_manifest_ready"] is False
+    assert policy["next_queue_policy"]["preferred_next_grid"]["pose_pair_source"] == (
+        "blocked_until_archive_specific_master_gradient_manifest"
+    )
     assert policy["rate_credit_rows"][0]["estimated_distortion_spend_score_units"] > 0.0
     assert policy["contest_space_action_functional"]["row_count"] == 1
     assert policy["contest_space_action_functional"]["local_gate_passed_count"] == 0
