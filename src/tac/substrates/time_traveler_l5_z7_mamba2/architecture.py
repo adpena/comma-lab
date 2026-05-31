@@ -85,10 +85,10 @@ from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.architecture impo
 )
 
 __all__ = [
-    "EVAL_HW",
-    "NUM_PAIRS",
     "CONTEXT_CONDITIONING_MODES",
+    "EVAL_HW",
     "MAMBA_SSM_AVAILABLE",
+    "NUM_PAIRS",
     "Z7Mamba2PredictiveCodingConfig",
     "Z7Mamba2PredictiveCodingSubstrate",
     "normalize_context_conditioning_mode",
@@ -110,8 +110,27 @@ class Z7Mamba2PredictiveCodingConfig:
             CARGO-CULTED-PENDING-VERIFICATION for dashcam 600-pair).
         expand: Mamba-2 expansion factor (2 from upstream).
         d_conv: Mamba-2 conv1d kernel size (4 canonical).
-        backend: ``"auto"`` (default), ``"mamba_ssm"``, or
-            ``"reference_torch"``.
+        backend: ``"auto"`` (default), ``"mamba_ssm"``,
+            ``"reference_torch"`` (Mamba-1 S6 reference), or
+            ``"ssd_reference"`` (canonical Mamba-2 SSD via
+            :mod:`tac.substrates._shared.mamba2_ssd` tri-backend
+            NUMPY/PYTORCH/MLX helper). The ``ssd_reference`` backend
+            is the canonical $0 macOS MLX path per CLAUDE.md 8th
+            MLX-first standing directive (added 2026-05-30; commit
+            ``b2936fb81`` canonical helper landed with 33 byte-stable
+            parity tests). The ``reference_torch`` backend is
+            preserved for backward compat + cite-chain per CLAUDE.md
+            HISTORICAL_PROVENANCE Catalog #110/#113 (existing
+            ``z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1``
+            canonical equation anchors cite reference_torch).
+        ssd_nheads: number of SSD heads when ``backend='ssd_reference'``.
+            Default ``None`` derives ``nheads = d_inner // ssd_headdim``
+            from ``ssd_headdim``; explicit override required if
+            ``d_inner % ssd_headdim != 0``. Ignored for non-SSD backends.
+        ssd_headdim: per-head feature dim when ``backend='ssd_reference'``;
+            default 64 (canonical from state-spaces/mamba upstream). Used
+            with ``ssd_nheads`` to construct the canonical helper config.
+            Ignored for non-SSD backends.
         stateful: True (default) maintains hidden state across the
             600-pair sequence (Wyner-Ziv implicit side-info channel).
         identity_predictor: True returns z_prev unchanged (Catalog #125
@@ -131,6 +150,8 @@ class Z7Mamba2PredictiveCodingConfig:
     expand: int = 2
     d_conv: int = 4
     backend: str = "auto"
+    ssd_nheads: int | None = None
+    ssd_headdim: int = 64
     stateful: bool = True
     identity_predictor: bool = False
     beta_ib: float = 1.0
@@ -157,7 +178,14 @@ class Z7Mamba2PredictiveCodingConfig:
         return self.latent_dim + self.ego_motion_dim
 
     def to_mamba2_predictor_config(self) -> Mamba2PredictorConfig:
-        """Build the underlying Mamba2PredictorConfig from this config."""
+        """Build the underlying Mamba2PredictorConfig from this config.
+
+        Threads the new ``ssd_nheads`` / ``ssd_headdim`` fields through
+        to the underlying ``Mamba2PredictorConfig`` so the canonical
+        Mamba-2 SSD backend (per :mod:`tac.substrates._shared.mamba2_ssd`)
+        is reachable from the Z7 config surface. The Mamba2PredictorConfig
+        will ignore these fields when ``backend != 'ssd_reference'``.
+        """
         return Mamba2PredictorConfig(
             latent_dim=self.latent_dim,
             ego_motion_dim=self.ego_motion_dim,
@@ -166,6 +194,8 @@ class Z7Mamba2PredictiveCodingConfig:
             expand=self.expand,
             d_conv=self.d_conv,
             backend=self.backend,  # type: ignore[arg-type]
+            ssd_nheads=self.ssd_nheads,
+            ssd_headdim=self.ssd_headdim,
             stateful=self.stateful,
             identity_predictor=self.identity_predictor,
         )
@@ -236,7 +266,7 @@ class Z7Mamba2PredictiveCodingSubstrate(nn.Module):
         self.context_conditioner: LatentAffineContextConditioner | None = None
         if context_mode == "latent_affine":
             # Adapt to Z7-LSTM/GRU sister config shape for canonical reuse.
-            from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.architecture import (  # noqa: E501
+            from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.architecture import (
                 Z7GruPredictiveCodingConfig,
             )
             adapter_cfg = Z7GruPredictiveCodingConfig(

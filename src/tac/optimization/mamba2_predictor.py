@@ -99,16 +99,61 @@ __all__ = [
     "MAMBA_SSM_AVAILABLE",
     "MAMBA_SSM_BACKEND",
     "REFERENCE_TORCH_BACKEND",
+    "SSD_REFERENCE_BACKEND",
     "Mamba2Predictor",
     "Mamba2PredictorConfig",
 ]
 
 
 REFERENCE_TORCH_BACKEND = "reference_torch"
-"""Backend name: pure-PyTorch reference Mamba-2 implementation; works on MPS/CPU/CUDA."""
+"""Backend name: pure-PyTorch reference Mamba-1 (S6) implementation; works on MPS/CPU/CUDA.
+
+Honest classification per Wave 4 Dao-Gu fidelity audit (2026-05-29): this
+backend implements the diagonal-A-per-channel S6 cell (Gu & Dao 2023; A_log
+shape ``(d_inner, d_state)``), NOT the canonical Mamba-2 SSD scalar-A-per-head
+form (Dao & Gu 2024 §4; A_log shape ``(nheads,)``). The name is preserved
+per CLAUDE.md HISTORICAL_PROVENANCE Catalog #110/#113 to avoid corrupting
+cite-chain on existing canonical equation anchors.
+"""
 
 MAMBA_SSM_BACKEND = "mamba_ssm"
 """Backend name: upstream mamba_ssm PyPI package; requires CUDA kernels."""
+
+SSD_REFERENCE_BACKEND = "ssd_reference"
+"""Backend name: canonical Mamba-2 SSD reference via :mod:`tac.substrates._shared.mamba2_ssd`.
+
+This backend is the canonical Mamba-2 SSD (Dao & Gu 2024 §4 Structured
+State-Space Duality) sister to :data:`REFERENCE_TORCH_BACKEND` (Mamba-1 S6).
+The cell math delegates to the canonical tri-backend helper which provides
+byte-stable parity across NUMPY / PYTORCH / MLX (verified in
+:mod:`tac.substrates._shared.mamba2_ssd.tests.test_mamba2_ssd` — 33 passing).
+
+Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" + Catalog
+#307 paradigm-vs-implementation classification: this backend is
+**mathematically distinct** from :data:`REFERENCE_TORCH_BACKEND` — the SSD
+form uses ``A_log`` shape ``(nheads,)`` scalar-per-head broadcast across
+``(headdim, d_state)`` whereas the S6 reference uses ``A_log`` shape
+``(d_inner, d_state)`` diagonal-per-channel. Switching backends produces
+a different forward pass; downstream consumers must register
+:mod:`tac.canonical_equations` anchors per Catalog #344 on either backend
+separately if they want predictive-vs-empirical residual tracking.
+
+Per CLAUDE.md 8th MLX-first standing directive: this backend's MLX route
+is the canonical $0 macOS local-substrate path (Z8 M12a MLX-LOCAL,
+Z7-Mamba-2 L2 long-training local), unlocking the "all MLX except that
+which cannot be done on MLX → make it doable on MLX" trajectory by giving
+the existing Z8 + Z7-Mamba-2 consumers a structural MLX path that did not
+previously exist.
+
+Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L8
++ existing :data:`REFERENCE_TORCH_BACKEND` discipline: this backend
+preserves gradient flow through the recurrence (no detach in forward) so
+score-aware loss can backprop end-to-end.
+
+Cross-reference: :class:`_CanonicalHelperSSDCell` (this module) +
+:func:`tac.substrates._shared.mamba2_ssd.compute_mamba2_ssd_forward_sequence`
+(tri-backend dispatch entry point).
+"""
 
 
 def _probe_mamba_ssm_available() -> bool:
@@ -152,8 +197,27 @@ class Mamba2PredictorConfig:
             upstream reference).
         d_conv: Mamba-2 conv1d kernel size (default 4; canonical).
         backend: one of ``"auto"`` (default; tries mamba_ssm, falls
-            back to reference_torch), ``"mamba_ssm"`` (CUDA only),
-            or ``"reference_torch"`` (pure PyTorch; MPS/CPU compatible).
+            back to reference_torch — Mamba-1 S6), ``"mamba_ssm"`` (CUDA
+            only — true Mamba-2 SSD), ``"reference_torch"`` (pure
+            PyTorch Mamba-1 S6; MPS/CPU compatible), or ``"ssd_reference"``
+            (canonical Mamba-2 SSD via :mod:`tac.substrates._shared.mamba2_ssd`
+            tri-backend NUMPY/PYTORCH/MLX). The ``"ssd_reference"``
+            backend is the canonical $0 macOS path per CLAUDE.md 8th
+            MLX-first standing directive; the ``"reference_torch"``
+            backend is preserved for backward compatibility and
+            cite-chain on existing equation anchors per CLAUDE.md
+            HISTORICAL_PROVENANCE Catalog #110/#113.
+        ssd_nheads: number of SSD heads when ``backend="ssd_reference"``;
+            default ``None`` derives ``nheads = d_inner // ssd_headdim``
+            from ``d_inner`` and ``ssd_headdim``. Used to construct the
+            canonical helper's ``Mamba2SSDConfig``. Ignored for
+            non-SSD backends.
+        ssd_headdim: per-head feature dim when ``backend="ssd_reference"``;
+            default 64 (canonical from state-spaces/mamba upstream). Used
+            with ``ssd_nheads`` to construct the canonical helper's
+            ``Mamba2SSDConfig``. Ignored for non-SSD backends. Must
+            satisfy ``d_inner % ssd_headdim == 0`` when ``ssd_nheads``
+            is None so the head count is integer.
         stateful: True (default) preserves hidden state across forward
             calls (Wyner-Ziv implicit side-info channel pattern per
             Catalog #311 Ballard verbatim); False resets state every
@@ -169,7 +233,9 @@ class Mamba2PredictorConfig:
     d_state: int = 16
     expand: int = 2
     d_conv: int = 4
-    backend: Literal["auto", "mamba_ssm", "reference_torch"] = "auto"
+    backend: Literal["auto", "mamba_ssm", "reference_torch", "ssd_reference"] = "auto"
+    ssd_nheads: int | None = None
+    ssd_headdim: int = 64
     stateful: bool = True
     identity_predictor: bool = False
 
@@ -352,6 +418,192 @@ class _ReferenceMamba2Cell(nn.Module):
         return y_t, h_t
 
 
+class _CanonicalHelperSSDCell(nn.Module):
+    """Canonical Mamba-2 SSD cell delegating to :mod:`tac.substrates._shared.mamba2_ssd`.
+
+    This cell is the canonical Mamba-2 SSD (Dao & Gu 2024 §4 Structured
+    State-Space Duality) sister to :class:`_ReferenceMamba2Cell` (Mamba-1 S6).
+    The recurrence math delegates to the canonical tri-backend helper via
+    :func:`tac.substrates._shared.mamba2_ssd.compute_mamba2_ssd_forward_sequence`
+    or per-step :func:`mamba2_ssd_step_pytorch` — preserving byte-stable
+    parity vs NUMPY reference + MLX impl per the canonical helper's 33-test
+    parity discipline.
+
+    Shape contract (vs ``_ReferenceMamba2Cell``)
+    --------------------------------------------
+
+    The canonical helper operates on structured shape ``(B, nheads, headdim,
+    d_state)`` per Dao & Gu 2024 §4 SSD parametrization. This cell reshapes
+    between the canonical Mamba2Predictor convention ``(B, d_inner, d_state)``
+    (used by the sister S6 reference cell + ``Mamba2Predictor.step_externalized_state``
+    contract) and the SSD ``(B, nheads, headdim, d_state)`` form internally.
+    Caller sees the SAME ``(B, d_inner, d_state)`` state contract as the
+    S6 reference; the SSD-internal reshape is implementation detail.
+
+    Per CLAUDE.md "Subagent coherence-by-default" + Catalog #290
+    canonical-vs-unique decision per layer:
+
+    - ADOPT_CANONICAL_BECAUSE_SERVES: ``tac.substrates._shared.mamba2_ssd``
+      tri-backend helper (canonical Mamba-2 SSD math; 33 byte-stable parity
+      tests; sister consumer surface for Z8 + Z7-Mamba-2 + Z7-Mamba-2-v2-fresh
+      + pact_nerv_mamba per the canonical equation registry at Catalog #344).
+    - FORK_BECAUSE_PRINCIPLED_MISMATCH: input/output projections (``in_proj``,
+      ``out_proj``, ``dt_proj``, ``B_proj``, ``C_proj``) live in this cell
+      (not in the helper) because the canonical helper is the MATHEMATICAL
+      CORE (low-level SSD primitive) — the projection wrappers are part of
+      the Mamba2Predictor architectural sister layer. This is the same
+      pattern the S6 reference cell uses (in_proj + cell + out_proj fold
+      lives in ``_ReferenceMamba2Cell.forward``); preserved here.
+
+    Documented adaptations per CLAUDE.md "Forbidden empirical-claim-without-
+    evidence-tag" + 5-axis taxonomy:
+
+    1. **Axis 4 (math)**: SSD uses scalar-A-per-head (``A_log`` shape
+       ``(nheads,)``) NOT diagonal-per-channel (``(d_inner, d_state)``).
+       This is the canonical Mamba-2 SSD form per Dao & Gu 2024 §4. The
+       parameter count differs from the S6 reference at the A_log surface
+       (nheads vs d_inner × d_state); per-call output shape is identical
+       at the ``(B, d_inner, d_state)`` state contract surface.
+    2. **Axis 3 (problem space)**: gradient-preserving (no detach in
+       forward) per CLAUDE.md "HNeRV / leaderboard-implementation parity
+       discipline" L8 eval-roundtrip-aware. Verified via the helper's
+       :func:`mamba2_ssd_step_pytorch` impl which uses einsum (autograd-traceable).
+    3. **Axis 1 (problem space)**: input projection ``in_proj`` produces
+       ``2 * d_inner`` (split into ``x`` and gate per Mamba-1 §3.5 +
+       canonical Mamba-2 SSD upstream gate-then-residual structure). The
+       gate ``z`` multiplies the SSD cell output via ``sigmoid(z)`` per
+       upstream — preserved here.
+    4. **Axis 5 (data)**: backend selection routes to the helper's
+       NUMPY/PYTORCH/MLX dispatch via the canonical :func:`tac.framework_agnostic.backend.select_backend`
+       cascade. Default is platform priority (Darwin ARM64 → MLX; Linux →
+       PYTORCH; else NUMPY) per the canonical helper docstring; this cell
+       pins PYTORCH so the gradient path is intact for substrate training.
+
+    Tri-backend dispatch availability
+    ----------------------------------
+
+    This cell's forward pass uses the PyTorch backend of the canonical
+    helper (per the gradient discipline above). The full tri-backend
+    contract (NUMPY for portability + MLX for $0 macOS) is available via
+    the canonical helper directly for inflate-time / MLX-LOCAL substrate
+    paths — those paths construct the canonical helper API directly without
+    going through this Mamba2Predictor wrapper.
+
+    [verified-against: tac.substrates._shared.mamba2_ssd canonical helper
+    docstring + 33 byte-stable parity tests at commit b2936fb81]
+    [verified-against: Dao & Gu 2024 arxiv 2405.21060 §4 SSD parametrization]
+    """
+
+    def __init__(
+        self,
+        *,
+        d_model: int,
+        d_state: int,
+        expand: int,
+        d_conv: int,
+        nheads: int,
+        headdim: int,
+    ) -> None:
+        super().__init__()
+        self.d_model = d_model
+        self.d_state = d_state
+        self.expand = expand
+        self.d_inner = expand * d_model
+        self.d_conv = d_conv
+        self.nheads = nheads
+        self.headdim = headdim
+        if self.nheads * self.headdim != self.d_inner:
+            raise ValueError(
+                f"SSD parametrization requires nheads*headdim == d_inner; "
+                f"got nheads={nheads}, headdim={headdim}, d_inner={self.d_inner} "
+                f"(expand={expand} * d_model={d_model}). "
+                f"Either set ssd_headdim to divide d_inner evenly or "
+                f"pin ssd_nheads explicitly."
+            )
+
+        # Input projection: d_model -> 2 * d_inner (split into x and gate
+        # per Mamba-1 §3.5 + canonical Mamba-2 SSD upstream pattern).
+        self.in_proj = nn.Linear(d_model, 2 * self.d_inner, bias=False)
+        # Per Dao & Gu 2024 §4 SSD scalar-A-per-head form: A_log shape (nheads,).
+        # Canonical init from upstream state-spaces/mamba: log-uniform over
+        # [1, d_state] per head. This is a STRUCTURAL difference vs S6 reference
+        # (d_inner × d_state diagonal). Stability-wise: bound A = -exp(A_log)
+        # to keep eigenvalues negative; init range [log(1), log(d_state)] per
+        # canonical upstream.
+        self.A_log = nn.Parameter(torch.log(torch.arange(1, nheads + 1).float()))
+        # SSD per-head input-conditioned projections: x_inner (B, d_inner) →
+        # B_t (B, nheads, d_state), C_t (B, nheads, d_state), dt_t (B, nheads).
+        # The B_proj + C_proj are linear nheads × d_state outputs per head.
+        # We use a single Linear that emits (nheads * d_state) then reshape.
+        self.B_proj = nn.Linear(self.d_inner, nheads * d_state, bias=False)
+        self.C_proj = nn.Linear(self.d_inner, nheads * d_state, bias=False)
+        # Step size projection: x_inner → dt (B, nheads); softplus-activated.
+        self.dt_proj = nn.Linear(self.d_inner, nheads, bias=True)
+        # Optional skip connection D per Dao & Gu 2024 §4 (canonical Mamba-2
+        # SSD includes D · x_t skip; this matches Mamba2SSDConfig.with_skip_connection=True default).
+        self.D = nn.Parameter(torch.zeros(nheads, headdim))
+        # Output projection: d_inner -> d_model
+        self.out_proj = nn.Linear(self.d_inner, d_model, bias=False)
+
+    def forward(
+        self,
+        x_t: torch.Tensor,
+        h_prev: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Single-timestep canonical Mamba-2 SSD step via :mod:`tac.substrates._shared.mamba2_ssd`.
+
+        Args:
+            x_t: ``(B, d_model)`` input embedding for this timestep.
+            h_prev: ``(B, d_inner, d_state)`` previous hidden state — flat
+                form for sister-API compatibility with ``_ReferenceMamba2Cell``
+                + ``Mamba2Predictor.step_externalized_state``. Reshaped
+                internally to SSD-structured ``(B, nheads, headdim, d_state)``.
+
+        Returns:
+            ``(y_t :: (B, d_model), h_t :: (B, d_inner, d_state))``. Output
+            state shape matches the input convention (flat d_inner × d_state).
+        """
+        # Lazy import the canonical helper at call time so the rest of this
+        # module can be imported without forcing the helper's framework
+        # backend probes (notably MLX detection) at module-load time.
+        from tac.substrates._shared.mamba2_ssd import (
+            Mamba2SSDPyTorchState,
+            mamba2_ssd_step_pytorch,
+        )
+
+        batch = x_t.shape[0]
+        # Input + gate projections
+        xz = self.in_proj(x_t)  # (B, 2 * d_inner)
+        x_inner, z_gate = xz.chunk(2, dim=-1)  # each (B, d_inner)
+        # Reshape x_inner to per-head form (B, nheads, headdim).
+        x_per_head = x_inner.reshape(batch, self.nheads, self.headdim)
+        # Per-step projections per Dao & Gu 2024 §4.
+        B_t = self.B_proj(x_inner).reshape(batch, self.nheads, self.d_state)
+        C_t = self.C_proj(x_inner).reshape(batch, self.nheads, self.d_state)
+        dt_t = torch.nn.functional.softplus(self.dt_proj(x_inner))  # (B, nheads)
+        # Reshape flat h_prev (B, d_inner, d_state) -> structured (B, nheads, headdim, d_state).
+        h_structured = h_prev.reshape(batch, self.nheads, self.headdim, self.d_state)
+        # Delegate to canonical helper PyTorch backend (gradient-preserving).
+        next_state, y_per_head = mamba2_ssd_step_pytorch(
+            state=Mamba2SSDPyTorchState(h=h_structured),
+            x_t=x_per_head,
+            A_log=self.A_log,
+            B_t=B_t,
+            C_t=C_t,
+            dt_t=dt_t,
+            D=self.D,
+        )
+        # y_per_head shape: (B, nheads, headdim); flatten to (B, d_inner).
+        y_inner = y_per_head.reshape(batch, self.d_inner)
+        # Gate y_inner with sigmoid(z_gate) per upstream Mamba-1/Mamba-2 pattern.
+        y_inner = y_inner * torch.sigmoid(z_gate)
+        # Output projection -> (B, d_model)
+        y_t = self.out_proj(y_inner)
+        # Flatten next_state shape: (B, nheads, headdim, d_state) -> (B, d_inner, d_state).
+        h_t = next_state.h.reshape(batch, self.d_inner, self.d_state)
+        return y_t, h_t
+
+
 class Mamba2Predictor(nn.Module):
     """Z7-Mamba-2 substrate-distinguishing primitive: selective state-space next-frame predictor.
 
@@ -431,12 +683,22 @@ class Mamba2Predictor(nn.Module):
                 raise ImportError(
                     "mamba_ssm backend requested but mamba_ssm not importable. "
                     "Install via `pip install mamba-ssm` on Linux x86_64 + CUDA 11.6+. "
-                    "macOS / MPS users: use backend='reference_torch' or backend='auto' "
-                    "per Mamba2Predictor parent design memo §13."
+                    "macOS / MPS users: use backend='reference_torch', "
+                    "backend='ssd_reference', or backend='auto' per Mamba2Predictor "
+                    "parent design memo §13."
                 )
             self.backend_active = MAMBA_SSM_BACKEND
         elif config.backend == "reference_torch":
             self.backend_active = REFERENCE_TORCH_BACKEND
+        elif config.backend == "ssd_reference":
+            # Canonical Mamba-2 SSD via tac.substrates._shared.mamba2_ssd
+            # tri-backend helper. Per CLAUDE.md 8th MLX-first standing
+            # directive + Catalog #344 canonical equation
+            # mamba2_ssd_mlx_pytorch_numpy_tri_backend_byte_stable_v1: this
+            # is the canonical Mamba-2 SSD reference path (sister to
+            # reference_torch which is Mamba-1 S6 reference per Wave 4
+            # Dao-Gu fidelity audit 2026-05-29).
+            self.backend_active = SSD_REFERENCE_BACKEND
         elif config.backend == "auto":
             self.backend_active = (
                 MAMBA_SSM_BACKEND if MAMBA_SSM_AVAILABLE else REFERENCE_TORCH_BACKEND
@@ -447,14 +709,17 @@ class Mamba2Predictor(nn.Module):
                     "reference_torch backend (~10x slower at language scale; MPS/CPU "
                     "compatible). Per parent design memo §13 + CC-4 HARD-EARNED-PARTIAL: "
                     "this is canonical for local M5 Max proxy training. For paid Modal "
-                    "A100 dispatch, install mamba-ssm explicitly in the training image.",
+                    "A100 dispatch, install mamba-ssm explicitly in the training image. "
+                    "For canonical Mamba-2 SSD math (true Dao & Gu 2024 §4 SSD form, "
+                    "not Mamba-1 S6), pass backend='ssd_reference' to consume "
+                    "tac.substrates._shared.mamba2_ssd tri-backend helper.",
                     UserWarning,
                     stacklevel=2,
                 )
         else:
             raise ValueError(
                 f"Unknown backend {config.backend!r}; expected one of "
-                "'auto', 'mamba_ssm', 'reference_torch'."
+                "'auto', 'mamba_ssm', 'reference_torch', 'ssd_reference'."
             )
         if self.backend_active == MAMBA_SSM_BACKEND and self.stateful:
             raise RuntimeError(
@@ -462,6 +727,8 @@ class Mamba2Predictor(nn.Module):
                 "the current upstream Mamba2 forward path is length-1 and does "
                 "not preserve an incremental inference state. Use "
                 "backend='reference_torch' for byte-faithful recurrent evidence, "
+                "backend='ssd_reference' for canonical Mamba-2 SSD per Dao & Gu "
+                "2024 §4 (via tac.substrates._shared.mamba2_ssd), "
                 "set stateful=False for a stateless ablation, or implement "
                 "mamba_ssm step/inference-state replay before handoff."
             )
@@ -500,6 +767,45 @@ class Mamba2Predictor(nn.Module):
                     expand=config.expand,
                     d_conv=config.d_conv,
                 )
+        elif self.backend_active == SSD_REFERENCE_BACKEND:
+            # Canonical Mamba-2 SSD cell delegating to canonical helper at
+            # tac.substrates._shared.mamba2_ssd (verified byte-stable across
+            # NUMPY/PYTORCH/MLX via 33 parity tests at commit b2936fb81).
+            #
+            # Derive nheads from ssd_nheads/ssd_headdim/d_inner per the
+            # SSD parametrization constraint nheads * headdim == d_inner.
+            d_inner_local = config.expand * config.d_model
+            if config.ssd_nheads is not None:
+                nheads_local = config.ssd_nheads
+                # Caller-pinned nheads: derive headdim s.t. nheads*headdim == d_inner.
+                if d_inner_local % nheads_local != 0:
+                    raise ValueError(
+                        f"ssd_nheads={nheads_local} does not divide d_inner="
+                        f"{d_inner_local} (=expand={config.expand} * d_model="
+                        f"{config.d_model}); cannot satisfy nheads*headdim "
+                        f"== d_inner SSD constraint."
+                    )
+                headdim_local = d_inner_local // nheads_local
+            else:
+                # Default ssd_headdim=64 with auto-derived nheads.
+                headdim_local = config.ssd_headdim
+                if d_inner_local % headdim_local != 0:
+                    raise ValueError(
+                        f"ssd_headdim={headdim_local} does not divide d_inner="
+                        f"{d_inner_local} (=expand={config.expand} * d_model="
+                        f"{config.d_model}); cannot satisfy nheads*headdim "
+                        f"== d_inner SSD constraint. Set ssd_nheads or "
+                        f"ssd_headdim explicitly to satisfy the constraint."
+                    )
+                nheads_local = d_inner_local // headdim_local
+            self.mamba_cell = _CanonicalHelperSSDCell(
+                d_model=config.d_model,
+                d_state=config.d_state,
+                expand=config.expand,
+                d_conv=config.d_conv,
+                nheads=nheads_local,
+                headdim=headdim_local,
+            )
         else:
             self.mamba_cell = _ReferenceMamba2Cell(
                 d_model=config.d_model,
@@ -599,7 +905,13 @@ class Mamba2Predictor(nn.Module):
             # sequence-mode forward via the trainer (handled in Wave N+1
             # trainer build).
         else:
-            # reference_torch backend: explicit per-step state update
+            # reference_torch backend (Mamba-1 S6) OR ssd_reference backend
+            # (canonical Mamba-2 SSD via tac.substrates._shared.mamba2_ssd):
+            # both expose the same (x_t, h_prev) -> (y_t, h_t) contract at
+            # the flat (B, d_inner, d_state) state shape, so the call site
+            # is unified. The cell-specific math distinction (S6 diagonal-A
+            # vs SSD scalar-A-per-head) lives inside the cell implementation
+            # per Catalog #290 canonical-vs-unique-decision-per-layer.
             y_t, h_t = self.mamba_cell(x_t, self._h)
             if self.stateful:
                 self._h = h_t.detach() if not self.training else h_t
@@ -660,8 +972,20 @@ class Mamba2Predictor(nn.Module):
                 not expose incremental state via a public single-step
                 signature; canonical externalization requires
                 ``mamba_ssm.utils.inference_params``. Use
-                ``backend='reference_torch'`` for externalized-state
-                consumers per parent design memo §13.
+                ``backend='reference_torch'`` (Mamba-1 S6) or
+                ``backend='ssd_reference'`` (canonical Mamba-2 SSD via
+                :mod:`tac.substrates._shared.mamba2_ssd` tri-backend
+                helper) for externalized-state consumers per parent
+                design memo §13.
+
+        Note:
+            The ``ssd_reference`` backend uses the same flat-state
+            ``(B, d_inner, d_state)`` contract as the ``reference_torch``
+            backend (the SSD-internal reshape to ``(B, nheads, headdim,
+            d_state)`` is handled inside :class:`_CanonicalHelperSSDCell`).
+            So this externalized-state interface is uniform across
+            ``reference_torch`` and ``ssd_reference`` from the caller's
+            perspective.
         """
         if self.identity_predictor:
             raise RuntimeError(
@@ -673,12 +997,14 @@ class Mamba2Predictor(nn.Module):
         if self.backend_active == MAMBA_SSM_BACKEND:
             raise NotImplementedError(
                 "Mamba2Predictor.step_externalized_state currently supports only "
-                "backend='reference_torch'. The upstream mamba_ssm.Mamba2 sequence-mode "
-                "forward does not expose incremental state via a stable single-step "
-                "signature; canonical externalization requires mamba_ssm.utils."
+                "backend='reference_torch' (Mamba-1 S6) or backend='ssd_reference' "
+                "(canonical Mamba-2 SSD via tac.substrates._shared.mamba2_ssd). "
+                "The upstream mamba_ssm.Mamba2 sequence-mode forward does not "
+                "expose incremental state via a stable single-step signature; "
+                "canonical externalization requires mamba_ssm.utils."
                 "inference_params (per parent design memo §13). For externalized-state "
                 "consumers (Z8 DeterministicStateUpdate, DP1, etc.) use "
-                "backend='reference_torch'."
+                "backend='reference_torch' or backend='ssd_reference'."
             )
         if z_prev.shape[-1] != self.latent_dim:
             raise ValueError(

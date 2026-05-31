@@ -54,19 +54,27 @@ This adapter:
 Honest classification
 ---------------------
 
-The current reference backend (``backend='reference_torch'`` /
+The reference backend (``backend='reference_torch'`` /
 ``REFERENCE_TORCH_BACKEND``) implements Mamba-1 S6 (per Wave 4 fidelity
 audit landed 2026-05-29 + canonical helper docstring). The upstream
 ``mamba_ssm.Mamba2`` (``MAMBA_SSM_BACKEND``) is the canonical Mamba-2
 SSD form per Dao & Gu 2024 §4 but is CUDA-only and does NOT currently
-expose a public externalized-state single-step signature. This adapter
-PINS ``backend='reference_torch'`` for the externalized-state Protocol
-contract. M4's stronger acceptance criterion (true SSD with
-``matrix-A-shared-across-channels``) lands when the upstream Mamba2
-inference-params surface is wired in via the sister
-``step_externalized_state`` NotImplementedError path. Until then, this
-adapter satisfies the Protocol with explicitly-documented Mamba-1 S6
-reference math.
+expose a public externalized-state single-step signature.
+
+**2026-05-30 canonical SSD reference upgrade**: a third backend
+``backend='ssd_reference'`` (``SSD_REFERENCE_BACKEND``) is now
+available which routes through the canonical tri-backend helper at
+:mod:`tac.substrates._shared.mamba2_ssd` (per commit ``b2936fb81``;
+33 byte-stable parity tests passing across NUMPY/PYTORCH/MLX). This
+backend implements the canonical Mamba-2 SSD scalar-A-per-head form
+(Dao & Gu 2024 §4) — mathematically distinct from
+``reference_torch`` (Mamba-1 S6 diagonal-A-per-channel per Gu & Dao
+2023). The new ``use_canonical_ssd=True`` adapter kwarg opts into
+this backend; the default remains ``use_canonical_ssd=False`` so
+existing Z8 milestone evidence + canonical equation anchors continue
+to cite the reference-torch backend unchanged per CLAUDE.md
+HISTORICAL_PROVENANCE Catalog #110/#113 + Catalog #344 cite-chain
+discipline.
 
 Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag": this
 docstring claims NO score improvement, NO empirical benchmark, NO
@@ -77,6 +85,8 @@ sub-0.189 threshold) per ``build_progress.Z8_PHASE_2_BUILD_MILESTONES``.
 
 [verified-against: tac.optimization.mamba2_predictor.Mamba2Predictor
 docstring + Wave 4 Dao-Gu fidelity audit landed 2026-05-29]
+[verified-against: tac.substrates._shared.mamba2_ssd canonical helper
+docstring + 33 byte-stable parity tests at commit b2936fb81]
 [verified-against:
 src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py
 DeterministicStateUpdate Protocol]
@@ -85,7 +95,11 @@ Per Catalog #290 canonical-vs-unique decision per layer:
 
 - ADOPT_CANONICAL_BECAUSE_SERVES: ``tac.optimization.mamba2_predictor``
   (the canonical Mamba-2 primitive; sister surface for Z7-Mamba-2 +
-  DP1 + future predictive-recurrence substrates).
+  DP1 + future predictive-recurrence substrates). When
+  ``use_canonical_ssd=True``, also ADOPT_CANONICAL_BECAUSE_SERVES on
+  ``tac.substrates._shared.mamba2_ssd`` (the canonical tri-backend SSD
+  helper providing $0 macOS MLX path per CLAUDE.md 8th MLX-first
+  standing directive).
 - FORK_BECAUSE_PRINCIPLED_MISMATCH: NOT applicable at this layer.
   The Z8 binding contract is satisfied by direct wrap; no fork is
   needed at the adapter surface.
@@ -99,12 +113,12 @@ import torch
 
 from tac.optimization.mamba2_predictor import (
     REFERENCE_TORCH_BACKEND,
+    SSD_REFERENCE_BACKEND,
     Mamba2Predictor,
     Mamba2PredictorConfig,
 )
 
 from .binding_contract import (
-    DeterministicStateUpdate,
     LevelDimensionContract,
 )
 
@@ -148,12 +162,36 @@ class Z8Mamba2DeterministicStateUpdate:
             for dashcam contest 600-pair sequence per parent design
             memo §7 + Wave 4 audit). ``d_inner`` is derived to satisfy
             ``d_inner × d_state == level.deterministic_state_dim``.
+        use_canonical_ssd: opt-in to the canonical Mamba-2 SSD reference
+            backend at :mod:`tac.substrates._shared.mamba2_ssd` (true
+            Dao & Gu 2024 §4 scalar-A-per-head SSD form via the tri-
+            backend NUMPY/PYTORCH/MLX helper; verified byte-stable at
+            commit ``b2936fb81``). Default ``False`` preserves the
+            Mamba-1 S6 reference backend so existing Z8 milestone
+            evidence + canonical equation anchors continue to cite the
+            existing backend unchanged. When ``True``, the adapter
+            constructs ``Mamba2PredictorConfig(backend='ssd_reference',
+            ssd_nheads=1, ssd_headdim=d_inner)`` so the SSD parametrization
+            is satisfied at the d_inner=d_inner_local pinned by the
+            level contract (nheads=1 keeps the per-head scalar-A
+            parameter to a single value at this small contest scale,
+            matching the Z8 binding-contract per-level state_dim
+            semantics). Per CLAUDE.md 8th MLX-first standing directive:
+            this opt-in unlocks the $0 macOS MLX-LOCAL path that
+            previously did not exist for Z8 M12a paid Modal T4 dispatch.
+        ssd_nheads: optional override for the SSD nheads parameter when
+            ``use_canonical_ssd=True``. Default ``None`` uses
+            ``nheads=1`` (single-head SSD at the per-level state_dim
+            scale; preserves Protocol contract). Setting >1 requires
+            ``d_inner % nheads == 0`` per the SSD parametrization
+            constraint. Ignored when ``use_canonical_ssd=False``.
 
     Raises:
         ValueError: if the level's ``deterministic_state_dim`` is not
             evenly divisible by ``d_state`` (the structured state
             shape ``(B, d_inner, d_state)`` requires integer
-            ``d_inner``).
+            ``d_inner``); or if ``ssd_nheads`` does not divide
+            ``d_inner`` when ``use_canonical_ssd=True``.
     """
 
     def __init__(
@@ -162,6 +200,9 @@ class Z8Mamba2DeterministicStateUpdate:
         latent_dim: int,
         ego_motion_dim: int,
         d_state: int = 16,
+        *,
+        use_canonical_ssd: bool = False,
+        ssd_nheads: int | None = None,
     ) -> None:
         if not isinstance(level, LevelDimensionContract):
             raise TypeError(
@@ -185,6 +226,7 @@ class Z8Mamba2DeterministicStateUpdate:
 
         self._level = level
         self._d_state = d_state
+        self._use_canonical_ssd = bool(use_canonical_ssd)
         d_inner = level.deterministic_state_dim // d_state
         # The Mamba2PredictorConfig parameterizes d_inner = expand * d_model.
         # We pin expand=1 and d_model=d_inner so the structured shape
@@ -193,17 +235,44 @@ class Z8Mamba2DeterministicStateUpdate:
         # configuration per upstream defaults (no constraint requires
         # expand=2; CC-9 in parent design memo flagged expand=2 as
         # CARGO-CULTED-PENDING).
-        self._config = Mamba2PredictorConfig(
-            latent_dim=latent_dim,
-            ego_motion_dim=ego_motion_dim,
-            d_model=d_inner,
-            d_state=d_state,
-            expand=1,
-            d_conv=4,
-            backend=REFERENCE_TORCH_BACKEND,
-            stateful=False,  # externalized-state mode; per-call state pass-through
-            identity_predictor=False,
-        )
+        if self._use_canonical_ssd:
+            # Canonical Mamba-2 SSD via tac.substrates._shared.mamba2_ssd.
+            # Default ssd_nheads=1 at this small contest scale so the
+            # scalar-A-per-head parameter is single-valued; caller can
+            # override for multi-head SSD parametrization.
+            effective_nheads = ssd_nheads if ssd_nheads is not None else 1
+            if d_inner % effective_nheads != 0:
+                raise ValueError(
+                    f"ssd_nheads={effective_nheads} does not divide d_inner="
+                    f"{d_inner}; SSD parametrization requires "
+                    f"nheads*headdim == d_inner with integer headdim."
+                )
+            effective_headdim = d_inner // effective_nheads
+            self._config = Mamba2PredictorConfig(
+                latent_dim=latent_dim,
+                ego_motion_dim=ego_motion_dim,
+                d_model=d_inner,
+                d_state=d_state,
+                expand=1,
+                d_conv=4,
+                backend=SSD_REFERENCE_BACKEND,
+                ssd_nheads=effective_nheads,
+                ssd_headdim=effective_headdim,
+                stateful=False,
+                identity_predictor=False,
+            )
+        else:
+            self._config = Mamba2PredictorConfig(
+                latent_dim=latent_dim,
+                ego_motion_dim=ego_motion_dim,
+                d_model=d_inner,
+                d_state=d_state,
+                expand=1,
+                d_conv=4,
+                backend=REFERENCE_TORCH_BACKEND,
+                stateful=False,  # externalized-state mode; per-call state pass-through
+                identity_predictor=False,
+            )
         self._predictor = Mamba2Predictor(self._config)
         # Sanity: confirm d_inner derivation matches what the predictor expects.
         assert self._predictor.config.d_inner == d_inner, (
@@ -311,18 +380,28 @@ def build_z8_mamba2_adapter_for_level(
     latent_dim: int,
     ego_motion_dim: int,
     d_state: int = 16,
+    *,
+    use_canonical_ssd: bool = False,
+    ssd_nheads: int | None = None,
 ) -> Z8Mamba2DeterministicStateUpdate:
     """Convenience constructor (canonical single-line builder per Catalog #290).
 
     Equivalent to ``Z8Mamba2DeterministicStateUpdate(level, latent_dim,
-    ego_motion_dim, d_state=d_state)`` but exists as a top-level
-    function so downstream consumers can adopt a uniform builder
-    pattern across the M4 / M5 / M7 / M8 adapter set without
-    importing the class directly.
+    ego_motion_dim, d_state=d_state, use_canonical_ssd=use_canonical_ssd,
+    ssd_nheads=ssd_nheads)`` but exists as a top-level function so
+    downstream consumers can adopt a uniform builder pattern across the
+    M4 / M5 / M7 / M8 adapter set without importing the class directly.
+
+    See :class:`Z8Mamba2DeterministicStateUpdate` for the
+    ``use_canonical_ssd`` + ``ssd_nheads`` semantics (canonical Mamba-2
+    SSD via :mod:`tac.substrates._shared.mamba2_ssd` tri-backend helper
+    per CLAUDE.md 8th MLX-first standing directive).
     """
     return Z8Mamba2DeterministicStateUpdate(
         level=level,
         latent_dim=latent_dim,
         ego_motion_dim=ego_motion_dim,
         d_state=d_state,
+        use_canonical_ssd=use_canonical_ssd,
+        ssd_nheads=ssd_nheads,
     )
