@@ -60,6 +60,8 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
     assert joint["full_video_vjp_acquisition"]["contest_budget_spend_requires"] == [
         "full_video_pair_grid_coverage",
         "linearization_archive_sha_equals_current_archive_sha",
+        "candidate_pairs_equal_archive_runtime_reconstruction",
+        "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation",
         "single_optimizer_update_after_full_shard_reduction",
         "relinearize_after_each_accepted_archive_mutation",
         "receiver_proof_plus_exact_cpu_cuda_before_score_authority",
