@@ -11,6 +11,9 @@ from pathlib import Path
 from tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule import (
     build_entropy_delta_schedule_from_headroom_report,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.per_subband_rd_waterfill_solver import (
+    build_rd_waterfill_schedule_from_headroom_report,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,9 +21,46 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--headroom-json", required=True, type=Path)
     parser.add_argument(
         "--max-subband-mse",
-        required=True,
         type=float,
-        help="Per-aggregate-subband quantization distortion ceiling used for RD selection.",
+        default=None,
+        help=(
+            "Per-aggregate-subband quantization distortion ceiling used for "
+            "legacy independent min-bytes selection."
+        ),
+    )
+    parser.add_argument(
+        "--strategy",
+        choices=("legacy-max-subband-mse", "rd-waterfill"),
+        default="legacy-max-subband-mse",
+    )
+    parser.add_argument(
+        "--target-total-bytes",
+        type=float,
+        default=None,
+        help="RD-waterfill total detail-byte target.",
+    )
+    parser.add_argument(
+        "--target-detail-byte-fraction",
+        type=float,
+        default=None,
+        help="RD-waterfill target as a fraction of measured raw-f32 detail bytes.",
+    )
+    parser.add_argument(
+        "--max-weighted-mse",
+        type=float,
+        default=None,
+        help="RD-waterfill weighted-mean MSE ceiling.",
+    )
+    parser.add_argument(
+        "--lambda-value",
+        type=float,
+        default=None,
+        help="RD-waterfill fixed Lagrange multiplier.",
+    )
+    parser.add_argument(
+        "--rate-field",
+        default="live_codec_brotli_bytes_per_coeff",
+        help="RD-waterfill per-quant-row bytes/coeff field to optimize.",
     )
     parser.add_argument("--out-json", required=True, type=Path)
     parser.add_argument(
@@ -37,17 +77,31 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     report = json.loads(args.headroom_json.read_text())
-    schedule = build_entropy_delta_schedule_from_headroom_report(
-        report,
-        max_subband_mse=float(args.max_subband_mse),
-        require_full_archive_coverage=not args.allow_partial_coverage,
-    )
+    if args.strategy == "legacy-max-subband-mse":
+        if args.max_subband_mse is None:
+            raise SystemExit("--max-subband-mse is required for legacy-max-subband-mse")
+        schedule = build_entropy_delta_schedule_from_headroom_report(
+            report,
+            max_subband_mse=float(args.max_subband_mse),
+            require_full_archive_coverage=not args.allow_partial_coverage,
+        )
+    else:
+        schedule = build_rd_waterfill_schedule_from_headroom_report(
+            report,
+            target_total_bytes=args.target_total_bytes,
+            target_detail_byte_fraction=args.target_detail_byte_fraction,
+            max_weighted_mse=args.max_weighted_mse,
+            lambda_value=args.lambda_value,
+            rate_field=str(args.rate_field),
+            require_full_archive_coverage=not args.allow_partial_coverage,
+        )
     args.out_json.parent.mkdir(parents=True, exist_ok=True)
     args.out_json.write_text(json.dumps(schedule, indent=2, sort_keys=True))
     print(
         json.dumps(
             {
                 "schema": schedule["schema"],
+                "strategy": args.strategy,
                 "ready_for_materializer": schedule["ready_for_materializer"],
                 "schedule_sha256": schedule["schedule_sha256"],
                 "step_count": len(schedule["entropy_detail_quantization_steps"]),

@@ -26,6 +26,7 @@ from tac.substrates.z8_hierarchical_predictive_coding.per_subband_rd_waterfill_s
     SubbandRDPoint,
     _pareto_frontier,
     _parse_subband_label,
+    build_rd_waterfill_schedule_from_headroom_report,
     emit_actuator_quant_steps,
     load_subband_rd_curves_from_report,
     solve_per_subband_waterfill,
@@ -138,6 +139,20 @@ def test_pareto_hull_is_convex():
     assert slopes == sorted(slopes, reverse=True)
 
 
+def test_pareto_keeps_point_below_chord():
+    # Middle point sits below the endpoint chord and therefore wins for some
+    # lambda; an inverted hull condition incorrectly drops it.
+    middle = SubbandRDPoint(0.1, 2.0, 1e-4)
+    hull = _pareto_frontier(
+        [
+            SubbandRDPoint(0.2, 1.0, 5e-4),
+            middle,
+            SubbandRDPoint(None, 4.0, 0.0),
+        ]
+    )
+    assert middle in hull
+
+
 # --------------------------------------------------------------------------- #
 # solver — fixed lambda extremes
 # --------------------------------------------------------------------------- #
@@ -184,6 +199,33 @@ def test_solve_requires_exactly_one_mode():
         solve_per_subband_waterfill(
             _toy_curves(), target_total_bytes=100.0, lambda_value=1.0
         )
+
+
+def test_lambda_choice_is_invariant_to_subband_coefficient_count():
+    # The local Lagrangian is n_i * (D_i + lambda R_i); n_i cancels inside one
+    # subband. A size-biased implementation changes choices across identical
+    # RD curves solely because one subband has more coefficients.
+    curves = [
+        SubbandRDCurve(
+            name="L0_hh", level=0, orientation="hh", n_coeffs=10,
+            points=(
+                SubbandRDPoint(None, 4.0, 0.0),
+                SubbandRDPoint(0.1, 1.0, 1e-4),
+            ),
+        ),
+        SubbandRDCurve(
+            name="L1_hh", level=1, orientation="hh", n_coeffs=10_000,
+            points=(
+                SubbandRDPoint(None, 4.0, 0.0),
+                SubbandRDPoint(0.1, 1.0, 1e-4),
+            ),
+        ),
+    ]
+    # Break-even is 1e-4 / (4.0 - 1.0) ~= 3.33e-5. Use a larger lambda so
+    # the quantized point is truly optimal; this test is about invariance to
+    # n_coeffs, not about forcing the wrong side of the RD trade.
+    sol = solve_per_subband_waterfill(curves, lambda_value=1e-4)
+    assert [c.chosen_quant_step for c in sol.choices] == [0.1, 0.1]
 
 
 # --------------------------------------------------------------------------- #
@@ -248,7 +290,13 @@ def test_emit_actuator_map_consumable_by_actuator_config():
 def test_emit_omits_keep_raw_subbands():
     # λ=0 keeps everything raw -> empty map.
     sol = solve_per_subband_waterfill(_toy_curves(), lambda_value=0.0)
-    assert emit_actuator_quant_steps(sol) == {}
+    assert emit_actuator_quant_steps(sol, require_complete=False) == {}
+
+
+def test_emit_rejects_partial_map_by_default():
+    sol = solve_per_subband_waterfill(_toy_curves(), lambda_value=0.0)
+    with pytest.raises(ValueError, match="map is incomplete"):
+        emit_actuator_quant_steps(sol)
 
 
 def test_emit_both_frames_share_same_step():
@@ -313,3 +361,51 @@ def test_real_report_as_dict_serializable():
     json.dumps(d)  # must be JSON-serializable
     assert d["schema"] == PER_SUBBAND_RD_WATERFILL_SCHEMA
     assert len(d["choices"]) == 6
+
+
+@pytest.mark.skipif(not REAL_REPORT.exists(), reason="real entropy-headroom report absent")
+def test_real_report_schedule_is_actuator_ready_when_all_subbands_quantized():
+    report = json.loads(REAL_REPORT.read_text(encoding="utf-8"))
+    schedule = build_rd_waterfill_schedule_from_headroom_report(
+        report,
+        max_weighted_mse=5e-5,
+        require_full_archive_coverage=False,
+    )
+
+    assert schedule["ready_for_materializer"] is True
+    assert schedule["keep_raw_subbands"] == []
+    assert schedule["schedule_sha256"]
+    assert len(schedule["entropy_detail_quantization_steps"]) == 12
+    for key in schedule["entropy_detail_quantization_steps"]:
+        _parse_entropy_detail_step_key(key)
+
+
+def test_schedule_blocks_partial_actuator_map() -> None:
+    report = {
+        "pairs_measured": 1,
+        "total_pairs_in_archive": 1,
+        "per_subband": [
+            {
+                "subband": "L0_hh",
+                "n_coeffs": 100,
+                "current_raw_f32_brotli_bytes_per_coeff": 1.0,
+                "quant_sweep": [
+                    {
+                        "quant_step": 0.25,
+                        "distortion_mse": 1.0,
+                        "live_codec_brotli_bytes_per_coeff": 0.1,
+                    }
+                ],
+            }
+        ],
+    }
+
+    schedule = build_rd_waterfill_schedule_from_headroom_report(report, lambda_value=0.0)
+
+    assert schedule["ready_for_materializer"] is False
+    assert schedule["entropy_detail_quantization_steps"] == {}
+    assert schedule["keep_raw_subbands"] == ["L0_hh"]
+    assert any(
+        blocker.startswith("materializer_step_map_incomplete_keep_raw_subbands")
+        for blocker in schedule["blockers"]
+    )

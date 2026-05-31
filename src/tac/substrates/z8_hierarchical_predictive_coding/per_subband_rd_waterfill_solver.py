@@ -12,12 +12,12 @@ curves and solves the canonical discrete-RD bit-allocation:
     minimize  D_total(Δ)  subject to  R_total(Δ) <= byte_budget
 
 via the Lagrangian ``J = D_total + λ · R_total`` (Shoham & Gersho 1988). For a
-fixed ``λ`` each subband independently picks the operating point minimizing its
-local ``D_i·w_i + λ·R_i``; bisecting ``λ`` drives ``R_total`` to the budget. The
-discrete RD points are first reduced to their lower-convex-hull (Pareto
-frontier) because a Lagrangian can only ever select hull points — this keeps the
-solver correct even though the raw RD points are non-monotone in ``Δ`` (the live
-codec switches method at coarse ``Δ``).
+fixed ``λ`` each subband independently picks the operating point minimizing
+``n_i · (D_i + λ · R_i)``; ``n_i`` still weights global totals but cancels
+inside one subband's argmin. For hard byte or distortion ceilings, this module
+solves the exact finite multiple-choice problem over nondominated measured
+points when the grid is tractable (the live report is six subbands), and falls
+back to λ-bisection on supported hull points only for oversized future grids.
 
 The emitted artifact is the ``entropy_detail_quantization_steps`` map consumed
 directly by :class:`Z8JointCoefficientWaterfillConfig` — the existing executable
@@ -43,6 +43,7 @@ import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from itertools import product
 from pathlib import Path
 from typing import Any
 
@@ -85,9 +86,10 @@ class SubbandRDPoint:
     distortion_mse: float
 
     def __post_init__(self) -> None:
-        if self.quant_step is not None:
-            if not math.isfinite(self.quant_step) or self.quant_step <= 0.0:
-                raise ValueError("quant_step must be a positive finite float or None")
+        if self.quant_step is not None and (
+            not math.isfinite(self.quant_step) or self.quant_step <= 0.0
+        ):
+            raise ValueError("quant_step must be a positive finite float or None")
         if not math.isfinite(self.bytes_per_coeff) or self.bytes_per_coeff < 0.0:
             raise ValueError("bytes_per_coeff must be a non-negative finite float")
         if not math.isfinite(self.distortion_mse) or self.distortion_mse < 0.0:
@@ -140,7 +142,8 @@ class WaterfillSolution:
 
     schema: str
     role: str
-    lambda_value: float
+    lambda_value: float | None
+    solver_backend: str
     total_bytes: float
     baseline_total_bytes: float
     bytes_saved: float
@@ -155,6 +158,7 @@ class WaterfillSolution:
             "schema": self.schema,
             "role": self.role,
             "lambda_value": self.lambda_value,
+            "solver_backend": self.solver_backend,
             "total_bytes": self.total_bytes,
             "baseline_total_bytes": self.baseline_total_bytes,
             "bytes_saved": self.bytes_saved,
@@ -229,11 +233,16 @@ def load_subband_rd_curves_from_report(
         if not isinstance(sweep, Sequence) or not sweep:
             raise ValueError(f"subband {label!r} must have a non-empty quant_sweep")
         for q in sweep:
+            if not isinstance(q, Mapping):
+                raise ValueError(f"subband {label!r} quant_sweep rows must be mappings")
             if rate_field in q:
                 bytes_per_coeff = float(q[rate_field])
-            elif "live_codec_brotli_bytes_per_coeff" in q:
-                bytes_per_coeff = float(q["live_codec_brotli_bytes_per_coeff"])
-            elif "live_codec_bytes_per_coeff" in q:
+            elif rate_field == "live_codec_brotli_bytes_per_coeff" and "live_codec_bytes_per_coeff" in q:
+                # Older reports only carried raw payload bpc. The materializer
+                # now selects on Brotli-paid bytes, so new reports should have
+                # live_codec_brotli_bytes_per_coeff; this fallback keeps old
+                # tests readable without silently substituting for explicit
+                # non-default fields.
                 bytes_per_coeff = float(q["live_codec_bytes_per_coeff"])
             else:
                 raise ValueError(
@@ -294,14 +303,34 @@ def _pareto_frontier(points: Sequence[SubbandRDPoint]) -> list[SubbandRDPoint]:
                 continue
             slope_ab = (b.distortion_mse - a.distortion_mse) / dr_ab
             slope_bp = (p.distortion_mse - b.distortion_mse) / dr_bp
-            # Both slopes negative; b is interior (not a vertex) if the curve
-            # does not bend, i.e. slope_ab <= slope_bp (less steep then steeper).
-            if slope_ab <= slope_bp + 1e-30:
+            # Both slopes are normally negative. A valid lower convex RD hull
+            # bends toward flatter slopes as rate increases, so slope_ab must
+            # be strictly less than slope_bp. If the next segment is steeper or
+            # collinear, b is above/on the chord and cannot win any lambda.
+            if slope_ab >= slope_bp - 1e-30:
                 hull.pop()
             else:
                 break
         hull.append(p)
     return hull
+
+
+def _nondominated_points(points: Sequence[SubbandRDPoint]) -> list[SubbandRDPoint]:
+    """Drop points that are worse in both bytes and distortion.
+
+    Fixed-lambda water-fill only needs supported hull points. Hard contest
+    constraints are discrete multiple-choice problems, and unsupported-but-
+    nondominated operating points can be the exact constrained optimum.
+    """
+
+    ordered = sorted(points, key=lambda p: (p.bytes_per_coeff, p.distortion_mse))
+    out: list[SubbandRDPoint] = []
+    best_mse = math.inf
+    for p in ordered:
+        if p.distortion_mse < best_mse - 1e-18:
+            out.append(p)
+            best_mse = p.distortion_mse
+    return out
 
 
 def _choose_point_for_lambda(
@@ -313,9 +342,13 @@ def _choose_point_for_lambda(
     """Per-subband argmin of ``D_i·w_i + λ·R_i`` over the hull points."""
 
     best = hull[0]
-    best_j = best.distortion_mse * distortion_weight + lambda_value * best.bytes_per_coeff
+    # The global Lagrangian is sum_i n_i * (D_i + lambda * R_i). The n_i
+    # factor cancels inside one subband, but we keep distortion_weight in the
+    # formula to make that invariance explicit and avoid size-biased lambda
+    # mistakes.
+    best_j = distortion_weight * (best.distortion_mse + lambda_value * best.bytes_per_coeff)
     for p in hull[1:]:
-        j = p.distortion_mse * distortion_weight + lambda_value * p.bytes_per_coeff
+        j = distortion_weight * (p.distortion_mse + lambda_value * p.bytes_per_coeff)
         if j < best_j - 1e-18:
             best_j = j
             best = p
@@ -334,7 +367,7 @@ def _total_bytes_for_lambda(
     total_bytes = 0.0
     weighted_mse_sum = 0.0
     chosen: list[SubbandRDPoint] = []
-    for curve, hull in zip(curves, hulls):
+    for curve, hull in zip(curves, hulls, strict=True):
         w_i = curve.n_coeffs  # distortion weight (Parseval coefficient count)
         pt = _choose_point_for_lambda(
             hull, lambda_value=lambda_value, distortion_weight=float(w_i)
@@ -350,16 +383,17 @@ def _build_solution(
     curves: Sequence[SubbandRDCurve],
     chosen: Sequence[SubbandRDPoint],
     *,
-    lambda_value: float,
+    lambda_value: float | None,
     total_coeffs: int,
     target_total_bytes: float | None,
     max_weighted_mse: float | None,
+    solver_backend: str = "discrete_lagrangian_hull_bisection",
 ) -> WaterfillSolution:
     total_bytes = 0.0
     weighted_mse_sum = 0.0
     baseline_total_bytes = 0.0
     choices: list[SubbandChoice] = []
-    for curve, pt in zip(curves, chosen):
+    for curve, pt in zip(curves, chosen, strict=True):
         subband_bytes = pt.bytes_per_coeff * curve.n_coeffs
         total_bytes += subband_bytes
         weighted_mse_sum += pt.distortion_mse * curve.n_coeffs
@@ -383,6 +417,7 @@ def _build_solution(
         schema=PER_SUBBAND_RD_WATERFILL_SCHEMA,
         role=PER_SUBBAND_RD_WATERFILL_ROLE,
         lambda_value=lambda_value,
+        solver_backend=solver_backend,
         total_bytes=total_bytes,
         baseline_total_bytes=baseline_total_bytes,
         bytes_saved=baseline_total_bytes - total_bytes,
@@ -391,6 +426,66 @@ def _build_solution(
         max_weighted_mse=max_weighted_mse,
         choices=tuple(choices),
     )
+
+
+def _totals_for_choice(
+    curves: Sequence[SubbandRDCurve],
+    chosen: Sequence[SubbandRDPoint],
+    *,
+    total_coeffs: int,
+) -> tuple[float, float]:
+    total_bytes = 0.0
+    weighted_mse_sum = 0.0
+    for curve, point in zip(curves, chosen, strict=True):
+        total_bytes += point.bytes_per_coeff * curve.n_coeffs
+        weighted_mse_sum += point.distortion_mse * curve.n_coeffs
+    weighted_mean_mse = weighted_mse_sum / total_coeffs if total_coeffs else 0.0
+    return total_bytes, weighted_mean_mse
+
+
+def _solve_exact_discrete_constraint(
+    curves: Sequence[SubbandRDCurve],
+    point_sets: Sequence[Sequence[SubbandRDPoint]],
+    *,
+    total_coeffs: int,
+    target_total_bytes: float | None,
+    max_weighted_mse: float | None,
+) -> tuple[SubbandRDPoint, ...]:
+    """Solve the finite multiple-choice RD problem exactly for small grids."""
+
+    best: tuple[SubbandRDPoint, ...] | None = None
+    best_key: tuple[float, float] | None = None
+    fallback: tuple[SubbandRDPoint, ...] | None = None
+    fallback_key: tuple[float, float] | None = None
+
+    for combo in product(*point_sets):
+        total_bytes, weighted_mse = _totals_for_choice(
+            curves, combo, total_coeffs=total_coeffs
+        )
+        if target_total_bytes is not None:
+            if total_bytes <= target_total_bytes + 1e-9:
+                key = (weighted_mse, total_bytes)
+                if best_key is None or key < best_key:
+                    best_key = key
+                    best = combo
+            fallback_candidate_key = (total_bytes, weighted_mse)
+        else:
+            assert max_weighted_mse is not None
+            if weighted_mse <= max_weighted_mse + 1e-18:
+                key = (total_bytes, weighted_mse)
+                if best_key is None or key < best_key:
+                    best_key = key
+                    best = combo
+            fallback_candidate_key = (weighted_mse, total_bytes)
+
+        if fallback_key is None or fallback_candidate_key < fallback_key:
+            fallback_key = fallback_candidate_key
+            fallback = combo
+
+    if best is not None:
+        return tuple(best)
+    assert fallback is not None
+    return tuple(fallback)
 
 
 def solve_per_subband_waterfill(
@@ -402,6 +497,7 @@ def solve_per_subband_waterfill(
     lambda_lo: float = 1e-9,
     lambda_hi: float = 1e12,
     max_iterations: int = 200,
+    max_exact_combinations: int = 1_000_000,
 ) -> WaterfillSolution:
     """Solve the per-subband Lagrangian RD water-fill.
 
@@ -409,11 +505,12 @@ def solve_per_subband_waterfill(
 
     * ``lambda_value`` set — solve at that fixed λ (returns the per-subband
       argmin allocation; no bisection).
-    * ``target_total_bytes`` set — bisect λ so total detail bytes <= the target
-      (the smallest λ whose allocation fits under the budget; lower λ = lower
-      distortion).
-    * ``max_weighted_mse`` set — bisect λ so weighted-mean MSE <= the ceiling
-      (the cheapest allocation whose distortion stays under the ceiling).
+    * ``target_total_bytes`` set — exact finite search for the minimum
+      weighted-MSE allocation under the byte budget when the measured grid is
+      tractable, otherwise λ-bisection fallback.
+    * ``max_weighted_mse`` set — exact finite search for the minimum-byte
+      allocation under the weighted-MSE ceiling when the measured grid is
+      tractable, otherwise λ-bisection fallback.
 
     Higher λ ⇒ cheaper (coarser) operating points ⇒ fewer bytes / more
     distortion, so both byte-budget and distortion-ceiling targets are monotone
@@ -432,6 +529,14 @@ def solve_per_subband_waterfill(
 
     hulls = [_pareto_frontier(curve.points) for curve in curves]
     total_coeffs = sum(curve.n_coeffs for curve in curves)
+    if lambda_lo <= 0.0 or lambda_hi <= 0.0:
+        raise ValueError("lambda_lo and lambda_hi must be positive for bisection")
+    if lambda_hi <= lambda_lo:
+        raise ValueError("lambda_hi must be greater than lambda_lo")
+    if max_iterations <= 0:
+        raise ValueError("max_iterations must be positive")
+    if max_exact_combinations <= 0:
+        raise ValueError("max_exact_combinations must be positive")
 
     if lambda_value is not None:
         if lambda_value < 0.0 or not math.isfinite(lambda_value):
@@ -446,11 +551,31 @@ def solve_per_subband_waterfill(
             total_coeffs=total_coeffs,
             target_total_bytes=None,
             max_weighted_mse=None,
+            solver_backend="lagrangian_fixed_lambda_supported_hull",
         )
 
+    point_sets = [_nondominated_points(curve.points) for curve in curves]
+    combination_count = math.prod(len(points) for points in point_sets)
     if target_total_bytes is not None:
         if target_total_bytes <= 0.0 or not math.isfinite(target_total_bytes):
             raise ValueError("target_total_bytes must be a positive finite float")
+        if combination_count <= max_exact_combinations:
+            chosen = _solve_exact_discrete_constraint(
+                curves,
+                point_sets,
+                total_coeffs=total_coeffs,
+                target_total_bytes=target_total_bytes,
+                max_weighted_mse=None,
+            )
+            return _build_solution(
+                curves,
+                chosen,
+                lambda_value=None,
+                total_coeffs=total_coeffs,
+                target_total_bytes=target_total_bytes,
+                max_weighted_mse=None,
+                solver_backend="exact_discrete_nondominated_multiple_choice",
+            )
 
         def fits(lam: float) -> bool:
             tot, _, _ = _total_bytes_for_lambda(
@@ -459,11 +584,27 @@ def solve_per_subband_waterfill(
             return tot <= target_total_bytes
 
         constraint_kind = "byte_budget"
-        target = target_total_bytes
     else:
         assert max_weighted_mse is not None
         if max_weighted_mse < 0.0 or not math.isfinite(max_weighted_mse):
             raise ValueError("max_weighted_mse must be a non-negative finite float")
+        if combination_count <= max_exact_combinations:
+            chosen = _solve_exact_discrete_constraint(
+                curves,
+                point_sets,
+                total_coeffs=total_coeffs,
+                target_total_bytes=None,
+                max_weighted_mse=max_weighted_mse,
+            )
+            return _build_solution(
+                curves,
+                chosen,
+                lambda_value=None,
+                total_coeffs=total_coeffs,
+                target_total_bytes=None,
+                max_weighted_mse=max_weighted_mse,
+                solver_backend="exact_discrete_nondominated_multiple_choice",
+            )
 
         def fits(lam: float) -> bool:
             # Lower λ → lower distortion. We want the LOWEST-byte allocation
@@ -475,7 +616,6 @@ def solve_per_subband_waterfill(
             return mse <= max_weighted_mse
 
         constraint_kind = "distortion_ceiling"
-        target = max_weighted_mse
 
     lo, hi = lambda_lo, lambda_hi
     if constraint_kind == "byte_budget":
@@ -524,6 +664,7 @@ def solve_per_subband_waterfill(
         total_coeffs=total_coeffs,
         target_total_bytes=target_total_bytes,
         max_weighted_mse=max_weighted_mse,
+        solver_backend="lagrangian_lambda_bisection_supported_hull_fallback",
     )
 
 
@@ -531,29 +672,40 @@ def emit_actuator_quant_steps(
     solution: WaterfillSolution,
     *,
     frames: Sequence[str] = ("frame_0_details", "frame_1_details"),
+    require_complete: bool = True,
 ) -> dict[str, float]:
     """Convert a solution into the actuator's ``entropy_detail_quantization_steps`` map.
 
     The report's RD curves are frame-agnostic (aggregated across frames), so the
     solved per-(level, orientation) ``Δ`` is applied to every frame's details at
     that level+orientation. Subbands the solver left at keep-raw (no
-    quantization, ``chosen_quant_step is None``) are omitted from the map so the
-    actuator stores them losslessly.
+    quantization, ``chosen_quant_step is None``) are omitted only when
+    ``require_complete=False``. The current entropy-coded detail materializer
+    requires complete maps, so the default fails closed rather than silently
+    applying a partial storage policy.
 
     The returned dict is directly consumable by
     ``Z8JointCoefficientWaterfillConfig(entropy_detail_quantization_steps=...)``
     and every key round-trips through ``_parse_entropy_detail_step_key``.
     """
 
+    keep_raw: list[str] = []
     steps: dict[str, float] = {}
     for choice in solution.choices:
         if choice.chosen_quant_step is None:
+            keep_raw.append(choice.name)
             continue
         for frame in frames:
             if frame not in ("frame_0_details", "frame_1_details"):
                 raise ValueError(f"unsupported frame key: {frame!r}")
             key = f"{frame}:{choice.level}:{choice.orientation}"
             steps[key] = float(choice.chosen_quant_step)
+    if keep_raw and require_complete:
+        raise ValueError(
+            "actuator entropy_detail_quantization_steps map is incomplete; "
+            "current Z8 materializer requires a step for every detail subband: "
+            + ",".join(keep_raw)
+        )
     return steps
 
 
@@ -618,13 +770,21 @@ def build_rd_waterfill_schedule_from_headroom_report(
         max_weighted_mse=max_weighted_mse,
         lambda_value=lambda_value,
     )
-    steps = emit_actuator_quant_steps(solution)
+    keep_raw_subbands = [
+        choice.name for choice in solution.choices if choice.chosen_quant_step is None
+    ]
+    steps = emit_actuator_quant_steps(solution, require_complete=False)
     blockers = _coverage_blockers(
         report_obj,
         require_full_archive_coverage=require_full_archive_coverage,
     )
     if not steps:
         blockers.append("waterfill_selected_keep_raw_for_all_subbands")
+    if keep_raw_subbands:
+        blockers.append(
+            "materializer_step_map_incomplete_keep_raw_subbands:"
+            + ",".join(keep_raw_subbands)
+        )
     chosen = [
         {
             "aggregate_subband": choice.name,
@@ -643,6 +803,18 @@ def build_rd_waterfill_schedule_from_headroom_report(
         }
         for choice in solution.choices
     ]
+    schedule_sha256 = _source_report_sha256(
+        {
+            "strategy": "per_subband_lagrangian_rd_waterfill",
+            "steps": sorted(steps.items()),
+            "keep_raw_subbands": keep_raw_subbands,
+            "target_total_bytes": target_total_bytes,
+            "target_detail_byte_fraction": target_detail_byte_fraction,
+            "max_weighted_mse": max_weighted_mse,
+            "lambda_value": lambda_value,
+            "rate_field": rate_field,
+        }
+    )
     return {
         "schema": "z8_entropy_delta_schedule.v2",
         "purpose": (
@@ -667,7 +839,9 @@ def build_rd_waterfill_schedule_from_headroom_report(
         "target_detail_byte_fraction": target_detail_byte_fraction,
         "max_weighted_mse": max_weighted_mse,
         "lambda_value": lambda_value,
+        "schedule_sha256": schedule_sha256,
         "entropy_detail_quantization_steps": steps,
+        "keep_raw_subbands": keep_raw_subbands,
         "chosen_subbands": chosen,
         "waterfill_solution": solution.as_dict(),
         "blockers": blockers,
