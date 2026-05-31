@@ -238,7 +238,13 @@ def entropy_coder_runtime_adapter_manifest(coder_family: str) -> dict[str, Any]:
         "network_access": False,
         "sidecar_fetch": False,
         "runtime_adapter_ready": True,
-        "contest_runtime_decoder_adapter_ready": True,
+        "runtime_adapter_scope": "member_decode_helper_only",
+        "contest_runtime_decoder_adapter_ready": False,
+        "contest_runtime_decoder_adapter_integrated": False,
+        "contest_runtime_adapter_integrated": False,
+        "readiness_blockers": [
+            "contest_runtime_decoder_adapter_integration_missing"
+        ],
         "ready_for_exact_eval_dispatch": False,
         "score_claim": False,
         "promotion_eligible": False,
@@ -277,4 +283,3 @@ __all__ = [
     "range_lzma_prototype_decode",
     "range_lzma_prototype_encode",
 ]
-

@@ -132,6 +132,24 @@ class _IncompleteCustodyMlxArchiveAdapter(_FixtureArchiveAdapter):
         ]
 
 
+class _NestedRuntimeManifestArchiveAdapter(_FixtureArchiveAdapter):
+    adapter_id = "fixture_nested_runtime_manifest_adapter"
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: Mapping[str, Any],
+    ) -> Sequence[Mapping[str, Any]]:
+        row = dict(super().emit_archive_bound_candidate_rows(context)[0])
+        row.pop("runtime_adapter_ready")
+        row["runtime_adapter_manifest"] = {
+            "schema": "fixture_nested_runtime_manifest.v1",
+            "runtime_adapter_ready": True,
+            "contest_runtime_decoder_adapter_ready": True,
+            "decode_only_receiver_contract": True,
+        }
+        return [row]
+
+
 def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     tmp_path: Path,
 ) -> None:
@@ -164,6 +182,23 @@ def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     assert package["posterior_update_hooks"][0]["schema"] == (ARCHIVE_BOUND_CANDIDATE_POSTERIOR_HOOK_SCHEMA)
     extracted = archive_bound_candidate_contracts_from_payload(package)
     assert [contract["contract_key"] for contract in extracted] == [contract["contract_key"]]
+
+
+def test_archive_contract_consumes_nested_runtime_adapter_manifest(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _NestedRuntimeManifestArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+
+    contract = package["candidate_rows"][0]["archive_bound_candidate_contract"]
+    assert contract["runtime_adapter_ready"] is True
+    assert contract["contest_runtime_decoder_adapter_ready"] is True
+    assert contract["runtime_adapter_manifest"]["schema"] == (
+        "fixture_nested_runtime_manifest.v1"
+    )
+    assert "archive_bound_receiver_runtime_proof_missing" not in contract["blockers"]
 
 
 def test_mlx_triage_fails_closed_on_incomplete_archive_custody(

@@ -842,6 +842,7 @@ def archive_bound_candidate_contract_fields_for_row(
         "runtime_adapter_manifest": runtime_manifest,
         "contest_runtime_decoder_adapter_ready": (
             row.get("contest_runtime_decoder_adapter_ready") is True
+            or runtime_manifest.get("contest_runtime_decoder_adapter_ready") is True
             or bool(row.get("runtime_content_tree_sha256"))
         ),
         "semantic_payload_changed": row.get("semantic_payload_changed") is True,
@@ -1107,6 +1108,10 @@ def build_archive_bound_candidate_contract(
         is True,
         "contest_runtime_decoder_adapter_ready": (
             candidate.get("contest_runtime_decoder_adapter_ready") is True
+            or _mapping(candidate.get("runtime_adapter_manifest")).get(
+                "contest_runtime_decoder_adapter_ready"
+            )
+            is True
         ),
         "archive_file_custody": file_custody,
         "candidate_archive": {

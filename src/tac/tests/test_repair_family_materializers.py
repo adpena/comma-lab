@@ -817,9 +817,26 @@ def test_byte_transform_executor_mutates_fec6_selector_payload_when_detected(
         assert prototype["runtime_adapter_scope"] == "member_decode_helper_only"
         assert prototype["contest_runtime_decoder_adapter_ready"] is False
         assert prototype["contest_runtime_adapter_integrated"] is False
-        assert prototype["runtime_adapter_manifest"]["schema"] == (REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA)
-        proof = json.loads((tmp_path / prototype["runtime_consumption_proof_path"]).read_text(encoding="utf-8"))
-        assert proof["runtime_adapter_manifest"]["schema"] == (REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA)
+        assert prototype["runtime_adapter_manifest"]["schema"] == (
+            REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA
+        )
+        assert prototype["runtime_adapter_manifest"]["runtime_adapter_scope"] == (
+            "member_decode_helper_only"
+        )
+        assert prototype["runtime_adapter_manifest"][
+            "contest_runtime_decoder_adapter_ready"
+        ] is False
+        assert "contest_runtime_decoder_adapter_integration_missing" in prototype[
+            "runtime_adapter_manifest"
+        ]["readiness_blockers"]
+        proof = json.loads(
+            (tmp_path / prototype["runtime_consumption_proof_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        assert proof["runtime_adapter_manifest"]["schema"] == (
+            REPAIR_ENTROPY_CODER_RUNTIME_ADAPTER_MANIFEST_SCHEMA
+        )
         assert proof["runtime_consumption_probe"]["decoder_adapter_invoked"] is True
         assert proof["proof_scope"] == "encoded_member_decodes_to_source_member_payload"
         assert proof["runtime_adapter_scope"] == "member_decode_helper_only"
