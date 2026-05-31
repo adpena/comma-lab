@@ -62,6 +62,13 @@ from tac.substrates.hprc.resolution_contract import (
     RGB_CHANNEL_COUNT,
     hprc_resolution_contract,
 )
+from tac.substrates.hprc.training_adapter import (
+    HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA,
+    HPRC_LONG_TRAINING_SUBSTRATE_ID,
+    HprcCompactReceiverLongTrainingAdapter,
+    HprcCompactReceiverTrainingModel,
+    HprcGainBounds,
+)
 
 __all__ = [
     "CONTEST_FRAME_COUNT",
@@ -72,6 +79,8 @@ __all__ = [
     "HPRC_CAMPAIGN_MANIFEST_SCHEMA",
     "HPRC_EXACT_READINESS_REFUSAL_SCHEMA",
     "HPRC_FAMILY_BINDINGS",
+    "HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA",
+    "HPRC_LONG_TRAINING_SUBSTRATE_ID",
     "HPRC_MAGIC",
     "HPRC_OPTIMIZATION_LEVERS",
     "HPRC_RESOLUTION_CONTRACT_SCHEMA",
@@ -83,7 +92,10 @@ __all__ = [
     "PR95_RGB_COLOR_TRANSFORM_ID",
     "RGB_CHANNEL_COUNT",
     "HprcCampaignRunResult",
+    "HprcCompactReceiverLongTrainingAdapter",
+    "HprcCompactReceiverTrainingModel",
     "HprcFamilyBinding",
+    "HprcGainBounds",
     "HprcOptimizationLever",
     "HprcPacket",
     "HprcPacketConfig",

@@ -1,0 +1,159 @@
+# SPDX-License-Identifier: MIT
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+import tac.substrates.hprc.archive_candidate as hprc_archive_candidate
+from tac.substrates.hprc.archive import parse_hprc_packet
+from tac.substrates.hprc.learned_receiver import (
+    COMPACT_RECEIVER_MODE,
+    compact_receiver_reconstruction_metrics,
+    decode_compact_receiver_packet,
+)
+from tac.substrates.hprc.training_adapter import (
+    HPRC_LONG_TRAINING_SUBSTRATE_ID,
+    HprcCompactReceiverLongTrainingAdapter,
+)
+from tac.training.long_training_canonical import (
+    CurriculumStage,
+    LongTrainingConfig,
+    run_long_training,
+    validate_substrate_adapter,
+)
+from tools import run_hprc_compact_receiver_training as hprc_training_tool
+
+
+def _frames() -> np.ndarray:
+    y = np.arange(8, dtype=np.float32)[:, None]
+    x = np.arange(10, dtype=np.float32)[None, :]
+    frames = []
+    for frame_index in range(6):
+        frame = np.empty((8, 10, 3), dtype=np.float32)
+        frame[:, :, 0] = 32 + frame_index * 4 + x
+        frame[:, :, 1] = 48 + frame_index * 2 + y
+        frame[:, :, 2] = 64 + frame_index + x + y
+        frames.append(frame)
+    return np.stack(frames, axis=0).clip(0, 255).astype(np.uint8)
+
+
+def test_hprc_training_adapter_conforms_and_exports_packet(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    adapter = HprcCompactReceiverLongTrainingAdapter(
+        _frames(),
+        basis_count=4,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        initial_latent_gain=0.0,
+        initial_residual_gain=0.0,
+        initial_receiver_state_gain=0.0,
+        emit_archive_bound_candidate_package=False,
+        source_manifest={"unit_test": "hprc_training_adapter"},
+    )
+
+    validate_substrate_adapter(adapter)
+    batch = adapter.sample_batch(batch_size=2, seed=123)
+    before = adapter.loss_fn(adapter.model, batch, {"recon": 1.0})["total"]
+    for _ in range(12):
+        adapter.train_step(batch, learning_rate=0.01, loss_weights={"recon": 1.0})
+    after = adapter.loss_fn(adapter.model, batch, {"recon": 1.0})["total"]
+    assert after < before
+
+    archive_path, archive_sha, archive_bytes = adapter.export_archive(adapter.model, tmp_path)
+    assert archive_path.is_file()
+    assert len(archive_sha) == 64
+    assert archive_bytes == archive_path.stat().st_size
+    export_manifest = json.loads((tmp_path / "hprc_compact_receiver_training_export.json").read_text())
+    assert export_manifest["receiver_proof_requested"] is False
+    assert export_manifest["score_claim"] is False
+
+    packet = parse_hprc_packet(
+        (tmp_path / "hprc_compact_receiver_archive_export" / "0.bin").read_bytes()
+    )
+    compact = decode_compact_receiver_packet(packet)
+    assert compact.manifest["hprc_receiver_mode"] == COMPACT_RECEIVER_MODE
+    assert compact.manifest["trained_renderer_export_ready"] is True
+    metrics = compact_receiver_reconstruction_metrics(compact, _frames())
+    assert metrics["score_claim"] is False
+    assert metrics["mse_rgb255"] < before
+
+
+def test_hprc_training_adapter_runs_canonical_long_training(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    adapter = HprcCompactReceiverLongTrainingAdapter(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        initial_latent_gain=0.0,
+        initial_residual_gain=0.0,
+        initial_receiver_state_gain=0.0,
+        emit_archive_bound_candidate_package=False,
+        source_manifest={"unit_test": "canonical_long_training"},
+    )
+    config = LongTrainingConfig(
+        substrate_id=HPRC_LONG_TRAINING_SUBSTRATE_ID,
+        lane_id="lane_hprc_compact_receiver_training_unit_20260531",
+        epochs=3,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(
+                name="gain_fit",
+                start_epoch=0,
+                end_epoch=3,
+                loss_weights={"recon": 1.0},
+            ),
+        ),
+        checkpoint_interval_epochs=1,
+        early_stopping_patience=10,
+        learning_rate=0.01,
+        output_dir=tmp_path / "hprc_long_training",
+        notes="Unit smoke for HPRC compact receiver train/export adapter.",
+    )
+
+    artifact = run_long_training(adapter, config)
+
+    assert artifact.substrate_id == HPRC_LONG_TRAINING_SUBSTRATE_ID
+    assert artifact.archive_path is not None
+    assert artifact.archive_sha256 is not None
+    assert artifact.archive_bytes is not None and artifact.archive_bytes > 0
+    assert artifact.score_claim is False
+    assert artifact.ready_for_exact_eval_dispatch is False
+    assert artifact.substrate_artifact_metadata["receiver_mode"] == COMPACT_RECEIVER_MODE
+    assert Path(artifact.telemetry_path).is_file()
+
+
+def test_hprc_training_cli_materializes_storage_custody_result(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    frames_path = tmp_path / "frames.npy"
+    np.save(frames_path, _frames())
+
+    exit_code = hprc_training_tool.main(
+        [
+            "--frames-npy",
+            frames_path.as_posix(),
+            "--output-dir",
+            (tmp_path / "hprc_cli_out").as_posix(),
+            "--epochs",
+            "2",
+            "--batch-pair-indices-per-step",
+            "2",
+            "--learning-rate",
+            "0.01",
+            "--skip-runtime-consumption-proof",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == hprc_training_tool.HPRC_LONG_TRAINING_RESULT_SCHEMA
+    assert payload["runtime_consumption_proof_requested"] is False
+    assert payload["artifact"]["archive_path"]
+    assert Path(payload["result_path"]).is_file()
+    assert payload["score_claim"] is False

@@ -98,6 +98,10 @@ def test_hprc_campaign_emits_refusal_and_resolution_contract(
     assert manifest["resolution_contract"]["scorer_preprocess"]["height"] == 384
     assert manifest["resolution_contract"]["posenet"]["frames_per_sample"] == 2
     assert manifest["queue_next_actions"][0]["id"] == "hprc_v1_train_export_archive"
+    assert (
+        manifest["queue_next_actions"][0]["status"]
+        == "ready_via_hprc_compact_receiver_long_training_adapter"
+    )
     assert manifest["campaign_taxonomy"]["score_claim"] is False
 
 

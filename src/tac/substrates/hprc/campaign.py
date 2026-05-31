@@ -216,7 +216,8 @@ def build_hprc_campaign_manifest(
             {
                 "id": "hprc_v1_train_export_archive",
                 "resource_kind": "local_mlx",
-                "status": "blocked_until_trained_receiver_implemented",
+                "status": "ready_via_hprc_compact_receiver_long_training_adapter",
+                "adapter": "tac.substrates.hprc.training_adapter.HprcCompactReceiverLongTrainingAdapter",
             },
             {
                 "id": "pr95_control_full_frame_inflate_parity",
