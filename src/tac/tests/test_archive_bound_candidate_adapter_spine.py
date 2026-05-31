@@ -404,6 +404,19 @@ def test_archive_contract_demotes_partial_predictive_stack_runtime(
         incumbent_score=0.2,
         archive_contract_surfaces=[package],
     )
+    assert (
+        portfolio["portfolio_summary"]["runtime_payload_materializer_backlog_count"]
+        == len(runtime_consumption["next_materializer_tasks"])
+    )
+    portfolio_backlog = portfolio["runtime_payload_materializer_backlog"]
+    assert len(portfolio_backlog) == len(
+        runtime_consumption["next_materializer_tasks"]
+    )
+    assert portfolio_backlog[0]["work_selection_kind"] == (
+        "runtime_payload_materializer_or_blocker_work"
+    )
+    assert portfolio_backlog[0]["budget_spend_allowed"] is False
+    assert portfolio_backlog[0]["blocked_exact_promotion_until_task_lands"] is True
     portfolio_row = portfolio["ranked_rows"][0]
     assert portfolio_row["operator_next_action"] == (
         "build_predictive_stack_runtime_payload_adapter_before_exact_promotion"

@@ -49,6 +49,9 @@ from tac.repo_io import json_text, repo_relative, sha256_file
 SCHEMA = "cross_family_candidate_portfolio.v1"
 ROW_SCHEMA = "cross_family_candidate_portfolio_row.v1"
 TOOL = "tac.optimization.cross_family_candidate_portfolio"
+RUNTIME_PAYLOAD_MATERIALIZER_BACKLOG_ROW_SCHEMA = (
+    "cross_family_runtime_payload_materializer_backlog_row.v1"
+)
 DROP_MANY_GREEDY_VERDICT_SCHEMA = (
     "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1"
 )
@@ -2922,6 +2925,66 @@ def _build_operator_action_rows(
     return rows
 
 
+def _runtime_payload_materializer_backlog_rows(
+    ranked_rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for row in ranked_rows:
+        metadata = row.get("source_metadata")
+        if not isinstance(metadata, Mapping):
+            continue
+        tasks = _string_list(metadata.get("runtime_payload_next_materializer_tasks"))
+        if not tasks:
+            continue
+        runtime_payload = (
+            metadata.get("runtime_payload_consumption")
+            if isinstance(metadata.get("runtime_payload_consumption"), Mapping)
+            else {}
+        )
+        contract = (
+            metadata.get("archive_bound_candidate_contract")
+            if isinstance(metadata.get("archive_bound_candidate_contract"), Mapping)
+            else {}
+        )
+        for task_index, task in enumerate(tasks):
+            out.append(
+                {
+                    "schema": RUNTIME_PAYLOAD_MATERIALIZER_BACKLOG_ROW_SCHEMA,
+                    "candidate_id": row.get("candidate_id"),
+                    "family_id": row.get("family_id"),
+                    "source_kind": row.get("source_kind"),
+                    "operator_action_rank": row.get("operator_action_rank"),
+                    "rank": row.get("rank"),
+                    "contract_key": metadata.get("contract_key")
+                    or contract.get("contract_key"),
+                    "candidate_archive": dict(
+                        contract.get("candidate_archive")
+                        if isinstance(contract.get("candidate_archive"), Mapping)
+                        else {}
+                    ),
+                    "runtime_payload_materializer_task": task,
+                    "task_index": task_index,
+                    "runtime_payload_consumption": dict(runtime_payload),
+                    "work_selection_kind": (
+                        "runtime_payload_materializer_or_blocker_work"
+                    ),
+                    "operator_next_action": (
+                        "build_predictive_stack_runtime_payload_adapter_before_exact_promotion"
+                    ),
+                    "blocked_exact_promotion_until_task_lands": True,
+                    "budget_spend_allowed": False,
+                    "ready_for_budget_spend": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "allowed_use": (
+                        "bounded_runner_runtime_payload_materializer_work_selection"
+                    ),
+                    "forbidden_use": "score_claim_budget_spend_or_dispatch_authority",
+                    **FALSE_AUTHORITY,
+                }
+            )
+    return out
+
+
 def build_cross_family_candidate_portfolio(
     *,
     incumbent_score: float,
@@ -3066,6 +3129,9 @@ def build_cross_family_candidate_portfolio(
         row["operator_next_action"] = _operator_action_for_row(row)
         row["operator_action_priority"] = list(_operator_action_priority(row))
     operator_action_rows = _build_operator_action_rows(ranked_rows)
+    runtime_payload_backlog_rows = _runtime_payload_materializer_backlog_rows(
+        operator_action_rows
+    )
 
     source_counts: dict[str, int] = {}
     for candidate in candidates:
@@ -3144,6 +3210,9 @@ def build_cross_family_candidate_portfolio(
             ),
             "candidate_archive_custody_ready_count": custody_ready_count,
             "materialization_required_count": materialization_required_count,
+            "runtime_payload_materializer_backlog_count": len(
+                runtime_payload_backlog_rows
+            ),
             "source_counts": dict(sorted(source_counts.items())),
             "observation_row_count": len(normalized_observations),
             "posterior_ledger_row_count": len(posterior_ledger_rows or ()),
@@ -3174,6 +3243,7 @@ def build_cross_family_candidate_portfolio(
         },
         "ranked_rows": ranked_rows,
         "operator_action_rows": operator_action_rows,
+        "runtime_payload_materializer_backlog": runtime_payload_backlog_rows,
     }
 
 

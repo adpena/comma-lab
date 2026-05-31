@@ -337,6 +337,10 @@ def _top_operator_actions(
         metadata = _mapping(row.get("source_metadata"))
         observation_feedback = _mapping(metadata.get("observation_feedback"))
         response_model = _mapping(metadata.get("observation_response_model"))
+        runtime_payload_tasks = [
+            str(task)
+            for task in metadata.get("runtime_payload_next_materializer_tasks") or []
+        ]
         blockers = [str(blocker) for blocker in row.get("dispatch_blockers") or []]
         out.append(
             {
@@ -356,6 +360,10 @@ def _top_operator_actions(
                 ),
                 "observation_feedback_status": observation_feedback.get("status"),
                 "observation_response_model_active": response_model.get("active"),
+                "runtime_payload_materializer_task_count": len(
+                    runtime_payload_tasks
+                ),
+                "runtime_payload_materializer_tasks": runtime_payload_tasks[:8],
                 "dispatch_blocker_count": len(blockers),
                 "dispatch_blockers": blockers[:8],
                 **_false_authority_payload(),
@@ -385,6 +393,11 @@ def _build_action_summary(
             None if summary_json_out is None else str(summary_json_out)
         ),
         "portfolio_summary": dict(_mapping(portfolio.get("portfolio_summary"))),
+        "runtime_payload_materializer_backlog": [
+            dict(row)
+            for row in portfolio.get("runtime_payload_materializer_backlog") or []
+            if isinstance(row, Mapping)
+        ],
         "pairset_observation_response_model": model,
         "pairset_component_marginal_model": component_model,
         "drop_many_greedy_verdict_model": drop_many_greedy_model,
