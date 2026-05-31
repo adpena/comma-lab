@@ -205,6 +205,35 @@ def test_full_video_vjp_surface_bundle_rejects_partial_or_stale_shards() -> None
         )
 
 
+def test_full_video_vjp_surface_bundle_rejects_nonfinite_shards_and_outputs(tmp_path: Path) -> None:
+    archive = _archive_bytes(num_pairs=2)
+    sha = build_z8_full_video_vjp_acquisition_plan(archive)["archive_sha256"]
+    bad_shard = _surface_shard(start=0, end=2, archive_sha=sha, value=0.0, shard_index=0)
+    bad_shard["joint_weight"].reshape(-1)[0] = np.nan
+
+    with pytest.raises(ValueError, match="joint_weight shard contains non-finite"):
+        assemble_z8_full_video_vjp_surface_bundle(
+            archive,
+            shard_surfaces=[bad_shard],
+            config=Z8FullVideoVjpAcquisitionConfig(pair_chunk_size=2),
+        )
+
+    good_bundle = assemble_z8_full_video_vjp_surface_bundle(
+        archive,
+        shard_surfaces=[
+            _surface_shard(start=0, end=2, archive_sha=sha, value=0.2, shard_index=0),
+        ],
+        config=Z8FullVideoVjpAcquisitionConfig(pair_chunk_size=2),
+    )
+    poisoned_bundle = dict(good_bundle)
+    poisoned_joint = np.array(good_bundle["joint_weight"], copy=True)
+    poisoned_joint.reshape(-1)[0] = np.nan
+    poisoned_bundle["joint_weight"] = poisoned_joint
+
+    with pytest.raises(ValueError, match="joint_weight contains non-finite"):
+        write_z8_full_video_vjp_surface_bundle(poisoned_bundle, tmp_path)
+
+
 def test_full_video_vjp_production_mode_requires_corpus_manifest() -> None:
     with pytest.raises(ValueError, match="corpus_manifest_path"):
         Z8FullVideoVjpAcquisitionConfig(target_mode=CORPUS_GENERALIZATION_MODE)

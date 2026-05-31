@@ -201,6 +201,9 @@ def _normalize_surface_array(value: Any, *, name: str) -> np.ndarray:
         raise ValueError(f"{name} must not be empty")
     if arr.ndim > 5:
         raise ValueError(f"{name} must have at most 5 dimensions; got {arr.shape}")
+    if not np.all(np.isfinite(arr)):
+        nonfinite = int(arr.size - np.count_nonzero(np.isfinite(arr)))
+        raise ValueError(f"{name} contains non-finite values ({nonfinite}/{arr.size})")
     return arr
 
 
@@ -1119,10 +1122,22 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                             "cumulative_receiver_mse_proxy_skipped_by_full_video_local_replay"
                         )
                     cumulative_mse = float(cumulative_distortion.get("mse", float("inf")))
-                    guard_ok = cfg.max_cumulative_mse is None or (
-                        cumulative_distortion.get("small_receiver_distortion_measured") is True
-                        and cumulative_mse <= float(cfg.max_cumulative_mse)
-                    )
+                    acceptance_blockers: list[str] = []
+                    if measure_receiver_proxy:
+                        guard_ok = cfg.max_cumulative_mse is None or (
+                            cumulative_distortion.get("small_receiver_distortion_measured") is True
+                            and cumulative_mse <= float(cfg.max_cumulative_mse)
+                        )
+                    elif local_replay_evaluator is not None:
+                        guard_ok = True
+                    elif not cfg.mutate_coefficients:
+                        guard_ok = True
+                        acceptance_blockers.append("rate_only_storage_probe_no_receiver_proxy")
+                    else:
+                        guard_ok = False
+                        acceptance_blockers.append(
+                            "mutating_candidate_requires_receiver_proxy_or_full_video_replay"
+                        )
                     candidate_proxy_objective = _candidate_proxy_objective(
                         result=result,
                         cumulative_distortion=cumulative_distortion,
@@ -1133,6 +1148,10 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                     objective_source = "receiver_mse_rate_proxy"
                     if local_replay_evaluator is not None and not measure_receiver_proxy:
                         objective_source = "rate_proxy_prefilter_before_full_video_local_replay"
+                    elif not measure_receiver_proxy and not cfg.mutate_coefficients:
+                        objective_source = "rate_only_storage_probe"
+                    elif not measure_receiver_proxy:
+                        objective_source = "rate_only_mutation_probe_blocked"
                     candidate_metadata = {
                         "joint_weight_quantile": float(joint_q),
                         "coefficient_deadzone_quantile": float(deadzone_q),
@@ -1150,6 +1169,7 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         "receiver_proxy_objective": float(candidate_proxy_objective),
                         "objective_source": objective_source,
                         "guard_ok": bool(guard_ok),
+                        "acceptance_blockers": acceptance_blockers,
                         "full_video_local_replay_required": local_replay_evaluator is not None,
                         "full_video_local_replay_prefilter_top_k": cfg.local_replay_prefilter_top_k,
                         "full_video_local_replay_report": None,
@@ -1209,10 +1229,11 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                 if local_objective is not None:
                     row["proxy_objective"] = float(local_objective)
                     row["objective_source"] = "full_video_local_replay"
-                row["full_video_local_replay_report"] = local_replay_report
-                row["full_video_local_replay_blockers"] = local_replay_blockers
-                row["hard_archive_projection_replay_executed"] = True
-                row["guard_ok"] = bool(row["guard_ok"] and not local_replay_blockers)
+                    row["full_video_local_replay_report"] = local_replay_report
+                    row["full_video_local_replay_blockers"] = local_replay_blockers
+                    row["acceptance_blockers"] = list(row.get("acceptance_blockers") or []) + local_replay_blockers
+                    row["hard_archive_projection_replay_executed"] = True
+                    row["guard_ok"] = bool(row["guard_ok"] and not local_replay_blockers)
         for row in iteration_candidates:
             mutated = bytes(row.pop("_mutated_archive_bytes"))
             row.pop("_candidate_metadata", None)

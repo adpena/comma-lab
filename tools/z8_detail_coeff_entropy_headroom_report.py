@@ -37,6 +37,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from dataclasses import dataclass, field
@@ -318,6 +319,7 @@ def build_report(
         )
 
     return {
+        "schema": "z8_detail_coeff_entropy_headroom_report.v1",
         "tool": "z8_detail_coeff_entropy_headroom_report",
         "purpose": (
             "Measurable per-subband entropy headroom on the REAL Z8HPC1 wavelet "
@@ -327,6 +329,7 @@ def build_report(
         ),
         **NON_PROMOTABLE_MARKERS,
         "archive_path": str(archive_path),
+        "archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
         "archive_total_bytes": len(archive_bytes),
         "wavelet_blob_bytes": len(parsed.wavelet_coeffs_blob),
         "total_pairs_in_archive": total_pairs,

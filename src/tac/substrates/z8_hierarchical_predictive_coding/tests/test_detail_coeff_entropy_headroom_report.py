@@ -10,6 +10,7 @@ Laplacian fixtures unit-test the math, not a fabricated empirical anchor.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import math
 import sys
@@ -218,6 +219,8 @@ def test_live_archive_headroom_is_large() -> None:
     )
     assert report["score_claim"] is False
     assert report["promotable"] is False
+    assert report["schema"] == "z8_detail_coeff_entropy_headroom_report.v1"
+    assert report["archive_sha256"] == hashlib.sha256(_LIVE_ARCHIVE.read_bytes()).hexdigest()
     assert report["pairs_measured"] == 2
     assert report["total_detail_coeffs_measured"] > 0
     # The current raw-f32->brotli detail blob is dominated by headroom (>=80% at the

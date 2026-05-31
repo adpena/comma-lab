@@ -8,6 +8,9 @@ import argparse
 import json
 from pathlib import Path
 
+from tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule import (
+    load_entropy_detail_quantization_steps_json,
+)
 from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill import (
     Z8JointCoefficientWaterfillConfig,
     load_joint_p18_p19_surface_file,
@@ -41,12 +44,55 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-archive-zip", action="store_true")
     parser.add_argument("--emit-receiver-proof", action="store_true")
+    parser.add_argument(
+        "--no-mutate-coefficients",
+        action="store_true",
+        help=(
+            "Run a storage-layout-only materialization. Useful for lossless "
+            "Brotli preconditioning probes where coefficient signal must not change."
+        ),
+    )
+    parser.add_argument(
+        "--entropy-code-quantized-details",
+        action="store_true",
+        help="Store Z8 detail subbands with the v2 quantized per-subband entropy codec.",
+    )
+    parser.add_argument(
+        "--entropy-detail-quantization-step",
+        type=float,
+        default=None,
+        help=(
+            "Storage quantization step for the v2 detail entropy codec. "
+            "Defaults to --quantization-step when omitted."
+        ),
+    )
+    parser.add_argument(
+        "--entropy-detail-quantization-steps-json",
+        type=Path,
+        default=None,
+        help=(
+            "JSON object or schedule report containing entropy_detail_quantization_steps "
+            "keyed as frame_0_details:level:lh. Mutually exclusive with "
+            "--entropy-detail-quantization-step."
+        ),
+    )
+    parser.add_argument(
+        "--lossless-brotli-precondition-details",
+        action="store_true",
+        help=(
+            "Store float32 detail subbands in byte-shuffled planes before Brotli. "
+            "This is reversible and preserves coefficient signal exactly."
+        ),
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     surface = load_joint_p18_p19_surface_file(args.surface)
+    entropy_detail_quantization_steps = load_entropy_detail_quantization_steps_json(
+        args.entropy_detail_quantization_steps_json
+    )
     config = Z8JointCoefficientWaterfillConfig(
         joint_weight_quantile=args.joint_weight_quantile,
         coefficient_deadzone_quantile=args.coefficient_deadzone_quantile,
@@ -55,8 +101,13 @@ def main() -> int:
         max_pairs=args.max_pairs,
         emit_archive_zip=not args.no_archive_zip,
         emit_receiver_proof=args.emit_receiver_proof,
+        mutate_coefficients=not args.no_mutate_coefficients,
         require_full_video_surface_coverage=not args.allow_broadcast_surface,
         require_surface_archive_freshness=not args.allow_stale_surface,
+        entropy_code_quantized_details=bool(args.entropy_code_quantized_details),
+        entropy_detail_quantization_step=args.entropy_detail_quantization_step,
+        entropy_detail_quantization_steps=entropy_detail_quantization_steps,
+        lossless_brotli_precondition_details=bool(args.lossless_brotli_precondition_details),
     )
     manifest = materialize_joint_p18_p19_deadzone_candidate(
         args.archive_bin.read_bytes(),

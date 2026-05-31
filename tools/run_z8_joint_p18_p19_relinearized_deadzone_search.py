@@ -8,6 +8,9 @@ import argparse
 import json
 from pathlib import Path
 
+from tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule import (
+    load_entropy_detail_quantization_steps_json,
+)
 from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill import (
     Z8JointCoefficientRelinearizationSearchConfig,
     load_joint_p18_p19_surface_file,
@@ -20,16 +23,6 @@ def _float_tuple(raw: str) -> tuple[float, ...]:
     if not values:
         raise argparse.ArgumentTypeError("expected comma-separated floats")
     return values
-
-
-def _load_entropy_detail_steps(path: Path | None) -> dict[str, float] | None:
-    if path is None:
-        return None
-    payload = json.loads(path.read_text())
-    raw_steps = payload.get("entropy_detail_quantization_steps", payload)
-    if not isinstance(raw_steps, dict):
-        raise ValueError("entropy detail step JSON must be an object or contain entropy_detail_quantization_steps")
-    return {str(key): float(value) for key, value in raw_steps.items()}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -178,7 +171,7 @@ def _parse_hw(text: str) -> tuple[int, int]:
 def main() -> int:
     args = build_parser().parse_args()
     surfaces = [load_joint_p18_p19_surface_file(path) for path in args.surface]
-    entropy_detail_quantization_steps = _load_entropy_detail_steps(
+    entropy_detail_quantization_steps = load_entropy_detail_quantization_steps_json(
         args.entropy_detail_quantization_steps_json
     )
     surface_provider = None

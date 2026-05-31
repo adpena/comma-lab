@@ -871,6 +871,19 @@ def _as_array(row: Mapping[str, Any], key: str, *, dtype: Any) -> np.ndarray:
     arr = np.asarray(row[key], dtype=dtype)
     if arr.ndim != 5:
         raise ValueError(f"{key} shard must have shape (pairs, frames, H, W, C); got {arr.shape}")
+    if np.issubdtype(arr.dtype, np.floating) and not np.all(np.isfinite(arr)):
+        nonfinite = int(arr.size - np.count_nonzero(np.isfinite(arr)))
+        raise ValueError(f"{key} shard contains non-finite values ({nonfinite}/{arr.size})")
+    return arr
+
+
+def _finite_surface_array(value: Any, *, name: str, dtype: Any) -> np.ndarray:
+    arr = np.asarray(value, dtype=dtype)
+    if arr.size == 0:
+        raise ValueError(f"{name} must not be empty")
+    if np.issubdtype(arr.dtype, np.floating) and not np.all(np.isfinite(arr)):
+        nonfinite = int(arr.size - np.count_nonzero(np.isfinite(arr)))
+        raise ValueError(f"{name} contains non-finite values ({nonfinite}/{arr.size})")
     return arr
 
 
@@ -1057,10 +1070,12 @@ def write_z8_full_video_vjp_surface_bundle(
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     surface_path = out_dir / "z8_full_video_vjp_surface_bundle.npz"
+    joint_weight = _finite_surface_array(bundle["joint_weight"], name="joint_weight", dtype=np.float32)
+    rate_attack_deadzone_mask = np.asarray(bundle["rate_attack_deadzone_mask"], dtype=bool)
     np.savez_compressed(
         surface_path,
-        joint_weight=np.asarray(bundle["joint_weight"], dtype=np.float32),
-        rate_attack_deadzone_mask=np.asarray(bundle["rate_attack_deadzone_mask"], dtype=bool),
+        joint_weight=joint_weight,
+        rate_attack_deadzone_mask=rate_attack_deadzone_mask,
         linearization_archive_sha=np.asarray(str(bundle["linearization_archive_sha"])),
         evidence_scope=np.asarray(str(bundle["evidence_scope"])),
         target_mode=np.asarray(str(bundle["target_mode"])),
@@ -1124,12 +1139,23 @@ def write_z8_full_video_vjp_surface_shard(
             "pose_jacobian_abs",
         }
     }
+    joint_weight = _finite_surface_array(shard["joint_weight"], name="joint_weight", dtype=np.float32)
+    seg_grad = _finite_surface_array(
+        shard["segnet_argmax_gradient_abs"],
+        name="segnet_argmax_gradient_abs",
+        dtype=np.float32,
+    )
+    pose_grad = _finite_surface_array(
+        shard["pose_jacobian_abs"],
+        name="pose_jacobian_abs",
+        dtype=np.float32,
+    )
     np.savez_compressed(
         shard_path,
-        joint_weight=np.asarray(shard["joint_weight"], dtype=np.float32),
+        joint_weight=joint_weight,
         rate_attack_deadzone_mask=np.asarray(shard["rate_attack_deadzone_mask"], dtype=bool),
-        segnet_argmax_gradient_abs=np.asarray(shard["segnet_argmax_gradient_abs"], dtype=np.float32),
-        pose_jacobian_abs=np.asarray(shard["pose_jacobian_abs"], dtype=np.float32),
+        segnet_argmax_gradient_abs=seg_grad,
+        pose_jacobian_abs=pose_grad,
         shard_index=np.asarray(shard_index),
         pair_start=np.asarray(int(shard["pair_start"])),
         pair_end=np.asarray(int(shard["pair_end"])),

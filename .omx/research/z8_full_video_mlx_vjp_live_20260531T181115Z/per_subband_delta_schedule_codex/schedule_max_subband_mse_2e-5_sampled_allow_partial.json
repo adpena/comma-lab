@@ -1,0 +1,99 @@
+{
+  "axis_tag": "[macOS-CPU advisory]",
+  "blockers": [],
+  "chosen_subbands": [
+    {
+      "aggregate_subband": "L0_hh",
+      "distortion_mse": 0.0001874910667538643,
+      "level_idx": 0,
+      "live_codec_brotli_bytes_per_coeff": 0.07961,
+      "live_codec_method": "qi16_constriction_range",
+      "orientation": "hh",
+      "quant_step": 0.0625,
+      "selection_reason": "no_admissible_step_min_distortion_fallback"
+    },
+    {
+      "aggregate_subband": "L0_hl",
+      "distortion_mse": 0.00021605874644592404,
+      "level_idx": 0,
+      "live_codec_brotli_bytes_per_coeff": 0.11127,
+      "live_codec_method": "qi16_constriction_range",
+      "orientation": "hl",
+      "quant_step": 0.0625,
+      "selection_reason": "no_admissible_step_min_distortion_fallback"
+    },
+    {
+      "aggregate_subband": "L0_lh",
+      "distortion_mse": 0.0001959780347533524,
+      "level_idx": 0,
+      "live_codec_brotli_bytes_per_coeff": 0.08643,
+      "live_codec_method": "qi16_constriction_range",
+      "orientation": "lh",
+      "quant_step": 0.0625,
+      "selection_reason": "no_admissible_step_min_distortion_fallback"
+    },
+    {
+      "aggregate_subband": "L1_hh",
+      "distortion_mse": 0.0002239821624243632,
+      "level_idx": 1,
+      "live_codec_brotli_bytes_per_coeff": 0.12156,
+      "live_codec_method": "qi16_constriction_range",
+      "orientation": "hh",
+      "quant_step": 0.0625,
+      "selection_reason": "no_admissible_step_min_distortion_fallback"
+    },
+    {
+      "aggregate_subband": "L1_hl",
+      "distortion_mse": 0.00027192584821023047,
+      "level_idx": 1,
+      "live_codec_brotli_bytes_per_coeff": 0.21401,
+      "live_codec_method": "qi16_constriction_range",
+      "orientation": "hl",
+      "quant_step": 0.0625,
+      "selection_reason": "no_admissible_step_min_distortion_fallback"
+    },
+    {
+      "aggregate_subband": "L1_lh",
+      "distortion_mse": 0.0002331784344278276,
+      "level_idx": 1,
+      "live_codec_brotli_bytes_per_coeff": 0.14258,
+      "live_codec_method": "qi16_constriction_range",
+      "orientation": "lh",
+      "quant_step": 0.0625,
+      "selection_reason": "no_admissible_step_min_distortion_fallback"
+    }
+  ],
+  "entropy_detail_quantization_steps": {
+    "frame_0_details:0:hh": 0.0625,
+    "frame_0_details:0:hl": 0.0625,
+    "frame_0_details:0:lh": 0.0625,
+    "frame_0_details:1:hh": 0.0625,
+    "frame_0_details:1:hl": 0.0625,
+    "frame_0_details:1:lh": 0.0625,
+    "frame_1_details:0:hh": 0.0625,
+    "frame_1_details:0:hl": 0.0625,
+    "frame_1_details:0:lh": 0.0625,
+    "frame_1_details:1:hh": 0.0625,
+    "frame_1_details:1:hl": 0.0625,
+    "frame_1_details:1:lh": 0.0625
+  },
+  "evidence_grade": "macOS-CPU-advisory",
+  "max_subband_mse": 2e-05,
+  "pairs_measured": 6,
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "Per-subband detail quantization schedule selected from measured Z8 entropy headroom RD rows; consumed by the joint P18/P19 dead-zone materializers as entropy_detail_quantization_steps.",
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_materializer": true,
+  "require_full_archive_coverage": false,
+  "schedule_sha256": "2451d0bf517a15c432478030a3e65c53feec261f899d925c8c3de68eaf2b00fc",
+  "schema": "z8_entropy_delta_schedule.v1",
+  "score_claim": false,
+  "source_archive_path": "/Users/adpena/Projects/pact/experiments/results/z8_joint_p18_p19_deadzone_rate_attack/baseline/byte_closed_archive/0.bin",
+  "source_archive_sha256": "eb5d371c8d3c5afe0bff4b28b0ff98bc67bd562ea57d1aeef6b450c368ab9498",
+  "source_archive_total_bytes": 152069787,
+  "source_report_sha256": "28c55b75f2c7ab96b28cda805b32c0593df266763b613cea62176fac3ae66c63",
+  "source_report_tool": "z8_detail_coeff_entropy_headroom_report",
+  "source_wavelet_blob_bytes": 152040265,
+  "total_pairs_in_archive": 600
+}

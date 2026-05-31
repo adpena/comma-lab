@@ -320,6 +320,33 @@ def test_joint_p18_p19_accepts_per_subband_entropy_steps_without_global_step() -
     assert result["rate_report"]["after_detail_codec_summary"]["float32_detail_subband_count"] == 0
 
 
+def test_relinearized_search_propagates_per_subband_entropy_steps() -> None:
+    archive_bytes = _archive_bytes()
+    original = parse_archive(archive_bytes)
+    pyramids = parse_pair_blobs_from_wavelet_blob(original.wavelet_coeffs_blob)
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    result = run_joint_p18_p19_relinearized_deadzone_search(
+        archive_bytes,
+        surfaces=[_surface_for_archive(archive_bytes, joint_weight, pose_null_mask)],
+        config=Z8JointCoefficientRelinearizationSearchConfig(
+            joint_weight_quantiles=(1.0,),
+            coefficient_deadzone_quantiles=(1.0,),
+            quantization_steps=(0.25,),
+            max_iterations=1,
+            entropy_code_quantized_details=True,
+            entropy_detail_quantization_steps=_all_detail_step_keys(pyramids[0], 0.25),
+        ),
+    )
+
+    assert result["iterations_accepted"] == 1
+    accepted = result["accepted_candidates"][0]
+    assert accepted["rate_report"]["entropy_detail_quantization_step"] is None
+    assert accepted["rate_report"]["entropy_detail_quantization_steps"]
+    assert accepted["rate_report"]["after_detail_codec_summary"]["float32_detail_subband_count"] == 0
+
+
 def test_joint_p18_p19_can_emit_lossless_brotli_preconditioned_details() -> None:
     archive_bytes = _archive_bytes()
     joint_weight = np.ones((1, 2, 16, 16, 3), dtype=np.float32)
@@ -538,7 +565,7 @@ def test_relinearized_search_can_prefilter_before_expensive_full_video_replay() 
     assert result["iterations_accepted"] == 1
 
 
-def test_relinearized_search_can_run_rate_only_entropy_headroom_probe() -> None:
+def test_relinearized_search_blocks_mutating_rate_only_entropy_headroom_probe() -> None:
     archive_bytes = _archive_bytes()
     joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
     pose_null_mask = np.ones_like(joint_weight, dtype=bool)
@@ -557,13 +584,63 @@ def test_relinearized_search_can_run_rate_only_entropy_headroom_probe() -> None:
         ),
     )
 
-    assert result["iterations_accepted"] == 1
-    row = result["accepted_candidates"][0]
+    assert result["iterations_accepted"] == 0
+    row = result["candidate_grid"][0]
+    assert row["guard_ok"] is False
     assert row["receiver_mse_proxy_measured"] is False
+    assert row["objective_source"] == "rate_only_mutation_probe_blocked"
+    assert row["acceptance_blockers"] == [
+        "mutating_candidate_requires_receiver_proxy_or_full_video_replay"
+    ]
     assert row["incremental_distortion_report"]["blocker"] == (
         "receiver_mse_proxy_skipped_by_full_video_local_replay"
     )
     assert row["rate_report"]["entropy_code_quantized_details"] is True
+
+
+def test_relinearized_search_allows_storage_only_rate_probe_without_receiver_proxy() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    result = run_joint_p18_p19_relinearized_deadzone_search(
+        archive_bytes,
+        surfaces=[_surface_for_archive(archive_bytes, joint_weight, pose_null_mask)],
+        config=Z8JointCoefficientRelinearizationSearchConfig(
+            joint_weight_quantiles=(1.0,),
+            coefficient_deadzone_quantiles=(1.0,),
+            quantization_steps=(0.0,),
+            max_iterations=1,
+            measure_receiver_mse_proxy=False,
+            mutate_coefficients=False,
+            lossless_brotli_precondition_details=True,
+        ),
+    )
+
+    assert result["iterations_accepted"] == 1
+    row = result["accepted_candidates"][0]
+    assert row["guard_ok"] is True
+    assert row["objective_source"] == "rate_only_storage_probe"
+    assert row["acceptance_blockers"] == ["rate_only_storage_probe_no_receiver_proxy"]
+    assert row["coefficient_summary"]["dead_zoned_coefficients"] == 0
+
+
+def test_joint_p18_p19_deadzone_rejects_nonfinite_surface() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    joint_weight.reshape(-1)[0] = np.nan
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    with pytest.raises(ValueError, match="joint_weight contains non-finite"):
+        apply_joint_p18_p19_deadzone_to_z8_archive(
+            archive_bytes,
+            joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
+            config=Z8JointCoefficientWaterfillConfig(
+                joint_weight_quantile=1.0,
+                coefficient_deadzone_quantile=1.0,
+                quantization_step=0.25,
+            ),
+        )
 
 
 def test_joint_p18_p19_deadzone_rejects_stale_surface() -> None:
