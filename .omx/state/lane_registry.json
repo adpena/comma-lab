@@ -64988,11 +64988,11 @@
       "id": "lane_z8_export_bridge_and_archive_wire_20260531",
       "name": "Z8 MLX->PyTorch export bridge + export_archive_fn",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/export_z8_hier_pc_mlx_to_pytorch_state_dict.py + tools/probe_z8_archive_distinguishing_feature_byte_mutation.py + 9/9 NO-FAKE tests; parity byte-stable max_abs_01=0.0 [macOS-MLX research-signal]; wavelet PIXEL_CONSUMED"
         },
         "real_archive_empirical": {
           "status": false,
@@ -65015,8 +65015,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_z8_export_bridge_and_archive_wire_landed_20260531.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -65074,5 +65074,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T13:51:36Z"
+  "updated_at": "2026-05-31T13:56:19Z"
 }
