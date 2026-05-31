@@ -50,13 +50,12 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from tac.local_acceleration.mlx_to_pytorch_export import (
-    MLX_BRIDGE_FALSE_AUTHORITY_BLOCKERS,
     assign_mlx_param_by_dotted_name,
+    build_substrate_bridge_manifest,
     hash_file_sha256,
 )
 
@@ -226,18 +225,16 @@ def export_z6_v2_cargo_cult_unwind_mlx_to_pytorch(
         hardware_substrate="darwin_arm64_apple_silicon_mlx",
     )
 
-    manifest = {
-        "schema_version": Z6V2_BRIDGE_SCHEMA,
-        "generated_utc": datetime.now(UTC).isoformat(),
-        "tool": "tools/export_z6_v2_cargo_cult_unwind_mlx_to_pytorch_state_dict.py",
-        "mlx_state_dict_path": str(src),
-        "mlx_state_dict_sha256": inputs_sha,
-        "mlx_state_dict_bytes": src.stat().st_size,
-        "output_pytorch_state_dict": str(out_pt),
-        "pytorch_state_dict_sha256": file_sha,
-        "pytorch_state_dict_bytes": file_size,
-        "tensor_count": len(pytorch_sd),
-        "config": {
+    manifest = build_substrate_bridge_manifest(
+        schema_version=Z6V2_BRIDGE_SCHEMA,
+        tool="tools/export_z6_v2_cargo_cult_unwind_mlx_to_pytorch_state_dict.py",
+        source_state_dict_path=src,
+        output_pytorch_state_dict=out_pt,
+        source_state_dict_sha256=inputs_sha,
+        pytorch_state_dict_sha256=file_sha,
+        pytorch_state_dict_bytes=file_size,
+        tensor_count=len(pytorch_sd),
+        config={
             "num_pairs": int(num_pairs),
             "latent_dim": int(latent_dim),
             "ego_dim": int(ego_dim),
@@ -247,23 +244,16 @@ def export_z6_v2_cargo_cult_unwind_mlx_to_pytorch(
             "film_hidden_width": int(cfg.film_hidden_width),
             "cooperative_receiver_beta": float(cfg.cooperative_receiver_beta),
         },
-        "per_tensor": per_tensor,
-        "forward_parity": parity,
-        "axis_tag": "[predicted]",
-        "evidence_grade": "predicted",
-        "score_claim": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "promotable": False,
-        "blockers": list(MLX_BRIDGE_FALSE_AUTHORITY_BLOCKERS),
-        "operator_routable_next_step": (
+        per_tensor=per_tensor,
+        forward_parity=parity,
+        operator_routable_next_step=(
             "Pack Z6V2CU1 archive via tac.substrates.z6_v2_cargo_cult_unwind.archive.pack_archive, "
             "then route through tools/gate_mlx_candidate_contest_equivalence_z6_v2.py (Catalog #1265), "
             "then operator-authorize.py paired CPU+CUDA dispatch"
         ),
-        "provenance": provenance_to_dict(prov),
-    }
+        provenance=provenance_to_dict(prov),
+        extra_fields={"mlx_state_dict_bytes": src.stat().st_size},
+    )
     if parity_proof_out is not None:
         proof_path = Path(parity_proof_out)
         proof_path.parent.mkdir(parents=True, exist_ok=True)
