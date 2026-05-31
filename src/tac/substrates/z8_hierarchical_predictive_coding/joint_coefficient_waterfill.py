@@ -174,8 +174,9 @@ def _surface_digest(
     linearization_archive_sha: str | None = None,
 ) -> str:
     h = hashlib.sha256()
-    joint = np.ascontiguousarray(np.asarray(joint_weight, dtype=np.float64))
+    joint = np.ascontiguousarray(np.asarray(joint_weight))
     h.update(str(joint.shape).encode("utf-8"))
+    h.update(str(joint.dtype).encode("utf-8"))
     h.update(joint.tobytes())
     if safe_mask is not None:
         mask = np.ascontiguousarray(np.asarray(safe_mask, dtype=bool))
@@ -487,34 +488,33 @@ def _quantize_selected(
     projected_safe: np.ndarray | None,
     config: Z8JointCoefficientWaterfillConfig,
 ) -> tuple[np.ndarray, dict[str, Any]]:
-    coeff64 = np.asarray(coeff, dtype=np.float64)
-    if projected_joint.shape != coeff64.shape:
-        raise ValueError(f"projected_joint shape {projected_joint.shape} != coeff shape {coeff64.shape}")
+    coeff32 = np.asarray(coeff, dtype=np.float32)
+    if projected_joint.shape != coeff32.shape:
+        raise ValueError(f"projected_joint shape {projected_joint.shape} != coeff shape {coeff32.shape}")
     water_level = float(np.quantile(projected_joint, config.joint_weight_quantile))
     eligible = projected_joint <= water_level
     if config.pose_null_required:
         eligible = np.zeros_like(eligible, dtype=bool) if projected_safe is None else eligible & (projected_safe >= 0.5)
-    abs_coeff = np.abs(coeff64)
+    abs_coeff = np.abs(coeff32)
     if np.any(eligible):
         deadzone_threshold = float(np.quantile(abs_coeff[eligible], config.coefficient_deadzone_quantile))
     else:
         deadzone_threshold = 0.0
     changed = eligible & (abs_coeff <= deadzone_threshold)
-    out = coeff64.copy()
+    out = coeff32.copy()
     if config.quantization_step > 0.0:
-        coarse = np.round(out[eligible] / config.quantization_step) * (config.quantization_step)
+        coarse = np.round(out[eligible] / config.quantization_step) * config.quantization_step
         out[eligible] = coarse
     out[changed] = 0.0
-    out32 = out.astype(np.float32)
-    delta = out32.astype(np.float64) - coeff64
-    return out32, {
+    delta = out - coeff32
+    return out.astype(np.float32, copy=False), {
         "water_level": water_level,
         "deadzone_abs_threshold": deadzone_threshold,
         "eligible_coefficients": int(np.count_nonzero(eligible)),
         "dead_zoned_coefficients": int(np.count_nonzero(changed)),
-        "total_coefficients": int(coeff64.size),
+        "total_coefficients": int(coeff32.size),
         "max_abs_coeff_delta": float(np.max(np.abs(delta))) if delta.size else 0.0,
-        "mean_abs_coeff_delta": float(np.mean(np.abs(delta))) if delta.size else 0.0,
+        "mean_abs_coeff_delta": float(np.mean(np.abs(delta), dtype=np.float64)) if delta.size else 0.0,
     }
 
 
@@ -540,7 +540,7 @@ def _mutate_detail(
         )
         projected_safe = (
             _project_surface_to_subband(
-                safe_mask.astype(np.float64),
+                safe_mask,
                 pair_idx=pair_idx,
                 frame_idx=frame_idx,
                 subband_shape=coeff.shape,
@@ -643,12 +643,12 @@ def _distortion_report(before_archive: bytes, after_archive: bytes) -> dict[str,
             "before_shape": list(before.shape),
             "after_shape": list(after.shape),
         }
-    delta = after.astype(np.float64) - before.astype(np.float64)
+    delta = after - before
     return {
         "small_receiver_distortion_measured": True,
         "receiver_tensor_values": int(before.size),
-        "mse": float(np.mean(delta * delta)) if delta.size else 0.0,
-        "mae": float(np.mean(np.abs(delta))) if delta.size else 0.0,
+        "mse": float(np.mean(delta * delta, dtype=np.float64)) if delta.size else 0.0,
+        "mae": float(np.mean(np.abs(delta), dtype=np.float64)) if delta.size else 0.0,
         "max_abs_delta": float(np.max(np.abs(delta))) if delta.size else 0.0,
     }
 
