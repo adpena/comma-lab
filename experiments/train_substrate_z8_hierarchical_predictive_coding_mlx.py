@@ -124,6 +124,35 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--seg-distill-objective",
+        type=str,
+        default="boundary_argmax_hinge",
+        choices=(
+            "kl_t2",
+            "boundary_tckd",
+            "boundary_decision_tckd",
+            "boundary_argmax_hinge",
+        ),
+        help=(
+            "SegNet scorer-teacher functional for --full. Default "
+            "boundary_argmax_hinge is the Crammer-Singer raw-logit objective "
+            "with loss=0 iff target argmax wins by the requested margin; kl_t2 "
+            "is available only for explicit legacy baseline replay."
+        ),
+    )
+    parser.add_argument(
+        "--seg-tau-boundary",
+        type=float,
+        default=1.0,
+        help="Boundary weighting temperature for boundary_* SegNet objectives.",
+    )
+    parser.add_argument(
+        "--seg-hinge-margin",
+        type=float,
+        default=1.0,
+        help="Raw-logit Crammer-Singer margin for boundary_argmax_hinge.",
+    )
+    parser.add_argument(
         "--allow-mock-scorer-teacher",
         action="store_true",
         help=(
@@ -658,6 +687,22 @@ def _full_main(args: argparse.Namespace) -> int:
         "optimizer_kind": str(args.optimizer_kind),
         "weight_decay": float(args.weight_decay),
     }
+    score_aware_training_metadata = {
+        "schema": "mlx_score_aware_training_objective.v1",
+        "mathematical_target": (
+            "Crammer-Singer raw-logit argmax-correct margin for SegNet "
+            "boundary pixels plus PoseNet pose-MSE teacher"
+            if str(args.seg_distill_objective) == "boundary_argmax_hinge"
+            else "explicit non-default SegNet distillation objective plus "
+            "PoseNet pose-MSE teacher"
+        ),
+        "segnet_distillation_objective": str(args.seg_distill_objective),
+        "segnet_tau_boundary": float(args.seg_tau_boundary),
+        "segnet_hinge_margin": float(args.seg_hinge_margin),
+        "segnet_distillation_weight": float(args.distillation_weight),
+        "pose_distillation_weight": float(args.pose_distillation_weight),
+        "axis_tag": "[macOS-MLX research-signal]",
+    }
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
@@ -667,6 +712,9 @@ def _full_main(args: argparse.Namespace) -> int:
         distillation_weight=float(args.distillation_weight),
         scorer_teacher=scorer_teacher,
         learnable_student_head=learnable_student_head,
+        segnet_distillation_objective=str(args.seg_distill_objective),
+        segnet_tau_boundary=float(args.seg_tau_boundary),
+        segnet_hinge_margin=float(args.seg_hinge_margin),
         pose_distillation_weight=pose_distillation_weight,
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
@@ -680,6 +728,7 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "z8_trainer_mode": "full",
             "z8_mlx_schedule_provenance": z8_schedule_metadata,
+            "score_aware_training": score_aware_training_metadata,
         },
     )
     grad_clip = float(args.grad_clip_max_norm)
@@ -718,7 +767,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "Z8 hierarchical predictive coding MLX-first score-aware full "
             "training via canonical mlx_score_aware_full_main harness; real "
             "contest video + reconstruction + REAL Hinton-distilled SegNet "
-            "(KL T=2.0) + REAL PoseNet (pose-MSE) teachers; Wave N+11 "
+            f"objective={args.seg_distill_objective} + REAL PoseNet "
+            "(pose-MSE) teachers; Wave N+11 "
             "stabilizer (EMA 0.997 + grad-clip + warmup + weight decay); "
             "non-promotable [macOS-MLX research-signal] per Catalog "
             "#192/#317/#341; MLX->PyTorch bridge + paired CUDA/CPU anchor "
@@ -750,9 +800,9 @@ def _canonical_quadruple_main(args: argparse.Namespace) -> int:
                            sensitivity=m7.get_for_level(level)) -> scalar
 
     Lands M9 ``full_main_trainer_lifts_notimplementederror`` to LANDED in
-    ``build_progress.py``. M10 (inflate consumes real trained weights per
-    Catalog #369) + M11 (L1 MLX-LOCAL end-to-end smoke) + M12 (paired-CUDA
-    Modal T4 sub-0.189 threshold attempt) are now unblocked.
+    ``build_progress.py``. M10 (inflate consumes Mallat wavelet archive bytes
+    per Catalog #369) + M11 (L1 MLX-LOCAL end-to-end smoke) + M12
+    (paired-CUDA Modal T4 sub-0.189 threshold attempt) are now unblocked.
 
     Per CLAUDE.md "Forbidden make_synthetic_pair_batch in any non-smoke
     training path" non-negotiable: this path REQUIRES real

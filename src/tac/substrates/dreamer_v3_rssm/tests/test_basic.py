@@ -412,19 +412,14 @@ def test_end_to_end_mlx_train_archive_pytorch_inflate() -> None:
     )
 
 
-def test_archive_bound_export_uses_num_pair_receiver_byte_contract(
+def test_archive_bound_export_requires_contest_receiver_byte_contract(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Archive-bound receiver proof sizing must match the actual archive pair count.
-
-    The full 600-pair constant is correct for contest submissions, but smoke and
-    MLX-local candidate rows often emit smaller archives. Those rows must be
-    byte-closed against their own archive grammar, not falsely blocked by a
-    1200-frame receiver byte expectation.
-    """
+    """Partial Dreamer archives remain advisory until contest-size closure."""
     import tac.substrates.dreamer_v3_rssm.archive_candidate as archive_candidate
     from tac.substrates.dreamer_v3_rssm import (
+        DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES,
         DreamerV3RSSMConfig,
         DreamerV3RSSMSubstrateMLX,
         expected_receiver_output_bytes_for_pairs,
@@ -463,11 +458,17 @@ def test_archive_bound_export_uses_num_pair_receiver_byte_contract(
     assert archive_path.is_file()
     assert len(archive_sha256) == 64
     assert archive_bytes == archive_path.stat().st_size
-    expected_bytes = expected_receiver_output_bytes_for_pairs(2)
+    expected_bytes = DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES
+    assert expected_receiver_output_bytes_for_pairs(2) == expected_bytes
     assert captured["expected_receiver_output_bytes"] == expected_bytes
+    assert "dreamer_v3_rssm_partial_archive_not_contest_runtime_closure" in (
+        captured["extra_blockers"]
+    )
     runtime_extra = captured["runtime_adapter_manifest_extra"]
     assert isinstance(runtime_extra, dict)
     assert runtime_extra["rssm_num_pairs"] == 2
+    assert runtime_extra["contest_num_pairs_required"] == 600
+    assert runtime_extra["partial_archive_receiver_proof_advisory_only"] is True
     assert runtime_extra["receiver_expected_raw_bytes"] == expected_bytes
     assert (
         runtime_extra["score_aware_training"]["segnet_distillation_objective"]

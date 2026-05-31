@@ -32,6 +32,7 @@ DREAMER_V3_RSSM_MLX_ARCHIVE_CANDIDATE_FAMILY = "dreamer_v3_rssm_mlx"
 DREAMER_V3_RSSM_MLX_ARCHIVE_TRANSFORM_KIND = (
     "dreamer_v3_rssm_mlx_categorical_predictive_coding_archive"
 )
+DREAMER_V3_RSSM_CONTEST_NUM_PAIRS = 600
 DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES = 1164 * 874 * 1200 * 3
 DREAMER_V3_RSSM_CAMERA_H = 874
 DREAMER_V3_RSSM_CAMERA_W = 1164
@@ -94,11 +95,26 @@ def dreamer_v3_rssm_meta_from_config(cfg: Any) -> dict[str, object]:
 
 
 def expected_receiver_output_bytes_for_pairs(num_pairs: int) -> int:
-    """Return raw receiver bytes for a Dreamer archive with ``num_pairs`` pairs."""
+    """Return contest raw bytes required for exact-ready Dreamer handoff.
+
+    Partial MLX-local archives are valid advisory artifacts, but their receiver
+    proof must not satisfy the archive-bound exact-handoff gate. Until the
+    runtime implements deterministic 600-pair cycling, the proof expectation is
+    the full contest output size for every archive.
+    """
 
     if not isinstance(num_pairs, int) or num_pairs < 1:
         raise ValueError(f"num_pairs must be a positive int; got {num_pairs!r}")
-    return int(num_pairs) * 2 * DREAMER_V3_RSSM_CAMERA_H * DREAMER_V3_RSSM_CAMERA_W * 3
+    return DREAMER_V3_RSSM_MLX_CONTEST_RAW_BYTES
+
+
+def _partial_archive_blockers_from_model(model: Any) -> list[str]:
+    if int(model.cfg.num_pairs) == DREAMER_V3_RSSM_CONTEST_NUM_PAIRS:
+        return []
+    return [
+        "dreamer_v3_rssm_partial_archive_not_contest_runtime_closure",
+        "dreamer_v3_rssm_600_pair_archive_or_runtime_cycling_required",
+    ]
 
 
 def _runtime_manifest_extra_from_model(
@@ -111,6 +127,10 @@ def _runtime_manifest_extra_from_model(
         "schema": "dreamer_v3_rssm_mlx_runtime_adapter_manifest.v1",
         "predictive_coding_family": "dreamer_v3_categorical_rssm",
         "rssm_num_pairs": int(model.cfg.num_pairs),
+        "contest_num_pairs_required": DREAMER_V3_RSSM_CONTEST_NUM_PAIRS,
+        "partial_archive_receiver_proof_advisory_only": (
+            int(model.cfg.num_pairs) != DREAMER_V3_RSSM_CONTEST_NUM_PAIRS
+        ),
         "rssm_num_groups": int(model.cfg.num_groups),
         "rssm_num_categories": int(model.cfg.num_categories),
         "receiver_expected_raw_bytes": int(expected_receiver_output_bytes),
@@ -233,6 +253,7 @@ def export_dreamer_v3_rssm_mlx_archive(
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
     expected_raw_bytes = expected_receiver_output_bytes_for_pairs(int(model.cfg.num_pairs))
+    extra_blockers = _partial_archive_blockers_from_model(model)
     if emit_archive_bound_candidate_package:
         emit_archive_bound_candidate_runtime_package(
             adapter_id=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_ID,
@@ -260,6 +281,7 @@ def export_dreamer_v3_rssm_mlx_archive(
             ),
             candidate_row_schema="dreamer_v3_rssm_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+            extra_blockers=extra_blockers,
             mlx_triage_argv=mlx_triage_argv,
         )
     return (archive_zip_path, archive_sha256, archive_bytes)
@@ -287,6 +309,7 @@ def export_dreamer_v3_rssm_mlx_archive_bound_candidate_package(
     )
     root, out_dir = _resolve_output_dir(output_dir, repo_root=repo_root)
     expected_raw_bytes = expected_receiver_output_bytes_for_pairs(int(model.cfg.num_pairs))
+    extra_blockers = _partial_archive_blockers_from_model(model)
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_ID,
         candidate_family=DREAMER_V3_RSSM_MLX_ARCHIVE_CANDIDATE_FAMILY,
@@ -313,6 +336,7 @@ def export_dreamer_v3_rssm_mlx_archive_bound_candidate_package(
         ),
         candidate_row_schema="dreamer_v3_rssm_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        extra_blockers=extra_blockers,
         mlx_triage_argv=mlx_triage_argv,
     )
 

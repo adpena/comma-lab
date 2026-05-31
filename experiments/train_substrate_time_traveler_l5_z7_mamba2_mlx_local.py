@@ -99,6 +99,61 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict] = {
 }
 
 
+def _full_replay_argv(args: argparse.Namespace) -> list[str]:
+    """Return deterministic argv for replaying a Z7 MLX-local full run."""
+    argv = [
+        ".venv/bin/python",
+        "experiments/train_substrate_time_traveler_l5_z7_mamba2_mlx_local.py",
+        "--full",
+        "--output-dir",
+        str(args.output_dir),
+        "--num-pairs",
+        str(int(args.num_pairs)),
+        "--epochs",
+        str(int(args.epochs)),
+        "--video-path",
+        str(args.video_path),
+        "--upstream-dir",
+        str(args.upstream_dir),
+        "--full-lr",
+        str(float(args.full_lr)),
+        "--distillation-weight",
+        str(float(args.distillation_weight)),
+        "--pose-distillation-weight",
+        str(float(args.pose_distillation_weight)),
+        "--seg-distill-objective",
+        str(args.seg_distill_objective),
+        "--seg-tau-boundary",
+        str(float(args.seg_tau_boundary)),
+        "--seg-hinge-margin",
+        str(float(args.seg_hinge_margin)),
+        "--seed",
+        str(int(args.seed)),
+    ]
+    for name in ("grad_clip_max_norm", "warmup_epochs", "weight_decay"):
+        value = getattr(args, name)
+        if value is not None:
+            argv.extend([f"--{name.replace('_', '-')}", str(value)])
+    argv.extend(["--optimizer-kind", str(args.optimizer_kind)])
+    if bool(args.cosine_decay_enabled):
+        argv.append("--cosine-decay-enabled")
+        argv.extend(
+            [
+                "--cosine-decay-min-lr-ratio",
+                str(float(args.cosine_decay_min_lr_ratio)),
+            ]
+        )
+    for name in ("d_state", "d_model", "expand", "ssd_nheads", "ssd_headdim"):
+        value = getattr(args, name)
+        if value is not None:
+            argv.extend([f"--{name.replace('_', '-')}", str(int(value))])
+    if bool(args.use_canonical_ssd_mlx_backend):
+        argv.append("--use-canonical-ssd-mlx-backend")
+    if bool(args.allow_mock_scorer_teacher):
+        argv.append("--allow-mock-scorer-teacher")
+    return argv
+
+
 def _full_main(args: argparse.Namespace) -> int:
     """Run the canonical MLX-first score-aware ``_full_main`` body for Z7-Mamba-2.
 
@@ -275,6 +330,36 @@ def _full_main(args: argparse.Namespace) -> int:
             "recurrence; canonical_mamba2_ssd_backend_not_claimed"
         ),
     }
+    replay_argv = _full_replay_argv(args)
+    score_aware_training_metadata = {
+        "schema": "mlx_score_aware_training_objective.v1",
+        "mathematical_target": (
+            "Crammer-Singer raw-logit argmax-correct margin for SegNet "
+            "boundary pixels plus PoseNet pose-MSE teacher"
+            if str(args.seg_distill_objective) == "boundary_argmax_hinge"
+            else "explicit non-default SegNet distillation objective plus "
+            "PoseNet pose-MSE teacher"
+        ),
+        "segnet_distillation_objective": str(args.seg_distill_objective),
+        "segnet_tau_boundary": float(args.seg_tau_boundary),
+        "segnet_hinge_margin": float(args.seg_hinge_margin),
+        "segnet_distillation_weight": float(args.distillation_weight),
+        "pose_distillation_weight": float(args.pose_distillation_weight),
+        "axis_tag": "[macOS-MLX research-signal]",
+    }
+    z7_substrate_artifact_metadata["score_aware_training"] = score_aware_training_metadata
+    z7_substrate_artifact_metadata["training_replay_argv"] = replay_argv
+
+    def _export_z7_archive(model_to_export, output_dir: Path):
+        return export_z7_mamba2_mlx_archive(
+            model_to_export,
+            output_dir,
+            meta={
+                "score_aware_training": score_aware_training_metadata,
+                "training_replay_argv": replay_argv,
+            },
+            mlx_triage_argv=replay_argv,
+        )
 
     # Canonical Hinton-distilled scorer surrogate wiring per sister Z6-v2
     # commit `c26647891` + V2/V4/VQ sister cascade commit `1860ea2ac` +
@@ -347,12 +432,15 @@ def _full_main(args: argparse.Namespace) -> int:
         distillation_weight=float(args.distillation_weight),
         scorer_teacher=scorer_teacher,
         learnable_student_head=learnable_student_head,
+        segnet_distillation_objective=str(args.seg_distill_objective),
+        segnet_tau_boundary=float(args.seg_tau_boundary),
+        segnet_hinge_margin=float(args.seg_hinge_margin),
         pose_distillation_weight=pose_distillation_weight,
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
-        export_archive_fn=export_z7_mamba2_mlx_archive,
+        export_archive_fn=_export_z7_archive,
         substrate_artifact_metadata=z7_substrate_artifact_metadata,
     )
     # Wave N+11 stabilizer recipe per task #1481:
@@ -397,7 +485,8 @@ def _full_main(args: argparse.Namespace) -> int:
         notes=(
             "Z7-Mamba-2 state-space predictive-coding MLX-FIRST score-aware "
             "LONG-RUN training via canonical mlx_score_aware harness + "
-            "Hinton-distilled SegNet + PoseNet teacher per Catalog #164; "
+            f"Hinton-distilled SegNet objective={args.seg_distill_objective} "
+            "+ PoseNet teacher per Catalog #164; "
             "Mamba-2 selective state-space (d_model=64, d_state=16, d_inner=128) "
             "+ Z6-compatible PixelShuffle decoder is the substrate-distinguishing "
             "primitive per Catalog #272; sister-architecture probe of Z6-v2 "
@@ -671,6 +760,35 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--distillation-weight", type=float, default=0.5)
     p.add_argument("--pose-distillation-weight", type=float, default=1.0)
+    p.add_argument(
+        "--seg-distill-objective",
+        type=str,
+        default="boundary_argmax_hinge",
+        choices=(
+            "kl_t2",
+            "boundary_tckd",
+            "boundary_decision_tckd",
+            "boundary_argmax_hinge",
+        ),
+        help=(
+            "SegNet scorer-teacher functional for --full. Default "
+            "boundary_argmax_hinge is the Crammer-Singer raw-logit margin "
+            "objective selected by the 2026-05-31 boundary A/B; kl_t2 remains "
+            "available for explicit legacy baseline replay."
+        ),
+    )
+    p.add_argument(
+        "--seg-tau-boundary",
+        type=float,
+        default=1.0,
+        help="Boundary weighting temperature for boundary_* SegNet objectives.",
+    )
+    p.add_argument(
+        "--seg-hinge-margin",
+        type=float,
+        default=1.0,
+        help="Raw-logit Crammer-Singer margin for boundary_argmax_hinge.",
+    )
     p.add_argument(
         "--allow-mock-scorer-teacher",
         action="store_true",

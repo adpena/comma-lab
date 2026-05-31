@@ -222,7 +222,8 @@ def _distill_value(bundle: RendererBundle, num_pairs: int = 4) -> float:
 
 
 # ---------------------------------------------------------------------------
-# (A) Trainer argparse wire-in — the flag exists, parses, defaults preserved.
+# (A) Trainer argparse wire-in — the flag exists, parses, and defaults to the
+# mathematically selected argmax-correct hinge.
 # ---------------------------------------------------------------------------
 
 
@@ -235,11 +236,11 @@ def test_parser_exposes_seg_distill_objective_flag():
     assert hasattr(ns, "seg_hinge_margin")
 
 
-def test_seg_distill_objective_default_is_kl_t2_legacy_preserving():
-    """Default MUST stay kl_t2 so existing runs are byte-for-byte unchanged."""
+def test_seg_distill_objective_default_is_boundary_argmax_hinge():
+    """Default selects the d_seg-faithful Crammer-Singer hinge."""
     mod = _load_trainer_module()
     ns = mod._build_parser().parse_args(list(_REQUIRED_ARGV))
-    assert ns.seg_distill_objective == "kl_t2"
+    assert ns.seg_distill_objective == "boundary_argmax_hinge"
     assert ns.seg_tau_boundary == pytest.approx(1.0)
     assert ns.seg_hinge_margin == pytest.approx(1.0)
 

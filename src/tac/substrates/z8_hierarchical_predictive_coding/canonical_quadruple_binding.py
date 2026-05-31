@@ -88,7 +88,6 @@ import numpy as np
 
 from tac.substrates.z8_hierarchical_predictive_coding.binding_contract import (
     HierarchyBindingContract,
-    LevelDimensionContract,
     build_canonical_contract_from_config,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.loss import (
@@ -107,13 +106,11 @@ from tac.substrates.z8_hierarchical_predictive_coding.mamba2_adapter import (
 from tac.substrates.z8_hierarchical_predictive_coding.scorer_sensitivity_map import (
     ScorerSensitivityMapSource,
     Z8ScorerSensitivityMap,
-    build_z8_scorer_sensitivity_map_for_level,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.wyner_ziv_coder import (
     WynerZivTopLevelCoderImpl,
     build_wyner_ziv_top_level_coder_for_contract,
 )
-
 
 CANONICAL_PROJECTION_SEED_DEFAULT: int = 0
 """Default Wyner-Ziv projection seed; encoder + decoder MUST agree."""
@@ -984,7 +981,7 @@ def run_canonical_quadruple_training_loop(
     substrate-engineering UNIQUE-IFIES: M9 establishes the canonical
     quadruple compose pattern runs end-to-end with real video frames +
     canonical Protocol implementations + Catalog #305 observability. M10
-    + M11 + M12 wire downstream (inflate real trained weights / L1
+    + M11 + M12 wire downstream (Mallat wavelet archive consumption / L1
     MLX-LOCAL smoke / paired-CUDA Modal dispatch). Per Catalog #292
     per-deliberation assumption surfacing: the optimizer-free training
     loop demonstrates per-epoch loss behavior is data-deterministic
@@ -1023,17 +1020,16 @@ def run_canonical_quadruple_training_loop(
             f"pair_rgb_targets must have at least one pair; "
             f"got num_pairs={num_pairs}"
         )
-    if pose_6dim_per_pair is not None:
-        if (
-            pose_6dim_per_pair.ndim != 2
-            or pose_6dim_per_pair.shape[-1] != POSE_SIDE_INFO_DIM
-            or int(pose_6dim_per_pair.shape[0]) != num_pairs
-        ):
-            raise ValueError(
-                f"pose_6dim_per_pair must be ({num_pairs}, "
-                f"{POSE_SIDE_INFO_DIM}); got shape "
-                f"{pose_6dim_per_pair.shape}"
-            )
+    if pose_6dim_per_pair is not None and (
+        pose_6dim_per_pair.ndim != 2
+        or pose_6dim_per_pair.shape[-1] != POSE_SIDE_INFO_DIM
+        or int(pose_6dim_per_pair.shape[0]) != num_pairs
+    ):
+        raise ValueError(
+            f"pose_6dim_per_pair must be ({num_pairs}, "
+            f"{POSE_SIDE_INFO_DIM}); got shape "
+            f"{pose_6dim_per_pair.shape}"
+        )
 
     per_step_records: list[TrainingStepObservability] = []
     per_epoch_total_loss: list[float] = []
@@ -1051,10 +1047,7 @@ def run_canonical_quadruple_training_loop(
         # per build_progress.py M9 acceptance criterion #3 without
         # depending on M10 + M11 + M12 downstream wiring. For epochs=1
         # the perturbation is fixed at 0.5 (canonical mid-point).
-        if epochs == 1:
-            epoch_perturbation = 0.5
-        else:
-            epoch_perturbation = 1.0 - (epoch / (epochs - 1))
+        epoch_perturbation = 0.5 if epochs == 1 else 1.0 - (epoch / (epochs - 1))
         for pair_idx in range(num_pairs):
             step_start = time.time()
             target_single_pair = pair_rgb_targets[
@@ -1232,14 +1225,15 @@ def load_real_video_targets_numpy(
 # M10 canonical archive-emit + inflate-side reconstruction helpers
 # ---------------------------------------------------------------------------
 #
-# M10 (``inflate_runtime_consumes_real_trained_weights`` per ``build_progress.py``)
-# closes the canonical compose pattern at the deployment surface: the trainer
-# (M9 ``_canonical_quadruple_main``) emits the real M5 Mallat wavelet
-# coefficients + M6 Wyner-Ziv-coded top state for every real-video pair, and
-# ``inflate.py`` consumes those bytes per Catalog #369 (NOT synthetic frame
-# base). The wavelet reconstruction round-trip is exact per Mallat 1989 §7.5
-# (perfect reconstruction); the rate cost is therefore the brotli-coded
-# wavelet detail-band magnitudes + Wyner-Ziv residuals.
+# M10 (``inflate_runtime_consumes_mallat_wavelet_archive_bytes`` per
+# ``build_progress.py``) closes the currently proven deployment surface: the
+# trainer emits real M5 Mallat wavelet coefficients for every real-video pair,
+# and ``inflate.py`` consumes those wavelet bytes per Catalog #369 (NOT
+# synthetic frame base). M6/Mamba/Dreamer/Wyner-Ziv sections are still parsed
+# and preserved for custody, but are not pixel drivers until distinguishing
+# byte-mutation proofs land. The wavelet reconstruction round-trip is exact per
+# Mallat 1989 §7.5 (perfect reconstruction); the proven rate cost is therefore
+# the brotli-coded wavelet detail-band magnitudes.
 #
 # Per HNeRV parity L7 substrate-engineering UNIQUE-IFIES: the per-pair
 # wavelet-pyramid + top-state archive grammar IS the canonical Z8 archive at
@@ -1319,6 +1313,7 @@ def _serialize_pair_wavelet_pyramid(
 def _deserialize_pair_wavelet_pyramid(blob: bytes) -> dict[str, Any]:
     """Inverse of :func:`_serialize_pair_wavelet_pyramid`."""
     import brotli  # type: ignore[import-not-found]
+
     from tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter import (
         WaveletDetail2D,
     )
@@ -1588,6 +1583,11 @@ def build_z8hpc1_archive_bytes_from_canonical_quadruple(
             side_info = buf
         side_info = side_info.astype(np.float32, copy=False)
         payload = binding.m6.encode(next_state_np, side_info)
+        if int(forward["wyner_ziv_payload_bytes"]) != len(payload):
+            raise ValueError(
+                "M9 forward WZ payload length drifted from archive emission "
+                f"for pair {pair_idx}"
+            )
         wz_payloads.append(payload)
     wz_blob_parts: list[bytes] = [struct.pack("<I", num_pairs)]
     for payload in wz_payloads:
@@ -1673,8 +1673,8 @@ def parse_pair_blobs_from_wavelet_blob(
 
 __all__ = [
     "CANONICAL_PROJECTION_SEED_DEFAULT",
-    "DEFAULT_M4_LATENT_DIM_PER_LEVEL",
     "DEFAULT_M4_D_STATE",
+    "DEFAULT_M4_LATENT_DIM_PER_LEVEL",
     "POSE_SIDE_INFO_DIM",
     "CanonicalQuadrupleTrainingArtifact",
     "TrainingStepObservability",

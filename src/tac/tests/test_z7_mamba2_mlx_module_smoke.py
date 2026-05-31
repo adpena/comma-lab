@@ -129,15 +129,22 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_exports_bridge(
         "predictor.mamba_cell.dt_proj.bias",
         "predictor.mamba_cell.D",
     } <= set(exported)
+    score_aware_training = {
+        "schema": "mlx_score_aware_training_objective.v1",
+        "segnet_distillation_objective": "boundary_argmax_hinge",
+        "segnet_hinge_margin": 1.5,
+    }
     blob = pack_archive_from_exported_state_dict(
         exported_state_dict=exported,
         mlx_cfg=cfg,
+        meta={"score_aware_training": score_aware_training},
     )
     archive = parse_archive(blob)
     assert archive.config.backend == "ssd_reference"
     assert archive.config.ssd_nheads == 2
     assert archive.config.ssd_headdim == 8
     authority = archive.meta["z7_mamba2_recurrent_predictive_coding_meta"]
+    assert archive.meta["score_aware_training"] == score_aware_training
     assert authority["ready_for_exact_eval_dispatch"] is False
     assert "canonical_ssd_mlx_exact_cpu_cuda_replay_required" in authority["blockers"]
     out_path = tmp_path / "z7_ssd_mlx_bridge_smoke.raw"
@@ -148,6 +155,7 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_exports_bridge(
     archive_zip, archive_sha, archive_size = export_z7_mamba2_mlx_archive(
         model,
         tmp_path / "z7_ssd_mlx_bridge_export",
+        meta={"score_aware_training": score_aware_training},
     )
     assert archive_zip.is_file()
     assert len(archive_sha) == 64
@@ -170,6 +178,9 @@ def test_z7_mamba2_mlx_canonical_ssd_backend_uses_helper_and_exports_bridge(
     assert shared_package["receiver_proof_gate_passed_count"] == 1
     assert shared_package["mlx_triage_ready_count"] == 0
     contract = shared_package["candidate_rows"][0]["archive_bound_candidate_contract"]
+    assert shared_package["candidate_rows"][0]["runtime_adapter_manifest"][
+        "score_aware_training"
+    ] == score_aware_training
     assert contract["archive_native_transform_kind"] == Z7_MAMBA2_MLX_ARCHIVE_TRANSFORM_KIND
     assert contract["entropy_position_label"] == "before_entropy_coder"
     assert "z7_mamba2" in contract["archive_substrate_tags"]

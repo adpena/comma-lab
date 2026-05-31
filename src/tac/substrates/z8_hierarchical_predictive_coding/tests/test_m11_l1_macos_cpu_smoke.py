@@ -13,7 +13,6 @@ Verifies:
 from __future__ import annotations
 
 import json
-import sys
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -35,43 +34,43 @@ from tac.substrates.z8_hierarchical_predictive_coding.m11_l1_macos_cpu_smoke imp
 
 def _baseline_kwargs() -> dict[str, Any]:
     """Canonical baseline kwargs that satisfy Z8M11L1SmokeResult invariants."""
-    return dict(
-        substrate_id="z8_hierarchical_predictive_coding",
-        lane_id="lane_z8_m11_l1_test",
-        schema_version="z8_m11_l1_macos_cpu_smoke_v1",
-        git_head_sha="abc123",
+    return {
+        "substrate_id": "z8_hierarchical_predictive_coding",
+        "lane_id": "lane_z8_m11_l1_test",
+        "schema_version": "z8_m11_l1_macos_cpu_smoke_v1",
+        "git_head_sha": "abc123",
         # M9 training
-        training_pairs=4,
-        training_epochs=5,
-        training_resolution_hw=(32, 32),
-        training_wall_clock_seconds=0.05,
-        training_convergence_verdict="CONVERGED_MONOTONIC",
-        training_final_total_loss=0.001,
-        training_final_wyner_ziv_payload_bytes=43,
+        "training_pairs": 4,
+        "training_epochs": 5,
+        "training_resolution_hw": (32, 32),
+        "training_wall_clock_seconds": 0.05,
+        "training_convergence_verdict": "CONVERGED_MONOTONIC",
+        "training_final_total_loss": 0.001,
+        "training_final_wyner_ziv_payload_bytes": 43,
         # M9 archive
-        archive_bytes_total=92408,
-        archive_sha256="0" * 64,
-        archive_emission_wall_clock_seconds=0.01,
+        "archive_bytes_total": 92408,
+        "archive_sha256": "0" * 64,
+        "archive_emission_wall_clock_seconds": 0.01,
         # M11 packet write
-        packet_write_wall_clock_seconds=0.005,
-        submission_dir_relative="experiments/results/test/submission",
-        inflate_sh_path_relative="experiments/results/test/submission/inflate.sh",
-        inflate_py_path_relative="experiments/results/test/submission/inflate.py",
+        "packet_write_wall_clock_seconds": 0.005,
+        "submission_dir_relative": "experiments/results/test/submission",
+        "inflate_sh_path_relative": "experiments/results/test/submission/inflate.sh",
+        "inflate_py_path_relative": "experiments/results/test/submission/inflate.py",
         # M10 inflate
-        inflate_wall_clock_seconds=12.0,
-        inflate_raw_bytes_per_video=CANONICAL_RAW_BYTES_PER_VIDEO,
-        inflate_total_videos=1,
-        inflate_first_video_sha256_sample_first_4096_bytes="a" * 64,
+        "inflate_wall_clock_seconds": 12.0,
+        "inflate_raw_bytes_per_video": CANONICAL_RAW_BYTES_PER_VIDEO,
+        "inflate_total_videos": 1,
+        "inflate_first_video_sha256_sample_first_4096_bytes": "a" * 64,
         # evaluator stage
-        evaluator_wall_clock_seconds=180.0,
-        evaluator_posenet_distortion=0.123,
-        evaluator_segnet_distortion=0.0456,
-        evaluator_compression_rate=0.00246,
-        evaluator_compressed_size_bytes=92408,
-        evaluator_uncompressed_size_bytes=37_545_489,
-        evaluator_final_score=5.74,
-        evaluator_report_path_relative="experiments/results/test/submission/report.txt",
-    )
+        "evaluator_wall_clock_seconds": 180.0,
+        "evaluator_posenet_distortion": 0.123,
+        "evaluator_segnet_distortion": 0.0456,
+        "evaluator_compression_rate": 0.00246,
+        "evaluator_compressed_size_bytes": 92408,
+        "evaluator_uncompressed_size_bytes": 37_545_489,
+        "evaluator_final_score": 5.74,
+        "evaluator_report_path_relative": "experiments/results/test/submission/report.txt",
+    }
 
 
 # ---------- Canonical Provenance non-promotable invariants (Catalog #192 + #323)
@@ -352,9 +351,9 @@ class TestZ8M11BuildProgressConsistency:
             if m.milestone_id == "l1_macos_cpu_smoke_landed"
         )
         # Per build_progress.py M11 acceptance: predecessors are M10
-        # (inflate_runtime_consumes_real_trained_weights).
+        # (inflate_runtime_consumes_mallat_wavelet_archive_bytes).
         assert (
-            "inflate_runtime_consumes_real_trained_weights"
+            "inflate_runtime_consumes_mallat_wavelet_archive_bytes"
             in m11.predecessor_milestone_ids
         )
 

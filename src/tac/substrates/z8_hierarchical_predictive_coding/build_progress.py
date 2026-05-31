@@ -44,7 +44,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 
-class BuildMilestoneStatus(str, Enum):
+class BuildMilestoneStatus(str, Enum):  # noqa: UP042 - keep str Enum on py3.10 lanes.
     """Per-milestone lifecycle state.
 
     The canonical transitions are pending -> in_progress -> landed.
@@ -125,12 +125,14 @@ class BuildMilestone:
         # Landed + landed_at_utc consistency. landed_commit_sha may be None
         # for the commit that lands the milestone itself (self-referential
         # backfill in next commit).
-        if self.status == BuildMilestoneStatus.LANDED:
-            if self.landed_at_utc is None:
-                raise ValueError(
-                    f"milestone {self.milestone_id} status=landed "
-                    f"requires landed_at_utc to be set"
-                )
+        if (
+            self.status == BuildMilestoneStatus.LANDED
+            and self.landed_at_utc is None
+        ):
+            raise ValueError(
+                f"milestone {self.milestone_id} status=landed "
+                f"requires landed_at_utc to be set"
+            )
         if self.status != BuildMilestoneStatus.LANDED:
             if self.landed_commit_sha is not None:
                 raise ValueError(
@@ -733,8 +735,9 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
             "substrate_z8_canonical_quadruple_binding.py covering all 5 M9 "
             "acceptance criteria + Catalog #323 canonical Provenance non-"
             "promotable invariants + Catalog #340 sister-DISJOINT "
-            "regression guard. M10 (inflate_runtime_consumes_real_trained_"
-            "weights per Catalog #369) + M11 (l1_macos_cpu_smoke_landed) + "
+            "regression guard. M10 (inflate_runtime_consumes_mallat_"
+            "wavelet_archive_bytes per Catalog #369) + M11 "
+            "(l1_macos_cpu_smoke_landed) + "
             "M12 (paired_cuda_dispatch_crosses_sub_0_189_threshold per "
             "Catalog #246) are now structurally unblocked. The optimizer "
             "is intentionally NOT wired at M9 per HNeRV parity L7 "
@@ -752,13 +755,15 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
         ),
     ),
     BuildMilestone(
-        milestone_id="inflate_runtime_consumes_real_trained_weights",
+        milestone_id="inflate_runtime_consumes_mallat_wavelet_archive_bytes",
         description=(
-            "inflate.py consumes real trained weights from M9 archive; "
-            "no synthetic frame generation per Catalog #369."
+            "inflate.py consumes real trained Mallat wavelet bytes from M9 "
+            "archive; Mamba/Dreamer/Wyner-Ziv sections remain custody-only "
+            "until byte-mutation proofs show pixel effects."
         ),
         acceptance_criteria=(
-            "inflate.py loads weights from archive (no NotImplementedError)",
+            "inflate.py reconstructs pixels from archive wavelet_coeffs_blob "
+            "(no synthetic frame base)",
             "produced raw bytes match contest contract 3,662,409,600 "
             "(1164*874*1200*3) per Catalog #367",
             "inflate runtime LOC <= 200 per HNeRV parity L4",
@@ -771,13 +776,15 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
         predecessor_milestone_ids=("full_main_trainer_lifts_notimplementederror",),
         notes=(
             "LANDED 2026-05-30 (operator-routed Yousfi-cascade TOP-1 post-M9). "
-            "M10 closes the canonical Catalog #312 quadruple cycle at the "
-            "deployment surface: M9 trainer emits Z8HPC1 archive bytes via "
+            "M10 closes only the Mallat wavelet pixel-consumption surface at the "
+            "deployment boundary: M9 trainer emits Z8HPC1 archive bytes via "
             "build_z8hpc1_archive_bytes_from_canonical_quadruple (sister in "
             "canonical_quadruple_binding.py); inflate.py parses the archive "
             "via parse_archive + parse_pair_blobs_from_wavelet_blob and "
             "reconstructs per-pair RGB via the canonical M5 Mallat "
-            "recompose_from_next_level chain (perfect reconstruction per "
+            "recompose_from_next_level chain. Decoder, indices, Wyner-Ziv, and "
+            "Dreamer sections are archive custody only pending distinguishing "
+            "feature mutation proofs. "
             "Mallat 1989 §7.5; max abs diff ~1.2e-7 at float32 precision). "
             "Contest RAW bytes contract per Catalog #367 satisfied: 1200 "
             "frames at 874x1164x3 = 3,662,409,600 bytes per video via the "
@@ -826,7 +833,7 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
         landed_commit_sha=None,  # self-referential; backfilled next commit
         landed_at_utc="2026-05-30T16:45:51Z",
         predecessor_milestone_ids=(
-            "inflate_runtime_consumes_real_trained_weights",
+            "inflate_runtime_consumes_mallat_wavelet_archive_bytes",
         ),
         notes=(
             "LANDED 2026-05-30 (operator-routed Yousfi-cascade TOP-1 post-"
@@ -906,13 +913,13 @@ validate_milestone_tuple(Z8_PHASE_2_BUILD_MILESTONES)
 
 
 __all__ = [
-    "BuildMilestoneStatus",
-    "BuildMilestone",
-    "validate_milestone_tuple",
-    "get_landed_milestones",
-    "get_pending_milestones",
-    "get_in_progress_milestones",
-    "get_next_actionable_milestones",
-    "render_progress_summary",
     "Z8_PHASE_2_BUILD_MILESTONES",
+    "BuildMilestone",
+    "BuildMilestoneStatus",
+    "get_in_progress_milestones",
+    "get_landed_milestones",
+    "get_next_actionable_milestones",
+    "get_pending_milestones",
+    "render_progress_summary",
+    "validate_milestone_tuple",
 ]

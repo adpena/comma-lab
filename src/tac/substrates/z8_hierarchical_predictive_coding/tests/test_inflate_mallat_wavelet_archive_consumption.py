@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Z8 M10 inflate consumes real trained weights tests.
+"""Z8 M10 inflate consumes Mallat wavelet archive bytes tests.
 
 Per Catalog #369 (`check_substrate_inflate_consumes_real_trained_weights_
 not_synthetic_frame_base`) + Catalog #146 (contest 3-arg inflate.sh
@@ -35,8 +35,6 @@ Test surfaces:
 
 from __future__ import annotations
 
-import re
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -178,8 +176,8 @@ def test_inflate_imports_canonical_select_inflate_device_catalog_205() -> None:
     assert "write_rgb_pair_to_raw" in source
 
 
-def test_inflate_imports_canonical_quadruple_binding_module() -> None:
-    """M10 cycle-closure: inflate consumes M9 canonical_quadruple_binding helpers."""
+def test_inflate_imports_mallat_wavelet_reconstruction_helpers() -> None:
+    """M10 closure is Mallat wavelet pixel consumption, not full-stack decode."""
     inflate_path = Path(__file__).resolve().parents[1] / "inflate.py"
     source = inflate_path.read_text(encoding="utf-8")
     assert "canonical_quadruple_binding" in source
@@ -439,9 +437,11 @@ def test_parse_and_validate_archive_passes_on_canonical_archive() -> None:
 
 def test_read_single_member_archive_bytes_refuses_missing() -> None:
     """_read_single_member_archive_bytes must refuse missing archive member."""
-    with tempfile.TemporaryDirectory() as td:
-        with pytest.raises(FileNotFoundError, match="expected exactly one"):
-            _read_single_member_archive_bytes(Path(td))
+    with tempfile.TemporaryDirectory() as td, pytest.raises(
+        FileNotFoundError,
+        match="expected exactly one",
+    ):
+        _read_single_member_archive_bytes(Path(td))
 
 
 def test_read_single_member_archive_bytes_refuses_ambiguous() -> None:
@@ -482,8 +482,8 @@ def test_inflate_canonical_module_path_is_canonical_substrate_engineering_locati
 def test_build_progress_m10_landed_status() -> None:
     """Per build_progress.py: M10 milestone must be marked LANDED."""
     from tac.substrates.z8_hierarchical_predictive_coding.build_progress import (
-        BuildMilestoneStatus,
         Z8_PHASE_2_BUILD_MILESTONES,
+        BuildMilestoneStatus,
         get_landed_milestones,
     )
 
@@ -491,7 +491,8 @@ def test_build_progress_m10_landed_status() -> None:
         (
             m
             for m in Z8_PHASE_2_BUILD_MILESTONES
-            if m.milestone_id == "inflate_runtime_consumes_real_trained_weights"
+            if m.milestone_id
+            == "inflate_runtime_consumes_mallat_wavelet_archive_bytes"
         ),
         None,
     )
@@ -500,7 +501,7 @@ def test_build_progress_m10_landed_status() -> None:
         f"M10 status must be LANDED after this commit; got {m10.status}"
     )
     landed_ids = {m.milestone_id for m in get_landed_milestones(Z8_PHASE_2_BUILD_MILESTONES)}
-    assert "inflate_runtime_consumes_real_trained_weights" in landed_ids
+    assert "inflate_runtime_consumes_mallat_wavelet_archive_bytes" in landed_ids
 
 
 # ---------------------------------------------------------------------------

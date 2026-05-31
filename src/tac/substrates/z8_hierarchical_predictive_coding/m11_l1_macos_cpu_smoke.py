@@ -141,7 +141,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import struct
 import subprocess
 import sys
 import time
@@ -213,7 +212,7 @@ This shim imports the canonical Z8 M10 ``main_cli`` from the installed
 ``PYTHONPATH=src`` per the canonical workspace layout. The shim
 inherits canonical ``select_inflate_device`` per Catalog #205 + canonical
 3-arg contract per Catalog #146 + canonical Mallat 1989 §7.5 perfect
-reconstruction per Catalog #369 (real-trained-weight consumption, NOT
+reconstruction per Catalog #369 (Mallat wavelet archive consumption, NOT
 synthetic frame base).
 """
 import sys
@@ -860,7 +859,7 @@ def run_z8_m11_l1_smoke(
             training_artifact.final_wyner_ziv_payload_bytes
         ),
         # M9 archive emission
-        archive_bytes_total=int(len(archive_bytes)),
+        archive_bytes_total=len(archive_bytes),
         archive_sha256=str(archive_sha256),
         archive_emission_wall_clock_seconds=float(archive_emission_wall_clock),
         # M11 packet write

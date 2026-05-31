@@ -43,6 +43,7 @@ The MLX → Z7MCM2 path:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -248,6 +249,7 @@ def pack_archive_from_exported_state_dict(
     *,
     exported_state_dict: dict[str, np.ndarray],
     mlx_cfg: Z7Mamba2MLXRenderConfig,
+    meta: Mapping[str, object] | None = None,
 ) -> bytes:
     """Pack a PyTorch-layout exported MLX state dict into Z7MCM2 ``0.bin`` bytes."""
     (
@@ -259,6 +261,9 @@ def pack_archive_from_exported_state_dict(
         ego_motion,
     ) = _split_state_dict_for_z7mcm2(exported_state_dict)
     pytorch_cfg = z7_mamba2_pytorch_config_from_mlx(mlx_cfg)
+    archive_meta = z7_mamba2_meta_from_config(mlx_cfg)
+    if meta:
+        archive_meta.update(dict(meta))
     return pack_archive(
         encoder_state_dict=encoder_sd,
         decoder_state_dict=decoder_sd,
@@ -266,7 +271,7 @@ def pack_archive_from_exported_state_dict(
         latent_init=latent_init,
         residuals=residuals,
         ego_motion=ego_motion,
-        meta=z7_mamba2_meta_from_config(mlx_cfg),
+        meta=archive_meta,
         config=pytorch_cfg,
     )
 
@@ -293,6 +298,7 @@ def export_z7_mamba2_mlx_archive(
     emit_archive_bound_candidate_package: bool = True,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
+    meta: Mapping[str, object] | None = None,
 ) -> tuple[Path, str, int]:
     """Export an MLX Z7-Mamba-2 model as a contest-shaped ``archive.zip``.
 
@@ -316,6 +322,7 @@ def export_z7_mamba2_mlx_archive(
     bin_bytes = pack_archive_from_exported_state_dict(
         exported_state_dict=model.export_state_dict(),
         mlx_cfg=cfg,
+        meta=meta,
     )
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
@@ -402,6 +409,12 @@ def export_z7_mamba2_mlx_archive(
                 "canonical_ssd_mlx_runtime_bridge_wired": bool(
                     getattr(cfg, "use_canonical_ssd_mlx_backend", False)
                 ),
+                "score_aware_training": dict(meta or {}).get(
+                    "score_aware_training"
+                ),
+                "training_replay_argv": dict(meta or {}).get(
+                    "training_replay_argv"
+                ),
             },
             candidate_row_schema="z7_mamba2_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
@@ -418,6 +431,7 @@ def export_z7_mamba2_mlx_archive_bound_candidate_package(
     repo_root: str | Path | None = None,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
+    meta: Mapping[str, object] | None = None,
 ) -> dict[str, Any]:
     """Export Z7 MLX bytes and emit the shared archive-bound package."""
     archive_zip_path, archive_sha256, archive_bytes = export_z7_mamba2_mlx_archive(
@@ -425,6 +439,7 @@ def export_z7_mamba2_mlx_archive_bound_candidate_package(
         output_dir,
         repo_root=repo_root,
         emit_archive_bound_candidate_package=False,
+        meta=meta,
     )
     root = (
         Path(repo_root)
@@ -471,6 +486,8 @@ def export_z7_mamba2_mlx_archive_bound_candidate_package(
             "canonical_ssd_mlx_runtime_bridge_wired": bool(
                 getattr(cfg, "use_canonical_ssd_mlx_backend", False)
             ),
+            "score_aware_training": dict(meta or {}).get("score_aware_training"),
+            "training_replay_argv": dict(meta or {}).get("training_replay_argv"),
         },
         candidate_row_schema="z7_mamba2_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=Z7_MAMBA2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,

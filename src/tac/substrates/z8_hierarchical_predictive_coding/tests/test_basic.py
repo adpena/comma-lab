@@ -14,11 +14,8 @@ Covers:
 
 from __future__ import annotations
 
-import json
-
 import numpy as np
 import pytest
-
 
 # -----------------------------------------------------------------------------
 # Import + canonical-field tests
@@ -244,7 +241,6 @@ def test_z8_archive_section_offsets_parse() -> None:
 def test_z8_archive_refuses_corrupt_magic() -> None:
     """parse_archive raises ValueError on corrupted magic."""
     from tac.substrates.z8_hierarchical_predictive_coding.archive import (
-        Z8HPC1_HEADER_SIZE,
         parse_archive,
     )
 
@@ -271,23 +267,23 @@ def test_z8_distinguishing_feature_sections_change_archive_bytes() -> None:
     num_groups = (4, 3, 2)
     num_cats = (16, 8, 4)
 
-    base_args = dict(
-        decoder_state_dict=_make_synthetic_state_dict(),
-        per_level_category_indices=_make_synthetic_indices(
+    base_args = {
+        "decoder_state_dict": _make_synthetic_state_dict(),
+        "per_level_category_indices": _make_synthetic_indices(
             num_pairs, num_groups, num_cats
         ),
-        wavelet_coeffs_blob=b"\xAA" * 16,
-        wyner_ziv_top_blob=b"\xBB" * 12,
-        dreamer_state_dict=_make_synthetic_dreamer_state_dict(),
-        meta={"k": 1},
-        num_levels=num_levels,
-        num_groups_per_level=num_groups,
-        num_categories_per_level=num_cats,
-        num_pairs=num_pairs,
-        decoder_latent_dim=28,
-        base_channels=24,
-        wavelet_basis_id=0,
-    )
+        "wavelet_coeffs_blob": b"\xAA" * 16,
+        "wyner_ziv_top_blob": b"\xBB" * 12,
+        "dreamer_state_dict": _make_synthetic_dreamer_state_dict(),
+        "meta": {"k": 1},
+        "num_levels": num_levels,
+        "num_groups_per_level": num_groups,
+        "num_categories_per_level": num_cats,
+        "num_pairs": num_pairs,
+        "decoder_latent_dim": 28,
+        "base_channels": 24,
+        "wavelet_basis_id": 0,
+    }
 
     baseline = pack_archive(**base_args)
 
@@ -318,29 +314,28 @@ def test_z8_archive_meta_json_deterministic_sort_keys() -> None:
     """Meta JSON serialization MUST sort keys for byte determinism."""
     from tac.substrates.z8_hierarchical_predictive_coding.archive import (
         pack_archive,
-        parse_archive,
     )
 
     num_pairs = 1
     num_levels = 3
     num_groups = (2, 2, 2)
     num_cats = (4, 4, 4)
-    common = dict(
-        decoder_state_dict=_make_synthetic_state_dict(),
-        per_level_category_indices=_make_synthetic_indices(
+    common = {
+        "decoder_state_dict": _make_synthetic_state_dict(),
+        "per_level_category_indices": _make_synthetic_indices(
             num_pairs, num_groups, num_cats
         ),
-        wavelet_coeffs_blob=b"x",
-        wyner_ziv_top_blob=b"y",
-        dreamer_state_dict=_make_synthetic_dreamer_state_dict(),
-        num_levels=num_levels,
-        num_groups_per_level=num_groups,
-        num_categories_per_level=num_cats,
-        num_pairs=num_pairs,
-        decoder_latent_dim=28,
-        base_channels=24,
-        wavelet_basis_id=0,
-    )
+        "wavelet_coeffs_blob": b"x",
+        "wyner_ziv_top_blob": b"y",
+        "dreamer_state_dict": _make_synthetic_dreamer_state_dict(),
+        "num_levels": num_levels,
+        "num_groups_per_level": num_groups,
+        "num_categories_per_level": num_cats,
+        "num_pairs": num_pairs,
+        "decoder_latent_dim": 28,
+        "base_channels": 24,
+        "wavelet_basis_id": 0,
+    }
 
     # Same meta with different insertion order MUST produce identical archive bytes
     arc_1 = pack_archive(**common, meta={"a": 1, "b": 2, "c": 3})
@@ -389,9 +384,9 @@ def test_z8_inflate_parse_and_validate_passes_on_valid_archive() -> None:
 def test_z8_inflate_l0_scaffold_council_gate_superseded_by_m10_per_catalog_369() -> None:
     """Per M10 landing 2026-05-30: the Catalog #240 acceptance cascade (c)
     runtime-forward council gate has been LIFTED (full milestone in
-    ``build_progress.py``: ``inflate_runtime_consumes_real_trained_weights``).
+    ``build_progress.py``: ``inflate_runtime_consumes_mallat_wavelet_archive_bytes``).
     The legacy ``Z8L0ScaffoldNotImplementedError`` raise is superseded by the
-    canonical M10 real-trained-weight consumption path per Catalog #369; the
+    canonical M10 Mallat wavelet archive consumption path per Catalog #369; the
     legacy ``inflate_one_video_l0_scaffold`` symbol is preserved as a
     backward-compat alias that routes through the M10 reconstruction.
 
@@ -405,6 +400,7 @@ def test_z8_inflate_l0_scaffold_council_gate_superseded_by_m10_per_catalog_369()
     from pathlib import Path
 
     import numpy as np
+
     from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
         build_canonical_quadruple_binding_from_z8_config,
         build_z8hpc1_archive_bytes_from_canonical_quadruple,
@@ -520,7 +516,9 @@ def test_z8_mlx_renderer_constructs_and_forward() -> None:
     assert len(per_level_indices) == 3
     assert len(per_level_soft) == 3
     # Per-level indices shape: (B, G_l)
-    for level_idx, (G, K) in enumerate(zip(cfg.num_groups_per_level, cfg.num_categories_per_level)):
+    for level_idx, (G, K) in enumerate(
+        zip(cfg.num_groups_per_level, cfg.num_categories_per_level, strict=True)
+    ):
         assert tuple(int(d) for d in per_level_indices[level_idx].shape) == (2, G)
         assert tuple(int(d) for d in per_level_soft[level_idx].shape) == (2, G, K)
 
@@ -652,6 +650,7 @@ def test_z8_pixel_shuffle_matches_pytorch() -> None:
         import mlx.core as mx
         import torch
         import torch.nn.functional as F
+
         from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
             _pixel_shuffle_2x_nhwc,
         )
@@ -684,6 +683,7 @@ def test_z8_bilinear_resize_matches_pytorch() -> None:
         import mlx.core as mx
         import torch
         import torch.nn.functional as F
+
         from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
             _bilinear_resize_2x_nhwc,
         )
