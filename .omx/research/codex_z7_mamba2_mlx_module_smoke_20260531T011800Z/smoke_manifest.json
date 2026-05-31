@@ -1,0 +1,75 @@
+{
+  "axis_tag": "[macOS-MLX research-signal]",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "evidence_grade": "predicted",
+    "kind": "predicted_from_model",
+    "promotable": false,
+    "rationale": "MLX-local smoke produces no score; this manifest documents trainable MLX module construction + single forward pass only. Non-promotable by construction per Catalog #192/#317/#341; exact CPU/CUDA authority still requires PyTorch bridge export and paired contest-axis replay.",
+    "score_claim_valid": false
+  },
+  "config": {
+    "d_conv": 4,
+    "d_model": 64,
+    "d_state": 16,
+    "decoder_channels": [
+      32,
+      24,
+      16,
+      12
+    ],
+    "decoder_embed_dim": 32,
+    "decoder_num_upsample_blocks": 4,
+    "ego_motion_dim": 8,
+    "expand": 2,
+    "latent_dim": 24,
+    "num_pairs": 2,
+    "output_height": 384,
+    "output_width": 512,
+    "stateful": true
+  },
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "forward_convention": "reconstruct_pair_nchw01",
+  "forward_smoke": {
+    "input_indices": [
+      0,
+      1
+    ],
+    "latents_shape": [
+      2,
+      24
+    ],
+    "rgb_0_max": 0.5,
+    "rgb_0_mean": 0.5,
+    "rgb_0_min": 0.5,
+    "rgb_0_shape": [
+      2,
+      3,
+      384,
+      512
+    ],
+    "rgb_1_max": 0.5,
+    "rgb_1_mean": 0.5,
+    "rgb_1_min": 0.5,
+    "rgb_1_shape": [
+      2,
+      3,
+      384,
+      512
+    ]
+  },
+  "lane_id": "lane_slot_1_z7_mamba2_hinton_distill_600pair_long_mlx_20260528",
+  "operator_routable_landing_memo": ".omx/research/z7_mamba2_mlx_nn_module_migration_plus_600pair_empirical_landed_20260528.md",
+  "predicted_delta_adjustment": 0.0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "renderer_module": "tac.substrates.time_traveler_l5_z7_mamba2.mlx_module",
+  "renderer_num_parameters": 751614,
+  "renderer_schema_version": "z7_mamba2_mlx_module_v1_20260528",
+  "scaffold_state": "L1_full_main_wired_via_z7_mamba2_mlx_module_wave_n9_slot1_landed_20260528",
+  "schema_version": "z7_mamba2_mlx_local_smoke_manifest_v1_20260528",
+  "score_claim": false,
+  "substrate_id": "time_traveler_l5_z7_mamba2_mlx_local"
+}

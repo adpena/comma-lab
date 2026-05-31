@@ -421,10 +421,9 @@ def _full_main(args: argparse.Namespace) -> int:
 def _smoke_main(args: argparse.Namespace) -> int:
     """MLX-local smoke manifest (config + renderer + 1 forward; no training).
 
-    Validates that the existing ``Z7Mamba2MLXNativeRenderer`` constructs
-    end-to-end and produces correctly-shaped output. This smoke WORKS today
-    (the renderer is functional; only the MLX-FIRST training harness binding
-    is blocked per ``_full_main`` above).
+    Validates that the trainable ``Z7Mamba2MLXModule`` constructs end-to-end
+    and produces correctly-shaped output through the same
+    ``reconstruct_pair_nchw01`` convention consumed by the full MLX harness.
     """
     try:
         import mlx.core as mx
@@ -436,34 +435,48 @@ def _smoke_main(args: argparse.Namespace) -> int:
         )
         return 2
 
+    from tac.substrates.time_traveler_l5_z7_mamba2.mlx_module import (
+        SCHEMA_VERSION as MLX_MODULE_SCHEMA_VERSION,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2.mlx_module import (
+        Z7Mamba2MLXModule,
+    )
     from tac.substrates.time_traveler_l5_z7_mamba2.mlx_native import (
-        Z7Mamba2MLXNativeRenderer,
         Z7Mamba2MLXRenderConfig,
     )
 
     # Per Catalog #192/#317/#341 + canonical sister Z6V2SubstrateMLX literal:
     # MLX-LOCAL artifacts are NON-PROMOTABLE [macOS-MLX research-signal].
     MLX_EVIDENCE_GRADE = "[macOS-MLX research-signal]"
-    SCHEMA_VERSION = "z7_mamba2_mlx_native_v1_20260518"
 
     cfg = Z7Mamba2MLXRenderConfig(num_pairs=min(int(args.num_pairs), 8))
-    renderer = Z7Mamba2MLXNativeRenderer(cfg, seed=int(args.seed))
+    model = Z7Mamba2MLXModule(cfg, seed=int(args.seed))
     # Single forward to validate the architecture binds end-to-end.
     idx_np = list(range(min(4, cfg.num_pairs)))
     import numpy as np
-    rgb_0, rgb_1 = renderer(np.array(idx_np, dtype=np.int64))
+    rgb_0, rgb_1, latents = model(np.array(idx_np, dtype=np.int64))
     mx.eval(rgb_0)
     mx.eval(rgb_1)
+    mx.eval(latents)
     out_shape_0 = tuple(int(s) for s in rgb_0.shape)
     out_shape_1 = tuple(int(s) for s in rgb_1.shape)
+    out_shape_latents = tuple(int(s) for s in latents.shape)
     expected_shape = (
         min(4, cfg.num_pairs), 3,
         int(cfg.output_height), int(cfg.output_width),
     )
+    expected_latent_shape = (min(4, cfg.num_pairs), int(cfg.latent_dim))
     if out_shape_0 != expected_shape or out_shape_1 != expected_shape:
         print(
             f"ERROR: MLX renderer output shape mismatch — got rgb_0={out_shape_0}, "
             f"rgb_1={out_shape_1}, expected {expected_shape}",
+            file=sys.stderr,
+        )
+        return 2
+    if out_shape_latents != expected_latent_shape:
+        print(
+            f"ERROR: MLX module latent shape mismatch — got {out_shape_latents}, "
+            f"expected {expected_latent_shape}",
             file=sys.stderr,
         )
         return 2
@@ -491,10 +504,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "lane_slot_1_z7_mamba2_hinton_distill_600pair_long_mlx_20260528"
         ),
         "renderer_module": (
-            "tac.substrates.time_traveler_l5_z7_mamba2.mlx_native"
+            "tac.substrates.time_traveler_l5_z7_mamba2.mlx_module"
         ),
-        "renderer_schema_version": SCHEMA_VERSION,
-        "renderer_num_parameters": "deferred_pending_mlx_module_migration",
+        "renderer_schema_version": MLX_MODULE_SCHEMA_VERSION,
+        "renderer_num_parameters": int(model.num_parameters()),
         "config": {
             "latent_dim": int(cfg.latent_dim),
             "ego_motion_dim": int(cfg.ego_motion_dim),
@@ -514,6 +527,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "input_indices": idx_np,
             "rgb_0_shape": list(out_shape_0),
             "rgb_1_shape": list(out_shape_1),
+            "latents_shape": list(out_shape_latents),
             "rgb_0_min": float(mx.min(rgb_0)),
             "rgb_0_max": float(mx.max(rgb_0)),
             "rgb_0_mean": float(mx.mean(rgb_0)),
@@ -543,10 +557,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "promotable": False,
             "rationale": (
                 "MLX-local smoke produces no score; this manifest documents "
-                "renderer construction + single forward pass only. Non-promotable "
-                "by construction per Catalog #192/#317/#341. Full training path "
-                "BLOCKED pending Z7Mamba2MLXNativeRenderer -> mlx.nn.Module "
-                "migration per landing memo §10."
+                "trainable MLX module construction + single forward pass only. "
+                "Non-promotable by construction per Catalog #192/#317/#341; "
+                "exact CPU/CUDA authority still requires PyTorch bridge export "
+                "and paired contest-axis replay."
             ),
         },
     }
@@ -582,9 +596,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--full",
         action="store_true",
         help=(
-            "Run the full MLX-LOCAL training body. BLOCKED per Catalog #240 + "
-            "landing memo §10 until Z7Mamba2MLXNativeRenderer -> mlx.nn.Module "
-            "migration completes."
+            "Run the full MLX-LOCAL training body through the trainable "
+            "Z7Mamba2MLXModule. Output remains advisory until PyTorch bridge "
+            "export and paired contest-axis replay."
         ),
     )
     p.add_argument("--output-dir", type=Path, default=None)
