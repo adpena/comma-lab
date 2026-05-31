@@ -34,6 +34,11 @@ FORWARD_CONVENTIONS: frozenset[str] = frozenset(
     {"reconstruct_pair_nchw01", "call_b2chw_255"}
 )
 
+#: Canonical normalization modes for the ``recon_pixel_weight`` channel.
+#: ``"mean"`` preserves the loss SCALE (convex re-distribution of the same total
+#: magnitude); ``"none"`` applies the raw map (caller owns the scale).
+_RECON_PIXEL_WEIGHT_NORMALIZE_MODES: frozenset[str] = frozenset({"mean", "none"})
+
 _SUBSTRATE_METADATA_FORBIDDEN_AUTHORITY_KEYS: frozenset[str] = frozenset(
     {
         "score_claim",
@@ -272,6 +277,30 @@ class RendererBundle:
             or substrate-local blockers. Canonical readiness/score authority
             fields are refused here so downstream consumers do not grow a
             second stale readiness reader.
+        recon_pixel_weight: OPTIONAL canonical per-pixel reconstruction-loss
+            weight map (the codex-named ``recon_pixel_weight`` channel). An MLX
+            float32 spatial map ``(H, W)`` / ``(H, W, 1)`` / ``(1, H, W, 1)``,
+            non-negative, matching the decoded frame's ``(H, W)``. When set, the
+            recon MSE is re-weighted PER PIXEL by this map BEFORE the spatial
+            mean (``mean(w * (rgb - gt)^2) / mean(w)``) so the renderer spends
+            its capacity on the pixels the map deems score-relevant. The
+            canonical source is the FULL-GRID measured SegNet input-gradient
+            saliency ``|∂L_seg/∂pixel|`` from
+            :mod:`tac.substrates.uniward_per_pixel_distortion.full_grid_segnet_response_cost_map`
+            (sister #1587: CONTEST_RELEVANT at moderate seg degradation), but
+            ANY non-negative ``(H, W)`` map is accepted (e.g. inverse-S-UNIWARD
+            texture for the A/B comparison). ``None`` DISABLES it — the recon
+            term is the canonical UNIFORM ``mean((rgb - gt)^2)``, BYTE-IDENTICAL
+            to existing runs (Catalog #290 opt-in default-OFF). The weight is
+            applied to BOTH frame_0 and frame_1; it is gradient-blocked
+            (``mx.stop_gradient``) so only the renderer carries gradient.
+        recon_pixel_weight_normalize: how the weight map is normalized before
+            re-weighting. ``"mean"`` (canonical default) preserves the loss
+            SCALE — ``mean(w * sq) / mean(w)`` so the weighted loss is a
+            convex re-distribution of the SAME total magnitude as the uniform
+            loss (the recon_weight Lagrangian coefficient stays comparable
+            across A/B arms). ``"none"`` applies the raw map (caller owns the
+            scale). Default ``"mean"``.
     """
 
     model: Any
@@ -301,6 +330,8 @@ class RendererBundle:
         Callable[[Any, Path], tuple[Path, str, int] | None] | None
     ) = None
     substrate_artifact_metadata: Mapping[str, Any] = field(default_factory=dict)
+    recon_pixel_weight: Any | None = None
+    recon_pixel_weight_normalize: str = "mean"
 
     def __post_init__(self) -> None:
         if self.forward_convention not in FORWARD_CONVENTIONS:
@@ -364,6 +395,12 @@ class RendererBundle:
         if self.pose_dims < 1:
             raise MlxScoreAwareHarnessError(
                 f"pose_dims must be >= 1; got {self.pose_dims}"
+            )
+        if self.recon_pixel_weight_normalize not in _RECON_PIXEL_WEIGHT_NORMALIZE_MODES:
+            raise MlxScoreAwareHarnessError(
+                "recon_pixel_weight_normalize must be one of "
+                f"{sorted(_RECON_PIXEL_WEIGHT_NORMALIZE_MODES)}; got "
+                f"{self.recon_pixel_weight_normalize!r}"
             )
         # C6 IBPS / DreamerV3 scorer-blindness fail-closed (Catalog #164):
         # if a distillation term is active it MUST bind the real scorer via

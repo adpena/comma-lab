@@ -62,6 +62,93 @@ def decode_frames_nhwc01(bundle: RendererBundle, idx: Any) -> tuple[Any, Any]:
     return rgb_0, rgb_1
 
 
+def _prepare_recon_pixel_weight(bundle: RendererBundle, frame_shape: Any) -> Any:
+    """Coerce + validate the bundle's ``recon_pixel_weight`` map for broadcasting.
+
+    Accepts an MLX float32 spatial map shaped ``(H, W)`` / ``(H, W, 1)`` /
+    ``(H, W, C)`` (C in {1, 3}) / ``(1, H, W, 1)`` and returns it broadcastable
+    against the decoded frame ``(B, H, W, 3)`` as ``(1, H, W, 1)`` (a single
+    per-pixel weight shared across channels) or ``(1, H, W, 3)`` (per-channel).
+    The map is gradient-blocked by the caller; this helper only normalizes shape
+    and validates the spatial dims match + the map is non-negative + finite.
+
+    Args:
+        bundle: the harness RendererBundle carrying ``recon_pixel_weight``.
+        frame_shape: the decoded frame's ``(B, H, W, 3)`` shape tuple.
+
+    Returns:
+        an MLX float32 array broadcastable against ``(B, H, W, 3)``.
+
+    Raises:
+        MlxScoreAwareHarnessError: on spatial mismatch / negative / non-finite /
+            unsupported ndim.
+    """
+    mx = require_mlx_for_harness()
+    from tac.substrates._shared.mlx_score_aware.device_gate import (
+        MlxScoreAwareHarnessError,
+    )
+
+    _b, h, w, _c = frame_shape
+    w_arr = bundle.recon_pixel_weight
+    # Coerce numpy / list -> MLX float32 (MLX arrays pass through as float32).
+    w_arr = mx.array(w_arr).astype(mx.float32)
+    nd = w_arr.ndim
+    if nd == 2:  # (H, W) -> (1, H, W, 1)
+        if w_arr.shape != (h, w):
+            raise MlxScoreAwareHarnessError(
+                f"recon_pixel_weight (H,W) must match decoded frame ({h},{w}); "
+                f"got {tuple(w_arr.shape)}"
+            )
+        w_arr = w_arr.reshape(1, h, w, 1)
+    elif nd == 3:  # (H, W, C) -> (1, H, W, C) with C in {1, 3}
+        wh, ww, wc = w_arr.shape
+        if (wh, ww) != (h, w) or wc not in (1, 3):
+            raise MlxScoreAwareHarnessError(
+                f"recon_pixel_weight (H,W,C) must be ({h},{w},1) or ({h},{w},3); "
+                f"got {tuple(w_arr.shape)}"
+            )
+        w_arr = w_arr.reshape(1, h, w, wc)
+    elif nd == 4:  # (1, H, W, C) -> as-is with leading dim 1 and C in {1, 3}
+        lb, wh, ww, wc = w_arr.shape
+        if lb != 1 or (wh, ww) != (h, w) or wc not in (1, 3):
+            raise MlxScoreAwareHarnessError(
+                f"recon_pixel_weight (B,H,W,C) must be (1,{h},{w},1) or "
+                f"(1,{h},{w},3); got {tuple(w_arr.shape)}"
+            )
+    else:
+        raise MlxScoreAwareHarnessError(
+            "recon_pixel_weight must be (H,W) / (H,W,C) / (1,H,W,C); got ndim="
+            f"{nd} shape={tuple(w_arr.shape)}"
+        )
+    # Non-negative + finite invariants (the map is a re-weight, not a mask).
+    if float(mx.min(w_arr)) < 0.0:
+        raise MlxScoreAwareHarnessError(
+            "recon_pixel_weight must be non-negative (it is a per-pixel weight)."
+        )
+    if not bool(mx.all(mx.isfinite(w_arr))):
+        raise MlxScoreAwareHarnessError("recon_pixel_weight must be finite.")
+    return w_arr
+
+
+def _weighted_recon(
+    bundle: RendererBundle, rgb: Any, gt: Any, weight: Any
+) -> Any:
+    """Per-pixel weighted reconstruction MSE for one frame.
+
+    ``mean(w * (rgb - gt)^2)`` with the canonical ``"mean"`` normalization
+    dividing by ``mean(w)`` so the weighted loss is a convex re-distribution of
+    the SAME total magnitude as the uniform ``mean((rgb - gt)^2)`` (keeps the
+    ``recon_weight`` Lagrangian coefficient comparable across A/B arms). When
+    ``recon_pixel_weight_normalize == "none"`` the raw map is applied.
+    """
+    mx = require_mlx_for_harness()
+    sq = (rgb - gt) ** 2  # (B, H, W, 3)
+    weighted = mx.mean(weight * sq)
+    if bundle.recon_pixel_weight_normalize == "mean":
+        weighted = weighted / (mx.mean(weight) + 1e-12)
+    return weighted
+
+
 def score_aware_loss(
     bundle: RendererBundle,
     idx: Any,
@@ -101,9 +188,20 @@ def score_aware_loss(
     rgb_0, rgb_1 = decode_frames_nhwc01(bundle, idx)
     gt_0 = bundle.target_rgb_0[idx]
     gt_1 = bundle.target_rgb_1[idx]
-    mse_0 = mx.mean((rgb_0 - gt_0) ** 2)
-    mse_1 = mx.mean((rgb_1 - gt_1) ** 2)
-    recon = mse_0 + mse_1
+    if bundle.recon_pixel_weight is None:
+        # Canonical UNIFORM recon — BYTE-IDENTICAL to pre-channel runs.
+        mse_0 = mx.mean((rgb_0 - gt_0) ** 2)
+        mse_1 = mx.mean((rgb_1 - gt_1) ** 2)
+        recon = mse_0 + mse_1
+    else:
+        # OPT-IN recon_pixel_weight channel (the codex-named building block):
+        # re-weight the per-pixel squared error by the measured-SegNet-saliency
+        # map (gradient-blocked) so the renderer spends capacity on the pixels
+        # the map deems score-relevant. Applied to BOTH frames.
+        weight = mx.stop_gradient(_prepare_recon_pixel_weight(bundle, rgb_0.shape))
+        mse_0 = _weighted_recon(bundle, rgb_0, gt_0, weight)
+        mse_1 = _weighted_recon(bundle, rgb_1, gt_1, weight)
+        recon = mse_0 + mse_1
     total = recon_weight * recon
     parts: dict[str, Any] = {"recon": recon}
 
@@ -454,3 +552,7 @@ __all__ = [
     "decode_frames_nhwc01",
     "score_aware_loss",
 ]
+
+# Internal helpers exported for the channel's dedicated tests + substrate reuse.
+# (kept out of __all__ so they are not part of the wildcard public surface, but
+# importable by name for the recon_pixel_weight A/B confirm + downstream wiring).
