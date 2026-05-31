@@ -20,10 +20,12 @@ from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition
     Z8FullVideoMlxVjpShardConfig,
     Z8FullVideoVjpAcquisitionConfig,
     assemble_z8_full_video_vjp_surface_bundle,
+    build_z8_full_video_mlx_replay_evaluator,
     build_z8_full_video_mlx_surface_provider,
     build_z8_full_video_mlx_vjp_surface_shard,
     build_z8_full_video_vjp_acquisition_contract,
     build_z8_full_video_vjp_acquisition_plan,
+    compute_full_video_mlx_distortion_replay,
     load_z8_full_video_vjp_surface_shard_file,
     reconstruct_z8_archive_pairs_rgb255,
     write_z8_full_video_vjp_acquisition_plan,
@@ -64,13 +66,20 @@ def _surface_shard(
     shard_index: int,
 ) -> dict:
     shape = (end - start, 2, 16, 16, 3)
+    joint = np.full(shape, value, dtype=np.float32)
     return {
         "shard_index": shard_index,
         "pair_start": start,
         "pair_end": end,
         "linearization_archive_sha": archive_sha,
-        "joint_weight": np.full(shape, value, dtype=np.float32),
+        "joint_weight": joint,
         "rate_attack_deadzone_mask": np.ones(shape, dtype=bool),
+        "segnet_argmax_gradient_abs": joint,
+        "pose_jacobian_abs": np.zeros(shape, dtype=np.float32),
+        "full_video_d_pose": 0.01,
+        "pose_null_threshold": 1e-8,
+        "archive_runtime_candidate_custody": True,
+        "gradient_values_are_full_video_objective_contributions": True,
     }
 
 
@@ -135,6 +144,8 @@ def test_full_video_vjp_surface_bundle_requires_archive_pinned_complete_shards()
     assert bundle["gradient_reduction_authority"] is True
     assert bundle["budget_spend_authority"] is True
     assert bundle["optimizer_update_authority"] is True
+    assert bundle["surface_assembly_backend"] == "global_kkt_dykstra_after_full_shard_reduction.v1"
+    assert bundle["implicit_allocator_authority"] is True
     assert bundle["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
     assert bundle["joint_weight"].shape == (4, 2, 16, 16, 3)
     assert bundle["rate_attack_deadzone_mask"].shape == (4, 2, 16, 16, 3)
@@ -175,6 +186,22 @@ def test_full_video_vjp_surface_bundle_rejects_partial_or_stale_shards() -> None
         assemble_z8_full_video_vjp_surface_bundle(
             archive,
             shard_surfaces=[bad_authority_shard],
+        )
+
+    bad_custody_shard = _surface_shard(start=0, end=4, archive_sha=sha, value=0.0, shard_index=0)
+    bad_custody_shard["archive_runtime_candidate_custody"] = False
+    with pytest.raises(ValueError, match="archive runtime candidate custody"):
+        assemble_z8_full_video_vjp_surface_bundle(
+            archive,
+            shard_surfaces=[bad_custody_shard],
+        )
+
+    missing_raw_shard = _surface_shard(start=0, end=4, archive_sha=sha, value=0.0, shard_index=0)
+    missing_raw_shard.pop("segnet_argmax_gradient_abs")
+    with pytest.raises(ValueError, match="segnet_argmax_gradient_abs"):
+        assemble_z8_full_video_vjp_surface_bundle(
+            archive,
+            shard_surfaces=[missing_raw_shard],
         )
 
 
@@ -225,6 +252,7 @@ def test_full_video_vjp_surface_bundle_writes_materializer_ready_npz(tmp_path: P
     assert bool(payload["gradient_reduction_authority"]) is True
     assert bool(payload["optimizer_update_authority"]) is True
     assert str(payload["optimizer_update_semantics"]) == SINGLE_UPDATE_AFTER_FULL_REDUCTION
+    assert bool(payload["implicit_allocator_authority"]) is True
 
 
 def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Path) -> None:
@@ -244,6 +272,13 @@ def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Pat
         linearization_archive_sha=np.asarray(sha),
         joint_weight=np.zeros((2, 2, 16, 16, 3), dtype=np.float32),
         rate_attack_deadzone_mask=np.ones((2, 2, 16, 16, 3), dtype=bool),
+        segnet_argmax_gradient_abs=np.zeros((2, 2, 16, 16, 3), dtype=np.float32),
+        pose_jacobian_abs=np.zeros((2, 2, 16, 16, 3), dtype=np.float32),
+        metadata_json=np.asarray(
+            '{"archive_runtime_candidate_custody": true, '
+            '"gradient_values_are_full_video_objective_contributions": true, '
+            '"full_video_d_pose": 0.01, "pose_null_threshold": 1e-8}'
+        ),
     )
 
     loaded = load_z8_full_video_vjp_surface_shard_file(shard_path)
@@ -265,6 +300,10 @@ def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -
     contract = build_z8_full_video_vjp_acquisition_contract()
 
     assert "full_video_pair_grid_coverage" in contract["contest_budget_spend_requires"]
+    assert "candidate_pairs_equal_archive_runtime_reconstruction" in contract["contest_budget_spend_requires"]
+    assert "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation" in contract[
+        "contest_budget_spend_requires"
+    ]
     assert "single_optimizer_update_after_full_shard_reduction" in contract["contest_budget_spend_requires"]
     assert "declared_corpus_manifest" in contract["production_budget_spend_requires"]
     assert contract["minibatch_window_gradients_role"] == "ranking_probe_only_between_full_video_passes"
@@ -276,9 +315,9 @@ def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_
 
     archive = _archive_bytes(num_pairs=2)
     rng = np.random.default_rng(316)
-    reference = rng.uniform(16, 220, size=(2, 2, 8, 10, 3)).astype(np.float32)
-    candidate = np.clip(
-        reference + rng.normal(0, 2.0, size=reference.shape),
+    candidate = reconstruct_z8_archive_pairs_rgb255(archive)
+    reference = np.clip(
+        candidate + rng.normal(0, 2.0, size=candidate.shape),
         0,
         255,
     ).astype(np.float32)
@@ -294,7 +333,7 @@ def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_
             pair_end=2,
             full_video_pair_count=2,
             full_video_d_pose=0.01,
-            scorer_hw=(8, 10),
+            scorer_hw=(16, 16),
             seg_margin_delta=1.0,
         ),
     )
@@ -303,8 +342,10 @@ def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_
     assert shard["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
     assert shard["optimizer_update_applied"] is False
     assert shard["budget_spend_authority"] is False
-    assert shard["joint_weight"].shape == (2, 2, 8, 10, 3)
-    assert shard["rate_attack_deadzone_mask"].shape == (2, 2, 8, 10, 3)
+    assert shard["archive_runtime_candidate_custody"] is True
+    assert shard["gradient_values_are_full_video_objective_contributions"] is True
+    assert shard["joint_weight"].shape == candidate.shape
+    assert shard["rate_attack_deadzone_mask"].shape == candidate.shape
     assert shard["segnet_vjp_abs_max"] > 0.0
     assert shard["pose_vjp_abs_max"] > 0.0
     assert shard["score_claim"] is False
@@ -346,3 +387,51 @@ def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_
     assert bundle["budget_spend_authority"] is True
     assert bundle["joint_weight"].shape == reference_pairs.shape
     assert Path(bundle["surface_provider_bundle_manifest"]["manifest_path"]).is_file()
+
+
+def test_mlx_full_video_replay_evaluator_scores_byte_closed_candidate(tmp_path: Path) -> None:
+    mx = pytest.importorskip("mlx.core")
+    archive = _archive_bytes(num_pairs=2)
+    reference_pairs = reconstruct_z8_archive_pairs_rgb255(archive)
+    scorer = _ToyMlxScorer(mx)
+
+    replay = compute_full_video_mlx_distortion_replay(
+        reference_pairs_rgb=reference_pairs,
+        candidate_pairs_rgb=reference_pairs,
+        mlx_scorer=scorer,
+        archive_rate_bytes=1234,
+        archive_rate_bytes_source="unit_test_payload",
+        scorer_hw=(16, 16),
+        pair_chunk_size=1,
+    )
+
+    assert replay["full_video_local_replay_executed"] is True
+    assert replay["full_video_local_replay_scope"] == "full_video"
+    assert replay["d_seg"] == 0.0
+    assert replay["d_pose"] == 0.0
+    assert replay["contest_action_proxy"] > 0.0
+    assert replay["score_claim"] is False
+
+    evaluator = build_z8_full_video_mlx_replay_evaluator(
+        reference_pairs_rgb=reference_pairs,
+        mlx_scorer=scorer,
+        scorer_hw=(16, 16),
+        pair_chunk_size=1,
+        rate_source="payload_bytes",
+        artifact_dir=tmp_path / "replay",
+    )
+    report = evaluator(
+        candidate_archive_bytes=archive,
+        source_archive_bytes=archive,
+        current_archive_bytes=archive,
+        iteration_index=0,
+        candidate_index=0,
+        candidate_metadata={"unit": True},
+    )
+
+    assert report["schema"] == replay["schema"]
+    assert report["replay_ok"] is True
+    assert report["candidate_archive_sha256"]
+    assert report["rate_source"] == "payload_bytes"
+    assert report["archive_rate_bytes"] == len(archive)
+    assert report["score_claim"] is False

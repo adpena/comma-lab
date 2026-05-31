@@ -241,6 +241,52 @@ def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
     assert manifest["ready_for_exact_eval_dispatch"] is False
 
 
+def test_relinearized_search_uses_full_video_local_replay_for_accept_reject() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+    replay_calls: list[dict[str, Any]] = []
+
+    def local_replay_evaluator(**kwargs: Any) -> dict[str, Any]:
+        meta = dict(kwargs["candidate_metadata"])
+        replay_calls.append(meta)
+        # Force the search to prefer the less aggressive deadzone even when the
+        # receiver-MSE/rate proxy would otherwise be free to choose either.
+        objective = 1.0 + float(meta["coefficient_deadzone_quantile"])
+        return {
+            "schema": "unit_full_video_local_replay.v1",
+            "full_video_local_replay_executed": True,
+            "full_video_local_replay_scope": "full_video",
+            "replay_ok": True,
+            "contest_action_proxy": objective,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    result = run_joint_p18_p19_relinearized_deadzone_search(
+        archive_bytes,
+        surfaces=[_surface_for_archive(archive_bytes, joint_weight, pose_null_mask)],
+        local_replay_evaluator=local_replay_evaluator,
+        config=Z8JointCoefficientRelinearizationSearchConfig(
+            joint_weight_quantiles=(1.0,),
+            coefficient_deadzone_quantiles=(0.25, 1.0),
+            quantization_steps=(0.25,),
+            max_iterations=1,
+            max_cumulative_mse=1.0,
+        ),
+    )
+
+    assert len(replay_calls) == 2
+    assert result["iterations_accepted"] == 1
+    accepted = result["accepted_candidates"][0]
+    assert accepted["objective_source"] == "full_video_local_replay"
+    assert accepted["full_video_local_replay_required"] is True
+    assert accepted["hard_archive_projection_replay_executed"] is True
+    assert accepted["coefficient_deadzone_quantile"] == 0.25
+    assert accepted["full_video_local_replay_report"]["contest_action_proxy"] == 1.25
+    assert accepted["score_claim"] is False
+
+
 def test_joint_p18_p19_deadzone_rejects_stale_surface() -> None:
     archive_bytes = _archive_bytes()
     joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)

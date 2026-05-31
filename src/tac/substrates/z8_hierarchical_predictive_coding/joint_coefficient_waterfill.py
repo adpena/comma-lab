@@ -670,6 +670,31 @@ def _candidate_proxy_objective(
     )
 
 
+def _local_replay_objective(report: Mapping[str, Any]) -> float | None:
+    for key in ("contest_action_proxy", "local_action_proxy", "score_proxy"):
+        if key in report:
+            try:
+                value = float(report[key])
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(value):
+                return value
+    return None
+
+
+def _local_replay_blockers(report: Mapping[str, Any]) -> list[str]:
+    blockers = [str(item) for item in (report.get("blockers") or []) if str(item)]
+    if report.get("replay_ok", True) is not True:
+        blockers.append("full_video_local_replay_not_ok")
+    if report.get("full_video_local_replay_executed") is not True:
+        blockers.append("full_video_local_replay_not_executed")
+    if report.get("full_video_local_replay_scope") not in {None, "full_video"}:
+        blockers.append(f"full_video_local_replay_wrong_scope:{report.get('full_video_local_replay_scope')}")
+    if _local_replay_objective(report) is None:
+        blockers.append("full_video_local_replay_objective_missing")
+    return blockers
+
+
 def apply_joint_p18_p19_deadzone_to_z8_archive(
     archive_bytes: bytes,
     *,
@@ -844,6 +869,7 @@ def run_joint_p18_p19_relinearized_deadzone_search(
     *,
     surfaces: Sequence[Any] | None = None,
     surface_provider: Callable[[int, bytes], Any] | None = None,
+    local_replay_evaluator: Callable[..., Mapping[str, Any]] | None = None,
     config: Z8JointCoefficientRelinearizationSearchConfig | None = None,
 ) -> dict[str, Any]:
     """Run a bounded iterative Z8 dead-zone search over fresh joint surfaces."""
@@ -909,12 +935,38 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                     cumulative_distortion = _distortion_report(original, mutated)
                     cumulative_mse = float(cumulative_distortion.get("mse", float("inf")))
                     guard_ok = cfg.max_cumulative_mse is None or cumulative_mse <= float(cfg.max_cumulative_mse)
-                    objective = _candidate_proxy_objective(
+                    candidate_proxy_objective = _candidate_proxy_objective(
                         result=result,
                         cumulative_distortion=cumulative_distortion,
                         previous_cumulative_mse=previous_cumulative_mse,
                         config=cfg,
                     )
+                    objective = candidate_proxy_objective
+                    objective_source = "receiver_mse_rate_proxy"
+                    local_replay_report: dict[str, Any] | None = None
+                    local_replay_blockers: list[str] = []
+                    if local_replay_evaluator is not None:
+                        local_replay_report = dict(
+                            local_replay_evaluator(
+                                candidate_archive_bytes=mutated,
+                                source_archive_bytes=original,
+                                current_archive_bytes=current,
+                                iteration_index=iteration_index,
+                                candidate_index=len(iteration_candidates),
+                                candidate_metadata={
+                                    "joint_weight_quantile": float(joint_q),
+                                    "coefficient_deadzone_quantile": float(deadzone_q),
+                                    "quantization_step": float(q_step),
+                                    "mutated_archive_sha256": result["mutated_archive_sha256"],
+                                },
+                            )
+                        )
+                        local_replay_blockers = _local_replay_blockers(local_replay_report)
+                        local_objective = _local_replay_objective(local_replay_report)
+                        if local_objective is not None:
+                            objective = local_objective
+                            objective_source = "full_video_local_replay"
+                        guard_ok = bool(guard_ok and not local_replay_blockers)
                     row = {
                         "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
                         "iteration_index": int(iteration_index),
@@ -923,7 +975,13 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         "coefficient_deadzone_quantile": float(deadzone_q),
                         "quantization_step": float(q_step),
                         "proxy_objective": float(objective),
+                        "receiver_proxy_objective": float(candidate_proxy_objective),
+                        "objective_source": objective_source,
                         "guard_ok": bool(guard_ok),
+                        "full_video_local_replay_required": local_replay_evaluator is not None,
+                        "full_video_local_replay_report": local_replay_report,
+                        "full_video_local_replay_blockers": local_replay_blockers,
+                        "hard_archive_projection_replay_executed": local_replay_evaluator is not None,
                         "rate_report": result["rate_report"],
                         "incremental_distortion_report": result["distortion_report"],
                         "cumulative_distortion_report": cumulative_distortion,
@@ -962,6 +1020,9 @@ def run_joint_p18_p19_relinearized_deadzone_search(
         "full_video_surface_contract": ("joint_and_pose_null_surfaces_must_cover_the_full_archive_pair_grid"),
         "pose_guard": "pose_null_mask_and_mahalanobis_ail_weights_consumed",
         "interaction_penalty": ("penalize_cumulative_mse_increase_between_relinearization_steps"),
+        "accept_reject_authority": (
+            "full_video_local_replay_when_local_replay_evaluator_is_provided_else_receiver_mse_proxy"
+        ),
         "iterations_requested": int(cfg.max_iterations),
         "iterations_accepted": len(accepted),
         "candidate_count": len(all_candidates),
@@ -985,6 +1046,7 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
     *,
     surfaces: Sequence[Any] | None = None,
     surface_provider: Callable[[int, bytes], Any] | None = None,
+    local_replay_evaluator: Callable[..., Mapping[str, Any]] | None = None,
     config: Z8JointCoefficientRelinearizationSearchConfig | None = None,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
@@ -995,6 +1057,7 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
         archive_bytes,
         surfaces=surfaces,
         surface_provider=surface_provider,
+        local_replay_evaluator=local_replay_evaluator,
         config=cfg,
     )
     final_archive = bytes(result["final_archive_bytes_payload"])

@@ -471,21 +471,11 @@ def _score_state_per_pair_in_chunks(
 
 def _build_mlx_scorer(upstream_dir: Path):
     """Load PyTorch DistortionNet then port to the MLX scorer adapter."""
-    import torch
+    from tac.local_acceleration.mlx_scorer_adapters import (
+        load_mlx_distortion_scorer_adapter_from_upstream,
+    )
 
-    from tac.local_acceleration.mlx_scorer_adapters import MLXDistortionScorerAdapter
-    from tac.scorer import load_default_scorers
-
-    posenet, segnet = load_default_scorers(upstream_dir, device="cpu")
-
-    class _DistortionShim(torch.nn.Module):
-        def __init__(self, posenet, segnet):
-            super().__init__()
-            self.posenet = posenet
-            self.segnet = segnet
-
-    shim = _DistortionShim(posenet, segnet)
-    return MLXDistortionScorerAdapter(shim)
+    return load_mlx_distortion_scorer_adapter_from_upstream(upstream_dir, device="cpu")
 
 
 # --------------------------------------------------------------------------- #

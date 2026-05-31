@@ -27,9 +27,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--archive-bin", required=True, type=Path)
     parser.add_argument(
         "--surface",
-        required=True,
         action="append",
         type=Path,
+        default=[],
         help="Fresh joint surface per iteration; repeat for relinearization.",
     )
     parser.add_argument("--output-dir", required=True, type=Path)
@@ -72,12 +72,82 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-archive-zip", action="store_true")
     parser.add_argument("--emit-receiver-proof", action="store_true")
+    parser.add_argument(
+        "--mlx-reference-pairs-npy",
+        type=Path,
+        help=(
+            "Reference RGB pair grid for archive-fresh MLX VJP surface provider, "
+            "shape (pairs,2,H,W,3). When set, --surface is not required."
+        ),
+    )
+    parser.add_argument("--mlx-pair-chunk-size", type=int, default=64)
+    parser.add_argument("--mlx-rgb-value-range", type=float, default=255.0)
+    parser.add_argument("--mlx-scorer-hw", default="384,512")
+    parser.add_argument("--mlx-seg-margin-delta", type=float, default=1.0)
+    parser.add_argument("--mlx-pose-null-threshold", type=float, default=1e-8)
+    parser.add_argument("--mlx-artifact-dir", type=Path, default=None)
+    parser.add_argument(
+        "--mlx-replay-rate-source",
+        choices=("byte_closed_zip", "payload_bytes"),
+        default="byte_closed_zip",
+        help="Rate byte source for full-video MLX local replay accept/reject.",
+    )
+    parser.add_argument("--upstream-dir", type=Path, default=Path("upstream"))
     return parser
+
+
+def _parse_hw(text: str) -> tuple[int, int]:
+    parts = [part.strip() for part in str(text).split(",") if part.strip()]
+    if len(parts) != 2:
+        raise ValueError("expected H,W")
+    return int(parts[0]), int(parts[1])
 
 
 def main() -> int:
     args = build_parser().parse_args()
     surfaces = [load_joint_p18_p19_surface_file(path) for path in args.surface]
+    surface_provider = None
+    local_replay_evaluator = None
+    if args.mlx_reference_pairs_npy:
+        if surfaces:
+            raise SystemExit("--surface cannot be combined with --mlx-reference-pairs-npy")
+        import numpy as np
+
+        from tac.local_acceleration.mlx_scorer_adapters import (
+            load_mlx_distortion_scorer_adapter_from_upstream,
+        )
+        from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition import (
+            Z8FullVideoVjpAcquisitionConfig,
+            build_z8_full_video_mlx_replay_evaluator,
+            build_z8_full_video_mlx_surface_provider,
+        )
+
+        reference_pairs = np.load(args.mlx_reference_pairs_npy)
+        mlx_scorer = load_mlx_distortion_scorer_adapter_from_upstream(args.upstream_dir, device="cpu")
+        surface_provider = build_z8_full_video_mlx_surface_provider(
+            reference_pairs_rgb=reference_pairs,
+            mlx_scorer=mlx_scorer,
+            acquisition_config=Z8FullVideoVjpAcquisitionConfig(
+                pair_chunk_size=int(args.mlx_pair_chunk_size),
+            ),
+            rgb_value_range=float(args.mlx_rgb_value_range),
+            scorer_hw=_parse_hw(args.mlx_scorer_hw),
+            seg_margin_delta=float(args.mlx_seg_margin_delta),
+            pose_null_threshold=float(args.mlx_pose_null_threshold),
+            artifact_dir=args.mlx_artifact_dir,
+        )
+        local_replay_evaluator = build_z8_full_video_mlx_replay_evaluator(
+            reference_pairs_rgb=reference_pairs,
+            mlx_scorer=mlx_scorer,
+            rgb_value_range=float(args.mlx_rgb_value_range),
+            scorer_hw=_parse_hw(args.mlx_scorer_hw),
+            pair_chunk_size=int(args.mlx_pair_chunk_size),
+            rate_source=str(args.mlx_replay_rate_source),
+            repo_root=args.repo_root,
+            artifact_dir=args.mlx_artifact_dir,
+        )
+    elif not surfaces:
+        raise SystemExit("--surface or --mlx-reference-pairs-npy is required")
     config = Z8JointCoefficientRelinearizationSearchConfig(
         joint_weight_quantiles=args.joint_weight_quantiles,
         coefficient_deadzone_quantiles=args.coefficient_deadzone_quantiles,
@@ -98,7 +168,9 @@ def main() -> int:
     manifest = materialize_joint_p18_p19_relinearized_deadzone_search(
         args.archive_bin.read_bytes(),
         args.output_dir,
-        surfaces=surfaces,
+        surfaces=surfaces or None,
+        surface_provider=surface_provider,
+        local_replay_evaluator=local_replay_evaluator,
         config=config,
         repo_root=args.repo_root,
     )

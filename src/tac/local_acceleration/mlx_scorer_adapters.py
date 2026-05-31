@@ -9,6 +9,7 @@ larger FastViT/EfficientNet blocks are ported.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -40,6 +41,7 @@ __all__ = [
     "run_mlx_unet_decoder_block_nchw",
     "run_mlx_unet_decoder_nchw",
     "scorer_distortion_components_numpy",
+    "load_mlx_distortion_scorer_adapter_from_upstream",
     "temporary_mlx_device",
     "torch_batchnorm2d_to_mlx",
     "torch_conv2d_relu_to_mlx",
@@ -1236,6 +1238,33 @@ def torch_distortion_net_to_mlx(torch_distortion_net: Any) -> MLXDistortionScore
     """Convert upstream ``DistortionNet`` to MLX for fixed scorer-input tensors."""
 
     return MLXDistortionScorerAdapter(torch_distortion_net)
+
+
+def load_mlx_distortion_scorer_adapter_from_upstream(
+    upstream_dir: str | "Path",
+    *,
+    device: str = "cpu",
+) -> MLXDistortionScorerAdapter:
+    """Load upstream scorers on CPU/PyTorch and convert them to the MLX adapter.
+
+    This is the reusable bridge used by local MLX acquisition lanes. It returns
+    a forward/backprop-capable MLX scorer adapter, but every consumer must still
+    keep MLX rows as local research signal rather than contest score authority.
+    """
+
+    import torch
+
+    from tac.scorer import load_default_scorers
+
+    posenet, segnet = load_default_scorers(upstream_dir, device=device)
+
+    class _DistortionShim(torch.nn.Module):
+        def __init__(self, posenet: Any, segnet: Any):
+            super().__init__()
+            self.posenet = posenet
+            self.segnet = segnet
+
+    return MLXDistortionScorerAdapter(_DistortionShim(posenet, segnet))
 
 
 def torch_repmixer_block_to_mlx(torch_block: Any) -> MLXRepMixerBlockAdapter:

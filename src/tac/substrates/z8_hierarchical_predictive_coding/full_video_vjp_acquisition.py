@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +23,7 @@ import numpy as np
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.joint_p18_p19_waterfill import (
+    FULL_VIDEO_AUTHORITY_SCOPE,
     FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
     PROPOSAL_ONLY_SCOPE,
     JointP18P19WaterfillConfig,
@@ -41,6 +44,8 @@ Z8_FULL_VIDEO_VJP_ACQUISITION_PLAN_SCHEMA = "z8_full_video_vjp_acquisition_plan.
 Z8_FULL_VIDEO_VJP_SURFACE_SHARD_SCHEMA = "z8_full_video_vjp_surface_shard.v1"
 Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA = "z8_full_video_vjp_surface_bundle.v1"
 Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND = "mlx_autograd_raw_pair_p18_p19_vjp.v1"
+Z8_FULL_VIDEO_MLX_REPLAY_SCHEMA = "z8_full_video_mlx_replay.v1"
+CONTEST_RATE_NORMALIZER_BYTES = 37_545_489.0
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -99,6 +104,8 @@ class Z8FullVideoMlxVjpShardConfig:
     scorer_hw: tuple[int, int] = (384, 512)
     seg_margin_delta: float = 1.0
     pose_null_threshold: float = 1e-8
+    require_archive_runtime_candidate_custody: bool = True
+    candidate_custody_atol: float = 0.0
 
     def __post_init__(self) -> None:
         normalize_target_optimization_mode(self.target_mode)
@@ -120,6 +127,8 @@ class Z8FullVideoMlxVjpShardConfig:
             raise ValueError("seg_margin_delta must be >= 0")
         if self.pose_null_threshold < 0.0:
             raise ValueError("pose_null_threshold must be >= 0")
+        if self.candidate_custody_atol < 0.0:
+            raise ValueError("candidate_custody_atol must be >= 0")
 
     @property
     def normalized_target_mode(self) -> str:
@@ -199,6 +208,71 @@ def _mlx_value_to_numpy(value: Any) -> np.ndarray:
     return np.asarray(value)
 
 
+def _candidate_archive_runtime_custody_report(
+    archive_bytes: bytes,
+    *,
+    candidate_pairs_rgb: np.ndarray,
+    rgb_value_range: float,
+    required: bool,
+    atol: float,
+    archive_runtime_candidate_pairs_rgb: Any | None,
+) -> dict[str, Any]:
+    archive_sha = _sha256_bytes(archive_bytes)
+    report: dict[str, Any] = {
+        "schema": "z8_archive_runtime_candidate_custody.v1",
+        "archive_sha256": archive_sha,
+        "required": bool(required),
+        "rgb_value_range": float(rgb_value_range),
+        "candidate_custody_atol": float(atol),
+    }
+    if not required:
+        report.update(
+            {
+                "archive_runtime_candidate_custody": False,
+                "blocker": "archive_runtime_candidate_custody_not_required_probe_only",
+            }
+        )
+        return report
+
+    archive_pairs = (
+        _as_pair_rgb_array(archive_runtime_candidate_pairs_rgb, name="archive_runtime_candidate_pairs_rgb")
+        if archive_runtime_candidate_pairs_rgb is not None
+        else reconstruct_z8_archive_pairs_rgb255(archive_bytes)
+    )
+    candidate_255 = np.ascontiguousarray(
+        np.asarray(candidate_pairs_rgb, dtype=np.float32) * (255.0 / float(rgb_value_range)),
+        dtype=np.float32,
+    )
+    if archive_pairs.shape != candidate_255.shape:
+        report.update(
+            {
+                "archive_runtime_candidate_custody": False,
+                "blocker": "archive_runtime_candidate_shape_mismatch",
+                "archive_runtime_shape": list(archive_pairs.shape),
+                "candidate_shape": list(candidate_255.shape),
+            }
+        )
+        return report
+
+    archive_255 = np.ascontiguousarray(archive_pairs, dtype=np.float32)
+    delta = np.abs(candidate_255.astype(np.float64) - archive_255.astype(np.float64))
+    max_abs_delta = float(np.max(delta)) if delta.size else 0.0
+    archive_pairs_sha = _array_sha256(archive_255)
+    candidate_pairs_sha = _array_sha256(candidate_255)
+    ok = bool(candidate_pairs_sha == archive_pairs_sha or max_abs_delta <= float(atol))
+    report.update(
+        {
+            "archive_runtime_candidate_custody": ok,
+            "candidate_pairs_source": "archive_runtime_reconstruction_or_verified_equal",
+            "archive_runtime_candidate_pairs_sha256": archive_pairs_sha,
+            "candidate_pairs_sha256_rgb255": candidate_pairs_sha,
+            "max_abs_delta_vs_archive_runtime_candidate": max_abs_delta,
+            "blocker": None if ok else "candidate_pairs_do_not_match_archive_runtime_reconstruction",
+        }
+    )
+    return report
+
+
 def build_z8_full_video_mlx_vjp_surface_shard(
     archive_bytes: bytes,
     *,
@@ -206,6 +280,7 @@ def build_z8_full_video_mlx_vjp_surface_shard(
     candidate_pairs_rgb: Any,
     mlx_scorer: Any,
     config: Z8FullVideoMlxVjpShardConfig,
+    archive_runtime_candidate_pairs_rgb: Any | None = None,
 ) -> dict[str, Any]:
     """Emit one exact chunked MLX P18/P19 VJP shard over pair RGB pixels.
 
@@ -229,6 +304,16 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         raise ValueError(
             f"full_video_pair_count must match pair array length: {config.full_video_pair_count} vs {ref_full.shape[0]}"
         )
+    custody = _candidate_archive_runtime_custody_report(
+        archive_bytes,
+        candidate_pairs_rgb=cand_full,
+        rgb_value_range=float(config.rgb_value_range),
+        required=bool(config.require_archive_runtime_candidate_custody),
+        atol=float(config.candidate_custody_atol),
+        archive_runtime_candidate_pairs_rgb=archive_runtime_candidate_pairs_rgb,
+    )
+    if config.require_archive_runtime_candidate_custody and not custody["archive_runtime_candidate_custody"]:
+        raise ValueError(str(custody["blocker"]))
     ref = np.ascontiguousarray(
         ref_full[config.pair_start : config.pair_end] * (255.0 / float(config.rgb_value_range)),
         dtype=np.float32,
@@ -278,8 +363,13 @@ def build_z8_full_video_mlx_vjp_surface_shard(
     seg_grad = mx.grad(seg_margin_loss)(cand_mx)
     pose_grad = mx.grad(pose_mse_loss)(cand_mx)
     mx.eval(seg_grad, pose_grad)
-    seg_grad_np = np.abs(_mlx_value_to_numpy(seg_grad)).astype(np.float64, copy=False)
-    pose_grad_np = np.abs(_mlx_value_to_numpy(pose_grad)).astype(np.float64, copy=False)
+    objective_shard_weight = float(config.pair_end - config.pair_start) / float(config.full_video_pair_count)
+    seg_grad_np = (
+        np.abs(_mlx_value_to_numpy(seg_grad)).astype(np.float64, copy=False) * objective_shard_weight
+    )
+    pose_grad_np = (
+        np.abs(_mlx_value_to_numpy(pose_grad)).astype(np.float64, copy=False) * objective_shard_weight
+    )
 
     full_atom_count = int(config.full_video_pair_count * np.prod(cand_full.shape[1:]))
     surface = build_joint_p18_p19_waterfill_surface(
@@ -316,6 +406,8 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         "covered_atom_count": int(joint.size),
         "gradient_reduction_semantics": FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
         "pair_chunk_updates_forbidden": True,
+        "gradient_values_are_full_video_objective_contributions": True,
+        "full_video_objective_shard_weight": objective_shard_weight,
         "optimizer_update_applied": False,
         "budget_spend_authority": False,
         "optimizer_update_authority": False,
@@ -331,8 +423,12 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         "rgb_value_range": float(config.rgb_value_range),
         "reference_pairs_sha256": _array_sha256(ref),
         "candidate_pairs_sha256": _array_sha256(cand),
+        "archive_runtime_candidate_custody": bool(custody["archive_runtime_candidate_custody"]),
+        "archive_runtime_candidate_custody_report": custody,
         "segnet_vjp_abs_max": float(seg_grad_np.max(initial=0.0)),
         "pose_vjp_abs_max": float(pose_grad_np.max(initial=0.0)),
+        "segnet_argmax_gradient_abs": seg_grad_np,
+        "pose_jacobian_abs": pose_grad_np,
         "joint_weight": joint,
         "rate_attack_deadzone_mask": mask,
         "joint_surface_report": {
@@ -416,6 +512,200 @@ def compute_full_video_mlx_pose_distortion(
     return float(pose_sum / max(pose_count, 1))
 
 
+def compute_full_video_mlx_distortion_replay(
+    *,
+    reference_pairs_rgb: Any,
+    candidate_pairs_rgb: Any,
+    mlx_scorer: Any,
+    archive_rate_bytes: int,
+    archive_rate_bytes_source: str,
+    rgb_value_range: float = 255.0,
+    scorer_hw: tuple[int, int] = (384, 512),
+    pair_chunk_size: int = 64,
+    rate_normalizer_bytes: float = CONTEST_RATE_NORMALIZER_BYTES,
+) -> dict[str, Any]:
+    """Replay the full-video local MLX scorer action for one candidate."""
+
+    import mlx.core as mx
+
+    ref = _as_pair_rgb_array(reference_pairs_rgb, name="reference_pairs_rgb")
+    cand = _as_pair_rgb_array(candidate_pairs_rgb, name="candidate_pairs_rgb")
+    if ref.shape != cand.shape:
+        raise ValueError(f"reference/candidate pair shapes disagree: {ref.shape} vs {cand.shape}")
+    if rgb_value_range <= 0.0:
+        raise ValueError("rgb_value_range must be positive")
+    if pair_chunk_size <= 0:
+        raise ValueError("pair_chunk_size must be positive")
+    if archive_rate_bytes < 0:
+        raise ValueError("archive_rate_bytes must be >= 0")
+    if rate_normalizer_bytes <= 0.0:
+        raise ValueError("rate_normalizer_bytes must be positive")
+
+    scale = 255.0 / float(rgb_value_range)
+    seg_sum = 0.0
+    seg_count = 0
+    pose_sum = 0.0
+    pose_count = 0
+    for start in range(0, int(ref.shape[0]), int(pair_chunk_size)):
+        end = min(int(ref.shape[0]), start + int(pair_chunk_size))
+        ref_mx = mx.array(np.ascontiguousarray(ref[start:end] * scale, dtype=np.float32))
+        cand_mx = mx.array(np.ascontiguousarray(cand[start:end] * scale, dtype=np.float32))
+        ref_seg_input, ref_pose_input = _mlx_pairs_to_scorer_inputs_nhwc(ref_mx, scorer_hw=scorer_hw)
+        cand_seg_input, cand_pose_input = _mlx_pairs_to_scorer_inputs_nhwc(cand_mx, scorer_hw=scorer_hw)
+        ref_seg = mlx_scorer.segnet(ref_seg_input)
+        cand_seg = mlx_scorer.segnet(cand_seg_input)
+        ref_pose = mlx_scorer.posenet(ref_pose_input)["pose"]
+        cand_pose = mlx_scorer.posenet(cand_pose_input)["pose"]
+
+        seg_diff = mx.argmax(ref_seg, axis=-1) != mx.argmax(cand_seg, axis=-1)
+        seg_np = _mlx_value_to_numpy(seg_diff).astype(np.float64, copy=False)
+        seg_sum += float(np.sum(seg_np))
+        seg_count += int(seg_np.size)
+
+        dims = min(6, int(ref_pose.shape[-1]), int(cand_pose.shape[-1]))
+        pose_diff = cand_pose[..., :dims] - ref_pose[..., :dims]
+        pose_np = _mlx_value_to_numpy(pose_diff * pose_diff).astype(np.float64, copy=False)
+        pose_sum += float(np.sum(pose_np))
+        pose_count += int(pose_np.size)
+
+    d_seg = float(seg_sum / max(seg_count, 1))
+    d_pose = float(pose_sum / max(pose_count, 1))
+    rate = float(archive_rate_bytes) / float(rate_normalizer_bytes)
+    action = 100.0 * d_seg + math.sqrt(max(0.0, 10.0 * d_pose)) + 25.0 * rate
+    return {
+        "schema": Z8_FULL_VIDEO_MLX_REPLAY_SCHEMA,
+        "local_axis": EVIDENCE_TAG_MLX,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "pair_count": int(ref.shape[0]),
+        "frame_count": int(ref.shape[0] * 2),
+        "d_seg": d_seg,
+        "d_pose": d_pose,
+        "rate": rate,
+        "archive_rate_bytes": int(archive_rate_bytes),
+        "archive_rate_bytes_source": archive_rate_bytes_source,
+        "rate_normalizer_bytes": float(rate_normalizer_bytes),
+        "contest_action_proxy": float(action),
+        "full_video_local_replay_executed": True,
+        "full_video_local_replay_scope": "full_video",
+        "replay_ok": True,
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_z8_full_video_mlx_replay_evaluator(
+    *,
+    reference_pairs_rgb: Any,
+    mlx_scorer: Any,
+    rgb_value_range: float = 255.0,
+    scorer_hw: tuple[int, int] = (384, 512),
+    pair_chunk_size: int = 64,
+    rate_source: str = "byte_closed_zip",
+    rate_normalizer_bytes: float = CONTEST_RATE_NORMALIZER_BYTES,
+    repo_root: str | Path | None = None,
+    artifact_dir: str | Path | None = None,
+):
+    """Return a candidate-archive replay gate for the relinearized loop."""
+
+    if rate_source not in {"payload_bytes", "byte_closed_zip"}:
+        raise ValueError("rate_source must be 'payload_bytes' or 'byte_closed_zip'")
+    ref = _as_pair_rgb_array(reference_pairs_rgb, name="reference_pairs_rgb")
+    artifact_root = Path(artifact_dir) if artifact_dir is not None else None
+
+    def _byte_closed_rate_bytes(
+        candidate_archive: bytes,
+        *,
+        iteration_index: int,
+        candidate_index: int,
+    ) -> tuple[int, str | None, str | None]:
+        from tac.substrates.z8_hierarchical_predictive_coding.archive_candidate import (
+            export_z8hpc1_archive_bytes,
+        )
+
+        if artifact_root is not None:
+            out_dir = (
+                artifact_root
+                / "local_replay_byte_closed"
+                / f"iter_{iteration_index:04d}_cand_{candidate_index:05d}"
+            )
+            out_dir.mkdir(parents=True, exist_ok=True)
+            archive_zip_path, archive_zip_sha, archive_zip_bytes = export_z8hpc1_archive_bytes(
+                candidate_archive,
+                out_dir,
+                repo_root=repo_root,
+                emit_archive_bound_candidate_package=False,
+                emit_byte_mutation_proof=False,
+                retain_receiver_proof_output=False,
+            )
+            return int(archive_zip_bytes), archive_zip_path.as_posix(), str(archive_zip_sha)
+
+        with tempfile.TemporaryDirectory(prefix="z8_mlx_replay_zip_") as tmp:
+            archive_zip_path, archive_zip_sha, archive_zip_bytes = export_z8hpc1_archive_bytes(
+                candidate_archive,
+                Path(tmp),
+                repo_root=repo_root,
+                emit_archive_bound_candidate_package=False,
+                emit_byte_mutation_proof=False,
+                retain_receiver_proof_output=False,
+            )
+            return int(archive_zip_bytes), archive_zip_path.as_posix(), str(archive_zip_sha)
+
+    def _evaluator(
+        *,
+        candidate_archive_bytes: bytes,
+        source_archive_bytes: bytes,
+        current_archive_bytes: bytes,
+        iteration_index: int,
+        candidate_index: int,
+        candidate_metadata: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        candidate_archive = bytes(candidate_archive_bytes)
+        candidate_pairs = reconstruct_z8_archive_pairs_rgb255(candidate_archive)
+        if candidate_pairs.shape != ref.shape:
+            raise ValueError(
+                "reference_pairs_rgb shape must match candidate archive reconstruction shape: "
+                f"{ref.shape} vs {candidate_pairs.shape}"
+            )
+        archive_zip_path: str | None = None
+        archive_zip_sha: str | None = None
+        if rate_source == "byte_closed_zip":
+            rate_bytes, archive_zip_path, archive_zip_sha = _byte_closed_rate_bytes(
+                candidate_archive,
+                iteration_index=int(iteration_index),
+                candidate_index=int(candidate_index),
+            )
+            rate_bytes_source = "byte_closed_archive_zip"
+        else:
+            rate_bytes = len(candidate_archive)
+            rate_bytes_source = "z8hpc1_payload_bytes"
+        report = compute_full_video_mlx_distortion_replay(
+            reference_pairs_rgb=ref,
+            candidate_pairs_rgb=candidate_pairs,
+            mlx_scorer=mlx_scorer,
+            archive_rate_bytes=rate_bytes,
+            archive_rate_bytes_source=rate_bytes_source,
+            rgb_value_range=rgb_value_range,
+            scorer_hw=scorer_hw,
+            pair_chunk_size=pair_chunk_size,
+            rate_normalizer_bytes=rate_normalizer_bytes,
+        )
+        report.update(
+            {
+                "candidate_archive_sha256": _sha256_bytes(candidate_archive),
+                "source_archive_sha256": _sha256_bytes(bytes(source_archive_bytes)),
+                "current_archive_sha256": _sha256_bytes(bytes(current_archive_bytes)),
+                "iteration_index": int(iteration_index),
+                "candidate_index": int(candidate_index),
+                "candidate_metadata": _jsonable(dict(candidate_metadata or {})),
+                "rate_source": rate_source,
+                "byte_closed_archive_zip_path": archive_zip_path if artifact_root is not None else None,
+                "byte_closed_archive_zip_sha256": archive_zip_sha,
+            }
+        )
+        return report
+
+    return _evaluator
+
+
 def build_z8_full_video_mlx_surface_provider(
     *,
     reference_pairs_rgb: Any,
@@ -480,6 +770,7 @@ def build_z8_full_video_mlx_surface_provider(
                     seg_margin_delta=seg_margin_delta,
                     pose_null_threshold=pose_null_threshold,
                 ),
+                archive_runtime_candidate_pairs_rgb=candidate_pairs,
             )
             shards.append(shard)
             if iter_dir is not None:
@@ -595,7 +886,11 @@ def assemble_z8_full_video_vjp_surface_bundle(
     expected_start = 0
     joint_chunks: list[np.ndarray] = []
     mask_chunks: list[np.ndarray] = []
+    seg_grad_chunks: list[np.ndarray] = []
+    pose_grad_chunks: list[np.ndarray] = []
     shard_reports: list[dict[str, Any]] = []
+    full_video_d_pose: float | None = None
+    pose_null_threshold: float = 1e-8
     for shard_index, raw in enumerate(sorted(shard_surfaces, key=lambda row: int(row.get("pair_start", -1)))):
         if (
             raw.get("optimizer_update_applied")
@@ -607,6 +902,14 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 "full-video VJP shards cannot carry optimizer update authority; "
                 "assemble the complete archive-pinned pair grid before updating"
             )
+        if raw.get("archive_runtime_candidate_custody") is not True:
+            blocker = (raw.get("archive_runtime_candidate_custody_report", {}) or {}).get(
+                "blocker",
+                "archive_runtime_candidate_custody_missing",
+            )
+            raise ValueError(f"full-video VJP shard lacks archive runtime candidate custody: {blocker}")
+        if raw.get("gradient_values_are_full_video_objective_contributions") is not True:
+            raise ValueError("full-video VJP shard gradients are not full-video objective contributions")
         pair_start = int(raw.get("pair_start", -1))
         pair_end = int(raw.get("pair_end", -1))
         if pair_start != expected_start or pair_end <= pair_start:
@@ -622,10 +925,24 @@ def assemble_z8_full_video_vjp_surface_bundle(
             )
         joint = _as_array(raw, "joint_weight", dtype=np.float64)
         mask = _as_array(raw, "rate_attack_deadzone_mask", dtype=bool)
+        seg_grad = _as_array(raw, "segnet_argmax_gradient_abs", dtype=np.float64)
+        pose_grad = _as_array(raw, "pose_jacobian_abs", dtype=np.float64)
         if joint.shape[0] != pair_end - pair_start or mask.shape != joint.shape:
             raise ValueError("surface shard pair span and tensor shape disagree")
+        if seg_grad.shape != joint.shape or pose_grad.shape != joint.shape:
+            raise ValueError("surface shard raw gradient tensors must match joint_weight shape")
+        shard_d_pose = raw.get("full_video_d_pose")
+        if shard_d_pose is None:
+            raise ValueError("surface shard missing full_video_d_pose")
+        if full_video_d_pose is None:
+            full_video_d_pose = float(shard_d_pose)
+            pose_null_threshold = float(raw.get("pose_null_threshold", pose_null_threshold))
+        elif abs(full_video_d_pose - float(shard_d_pose)) > 1e-12:
+            raise ValueError("surface shards disagree on full_video_d_pose")
         joint_chunks.append(joint)
         mask_chunks.append(mask)
+        seg_grad_chunks.append(seg_grad)
+        pose_grad_chunks.append(pose_grad)
         expected_start = pair_end
         shard_reports.append(
             {
@@ -635,6 +952,8 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 "pair_end": pair_end,
                 "pair_count": int(pair_end - pair_start),
                 "linearization_archive_sha": pinned,
+                "archive_runtime_candidate_custody": True,
+                "gradient_values_are_full_video_objective_contributions": True,
                 "optimizer_update_applied": False,
             }
         )
@@ -648,8 +967,33 @@ def assemble_z8_full_video_vjp_surface_bundle(
         )
     joint_full = np.concatenate(joint_chunks, axis=0) if joint_chunks else np.zeros((0, 2, 1, 1, 1))
     mask_full = np.concatenate(mask_chunks, axis=0) if mask_chunks else np.zeros_like(joint_full, dtype=bool)
+    if full_coverage:
+        seg_grad_full = np.concatenate(seg_grad_chunks, axis=0)
+        pose_grad_full = np.concatenate(pose_grad_chunks, axis=0)
+        global_surface = build_joint_p18_p19_waterfill_surface(
+            segnet_argmax_gradient=seg_grad_full,
+            pose_jacobian=pose_grad_full[..., None],
+            config=JointP18P19WaterfillConfig(
+                d_pose=float(full_video_d_pose if full_video_d_pose is not None else 0.0),
+                pose_inverse_variance=(1.0,),
+                target_mode=str(plan["target_mode"]),
+                pose_null_threshold=float(pose_null_threshold),
+                evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+                full_video_atom_count=int(seg_grad_full.size),
+                linearization_archive_sha=archive_sha,
+                gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+            ),
+        )
+        joint_full = np.asarray(global_surface["joint_weight"], dtype=np.float64)
+        mask_full = np.asarray(global_surface["rate_attack_deadzone_mask"], dtype=bool)
+    else:
+        global_surface = {
+            "implicit_allocator_authority": False,
+            "implicit_allocator_blockers": ["partial_full_video_vjp_surface_probe_only"],
+        }
     return {
         "schema": Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA,
+        "surface_assembly_backend": "global_kkt_dykstra_after_full_shard_reduction.v1",
         "target_mode": plan["target_mode"],
         "local_axis": plan["local_axis"],
         "archive_sha256": archive_sha,
@@ -671,6 +1015,25 @@ def assemble_z8_full_video_vjp_surface_bundle(
         "optimizer_update_semantics": (
             SINGLE_UPDATE_AFTER_FULL_REDUCTION if full_coverage else "no_update_partial_surface_probe_only"
         ),
+        "implicit_allocator_authority": bool(global_surface.get("implicit_allocator_authority", False)),
+        "implicit_allocator_blockers": list(global_surface.get("implicit_allocator_blockers") or []),
+        "global_joint_surface_report": {
+            key: value
+            for key, value in global_surface.items()
+            if key
+            not in {
+                "joint_weight",
+                "rate_attack_deadzone_mask",
+                "safe_rate_spend_mask",
+                "distortion_protect_mask",
+                "segnet_term",
+                "pose_term",
+                "pose_null_mask",
+                "pose_mahalanobis_norm",
+                "coarsening_priority",
+                "rate_attack_allocation",
+            }
+        },
         "surface_relinearization_required_after_accepted_mutation": True,
         "joint_weight": joint_full,
         "rate_attack_deadzone_mask": mask_full,
@@ -705,6 +1068,7 @@ def write_z8_full_video_vjp_surface_bundle(
         optimizer_update_semantics=np.asarray(str(bundle["optimizer_update_semantics"])),
         full_video_reduction_complete=np.asarray(bool(bundle["full_video_reduction_complete"])),
         budget_spend_authority=np.asarray(bool(bundle["budget_spend_authority"])),
+        implicit_allocator_authority=np.asarray(bool(bundle.get("implicit_allocator_authority", False))),
     )
     manifest = {
         "schema": "z8_full_video_vjp_surface_bundle_manifest.v1",
@@ -723,6 +1087,8 @@ def write_z8_full_video_vjp_surface_bundle(
         "budget_spend_authority": bundle["budget_spend_authority"],
         "optimizer_update_authority": bundle["optimizer_update_authority"],
         "optimizer_update_semantics": bundle["optimizer_update_semantics"],
+        "implicit_allocator_authority": bundle.get("implicit_allocator_authority", False),
+        "implicit_allocator_blockers": bundle.get("implicit_allocator_blockers", []),
         "shard_count": bundle["shard_count"],
         "score_claim": False,
         "promotion_eligible": False,
@@ -745,11 +1111,23 @@ def write_z8_full_video_vjp_surface_shard(
     out_dir.mkdir(parents=True, exist_ok=True)
     shard_index = int(shard.get("shard_index", 0))
     shard_path = out_dir / f"z8_full_video_vjp_surface_shard_{shard_index:04d}.npz"
-    metadata = {key: value for key, value in shard.items() if key not in {"joint_weight", "rate_attack_deadzone_mask"}}
+    metadata = {
+        key: value
+        for key, value in shard.items()
+        if key
+        not in {
+            "joint_weight",
+            "rate_attack_deadzone_mask",
+            "segnet_argmax_gradient_abs",
+            "pose_jacobian_abs",
+        }
+    }
     np.savez_compressed(
         shard_path,
         joint_weight=np.asarray(shard["joint_weight"], dtype=np.float32),
         rate_attack_deadzone_mask=np.asarray(shard["rate_attack_deadzone_mask"], dtype=bool),
+        segnet_argmax_gradient_abs=np.asarray(shard["segnet_argmax_gradient_abs"], dtype=np.float32),
+        pose_jacobian_abs=np.asarray(shard["pose_jacobian_abs"], dtype=np.float32),
         shard_index=np.asarray(shard_index),
         pair_start=np.asarray(int(shard["pair_start"])),
         pair_end=np.asarray(int(shard["pair_end"])),
@@ -772,6 +1150,10 @@ def write_z8_full_video_vjp_surface_shard(
         "pair_count": int(shard["pair_end"]) - int(shard["pair_start"]),
         "full_video_pair_count": shard.get("full_video_pair_count"),
         "gradient_reduction_semantics": shard.get("gradient_reduction_semantics"),
+        "archive_runtime_candidate_custody": bool(shard.get("archive_runtime_candidate_custody", False)),
+        "gradient_values_are_full_video_objective_contributions": bool(
+            shard.get("gradient_values_are_full_video_objective_contributions", False)
+        ),
         "optimizer_update_applied": False,
         "budget_spend_authority": False,
         **FALSE_AUTHORITY,
@@ -810,6 +1192,8 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
         required = {
             "joint_weight",
             "rate_attack_deadzone_mask",
+            "segnet_argmax_gradient_abs",
+            "pose_jacobian_abs",
             "pair_start",
             "pair_end",
             "linearization_archive_sha",
@@ -832,6 +1216,8 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
                 data["rate_attack_deadzone_mask"],
                 dtype=bool,
             ),
+            "segnet_argmax_gradient_abs": np.asarray(data["segnet_argmax_gradient_abs"], dtype=np.float64),
+            "pose_jacobian_abs": np.asarray(data["pose_jacobian_abs"], dtype=np.float64),
             "optimizer_update_applied": bool(
                 np.asarray(metadata.get("optimizer_update_applied", False)).reshape(-1)[0]
             ),
@@ -842,6 +1228,12 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
                 np.asarray(metadata.get("gradient_reduction_authority", False)).reshape(-1)[0]
             ),
             "budget_spend_authority": bool(np.asarray(metadata.get("budget_spend_authority", False)).reshape(-1)[0]),
+            "archive_runtime_candidate_custody": bool(
+                np.asarray(metadata.get("archive_runtime_candidate_custody", False)).reshape(-1)[0]
+            ),
+            "gradient_values_are_full_video_objective_contributions": bool(
+                np.asarray(metadata.get("gradient_values_are_full_video_objective_contributions", False)).reshape(-1)[0]
+            ),
         }
     payload = json.loads(p.read_text(encoding="utf-8"))
     return {
@@ -854,10 +1246,16 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
             payload["rate_attack_deadzone_mask"],
             dtype=bool,
         ),
+        "segnet_argmax_gradient_abs": np.asarray(payload["segnet_argmax_gradient_abs"], dtype=np.float64),
+        "pose_jacobian_abs": np.asarray(payload["pose_jacobian_abs"], dtype=np.float64),
         "optimizer_update_applied": bool(payload.get("optimizer_update_applied", False)),
         "optimizer_update_authority": bool(payload.get("optimizer_update_authority", False)),
         "gradient_reduction_authority": bool(payload.get("gradient_reduction_authority", False)),
         "budget_spend_authority": bool(payload.get("budget_spend_authority", False)),
+        "archive_runtime_candidate_custody": bool(payload.get("archive_runtime_candidate_custody", False)),
+        "gradient_values_are_full_video_objective_contributions": bool(
+            payload.get("gradient_values_are_full_video_objective_contributions", False)
+        ),
     }
 
 
@@ -873,6 +1271,8 @@ def build_z8_full_video_vjp_acquisition_contract() -> dict[str, Any]:
         "contest_budget_spend_requires": [
             "full_video_pair_grid_coverage",
             "linearization_archive_sha_equals_current_archive_sha",
+            "candidate_pairs_equal_archive_runtime_reconstruction",
+            "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation",
             "single_optimizer_update_after_full_shard_reduction",
             "relinearize_after_each_accepted_archive_mutation",
             "receiver_proof_plus_exact_cpu_cuda_before_score_authority",
@@ -891,6 +1291,7 @@ def build_z8_full_video_vjp_acquisition_contract() -> dict[str, Any]:
 
 
 __all__ = [
+    "Z8_FULL_VIDEO_MLX_REPLAY_SCHEMA",
     "Z8_FULL_VIDEO_VJP_ACQUISITION_PLAN_SCHEMA",
     "Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND",
     "Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA",
@@ -898,10 +1299,12 @@ __all__ = [
     "Z8FullVideoMlxVjpShardConfig",
     "Z8FullVideoVjpAcquisitionConfig",
     "assemble_z8_full_video_vjp_surface_bundle",
+    "build_z8_full_video_mlx_replay_evaluator",
     "build_z8_full_video_mlx_surface_provider",
     "build_z8_full_video_mlx_vjp_surface_shard",
     "build_z8_full_video_vjp_acquisition_contract",
     "build_z8_full_video_vjp_acquisition_plan",
+    "compute_full_video_mlx_distortion_replay",
     "compute_full_video_mlx_pose_distortion",
     "load_z8_full_video_vjp_surface_shard_file",
     "reconstruct_z8_archive_pairs_rgb255",
