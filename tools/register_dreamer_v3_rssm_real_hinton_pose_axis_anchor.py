@@ -138,10 +138,13 @@ def main(argv: list[str] | None = None) -> int:
     pose_ep0 = float(poses[0])
     pose_last = float(poses[-1])
     pose_min = float(min(poses))
-    residual = float(args.predicted_reduction) - float(reduction)
-    # Canonical EmpiricalAnchor schema: inputs/predicted_output/empirical_output/
-    # residual are dicts; source_artifact is a str (mirrors the existing
-    # dreamer_v3_rssm anchors in the registry).
+    # Canonical EmpiricalAnchor schema: inputs is a Mapping; predicted_output +
+    # empirical_output are Any (dicts OK); ``residual`` is a SCALAR numeric
+    # NORMALIZED MAGNITUDE >= 0 (the registry refuses negative residuals — it
+    # stores |predicted - empirical| as the residual magnitude). The signed
+    # direction is captured by predicted_output vs empirical_output.
+    signed_residual = float(args.predicted_reduction) - float(reduction)
+    residual = abs(signed_residual)
     anchor = EmpiricalAnchor(
         anchor_id=f"dreamer_v3_rssm_real_hinton_pose_axis_{args.run_dir.name}",
         measurement_utc=now,
@@ -164,10 +167,9 @@ def main(argv: list[str] | None = None) -> int:
             "pose_axis_ep0": pose_ep0,
             "pose_axis_last": pose_last,
             "pose_axis_min": pose_min,
+            "signed_residual_predicted_minus_empirical": signed_residual,
         },
-        residual={
-            "pose_axis_reduction_fraction": residual,
-        },
+        residual=residual,
         source_artifact=source_path,
         measurement_method=(
             "real_hinton_segnet_posenet_teacher_600pair_long_mlx_local_"
