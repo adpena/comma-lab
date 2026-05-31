@@ -40,6 +40,13 @@ from typing import Any
 
 import numpy as np
 
+from tac.optimization.target_modes import (
+    CONTEST_VIDEO_OVERFIT_MODE,
+    normalize_target_optimization_mode,
+    target_mode_declares_overfit_allowed,
+    target_mode_requires_corpus_manifest,
+)
+
 JOINT_P18_P19_WATERFILL_SCHEMA = "joint_p18_p19_waterfill_surface.v1"
 JOINT_P18_P19_WEIGHT_FORMULA = (
     "w_i = 100*abs(dL_seg/dx_i) + 5/sqrt(10*d_pose)*||J_pose_i||_{Sigma^-1}"
@@ -67,6 +74,7 @@ class JointP18P19WaterfillConfig:
 
     d_pose: float
     pose_inverse_variance: tuple[float, ...]
+    target_mode: str = CONTEST_VIDEO_OVERFIT_MODE
     pose_null_threshold: float = 1e-8
     d_pose_floor: float = 1e-12
     evidence_scope: str = PROPOSAL_ONLY_SCOPE
@@ -84,6 +92,7 @@ class JointP18P19WaterfillConfig:
             raise ValueError("pose_inverse_variance must not be empty")
         if any(value <= 0.0 for value in self.pose_inverse_variance):
             raise ValueError("pose_inverse_variance entries must be > 0")
+        normalize_target_optimization_mode(self.target_mode)
         if self.evidence_scope not in {PROPOSAL_ONLY_SCOPE, FULL_VIDEO_AUTHORITY_SCOPE}:
             raise ValueError(
                 f"evidence_scope must be {PROPOSAL_ONLY_SCOPE!r} or {FULL_VIDEO_AUTHORITY_SCOPE!r}"
@@ -100,6 +109,10 @@ class JointP18P19WaterfillConfig:
     @property
     def pose_ail_gain(self) -> float:
         return 5.0 / float(np.sqrt(10.0 * max(self.d_pose, self.d_pose_floor)))
+
+    @property
+    def normalized_target_mode(self) -> str:
+        return normalize_target_optimization_mode(self.target_mode)
 
 
 def mahalanobis_pose_jacobian_norm(
@@ -242,6 +255,7 @@ def build_joint_p18_p19_waterfill_surface(
         full_video_atom_count=config.full_video_atom_count,
     )
     fresh_blockers = _fresh_surface_blockers(config.linearization_archive_sha)
+    target_mode = config.normalized_target_mode
     pose_null_mask = pose_norm <= float(config.pose_null_threshold)
     rate_attack_deadzone_mask = pose_null_mask & (joint <= np.median(joint))
     distortion_protect_mask = ~rate_attack_deadzone_mask
@@ -253,6 +267,20 @@ def build_joint_p18_p19_waterfill_surface(
         "d_pose": float(config.d_pose),
         "pose_ail_gain": float(config.pose_ail_gain),
         "pose_null_threshold": float(config.pose_null_threshold),
+        "target_mode": target_mode,
+        "declared_overfit_allowed": target_mode_declares_overfit_allowed(target_mode),
+        "corpus_manifest_required": target_mode_requires_corpus_manifest(target_mode),
+        "objective_mode_contract": {
+            "schema": "joint_p18_p19_objective_mode_contract.v1",
+            "target_mode": target_mode,
+            "contest_mode_uses_declared_video_as_optimization_target": (
+                target_mode == CONTEST_VIDEO_OVERFIT_MODE
+            ),
+            "production_modes_use_same_surface_contract_with_declared_corpus": (
+                target_mode_requires_corpus_manifest(target_mode)
+            ),
+            "no_hidden_video_or_corpus_binding": True,
+        },
         "evidence_scope": config.evidence_scope,
         "observed_atom_count": observed_atom_count,
         "full_video_atom_count": config.full_video_atom_count,
@@ -284,6 +312,7 @@ def build_joint_p18_p19_waterfill_surface(
 
 
 __all__ = [
+    "CONTEST_VIDEO_OVERFIT_MODE",
     "FULL_VIDEO_AUTHORITY_SCOPE",
     "JOINT_P18_P19_RATE_ATTACK_ROLE",
     "JOINT_P18_P19_WATERFILL_SCHEMA",

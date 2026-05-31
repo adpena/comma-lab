@@ -11,6 +11,13 @@ from typing import Any
 
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
+from tac.optimization.target_modes import (
+    CONTEST_VIDEO_OVERFIT_MODE,
+    HYBRID_CONTEST_PLUS_CORPUS_MODE,
+    TARGET_OPTIMIZATION_MODES,
+    target_mode_declares_overfit_allowed,
+    target_mode_requires_corpus_manifest,
+)
 
 from .experiment_queue import ExperimentQueueError
 
@@ -21,13 +28,6 @@ TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_target_optimization_profile_queue_metadata.v1"
 )
 DEFAULT_CONTEST_TARGET_VIDEO = Path("upstream/videos/0.mkv")
-TARGET_OPTIMIZATION_MODES = frozenset(
-    {
-        "contest_video_overfit",
-        "corpus_generalization",
-        "hybrid_contest_plus_corpus",
-    }
-)
 
 
 class FrontierRateAttackTargetProfileError(ExperimentQueueError):
@@ -102,7 +102,7 @@ def build_frontier_target_optimization_profile(
     *,
     repo_root: str | Path,
     target_profile_id: str = "contest_video_0",
-    target_mode: str = "contest_video_overfit",
+    target_mode: str = CONTEST_VIDEO_OVERFIT_MODE,
     target_video_paths: Sequence[str | Path] = (),
     target_corpus_manifest_path: str | Path | None = None,
 ) -> dict[str, Any]:
@@ -153,7 +153,7 @@ def build_frontier_target_optimization_profile(
     for video in videos:
         if video.get("exists") is not True:
             blockers.append(f"target_video_missing:{video.get('path')}")
-    if mode in {"corpus_generalization", "hybrid_contest_plus_corpus"}:
+    if target_mode_requires_corpus_manifest(mode):
         if corpus_manifest is None:
             blockers.append("target_corpus_manifest_required_for_mode")
         elif corpus_manifest.get("exists") is not True:
@@ -166,8 +166,7 @@ def build_frontier_target_optimization_profile(
         "generated_at_utc": _utc_now(),
         "target_profile_id": profile_id,
         "target_mode": mode,
-        "declared_overfit_allowed": mode
-        in {"contest_video_overfit", "hybrid_contest_plus_corpus"},
+        "declared_overfit_allowed": target_mode_declares_overfit_allowed(mode),
         "target_video_count": len(videos),
         "target_videos": videos,
         "target_corpus_manifest": corpus_manifest,
@@ -250,7 +249,9 @@ def target_optimization_profile_queue_metadata(
 
 
 __all__ = [
+    "CONTEST_VIDEO_OVERFIT_MODE",
     "DEFAULT_CONTEST_TARGET_VIDEO",
+    "HYBRID_CONTEST_PLUS_CORPUS_MODE",
     "TARGET_OPTIMIZATION_MODES",
     "TARGET_OPTIMIZATION_PROFILE_QUEUE_METADATA_SCHEMA",
     "TARGET_OPTIMIZATION_PROFILE_SCHEMA",

@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from tac.optimization.joint_p18_p19_waterfill import (
+    CONTEST_VIDEO_OVERFIT_MODE,
     FULL_VIDEO_AUTHORITY_SCOPE,
     JOINT_P18_P19_RATE_ATTACK_ROLE,
     JOINT_P18_P19_WEIGHT_FORMULA,
@@ -16,6 +17,11 @@ from tac.optimization.joint_p18_p19_waterfill import (
     require_full_video_joint_surface,
     surface_is_stale_for_archive,
 )
+from tac.optimization.target_modes import CORPUS_GENERALIZATION_MODE
+
+ARCHIVE_A_SHA = "a" * 64
+ARCHIVE_B_SHA = "b" * 64
+ARCHIVE_D_SHA = "d" * 64
 
 
 def _full_video_surface(
@@ -27,10 +33,7 @@ def _full_video_surface(
     if linearization_archive_sha is None:
         sha = None
     else:
-        aliases = {
-            "archiveA": "a" * 64,
-            "archiveB": "b" * 64,
-        }
+        aliases = {"archiveA": ARCHIVE_A_SHA, "archiveB": ARCHIVE_B_SHA}
         sha = aliases.get(linearization_archive_sha, linearization_archive_sha)
     seg = np.array([0.01, 0.02], dtype=np.float64)
     pose_j = np.zeros((2, 1), dtype=np.float64)
@@ -81,6 +84,9 @@ def test_joint_p18_p19_weight_uses_segnet_and_pose_mahalanobis_terms() -> None:
     )
     assert surface["formula"] == JOINT_P18_P19_WEIGHT_FORMULA
     assert surface["rate_axis_attack_role"] == JOINT_P18_P19_RATE_ATTACK_ROLE
+    assert surface["target_mode"] == CONTEST_VIDEO_OVERFIT_MODE
+    assert surface["declared_overfit_allowed"] is True
+    assert surface["corpus_manifest_required"] is False
     assert surface["pose_null_mask"].tolist() == [True, False, False]
     assert surface["rate_attack_deadzone_mask"].tolist() == [True, False, False]
     assert surface["distortion_protect_mask"].tolist() == [False, True, True]
@@ -175,7 +181,7 @@ def test_mahalanobis_pose_norm_rejects_shape_mismatch() -> None:
 
 
 def test_surface_carries_local_tangent_plane_markers_and_pinned_sha() -> None:
-    sha = "d" * 64
+    sha = ARCHIVE_D_SHA
     surface = _full_video_surface(linearization_archive_sha=sha)
     assert surface["surface_is_local_tangent_plane"] is True
     assert surface["recompute_required_after_archive_mutation"] is True
@@ -183,8 +189,8 @@ def test_surface_carries_local_tangent_plane_markers_and_pinned_sha() -> None:
 
 
 def test_surface_is_stale_for_archive_detects_accepted_mutation() -> None:
-    archive_a = "a" * 64
-    archive_b = "b" * 64
+    archive_a = ARCHIVE_A_SHA
+    archive_b = ARCHIVE_B_SHA
     surface = _full_video_surface(linearization_archive_sha=archive_a)
     # The decision was about to mutate the archive it was linearized at -> fresh.
     assert surface_is_stale_for_archive(surface, archive_a) is False
@@ -195,12 +201,12 @@ def test_surface_is_stale_for_archive_detects_accepted_mutation() -> None:
 def test_surface_is_stale_for_archive_unpinned_is_stale() -> None:
     surface = _full_video_surface(linearization_archive_sha=None)
     # No pinned linearization point means the tangent plane cannot prove freshness.
-    assert surface_is_stale_for_archive(surface, "a" * 64) is True
+    assert surface_is_stale_for_archive(surface, ARCHIVE_A_SHA) is True
 
 
 def test_require_fresh_joint_surface_refuses_stale_tangent_plane() -> None:
-    archive_a = "a" * 64
-    archive_b = "b" * 64
+    archive_a = ARCHIVE_A_SHA
+    archive_b = ARCHIVE_B_SHA
     surface = _full_video_surface(linearization_archive_sha=archive_a)
     require_fresh_joint_surface(surface, current_archive_sha=archive_a)  # fresh: ok
     with pytest.raises(
@@ -216,7 +222,7 @@ def test_require_fresh_joint_surface_refuses_unpinned_surface() -> None:
         JointP18P19WaterfillAuthorityError,
         match="linearization_archive_sha_missing",
     ):
-        require_fresh_joint_surface(surface, current_archive_sha="a" * 64)
+        require_fresh_joint_surface(surface, current_archive_sha=ARCHIVE_A_SHA)
 
 
 def test_config_rejects_blank_linearization_sha() -> None:
@@ -225,6 +231,37 @@ def test_config_rejects_blank_linearization_sha() -> None:
             d_pose=1e-4,
             pose_inverse_variance=(1.0,),
             linearization_archive_sha="   ",
+        )
+
+
+def test_joint_surface_target_mode_toggle_records_production_contract() -> None:
+    seg = np.array([0.01, 0.02], dtype=np.float64)
+    surface = build_joint_p18_p19_waterfill_surface(
+        segnet_argmax_gradient=seg,
+        pose_jacobian=np.zeros((2, 1), dtype=np.float64),
+        config=JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            target_mode=CORPUS_GENERALIZATION_MODE,
+            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+            full_video_atom_count=seg.size,
+            linearization_archive_sha=ARCHIVE_A_SHA,
+        ),
+    )
+
+    assert surface["target_mode"] == CORPUS_GENERALIZATION_MODE
+    assert surface["declared_overfit_allowed"] is False
+    assert surface["corpus_manifest_required"] is True
+    assert surface["ready_for_budget_spend"] is True
+    assert surface["objective_mode_contract"]["no_hidden_video_or_corpus_binding"] is True
+
+
+def test_joint_surface_rejects_unknown_target_mode() -> None:
+    with pytest.raises(ValueError, match="target_mode"):
+        JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            target_mode="secret_single_video_hack",
         )
 
 
@@ -238,8 +275,8 @@ def test_coverage_and_freshness_are_orthogonal_and_both_required() -> None:
 
     # (1) Full-video coverage authoritative BUT stale: coverage gate passes,
     #     freshness gate REFUSES (linearized at archiveA, deciding on archiveB).
-    archive_a = "a" * 64
-    archive_b = "b" * 64
+    archive_a = ARCHIVE_A_SHA
+    archive_b = ARCHIVE_B_SHA
     stale_full = _full_video_surface(linearization_archive_sha=archive_a)
     require_full_video_joint_surface(stale_full)  # coverage: ok
     with pytest.raises(JointP18P19WaterfillAuthorityError, match="stale_tangent_plane"):
