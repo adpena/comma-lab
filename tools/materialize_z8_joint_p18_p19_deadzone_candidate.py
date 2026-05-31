@@ -7,29 +7,12 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any
-
-import numpy as np
 
 from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill import (
     Z8JointCoefficientWaterfillConfig,
+    load_joint_p18_p19_surface_file,
     materialize_joint_p18_p19_deadzone_candidate,
 )
-
-
-def _load_surface(path: Path) -> tuple[Any, Any | None]:
-    if path.suffix == ".npz":
-        data = np.load(path)
-        if "joint_weight" not in data:
-            raise ValueError(f"{path} must contain joint_weight")
-        mask = data.get("rate_attack_deadzone_mask", None)
-        return data["joint_weight"], mask
-    if path.suffix == ".npy":
-        return np.load(path), None
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if "joint_weight" not in payload:
-        raise ValueError(f"{path} JSON must contain joint_weight")
-    return payload["joint_weight"], payload.get("rate_attack_deadzone_mask")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -50,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    joint_weight, safe_mask = _load_surface(args.surface)
+    joint_weight, safe_mask = load_joint_p18_p19_surface_file(args.surface)
     config = Z8JointCoefficientWaterfillConfig(
         joint_weight_quantile=args.joint_weight_quantile,
         coefficient_deadzone_quantile=args.coefficient_deadzone_quantile,

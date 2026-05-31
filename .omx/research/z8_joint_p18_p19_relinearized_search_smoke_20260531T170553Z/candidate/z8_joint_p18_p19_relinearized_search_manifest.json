@@ -1,0 +1,362 @@
+{
+  "accepted_candidates": [
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 11520,
+        "dead_zoned_fraction": 0.5,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 0,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "59a95ec69df6dd88f1945c1bd90c6f00909692101f7db2251e951af6de07b51c",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 24.455436091323914,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 11004,
+        "after_wavelet_blob_bytes": 10210,
+        "archive_byte_delta": -81404,
+        "archive_rate_ratio": 0.11908059908233054,
+        "before_archive_bytes": 92408,
+        "before_wavelet_blob_bytes": 91951,
+        "wavelet_blob_byte_delta": -81741,
+        "wavelet_blob_rate_ratio": 0.11103740035453666
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "fe2fb0012b21356deecbc82c9fa6ac5b9182eac4a567b93a393c6c83ff15bd54"
+    },
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 22375,
+        "dead_zoned_fraction": 0.9711371527777778,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.0,
+        "max_abs_delta": 0.0,
+        "mse": 0.0,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 1,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "22558868e9cfa87e986cec30cfd6ca6208d7d25035e24173a8ae34abb8bad925",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 28.214674024962704,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 7692,
+        "after_wavelet_blob_bytes": 6898,
+        "archive_byte_delta": -3312,
+        "archive_rate_ratio": 0.6990185387131952,
+        "before_archive_bytes": 11004,
+        "before_wavelet_blob_bytes": 10210,
+        "wavelet_blob_byte_delta": -3312,
+        "wavelet_blob_rate_ratio": 0.6756121449559256
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "89a5e52bce7e36313ecf11c8cd4b73e2452b40ee7d72ae00a773b4a24f011405"
+    }
+  ],
+  "allowed_use": "local_z8_rate_attack_acquisition_and_materialization_signal",
+  "archive_zip_bytes": 119662,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/z8_joint_p18_p19_relinearized_search_smoke_20260531T170553Z/candidate/archive.zip",
+  "archive_zip_sha256": "4e533673e206976d2ef41f009ffa4599454c229ef5bf0382643b67e308a46b3c",
+  "axis_tag": "[macOS-CPU advisory]",
+  "candidate_bin_bytes": 7692,
+  "candidate_bin_path": ".omx/research/z8_joint_p18_p19_relinearized_search_smoke_20260531T170553Z/candidate/0.bin",
+  "candidate_bin_sha256": "22558868e9cfa87e986cec30cfd6ca6208d7d25035e24173a8ae34abb8bad925",
+  "candidate_count": 4,
+  "candidate_grid": [
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 11520,
+        "dead_zoned_fraction": 0.5,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 0,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "59a95ec69df6dd88f1945c1bd90c6f00909692101f7db2251e951af6de07b51c",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 24.455436091323914,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 11004,
+        "after_wavelet_blob_bytes": 10210,
+        "archive_byte_delta": -81404,
+        "archive_rate_ratio": 0.11908059908233054,
+        "before_archive_bytes": 92408,
+        "before_wavelet_blob_bytes": 91951,
+        "wavelet_blob_byte_delta": -81741,
+        "wavelet_blob_rate_ratio": 0.11103740035453666
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "fe2fb0012b21356deecbc82c9fa6ac5b9182eac4a567b93a393c6c83ff15bd54"
+    },
+    {
+      "coefficient_deadzone_quantile": 1.0,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 23040,
+        "dead_zoned_fraction": 1.0,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.028669421002975173,
+        "max_abs_delta": 0.8287017792463303,
+        "mse": 0.0023139107733749554,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.028669421002975173,
+        "max_abs_delta": 0.8287017792463303,
+        "mse": 0.0023139107733749554,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 0,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "d42c8a1badfa39c378a01a2f1bd058daf1fd377e19524b811893077b3348755d",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 48.07053864298175,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 6625,
+        "after_wavelet_blob_bytes": 5831,
+        "archive_byte_delta": -85783,
+        "archive_rate_ratio": 0.07169292701930569,
+        "before_archive_bytes": 92408,
+        "before_wavelet_blob_bytes": 91951,
+        "wavelet_blob_byte_delta": -86120,
+        "wavelet_blob_rate_ratio": 0.06341420974214527
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "fe2fb0012b21356deecbc82c9fa6ac5b9182eac4a567b93a393c6c83ff15bd54"
+    },
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 22375,
+        "dead_zoned_fraction": 0.9711371527777778,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.023923634697554735,
+        "max_abs_delta": 0.20456412434577942,
+        "mse": 0.0010739210557132825,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.0,
+        "max_abs_delta": 0.0,
+        "mse": 0.0,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 1,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "22558868e9cfa87e986cec30cfd6ca6208d7d25035e24173a8ae34abb8bad925",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 28.214674024962704,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 7692,
+        "after_wavelet_blob_bytes": 6898,
+        "archive_byte_delta": -3312,
+        "archive_rate_ratio": 0.6990185387131952,
+        "before_archive_bytes": 11004,
+        "before_wavelet_blob_bytes": 10210,
+        "wavelet_blob_byte_delta": -3312,
+        "wavelet_blob_rate_ratio": 0.6756121449559256
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "89a5e52bce7e36313ecf11c8cd4b73e2452b40ee7d72ae00a773b4a24f011405"
+    },
+    {
+      "coefficient_deadzone_quantile": 1.0,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 23040,
+        "dead_zoned_fraction": 1.0,
+        "eligible_coefficients": 23040,
+        "eligible_fraction": 1.0,
+        "mutated_pair_count": 4,
+        "pair_count": 4,
+        "total_detail_coefficients": 23040
+      },
+      "cumulative_distortion_report": {
+        "mae": 0.028669421002975173,
+        "max_abs_delta": 0.8287017792463303,
+        "mse": 0.0023139107733749554,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "guard_ok": true,
+      "incremental_distortion_report": {
+        "mae": 0.018008017453372178,
+        "max_abs_delta": 0.8086880445480347,
+        "mse": 0.001931244683418689,
+        "receiver_tensor_values": 24576,
+        "small_receiver_distortion_measured": true
+      },
+      "iteration_index": 1,
+      "joint_weight_quantile": 1.0,
+      "mutated_archive_sha256": "d42c8a1badfa39c378a01a2f1bd058daf1fd377e19524b811893077b3348755d",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 50.59034987583338,
+      "quantization_step": 0.25,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 6625,
+        "after_wavelet_blob_bytes": 5831,
+        "archive_byte_delta": -4379,
+        "archive_rate_ratio": 0.6020537986186841,
+        "before_archive_bytes": 11004,
+        "before_wavelet_blob_bytes": 10210,
+        "wavelet_blob_byte_delta": -4379,
+        "wavelet_blob_rate_ratio": 0.5711067580803134
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "89a5e52bce7e36313ecf11c8cd4b73e2452b40ee7d72ae00a773b4a24f011405"
+    }
+  ],
+  "cumulative_rate_report": {
+    "archive_byte_delta": -84716,
+    "archive_rate_ratio": 0.08323954635962254,
+    "final_archive_bytes": 7692,
+    "original_archive_bytes": 92408
+  },
+  "dispatch_attempted": false,
+  "exact_axis_blocker": "receiver_proof_and_contest_cpu_cuda_eval_not_executed",
+  "final_archive_sha256": "22558868e9cfa87e986cec30cfd6ca6208d7d25035e24173a8ae34abb8bad925",
+  "final_blocker": null,
+  "final_distortion_report": {
+    "mae": 0.023923634697554735,
+    "max_abs_delta": 0.20456412434577942,
+    "mse": 0.0010739210557132825,
+    "receiver_tensor_values": 24576,
+    "small_receiver_distortion_measured": true
+  },
+  "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
+  "gpu_launched": false,
+  "interaction_penalty": "penalize_cumulative_mse_increase_between_relinearization_steps",
+  "iterations_accepted": 2,
+  "iterations_requested": 2,
+  "manifest_path": ".omx/research/z8_joint_p18_p19_relinearized_search_smoke_20260531T170553Z/candidate/z8_joint_p18_p19_relinearized_search_manifest.json",
+  "pose_guard": "pose_null_mask_and_mahalanobis_ail_weights_consumed",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_executed": false,
+  "role": "project_joint_p18_p19_pixel_pair_surface_to_mallat_detail_subbands_then_dead_zone_low_joint_weight_pose_null_coefficients",
+  "schema": "z8_joint_p18_p19_coefficient_relinearized_search.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "ste_boundary": "straight_through_deadzone_quantization_proxy",
+  "surface_refresh_contract": "fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"
+}

@@ -28,12 +28,8 @@ from tac.score_composition import (
 )
 
 Z8_JOINT_VARIATIONAL_DRIVER_SCHEMA = "z8_joint_variational_driver.v1"
-Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA = (
-    "z8_joint_p18_p19_gradient_waterfill_contract.v1"
-)
-Z8_TRAINED_MLX_RENDERED_OUTPUT_EXPORT_SCHEMA = (
-    "z8_trained_mlx_rendered_output_export.v1"
-)
+Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA = "z8_joint_p18_p19_gradient_waterfill_contract.v1"
+Z8_TRAINED_MLX_RENDERED_OUTPUT_EXPORT_SCHEMA = "z8_trained_mlx_rendered_output_export.v1"
 
 
 @dataclass(frozen=True)
@@ -85,11 +81,7 @@ def expected_categorical_archive_rate_score(
         total_bits = total_bits + mx.mean(mx.sum(entropy_bits, axis=-1))
 
     expected_archive_bytes = (total_bits / 8.0) * float(cfg.num_pairs)
-    return (
-        float(CANONICAL_RATE_MULTIPLIER)
-        * expected_archive_bytes
-        / float(CANONICAL_RATE_DENOM_BYTES)
-    )
+    return float(CANONICAL_RATE_MULTIPLIER) * expected_archive_bytes / float(CANONICAL_RATE_DENOM_BYTES)
 
 
 def argmax_commitment_loss(
@@ -153,15 +145,15 @@ def build_z8_joint_p18_p19_gradient_waterfill_contract() -> dict[str, Any]:
         ),
         "rate_axis_attack_role": JOINT_P18_P19_RATE_ATTACK_ROLE,
         "executable_materializer": {
-            "module": (
-                "tac.substrates.z8_hierarchical_predictive_coding."
-                "joint_coefficient_waterfill"
-            ),
+            "module": ("tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill"),
             "function": "materialize_joint_p18_p19_deadzone_candidate",
+            "relinearized_search_function": ("materialize_joint_p18_p19_relinearized_deadzone_search"),
             "cli": "tools/materialize_z8_joint_p18_p19_deadzone_candidate.py",
             "output_schema": "z8_joint_p18_p19_coefficient_deadzone_candidate.v1",
+            "relinearized_search_schema": ("z8_joint_p18_p19_coefficient_relinearized_search.v1"),
             "archive_target": "z8hpc1_wavelet_coeffs_blob",
             "mutation": "deterministic_detail_subband_deadzone_quantization",
+            "surface_refresh_contract": ("fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"),
         },
         "segnet_surface": {
             "stage": "P18",
@@ -170,18 +162,20 @@ def build_z8_joint_p18_p19_gradient_waterfill_contract() -> dict[str, Any]:
         },
         "posenet_surface": {
             "stage": "P19",
-            "role": (
-                "null_subset_detection_plus_mahalanobis_or_ail_pair_weighting"
-            ),
+            "role": ("null_subset_detection_plus_mahalanobis_or_ail_pair_weighting"),
             "required_measurements": [
                 "posenet_null_subset_pair_ids",
                 "posenet_mahalanobis_or_ail_pair_weights",
             ],
         },
         "rate_spend_guard": (
-            "dead_zone_low_joint_weight_wavelet_atoms_only; protect "
-            "seg_boundary_and_pose_sensitive_atoms"
+            "dead_zone_low_joint_weight_wavelet_atoms_only; protect seg_boundary_and_pose_sensitive_atoms"
         ),
+        "iterative_search": {
+            "ste_boundary": "straight_through_deadzone_quantization_proxy",
+            "interaction_penalty": ("penalize_cumulative_mse_increase_between_relinearization_steps"),
+            "fresh_surface_required": True,
+        },
         "forbidden_policy": "segnet_only_waterfill",
         "allowed_use": "local_mlx_joint_acquisition_routing_only",
         "forbidden_use": "score_claim_or_exact_axis_authority",
@@ -202,8 +196,7 @@ def build_z8_joint_variational_driver_metadata(
         "schema": Z8_JOINT_VARIATIONAL_DRIVER_SCHEMA,
         "local_axis": "[macOS-MLX research-signal]",
         "gradient_field": (
-            "joint renderer + categorical allocation + argmax-boundary "
-            "commitment + differentiable pre-coder rate proxy"
+            "joint renderer + categorical allocation + argmax-boundary commitment + differentiable pre-coder rate proxy"
         ),
         "objective_terms": [
             "reconstruction",
@@ -213,19 +206,12 @@ def build_z8_joint_variational_driver_metadata(
             "expected_categorical_archive_rate_score",
             "argmax_commitment_loss",
         ],
-        "joint_p18_p19_gradient_waterfill_contract": (
-            build_z8_joint_p18_p19_gradient_waterfill_contract()
-        ),
+        "joint_p18_p19_gradient_waterfill_contract": (build_z8_joint_p18_p19_gradient_waterfill_contract()),
         "archive_rate_weight": float(config.archive_rate_weight),
         "argmax_commitment_weight": float(config.argmax_commitment_weight),
-        "rate_formula": (
-            f"{CANONICAL_RATE_MULTIPLIER} * expected_categorical_bytes / "
-            f"{CANONICAL_RATE_DENOM_BYTES}"
-        ),
+        "rate_formula": (f"{CANONICAL_RATE_MULTIPLIER} * expected_categorical_bytes / {CANONICAL_RATE_DENOM_BYTES}"),
         "ste_boundary": "gumbel_softmax_argmax_indices_to_archive",
-        "iterative_relinearization": (
-            "long_training_canonical reruns value_and_grad at every MLX step"
-        ),
+        "iterative_relinearization": ("long_training_canonical reruns value_and_grad at every MLX step"),
         "archive_export_enabled": bool(archive_export_enabled),
         "full_contest_scorer_backprop_status": (
             "not_claimed; MLX-local path uses real scorer teacher caches plus "
@@ -274,10 +260,7 @@ def _render_pair_arrays_numpy(
     frame1_chunks: list[np.ndarray] = []
     for start in range(0, int(cfg.num_pairs), int(chunk_size)):
         end = min(start + int(chunk_size), int(cfg.num_pairs))
-        batch_indices = [
-            mx.array(level_idx[start:end].astype(np.int32))
-            for level_idx in all_indices
-        ]
+        batch_indices = [mx.array(level_idx[start:end].astype(np.int32)) for level_idx in all_indices]
         pair = model.forward_eval_from_indices(batch_indices)
         mx.eval(pair)
         pair_np = np.asarray(pair, dtype=np.float32)

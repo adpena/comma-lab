@@ -17,6 +17,8 @@ archive/runtime pair.
 from __future__ import annotations
 
 import hashlib
+import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -43,12 +45,9 @@ from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge imp
     projected_pair_pyramids_from_archive_bytes,
 )
 
-Z8_JOINT_COEFFICIENT_WATERFILL_SCHEMA = (
-    "z8_joint_p18_p19_coefficient_waterfill_rate_attack.v1"
-)
-Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA = (
-    "z8_joint_p18_p19_coefficient_deadzone_candidate.v1"
-)
+Z8_JOINT_COEFFICIENT_WATERFILL_SCHEMA = "z8_joint_p18_p19_coefficient_waterfill_rate_attack.v1"
+Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA = "z8_joint_p18_p19_coefficient_deadzone_candidate.v1"
+Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA = "z8_joint_p18_p19_coefficient_relinearized_search.v1"
 Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE = (
     "project_joint_p18_p19_pixel_pair_surface_to_mallat_detail_subbands_then_"
     "dead_zone_low_joint_weight_pose_null_coefficients"
@@ -90,6 +89,60 @@ class Z8JointCoefficientWaterfillConfig:
             raise ValueError("max_pairs must be positive when provided")
 
 
+@dataclass(frozen=True)
+class Z8JointCoefficientRelinearizationSearchConfig:
+    """Bounded iterative search over fresh joint P18/P19 coefficient surfaces.
+
+    Each iteration consumes a fresh surface from the MLX scorer-VJP/pose-null
+    lane, evaluates a small deterministic dead-zone grid on the current
+    archive, accepts the lowest proxy objective that satisfies the distortion
+    guard, and remeasures cumulative rate/distortion versus the original
+    archive. Reusing the same surface while claiming relinearization is refused
+    by default.
+    """
+
+    joint_weight_quantiles: tuple[float, ...] = (0.20, 0.35, 0.50)
+    coefficient_deadzone_quantiles: tuple[float, ...] = (0.25, 0.50, 0.75)
+    quantization_steps: tuple[float, ...] = (1.0 / 255.0, 2.0 / 255.0, 4.0 / 255.0)
+    max_iterations: int = 3
+    max_cumulative_mse: float | None = None
+    rate_weight: float = 25.0
+    distortion_weight: float = 10_000.0
+    interaction_penalty_weight: float = 10_000.0
+    require_fresh_surface_per_iteration: bool = True
+    pose_null_required: bool = True
+    max_pairs: int | None = None
+    emit_archive_zip: bool = True
+    emit_receiver_proof: bool = False
+
+    def __post_init__(self) -> None:
+        if self.max_iterations <= 0:
+            raise ValueError("max_iterations must be positive")
+        for name, values in (
+            ("joint_weight_quantiles", self.joint_weight_quantiles),
+            ("coefficient_deadzone_quantiles", self.coefficient_deadzone_quantiles),
+        ):
+            if not values:
+                raise ValueError(f"{name} must not be empty")
+            for value in values:
+                if not 0.0 <= float(value) <= 1.0:
+                    raise ValueError(f"{name} entries must be in [0, 1]")
+        if not self.quantization_steps:
+            raise ValueError("quantization_steps must not be empty")
+        if any(float(value) < 0.0 for value in self.quantization_steps):
+            raise ValueError("quantization_steps entries must be >= 0")
+        if self.max_cumulative_mse is not None and self.max_cumulative_mse < 0.0:
+            raise ValueError("max_cumulative_mse must be >= 0 when provided")
+        if self.rate_weight < 0.0:
+            raise ValueError("rate_weight must be >= 0")
+        if self.distortion_weight < 0.0:
+            raise ValueError("distortion_weight must be >= 0")
+        if self.interaction_penalty_weight < 0.0:
+            raise ValueError("interaction_penalty_weight must be >= 0")
+        if self.max_pairs is not None and self.max_pairs <= 0:
+            raise ValueError("max_pairs must be positive when provided")
+
+
 def _as_bool_mask(value: Any | None) -> np.ndarray | None:
     if value is None:
         return None
@@ -103,6 +156,46 @@ def _normalize_surface_array(value: Any, *, name: str) -> np.ndarray:
     if arr.ndim > 5:
         raise ValueError(f"{name} must have at most 5 dimensions; got {arr.shape}")
     return arr
+
+
+def _surface_digest(joint_weight: Any, safe_mask: Any | None) -> str:
+    h = hashlib.sha256()
+    joint = np.ascontiguousarray(np.asarray(joint_weight, dtype=np.float64))
+    h.update(str(joint.shape).encode("utf-8"))
+    h.update(joint.tobytes())
+    if safe_mask is not None:
+        mask = np.ascontiguousarray(np.asarray(safe_mask, dtype=bool))
+        h.update(str(mask.shape).encode("utf-8"))
+        h.update(mask.tobytes())
+    return h.hexdigest()
+
+
+def _surface_pair(surface: Any) -> tuple[Any, Any | None]:
+    if isinstance(surface, dict):
+        if "joint_weight" not in surface:
+            raise ValueError("surface dict must contain joint_weight")
+        return surface["joint_weight"], surface.get("rate_attack_deadzone_mask")
+    if isinstance(surface, tuple) and len(surface) == 2:
+        return surface[0], surface[1]
+    return surface, None
+
+
+def load_joint_p18_p19_surface_file(path: str | Path) -> tuple[Any, Any | None]:
+    """Load a joint surface file consumed by Z8 materializer/search CLIs."""
+
+    p = Path(path)
+    if p.suffix == ".npz":
+        data = np.load(p)
+        if "joint_weight" not in data:
+            raise ValueError(f"{p} must contain joint_weight")
+        mask = data.get("rate_attack_deadzone_mask", None)
+        return data["joint_weight"], mask
+    if p.suffix == ".npy":
+        return np.load(p), None
+    payload = json.loads(p.read_text(encoding="utf-8"))
+    if "joint_weight" not in payload:
+        raise ValueError(f"{p} JSON must contain joint_weight")
+    return payload["joint_weight"], payload.get("rate_attack_deadzone_mask")
 
 
 def _surface_slice_for_pair_frame(
@@ -184,30 +277,20 @@ def _quantize_selected(
 ) -> tuple[np.ndarray, dict[str, Any]]:
     coeff64 = np.asarray(coeff, dtype=np.float64)
     if projected_joint.shape != coeff64.shape:
-        raise ValueError(
-            f"projected_joint shape {projected_joint.shape} != coeff shape {coeff64.shape}"
-        )
+        raise ValueError(f"projected_joint shape {projected_joint.shape} != coeff shape {coeff64.shape}")
     water_level = float(np.quantile(projected_joint, config.joint_weight_quantile))
     eligible = projected_joint <= water_level
     if config.pose_null_required:
-        eligible = (
-            np.zeros_like(eligible, dtype=bool)
-            if projected_safe is None
-            else eligible & (projected_safe >= 0.5)
-        )
+        eligible = np.zeros_like(eligible, dtype=bool) if projected_safe is None else eligible & (projected_safe >= 0.5)
     abs_coeff = np.abs(coeff64)
     if np.any(eligible):
-        deadzone_threshold = float(
-            np.quantile(abs_coeff[eligible], config.coefficient_deadzone_quantile)
-        )
+        deadzone_threshold = float(np.quantile(abs_coeff[eligible], config.coefficient_deadzone_quantile))
     else:
         deadzone_threshold = 0.0
     changed = eligible & (abs_coeff <= deadzone_threshold)
     out = coeff64.copy()
     if config.quantization_step > 0.0:
-        coarse = np.round(out[eligible] / config.quantization_step) * (
-            config.quantization_step
-        )
+        coarse = np.round(out[eligible] / config.quantization_step) * (config.quantization_step)
         out[eligible] = coarse
     out[changed] = 0.0
     out32 = out.astype(np.float32)
@@ -286,11 +369,7 @@ def _mutate_pair_pyramids(
     safe_mask: np.ndarray | None,
     config: Z8JointCoefficientWaterfillConfig,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    pair_limit = (
-        len(pair_pyramids)
-        if config.max_pairs is None
-        else min(len(pair_pyramids), int(config.max_pairs))
-    )
+    pair_limit = len(pair_pyramids) if config.max_pairs is None else min(len(pair_pyramids), int(config.max_pairs))
     out: list[dict[str, Any]] = []
     subband_stats: list[dict[str, Any]] = []
     for pair_idx, pyramid in enumerate(pair_pyramids):
@@ -331,9 +410,7 @@ def _mutate_pair_pyramids(
 
 
 def _small_receiver_tensor(archive_bytes: bytes) -> np.ndarray:
-    binding, pair_pyramids, _stats = projected_pair_pyramids_from_archive_bytes(
-        archive_bytes
-    )
+    binding, pair_pyramids, _stats = projected_pair_pyramids_from_archive_bytes(archive_bytes)
     frames: list[np.ndarray] = []
     for pyramid in pair_pyramids:
         frame_0, frame_1 = reconstruct_pair_rgb_from_pyramid(binding, pyramid)
@@ -364,6 +441,23 @@ def _distortion_report(before_archive: bytes, after_archive: bytes) -> dict[str,
     }
 
 
+def _candidate_proxy_objective(
+    *,
+    result: dict[str, Any],
+    cumulative_distortion: dict[str, Any],
+    previous_cumulative_mse: float,
+    config: Z8JointCoefficientRelinearizationSearchConfig,
+) -> float:
+    rate = result["rate_report"]["archive_rate_ratio"]
+    mse = float(cumulative_distortion.get("mse", float("inf")))
+    interaction = max(0.0, mse - float(previous_cumulative_mse))
+    return (
+        float(config.rate_weight) * float(rate)
+        + float(config.distortion_weight) * mse
+        + float(config.interaction_penalty_weight) * interaction
+    )
+
+
 def apply_joint_p18_p19_deadzone_to_z8_archive(
     archive_bytes: bytes,
     *,
@@ -376,14 +470,8 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
     cfg = config or Z8JointCoefficientWaterfillConfig()
     joint_surface = _normalize_surface_array(joint_weight, name="joint_weight")
     safe_mask = _as_bool_mask(rate_attack_deadzone_mask)
-    if (
-        safe_mask is not None
-        and safe_mask.shape != joint_surface.shape
-        and safe_mask.size != 1
-    ):
-        raise ValueError(
-            "rate_attack_deadzone_mask must match joint_weight shape or be scalar"
-        )
+    if safe_mask is not None and safe_mask.shape != joint_surface.shape and safe_mask.size != 1:
+        raise ValueError("rate_attack_deadzone_mask must match joint_weight shape or be scalar")
     arc = parse_archive(archive_bytes)
     pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
     mutated_pyramids, coeff_report = _mutate_pair_pyramids(
@@ -405,9 +493,7 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
                 "schema": Z8_JOINT_COEFFICIENT_WATERFILL_SCHEMA,
                 "role": Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE,
                 "joint_weight_quantile": float(cfg.joint_weight_quantile),
-                "coefficient_deadzone_quantile": float(
-                    cfg.coefficient_deadzone_quantile
-                ),
+                "coefficient_deadzone_quantile": float(cfg.coefficient_deadzone_quantile),
                 "quantization_step": float(cfg.quantization_step),
                 "pose_null_required": bool(cfg.pose_null_required),
             },
@@ -430,19 +516,11 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         "before_archive_bytes": before_archive_len,
         "after_archive_bytes": after_archive_len,
         "archive_byte_delta": after_archive_len - before_archive_len,
-        "archive_rate_ratio": (
-            float(after_archive_len / before_archive_len)
-            if before_archive_len
-            else 1.0
-        ),
+        "archive_rate_ratio": (float(after_archive_len / before_archive_len) if before_archive_len else 1.0),
         "before_wavelet_blob_bytes": before_wavelet_len,
         "after_wavelet_blob_bytes": after_wavelet_len,
         "wavelet_blob_byte_delta": after_wavelet_len - before_wavelet_len,
-        "wavelet_blob_rate_ratio": (
-            float(after_wavelet_len / before_wavelet_len)
-            if before_wavelet_len
-            else 1.0
-        ),
+        "wavelet_blob_rate_ratio": (float(after_wavelet_len / before_wavelet_len) if before_wavelet_len else 1.0),
     }
     distortion = _distortion_report(archive_bytes, mutated_archive)
     return {
@@ -506,15 +584,9 @@ def materialize_joint_p18_p19_deadzone_candidate(
         "archive_zip_bytes": archive_zip_bytes,
         "receiver_proof_executed": bool(cfg.emit_receiver_proof),
         "exact_axis_blocker": (
-            None
-            if cfg.emit_receiver_proof
-            else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+            None if cfg.emit_receiver_proof else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
         ),
-        "waterfill_result": {
-            key: value
-            for key, value in result.items()
-            if key != "mutated_archive_bytes"
-        },
+        "waterfill_result": {key: value for key, value in result.items() if key != "mutated_archive_bytes"},
         **FALSE_AUTHORITY,
     }
     manifest_path = out_dir / "z8_joint_p18_p19_deadzone_manifest.json"
@@ -524,11 +596,192 @@ def materialize_joint_p18_p19_deadzone_candidate(
     return manifest
 
 
+def run_joint_p18_p19_relinearized_deadzone_search(
+    archive_bytes: bytes,
+    *,
+    surfaces: Sequence[Any],
+    config: Z8JointCoefficientRelinearizationSearchConfig | None = None,
+) -> dict[str, Any]:
+    """Run a bounded iterative Z8 dead-zone search over fresh joint surfaces."""
+
+    cfg = config or Z8JointCoefficientRelinearizationSearchConfig()
+    if not surfaces:
+        raise ValueError("surfaces must not be empty")
+    original = bytes(archive_bytes)
+    current = original
+    seen_surface_digests: set[str] = set()
+    accepted: list[dict[str, Any]] = []
+    all_candidates: list[dict[str, Any]] = []
+    previous_cumulative_mse = 0.0
+    final_blocker: str | None = None
+
+    for iteration_index, raw_surface in enumerate(surfaces[: cfg.max_iterations]):
+        joint_weight, safe_mask = _surface_pair(raw_surface)
+        digest = _surface_digest(joint_weight, safe_mask)
+        if cfg.require_fresh_surface_per_iteration and digest in seen_surface_digests:
+            raise ValueError(
+                "fresh surface required for iterative relinearization; duplicate "
+                f"surface digest at iteration {iteration_index}: {digest}"
+            )
+        seen_surface_digests.add(digest)
+
+        iteration_candidates: list[dict[str, Any]] = []
+        best: dict[str, Any] | None = None
+        for joint_q in cfg.joint_weight_quantiles:
+            for deadzone_q in cfg.coefficient_deadzone_quantiles:
+                for q_step in cfg.quantization_steps:
+                    waterfill_cfg = Z8JointCoefficientWaterfillConfig(
+                        joint_weight_quantile=float(joint_q),
+                        coefficient_deadzone_quantile=float(deadzone_q),
+                        quantization_step=float(q_step),
+                        pose_null_required=bool(cfg.pose_null_required),
+                        max_pairs=cfg.max_pairs,
+                        emit_archive_zip=False,
+                        emit_receiver_proof=False,
+                    )
+                    result = apply_joint_p18_p19_deadzone_to_z8_archive(
+                        current,
+                        joint_weight=joint_weight,
+                        rate_attack_deadzone_mask=safe_mask,
+                        config=waterfill_cfg,
+                    )
+                    mutated = bytes(result["mutated_archive_bytes"])
+                    cumulative_distortion = _distortion_report(original, mutated)
+                    cumulative_mse = float(cumulative_distortion.get("mse", float("inf")))
+                    guard_ok = cfg.max_cumulative_mse is None or cumulative_mse <= float(cfg.max_cumulative_mse)
+                    objective = _candidate_proxy_objective(
+                        result=result,
+                        cumulative_distortion=cumulative_distortion,
+                        previous_cumulative_mse=previous_cumulative_mse,
+                        config=cfg,
+                    )
+                    row = {
+                        "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+                        "iteration_index": int(iteration_index),
+                        "surface_digest": digest,
+                        "joint_weight_quantile": float(joint_q),
+                        "coefficient_deadzone_quantile": float(deadzone_q),
+                        "quantization_step": float(q_step),
+                        "proxy_objective": float(objective),
+                        "guard_ok": bool(guard_ok),
+                        "rate_report": result["rate_report"],
+                        "incremental_distortion_report": result["distortion_report"],
+                        "cumulative_distortion_report": cumulative_distortion,
+                        "coefficient_summary": {
+                            key: value for key, value in result["coefficient_report"].items() if key != "subband_stats"
+                        },
+                        "mutated_archive_sha256": result["mutated_archive_sha256"],
+                        **FALSE_AUTHORITY,
+                    }
+                    iteration_candidates.append(row)
+                    all_candidates.append(row)
+                    if guard_ok and (best is None or objective < best["proxy_objective"]):
+                        best = {**row, "_mutated_archive_bytes": mutated}
+        if best is None:
+            final_blocker = f"all_candidates_failed_cumulative_distortion_guard_at_iteration_{iteration_index}"
+            break
+        current = bytes(best.pop("_mutated_archive_bytes"))
+        previous_cumulative_mse = float(best["cumulative_distortion_report"].get("mse", previous_cumulative_mse))
+        accepted.append(best)
+
+    cumulative_rate_report = {
+        "original_archive_bytes": len(original),
+        "final_archive_bytes": len(current),
+        "archive_byte_delta": len(current) - len(original),
+        "archive_rate_ratio": float(len(current) / len(original)) if original else 1.0,
+    }
+    final_distortion = _distortion_report(original, current)
+    return {
+        "schema": Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA,
+        "role": Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE,
+        "ste_boundary": "straight_through_deadzone_quantization_proxy",
+        "surface_refresh_contract": ("fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"),
+        "pose_guard": "pose_null_mask_and_mahalanobis_ail_weights_consumed",
+        "interaction_penalty": ("penalize_cumulative_mse_increase_between_relinearization_steps"),
+        "iterations_requested": int(cfg.max_iterations),
+        "iterations_accepted": len(accepted),
+        "candidate_count": len(all_candidates),
+        "accepted_candidates": accepted,
+        "candidate_grid": all_candidates,
+        "cumulative_rate_report": cumulative_rate_report,
+        "final_distortion_report": final_distortion,
+        "final_blocker": final_blocker,
+        "final_archive_sha256": hashlib.sha256(current).hexdigest(),
+        "final_archive_bytes_payload": current,
+        "axis_tag": "[macOS-CPU advisory]",
+        "allowed_use": "local_z8_rate_attack_acquisition_and_materialization_signal",
+        "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
+        **FALSE_AUTHORITY,
+    }
+
+
+def materialize_joint_p18_p19_relinearized_deadzone_search(
+    archive_bytes: bytes,
+    output_dir: str | Path,
+    *,
+    surfaces: Sequence[Any],
+    config: Z8JointCoefficientRelinearizationSearchConfig | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Write the accepted iterative Z8 dead-zone candidate and manifest."""
+
+    cfg = config or Z8JointCoefficientRelinearizationSearchConfig()
+    result = run_joint_p18_p19_relinearized_deadzone_search(
+        archive_bytes,
+        surfaces=surfaces,
+        config=cfg,
+    )
+    final_archive = bytes(result["final_archive_bytes_payload"])
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    final_bin = out_dir / "0.bin"
+    final_bin.write_bytes(final_archive)
+
+    archive_zip_path: Path | None = None
+    archive_sha256: str | None = None
+    archive_zip_bytes: int | None = None
+    if cfg.emit_archive_zip:
+        archive_zip_path, archive_sha256, archive_zip_bytes = export_z8hpc1_archive_bytes(
+            final_archive,
+            out_dir,
+            repo_root=repo_root,
+            emit_archive_bound_candidate_package=cfg.emit_receiver_proof,
+            emit_byte_mutation_proof=False,
+            retain_receiver_proof_output=False,
+        )
+
+    manifest = {key: value for key, value in result.items() if key != "final_archive_bytes_payload"}
+    manifest.update(
+        {
+            "candidate_bin_path": final_bin.as_posix(),
+            "candidate_bin_sha256": hashlib.sha256(final_archive).hexdigest(),
+            "candidate_bin_bytes": len(final_archive),
+            "archive_zip_path": (archive_zip_path.as_posix() if archive_zip_path else None),
+            "archive_zip_sha256": archive_sha256,
+            "archive_zip_bytes": archive_zip_bytes,
+            "receiver_proof_executed": bool(cfg.emit_receiver_proof),
+            "exact_axis_blocker": (
+                None if cfg.emit_receiver_proof else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+            ),
+            **FALSE_AUTHORITY,
+        }
+    )
+    manifest_path = out_dir / "z8_joint_p18_p19_relinearized_search_manifest.json"
+    write_json(manifest_path, manifest)
+    manifest["manifest_path"] = manifest_path.as_posix()
+    write_json(manifest_path, manifest)
+    return manifest
+
+
 __all__ = [
     "Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE",
+    "Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA",
     "Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA",
     "Z8_JOINT_COEFFICIENT_WATERFILL_SCHEMA",
+    "Z8JointCoefficientRelinearizationSearchConfig",
     "Z8JointCoefficientWaterfillConfig",
     "apply_joint_p18_p19_deadzone_to_z8_archive",
     "materialize_joint_p18_p19_deadzone_candidate",
+    "materialize_joint_p18_p19_relinearized_deadzone_search",
+    "run_joint_p18_p19_relinearized_deadzone_search",
 ]

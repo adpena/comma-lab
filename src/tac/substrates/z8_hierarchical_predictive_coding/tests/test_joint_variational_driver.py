@@ -45,12 +45,17 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
     assert "Sigma^-1" in joint["weight_formula"]
     assert "rate_bound" in joint["binding_axis_interpretation"]
     assert "wavelet_detail" in joint["rate_axis_attack_role"]
-    assert joint["executable_materializer"]["function"] == (
-        "materialize_joint_p18_p19_deadzone_candidate"
+    assert joint["executable_materializer"]["function"] == ("materialize_joint_p18_p19_deadzone_candidate")
+    assert joint["executable_materializer"]["relinearized_search_function"] == (
+        "materialize_joint_p18_p19_relinearized_deadzone_search"
     )
-    assert joint["executable_materializer"]["archive_target"] == (
-        "z8hpc1_wavelet_coeffs_blob"
+    assert joint["executable_materializer"]["archive_target"] == ("z8hpc1_wavelet_coeffs_blob")
+    assert (
+        joint["executable_materializer"]["surface_refresh_contract"]
+        == "fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"
     )
+    assert joint["iterative_search"]["fresh_surface_required"] is True
+    assert "straight_through" in joint["iterative_search"]["ste_boundary"]
     assert joint["forbidden_policy"] == "segnet_only_waterfill"
     assert joint["segnet_surface"]["stage"] == "P18"
     assert joint["posenet_surface"]["stage"] == "P19"
@@ -65,9 +70,7 @@ def test_joint_p18_p19_waterfill_contract_blocks_segnet_only_spend() -> None:
 
     assert contract["schema"] == Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA
     assert contract["operator_stages"] == ["P19", "P18"]
-    assert contract["segnet_surface"]["required_measurement"] == (
-        "boundary_argmax_hinge_marginal_surface"
-    )
+    assert contract["segnet_surface"]["required_measurement"] == ("boundary_argmax_hinge_marginal_surface")
     assert contract["posenet_surface"]["required_measurements"] == [
         "posenet_null_subset_pair_ids",
         "posenet_mahalanobis_or_ail_pair_weights",

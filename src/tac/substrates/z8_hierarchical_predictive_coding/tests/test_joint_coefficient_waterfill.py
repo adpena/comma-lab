@@ -15,10 +15,14 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
 )
 from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill import (
     Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE,
+    Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA,
     Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA,
+    Z8JointCoefficientRelinearizationSearchConfig,
     Z8JointCoefficientWaterfillConfig,
     apply_joint_p18_p19_deadzone_to_z8_archive,
     materialize_joint_p18_p19_deadzone_candidate,
+    materialize_joint_p18_p19_relinearized_deadzone_search,
+    run_joint_p18_p19_relinearized_deadzone_search,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
     Z8HierarchicalConfig,
@@ -71,9 +75,7 @@ def test_joint_p18_p19_deadzone_mutates_wavelet_details_and_reduces_rate() -> No
     mutated_pyramids = parse_pair_blobs_from_wavelet_blob(mutated.wavelet_coeffs_blob)
     assert result["role"] == Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE
     assert result["coefficient_report"]["dead_zoned_coefficients"] > 0
-    assert result["rate_report"]["after_wavelet_blob_bytes"] < result["rate_report"][
-        "before_wavelet_blob_bytes"
-    ]
+    assert result["rate_report"]["after_wavelet_blob_bytes"] < result["rate_report"]["before_wavelet_blob_bytes"]
     assert result["distortion_report"]["small_receiver_distortion_measured"] is True
     assert result["distortion_report"]["max_abs_delta"] > 0.0
     np.testing.assert_allclose(
@@ -114,8 +116,75 @@ def test_joint_p18_p19_deadzone_materializer_emits_byte_closed_archive(
     assert Path(manifest["archive_zip_path"]).is_file()
     assert Path(manifest["manifest_path"]).is_file()
     assert manifest["receiver_proof_executed"] is False
-    assert manifest["exact_axis_blocker"] == (
-        "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+    assert manifest["exact_axis_blocker"] == ("receiver_proof_and_contest_cpu_cuda_eval_not_executed")
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_relinearized_search_requires_fresh_surfaces() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    try:
+        run_joint_p18_p19_relinearized_deadzone_search(
+            archive_bytes,
+            surfaces=[
+                (joint_weight, pose_null_mask),
+                (joint_weight.copy(), pose_null_mask.copy()),
+            ],
+            config=Z8JointCoefficientRelinearizationSearchConfig(
+                joint_weight_quantiles=(1.0,),
+                coefficient_deadzone_quantiles=(1.0,),
+                quantization_steps=(0.25,),
+                max_iterations=2,
+                require_fresh_surface_per_iteration=True,
+            ),
+        )
+    except ValueError as exc:
+        assert "fresh surface required" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("duplicate iterative surface was accepted")
+
+
+def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
+    tmp_path: Path,
+) -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight_0 = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    joint_weight_1 = np.ones((1, 2, 16, 16, 3), dtype=np.float32) * 0.1
+    joint_weight_1[..., :8, :8, :] = 0.0
+    pose_null_mask = np.ones_like(joint_weight_0, dtype=bool)
+
+    manifest = materialize_joint_p18_p19_relinearized_deadzone_search(
+        archive_bytes,
+        tmp_path,
+        surfaces=[
+            (joint_weight_0, pose_null_mask),
+            (joint_weight_1, pose_null_mask),
+        ],
+        config=Z8JointCoefficientRelinearizationSearchConfig(
+            joint_weight_quantiles=(1.0,),
+            coefficient_deadzone_quantiles=(0.5, 1.0),
+            quantization_steps=(0.25,),
+            max_iterations=2,
+            max_cumulative_mse=1.0,
+            emit_archive_zip=True,
+            emit_receiver_proof=False,
+        ),
     )
+
+    assert manifest["schema"] == Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA
+    assert manifest["iterations_accepted"] == 2
+    assert manifest["candidate_count"] == 4
+    assert Path(manifest["candidate_bin_path"]).is_file()
+    assert Path(manifest["archive_zip_path"]).is_file()
+    assert Path(manifest["manifest_path"]).is_file()
+    assert (
+        manifest["cumulative_rate_report"]["final_archive_bytes"]
+        <= manifest["cumulative_rate_report"]["original_archive_bytes"]
+    )
+    assert manifest["final_distortion_report"]["small_receiver_distortion_measured"] is True
+    assert manifest["receiver_proof_executed"] is False
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
