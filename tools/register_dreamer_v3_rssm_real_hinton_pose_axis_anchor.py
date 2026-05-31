@@ -134,35 +134,62 @@ def main(argv: list[str] | None = None) -> int:
         source_path=source_path,
         artifact_sha256=artifact_sha,
         captured_at_utc=now,
-        in_domain_context="dreamer_v3_rssm_real_hinton_teacher_600pair_long_mlx",
     )
+    pose_ep0 = float(poses[0])
+    pose_last = float(poses[-1])
+    pose_min = float(min(poses))
     residual = float(args.predicted_reduction) - float(reduction)
+    # Canonical EmpiricalAnchor schema: inputs/predicted_output/empirical_output/
+    # residual are dicts; source_artifact is a str (mirrors the existing
+    # dreamer_v3_rssm anchors in the registry).
     anchor = EmpiricalAnchor(
         anchor_id=f"dreamer_v3_rssm_real_hinton_pose_axis_{args.run_dir.name}",
-        predicted_value=float(args.predicted_reduction),
-        measured_value=float(reduction),
-        measurement_residual=residual,
+        measurement_utc=now,
+        inputs={
+            "num_groups": 24,
+            "num_categories": 256,
+            "num_pairs": 600,
+            "epochs": len(poses),
+            "distillation_weight": 0.5,
+            "pose_distillation_weight": 1.0,
+            "scorer_teacher": "real_segnet_kl_t2",
+            "pose_scorer_teacher": "real_posenet_pose_mse",
+            "stabilizer": "grad_clip_1.0_warmup_5_wd_1e-4_adamw_ema_0.997",
+        },
+        predicted_output={
+            "pose_axis_reduction_fraction": float(args.predicted_reduction),
+        },
+        empirical_output={
+            "pose_axis_reduction_fraction": float(reduction),
+            "pose_axis_ep0": pose_ep0,
+            "pose_axis_last": pose_last,
+            "pose_axis_min": pose_min,
+        },
+        residual={
+            "pose_axis_reduction_fraction": residual,
+        },
+        source_artifact=source_path,
         measurement_method=(
             "real_hinton_segnet_posenet_teacher_600pair_long_mlx_local_"
             "pose_axis_reduction_fraction"
         ),
-        evidence_path=source_path,
         provenance=prov,
         empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
+    update_equation_with_empirical_anchor(
+        EQUATION_ID,
+        anchor,
         notes=(
             "FIRST REAL-teacher pose-axis anchor for the DreamerV3 categorical-"
             "posterior (the dreamer member of the hierarchical-PC stack-of-"
             "stacks). REAL SegNet KL T=2.0 + REAL PoseNet pose-MSE Hinton-"
-            f"distilled teachers (NO mock flag); pose-axis {poses[0]:.4g} -> "
-            f"{poses[-1]:.4g} ({reduction:.1%} reduction) over {len(poses)} "
-            "epochs at 600pair MLX-LOCAL with Wave N+11 stabilizer (grad-clip "
-            "1.0 + warmup 5 + weight_decay 1e-4 + adamw + EMA 0.997). Mock "
-            "leaves pose=0 (phantom-provenance per Catalog #322). Non-promotable "
-            "[macOS-MLX research-signal] per Catalog #192/#317/#341; paired "
-            "Linux x86_64 CPU/CUDA replay DEFERRED."
+            f"distilled teachers (NO mock flag); pose-axis {pose_ep0:.4g} -> "
+            f"{pose_last:.4g} ({reduction:.1%} reduction) over {len(poses)} "
+            "epochs at 600pair MLX-LOCAL. Mock leaves pose=0 (phantom-provenance "
+            "per Catalog #322). Non-promotable [macOS-MLX research-signal] per "
+            "Catalog #192/#317/#341; paired Linux x86_64 CPU/CUDA replay DEFERRED."
         ),
     )
-    update_equation_with_empirical_anchor(EQUATION_ID, anchor)
     eq = get_equation_by_id(EQUATION_ID)
     print(
         f"registered anchor; equation now has {len(eq.empirical_anchors)} anchors "
