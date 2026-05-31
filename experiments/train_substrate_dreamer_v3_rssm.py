@@ -215,6 +215,37 @@ def _build_parser() -> argparse.ArgumentParser:
         default=0.1,
         help="Gumbel-Softmax temperature τ at training end (annealed linearly).",
     )
+    p.add_argument(
+        "--tau-anneal-enabled",
+        action="store_true",
+        default=False,
+        help=(
+            "v2 lever (DreamerV3 RSSM): enable per-epoch cosine Gumbel-Softmax "
+            "τ anneal in --full training (τ_start=--gumbel-temperature → "
+            "τ_min=--gumbel-temperature-final over the full epoch budget). "
+            "Closes the 'Annealed during training (1.0 → 0.1)' comment-only "
+            "contract that the prior --full path violated (forward_training "
+            "read a STATIC cfg.gumbel_temperature). Default OFF preserves the "
+            "byte-stable static-τ behavior."
+        ),
+    )
+    p.add_argument(
+        "--cosine-decay-enabled",
+        action="store_true",
+        default=False,
+        help=(
+            "v2 lever: enable cosine LR decay in --full training (peak lr at "
+            "end of warmup → lr * --cosine-decay-min-lr-ratio at the final "
+            "epoch). Requires --warmup-epochs > 0. The 300ep baseline used "
+            "FLAT lr; cosine decay lets the late-epoch floor settle."
+        ),
+    )
+    p.add_argument(
+        "--cosine-decay-min-lr-ratio",
+        type=float,
+        default=1e-2,
+        help="v2 lever: cosine-decay end-of-run lr = peak_lr * ratio.",
+    )
     p.add_argument("--seed", type=int, default=0)
     p.add_argument(
         "--smoke",
@@ -601,6 +632,19 @@ def _full_main(args: argparse.Namespace) -> int:
         use_straight_through=True,
     )
     model = DreamerV3RSSMSubstrateMLX(cfg)
+    # v2 lever 1 — Gumbel-Softmax τ anneal (closes the comment-only contract).
+    # When enabled, configure the renderer's canonical cosine τ schedule so the
+    # harness's per-epoch ``adapter.notify_global_epoch(epoch)`` -> renderer
+    # ``notify_global_epoch(epoch)`` actually anneals τ from
+    # ``--gumbel-temperature`` (τ_start) down to ``--gumbel-temperature-final``
+    # (τ_min) over the full epoch budget. The frozen ``cfg.gumbel_temperature``
+    # IS τ_start (the schedule reads it as the high anchor); the mutable
+    # ``model._current_gumbel_temperature`` is what ``forward_training`` reads.
+    if bool(getattr(args, "tau_anneal_enabled", False)):
+        model.set_anneal_schedule(
+            total_epochs=int(args.epochs),
+            tau_min=float(args.gumbel_temperature_final),
+        )
     out_h, out_w = cfg.eval_size  # HNeRV decoder hardcodes 384x512 output.
     target_rgb_0, target_rgb_1 = decode_mlx_targets(
         args.video_path,
@@ -704,6 +748,15 @@ def _full_main(args: argparse.Namespace) -> int:
         warmup_epochs=int(args.warmup_epochs),
         weight_decay=float(args.weight_decay),
         optimizer_kind=str(args.optimizer_kind),
+        # v2 lever 2 — cosine LR decay (the 300ep baseline used FLAT lr). The
+        # harness requires warmup_epochs > 0 + total_epochs > warmup_epochs.
+        cosine_decay_enabled=bool(getattr(args, "cosine_decay_enabled", False)),
+        cosine_decay_total_epochs=(
+            int(args.epochs)
+            if bool(getattr(args, "cosine_decay_enabled", False))
+            else None
+        ),
+        cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         notes=(
             "DreamerV3 RSSM MLX-first score-aware full training via canonical "
             "mlx_score_aware_full_main harness; real contest video + "

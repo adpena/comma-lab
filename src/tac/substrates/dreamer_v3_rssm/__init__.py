@@ -145,6 +145,8 @@ from tac.substrates.dreamer_v3_rssm.archive_candidate import (
     pack_archive_from_model,
 )
 from tac.substrates.dreamer_v3_rssm.module import (
+    CANONICAL_GUMBEL_TAU_MIN,
+    CANONICAL_GUMBEL_TAU_START,
     DEFAULT_G,
     DEFAULT_K,
     EVAL_HW,
@@ -153,6 +155,7 @@ from tac.substrates.dreamer_v3_rssm.module import (
     DreamerV3RSSMSubstrateMLX,
     apply_unimix_to_logits,
     gumbel_softmax_sample,
+    gumbel_temperature_for_epoch,
     rssmc_decoder_param_count,
 )
 
@@ -282,6 +285,8 @@ __all__ = [
     "ARCHITECTURE_CLASS",
     "ARCHIVE_GRAMMAR_FIELDS",
     "CANONICAL_EQUATION_IDS",
+    "CANONICAL_GUMBEL_TAU_MIN",
+    "CANONICAL_GUMBEL_TAU_START",
     "DEFAULT_G",
     "DEFAULT_K",
     "DREAMER_V3_RSSM_MLX_ARCHIVE_BOUND_ADAPTER_ID",
@@ -308,6 +313,7 @@ __all__ = [
     "export_dreamer_v3_rssm_mlx_archive_bound_candidate_package",
     "exported_decoder_state_dict_from_model",
     "gumbel_softmax_sample",
+    "gumbel_temperature_for_epoch",
     "pack_archive",
     "pack_archive_from_model",
     "parse_archive",

@@ -64655,6 +64655,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_dreamer_v3_rssm_v2_tau_anneal_20260531",
+      "name": "DreamerV3 RSSM v2 Gumbel-Softmax tau-anneal",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/dreamer_v3_rssm/module.py (gumbel_temperature_for_epoch cosine schedule + set_anneal_schedule + notify_global_epoch + mutable _current_gumbel_temperature + forward_training reads mutable tau) + adapter.notify_global_epoch forwards to renderer + trainer _full_main 3 new flags --tau-anneal-enabled --cosine-decay-enabled --cosine-decay-min-lr-ratio; 600ep run completed wall=79.2s artifact .omx/research/dreamer_v3_rssm_v2_tau_anneal_20260531T094807Z/training_artifact.json [macOS-MLX research-signal]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "18 NO-FAKE tau-anneal tests (test_tau_anneal.py: tau actually changes per epoch / static no-op backward-compat / eval-path tau-independent / not-trainable-param / adapter->renderer forward) + 63 dreamer_v3_rssm tests all pass; ruff clean; Class 2 guard: test_tau_actually_changes_per_epoch_not_static would FAIL if forward reverted to static cfg read"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_dreamer_v3_rssm_v2_tau_anneal_landed_20260531.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; macOS-MLX research-signal non-promotable per Catalog #192/#341/#127/#323; closes the comment-only-contract (forward_training read static cfg.gumbel_temperature; docstring claimed Annealed 1.0->0.1); cosine tau anneal + cosine LR decay + extended 600ep + seg-rebalance distill=1.0; apples-to-apples @ep299 pose 93.46->93.53% small real gain; full-budget 99.21% confounded by 2x epochs; seg NOT meaningfully unfrozen; Catalog #307 PARADIGM_INTACT IMPLEMENTATION-LEVEL IMPROVEMENT; $0 MLX-LOCAL; lane_class=substrate_engineering"
     }
   ],
   "level_rules": {
@@ -64664,5 +64705,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T09:50:09Z"
+  "updated_at": "2026-05-31T09:58:19Z"
 }

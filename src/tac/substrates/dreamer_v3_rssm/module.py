@@ -36,8 +36,6 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-import numpy as np
-
 try:  # pragma: no cover - exercised in environments with MLX installed
     import mlx.core as mx
     import mlx.nn as nn
@@ -66,6 +64,78 @@ DEFAULT_G: int = 24
 
 DEFAULT_K: int = 256
 """Default categorical alphabet size (8 bits/group → 1 byte int8 packing)."""
+
+CANONICAL_GUMBEL_TAU_START: float = 1.0
+"""Canonical Gumbel-Softmax τ at epoch 0 (high → low-variance exploration).
+
+Jang et al. 2016 §3.2 + Maddison et al. 2016 §2.2: training starts at a high τ
+so the relaxed Concrete sample is smooth (low gradient variance, the categorical
+posterior explores all K categories) and anneals toward a low τ so the sample
+crystallizes to a sharp near-one-hot commitment. Hafner 2023 DreamerV3 holds a
+fixed τ for world-model stability, but the contest substrate is a STATIC
+per-pair categorical fit (NOT an online world model), so the canonical Jang/
+Maddison annealing schedule applies."""
+
+CANONICAL_GUMBEL_TAU_MIN: float = 0.1
+"""Canonical Gumbel-Softmax τ floor (sharp/discrete late-training commitment).
+
+Jang 2016 §3.2: annealing all the way to 0 explodes gradient variance; the
+canonical floor is τ_min ∈ [0.1, 0.5]. We use 0.1 (the matching value the
+docstring at ``DreamerV3RSSMConfig.gumbel_temperature`` already claimed:
+"Annealed during training (1.0 → 0.1)")."""
+
+
+def gumbel_temperature_for_epoch(
+    epoch: int,
+    total_epochs: int,
+    *,
+    tau_start: float = CANONICAL_GUMBEL_TAU_START,
+    tau_min: float = CANONICAL_GUMBEL_TAU_MIN,
+) -> float:
+    """Canonical cosine-annealed Gumbel-Softmax τ for the given epoch.
+
+    Closes the "Comment-only contracts are FORBIDDEN" violation: the config
+    docstring claimed "Annealed during training (1.0 → 0.1)" but the prior
+    ``forward_training`` read a STATIC ``cfg.gumbel_temperature``. This is the
+    canonical schedule that makes the claim TRUE.
+
+    Canonical cosine schedule (Jang 2016 anneal-from-high-to-low recipe;
+    cosine shape per Loshchilov & Hutter 2017 SGDR for a smooth, slow-early /
+    fast-late descent so the categorical posterior explores broadly early and
+    crystallizes sharply late)::
+
+        τ(e) = τ_min + 0.5 * (τ_start - τ_min) * (1 + cos(π * e / (E - 1)))
+
+    so ``τ(0) = τ_start`` and ``τ(E - 1) = τ_min`` exactly, clamped to
+    ``[τ_min, τ_start]`` for any out-of-range epoch.
+
+    Args:
+        epoch: current global epoch (0-indexed).
+        total_epochs: total epoch budget (E). For ``E <= 1`` returns
+            ``tau_start`` (degenerate single-epoch run; no anneal possible).
+        tau_start: τ at epoch 0 (high; exploration).
+        tau_min: τ floor at the final epoch (low; sharp commitment).
+
+    Returns:
+        The annealed τ as a Python float, always in ``[τ_min, τ_start]``.
+    """
+    if tau_start <= 0.0 or tau_min <= 0.0:
+        raise ValueError(
+            "gumbel_temperature_for_epoch: τ_start and τ_min must be > 0; got "
+            f"τ_start={tau_start} τ_min={tau_min}."
+        )
+    if tau_min > tau_start:
+        raise ValueError(
+            "gumbel_temperature_for_epoch: τ_min must be <= τ_start "
+            f"(anneal goes high→low); got τ_min={tau_min} τ_start={tau_start}."
+        )
+    if total_epochs <= 1:
+        return float(tau_start)
+    frac = float(epoch) / float(total_epochs - 1)
+    frac = min(1.0, max(0.0, frac))
+    cosine = 0.5 * (1.0 + math.cos(math.pi * frac))
+    tau = tau_min + (tau_start - tau_min) * cosine
+    return float(min(tau_start, max(tau_min, tau)))
 
 
 def _require_mlx() -> None:
@@ -384,6 +454,24 @@ class DreamerV3RSSMSubstrateMLX(nn.Module if nn is not None else object):  # typ
         _require_mlx()
         super().__init__()
         self.cfg = cfg
+        # Mutable per-epoch Gumbel-Softmax τ (NOT an MLX array, so MLX's
+        # value_and_grad tree traversal never treats it as a trainable leaf).
+        # ``forward_training`` reads THIS attribute, not the frozen
+        # ``cfg.gumbel_temperature``, so the canonical anneal schedule
+        # (``notify_global_epoch`` / ``set_gumbel_temperature``) actually
+        # changes the τ the forward uses. Initialized to the config value so an
+        # un-annealed run (no ``notify_global_epoch`` calls) is byte-identical
+        # to the prior static behavior (backward compat per CLAUDE.md "Beauty,
+        # simplicity, and developer experience"). The leading underscore + plain
+        # float keeps it out of ``module.parameters()`` / state_dict export.
+        self._current_gumbel_temperature: float = float(cfg.gumbel_temperature)
+        # Total epoch budget for the anneal schedule; set via
+        # ``notify_global_epoch`` (the harness knows it). Default None = no
+        # anneal target known yet (single-epoch / static behavior).
+        self._anneal_total_epochs: int | None = None
+        # τ floor for the anneal; defaults to the canonical Jang 2016 floor.
+        # Configurable via ``set_anneal_schedule`` for ablations.
+        self._anneal_tau_min: float = CANONICAL_GUMBEL_TAU_MIN
         G = int(cfg.num_groups)
         K = int(cfg.num_categories)
         base_h, base_w = 6, 8  # PR95 canonical base grid for 384×512 output
@@ -467,9 +555,13 @@ class DreamerV3RSSMSubstrateMLX(nn.Module if nn is not None else object):  # typ
         """
         _require_mlx()
         logits = mx.take(self.logits, pair_indices, axis=0)  # type: ignore[union-attr]
+        # Read the MUTABLE per-epoch τ (annealed via notify_global_epoch /
+        # set_gumbel_temperature), NOT the frozen cfg value. This is the line
+        # that makes the config docstring's "Annealed during training
+        # (1.0 → 0.1)" claim TRUE (Comment-only contracts are FORBIDDEN).
         soft, indices = gumbel_softmax_sample(
             logits,
-            temperature=float(self.cfg.gumbel_temperature),
+            temperature=float(self._current_gumbel_temperature),
             use_straight_through=bool(self.cfg.use_straight_through),
             unimix_alpha=float(self.cfg.unimix_alpha),
             key=gumbel_key,
@@ -500,7 +592,81 @@ class DreamerV3RSSMSubstrateMLX(nn.Module if nn is not None else object):  # typ
         one_hot = mx.reshape(one_hot_flat, (B, G, K))  # type: ignore[union-attr]
         flat = mx.reshape(one_hot, (B, G * K))  # type: ignore[union-attr]
         embedding = self.cat_to_continuous(flat)
+        # NOTE: the eval path decodes from argmax indices and is INDEPENDENT of
+        # τ (the categorical sample is already discrete one-hot). The anneal
+        # schedule touches ONLY the training forward; eval is unaffected.
         return self._decoder_forward(embedding)
+
+    # ------------------------------------------------------------------
+    # Gumbel-Softmax τ anneal surface (closes the comment-only contract).
+    # ------------------------------------------------------------------
+
+    @property
+    def current_gumbel_temperature(self) -> float:
+        """The τ ``forward_training`` will use on its next call (read-only)."""
+        return float(self._current_gumbel_temperature)
+
+    def set_gumbel_temperature(self, tau: float) -> None:
+        """Set the mutable per-epoch Gumbel-Softmax τ directly.
+
+        Args:
+            tau: the new temperature (must be > 0; lower = sharper / more
+                discrete). The next ``forward_training`` call reads this value.
+
+        Raises:
+            ValueError: if ``tau <= 0`` (the Gumbel-Softmax denominator).
+        """
+        if float(tau) <= 0.0:
+            raise ValueError(
+                f"set_gumbel_temperature: τ must be > 0; got {tau}."
+            )
+        self._current_gumbel_temperature = float(tau)
+
+    def set_anneal_schedule(
+        self,
+        *,
+        total_epochs: int,
+        tau_min: float = CANONICAL_GUMBEL_TAU_MIN,
+    ) -> None:
+        """Configure the cosine τ-anneal schedule used by ``notify_global_epoch``.
+
+        Args:
+            total_epochs: the total epoch budget E (τ reaches ``tau_min`` at
+                epoch E-1).
+            tau_min: the τ floor (default = canonical Jang 2016 floor 0.1).
+        """
+        self._anneal_total_epochs = int(total_epochs)
+        self._anneal_tau_min = float(tau_min)
+
+    def notify_global_epoch(self, global_epoch: int) -> None:
+        """Canonical per-epoch hook: anneal τ for ``global_epoch``.
+
+        The canonical long-training harness calls
+        ``adapter.notify_global_epoch(epoch)`` once per epoch (see
+        ``tac.training.long_training_canonical.run_long_training``); the adapter
+        forwards to THIS method when the renderer exposes it. When an anneal
+        schedule has been configured (``set_anneal_schedule`` /
+        ``_anneal_total_epochs`` set), τ is recomputed via the canonical cosine
+        schedule and pushed to ``self._current_gumbel_temperature`` so the next
+        ``forward_training`` uses the annealed value.
+
+        When NO schedule is configured (``_anneal_total_epochs is None``) this
+        is a no-op (τ stays at ``cfg.gumbel_temperature``; backward-compatible
+        with the prior static behavior per CLAUDE.md "Beauty, simplicity, and
+        developer experience").
+
+        Args:
+            global_epoch: the current 0-indexed global epoch.
+        """
+        if self._anneal_total_epochs is None:
+            return
+        tau = gumbel_temperature_for_epoch(
+            int(global_epoch),
+            int(self._anneal_total_epochs),
+            tau_start=float(self.cfg.gumbel_temperature),
+            tau_min=float(self._anneal_tau_min),
+        )
+        self._current_gumbel_temperature = float(tau)
 
     def __call__(self, pair_indices: Any) -> Any:
         """Default __call__ is training forward (returns rgb_pair only)."""
@@ -521,6 +687,9 @@ class DreamerV3RSSMSubstrateMLX(nn.Module if nn is not None else object):  # typ
             "eval_size": list(self.cfg.eval_size),
             "num_pairs": self.cfg.num_pairs,
             "gumbel_temperature": self.cfg.gumbel_temperature,
+            "current_gumbel_temperature": self.current_gumbel_temperature,
+            "anneal_total_epochs": self._anneal_total_epochs,
+            "anneal_tau_min": self._anneal_tau_min,
             "use_straight_through": self.cfg.use_straight_through,
             "unimix_alpha": self.cfg.unimix_alpha,
             "decoder_topology_source": (
@@ -589,13 +758,16 @@ def rssmc_decoder_param_count(cfg: DreamerV3RSSMConfig) -> int:
 
 
 __all__ = [
+    "CANONICAL_GUMBEL_TAU_MIN",
+    "CANONICAL_GUMBEL_TAU_START",
     "DEFAULT_G",
     "DEFAULT_K",
-    "DreamerV3RSSMConfig",
-    "DreamerV3RSSMSubstrateMLX",
     "EVAL_HW",
     "NUM_PAIRS",
+    "DreamerV3RSSMConfig",
+    "DreamerV3RSSMSubstrateMLX",
     "apply_unimix_to_logits",
     "gumbel_softmax_sample",
+    "gumbel_temperature_for_epoch",
     "rssmc_decoder_param_count",
 ]

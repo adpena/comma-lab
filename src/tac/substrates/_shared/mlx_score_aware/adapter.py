@@ -702,10 +702,33 @@ class MlxScoreAwareAdapter:
 
         The canonical long-training harness calls this once per epoch so the
         PR95 curriculum factory can advance the stage index correctly. When
-        ``pr95_faithful_curriculum_enabled=False`` this is a no-op (preserves
-        backward compat per the legacy adapter API).
+        ``pr95_faithful_curriculum_enabled=False`` the PR95-stage update is a
+        no-op (preserves backward compat per the legacy adapter API).
+
+        Substrate-AGNOSTIC renderer epoch hook (DreamerV3 τ-anneal sister wave):
+        when the renderer module (``self.model``) exposes its OWN
+        ``notify_global_epoch`` method, the adapter forwards the epoch to it.
+        This is how a substrate with an epoch-dependent forward parameter
+        (e.g. the DreamerV3 RSSM Gumbel-Softmax τ-anneal, which closes the
+        "Annealed during training (1.0 → 0.1)" comment-only contract) receives
+        the per-epoch tick WITHOUT coupling the shared adapter to any specific
+        substrate. Renderers that lack the hook (every other MLX substrate) are
+        a silent no-op (backward compat per CLAUDE.md "Beauty, simplicity, and
+        developer experience"). Forwarding is best-effort: a renderer hook that
+        raises must NOT fail the run (the harness already wraps THIS call in a
+        try/except, but we keep the renderer hook isolated so a sister-substrate
+        renderer bug cannot poison the PR95-stage update above).
         """
         self._pr95_global_epoch = int(global_epoch)
+        renderer_hook = getattr(self.model, "notify_global_epoch", None)
+        if callable(renderer_hook):
+            try:
+                renderer_hook(int(global_epoch))
+            except Exception as exc:  # pragma: no cover - defensive isolation
+                print(
+                    "[MlxScoreAwareAdapter] WARN: renderer notify_global_epoch "
+                    f"failed at epoch {global_epoch}: {exc!r}"
+                )
 
     def export_state_dict(self, model: Any, path: Path) -> None:
         """Export the model state for checkpointing.
