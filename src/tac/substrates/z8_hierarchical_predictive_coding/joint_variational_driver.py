@@ -152,6 +152,17 @@ def build_z8_joint_p18_p19_gradient_waterfill_contract() -> dict[str, Any]:
             "the wavelet detail-band dead-zone allocator"
         ),
         "rate_axis_attack_role": JOINT_P18_P19_RATE_ATTACK_ROLE,
+        "executable_materializer": {
+            "module": (
+                "tac.substrates.z8_hierarchical_predictive_coding."
+                "joint_coefficient_waterfill"
+            ),
+            "function": "materialize_joint_p18_p19_deadzone_candidate",
+            "cli": "tools/materialize_z8_joint_p18_p19_deadzone_candidate.py",
+            "output_schema": "z8_joint_p18_p19_coefficient_deadzone_candidate.v1",
+            "archive_target": "z8hpc1_wavelet_coeffs_blob",
+            "mutation": "deterministic_detail_subband_deadzone_quantization",
+        },
         "segnet_surface": {
             "stage": "P18",
             "role": "large_argmax_flip_boundary_gradient_surface",

@@ -45,6 +45,12 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
     assert "Sigma^-1" in joint["weight_formula"]
     assert "rate_bound" in joint["binding_axis_interpretation"]
     assert "wavelet_detail" in joint["rate_axis_attack_role"]
+    assert joint["executable_materializer"]["function"] == (
+        "materialize_joint_p18_p19_deadzone_candidate"
+    )
+    assert joint["executable_materializer"]["archive_target"] == (
+        "z8hpc1_wavelet_coeffs_blob"
+    )
     assert joint["forbidden_policy"] == "segnet_only_waterfill"
     assert joint["segnet_surface"]["stage"] == "P18"
     assert joint["posenet_surface"]["stage"] == "P19"

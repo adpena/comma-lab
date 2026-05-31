@@ -1,0 +1,125 @@
+{
+  "allowed_use": "receiver_runtime_projection_candidate_and_materializer_planning_only",
+  "archive_sha256": "d42c8a1badfa39c378a01a2f1bd058daf1fd377e19524b811893077b3348755d",
+  "dispatch_attempted": false,
+  "forbidden_use": "score_claim_or_pixel_consumption_authority",
+  "gpu_launched": false,
+  "next_required_task": "serialize_trained_mlx_renderer_state_into_z8hpc1_archive",
+  "pixel_consumption_proven": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/z8_joint_p18_p19_deadzone_smoke_20260531T1715Z/candidate/z8_hpc1_runtime_payload_bridge_report.json",
+  "schema": "z8_hpc1_runtime_payload_bridge_report.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "side_info_source": "frame_0_top_ll_per_channel_spatial_mean",
+  "stack_context_payload_mutation_receiver_proofs": {
+    "archive_member_byte_closed": true,
+    "axis_tag": "[macOS-CPU advisory]",
+    "dispatch_attempted": false,
+    "evidence_grade": "receiver-runtime-local-proof",
+    "gpu_launched": false,
+    "per_section": {
+      "decoder_blob": {
+        "expected_changed_frame": "frame_1",
+        "frame_0_max_abs_delta": 0.0,
+        "frame_1_max_abs_delta": 0.0021076351404190063,
+        "mutation": {
+          "mutated_archive_sha256": "0d17fcd3f70b861a3480a36a3a8ecc3242827e6c90fb7105e855b432f74ed130",
+          "mutated_pair_index": 0,
+          "mutated_section": "decoder_blob",
+          "mutation_kind": "valid_semantic_stack_context_payload_mutation",
+          "original_archive_sha256": "d42c8a1badfa39c378a01a2f1bd058daf1fd377e19524b811893077b3348755d"
+        },
+        "section": "decoder_blob",
+        "section_pixel_consumption_proven": true,
+        "valid_semantic_payload_mutation": true
+      },
+      "dreamer_state_blob": {
+        "expected_changed_frame": "frame_1",
+        "frame_0_max_abs_delta": 0.0,
+        "frame_1_max_abs_delta": 0.0021076202392578125,
+        "mutation": {
+          "mutated_archive_sha256": "e602a252b96af19bc0c9c5d20a86054f32dfc4dcf85b33ef6d71766424602bf2",
+          "mutated_pair_index": 0,
+          "mutated_section": "dreamer_state_blob",
+          "mutation_kind": "valid_semantic_stack_context_payload_mutation",
+          "original_archive_sha256": "d42c8a1badfa39c378a01a2f1bd058daf1fd377e19524b811893077b3348755d"
+        },
+        "section": "dreamer_state_blob",
+        "section_pixel_consumption_proven": true,
+        "valid_semantic_payload_mutation": true
+      },
+      "indices_blob": {
+        "expected_changed_frame": "frame_1",
+        "frame_0_max_abs_delta": 0.0,
+        "frame_1_max_abs_delta": 0.0021076351404190063,
+        "mutation": {
+          "mutated_archive_sha256": "941854e1e2504710c3d3f6b30bfcceaaf2e08966b6eb38aceee7cdaa70e9a44f",
+          "mutated_pair_index": 0,
+          "mutated_section": "indices_blob",
+          "mutation_kind": "valid_semantic_stack_context_payload_mutation",
+          "original_archive_sha256": "d42c8a1badfa39c378a01a2f1bd058daf1fd377e19524b811893077b3348755d"
+        },
+        "section": "indices_blob",
+        "section_pixel_consumption_proven": true,
+        "valid_semantic_payload_mutation": true
+      }
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_runtime_path": "projected_pair_pyramids_from_archive_bytes->stack_context_vector_from_archive->project_decoded_top_states_into_pair_pyramids->reconstruct_pair_rgb_from_pyramid",
+    "schema": "z8_hpc1_stack_context_payload_mutation_receiver_proofs.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "stack_context_sections_pixel_consumed": [
+      "decoder_blob",
+      "indices_blob",
+      "dreamer_state_blob"
+    ],
+    "valid_semantic_stack_context_payload_mutations": true
+  },
+  "stack_context_sections_pixel_consumed": [
+    "decoder_blob",
+    "indices_blob",
+    "dreamer_state_blob"
+  ],
+  "state_to_pixel_projection": {
+    "max_abs_projected_top_ll_delta": 0.015465617179870605,
+    "mean_abs_projected_top_ll_delta": 0.00878381123766303,
+    "projected_pair_changed_count": 4,
+    "projected_pair_count": 4,
+    "projection_gain": 0.015625,
+    "projection_seed": 23,
+    "projection_target": "frame_1_top_ll",
+    "stack_context_projection_gain": 0.0078125,
+    "stack_context_projection_seed": 29,
+    "stack_context_vector_length": 38
+  },
+  "state_to_pixel_projection_ready": true,
+  "wyner_ziv_top_state_count": 4,
+  "wyner_ziv_top_state_decode_ready": true,
+  "wyner_ziv_top_state_sha256": "560133999af6267b09782e9ea1ad795b0660673c262140806676663871bbd46e",
+  "wyner_ziv_top_state_shapes": [
+    [
+      1,
+      16
+    ],
+    [
+      1,
+      16
+    ],
+    [
+      1,
+      16
+    ],
+    [
+      1,
+      16
+    ]
+  ]
+}

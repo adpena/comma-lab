@@ -1706,6 +1706,25 @@ def parse_pair_blobs_from_wavelet_blob(
     return pyramids
 
 
+def pack_pair_pyramids_to_wavelet_blob(
+    pair_pyramids: list[dict[str, Any]],
+) -> bytes:
+    """Pack per-pair wavelet pyramids into the Z8HPC1 wavelet blob.
+
+    This is the public inverse of :func:`parse_pair_blobs_from_wavelet_blob`.
+    Rate-attack materializers use it after modifying Mallat detail-band
+    coefficients so they can rebuild byte-closed archives without duplicating
+    the length-prefix grammar.
+    """
+
+    wavelet_blob_parts: list[bytes] = [struct.pack("<I", len(pair_pyramids))]
+    for pyramid in pair_pyramids:
+        pair_blob = _serialize_pair_wavelet_pyramid(pyramid)
+        wavelet_blob_parts.append(struct.pack("<I", len(pair_blob)))
+        wavelet_blob_parts.append(pair_blob)
+    return b"".join(wavelet_blob_parts)
+
+
 __all__ = [
     "CANONICAL_PROJECTION_SEED_DEFAULT",
     "DEFAULT_M4_D_STATE",
@@ -1720,6 +1739,7 @@ __all__ = [
     "compute_pose_side_info_canonical_equation_150",
     "load_real_video_pair_targets_numpy",
     "load_real_video_targets_numpy",
+    "pack_pair_pyramids_to_wavelet_blob",
     "parse_pair_blobs_from_wavelet_blob",
     "reconstruct_pair_rgb_from_pyramid",
     "run_canonical_quadruple_training_loop",
