@@ -9,6 +9,10 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
+
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "scripts" / "lightning_exact_eval_repro.py"
 
@@ -76,6 +80,49 @@ def _base_args(archive: Path, baseline: Path) -> list[str]:
 def _flag_value(cmd: list[str], flag: str) -> str:
     idx = cmd.index(flag)
     return cmd[idx + 1]
+
+
+def _public_preflight_payload(
+    *,
+    tmp_path: Path,
+    archive: Path,
+    inflate: Path,
+    inflate_sha256: str,
+    runtime_manifest: dict[str, object] | None = None,
+) -> dict[str, object]:
+    row: dict[str, object] = {
+        "candidate_id": "public-replay-preflight-fixture",
+        "target_kind": "public_frontier_replay_runtime_adapter",
+        "candidate_archive_path": archive.relative_to(tmp_path).as_posix(),
+        "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "candidate_archive_bytes": archive.stat().st_size,
+        "byte_closed_candidate_emitted": True,
+        "candidate_archive_materialized": True,
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            row,
+            repo_root=tmp_path,
+            family_id="public_replay_preflight_fixture",
+            candidate_chain_id="public-replay-preflight-fixture",
+            selected_transform_kind="public_frontier_replay_runtime_adapter",
+        )
+    )
+    return {
+        **row,
+        "runtime": {
+            "inflate_sh": inflate.relative_to(tmp_path).as_posix(),
+            "inflate_sh_sha256": inflate_sha256,
+            "runtime_manifest": runtime_manifest or {},
+        },
+    }
 
 
 def test_stage_command_uses_operator_supplied_ssh_alias_without_key_material(tmp_path: Path) -> None:
@@ -386,11 +433,39 @@ def test_public_replay_preflight_must_match_current_adapter_sha(tmp_path: Path) 
     preflight.parent.mkdir(parents=True, exist_ok=True)
     preflight.write_text(
         json.dumps(
+            _public_preflight_payload(
+                tmp_path=tmp_path,
+                archive=archive,
+                inflate=inflate,
+                inflate_sha256="stale",
+            )
+        )
+        + "\n"
+    )
+    args = mod.build_parser().parse_args(
+        [*_base_args(archive, baseline), "--inflate-sh", str(inflate), "--queue-metadata", "public_preflight=experiments/results/pr106/public_replay_preflight.json"]
+    )
+    plan = mod.build_plan(args, repo_root=tmp_path)
+
+    with pytest.raises(ValueError, match="inflate_sh_sha256 is stale"):
+        mod._validate_public_replay_preflight(plan, repo_root=tmp_path)
+
+
+def test_public_replay_preflight_requires_archive_bound_contract(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    inflate = tmp_path / "experiments/public_runtime_adapters/pr106/inflate.sh"
+    inflate.parent.mkdir(parents=True)
+    inflate.write_text("#!/usr/bin/env bash\n")
+    preflight = tmp_path / "experiments/results/pr106/public_replay_preflight.json"
+    preflight.parent.mkdir(parents=True, exist_ok=True)
+    preflight.write_text(
+        json.dumps(
             {
                 "ready_for_exact_eval_dispatch": True,
                 "runtime": {
                     "inflate_sh": "experiments/public_runtime_adapters/pr106/inflate.sh",
-                    "inflate_sh_sha256": "stale",
+                    "inflate_sh_sha256": mod.sha256_file(inflate),
                     "runtime_manifest": {},
                 },
             }
@@ -402,7 +477,7 @@ def test_public_replay_preflight_must_match_current_adapter_sha(tmp_path: Path) 
     )
     plan = mod.build_plan(args, repo_root=tmp_path)
 
-    with pytest.raises(ValueError, match="inflate_sh_sha256 is stale"):
+    with pytest.raises(ValueError, match="archive-bound candidate contract"):
         mod._validate_public_replay_preflight(plan, repo_root=tmp_path)
 
 
@@ -422,14 +497,13 @@ def test_public_replay_preflight_requires_external_roots_for_declared_dependency
     preflight.parent.mkdir(parents=True, exist_ok=True)
     preflight.write_text(
         json.dumps(
-            {
-                "ready_for_exact_eval_dispatch": True,
-                "runtime": {
-                    "inflate_sh": "experiments/public_runtime_adapters/pr106/inflate.sh",
-                    "inflate_sh_sha256": mod.sha256_file(inflate),
-                    "runtime_manifest": {"external_dependency_roots": []},
-                },
-            }
+            _public_preflight_payload(
+                tmp_path=tmp_path,
+                archive=archive,
+                inflate=inflate,
+                inflate_sha256=mod.sha256_file(inflate),
+                runtime_manifest={"external_dependency_roots": []},
+            )
         )
         + "\n"
     )

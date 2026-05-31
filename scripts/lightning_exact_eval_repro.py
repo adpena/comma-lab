@@ -45,6 +45,10 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.repo_io import json_text, read_json, sha256_file, write_json  # noqa: E402
+from tac.optimization.archive_bound_candidate_contract import (  # noqa: E402
+    ArchiveBoundCandidateContractError,
+    selected_archive_bound_candidate_contract_from_payload,
+)
 
 DEFAULT_STATE_DIR = REPO_ROOT / ".omx/state"
 DEFAULT_REMOTE_PACT = "/teamspace/studios/this_studio/pact"
@@ -271,10 +275,48 @@ def _validate_public_replay_preflight(plan: dict[str, Any], *, repo_root: Path) 
         return
     preflight_path = repo_root / _repo_rel(preflight_rel, repo_root=repo_root)
     preflight = _load_json(preflight_path)
-    if preflight.get("ready_for_exact_eval_dispatch") is not True:
+    try:
+        contract = selected_archive_bound_candidate_contract_from_payload(
+            preflight,
+            label=f"public_replay_preflight:{preflight_rel}",
+        )
+    except ArchiveBoundCandidateContractError as exc:
         raise ValueError(
-            "exact-eval submit blocked; public replay preflight is not ready_for_exact_eval_dispatch=true: "
-            f"{preflight_rel}"
+            "exact-eval submit blocked; public replay preflight archive-bound "
+            f"candidate contract is invalid: {preflight_rel}: {exc}"
+        ) from exc
+    if not contract:
+        raise ValueError(
+            "exact-eval submit blocked; public replay preflight missing "
+            f"archive-bound candidate contract: {preflight_rel}"
+        )
+    if contract.get("archive_bound_candidate_ready_for_exact_handoff") is not True:
+        blockers = ", ".join(str(item) for item in contract.get("blockers") or [])
+        raise ValueError(
+            "exact-eval submit blocked; public replay preflight archive-bound "
+            "candidate contract is not ready for exact handoff: "
+            f"{preflight_rel} {blockers}".rstrip()
+        )
+    contract_archive = contract.get("candidate_archive")
+    if not isinstance(contract_archive, dict):
+        raise ValueError(
+            "exact-eval submit blocked; public replay preflight contract missing "
+            f"candidate_archive: {preflight_rel}"
+        )
+    plan_archive = plan.get("archive")
+    if not isinstance(plan_archive, dict):
+        raise ValueError("exact-eval plan missing archive object")
+    if contract_archive.get("sha256") != plan_archive.get("sha256"):
+        raise ValueError(
+            "exact-eval submit blocked; public replay preflight contract archive "
+            "sha256 does not match plan archive: "
+            f"{preflight_rel} {contract_archive.get('sha256')!r} != {plan_archive.get('sha256')!r}"
+        )
+    if contract_archive.get("bytes") != plan_archive.get("size_bytes"):
+        raise ValueError(
+            "exact-eval submit blocked; public replay preflight contract archive "
+            "bytes does not match plan archive: "
+            f"{preflight_rel} {contract_archive.get('bytes')!r} != {plan_archive.get('size_bytes')!r}"
         )
     runtime = preflight.get("runtime")
     if not isinstance(runtime, dict):

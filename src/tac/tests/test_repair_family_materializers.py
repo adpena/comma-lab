@@ -970,6 +970,90 @@ def test_repair_stack_search_demotes_stale_archive_bound_contract(
     )
 
 
+def test_repair_stack_search_does_not_promote_legacy_archive_flags_without_contract(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_zip(
+        tmp_path / "legacy_candidate_archive.zip",
+        {"payload.bin": b"legacy-candidate"},
+    )
+    proof_path = _write_json(
+        tmp_path / "legacy_runtime_consumption_proof.json",
+        {"schema": "legacy_runtime_proof.v1", **_false_authority()},
+    )
+    report = {
+        "schema": REPAIR_FAMILY_BYTE_TRANSFORM_EXECUTION_REPORT_SCHEMA,
+        "family_id": "segnet_class_region_waterfill",
+        "typed_response_id": "segnet_legacy_flags",
+        "candidate_chain_id": "segnet_legacy_flags_chain",
+        "candidate_chain_ids": ["segnet_legacy_flags_chain"],
+        "entropy_position_label": "before_entropy_coder_distribution_shaping",
+        "active_entropy_stage": {
+            "order": 10,
+            "stage": "before_entropy_coder_distribution_shaping",
+        },
+        "fractal_optimization_scope": {
+            "active_levels": ["pixel", "region", "frame"],
+            "declared_levels": ["pixel", "region", "frame"],
+        },
+        "allocated_repair_bytes": 16,
+        "byte_transform_delta": {
+            "schema": "repair_family_byte_transform_delta.v1",
+            "path": "delta.json",
+            "bytes": 16,
+            **_false_authority(),
+        },
+        "mlx_local_probe_delta": {
+            "schema": "repair_family_byte_transform_mlx_probe_delta.v1",
+            "combined_delta_score_units": -0.001,
+            "segnet_delta_score_units": -0.001,
+            "posenet_delta_score_units": 0.0,
+            **_false_authority(),
+        },
+        "byte_closed_candidate_emitted": True,
+        "candidate_archive_materialized": True,
+        "candidate_archive": {
+            "path": archive_path.relative_to(tmp_path).as_posix(),
+            "sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+            "bytes": archive_path.stat().st_size,
+            "runtime_consumption_proof_path": proof_path.relative_to(tmp_path).as_posix(),
+        },
+        "runtime_consumption_proof_path": proof_path.relative_to(tmp_path).as_posix(),
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "exact_eval_handoff_gate": {
+            "schema": "repair_family_exact_eval_handoff_gate.v1",
+            "archive_bound_runtime_consumption_proof_ready": True,
+            "eligible_for_exact_eval_handoff": False,
+            "blockers": ["contest_exact_auth_eval_required"],
+            **_false_authority(),
+        },
+        "blockers": [],
+        **_false_authority(),
+    }
+    report_path = _write_json(tmp_path / "legacy_flags_report.json", report)
+
+    stack_plan = plan_repair_family_stack_search(
+        execution_reports=[report],
+        execution_report_paths=[report_path],
+        repo_root=tmp_path,
+        byte_credit_budget=1_000,
+    )
+
+    stack_row = stack_plan["stack_rows"][0]
+    handoff_row = stack_plan["exact_eval_handoff_candidates"][0]
+    assert stack_row["legacy_archive_bound_signal_observed"] is True
+    assert stack_row["archive_bound_exact_handoff_candidate"] is False
+    assert handoff_row["archive_bound_custody_complete"] is False
+    assert stack_plan["archive_bound_exact_handoff_candidate_count"] == 0
+    assert "archive_bound_candidate_contract_required_for_archive_custody" in handoff_row[
+        "blockers"
+    ]
+    assert "legacy_archive_bound_signal_observed_without_contract_custody" in handoff_row[
+        "blockers"
+    ]
+
+
 @pytest.mark.parametrize(
     ("archive_family", "payload"),
     [

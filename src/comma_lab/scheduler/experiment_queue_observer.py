@@ -24,7 +24,10 @@ from comma_lab.scheduler.experiment_queue import (
     resolve_worker_max_parallel,
 )
 from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_PAYLOAD_KEYS,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
     has_archive_bound_candidate_contract_payload,
     selected_archive_bound_candidate_contract_from_payload,
 )
@@ -85,6 +88,13 @@ ARCHIVE_RUNTIME_RECEIVER_CUSTODY_POSTCONDITION_TYPES = frozenset(
 PLANNING_ONLY_COMPLETION_CONTRACT_SCHEMAS = frozenset(
     {
         FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
+    }
+)
+ARCHIVE_BOUND_CONTRACT_PAYLOAD_SCHEMAS = frozenset(
+    {
+        ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
     }
 )
 
@@ -639,11 +649,22 @@ def _archive_bound_candidate_contract_for_observer(
     *,
     context: str,
 ) -> tuple[dict[str, Any] | None, list[str]]:
-    if not has_archive_bound_candidate_contract_payload(payload):
+    contract_payload: Mapping[str, Any] = payload
+    if (
+        not has_archive_bound_candidate_contract_payload(contract_payload)
+        and contract_payload.get("schema") not in ARCHIVE_BOUND_CONTRACT_PAYLOAD_SCHEMAS
+    ):
+        nested_package = contract_payload.get("archive_bound_candidate_adapter_package")
+        if isinstance(nested_package, Mapping):
+            contract_payload = nested_package
+    if (
+        not has_archive_bound_candidate_contract_payload(contract_payload)
+        and contract_payload.get("schema") not in ARCHIVE_BOUND_CONTRACT_PAYLOAD_SCHEMAS
+    ):
         return None, []
     try:
         contract = selected_archive_bound_candidate_contract_from_payload(
-            payload,
+            contract_payload,
             label=f"{context}.archive_bound_candidate_contract",
         )
     except ValueError as exc:
@@ -1039,6 +1060,49 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                     for key in ("path", "bytes", "sha256", "member_sha256")
                     if key in candidate_archive
                 }
+            contract, contract_blockers = _archive_bound_candidate_contract_for_observer(
+                payload,
+                context=f"path_artifact_record:{record['path']}",
+            )
+            if contract is not None or contract_blockers:
+                record["archive_bound_candidate_contract_valid"] = (
+                    contract is not None and not contract_blockers
+                )
+                record["archive_bound_candidate_contract_blockers"] = contract_blockers
+                if contract is not None:
+                    record["archive_bound_candidate_contract_key"] = contract.get(
+                        "contract_key"
+                    )
+                    record["archive_bound_candidate_contract_selected_kind"] = (
+                        contract.get("archive_native_transform_kind")
+                    )
+                    record["archive_bound_candidate_ready"] = (
+                        contract.get("archive_bound_candidate_ready") is True
+                    )
+                    record["archive_bound_candidate_ready_for_exact_handoff"] = (
+                        contract.get("archive_bound_candidate_ready_for_exact_handoff")
+                        is True
+                    )
+                    if "candidate_archive" not in record:
+                        contract_archive = contract.get("candidate_archive")
+                        if isinstance(contract_archive, Mapping):
+                            record["candidate_archive"] = {
+                                key: contract_archive.get(key)
+                                for key in ("path", "bytes", "sha256", "member_sha256")
+                                if key in contract_archive
+                            }
+            adapter_package = payload.get("archive_bound_candidate_adapter_package")
+            if isinstance(adapter_package, Mapping):
+                record["archive_bound_candidate_adapter_package_schema"] = (
+                    adapter_package.get("schema")
+                )
+                for source_key, target_key in (
+                    ("candidate_row_count", "archive_bound_candidate_adapter_package_candidate_count"),
+                    ("ready_contract_count", "archive_bound_candidate_adapter_package_ready_contract_count"),
+                    ("receiver_proof_gate_passed_count", "archive_bound_candidate_adapter_package_receiver_gate_passed_count"),
+                ):
+                    if source_key in adapter_package:
+                        record[target_key] = adapter_package[source_key]
             delta = payload.get("serialized_archive_delta")
             if isinstance(delta, Mapping):
                 record["serialized_archive_delta_schema"] = delta.get("schema")

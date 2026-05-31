@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -8,8 +9,10 @@ from comma_lab.scheduler.experiment_queue_observer import (
     _materializer_payload_revalidation,
     _materializer_queue_row_allows_deferred_runtime_identity,
     _optimizer_candidate_queue_materializer_row,
+    _path_artifact_record,
 )
 from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
     archive_bound_candidate_contract_fields_for_row,
 )
 from tac.optimization.serialized_archive_economics import (
@@ -139,3 +142,49 @@ def test_observer_rejects_stale_duplicate_contract_readiness(
         in blocker
         for blocker in revalidation["archive_bound_candidate_contract_blockers"]
     )
+
+
+def test_observer_extracts_nested_pr95_adapter_package_contract(tmp_path: Path) -> None:
+    row = _contract_row(tmp_path)
+    package = {
+        "schema": ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+        "candidate_family": "pr95_mlx_hnerv",
+        "candidate_row_count": 1,
+        "ready_contract_count": 0,
+        "receiver_proof_gate_passed_count": 0,
+        "candidate_rows": [row],
+        "archive_bound_candidate_contract_surfaces": [
+            row["archive_bound_candidate_contract_surface"]
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    path = tmp_path / "pr95_package_report.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "pr95_mlx_pytorch_state_dict_to_contest_archive.v1",
+                "archive_bound_candidate_adapter_package": package,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    record = _path_artifact_record(path, repo_root=tmp_path)
+
+    assert record["pr95_mlx_package_report"] is True
+    assert record["archive_bound_candidate_contract_valid"] is True
+    assert record["archive_bound_candidate_contract_key"] == row[
+        "archive_bound_candidate_contract"
+    ]["contract_key"]
+    assert record["candidate_archive"]["sha256"] == row["candidate_archive_sha256"]
+    assert record["archive_bound_candidate_adapter_package_candidate_count"] == 1

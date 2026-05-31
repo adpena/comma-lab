@@ -102,6 +102,30 @@ def _validated_archive_bound_contract_surface(
     return _mapping(payload.get("archive_bound_candidate_contract_surface"))
 
 
+def _legacy_archive_bound_signal_observed(payload: Mapping[str, Any]) -> bool:
+    exact_gate = _mapping(payload.get("exact_eval_handoff_gate"))
+    candidate = _mapping(payload.get("candidate_archive"))
+    return any(
+        value is True
+        for value in (
+            payload.get("byte_closed_candidate_emitted"),
+            payload.get("candidate_archive_materialized"),
+            payload.get("byte_closed_candidate_materialized"),
+            payload.get("runtime_consumption_proof_ready"),
+            payload.get("receiver_contract_satisfied"),
+            exact_gate.get("archive_bound_runtime_consumption_proof_ready"),
+            candidate.get("runtime_consumption_proof_ready"),
+            candidate.get("receiver_contract_satisfied"),
+        )
+    )
+
+
+def _archive_bound_contract_ready_for_exact_handoff(
+    contract: Mapping[str, Any],
+) -> bool:
+    return contract.get("archive_bound_candidate_ready_for_exact_handoff") is True
+
+
 def _string_list(value: Any) -> list[str]:
     if value is None:
         return []
@@ -375,6 +399,10 @@ def _stack_row(
             label=f"repair_family_stack_search_contract:{report_path}",
         )
     )
+    legacy_archive_bound_signal = _legacy_archive_bound_signal_observed(report)
+    contract_exact_handoff_ready = _archive_bound_contract_ready_for_exact_handoff(
+        archive_bound_contract
+    )
     archive_bound_contract_surface = _validated_archive_bound_contract_surface(
         report,
         contract_blockers=archive_bound_contract_reader_blockers,
@@ -432,6 +460,14 @@ def _stack_row(
             *archive_entropy_blockers,
             *archive_variant_signal_blockers,
             *_string_list(archive_bound_contract.get("blockers")),
+            *(
+                [
+                    "legacy_archive_bound_signal_observed_without_contract_custody",
+                    "archive_bound_candidate_contract_required_for_archive_custody",
+                ]
+                if legacy_archive_bound_signal and not contract_exact_handoff_ready
+                else []
+            ),
             *([] if feasible else ["byte_credit_exhausted_for_stack_row"]),
             *(["automatic_negative_result_demotion_active"] if negative_demoted else []),
             *(
@@ -500,6 +536,7 @@ def _stack_row(
         "archive_bound_contract_ready": (
             archive_bound_contract.get("archive_bound_candidate_ready") is True
         ),
+        "legacy_archive_bound_signal_observed": legacy_archive_bound_signal,
         "archive_entropy_substrate_coverage": dict(archive_entropy_coverage),
         "archive_entropy_substrate_materialized_substrates": _string_list(
             archive_entropy_coverage.get("materialized_substrates")
@@ -564,14 +601,7 @@ def _stack_row(
             exact_gate.get("archive_bound_runtime_consumption_proof_ready") is True
         ),
         "archive_bound_exact_handoff_candidate": (
-            archive_bound_contract.get("archive_bound_candidate_ready_for_exact_handoff")
-            is True
-            or (
-                report.get("byte_closed_candidate_emitted") is True
-                and report.get("candidate_archive_materialized") is True
-                and exact_gate.get("archive_bound_runtime_consumption_proof_ready")
-                is True
-            )
+            contract_exact_handoff_ready
         ),
         "local_mlx_combined_delta_score_units": combined_delta,
         "local_mlx_expected_improvement_score_units": local_improvement,
@@ -1899,9 +1929,29 @@ def _candidate_archive_record(
             "ready_for_exact_eval_dispatch": False,
             **FALSE_AUTHORITY,
         }, list(contract_blockers)
-    candidate = _mapping(
-        archive_bound_contract.get("candidate_archive")
-    ) or _mapping(report.get("candidate_archive"))
+    if not archive_bound_contract:
+        blockers = [
+            "archive_bound_candidate_contract_required_for_archive_custody",
+        ]
+        if _legacy_archive_bound_signal_observed(report):
+            blockers.append("legacy_archive_bound_signal_observed_without_contract_custody")
+        return {
+            "schema": "repair_family_exact_handoff_candidate_archive_custody.v1",
+            "path": None,
+            "expected_sha256": None,
+            "expected_bytes": None,
+            "present": False,
+            "sha256": None,
+            "bytes": None,
+            "sha256_matches": False,
+            "bytes_match": False,
+            "custody_complete": False,
+            "blockers": ordered_unique(blockers),
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }, blockers
+    candidate = _mapping(archive_bound_contract.get("candidate_archive"))
     path_text = str(candidate.get("path") or "").strip()
     expected_sha = str(candidate.get("sha256") or "").strip()
     expected_bytes = candidate.get("bytes")
@@ -1976,11 +2026,28 @@ def _runtime_proof_record(
             "ready_for_exact_eval_dispatch": False,
             **FALSE_AUTHORITY,
         }, list(contract_blockers)
-    candidate = _mapping(
-        archive_bound_contract.get("candidate_archive")
-    ) or _mapping(report.get("candidate_archive"))
+    if not archive_bound_contract:
+        blockers = [
+            "archive_bound_candidate_contract_required_for_runtime_proof_custody",
+        ]
+        if _legacy_archive_bound_signal_observed(report):
+            blockers.append("legacy_archive_bound_signal_observed_without_contract_custody")
+        return {
+            "schema": "repair_family_exact_handoff_runtime_proof_custody.v1",
+            "path": None,
+            "present": False,
+            "sha256": None,
+            "bytes": None,
+            "archive_bound_runtime_consumption_proof_ready": False,
+            "custody_complete": False,
+            "blockers": ordered_unique(blockers),
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }, blockers
+    candidate = _mapping(archive_bound_contract.get("candidate_archive"))
     path_text = str(
-        candidate.get("runtime_consumption_proof_path") or report.get("runtime_consumption_proof_path") or ""
+        candidate.get("runtime_consumption_proof_path") or ""
     ).strip()
     blockers: list[str] = []
     present = False
@@ -1999,7 +2066,6 @@ def _runtime_proof_record(
     proof_ready = (
         archive_bound_contract.get("runtime_consumption_proof_ready") is True
         or candidate.get("runtime_consumption_proof_ready") is True
-        or _mapping(report.get("exact_eval_handoff_gate")).get("archive_bound_runtime_consumption_proof_ready") is True
     )
     if not proof_ready:
         blockers.append("archive_bound_runtime_consumption_proof_missing")
@@ -2044,9 +2110,12 @@ def _exact_handoff_candidate_row(
         repo_root=repo_root,
     )
     exact_gate = _mapping(report.get("exact_eval_handoff_gate"))
+    legacy_archive_bound_signal = _legacy_archive_bound_signal_observed(report)
+    contract_exact_handoff_ready = _archive_bound_contract_ready_for_exact_handoff(
+        archive_bound_contract
+    )
     archive_bound_complete = bool(
-        report.get("byte_closed_candidate_emitted") is True
-        and report.get("candidate_archive_materialized") is True
+        contract_exact_handoff_ready
         and candidate_archive.get("custody_complete") is True
         and runtime_proof.get("custody_complete") is True
     )
@@ -2057,7 +2126,21 @@ def _exact_handoff_candidate_row(
             *_string_list(exact_gate.get("blockers")),
             *archive_blockers,
             *proof_blockers,
-            *([] if report.get("byte_closed_candidate_emitted") is True else ["byte_closed_candidate_archive_missing"]),
+            *(
+                []
+                if archive_bound_contract
+                else ["archive_bound_candidate_contract_required_for_archive_custody"]
+            ),
+            *(
+                []
+                if not archive_bound_contract or contract_exact_handoff_ready
+                else ["archive_bound_candidate_contract_not_ready_for_exact_handoff"]
+            ),
+            *(
+                ["legacy_archive_bound_signal_observed_without_contract_custody"]
+                if legacy_archive_bound_signal and not contract_exact_handoff_ready
+                else []
+            ),
             *([] if archive_bound_complete else ["archive_runtime_custody_incomplete"]),
             "contest_cpu_or_cuda_exact_axis_payload_required",
             "lane_dispatch_claim_required_before_exact_eval",
@@ -2080,6 +2163,7 @@ def _exact_handoff_candidate_row(
         "archive_bound_candidate_contract": dict(archive_bound_contract),
         "archive_bound_candidate_contract_surface": dict(archive_bound_contract_surface),
         "runtime_consumption_proof": runtime_proof,
+        "legacy_archive_bound_signal_observed": legacy_archive_bound_signal,
         "archive_bound_custody_complete": archive_bound_complete,
         "archive_bound_exact_handoff_candidate": archive_bound_complete,
         "target_modes": ["contest_exact_eval"],
@@ -2441,13 +2525,30 @@ def _chain_exact_handoff_candidate_row(
         if isinstance(stage, Mapping)
     ]
     final_stage = stages[-1] if stages else {}
-    candidate_archive = dict(_mapping(chain_report.get("candidate_archive")))
+    archive_bound_contract, contract_blockers = _archive_bound_contract_for_payload(
+        chain_report,
+        label=f"repair_family_exact_handoff_chain_contract:{chain_report.get('chain_id')}",
+    )
+    if not archive_bound_contract and not contract_blockers:
+        contracts = [
+            dict(contract)
+            for contract in chain_report.get("archive_bound_candidate_contracts") or []
+            if isinstance(contract, Mapping)
+        ]
+        selected_contracts = [
+            contract
+            for contract in contracts
+            if contract.get("selected_archive_transform_variant") is True
+        ]
+        archive_bound_contract = (
+            selected_contracts[0] if selected_contracts else contracts[0] if contracts else {}
+        )
+    candidate_archive = dict(_mapping(archive_bound_contract.get("candidate_archive")))
     runtime_proof_path = str(
-        final_stage.get("stage_runtime_consumption_proof_path") or ""
+        candidate_archive.get("runtime_consumption_proof_path") or ""
     ).strip()
     runtime_proof_ready = (
-        chain_report.get("runtime_consumption_proof_ready") is True
-        and final_stage.get("stage_receiver_proof_ready") is True
+        archive_bound_contract.get("runtime_consumption_proof_ready") is True
     )
     runtime_proof = {
         "schema": "repair_family_exact_handoff_runtime_proof_custody.v1",
@@ -2481,8 +2582,7 @@ def _chain_exact_handoff_candidate_row(
         **FALSE_AUTHORITY,
     }
     archive_complete = bool(
-        chain_report.get("archive_bound_candidate_emitted") is True
-        and chain_report.get("candidate_archive_materialized") is True
+        _archive_bound_contract_ready_for_exact_handoff(archive_bound_contract)
         and candidate_archive.get("path")
         and candidate_archive.get("sha256")
         and isinstance(candidate_archive.get("bytes"), int)
@@ -2508,8 +2608,20 @@ def _chain_exact_handoff_candidate_row(
     blockers = ordered_unique(
         [
             *_string_list(chain_report.get("blockers")),
+            *contract_blockers,
             *_string_list(candidate_archive.get("blockers")),
             *_string_list(runtime_proof.get("blockers")),
+            *(
+                []
+                if archive_bound_contract
+                else ["archive_bound_candidate_contract_required_for_entropy_stage_chain"]
+            ),
+            *(
+                []
+                if not _legacy_archive_bound_signal_observed(chain_report)
+                or _archive_bound_contract_ready_for_exact_handoff(archive_bound_contract)
+                else ["legacy_archive_bound_signal_observed_without_contract_custody"]
+            ),
             *([] if archive_bound_complete else ["archive_runtime_custody_incomplete"]),
             "contest_cpu_or_cuda_exact_axis_payload_required",
             "lane_dispatch_claim_required_before_exact_eval",
@@ -2561,6 +2673,7 @@ def _chain_exact_handoff_candidate_row(
             for contract in chain_report.get("archive_bound_candidate_contracts") or []
             if isinstance(contract, Mapping)
         ],
+        "archive_bound_candidate_contract": dict(archive_bound_contract),
         "archive_bound_candidate_contract_surfaces": [
             dict(surface)
             for surface in chain_report.get("archive_bound_candidate_contract_surfaces") or []

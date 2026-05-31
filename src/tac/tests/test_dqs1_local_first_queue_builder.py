@@ -528,12 +528,13 @@ def test_dqs1_queue_builder_skips_candidates_with_harvest_observations(
     )
 
     assert result.selection.candidate_id == "pairset_drop_one_rank024_pair0112"
-    assert result.selection.skipped_candidates == (
-        {
-            "candidate_id": "pairset_drop_one_rank023_pair0440",
-            "reason": "dqs1_harvest_observation_exists",
-            "observation_outcome": "local_advisory_improved",
-        },
+    skipped = result.selection.skipped_candidates[0]
+    assert skipped["candidate_id"] == "pairset_drop_one_rank023_pair0440"
+    assert skipped["reason"] == "dqs1_harvest_observation_exists"
+    assert skipped["observation_outcome"] == "local_advisory_improved"
+    assert skipped["archive_bound_candidate_contract_valid"] == "false"
+    assert (
+        "archive_bound_candidate_contract" in skipped["archive_bound_candidate_contract_blocker"]
     )
     skip_policy = result.selection.source_metadata["dqs1_observation_acquisition_skip"]
     assert skip_policy["schema"] == "dqs1_observation_acquisition_skip.v1"
@@ -2057,6 +2058,9 @@ def test_dqs1_queue_builder_pairset_acquisition_skips_observed_candidates(
     assert result.selection.skipped_candidates[0]["reason"] == (
         "dqs1_harvest_observation_exists"
     )
+    assert result.selection.skipped_candidates[0][
+        "archive_bound_candidate_contract_valid"
+    ] == "false"
     assert result.selection.source_metadata["dqs1_observation_acquisition_skip"][
         "active"
     ] is True

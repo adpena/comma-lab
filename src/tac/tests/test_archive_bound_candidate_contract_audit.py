@@ -107,6 +107,16 @@ def test_archive_bound_contract_audit_surfaces_missing_contract_migration(
     assert result.migration_required_findings[0].code == (
         "archive_like_candidate_payload_missing_shared_contract"
     )
+    payload = result.as_dict()
+    assert payload["migration_backlog_group_count"] == 1
+    group = payload["migration_backlog_groups"][0]
+    assert group["family"] == "pr95"
+    assert group["stage"] == "receiver_proof"
+    assert group["scope"] == "archive"
+    assert "byte_closed_archive_custody" in group[
+        "contest_space_grounding_requirements"
+    ]
+    assert "posterior_budget_route_updated" in group["acquisition_spend_preconditions"]
 
 
 def test_archive_bound_contract_audit_can_ignore_untracked_scratch(

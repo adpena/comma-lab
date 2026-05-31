@@ -146,6 +146,9 @@ class ArchiveBoundContractAuditResult:
         return not self.blocking_findings
 
     def as_dict(self) -> dict[str, Any]:
+        migration_backlog_groups = archive_bound_migration_backlog_groups(
+            self.migration_required_findings
+        )
         return {
             "schema": ARCHIVE_BOUND_CONTRACT_AUDIT_SCHEMA,
             "passed": self.passed,
@@ -167,6 +170,8 @@ class ArchiveBoundContractAuditResult:
             "migration_required_findings": [
                 asdict(finding) for finding in self.migration_required_findings
             ],
+            "migration_backlog_group_count": len(migration_backlog_groups),
+            "migration_backlog_groups": migration_backlog_groups,
             "advisory_findings": [
                 asdict(finding) for finding in self.advisory_findings
             ],
@@ -266,11 +271,162 @@ def _candidate_archive_digest(payload: Mapping[str, Any]) -> str:
         archive_path = archive.get("path") or archive.get("archive_path")
         archive_sha = archive.get("sha256") or archive.get("archive_sha256")
         archive_bytes = archive.get("bytes") or archive.get("archive_bytes")
-        return f"path={archive_path!r} sha256={archive_sha!r} bytes={archive_bytes!r}"
+        return (
+            f"path={archive_path!r} sha256={archive_sha!r} bytes={archive_bytes!r} "
+            f"runtime={payload.get('runtime_consumption_proof_status')!r}"
+        )
     return (
         f"path={payload.get('candidate_archive_path') or payload.get('archive_path')!r} "
         f"sha256={payload.get('candidate_archive_sha256') or payload.get('archive_sha256')!r} "
-        f"bytes={payload.get('candidate_archive_bytes') or payload.get('archive_bytes')!r}"
+        f"bytes={payload.get('candidate_archive_bytes') or payload.get('archive_bytes')!r} "
+        f"runtime={payload.get('runtime_consumption_proof_status')!r}"
+    )
+
+
+def _infer_migration_family(text: str) -> str:
+    lowered = text.lower()
+    ordered = (
+        ("pr95", "pr95"),
+        ("pr103", "pr103"),
+        ("dqs1", "dqs1"),
+        ("byte_shaving", "byte_shaving"),
+        ("public_frontier", "public_frontier"),
+        ("public_pr", "public_frontier"),
+        ("range", "range_coder"),
+        ("arithmetic", "range_coder"),
+        ("ans", "ans_coder"),
+        ("huffman", "huffman"),
+        ("fec", "fec"),
+        ("selector", "selector"),
+        ("header", "header"),
+        ("zip", "zip_ordering"),
+        ("repack", "zip_ordering"),
+    )
+    for needle, family in ordered:
+        if needle in lowered:
+            return family
+    return "archive_candidate"
+
+
+def _infer_migration_stage(text: str) -> str:
+    lowered = text.lower()
+    if "exact" in lowered or "handoff" in lowered or "preclaim" in lowered:
+        return "exact_handoff"
+    if "receiver" in lowered or "runtime" in lowered or "inflate" in lowered:
+        return "receiver_proof"
+    if "mlx" in lowered or "triage" in lowered:
+        return "mlx_triage"
+    if "materializer" in lowered or "candidate_archive" in lowered or "archive" in lowered:
+        return "byte_closed_materializer"
+    return "contract_migration"
+
+
+def _infer_migration_scope(text: str) -> str:
+    lowered = text.lower()
+    if "archive" in lowered:
+        return "archive"
+    ordered = (
+        ("full_video", "full_video"),
+        ("full-video", "full_video"),
+        ("batch", "batch"),
+        ("pair", "pair"),
+        ("frame", "frame"),
+        ("region", "region"),
+        ("boundary", "boundary"),
+        ("byte", "byte"),
+        ("bit", "bit"),
+    )
+    for needle, scope in ordered:
+        if needle in lowered:
+            return scope
+    return "archive"
+
+
+def _infer_migration_entropy_position(family: str, text: str) -> str:
+    lowered = f"{family} {text}".lower()
+    if family in {"dqs1", "fec", "selector", "public_frontier"}:
+        return "before_entropy_coder"
+    if family in {"range_coder", "ans_coder", "huffman"}:
+        return "at_entropy_coder"
+    if family in {"header", "zip_ordering"}:
+        return "after_entropy_coder"
+    if "before" in lowered:
+        return "before_entropy_coder"
+    if "after" in lowered:
+        return "after_entropy_coder"
+    if "entropy" in lowered:
+        return "at_entropy_coder"
+    return "archive_entropy_position_unknown"
+
+
+def archive_bound_migration_backlog_groups(
+    findings: Sequence[ArchiveBoundContractAuditFinding],
+) -> list[dict[str, Any]]:
+    """Group missing-contract findings into executable migration backlog slices."""
+
+    groups: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    for finding in findings:
+        text = " ".join(
+            [
+                finding.path,
+                finding.pointer,
+                finding.code,
+                finding.message,
+            ]
+        )
+        family = _infer_migration_family(text)
+        stage = _infer_migration_stage(text)
+        scope = _infer_migration_scope(text)
+        entropy_position = _infer_migration_entropy_position(family, text)
+        key = (family, stage, scope, entropy_position)
+        group = groups.setdefault(
+            key,
+            {
+                "schema": "tac_archive_bound_candidate_contract_migration_backlog_group.v1",
+                "group_key": "|".join(key),
+                "family": family,
+                "stage": stage,
+                "scope": scope,
+                "entropy_position_label": entropy_position,
+                "finding_count": 0,
+                "paths": [],
+                "sample_pointers": [],
+                "task_kind": "smallest_byte_closed_materializer_contract_migration",
+                "smallest_executable_task": (
+                    "emit tac_archive_bound_candidate_contract.v1 for the "
+                    f"{family}/{stage}/{scope} row, then rerun receiver proof "
+                    "or record an exact blocker"
+                ),
+                "contest_space_grounding_requirements": [
+                    "byte_closed_archive_custody",
+                    "contest_inflate_runtime_consumption",
+                    "upstream_video_content_tree_or_runtime_tree_custody",
+                    "segnet_posenet_rate_component_axis_label",
+                    "exact_cpu_or_cuda_replay_or_precise_blocker",
+                    "posterior_ledger_update_for_positive_or_negative_result",
+                ],
+                "acquisition_spend_preconditions": [
+                    "shared_contract_valid",
+                    "receiver_proof_gate_passed",
+                    "exact_axis_preclaim_or_blocker_recorded",
+                    "posterior_budget_route_updated",
+                ],
+                "allowed_use": "archive_bound_contract_migration_backlog_routing",
+                "forbidden_use": "score_claim_or_dispatch_authority",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        )
+        group["finding_count"] += 1
+        if finding.path not in group["paths"]:
+            group["paths"].append(finding.path)
+        if len(group["sample_pointers"]) < 8:
+            group["sample_pointers"].append(finding.pointer)
+    return sorted(
+        groups.values(),
+        key=lambda row: (-int(row["finding_count"]), row["group_key"]),
     )
 
 

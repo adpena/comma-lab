@@ -12,6 +12,10 @@ from typing import Any
 
 from comma_lab.operator_storage_waterfall import operator_cold_store_roots
 from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB
+from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    selected_archive_bound_candidate_contract_from_payload,
+)
 from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.dqs1_materializer_feedback_bridge import (
     DQS1_OBSERVATION_SOURCE_SCHEMA,
@@ -810,6 +814,49 @@ def _dqs1_observation_outcome_label(row: Mapping[str, Any]) -> str:
     return "flat_local_advisory"
 
 
+def _dqs1_observation_archive_contract_metadata(
+    row: Mapping[str, Any],
+) -> dict[str, str]:
+    contract_payload: Mapping[str, Any] = row
+    nested_package = row.get("archive_bound_candidate_adapter_package")
+    if isinstance(nested_package, Mapping):
+        contract_payload = nested_package
+    try:
+        contract = selected_archive_bound_candidate_contract_from_payload(
+            contract_payload,
+            label="dqs1_local_first_queue.observation_skip.archive_bound_candidate_contract",
+        )
+    except ArchiveBoundCandidateContractError as exc:
+        return {
+            "archive_bound_candidate_contract_valid": "false",
+            "archive_bound_candidate_contract_blocker": str(exc),
+        }
+    if not contract:
+        return {
+            "archive_bound_candidate_contract_valid": "false",
+            "archive_bound_candidate_contract_blocker": (
+                "archive_bound_candidate_contract_missing"
+            ),
+        }
+    out = {
+        "archive_bound_candidate_contract_valid": "true",
+        "archive_bound_candidate_contract_key": str(contract.get("contract_key") or ""),
+        "archive_bound_contract_selected_kind": str(
+            contract.get("archive_native_transform_kind") or ""
+        ),
+    }
+    candidate_archive = contract.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping):
+        for source_key, target_key in (
+            ("sha256", "candidate_archive_sha256"),
+            ("bytes", "candidate_archive_bytes"),
+        ):
+            value = candidate_archive.get(source_key)
+            if value not in (None, ""):
+                out[target_key] = str(value)
+    return {key: value for key, value in out.items() if value}
+
+
 def _observed_dqs1_candidate_skips(
     dqs1_observations: tuple[dict[str, Any], ...],
 ) -> dict[str, dict[str, str]]:
@@ -835,6 +882,7 @@ def _observed_dqs1_candidate_skips(
                 "candidate_id": candidate_id,
                 "reason": "dqs1_harvest_observation_exists",
                 "observation_outcome": _dqs1_observation_outcome_label(row),
+                **_dqs1_observation_archive_contract_metadata(row),
             },
         )
     return observed

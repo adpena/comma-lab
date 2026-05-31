@@ -1159,8 +1159,10 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
         selected_report["archive_bound_candidate_default_contract"][
             "selected_missing_archive_bound_default_count"
         ]
-        == 2
+        == 0
     )
+    assert selected_report["refused_non_contract_candidate_count"] == 0
+    assert summary["bounded_runner_refused_non_contract_candidate_count"] == 0
     assert summary["measured_mlx_posterior_budget_routing_update_count"] > 0
     assert summary["entropy_stage_materializer_work_order_count"] > 0
     assert iteration["worker_queue_path"].endswith(

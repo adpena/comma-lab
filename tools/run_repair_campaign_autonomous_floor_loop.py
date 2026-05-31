@@ -414,12 +414,6 @@ def _experiment_matches_frontier_selection(
 
 
 def _experiment_archive_bound_default_ready(experiment: dict[str, Any]) -> bool:
-    metadata = experiment.get("metadata")
-    metadata = metadata if isinstance(metadata, dict) else {}
-    if not str(
-        metadata.get("repair_family_byte_transform_execution_report_path") or ""
-    ).strip():
-        return False
     for step in experiment.get("steps") or []:
         if not isinstance(step, dict):
             continue
@@ -432,6 +426,28 @@ def _experiment_archive_bound_default_ready(experiment: dict[str, Any]) -> bool:
         ):
             return True
     return False
+
+
+def _experiment_explicit_contract_migration_or_blocker_work(
+    experiment: dict[str, Any],
+) -> bool:
+    metadata = experiment.get("metadata")
+    if not isinstance(metadata, dict):
+        return False
+    if metadata.get("contract_migration_work") is True:
+        return True
+    if metadata.get("exact_blocker_work") is True:
+        return True
+    text = json.dumps(metadata, sort_keys=True, default=str).lower()
+    return any(
+        token in text
+        for token in (
+            "contract_migration",
+            "migration_required",
+            "blocker_work",
+            "exact_axis_blocker",
+        )
+    )
 
 
 def _with_frontier_archive_bound_default(
@@ -524,10 +540,21 @@ def _frontier_selected_queue(
         for experiment in experiments
         if _experiment_matches_frontier_selection(experiment, selection)
     ]
-    selected_source_ids = {id(experiment) for experiment in selected_source}
+    selected_source_allowed = [
+        experiment
+        for experiment in selected_source
+        if _experiment_archive_bound_default_ready(experiment)
+        or _experiment_explicit_contract_migration_or_blocker_work(experiment)
+    ]
+    refused_non_contract = [
+        experiment
+        for experiment in selected_source
+        if id(experiment) not in {id(item) for item in selected_source_allowed}
+    ]
+    selected_source_ids = {id(experiment) for experiment in selected_source_allowed}
     selected = [
         _with_frontier_archive_bound_default(experiment)
-        for experiment in selected_source
+        for experiment in selected_source_allowed
     ]
     skipped = [
         experiment for experiment in experiments if id(experiment) not in selected_source_ids
@@ -550,7 +577,11 @@ def _frontier_selected_queue(
             "frontier_execution_selection": selection,
             "frontier_selected_experiment_count": len(selected),
             "frontier_skipped_experiment_count": len(skipped),
+            "frontier_refused_non_contract_candidate_count": len(
+                refused_non_contract
+            ),
             "frontier_selected_queues_emit_archive_bound_candidates_by_default": True,
+            "frontier_selected_non_contract_paths_refused_unless_migration_or_blocker": True,
             "archive_bound_candidate_default_contract": (
                 archive_bound_default_contract
             ),
@@ -573,6 +604,10 @@ def _frontier_selected_queue(
         "selected_experiment_ids": [
             str(experiment.get("id") or "") for experiment in selected
         ],
+        "refused_non_contract_candidate_experiment_ids": [
+            str(experiment.get("id") or "") for experiment in refused_non_contract
+        ],
+        "refused_non_contract_candidate_count": len(refused_non_contract),
         "skipped_experiment_ids": [
             str(experiment.get("id") or "") for experiment in skipped
         ],
@@ -590,7 +625,7 @@ def _frontier_selected_queue(
         ),
         "blockers": []
         if selected
-        else ["frontier_selection_matched_no_queue_experiments"],
+        else ["frontier_selection_matched_no_contract_backed_queue_experiments"],
         "budget_spend_allowed": False,
         "ready_for_budget_spend": False,
         "ready_for_exact_eval_dispatch": False,
@@ -611,6 +646,13 @@ def _frontier_selected_queue(
         [
             *report["blockers"],
             *_string_list(archive_bound_default_contract.get("blockers")),
+            *[
+                f"bounded_runner_refused_non_contract_candidate_path:{experiment_id}"
+                for experiment_id in report[
+                    "refused_non_contract_candidate_experiment_ids"
+                ]
+                if experiment_id
+            ],
         ]
     )
     require_no_truthy_authority_fields(
@@ -1605,6 +1647,17 @@ def _build_summary(
             )
             for item in iterations
         ),
+        "bounded_runner_refused_non_contract_candidate_count": sum(
+            int(
+                item["frontier_selected_queue_report"].get(
+                    "refused_non_contract_candidate_count"
+                )
+                or 0
+            )
+            for item in iterations
+            if isinstance(item, dict)
+            and isinstance(item.get("frontier_selected_queue_report"), dict)
+        ),
         "exact_handoff_plan_path": _repo_rel(exact_handoff_plan_path),
         "exact_handoff_plan_schema": REPAIR_FAMILY_EXACT_HANDOFF_PLAN_SCHEMA,
         "exact_handoff_plan": exact_handoff_plan,
@@ -1672,6 +1725,7 @@ def _build_summary(
             "measured_mlx_marginals_update_posterior_budget_routing_directly",
             "frontier_paths_filter_executable_iteration_queues_when_available",
             "frontier_selected_queues_default_to_archive_bound_candidate_emission",
+            "bounded_runner_refuses_non_contract_candidates_unless_migration_or_blocker_work",
             "entropy_stage_chain_compiler_emits_materializer_work_orders",
             "entropy_stage_chain_compiler_executes_composed_archive_candidates",
             "probe_only_entropy_variant_signals_open_queue_owned_materializer_backlog_tasks",
@@ -1686,6 +1740,17 @@ def _build_summary(
                 "lane_dispatch_claim_required_before_exact_eval",
                 *_string_list(entropy_stage_chain_execution_bundle.get("blockers")),
                 *_string_list(predictive_stack_plan.get("blockers")),
+                *[
+                    blocker
+                    for item in iterations
+                    if isinstance(item.get("frontier_selected_queue_report"), dict)
+                    for blocker in _string_list(
+                        item["frontier_selected_queue_report"].get("blockers")
+                    )
+                    if str(blocker).startswith(
+                        "bounded_runner_refused_non_contract_candidate_path:"
+                    )
+                ],
                 *(
                     []
                     if final_stack_plan.get("execution_report_count")
