@@ -18,12 +18,19 @@ from typing import Any
 
 import numpy as np
 
+from tac.optimization.joint_p18_p19_waterfill import (
+    JOINT_P18_P19_RATE_ATTACK_ROLE,
+    JOINT_P18_P19_WEIGHT_FORMULA,
+)
 from tac.score_composition import (
     CANONICAL_RATE_DENOM_BYTES,
     CANONICAL_RATE_MULTIPLIER,
 )
 
 Z8_JOINT_VARIATIONAL_DRIVER_SCHEMA = "z8_joint_variational_driver.v1"
+Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA = (
+    "z8_joint_p18_p19_gradient_waterfill_contract.v1"
+)
 Z8_TRAINED_MLX_RENDERED_OUTPUT_EXPORT_SCHEMA = (
     "z8_trained_mlx_rendered_output_export.v1"
 )
@@ -126,6 +133,53 @@ def build_z8_joint_variational_extra_loss_terms(
     return _terms
 
 
+def build_z8_joint_p18_p19_gradient_waterfill_contract() -> dict[str, Any]:
+    """Return the joint scorer-surface contract for Z8 local acquisition.
+
+    SegNet supplies the large argmax-flip boundary field, but PoseNet decides
+    where freed bytes are dangerous. The contract makes that coupling explicit
+    so downstream water-fill/acquisition code cannot silently run a SegNet-only
+    spend policy.
+    """
+
+    return {
+        "schema": Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA,
+        "operator_stages": ["P19", "P18"],
+        "score_functional": "100*d_seg + sqrt(10*d_pose) + 25*bytes/N",
+        "weight_formula": JOINT_P18_P19_WEIGHT_FORMULA,
+        "binding_axis_interpretation": (
+            "z8_600_pair_advisory_is_rate_bound; use joint scorer weights as "
+            "the wavelet detail-band dead-zone allocator"
+        ),
+        "rate_axis_attack_role": JOINT_P18_P19_RATE_ATTACK_ROLE,
+        "segnet_surface": {
+            "stage": "P18",
+            "role": "large_argmax_flip_boundary_gradient_surface",
+            "required_measurement": "boundary_argmax_hinge_marginal_surface",
+        },
+        "posenet_surface": {
+            "stage": "P19",
+            "role": (
+                "null_subset_detection_plus_mahalanobis_or_ail_pair_weighting"
+            ),
+            "required_measurements": [
+                "posenet_null_subset_pair_ids",
+                "posenet_mahalanobis_or_ail_pair_weights",
+            ],
+        },
+        "rate_spend_guard": (
+            "dead_zone_low_joint_weight_wavelet_atoms_only; protect "
+            "seg_boundary_and_pose_sensitive_atoms"
+        ),
+        "forbidden_policy": "segnet_only_waterfill",
+        "allowed_use": "local_mlx_joint_acquisition_routing_only",
+        "forbidden_use": "score_claim_or_exact_axis_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def build_z8_joint_variational_driver_metadata(
     config: Z8JointVariationalDriverConfig,
     *,
@@ -144,9 +198,13 @@ def build_z8_joint_variational_driver_metadata(
             "reconstruction",
             "real_segnet_teacher_surrogate",
             "real_posenet_teacher_surrogate",
+            "joint_p18_p19_gradient_waterfill_guard",
             "expected_categorical_archive_rate_score",
             "argmax_commitment_loss",
         ],
+        "joint_p18_p19_gradient_waterfill_contract": (
+            build_z8_joint_p18_p19_gradient_waterfill_contract()
+        ),
         "archive_rate_weight": float(config.archive_rate_weight),
         "argmax_commitment_weight": float(config.argmax_commitment_weight),
         "rate_formula": (
@@ -309,9 +367,11 @@ def export_trained_mlx_rendered_z8hpc1_archive(
 
 
 __all__ = [
+    "Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA",
     "Z8_JOINT_VARIATIONAL_DRIVER_SCHEMA",
     "Z8JointVariationalDriverConfig",
     "argmax_commitment_loss",
+    "build_z8_joint_p18_p19_gradient_waterfill_contract",
     "build_z8_joint_variational_driver_metadata",
     "build_z8_joint_variational_extra_loss_terms",
     "expected_categorical_archive_rate_score",

@@ -189,7 +189,22 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert semantic_wz["wyner_ziv_top_state_pixel_consumption_proven"] is True
     assert proof["wyner_ziv_payload_pixel_consumption_proven"] is True
     assert proof["stack_context_pixel_consumption_proven"] is True
+    section_proofs = proof["section_pixel_consumption_proofs"]
+    assert section_proofs["wavelet_blob"]["proof_kind"] == "raw_byte_mutation"
+    assert section_proofs["wyner_ziv_blob"]["proof_kind"] == (
+        "valid_semantic_payload_mutation"
+    )
+    stack = proof["predictive_stack_pixel_consumption"]
+    assert stack["all_required_sections_pixel_consumed"] is True
+    assert stack["full_stack_pixel_consumption_claim"] is False
+    assert stack["status"] == (
+        "section_pixel_consumption_proven_trained_export_pending"
+    )
     for section in ("decoder_blob", "indices_blob", "dreamer_state_blob"):
+        assert section_proofs[section]["proof_kind"] == (
+            "valid_stack_context_payload_mutation"
+        )
+        assert section_proofs[section]["pixel_consumption_proven"] is True
         assert section in proof["pixel_consumed_sections"]
         assert section not in proof["custody_only_sections"]
     bridge_report_path = tmp_path / "z8_hpc1_runtime_payload_bridge_report.json"
@@ -286,9 +301,20 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
         assert mutation_proof["custody_only_sections"] == []
         assert mutation_proof["wyner_ziv_payload_pixel_consumption_proven"] is True
         assert mutation_proof["stack_context_pixel_consumption_proven"] is True
+        section_proofs = mutation_proof["section_pixel_consumption_proofs"]
+        assert section_proofs["wyner_ziv_blob"]["pixel_consumption_proven"] is True
+        assert section_proofs["decoder_blob"]["pixel_consumption_proven"] is True
+        stack = mutation_proof["predictive_stack_pixel_consumption"]
+        assert stack["all_required_sections_pixel_consumed"] is True
+        assert stack["status"] == (
+            "section_pixel_consumption_proven_trained_export_pending"
+        )
         assert (
             mutation_proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"]
             is True
+        )
+        assert manifest_extra["predictive_stack_runtime_consumption_status"] == (
+            "section_pixel_consumption_proven_trained_export_pending"
         )
         status = manifest_extra["mamba_dreamer_wyner_ziv_runtime_consumption_status"]
         assert status == "pixel_consumed_proven"

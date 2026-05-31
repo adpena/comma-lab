@@ -193,6 +193,50 @@ class _PartialPredictiveStackArchiveAdapter(_FixtureArchiveAdapter):
         return [row]
 
 
+class _SectionProvenPredictiveStackArchiveAdapter(_FixtureArchiveAdapter):
+    adapter_id = "fixture_section_proven_predictive_stack_adapter"
+    candidate_family = "z8_hierarchical_predictive_coding"
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: Mapping[str, Any],
+    ) -> Sequence[Mapping[str, Any]]:
+        row = dict(super().emit_archive_bound_candidate_rows(context)[0])
+        sections = [
+            "wavelet_blob",
+            "decoder_blob",
+            "indices_blob",
+            "wyner_ziv_blob",
+            "dreamer_state_blob",
+        ]
+        row["target_kind"] = (
+            "z8_hpc1_mallat_wavelet_plus_mamba_wyner_ziv_top_ll_pixel_driver_partial_predictive_stack_archive"
+        )
+        row["runtime_adapter_manifest"] = {
+            "schema": "z8_hpc1_runtime_adapter_manifest.v1",
+            "runtime_adapter_ready": True,
+            "contest_runtime_decoder_adapter_ready": True,
+            "full_stack_pixel_consumption_claim": False,
+            "pixel_consumed_archive_sections": list(sections),
+            "stack_custody_not_yet_pixel_consumed_sections": [],
+            "section_pixel_consumption_proofs": {
+                section: {
+                    "section": section,
+                    "pixel_consumption_proven": True,
+                }
+                for section in sections
+            },
+            "predictive_stack_pixel_consumption": {
+                "schema": "z8_hpc1_predictive_stack_pixel_consumption.v1",
+                "all_required_sections_pixel_consumed": True,
+                "next_required_tasks": [
+                    "serialize_trained_mlx_renderer_state_into_z8hpc1_archive"
+                ],
+            },
+        }
+        return [row]
+
+
 def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     tmp_path: Path,
 ) -> None:
@@ -429,6 +473,31 @@ def test_archive_contract_demotes_partial_predictive_stack_runtime(
         portfolio_row["source_metadata"]["runtime_payload_next_materializer_tasks"]
         == runtime_consumption["next_materializer_tasks"]
     )
+
+
+def test_archive_contract_uses_section_pixel_proofs_without_full_stack_overclaim(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _SectionProvenPredictiveStackArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+
+    contract = package["candidate_rows"][0]["archive_bound_candidate_contract"]
+    runtime_consumption = contract["runtime_payload_consumption"]
+
+    assert runtime_consumption["stack_sections_pixel_consumption_proven"] is True
+    assert runtime_consumption["custody_only_archive_sections"] == []
+    assert runtime_consumption["mamba_dreamer_wyner_ziv_pixel_consumption_proven"] is True
+    assert runtime_consumption["full_stack_pixel_consumption_claim"] is False
+    assert runtime_consumption["full_stack_pixel_consumption_proven"] is False
+    assert runtime_consumption["status"] == (
+        "section_pixel_consumption_proven_full_stack_claim_blocked"
+    )
+    assert runtime_consumption["next_materializer_tasks"] == [
+        "serialize_trained_mlx_renderer_state_into_z8hpc1_archive"
+    ]
+    assert contract["full_stack_predictive_runtime_ready"] is False
 
 
 def test_mlx_triage_fails_closed_on_incomplete_archive_custody(

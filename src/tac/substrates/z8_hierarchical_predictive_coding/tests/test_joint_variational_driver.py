@@ -6,7 +6,9 @@ from __future__ import annotations
 import pytest
 
 from tac.substrates.z8_hierarchical_predictive_coding.joint_variational_driver import (
+    Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA,
     Z8JointVariationalDriverConfig,
+    build_z8_joint_p18_p19_gradient_waterfill_contract,
     build_z8_joint_variational_driver_metadata,
     expected_categorical_archive_rate_score,
 )
@@ -37,9 +39,37 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
     assert metadata["ste_boundary"] == "gumbel_softmax_argmax_indices_to_archive"
     assert metadata["archive_export_enabled"] is True
     assert metadata["implicit_dykstra_allocator_diff_status"] == "pending_follow_on"
+    joint = metadata["joint_p18_p19_gradient_waterfill_contract"]
+    assert joint["schema"] == Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA
+    assert joint["operator_stages"] == ["P19", "P18"]
+    assert "Sigma^-1" in joint["weight_formula"]
+    assert "rate_bound" in joint["binding_axis_interpretation"]
+    assert "wavelet_detail" in joint["rate_axis_attack_role"]
+    assert joint["forbidden_policy"] == "segnet_only_waterfill"
+    assert joint["segnet_surface"]["stage"] == "P18"
+    assert joint["posenet_surface"]["stage"] == "P19"
+    assert "mahalanobis_or_ail" in joint["posenet_surface"]["role"]
     assert "score_claim" not in metadata
     assert "promotion_eligible" not in metadata
     assert "ready_for_exact_eval_dispatch" not in metadata
+
+
+def test_joint_p18_p19_waterfill_contract_blocks_segnet_only_spend() -> None:
+    contract = build_z8_joint_p18_p19_gradient_waterfill_contract()
+
+    assert contract["schema"] == Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA
+    assert contract["operator_stages"] == ["P19", "P18"]
+    assert contract["segnet_surface"]["required_measurement"] == (
+        "boundary_argmax_hinge_marginal_surface"
+    )
+    assert contract["posenet_surface"]["required_measurements"] == [
+        "posenet_null_subset_pair_ids",
+        "posenet_mahalanobis_or_ail_pair_weights",
+    ]
+    assert contract["forbidden_policy"] == "segnet_only_waterfill"
+    assert "dead_zone_low_joint_weight_wavelet_atoms" in contract["rate_spend_guard"]
+    assert contract["score_claim"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
 
 
 def test_joint_variational_config_rejects_negative_weights() -> None:

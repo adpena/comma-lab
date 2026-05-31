@@ -132,6 +132,19 @@ def _z8_runtime_adapter_manifest_extra(
     runtime_payload_bridge_report: Mapping[str, Any] | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
+    section_pixel_consumption_proofs: dict[str, Any] = {}
+    predictive_stack_pixel_consumption: dict[str, Any] = {}
+    if byte_mutation_proof is not None:
+        raw_section_proofs = byte_mutation_proof.get(
+            "section_pixel_consumption_proofs"
+        )
+        if isinstance(raw_section_proofs, Mapping):
+            section_pixel_consumption_proofs = dict(raw_section_proofs)
+        raw_predictive_stack = byte_mutation_proof.get(
+            "predictive_stack_pixel_consumption"
+        )
+        if isinstance(raw_predictive_stack, Mapping):
+            predictive_stack_pixel_consumption = dict(raw_predictive_stack)
     mamba_dreamer_wz_proven = (
         byte_mutation_proof is not None
         and byte_mutation_proof.get(
@@ -167,7 +180,13 @@ def _z8_runtime_adapter_manifest_extra(
         "stack_custody_not_yet_pixel_consumed_sections": list(
             Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS
         ),
+        "section_pixel_consumption_proofs": section_pixel_consumption_proofs,
+        "predictive_stack_pixel_consumption": predictive_stack_pixel_consumption,
         "full_stack_pixel_consumption_claim": False,
+        "predictive_stack_runtime_consumption_status": (
+            predictive_stack_pixel_consumption.get("status")
+            or runtime_consumption_status
+        ),
         "mamba_dreamer_wyner_ziv_runtime_consumption_status": (
             runtime_consumption_status
         ),
@@ -236,6 +255,8 @@ def _z8_runtime_adapter_manifest_extra(
             "stack_context_pixel_consumption_proven": bool(
                 byte_mutation_proof.get("stack_context_pixel_consumption_proven")
             ),
+            "section_pixel_consumption_proofs": section_pixel_consumption_proofs,
+            "predictive_stack_pixel_consumption": predictive_stack_pixel_consumption,
         }
     return manifest
 

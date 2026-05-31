@@ -52,6 +52,35 @@ REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA = (
 REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_SMOKE_RESULT_SCHEMA = (
     "repair_cascade_mlx_lora_boundary_adapter_smoke_result.v1"
 )
+REPAIR_CASCADE_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA = (
+    "repair_cascade_joint_p18_p19_waterfill_contract.v1"
+)
+
+_JOINT_P18_P19_WATERFILL_CONTRACT: dict[str, Any] = {
+    "schema": REPAIR_CASCADE_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA,
+    "operator_stages": ["P19", "P18"],
+    "required_joint_surfaces": [
+        "p18_segnet_argmax_flip_boundary_surface",
+        "p19_posenet_null_subset_pair_surface",
+        "p19_posenet_mahalanobis_or_ail_weight_surface",
+    ],
+    "segnet_surface_role": (
+        "large_argmax_flip_boundary_gradient_for_region_and_class_waterfill"
+    ),
+    "posenet_surface_role": (
+        "null_subset_detection_and_mahalanobis_ail_weighting_guard_against_"
+        "spending_rate_savings_on_pose_sensitive_pairs"
+    ),
+    "rate_axis_attack_role": (
+        "select_low_joint_weight_atoms_for_wavelet_detail_band_deadzone_or_"
+        "coarsening_when_rate_is_binding"
+    ),
+    "forbidden_policy": "segnet_only_waterfill_budget_spend",
+    "budget_spend_allowed_without_joint_pose_guard": False,
+    "allowed_use": "local_mlx_joint_acquisition_routing_only",
+    "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+    **FALSE_AUTHORITY,
+}
 
 _CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS: tuple[dict[str, Any], ...] = (
     {
@@ -60,6 +89,8 @@ _CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS: tuple[dict[str, Any], ...] = (
         "entropy_position_label": "scorer_entropy_repair_before_selector_codec",
         "entropy_position_class": "scorer_entropy_before_selector_codec",
         "operator_stage": "P19",
+        "paired_operator_stage": "P18",
+        "joint_waterfill_role": "pose_null_subset_and_mahalanobis_ail_guard",
         "required_measurements": ("posenet_null_bottom_decile_pair_ids",),
         "required_artifact_keys": ("posenet_null_bottom_decile_pair_ids_path",),
         "materializer_family_id": "posenet_null_bottom_decile",
@@ -70,6 +101,8 @@ _CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS: tuple[dict[str, Any], ...] = (
         "entropy_position_label": "scorer_entropy_repair_before_selector_codec",
         "entropy_position_class": "scorer_entropy_before_selector_codec",
         "operator_stage": "P18",
+        "paired_operator_stage": "P19",
+        "joint_waterfill_role": "segnet_argmax_boundary_surface_conditioned_on_pose_guard",
         "required_measurements": ("segnet_class_region_mask_ids",),
         "required_artifact_keys": ("segnet_class_region_mask_ids_path",),
         "materializer_family_id": "segnet_class_region_waterfill",
@@ -559,6 +592,13 @@ def _canonical_repair_family_campaign_rows(
             "materializer_family_id": campaign["materializer_family_id"],
             "label": campaign["label"],
             "operator_stage": campaign["operator_stage"],
+            "paired_operator_stage": campaign.get("paired_operator_stage"),
+            "joint_waterfill_role": campaign.get("joint_waterfill_role"),
+            "joint_p18_p19_waterfill_contract": (
+                dict(_JOINT_P18_P19_WATERFILL_CONTRACT)
+                if campaign.get("operator_stage") in {"P18", "P19"}
+                else None
+            ),
             "targeted_position_ids": targeted_position_ids,
             "entropy_position_label": campaign["entropy_position_label"],
             "entropy_position_class": campaign["entropy_position_class"],

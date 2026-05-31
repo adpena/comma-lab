@@ -30,6 +30,13 @@ Z8_STACK_CUSTODY_SECTION_TO_MEMBER: dict[str, str] = {
     "indices_blob": "dreamer_v3_categorical_indices_custody",
     "dreamer_state_blob": "dreamer_v3_rssm_state_custody",
 }
+Z8_PIXEL_PROOF_REQUIRED_SECTIONS: tuple[str, ...] = (
+    "wavelet_blob",
+    "wyner_ziv_blob",
+    "decoder_blob",
+    "indices_blob",
+    "dreamer_state_blob",
+)
 
 
 def _reconstruct_all_pairs_small(archive_bytes: bytes) -> Any:
@@ -142,6 +149,67 @@ def probe_section_consumption(
     }
 
 
+def _section_pixel_consumption_proof_map(
+    sections: dict[str, dict[str, Any]],
+    *,
+    semantic_wz_proof: dict[str, Any],
+    stack_context_proofs: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Build precise per-section pixel-consumption proof records.
+
+    Raw byte flips are useful for the wavelet payload, but semantic sections can
+    be checksummed, compressed, or shape-guarded. For those sections the proof
+    that matters is a valid payload mutation that survives parsing and changes
+    receiver pixels.
+    """
+
+    wavelet = sections.get("wavelet_blob") or {}
+    proof_map: dict[str, dict[str, Any]] = {
+        "wavelet_blob": {
+            "section": "wavelet_blob",
+            "proof_kind": "raw_byte_mutation",
+            "pixel_consumption_proven": wavelet.get("verdict") == "PIXEL_CONSUMED",
+            "max_abs_pixel_delta": wavelet.get("max_abs_pixel_delta"),
+            "receiver_projection": "mallat_wavelet_reconstruction",
+        },
+        "wyner_ziv_blob": {
+            "section": "wyner_ziv_blob",
+            "proof_kind": "valid_semantic_payload_mutation",
+            "pixel_consumption_proven": bool(
+                semantic_wz_proof.get(
+                    "wyner_ziv_top_state_pixel_consumption_proven"
+                )
+            ),
+            "frame_0_max_abs_delta": semantic_wz_proof.get(
+                "frame_0_max_abs_delta"
+            ),
+            "frame_1_max_abs_delta": semantic_wz_proof.get(
+                "frame_1_max_abs_delta"
+            ),
+            "receiver_projection": "wyner_ziv_top_state_to_frame_1_top_ll",
+        },
+    }
+    per_section = stack_context_proofs.get("per_section")
+    if not isinstance(per_section, dict):
+        per_section = {}
+    for section, member_name in Z8_STACK_CUSTODY_SECTION_TO_MEMBER.items():
+        section_proof = per_section.get(section)
+        if not isinstance(section_proof, dict):
+            section_proof = {}
+        proof_map[section] = {
+            "section": section,
+            "archive_member": member_name,
+            "proof_kind": "valid_stack_context_payload_mutation",
+            "pixel_consumption_proven": bool(
+                section_proof.get("section_pixel_consumption_proven")
+            ),
+            "frame_0_max_abs_delta": section_proof.get("frame_0_max_abs_delta"),
+            "frame_1_max_abs_delta": section_proof.get("frame_1_max_abs_delta"),
+            "receiver_projection": "stack_context_vector_to_frame_1_top_ll",
+        }
+    return proof_map
+
+
 def probe_z8_archive_distinguishing_feature(
     archive_path: Path,
     *,
@@ -164,23 +232,26 @@ def probe_z8_archive_distinguishing_feature(
     stack_context_proofs = build_stack_context_payload_mutation_receiver_proofs(
         archive_bytes
     )
+    section_pixel_proofs = _section_pixel_consumption_proof_map(
+        sections,
+        semantic_wz_proof=semantic_wz_proof,
+        stack_context_proofs=stack_context_proofs,
+    )
     pixel_consumed_sections = [
-        name for name, verdict in sections.items() if verdict.get("verdict") == "PIXEL_CONSUMED"
+        name
+        for name in Z8_PIXEL_PROOF_REQUIRED_SECTIONS
+        if section_pixel_proofs.get(name, {}).get("pixel_consumption_proven") is True
     ]
-    if (
-        semantic_wz_proof.get("wyner_ziv_top_state_pixel_consumption_proven")
-        and "wyner_ziv_blob" not in pixel_consumed_sections
-    ):
-        pixel_consumed_sections.append("wyner_ziv_blob")
-    for section in stack_context_proofs.get("stack_context_sections_pixel_consumed") or []:
-        if section not in pixel_consumed_sections:
-            pixel_consumed_sections.append(str(section))
     custody_only_sections = [
         name
-        for name in Z8_STACK_CUSTODY_SECTION_TO_MEMBER
+        for name in Z8_PIXEL_PROOF_REQUIRED_SECTIONS
         if name not in pixel_consumed_sections
     ]
     distinguishing_feature_consumed = "wavelet_blob" in pixel_consumed_sections
+    all_required_sections_pixel_consumed = all(
+        section_pixel_proofs.get(section, {}).get("pixel_consumption_proven") is True
+        for section in Z8_PIXEL_PROOF_REQUIRED_SECTIONS
+    )
     proof_path = str(proof_out) if proof_out is not None else None
 
     manifest = {
@@ -192,9 +263,43 @@ def probe_z8_archive_distinguishing_feature(
         "distinguishing_feature_consumed": bool(distinguishing_feature_consumed),
         "pixel_consumed_sections": pixel_consumed_sections,
         "custody_only_sections": custody_only_sections,
+        "section_pixel_consumption_proofs": section_pixel_proofs,
+        "predictive_stack_pixel_consumption": {
+            "schema": "z8_hpc1_predictive_stack_pixel_consumption.v1",
+            "required_sections": list(Z8_PIXEL_PROOF_REQUIRED_SECTIONS),
+            "pixel_consumed_sections": pixel_consumed_sections,
+            "custody_only_sections": custody_only_sections,
+            "all_required_sections_pixel_consumed": (
+                all_required_sections_pixel_consumed
+            ),
+            "trained_mlx_renderer_archive_export_ready": False,
+            "full_stack_pixel_consumption_claim": False,
+            "status": (
+                "section_pixel_consumption_proven_trained_export_pending"
+                if all_required_sections_pixel_consumed
+                else "section_pixel_consumption_incomplete"
+            ),
+            "next_required_tasks": [
+                "serialize_trained_mlx_renderer_state_into_z8hpc1_archive",
+                "replay_archive_bound_candidate_on_contest_cpu_cuda_exact_axis",
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "mamba_dreamer_wyner_ziv_pixel_consumption_proven": bool(
-            semantic_wz_proof.get("wyner_ziv_top_state_pixel_consumption_proven")
-            and stack_context_proofs.get("stack_context_sections_pixel_consumed")
+            all(
+                section_pixel_proofs.get(section, {}).get(
+                    "pixel_consumption_proven"
+                )
+                is True
+                for section in (
+                    "wyner_ziv_blob",
+                    "decoder_blob",
+                    "indices_blob",
+                    "dreamer_state_blob",
+                )
+            )
         ),
         "wyner_ziv_payload_pixel_consumption_proven": bool(
             semantic_wz_proof.get("wyner_ziv_top_state_pixel_consumption_proven")

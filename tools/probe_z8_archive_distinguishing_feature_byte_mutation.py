@@ -43,6 +43,17 @@ def main(argv: list[str] | None = None) -> int:
         "[z8-byte-mutation] mamba_dreamer_wyner_ziv_pixel_consumption_proven="
         f"{manifest['mamba_dreamer_wyner_ziv_pixel_consumption_proven']}"
     )
+    for section, proof in manifest.get("section_pixel_consumption_proofs", {}).items():
+        print(
+            f"[z8-byte-mutation] {section} proof_kind={proof.get('proof_kind')} "
+            f"pixel_consumption_proven={proof.get('pixel_consumption_proven')}"
+        )
+    stack = manifest.get("predictive_stack_pixel_consumption", {})
+    if stack:
+        print(
+            "[z8-byte-mutation] predictive_stack_status="
+            f"{stack.get('status')}"
+        )
     if args.proof_out is not None:
         print(f"[z8-byte-mutation] proof={args.proof_out}")
     if (

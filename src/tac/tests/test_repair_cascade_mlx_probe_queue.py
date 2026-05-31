@@ -137,6 +137,29 @@ def test_repair_cascade_mlx_probe_spec_names_exact_missing_artifacts(
         and row["ready_for_exact_eval_dispatch"] is False
         for row in spec["repair_family_campaign_rows"]
     )
+    by_family = {
+        row["family_id"]: row for row in spec["repair_family_campaign_rows"]
+    }
+    p19 = by_family["posenet_null_bottom_decile"]
+    p18 = by_family["segnet_class_region_waterfill"]
+    assert p19["paired_operator_stage"] == "P18"
+    assert p18["paired_operator_stage"] == "P19"
+    assert p19["joint_waterfill_role"] == (
+        "pose_null_subset_and_mahalanobis_ail_guard"
+    )
+    assert p18["joint_waterfill_role"] == (
+        "segnet_argmax_boundary_surface_conditioned_on_pose_guard"
+    )
+    joint = p18["joint_p18_p19_waterfill_contract"]
+    assert joint["schema"] == "repair_cascade_joint_p18_p19_waterfill_contract.v1"
+    assert joint["operator_stages"] == ["P19", "P18"]
+    assert "p19_posenet_mahalanobis_or_ail_weight_surface" in (
+        joint["required_joint_surfaces"]
+    )
+    assert joint["forbidden_policy"] == "segnet_only_waterfill_budget_spend"
+    assert joint["budget_spend_allowed_without_joint_pose_guard"] is False
+    assert "wavelet_detail_band_deadzone" in joint["rate_axis_attack_role"]
+    assert joint["score_claim"] is False
 
 
 def test_repair_cascade_probe_spec_consumes_segnet_semantic_bridge_backlog(

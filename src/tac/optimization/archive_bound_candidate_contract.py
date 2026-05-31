@@ -140,6 +140,27 @@ def _anti_pattern_id_values(value: Any) -> list[str]:
     return [text] if text else []
 
 
+def _runtime_section_pixel_proofs(
+    runtime_manifest: Mapping[str, Any],
+    byte_mutation_proof: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for raw in (
+        byte_mutation_proof.get("section_pixel_consumption_proofs"),
+        runtime_manifest.get("section_pixel_consumption_proofs"),
+    ):
+        if not isinstance(raw, Mapping):
+            continue
+        for section, record in raw.items():
+            if not isinstance(record, Mapping):
+                continue
+            section_name = str(section).strip()
+            if not section_name:
+                continue
+            out[section_name] = dict(record)
+    return out
+
+
 def _canonical_anti_pattern_ids(candidate: Mapping[str, Any]) -> list[str]:
     coverage = _mapping(candidate.get("archive_entropy_substrate_coverage"))
     runtime_manifest = _mapping(candidate.get("runtime_adapter_manifest"))
@@ -173,10 +194,26 @@ def _canonical_anti_pattern_ids(candidate: Mapping[str, Any]) -> list[str]:
     )
     full_stack_claim = runtime_manifest.get("full_stack_pixel_consumption_claim") is True
     byte_mutation_proof = _mapping(runtime_manifest.get("byte_mutation_consumption_proof"))
+    section_pixel_proofs = _runtime_section_pixel_proofs(
+        runtime_manifest,
+        byte_mutation_proof,
+    )
+    stack_sections = ("decoder_blob", "indices_blob", "wyner_ziv_blob", "dreamer_state_blob")
+    stack_sections_pixel_proven = bool(
+        section_pixel_proofs
+        and all(
+            _mapping(section_pixel_proofs.get(section)).get(
+                "pixel_consumption_proven"
+            )
+            is True
+            for section in stack_sections
+        )
+    )
     mamba_dreamer_wz_proven = (
         runtime_manifest.get("mamba_dreamer_wyner_ziv_pixel_consumption_proven") is True
         or byte_mutation_proof.get("mamba_dreamer_wyner_ziv_pixel_consumption_proven")
         is True
+        or stack_sections_pixel_proven
     )
     return ordered_unique(
         [
@@ -941,6 +978,12 @@ def _runtime_payload_consumption_surface(
     transform_kind: str,
 ) -> dict[str, Any]:
     proof = _mapping(runtime_manifest.get("byte_mutation_consumption_proof"))
+    runtime_custody_contract = _mapping(runtime_manifest.get("runtime_custody_contract"))
+    predictive_stack_pixel_consumption = _mapping(
+        runtime_manifest.get("predictive_stack_pixel_consumption")
+        or proof.get("predictive_stack_pixel_consumption")
+    )
+    section_pixel_proofs = _runtime_section_pixel_proofs(runtime_manifest, proof)
     manifest_pixel_consumed = _string_list(
         runtime_manifest.get("pixel_consumed_archive_sections")
     )
@@ -949,12 +992,38 @@ def _runtime_payload_consumption_surface(
         runtime_manifest.get("stack_custody_not_yet_pixel_consumed_sections")
     )
     proof_custody_only = _string_list(proof.get("custody_only_sections"))
-    pixel_consumed_sections = ordered_unique(
-        [*manifest_pixel_consumed, *proof_pixel_consumed]
-    )
-    custody_only_sections = ordered_unique(
-        [*manifest_custody_only, *proof_custody_only]
-    )
+    if section_pixel_proofs:
+        proven_sections = [
+            section
+            for section, record in section_pixel_proofs.items()
+            if _mapping(record).get("pixel_consumption_proven") is True
+        ]
+        unproven_sections = [
+            section
+            for section, record in section_pixel_proofs.items()
+            if _mapping(record).get("pixel_consumption_proven") is not True
+        ]
+        pixel_consumed_sections = ordered_unique(
+            [
+                *[
+                    section
+                    for section in [*manifest_pixel_consumed, *proof_pixel_consumed]
+                    if section not in section_pixel_proofs
+                    or section in proven_sections
+                ],
+                *proven_sections,
+            ]
+        )
+        custody_only_sections = ordered_unique(
+            [*manifest_custody_only, *proof_custody_only, *unproven_sections]
+        )
+    else:
+        pixel_consumed_sections = ordered_unique(
+            [*manifest_pixel_consumed, *proof_pixel_consumed]
+        )
+        custody_only_sections = ordered_unique(
+            [*manifest_custody_only, *proof_custody_only]
+        )
     declared = bool(pixel_consumed_sections or custody_only_sections)
     kind = transform_kind.lower()
     predictive_stack = any(
@@ -970,9 +1039,21 @@ def _runtime_payload_consumption_surface(
         )
     )
     full_stack_claim = runtime_manifest.get("full_stack_pixel_consumption_claim") is True
+    stack_sections = ("decoder_blob", "indices_blob", "wyner_ziv_blob", "dreamer_state_blob")
+    stack_sections_pixel_proven = bool(
+        section_pixel_proofs
+        and all(
+            _mapping(section_pixel_proofs.get(section)).get(
+                "pixel_consumption_proven"
+            )
+            is True
+            for section in stack_sections
+        )
+    )
     mamba_dreamer_wz_proven = (
         runtime_manifest.get("mamba_dreamer_wyner_ziv_pixel_consumption_proven") is True
         or proof.get("mamba_dreamer_wyner_ziv_pixel_consumption_proven") is True
+        or stack_sections_pixel_proven
     )
     all_manifested_payload_sections_pixel_consumed = declared and not custody_only_sections
     full_stack_pixel_consumption_proven = bool(
@@ -989,7 +1070,18 @@ def _runtime_payload_consumption_surface(
             f"wire_{section}_decode_into_receiver_pixel_output"
         )
     if incomplete_predictive_stack and not custody_only_sections:
-        next_materializer_tasks.append("prove_predictive_stack_pixel_consumption")
+        next_materializer_tasks.extend(
+            _string_list(
+                predictive_stack_pixel_consumption.get("next_required_tasks")
+            )
+        )
+        next_materializer_tasks.extend(
+            _string_list(runtime_custody_contract.get("next_required_tasks"))
+        )
+        if not next_materializer_tasks:
+            next_materializer_tasks.append(
+                "promote_trained_predictive_stack_runtime_pixel_consumption_claim"
+            )
     penalty = 0.0
     if custody_only_sections:
         penalty += min(0.16, 0.04 * len(custody_only_sections))
@@ -1002,6 +1094,14 @@ def _runtime_payload_consumption_surface(
         status = "full_stack_pixel_consumption_proven"
     elif declared and custody_only_sections:
         status = "partial_runtime_payload_consumption_custody_sections_pending"
+    elif (
+        declared
+        and section_pixel_proofs
+        and pixel_consumed_sections
+        and not custody_only_sections
+        and not full_stack_claim
+    ):
+        status = "section_pixel_consumption_proven_full_stack_claim_blocked"
     elif declared and pixel_consumed_sections:
         status = "declared_pixel_consumed_sections_only"
     return {
@@ -1010,6 +1110,11 @@ def _runtime_payload_consumption_surface(
         "predictive_stack": predictive_stack,
         "pixel_consumed_archive_sections": pixel_consumed_sections,
         "custody_only_archive_sections": custody_only_sections,
+        "section_pixel_consumption_proofs": section_pixel_proofs,
+        "predictive_stack_pixel_consumption": dict(
+            predictive_stack_pixel_consumption
+        ),
+        "stack_sections_pixel_consumption_proven": stack_sections_pixel_proven,
         "all_manifested_payload_sections_pixel_consumed": (
             all_manifested_payload_sections_pixel_consumed
         ),
