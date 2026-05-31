@@ -1,0 +1,196 @@
+# SPDX-License-Identifier: MIT
+schema_version: 1
+name: substrate_pr110_opt11_multi_mode_per_pair_composition_modal_t4_dispatch
+lane_id: lane_pr110_opt11_multi_mode_per_pair_composition_l0_scaffold_20260530
+summary: |
+  PR110-OPT-11 multi-mode-per-pair composition L0 SCAFFOLD per task #1323
+  PENDING + Wave N+34 Zone 2 PR110-OPT cluster continuation. Substrate-
+  engineering per canonical L7 (binding 2 perturbation modes per pair across
+  6 canonical orthogonal family pairs derived from the 22-mode menu).
+  horizon_class=frontier_pursuit per Catalog #309.
+
+# Catalog #240 substrate_contest_cuda_chain coherence: dispatch_enabled: false
+# per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY".
+# The L0 SCAFFOLD declares research_only=true; L1 PROMOTION lands the
+# per-substrate symposium PROCEED per Catalog #325 before paid dispatch.
+dispatch_enabled: false
+research_only: true
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 100
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.20
+  platform_key: modal
+  gpu_key: T4
+
+# Catalog #325 per-substrate symposium anchor (emitted at same commit batch)
+symposium_memo_path: .omx/research/per_substrate_symposium_pr110_opt11_multi_mode_per_pair_composition_20260530.md
+symposium_council_verdict: PROCEED_WITH_REVISIONS
+symposium_council_anchor_id: per_substrate_symposium_pr110_opt11_multi_mode_per_pair_composition_20260530
+symposium_window_opened_utc: 2026-05-30T22:00:00Z
+symposium_window_closes_utc: 2026-06-13T22:00:00Z
+
+# Catalog #324 post-training Tier-C validation discipline
+# PREDICTED_BAND_RANDOM_INIT_OK:l0_scaffold_research_only_predicted_band_anchored_in_wave_n34_analytical_macos_cpu_advisory_compound_ratio_1_548x_upper_bound_with_acknowledged_dykstra_polytope_sub_additivity_per_catalog_373_l1_promotion_will_emit_post_training_tier_c_validation_via_canonical_helper_per_catalog_344_pending_paired_cuda_ratification
+predicted_score_target: 0.191
+predicted_delta: "[predicted] PR110-OPT-11 multi-mode-per-pair composition: stack 2 frame-0 perturbations within a pair across canonical orthogonal families (luma_bias / blue_chroma / rgb_bias / roll). Wave N+34 analytical upper-bound: compound_ratio=1.548x single-mode aggregate ΔS; multi-mode additive upper bound ΔS=-0.00181 vs single-mode -0.00117; wire cost increase 428B vs FEC6 baseline 249B = +0.000119 rate-axis ΔS; net score delta upper bound = -0.00052 DIRECTIONAL. Per Wave N+34 + canonical anti-pattern cross_paradigm_stacking_additive_compounding_without_dykstra_feasibility: true Dykstra-projected polytope intersection per Catalog #373 yields SUB-ADDITIVE results; actual savings will be LESS than upper bound."
+predicted_delta_basis: ".omx/research/per_substrate_symposium_pr110_opt11_multi_mode_per_pair_composition_20260530.md#dykstra-feasibility-predicted-band-per-catalog-296"
+literature_anchor: "Fridrich-Yousfi STC 2010 + Wang-Rudin 2015 canonical Huffman length-vector ranked sidecar + Wave N+34 analytical PR110-OPT-4/7/11 triple investigator macOS-CPU advisory + canonical-leaderboard-binding-depth discipline L20 monolithic 4-section archive grammar"
+
+predicted_band: [-0.001, 0.001]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Catalog #324 + Phase D operator-routable reactivation: BEFORE promotion or
+  full-run score-band authority, (a) execute MLX-LOCAL smoke per the L0
+  SCAFFOLD trainer (smoke generates 600-pair synthetic frame composition
+  evidence; macOS-CPU advisory; non-promotable); (b) post Phase 2 council
+  symposium PROCEED-unconditional verdict per Catalog #325, land L1
+  PROMOTION trainer wire-in for real PR110 base pair reconstruction;
+  (c) post L1 paired-CUDA empirical anchor landing, measure Tier-C density
+  on the post-training archive via tools/mdl_scorer_conditional_ablation.py
+  --tier c and replace this pending status with validated_post_training
+  plus artifact path; (d) IF empirical score deviates from predicted
+  [-0.001, 0.001] band → DEFER paid full-run dispatch + revise canonical
+  equation per Catalog #344 auto-recalibration via Catalog #371; (e) IF
+  >2x deviation → IMPLEMENTATION-LEVEL falsification per Catalog #307
+  (paradigm INTACT; reactivation paths per Catalog #308: alternative
+  family-pair index OR alternative selector-bits-per-mode OR alternative
+  per-pair selector derivation strategy).
+
+# Catalog #368 substitution-stacking baseline canonical frontier pointer
+baseline_archive_sha: stacking_on_pr110_fec6_baseline_via_per_pair_multi_mode_composition_l0_scaffold_research_only_until_l1_promotion_paired_cuda_ratification_lands
+baseline_canonical_frontier_pointer_path: .omx/state/canonical_frontier_pointer.json
+stacked_archive_built_on: pr110_fec6_fixed_huffman_k16_canonical_baseline_via_per_pair_multi_mode_composition_l0_scaffold
+
+remote_driver: scripts/remote_lane_substrate_pr110_opt11_multi_mode_per_pair_composition.sh
+timeout_hours: 1.0
+
+required_input_files: []
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pr110_opt11_multi_mode_per_pair_composition.sh
+  cost_band_trainer: experiments/train_substrate_pr110_opt11_multi_mode_per_pair_composition.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_pr110_opt11_multi_mode_per_pair_composition.py
+
+env_overrides:
+  PR110_OPT11_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PR110_OPT11_OUTPUT_DIR: /modal_results/${INSTANCE_JOB_ID}/output
+  PR110_OPT11_EPOCHS: "100"
+  PR110_OPT11_DEVICE: cuda
+  PR110_OPT11_SUBSTRATE_ID: pr110_opt11_multi_mode_per_pair_composition
+  PR110_OPT11_FRAMEWORK_BACKEND: numpy_smoke
+  PR110_OPT11_N_PAIRS: "600"
+  PR110_OPT11_MODES_PER_PAIR: "2"
+  PR110_OPT11_SELECTOR_BITS_PER_MODE: "4"
+  PR110_OPT11_FAMILY_PAIR_INDEX: "1"
+  PR110_OPT11_RNG_SEED: "42"
+  PR110_OPT11_TRAINER_MODE: "smoke"
+  SMOKE_ONLY: "1"
+  # Catalog #244 canonical NVML 3-export block
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - experiments/train_substrate_pr110_opt11_multi_mode_per_pair_composition.py
+  - src/tac/substrates/pr110_opt11_multi_mode_per_pair_composition/__init__.py
+  - src/tac/substrates/pr110_opt11_multi_mode_per_pair_composition/substrate.py
+  - src/tac/substrates/pr110_opt11_multi_mode_per_pair_composition/archive_grammar.py
+  - src/tac/substrates/pr110_opt11_multi_mode_per_pair_composition/inflate.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+  - tools/operator_authorize.py
+
+# Catalog #201 mount-set parity + Catalog #166 worker source-parity ledger
+sentinel_files:
+  - experiments/train_substrate_pr110_opt11_multi_mode_per_pair_composition.py
+  - src/tac/substrates/pr110_opt11_multi_mode_per_pair_composition/substrate.py
+  - src/tac/substrates/pr110_opt11_multi_mode_per_pair_composition/inflate.py
+  - src/tac/substrates/pr110_opt11_multi_mode_per_pair_composition/archive_grammar.py
+
+# Catalog #270 dispatch optimization protocol Tier 1+2+3 declarations
+dispatch_optimization_protocol_tier_1_signals:
+  - autocast_fp16
+  - tf32
+  - torch_compile
+  - no_grad_at_eval
+  - canonical_scorer_loss_helper_routing
+dispatch_optimization_protocol_tier_2_signals:
+  - min_vram_gb
+  - min_smoke_gpu
+  - video_input_strategy
+  - pyav_decode_strategy
+  - target_modes
+  - canonical_nvml_env_block
+dispatch_optimization_protocol_tier_3_signals:
+  - canonical_auth_eval_helper_routing
+  - canonical_inflate_device
+  - scorer_loader_assignment_order_pose_first
+  - recipe_vs_trainer_state_consistency
+  - no_phantom_device_named_output_directories
+
+notes: |
+  PR110-OPT-11 multi-mode-per-pair composition L0 SCAFFOLD per task #1323
+  PENDING + Wave N+34 analytical foundation
+  (.omx/research/wave_n34_pr110_opt_4_7_11_triple_artifacts_20260528.json).
+
+  ## Sister substrate composition (PR-or-greater parity)
+
+  Per `[[pr-or-greater-parity-synergy-binding-integration-not-hnerv-specific-meta-class-lesson-correction]]`
+  2026-05-30 binding META-class correction: substrate binds canonical
+  perturbation menu (22 modes × 4 orthogonal families) + canonical 4-bit
+  K=16 selector budget + canonical 2-mode-per-pair composition primitive
+  + canonical OPT11MMP archive grammar + canonical inflate runtime + Tier A
+  canonical-routing-markers per Catalog #341 + canonical Provenance per
+  Catalog #323.
+
+  ## Wave N+34 analytical foundation
+
+  - source: experiments/results/frame_exploit_segnet_posenet_20260514_pr101_mps600_codex/pair_component_rows.jsonl
+  - mode_menu: 22 modes across (luma_bias / blue_chroma / rgb_bias / roll) + identity
+  - compound_ratio_upper_bound: 1.548x single-mode
+  - multi_mode_additive_upper_bound_delta_S: -0.00181
+  - rate_axis_delta_S_estimate: +0.000119 (+179B wire vs FEC6=249B)
+  - net_score_delta_upper_bound_estimate: -0.00052 DIRECTIONAL
+  - verdict: PROCEED_CANDIDATE_FOR_EMPIRICAL_VALIDATION
+
+  ## L0 SCAFFOLD posture
+
+  Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+  non-negotiable: dispatch_enabled=false + research_only=true; the smoke
+  validates canonical apparatus on synthetic frames; L1 PROMOTION lands
+  the per-substrate symposium PROCEED-unconditional per Catalog #325
+  before paid dispatch.
+
+  ## Slot EEE NO FAKE IMPLEMENTATIONS attestation
+
+  Per CLAUDE.md NO FAKE IMPLEMENTATIONS non-negotiable 2026-05-30: trainer
+  ACTUALLY composes 2 perturbation modes per pair via real numpy arithmetic
+  on synthetic frames; tests verify behavioral invariants (composed frame
+  differs from BOTH single-mode outputs when both modes non-identity) per
+  Slot EEE 5 forbidden classes (Class 1 + Class 2). 30+ dedicated tests.
+
+  ## Cross-references
+
+  - Phase A substrate package: src/tac/substrates/pr110_opt11_multi_mode_per_pair_composition/
+  - Phase B trainer: experiments/train_substrate_pr110_opt11_multi_mode_per_pair_composition.py
+  - Sister PR110-OPT-7 L1 PROMOTION (canonical L0 reference pattern): commit `1230b3b9c`
+  - Wave N+34 analytical: .omx/research/wave_n34_pr110_opt_4_7_11_triple_artifacts_20260528.json
+  - Per-substrate symposium memo: .omx/research/per_substrate_symposium_pr110_opt11_multi_mode_per_pair_composition_20260530.md
+  - L0 SCAFFOLD landing memo: feedback_pr110_opt11_multi_mode_per_pair_composition_l0_scaffold_landed_20260530.md
+  - Retroactive sweep: .omx/research/retroactive_sweep_for_pr110_opt11_l0_scaffold_20260530.md
