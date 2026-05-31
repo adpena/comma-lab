@@ -645,6 +645,10 @@
         "learning_signal_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json",
         "learning_signal_schema": "repair_campaign_learning_signal.v1",
         "local_mlx_advisory_custody_required": true,
+        "mlx_lora_boundary_adapter_smoke_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_smoke.json",
+        "mlx_lora_boundary_adapter_smoke_schema": "repair_cascade_mlx_lora_boundary_adapter_smoke_result.v1",
+        "mlx_lora_boundary_adapter_work_order_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json",
+        "mlx_lora_boundary_adapter_work_order_schema": "repair_cascade_mlx_lora_boundary_adapter_work_order.v1",
         "pipeline_position": "scorer_entropy_repair_before_selector_codec",
         "posterior_append_report_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_posterior_append_report.json",
         "posterior_append_report_schema": "repair_campaign_stackability_posterior_append_report.v1",
@@ -674,6 +678,7 @@
           "boundary_argmax_hinge_marginal_surface",
           "local_mlx_boundary_argmax_hinge_probe",
           "pose_axis_guard_measurement",
+          "mlx_lora_boundary_adapter_work_order",
           "mlx_lora_boundary_adapter_smoke"
         ],
         "schema": "repair_cascade_mlx_probe_experiment_metadata.v1",
@@ -688,6 +693,106 @@
       "priority": 3,
       "status": "queued",
       "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_mlx_lora_boundary_adapter_work_order.py",
+            "--source-payload",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+            "--cascade-id",
+            "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter",
+            "--work-order-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_mlx_lora_boundary_adapter_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_lora_boundary_adapter_work_order.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_mlx_lora_boundary_adapter_smoke.py",
+            "--work-order",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json",
+            "--output",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_smoke.json",
+            "--overwrite"
+          ],
+          "id": "run_mlx_lora_boundary_adapter_smoke",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_lora_boundary_adapter_smoke_result.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_smoke.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_mlx_lora_boundary_adapter_work_order"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_smoke.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
         {
           "artifact_mobility": {},
           "command": [
@@ -721,7 +826,9 @@
               "type": "json_equals"
             }
           ],
-          "requires": [],
+          "requires": [
+            "run_mlx_lora_boundary_adapter_smoke"
+          ],
           "resources": {
             "kind": "local_cpu"
           },

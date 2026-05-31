@@ -11,7 +11,6 @@
     "entropy_boundary_probe_manifest_path:missing_or_unverified",
     "local_mlx_boundary_argmax_hinge_probe_path:missing_or_unverified",
     "pose_axis_guard_measurement_path:missing_or_unverified",
-    "mlx_lora_boundary_adapter_smoke_path:missing_or_unverified",
     "byte_closed_archive_materializer_required_before_score_claim",
     "receiver_runtime_proof_required_before_exact_dispatch",
     "exact_cpu_cuda_eval_required_before_promotion",
@@ -95,9 +94,14 @@
       "path": null
     },
     {
-      "exists": false,
+      "exists": true,
+      "key": "mlx_lora_boundary_adapter_work_order_path",
+      "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_work_order.json"
+    },
+    {
+      "exists": true,
       "key": "mlx_lora_boundary_adapter_smoke_path",
-      "path": null
+      "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/mlx_lora_boundary_adapter/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/mlx_lora_boundary_adapter_smoke.json"
     }
   ],
   "local_mlx_probe_executed": false,
@@ -113,8 +117,7 @@
     "repair_dynamics_palette_probe_matrix_path:missing_or_unverified",
     "entropy_boundary_probe_manifest_path:missing_or_unverified",
     "local_mlx_boundary_argmax_hinge_probe_path:missing_or_unverified",
-    "pose_axis_guard_measurement_path:missing_or_unverified",
-    "mlx_lora_boundary_adapter_smoke_path:missing_or_unverified"
+    "pose_axis_guard_measurement_path:missing_or_unverified"
   ],
   "pipeline_position": "scorer_entropy_repair_before_selector_codec",
   "probe_measurement_plan": [
@@ -185,6 +188,25 @@
       "field_selection_ready_for_exact_eval_dispatch": false,
       "gpu_launched": false,
       "measurement": "pose_axis_guard_measurement",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    },
+    {
+      "authority": "local_repair_planning_only",
+      "axis": "[macOS-MLX research-signal]",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "measurement": "mlx_lora_boundary_adapter_work_order",
       "promotable": false,
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -510,6 +532,7 @@
     "boundary_argmax_hinge_marginal_surface",
     "local_mlx_boundary_argmax_hinge_probe",
     "pose_axis_guard_measurement",
+    "mlx_lora_boundary_adapter_work_order",
     "mlx_lora_boundary_adapter_smoke"
   ],
   "schema": "repair_cascade_mlx_probe_result.v1",

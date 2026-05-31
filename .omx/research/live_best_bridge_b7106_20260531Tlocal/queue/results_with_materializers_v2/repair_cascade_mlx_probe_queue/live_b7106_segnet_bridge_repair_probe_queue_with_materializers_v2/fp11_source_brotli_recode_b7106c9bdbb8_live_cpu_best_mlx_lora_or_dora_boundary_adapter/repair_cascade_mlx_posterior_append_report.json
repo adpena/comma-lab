@@ -36,10 +36,10 @@
   "contest_cuda_auth_eval": false,
   "dispatch_attempted": false,
   "exact_cuda_auth_eval": false,
-  "existing_row_count": 2,
+  "existing_row_count": 4,
   "family_id": "mlx_lora_or_dora_boundary_adapter",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "final_row_count": 3,
+  "final_row_count": 5,
   "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
   "gpu_launched": false,
   "lock_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
@@ -49,7 +49,7 @@
   "rank_or_kill_eligible": false,
   "ready_for_budget_spend": false,
   "ready_for_exact_eval_dispatch": false,
-  "row_id": "ae41321a96c15d922c1b54d194ead2fec4a7b3f5e12d5087d156f9736b6617b5",
+  "row_id": "101fff8c18b71fb41a749df44918a7bf32c662a6bbacc0d28cb8e3d2cb7d8ae0",
   "schema": "repair_campaign_stackability_posterior_append_report.v1",
   "score_affecting_payload_changed": false,
   "score_claim": false,
@@ -57,10 +57,10 @@
   "score_claim_valid": false,
   "skipped_duplicate": false,
   "source_signal": {
-    "bytes": 7367,
+    "bytes": 7235,
     "label": "repair_campaign_learning_signal",
     "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json",
-    "sha256": "32a49dd7c1626b8c29143b3568b1003f14f558ebd07cdfe257cb1bef8ee14afb"
+    "sha256": "56e6ae518585d0299b7c3218ffabe7b3dedd602bfe2027700e4d2825b307c654"
   },
   "typed_response_id": "repair_cascade_mlx_probe:fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter"
 }

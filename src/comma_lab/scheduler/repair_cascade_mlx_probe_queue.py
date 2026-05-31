@@ -9,6 +9,9 @@ from typing import Any
 
 from comma_lab.scheduler.experiment_queue import QUEUE_SCHEMA, normalize_queue_definition
 from tac.analysis.segnet_semantic_bridge import SEGNET_SEMANTIC_BRIDGE_SCHEMA
+from tac.optimization.archive_bound_candidate_adapter_spine import (
+    build_archive_bound_candidate_adapter_package,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -42,6 +45,12 @@ REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA = (
 )
 REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA = (
     "frontier_rate_attack_repair_budget_waterfill_work_order.v1"
+)
+REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA = (
+    "repair_cascade_mlx_lora_boundary_adapter_work_order.v1"
+)
+REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_SMOKE_RESULT_SCHEMA = (
+    "repair_cascade_mlx_lora_boundary_adapter_smoke_result.v1"
 )
 
 _CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS: tuple[dict[str, Any], ...] = (
@@ -116,6 +125,9 @@ _MEASUREMENT_ARTIFACT_KEYS: dict[str, tuple[str, ...]] = {
         "byte_closed_runtime_postfilter_materializer_path",
     ),
     "mlx_lora_boundary_adapter_smoke": ("mlx_lora_boundary_adapter_smoke_path",),
+    "mlx_lora_boundary_adapter_work_order": (
+        "mlx_lora_boundary_adapter_work_order_path",
+    ),
     "fleet_holdout_or_online_calibration_split": (
         "fleet_holdout_or_online_calibration_split_path",
     ),
@@ -163,6 +175,87 @@ def _string_list(value: Any) -> list[str]:
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _is_mlx_lora_boundary_adapter(cascade: Mapping[str, Any]) -> bool:
+    family_id = _slug(
+        cascade.get("repair_candidate_family_id") or cascade.get("family_id") or ""
+    )
+    return family_id == "mlx_lora_or_dora_boundary_adapter"
+
+
+def _planned_lora_artifact_paths(
+    *,
+    cascade_id: str,
+    source_payload_path: str | Path,
+    repo_root: str | Path,
+) -> dict[str, Path]:
+    source_path = _resolve(source_payload_path, repo_root)
+    root = source_path.parent / "mlx_lora_boundary_adapter" / _slug(cascade_id)
+    return {
+        "work_order": root / "mlx_lora_boundary_adapter_work_order.json",
+        "smoke_result": root / "mlx_lora_boundary_adapter_smoke.json",
+    }
+
+
+def _cascade_with_planned_lora_paths(
+    cascade: Mapping[str, Any],
+    *,
+    source_payload_path: str | Path,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    out = dict(cascade)
+    if not _is_mlx_lora_boundary_adapter(out):
+        return out
+    cascade_id = str(out.get("cascade_id") or "mlx_lora_boundary_adapter").strip()
+    planned = _planned_lora_artifact_paths(
+        cascade_id=cascade_id,
+        source_payload_path=source_payload_path,
+        repo_root=repo_root,
+    )
+    out.setdefault(
+        "mlx_lora_boundary_adapter_work_order_path",
+        _repo_rel(planned["work_order"], repo_root),
+    )
+    out.setdefault(
+        "mlx_lora_boundary_adapter_smoke_path",
+        _repo_rel(planned["smoke_result"], repo_root),
+    )
+    return out
+
+
+def _compact_materializer_refs(value: Mapping[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for family_id, raw_ref in value.items():
+        ref = _mapping(raw_ref)
+        if not ref:
+            continue
+        out[str(family_id)] = {
+            key: ref.get(key)
+            for key in (
+                "schema",
+                "strategy",
+                "candidate_archive",
+                "manifest_path",
+                "materializer_manifest_path",
+                "receiver_proof_path",
+                "runtime_consumption_proof_ready",
+                "receiver_contract_satisfied",
+                "archive_bound_candidate_adapter_package_path",
+            )
+            if key in ref
+        }
+    return out
+
+
+def _archive_record(value: Any) -> dict[str, Any]:
+    record = _mapping(value)
+    out = {
+        key: record.get(key)
+        for key in ("path", "sha256", "bytes")
+        if record.get(key) not in ("", None)
+    }
+    return out
 
 
 def _source_payload_schema(payload: Mapping[str, Any]) -> str:
@@ -219,6 +312,10 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
     surface_npz = _mapping(surface.get("argmax_margin_boundary_npz"))
     surface_path = str(surface_npz.get("path") or "").strip()
     materialized_artifacts = _mapping(payload.get("archive_bound_materializer_artifacts"))
+    source_artifacts = dict(_mapping(payload.get("source_artifacts")))
+    live_source_archive = _archive_record(
+        payload.get("source_archive") or payload.get("candidate_archive")
+    )
     class_rows = [
         dict(row)
         for row in payload.get("class_rows") or []
@@ -264,6 +361,7 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
         if "postfilter" in family_id:
             required_measurements.append("byte_closed_runtime_postfilter_materializer")
         if "lora" in family_id or "adapter" in family_id:
+            required_measurements.append("mlx_lora_boundary_adapter_work_order")
             required_measurements.append("mlx_lora_boundary_adapter_smoke")
         if mode == "fleet_adaptable":
             required_measurements.append("fleet_holdout_or_online_calibration_split")
@@ -335,6 +433,11 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
                 "runtime_consumption_proof_path": receiver_proof_path or None,
                 "archive_bound_materializer_artifact": (
                     dict(family_materializer) if family_materializer else None
+                ),
+                "bridge_source_artifacts": source_artifacts,
+                "live_source_archive": live_source_archive or None,
+                "materialized_archive_family_refs": _compact_materializer_refs(
+                    materialized_artifacts
                 ),
                 "next_queue_action": backlog.get("next_materializer_task"),
                 "blockers": [
@@ -504,6 +607,11 @@ def build_repair_cascade_mlx_probe_spec(
     )
     if cascade is None:
         raise RepairCascadeMlxProbeQueueError(f"cascade id not found: {cascade_id}")
+    cascade = _cascade_with_planned_lora_paths(
+        cascade,
+        source_payload_path=source_payload_path,
+        repo_root=repo_root,
+    )
     measurements = _required_probe_measurements(cascade)
     artifact_keys = ordered_unique(
         [
@@ -598,6 +706,304 @@ def build_repair_cascade_mlx_probe_spec(
         context=f"repair_cascade_mlx_probe_spec:{cascade_id}",
     )
     return spec
+
+
+class _MlxLoraBoundaryArchiveAdapter:
+    adapter_id = "repair_cascade_mlx_lora_dora_boundary_adapter"
+    candidate_family = "mlx_lora_or_dora_boundary_adapter"
+
+    def __init__(self, row: Mapping[str, Any]) -> None:
+        self._row = row
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: Mapping[str, Any],
+    ) -> Sequence[Mapping[str, Any]]:
+        return [self._row]
+
+
+def _lora_adapter_package_row(
+    *,
+    cascade: Mapping[str, Any],
+    source_payload_path: str | Path,
+    work_order_ref: str,
+    smoke_ref: str,
+) -> dict[str, Any]:
+    source_archive = _mapping(cascade.get("live_source_archive"))
+    cascade_id = str(cascade.get("cascade_id") or "mlx_lora_boundary_adapter").strip()
+    blockers = ordered_unique(
+        [
+            *([] if source_archive.get("path") else ["live_best_archive_custody_missing"]),
+            "mlx_lora_boundary_adapter_training_required",
+            "adapter_checkpoint_export_required",
+            "byte_closed_archive_materializer_required",
+            "receiver_runtime_proof_required_before_exact_dispatch",
+            "exact_cpu_cuda_eval_required_before_promotion",
+        ]
+    )
+    return {
+        "candidate_id": f"{cascade_id}_mlx_lora_dora_boundary_adapter_work_order",
+        "candidate_family": "mlx_lora_or_dora_boundary_adapter",
+        "target_kind": "mlx_lora_dora_boundary_adapter_neural_archive_v1",
+        "source_archive": dict(source_archive),
+        "byte_closed_candidate_emitted": False,
+        "candidate_archive_materialized": False,
+        "runtime_consumption_proof_status": "missing",
+        "receiver_contract_kind": "mlx_lora_dora_boundary_adapter_decode_only_runtime",
+        "receiver_contract_satisfied": False,
+        "runtime_adapter_ready": False,
+        "contest_runtime_decoder_adapter_ready": False,
+        "semantic_payload_change_planned": True,
+        "exact_axis_score_affecting_adjudication_required": True,
+        "runtime_adapter_manifest": {
+            "schema": "mlx_lora_dora_boundary_adapter_runtime_manifest.v1",
+            "runtime_adapter_ready": False,
+            "contest_runtime_decoder_adapter_ready": False,
+            "decode_only_receiver_contract": True,
+            "source_payload_path": str(source_payload_path),
+            "work_order_path": work_order_ref,
+            "smoke_result_path": smoke_ref,
+            "training_objective": "crammer_singer_boundary_argmax_hinge_plus_pose_guard",
+            "export_contract": "byte_closed_archive_runtime_adapter_required",
+            **FALSE_AUTHORITY,
+        },
+        "mlx_triage_argv": [
+            ".venv/bin/python",
+            "tools/run_mlx_lora_boundary_adapter_smoke.py",
+            "--work-order",
+            work_order_ref,
+            "--output",
+            smoke_ref,
+            "--overwrite",
+        ],
+        "input_artifacts": ordered_unique(
+            [
+                str(source_payload_path),
+                str(cascade.get("boundary_argmax_hinge_marginal_surface_path") or ""),
+            ]
+        ),
+        "blockers": blockers,
+        "anti_pattern_protections": [
+            {"anti_pattern_id": "probe_only_side_report_orphaned_from_optimizer_v1"},
+            {"anti_pattern_id": "proxy_or_advisory_masquerades_as_score_v1"},
+            {"anti_pattern_id": "candidate_without_receiver_consumption_v1"},
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_mlx_lora_boundary_adapter_work_order(
+    *,
+    source_payload: Mapping[str, Any],
+    source_payload_path: str | Path,
+    cascade_id: str,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Build the queue-owned executable work order for the MLX LoRA/DoRA row."""
+
+    require_no_truthy_authority_fields(
+        source_payload,
+        context="mlx_lora_boundary_adapter_work_order_source_payload",
+    )
+    rows = repair_cascade_rows_from_payload(source_payload)
+    cascade = next(
+        (row for row in rows if str(row.get("cascade_id") or "") == cascade_id),
+        None,
+    )
+    if cascade is None:
+        raise RepairCascadeMlxProbeQueueError(f"cascade id not found: {cascade_id}")
+    cascade = _cascade_with_planned_lora_paths(
+        cascade,
+        source_payload_path=source_payload_path,
+        repo_root=repo_root,
+    )
+    if not _is_mlx_lora_boundary_adapter(cascade):
+        raise RepairCascadeMlxProbeQueueError(
+            f"cascade is not an MLX LoRA/DoRA boundary adapter row: {cascade_id}"
+        )
+    planned = _planned_lora_artifact_paths(
+        cascade_id=cascade_id,
+        source_payload_path=source_payload_path,
+        repo_root=repo_root,
+    )
+    work_order_ref = _repo_rel(planned["work_order"], repo_root)
+    smoke_ref = _repo_rel(planned["smoke_result"], repo_root)
+    adapter_row = _lora_adapter_package_row(
+        cascade=cascade,
+        source_payload_path=source_payload_path,
+        work_order_ref=work_order_ref,
+        smoke_ref=smoke_ref,
+    )
+    adapter_package = build_archive_bound_candidate_adapter_package(
+        _MlxLoraBoundaryArchiveAdapter(adapter_row),
+        context={"source_payload_path": str(source_payload_path), "cascade_id": cascade_id},
+        repo_root=repo_root,
+    )
+    blockers = ordered_unique(
+        [
+            *adapter_row["blockers"],
+            "mlx_lora_smoke_required_before_component_response",
+            "archive_bound_contract_required_before_exact_handoff",
+        ]
+    )
+    work_order = {
+        "schema": REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA,
+        "work_order_id": f"mlx_lora_boundary_adapter:{cascade_id}",
+        "cascade_id": cascade_id,
+        "source_payload_path": str(source_payload_path),
+        "source_payload_schema": source_payload.get("schema"),
+        "repair_candidate_family_id": cascade.get("repair_candidate_family_id"),
+        "pipeline_position": cascade.get("pipeline_position"),
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "mathematical_objective": {
+            "local_loss": "crammer_singer_multiclass_hinge_on_raw_boundary_logits",
+            "loss_zero_condition": "target_logit_exceeds_every_impostor_by_margin",
+            "pose_guard": "do_not_spend_segnet_repair_if_posenet_margin_degrades",
+            "rate_term": "lambda_rate_times_archive_delta_bytes",
+            "optimization_scope": [
+                "pixel",
+                "boundary",
+                "region",
+                "frame",
+                "pair",
+                "batch",
+                "full_video",
+            ],
+        },
+        "targeted_positions": [dict(row) for row in _targeted_positions(cascade)],
+        "bridge_source_artifacts": dict(_mapping(cascade.get("bridge_source_artifacts"))),
+        "semantic_surface_path": cascade.get(
+            "boundary_argmax_hinge_marginal_surface_path"
+        ),
+        "live_source_archive": dict(_mapping(cascade.get("live_source_archive"))),
+        "parent_archive_family_refs": dict(
+            _mapping(cascade.get("materialized_archive_family_refs"))
+        ),
+        "expected_outputs": {
+            "mlx_lora_boundary_adapter_smoke_path": smoke_ref,
+            "adapter_checkpoint_or_delta_path": None,
+            "archive_bound_candidate_adapter_package_path": None,
+            "candidate_archive_path": None,
+            "receiver_proof_path": None,
+        },
+        "archive_bound_candidate_adapter_package_schema": adapter_package.get("schema"),
+        "archive_bound_candidate_adapter_package": adapter_package,
+        "blockers": blockers,
+        "work_order_ready_for_mlx_smoke": True,
+        "work_order_ready_for_training": False,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "queue_owned_mlx_lora_boundary_adapter_work_order_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_exact_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        work_order,
+        context=f"mlx_lora_boundary_adapter_work_order:{cascade_id}",
+    )
+    return work_order
+
+
+def build_mlx_lora_boundary_adapter_smoke_result(
+    *,
+    work_order: Mapping[str, Any],
+    work_order_path: str | Path,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Record deterministic custody readiness for the MLX LoRA/DoRA work order."""
+
+    if work_order.get("schema") != REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA:
+        raise RepairCascadeMlxProbeQueueError(
+            "MLX LoRA boundary adapter smoke requires a work order"
+        )
+    require_no_truthy_authority_fields(
+        work_order,
+        context="mlx_lora_boundary_adapter_smoke_work_order",
+    )
+    source_payload_path = _resolve(str(work_order.get("source_payload_path") or ""), repo_root)
+    surface_path_text = str(work_order.get("semantic_surface_path") or "")
+    surface_path = _resolve(surface_path_text, repo_root) if surface_path_text else None
+    source_artifacts = _mapping(work_order.get("bridge_source_artifacts"))
+    inflated_dir_text = str(source_artifacts.get("inflated_dir") or "")
+    inflated_dir = _resolve(inflated_dir_text, repo_root) if inflated_dir_text else None
+    video_names = _mapping(source_artifacts.get("video_names_file"))
+    video_names_text = str(video_names.get("path") or "")
+    video_names_path = _resolve(video_names_text, repo_root) if video_names_text else None
+    input_status = [
+        {
+            "key": "work_order_path",
+            "path": str(work_order_path),
+            "exists": _resolve(work_order_path, repo_root).is_file(),
+        },
+        {
+            "key": "source_payload_path",
+            "path": _repo_rel(source_payload_path, repo_root),
+            "exists": source_payload_path.is_file(),
+        },
+        {
+            "key": "semantic_surface_path",
+            "path": surface_path_text or None,
+            "exists": bool(surface_path and surface_path.is_file()),
+        },
+        {
+            "key": "inflated_dir",
+            "path": inflated_dir_text or None,
+            "exists": bool(inflated_dir and inflated_dir.is_dir()),
+        },
+        {
+            "key": "video_names_file",
+            "path": video_names_text or None,
+            "exists": bool(video_names_path and video_names_path.is_file()),
+        },
+    ]
+    missing = ordered_unique(
+        f"{row['key']}:missing_or_unverified"
+        for row in input_status
+        if row.get("exists") is not True
+    )
+    blockers = ordered_unique(
+        [
+            *missing,
+            *_string_list(work_order.get("blockers")),
+            "adapter_training_not_run",
+            "byte_closed_archive_materializer_required",
+            "receiver_runtime_proof_required_before_exact_dispatch",
+            "exact_cpu_cuda_eval_required_before_promotion",
+        ]
+    )
+    result = {
+        "schema": REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_SMOKE_RESULT_SCHEMA,
+        "work_order_path": str(work_order_path),
+        "work_order_schema": work_order.get("schema"),
+        "cascade_id": work_order.get("cascade_id"),
+        "family_id": work_order.get("repair_candidate_family_id"),
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "input_status": input_status,
+        "missing_inputs": missing,
+        "archive_bound_candidate_adapter_package_schema": work_order.get(
+            "archive_bound_candidate_adapter_package_schema"
+        ),
+        "archive_bound_candidate_adapter_package": work_order.get(
+            "archive_bound_candidate_adapter_package"
+        ),
+        "smoke_executed": True,
+        "ready_for_mlx_local_training": not missing,
+        "component_response_row_emitted": False,
+        "candidate_delta_emitted": False,
+        "blockers": blockers,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "mlx_lora_boundary_adapter_smoke_for_training_custody_only",
+        "forbidden_use": "score_claim_or_promotion_or_exact_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        result,
+        context=f"mlx_lora_boundary_adapter_smoke:{work_order.get('cascade_id')}",
+    )
+    return result
 
 
 def _artifact_status_from_record(
@@ -1006,6 +1412,11 @@ def _cascade_experiment(
     posterior_lock_path: Path,
     priority: int,
 ) -> dict[str, Any]:
+    cascade = _cascade_with_planned_lora_paths(
+        cascade,
+        source_payload_path=source_payload_path,
+        repo_root=repo_root,
+    )
     cascade_id = str(cascade.get("cascade_id") or f"cascade_{priority}").strip()
     slug = _slug(cascade_id)
     spec_path = queue_root / slug / "repair_cascade_mlx_probe_spec.json"
@@ -1021,6 +1432,8 @@ def _cascade_experiment(
     posterior_ref = _repo_rel(posterior_path, repo_root)
     posterior_lock_ref = _repo_rel(posterior_lock_path, repo_root)
     missing = _required_probe_measurements(cascade)
+    lora_work_order_ref = str(cascade.get("mlx_lora_boundary_adapter_work_order_path") or "")
+    lora_smoke_ref = str(cascade.get("mlx_lora_boundary_adapter_smoke_path") or "")
     metadata = {
         "schema": REPAIR_CASCADE_MLX_PROBE_EXPERIMENT_METADATA_SCHEMA,
         "source_payload_path": str(source_payload_path),
@@ -1060,10 +1473,143 @@ def _cascade_experiment(
         "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
         **FALSE_AUTHORITY,
     }
+    if _is_mlx_lora_boundary_adapter(cascade):
+        metadata.update(
+            {
+                "mlx_lora_boundary_adapter_work_order_path": lora_work_order_ref,
+                "mlx_lora_boundary_adapter_work_order_schema": (
+                    REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA
+                ),
+                "mlx_lora_boundary_adapter_smoke_path": lora_smoke_ref,
+                "mlx_lora_boundary_adapter_smoke_schema": (
+                    REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_SMOKE_RESULT_SCHEMA
+                ),
+            }
+        )
     require_no_truthy_authority_fields(
         metadata,
         context=f"repair_cascade_mlx_probe_experiment:{cascade_id}",
     )
+    lora_steps: list[dict[str, Any]] = []
+    if _is_mlx_lora_boundary_adapter(cascade):
+        lora_steps = [
+            {
+                "id": "emit_mlx_lora_boundary_adapter_work_order",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_mlx_lora_boundary_adapter_work_order.py",
+                    "--source-payload",
+                    str(source_payload_path),
+                    "--cascade-id",
+                    cascade_id,
+                    "--work-order-out",
+                    lora_work_order_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": lora_work_order_ref,
+                        "key": "schema",
+                        "equals": (
+                            REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA
+                        ),
+                    },
+                    {"type": "json_false_authority", "path": lora_work_order_ref},
+                    {
+                        "type": "json_equals",
+                        "path": lora_work_order_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [lora_work_order_ref],
+                    "input_artifact_paths": [str(source_payload_path)],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "run_mlx_lora_boundary_adapter_smoke",
+                "kind": "command",
+                "requires": ["emit_mlx_lora_boundary_adapter_work_order"],
+                "command": [
+                    ".venv/bin/python",
+                    "tools/run_mlx_lora_boundary_adapter_smoke.py",
+                    "--work-order",
+                    lora_work_order_ref,
+                    "--output",
+                    lora_smoke_ref,
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": lora_smoke_ref,
+                        "key": "schema",
+                        "equals": (
+                            REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_SMOKE_RESULT_SCHEMA
+                        ),
+                    },
+                    {"type": "json_false_authority", "path": lora_smoke_ref},
+                    {
+                        "type": "json_equals",
+                        "path": lora_smoke_ref,
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [lora_smoke_ref],
+                    "input_artifact_paths": [lora_work_order_ref],
+                    "include_postcondition_paths": True,
+                },
+            },
+        ]
+    emit_spec_step: dict[str, Any] = {
+        "id": "emit_repair_cascade_mlx_probe_spec",
+        "kind": "command",
+        "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_probe_spec.py",
+            "--source-payload",
+            str(source_payload_path),
+            "--cascade-id",
+            cascade_id,
+            "--probe-spec-out",
+            spec_ref,
+            "--overwrite",
+        ],
+        "resources": {"kind": "local_cpu"},
+        "timeout_seconds": 120,
+        "postconditions": [
+            {
+                "type": "json_equals",
+                "path": spec_ref,
+                "key": "schema",
+                "equals": REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA,
+            },
+            {"type": "json_false_authority", "path": spec_ref},
+            {
+                "type": "json_equals",
+                "path": spec_ref,
+                "key": "ready_for_exact_eval_dispatch",
+                "equals": False,
+            },
+        ],
+        "telemetry": {
+            "artifact_paths": [spec_ref],
+            "input_artifact_paths": [str(source_payload_path)],
+            "include_postcondition_paths": True,
+        },
+    }
+    if lora_steps:
+        emit_spec_step["requires"] = ["run_mlx_lora_boundary_adapter_smoke"]
     return {
         "id": f"repair_cascade_mlx_probe_{slug}",
         "priority": priority,
@@ -1076,43 +1622,8 @@ def _cascade_experiment(
         ],
         "metadata": metadata,
         "steps": [
-            {
-                "id": "emit_repair_cascade_mlx_probe_spec",
-                "kind": "command",
-                "command": [
-                    ".venv/bin/python",
-                    "tools/build_repair_cascade_mlx_probe_spec.py",
-                    "--source-payload",
-                    str(source_payload_path),
-                    "--cascade-id",
-                    cascade_id,
-                    "--probe-spec-out",
-                    spec_ref,
-                    "--overwrite",
-                ],
-                "resources": {"kind": "local_cpu"},
-                "timeout_seconds": 120,
-                "postconditions": [
-                    {
-                        "type": "json_equals",
-                        "path": spec_ref,
-                        "key": "schema",
-                        "equals": REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA,
-                    },
-                    {"type": "json_false_authority", "path": spec_ref},
-                    {
-                        "type": "json_equals",
-                        "path": spec_ref,
-                        "key": "ready_for_exact_eval_dispatch",
-                        "equals": False,
-                    },
-                ],
-                "telemetry": {
-                    "artifact_paths": [spec_ref],
-                    "input_artifact_paths": [str(source_payload_path)],
-                    "include_postcondition_paths": True,
-                },
-            },
+            *lora_steps,
+            emit_spec_step,
             {
                 "id": "inspect_repair_cascade_mlx_probe_missing_artifacts",
                 "kind": "command",
@@ -1404,12 +1915,16 @@ def build_repair_cascade_mlx_probe_queue(
 
 
 __all__ = [
+    "REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_SMOKE_RESULT_SCHEMA",
+    "REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_EXPERIMENT_METADATA_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA",
     "REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA",
     "REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA",
     "RepairCascadeMlxProbeQueueError",
+    "build_mlx_lora_boundary_adapter_smoke_result",
+    "build_mlx_lora_boundary_adapter_work_order",
     "build_repair_cascade_mlx_learning_signal",
     "build_repair_cascade_mlx_probe_queue",
     "build_repair_cascade_mlx_probe_result",

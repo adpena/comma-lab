@@ -8,10 +8,14 @@ from pathlib import Path
 
 from comma_lab.scheduler.experiment_queue import QUEUE_SCHEMA
 from comma_lab.scheduler.repair_cascade_mlx_probe_queue import (
+    REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_SMOKE_RESULT_SCHEMA,
+    REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA,
     REPAIR_CASCADE_MLX_PROBE_QUEUE_METADATA_SCHEMA,
     REPAIR_CASCADE_MLX_PROBE_RESULT_SCHEMA,
     REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA,
     REPAIR_CASCADE_MLX_REPAIR_FAMILY_CAMPAIGN_SCHEMA,
+    build_mlx_lora_boundary_adapter_smoke_result,
+    build_mlx_lora_boundary_adapter_work_order,
     build_repair_cascade_mlx_learning_signal,
     build_repair_cascade_mlx_probe_queue,
     build_repair_cascade_mlx_probe_result,
@@ -185,7 +189,115 @@ def test_repair_cascade_probe_spec_consumes_segnet_semantic_bridge_backlog(
     targeted = spec["targeted_positions"][0]
     assert targeted["out_of_pair_spread_fraction"] == 0.25
     assert targeted["top_source_classes"][0]["class_name"] == "lane_markings"
+    assert "mlx_lora_boundary_adapter_work_order" in (
+        spec["required_probe_measurements"]
+    )
+    assert "mlx_lora_boundary_adapter_work_order_path" in (
+        spec["required_local_mlx_artifacts"]
+    )
     assert spec["ready_for_exact_eval_dispatch"] is False
+
+
+def test_mlx_lora_boundary_adapter_work_order_and_smoke_close_probe_inputs(
+    tmp_path: Path,
+) -> None:
+    surface_path = tmp_path / "semantic_surfaces.npz"
+    surface_path.write_bytes(b"surface")
+    inflated_dir = tmp_path / "inflated"
+    inflated_dir.mkdir()
+    video_names = tmp_path / "video_names.txt"
+    video_names.write_text("x\n", encoding="utf-8")
+    semantic_bridge = {
+        "schema": "segnet_semantic_bridge.v1",
+        "candidate_id": "bridge_unit",
+        "generalization_mode": "mixed",
+        "summary": {
+            "argmax_disagreement_rate": 0.125,
+            "error_is_out_of_pair_spread_fraction": 0.25,
+        },
+        "source_artifacts": {
+            "inflated_dir": str(inflated_dir),
+            "video_names_file": {
+                "path": str(video_names),
+                "sha256": "stub",
+            },
+        },
+        "class_rows": [
+            {
+                "class_id": 1,
+                "class_name": "lane_markings",
+                "wrong_pixels": 12,
+                "error_rate_within_source_class": 0.4,
+            }
+        ],
+        "semantic_surface_artifacts": {
+            "schema": "segnet_semantic_bridge_surface_artifacts.v1",
+            "argmax_margin_boundary_npz": {
+                "path": str(surface_path),
+                "bytes": surface_path.stat().st_size,
+                "sha256": "stub",
+            },
+        },
+        "executable_backlog": [
+            {
+                "family_id": "mlx_lora_or_dora_boundary_adapter",
+                "generalization_mode": "mixed",
+                "next_materializer_task": "train MLX boundary adapter",
+                "score_authority": False,
+            }
+        ],
+        **_false_authority(),
+    }
+    bridge_path = _write_json(tmp_path / "segnet_semantic_bridge.json", semantic_bridge)
+
+    work_order = build_mlx_lora_boundary_adapter_work_order(
+        source_payload=semantic_bridge,
+        source_payload_path=bridge_path,
+        cascade_id="bridge_unit_mlx_lora_or_dora_boundary_adapter",
+        repo_root=tmp_path,
+    )
+    adapter_package = work_order["archive_bound_candidate_adapter_package"]
+    assert work_order["schema"] == (
+        REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_WORK_ORDER_SCHEMA
+    )
+    assert adapter_package["candidate_row_count"] == 1
+    assert adapter_package["ready_contract_count"] == 0
+    contract = adapter_package["candidate_rows"][0][
+        "archive_bound_candidate_contract"
+    ]
+    assert contract["family_id"] == "mlx_lora_or_dora_boundary_adapter"
+    assert contract["entropy_position_label"] == "before_entropy_coder"
+    assert "archive_bound_candidate_not_materialized" in contract["blockers"]
+    assert work_order["ready_for_exact_eval_dispatch"] is False
+
+    work_order_path = tmp_path / "mlx_lora_boundary_adapter" / (
+        "bridge_unit_mlx_lora_or_dora_boundary_adapter"
+    ) / "mlx_lora_boundary_adapter_work_order.json"
+    _write_json(work_order_path, work_order)
+    smoke = build_mlx_lora_boundary_adapter_smoke_result(
+        work_order=work_order,
+        work_order_path=work_order_path,
+        repo_root=tmp_path,
+    )
+    assert smoke["schema"] == REPAIR_CASCADE_MLX_LORA_BOUNDARY_ADAPTER_SMOKE_RESULT_SCHEMA
+    assert smoke["ready_for_mlx_local_training"] is True
+    smoke_path = tmp_path / "mlx_lora_boundary_adapter" / (
+        "bridge_unit_mlx_lora_or_dora_boundary_adapter"
+    ) / "mlx_lora_boundary_adapter_smoke.json"
+    _write_json(smoke_path, smoke)
+
+    spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=semantic_bridge,
+        source_payload_path=bridge_path,
+        cascade_id="bridge_unit_mlx_lora_or_dora_boundary_adapter",
+        repo_root=tmp_path,
+    )
+    assert "mlx_lora_boundary_adapter_work_order_path:missing_or_unverified" not in (
+        spec["missing_local_mlx_artifacts"]
+    )
+    assert "mlx_lora_boundary_adapter_smoke_path:missing_or_unverified" not in (
+        spec["missing_local_mlx_artifacts"]
+    )
 
 
 def test_repair_cascade_probe_spec_names_deterministic_bridge_materializers(
@@ -536,6 +648,103 @@ def test_repair_cascade_mlx_probe_queue_from_score_report_runs_spec_step(
     assert len(posterior_lines) == 1
     posterior_row = json.loads(posterior_lines[0])
     assert posterior_row["typed_response_id"] == signal["typed_response_id"]
+
+
+def test_repair_cascade_mlx_probe_queue_runs_lora_work_order_before_spec(
+    tmp_path: Path,
+) -> None:
+    surface_path = tmp_path / "semantic_surfaces.npz"
+    surface_path.write_bytes(b"surface")
+    inflated_dir = tmp_path / "inflated"
+    inflated_dir.mkdir()
+    video_names = tmp_path / "video_names.txt"
+    video_names.write_text("x\n", encoding="utf-8")
+    semantic_bridge = {
+        "schema": "segnet_semantic_bridge.v1",
+        "candidate_id": "bridge_unit",
+        "generalization_mode": "mixed",
+        "summary": {
+            "argmax_disagreement_rate": 0.125,
+            "error_is_out_of_pair_spread_fraction": 0.25,
+        },
+        "source_artifacts": {
+            "inflated_dir": str(inflated_dir),
+            "video_names_file": {"path": str(video_names), "sha256": "stub"},
+        },
+        "semantic_surface_artifacts": {
+            "schema": "segnet_semantic_bridge_surface_artifacts.v1",
+            "argmax_margin_boundary_npz": {
+                "path": str(surface_path),
+                "bytes": surface_path.stat().st_size,
+                "sha256": "stub",
+            },
+        },
+        "class_rows": [],
+        "executable_backlog": [
+            {
+                "family_id": "mlx_lora_or_dora_boundary_adapter",
+                "generalization_mode": "mixed",
+                "next_materializer_task": "train MLX boundary adapter",
+                "score_authority": False,
+            }
+        ],
+        **_false_authority(),
+    }
+    bridge_path = _write_json(tmp_path / "segnet_semantic_bridge.json", semantic_bridge)
+    queue = build_repair_cascade_mlx_probe_queue(
+        repo_root=REPO_ROOT,
+        source_payload=semantic_bridge,
+        source_payload_path=bridge_path,
+        results_root=tmp_path / "results",
+        queue_id="bridge_unit_lora_probe_queue",
+        posterior_path=tmp_path / "posterior.jsonl",
+        posterior_lock_path=tmp_path / ".posterior.lock",
+    )
+    experiment = queue["experiments"][0]
+    step_ids = [step["id"] for step in experiment["steps"]]
+    assert step_ids[:3] == [
+        "emit_mlx_lora_boundary_adapter_work_order",
+        "run_mlx_lora_boundary_adapter_smoke",
+        "emit_repair_cascade_mlx_probe_spec",
+    ]
+    assert experiment["steps"][2]["requires"] == [
+        "run_mlx_lora_boundary_adapter_smoke"
+    ]
+
+    queue_path = _write_json(tmp_path / "repair_cascade_mlx_probe_queue.json", queue)
+    worker_out = tmp_path / "worker_result.json"
+    worker = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            str(queue_path),
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "3",
+            "--max-experiments",
+            "1",
+            "--output",
+            str(worker_out),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert worker.returncode == 0, worker.stderr
+    result = json.loads(worker_out.read_text(encoding="utf-8"))
+    assert result["failure_count"] == 0
+    spec_path = Path(experiment["metadata"]["probe_spec_path"])
+    assert spec_path.is_file()
+    spec = json.loads(spec_path.read_text(encoding="utf-8"))
+    assert "mlx_lora_boundary_adapter_work_order_path:missing_or_unverified" not in (
+        spec["missing_local_mlx_artifacts"]
+    )
+    assert "mlx_lora_boundary_adapter_smoke_path:missing_or_unverified" not in (
+        spec["missing_local_mlx_artifacts"]
+    )
 
 
 def test_repair_cascade_mlx_probe_queue_cli_writes_queue(tmp_path: Path) -> None:
