@@ -56,7 +56,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
 
 import brotli
 import numpy as np
@@ -64,6 +65,13 @@ import numpy as np
 from tac.codec.syndrome_trellis_codec import STCParams, ternary_stc_encode_stream
 
 PROBE_SCHEMA = "stc_clean_source_mask_delta_syndrome_vs_brotli_probe_v1"
+PROBE_ID = "stc_clean_source_mask_delta_syndrome_vs_brotli_20260530"
+PROBE_SUBSTRATE = "stc_clean_source"
+PROBE_KIND = "rate_axis_disambiguator"
+PROBE_METRIC_NAME = "stc_syndrome_savings_fraction_vs_brotli_at_contest_realistic_band"
+PROBE_THRESHOLD_TOKEN = (
+    "symposium_2026_05_17_section_6_reactivation_bar_stc_beats_brotli_by_5pct"
+)
 
 # The symposium §6 reactivation bar: STC must beat brotli by >= 5% to PROCEED.
 _STC_BEAT_BROTLI_REQUIRED_FRACTION = 0.05
@@ -124,7 +132,7 @@ def _make_sparse_ternary_stream(n: int, rho: float, seed: int) -> np.ndarray:
     """
     rng = np.random.default_rng(seed)
     deltas = np.zeros(n, dtype=np.int8)
-    n_nonzero = int(round(n * rho))
+    n_nonzero = round(n * rho)
     if n_nonzero > 0:
         idx = rng.choice(n, size=n_nonzero, replace=False)
         deltas[idx] = rng.choice([-1, 1], size=n_nonzero).astype(np.int8)
@@ -203,7 +211,7 @@ def run_probe(
             f"sparse-delta reformulation the symposium PROCEEDed."
         )
 
-    return _verdict(
+    payload = _verdict(
         schema_ok=True,
         verdict=verdict,
         rationale=rationale,
@@ -218,13 +226,110 @@ def run_probe(
         seed=seed,
         per_rho=per_rho,
     )
+    payload["catalog_313_probe_outcome_kwargs"] = _catalog_313_probe_outcome_kwargs(
+        payload
+    )
+    return payload
+
+
+def _catalog_313_probe_verdict(verdict: str) -> str:
+    if verdict == "PROCEED_STC_BEATS_BROTLI":
+        return "PROCEED"
+    if verdict == "DEFER_STC_DOES_NOT_BEAT_BROTLI":
+        return "DEFER"
+    return "OPERATOR_REVIEW_REQUIRED"
+
+
+def _catalog_313_blocker_status(verdict: str) -> str:
+    return "advisory" if _catalog_313_probe_verdict(verdict) == "PROCEED" else "blocking"
+
+
+def _catalog_313_reactivation_criteria() -> list[str]:
+    return [
+        (
+            "CC#2 detector-informed cost map (inverse SegNet boundary "
+            "sensitivity) wired into STC cost vector; re-run probe; >=5% bar "
+            "re-evaluated"
+        ),
+        (
+            "CC#4 constraint-height {8,10,12} x block-size {32,64,128} "
+            "sweep finds syndrome-byte-minimizing operating point"
+        ),
+        "real contest mask-delta via extract_mask_deltas_ternary replaces swept rho",
+        (
+            "paired CUDA+CPU auth-eval per Catalog #246 only after STC < "
+            "brotli by >=5%"
+        ),
+    ]
+
+
+def _catalog_313_next_action() -> str:
+    return (
+        "wire CC#2 detector-informed cost map + CC#4 h/block sweep + real "
+        "extract_mask_deltas_ternary; re-probe before any paid dispatch"
+    )
+
+
+def _catalog_313_probe_outcome_kwargs(
+    verdict: dict,
+    *,
+    evidence_path: str | None = None,
+) -> dict:
+    return {
+        "probe_id": PROBE_ID,
+        "substrate": PROBE_SUBSTRATE,
+        "recipe_path": None,
+        "probe_kind": PROBE_KIND,
+        "verdict": _catalog_313_probe_verdict(str(verdict["verdict"])),
+        "metric_name": PROBE_METRIC_NAME,
+        "metric_value": float(verdict["best_realistic_savings_fraction"]),
+        "threshold": float(verdict["required_savings_fraction"]),
+        "threshold_token": PROBE_THRESHOLD_TOKEN,
+        "evidence_path": evidence_path,
+        "next_action": _catalog_313_next_action(),
+        "reactivation_criteria": _catalog_313_reactivation_criteria(),
+        "blocker_status": _catalog_313_blocker_status(str(verdict["verdict"])),
+        "agent": "codex_stc_probe_cli",
+        "subagent_id": None,
+        "session_id": None,
+        "notes": (
+            "$0 local-CPU STC clean-source mask-delta disambiguator; "
+            "research-signal only, no score authority."
+        ),
+        "staleness_window_days": 14,
+    }
+
+
+def register_catalog_313_probe_outcome(
+    verdict: dict,
+    *,
+    evidence_path: str | None = None,
+    ledger_path: Path | None = None,
+    lock_path: Path | None = None,
+) -> dict:
+    """Append the probe verdict through the canonical Catalog #313 ledger."""
+
+    from tac.probe_outcomes_ledger import register_probe_outcome
+
+    kwargs = _catalog_313_probe_outcome_kwargs(
+        verdict,
+        evidence_path=evidence_path,
+    )
+    verdict["catalog_313_probe_outcome_kwargs"] = kwargs
+    row = register_probe_outcome(
+        **kwargs,
+        path=ledger_path,
+        lock_path=lock_path,
+    )
+    verdict["catalog_313_probe_outcome_row"] = row
+    return row
 
 
 def _verdict(**kw) -> dict:
     """Assemble the structured probe verdict with canonical non-promotable markers."""
     base = {
         "schema": PROBE_SCHEMA,
-        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "generated_at_utc": datetime.now(UTC).isoformat(),
         # Canonical Tier A non-promotable markers per Catalog #341.
         "predicted_delta_adjustment": 0.0,
         "promotable": False,
@@ -251,6 +356,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--block-size", type=int, default=64)
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--json-out", type=str, default=None)
+    parser.add_argument(
+        "--register-probe-outcome",
+        action="store_true",
+        help="Append the verdict through tac.probe_outcomes_ledger.",
+    )
+    parser.add_argument(
+        "--probe-outcomes-ledger",
+        type=str,
+        default=None,
+        help="Optional custom probe_outcomes.jsonl path for --register-probe-outcome.",
+    )
+    parser.add_argument(
+        "--probe-outcomes-lock",
+        type=str,
+        default=None,
+        help="Optional custom lock path for --register-probe-outcome.",
+    )
     args = parser.parse_args(argv)
 
     verdict = run_probe(
@@ -259,6 +381,27 @@ def main(argv: list[str] | None = None) -> int:
         block_size=args.block_size,
         seed=args.seed,
     )
+
+    evidence_path = args.json_out
+    verdict["catalog_313_probe_outcome_kwargs"] = _catalog_313_probe_outcome_kwargs(
+        verdict,
+        evidence_path=evidence_path,
+    )
+    if args.register_probe_outcome:
+        register_catalog_313_probe_outcome(
+            verdict,
+            evidence_path=evidence_path,
+            ledger_path=(
+                Path(args.probe_outcomes_ledger)
+                if args.probe_outcomes_ledger
+                else None
+            ),
+            lock_path=(
+                Path(args.probe_outcomes_lock)
+                if args.probe_outcomes_lock
+                else None
+            ),
+        )
 
     out = json.dumps(verdict, indent=2, sort_keys=True)
     if args.json_out:
