@@ -26,11 +26,11 @@ from __future__ import annotations
 
 import datetime as _dt
 import re
-from dataclasses import dataclass, field
-from typing import Any, Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any
 
 from tac.provenance.contract import Provenance
-
 
 CANONICAL_EQUATION_SCHEMA_VERSION = "canonical_equation_v1_20260519"
 """Pinned schema version. Bump only via explicit migration landing."""
@@ -53,6 +53,48 @@ VALID_RECALIBRATION_TRIGGERS = frozenset(
         RECALIBRATE_ON_RESIDUAL_DRIFT,
         RECALIBRATE_ON_PARAMETER_REFIT,
         RECALIBRATE_NEVER_AUTO,
+    }
+)
+
+# Catalog #363 4-value empirical-verification-status taxonomy.
+#
+# Per CLAUDE.md "Recursive self-reflection protocol — non-negotiable (Catalog
+# #363; 2026-05-26)" + Slot N M3 MEDIUM finding 2026-05-29 (residual=0.0
+# conflates pending-verification with measured per Catalog #363 4-value
+# taxonomy): every EmpiricalAnchor MAY (optional for backward-compat with
+# 327 legacy registry rows per Catalog #110/#113 APPEND-ONLY) declare an
+# empirical_verification_status disambiguating whether the predicted_output
+# was actually verified vs inferred-from-domain-literature vs awaiting-
+# verification. This is the per-anchor sister of the canonical
+# AssumptionEmpiricalVerification schema at
+# ``tac.council_continual_learning.EmpiricalVerificationStatus`` (council
+# deliberation surface; this canonical equations surface is per-anchor).
+#
+# Default value at construction is None (backward-compat): legacy 327 rows
+# behave unchanged. Catalog #371 auto-recalibrator may treat None as
+# INFERRED_FROM_DOMAIN_LITERATURE safe-default in a future extension; THIS
+# landing lands the schema only, not the recalibrator change.
+VERIFIED_VIA_SOURCE_INSPECTION = "VERIFIED_VIA_SOURCE_INSPECTION"
+VERIFIED_VIA_EMPIRICAL_ANCHOR = "VERIFIED_VIA_EMPIRICAL_ANCHOR"
+INFERRED_FROM_DOMAIN_LITERATURE = "INFERRED_FROM_DOMAIN_LITERATURE"
+ASSUMED_AWAITING_VERIFICATION = "ASSUMED_AWAITING_VERIFICATION"
+
+VALID_EMPIRICAL_VERIFICATION_STATUSES = frozenset(
+    {
+        VERIFIED_VIA_SOURCE_INSPECTION,
+        VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        INFERRED_FROM_DOMAIN_LITERATURE,
+        ASSUMED_AWAITING_VERIFICATION,
+    }
+)
+
+# The 2 statuses that do NOT carry direct evidence at the per-anchor surface.
+# Catalog #363 amendment classifies these as "operator-routable for
+# verification" (Round 2 verification required or Round 3 downgrade).
+UNVERIFIED_EMPIRICAL_VERIFICATION_STATUSES = frozenset(
+    {
+        INFERRED_FROM_DOMAIN_LITERATURE,
+        ASSUMED_AWAITING_VERIFICATION,
     }
 )
 
@@ -132,6 +174,7 @@ class EmpiricalAnchor:
     source_artifact: str
     measurement_method: str
     provenance: Provenance
+    empirical_verification_status: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.anchor_id, str) or not self.anchor_id.strip():
@@ -155,12 +198,30 @@ class EmpiricalAnchor:
             raise InvalidEquationError(
                 f"provenance must be a tac.provenance.Provenance, got {type(self.provenance).__name__}"
             )
+        # Catalog #363 4-value taxonomy validator. None is the canonical
+        # backward-compat default for 327 legacy rows. Non-None values must
+        # match one of the 4 canonical tokens (sister of
+        # ``tac.council_continual_learning.VALID_EMPIRICAL_VERIFICATION_STATUSES``).
+        if self.empirical_verification_status is not None:
+            if not isinstance(self.empirical_verification_status, str):
+                raise InvalidEquationError(
+                    "empirical_verification_status must be a string OR None for backward-compat; "
+                    f"got {type(self.empirical_verification_status).__name__}"
+                )
+            if self.empirical_verification_status not in VALID_EMPIRICAL_VERIFICATION_STATUSES:
+                raise InvalidEquationError(
+                    f"empirical_verification_status="
+                    f"{self.empirical_verification_status!r} must be one of "
+                    f"{sorted(VALID_EMPIRICAL_VERIFICATION_STATUSES)!r} "
+                    "(per Catalog #363 canonical 4-value taxonomy) OR None for "
+                    "backward-compat with 327 legacy rows per Catalog #110/#113 APPEND-ONLY"
+                )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-safe dict (Provenance flattened via its own as_dict)."""
         from tac.provenance.validator import provenance_to_dict
 
-        return {
+        payload: dict[str, Any] = {
             "anchor_id": self.anchor_id,
             "measurement_utc": self.measurement_utc,
             "inputs": dict(self.inputs),
@@ -171,6 +232,12 @@ class EmpiricalAnchor:
             "measurement_method": self.measurement_method,
             "provenance": provenance_to_dict(self.provenance),
         }
+        # Only emit empirical_verification_status when explicitly set, to
+        # preserve byte-stable serialization of 327 legacy rows per Catalog
+        # #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE discipline.
+        if self.empirical_verification_status is not None:
+            payload["empirical_verification_status"] = self.empirical_verification_status
+        return payload
 
 
 @dataclass(frozen=True)
@@ -321,7 +388,7 @@ class CanonicalEquation:
             "provenance": provenance_to_dict(self.provenance),
         }
 
-    def with_new_anchor(self, anchor: EmpiricalAnchor) -> "CanonicalEquation":
+    def with_new_anchor(self, anchor: EmpiricalAnchor) -> CanonicalEquation:
         """Return a new CanonicalEquation with the anchor appended (frozen-safe).
 
         Also refreshes ``predicted_vs_empirical_residual`` for the anchor's
@@ -332,7 +399,7 @@ class CanonicalEquation:
             raise InvalidEquationError(
                 f"with_new_anchor expected EmpiricalAnchor, got {type(anchor).__name__}"
             )
-        new_anchors = self.empirical_anchors + (anchor,)
+        new_anchors = (*self.empirical_anchors, anchor)
         new_residuals = dict(self.predicted_vs_empirical_residual)
         new_residuals[anchor.measurement_method] = anchor.residual
         # Build a fresh frozen copy via dataclasses.replace semantics.
@@ -362,14 +429,20 @@ class CanonicalEquation:
 
 
 __all__ = [
+    "ASSUMED_AWAITING_VERIFICATION",
     "CANONICAL_EQUATION_SCHEMA_VERSION",
-    "RECALIBRATE_ON_NEW_ANCHORS",
-    "RECALIBRATE_ON_RESIDUAL_DRIFT",
-    "RECALIBRATE_ON_PARAMETER_REFIT",
+    "INFERRED_FROM_DOMAIN_LITERATURE",
     "RECALIBRATE_NEVER_AUTO",
+    "RECALIBRATE_ON_NEW_ANCHORS",
+    "RECALIBRATE_ON_PARAMETER_REFIT",
+    "RECALIBRATE_ON_RESIDUAL_DRIFT",
+    "UNVERIFIED_EMPIRICAL_VERIFICATION_STATUSES",
+    "VALID_EMPIRICAL_VERIFICATION_STATUSES",
     "VALID_RECALIBRATION_TRIGGERS",
-    "InvalidEquationError",
+    "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    "VERIFIED_VIA_SOURCE_INSPECTION",
+    "CanonicalEquation",
     "DomainOfValidityViolation",
     "EmpiricalAnchor",
-    "CanonicalEquation",
+    "InvalidEquationError",
 ]
