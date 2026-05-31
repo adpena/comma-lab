@@ -81,6 +81,8 @@ def test_full_video_vjp_plan_shards_archive_pairs_and_marks_probes_non_authority
         (4, 5),
     ]
     assert plan["parallel_workers"] == 3
+    assert plan["pair_chunk_updates_forbidden"] is True
+    assert plan["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
     assert plan["minibatch_window_gradients_budget_spend_authority"] is False
     assert plan["score_claim"] is False
 
@@ -104,7 +106,10 @@ def test_full_video_vjp_surface_bundle_requires_archive_pinned_complete_shards()
 
     assert bundle["linearization_archive_sha"] == sha
     assert bundle["full_video_surface_coverage"] is True
+    assert bundle["full_video_reduction_complete"] is True
     assert bundle["budget_spend_authority"] is True
+    assert bundle["optimizer_update_authority"] is True
+    assert bundle["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
     assert bundle["joint_weight"].shape == (4, 2, 16, 16, 3)
     assert bundle["rate_attack_deadzone_mask"].shape == (4, 2, 16, 16, 3)
 
@@ -128,6 +133,14 @@ def test_full_video_vjp_surface_bundle_rejects_partial_or_stale_shards() -> None
                 _surface_shard(start=0, end=2, archive_sha="b" * 64, value=0.0, shard_index=0),
                 _surface_shard(start=2, end=4, archive_sha=sha, value=0.1, shard_index=1),
             ],
+        )
+
+    bad_shard = _surface_shard(start=0, end=4, archive_sha=sha, value=0.0, shard_index=0)
+    bad_shard["optimizer_update_applied"] = True
+    with pytest.raises(ValueError, match="cannot carry optimizer update authority"):
+        assemble_z8_full_video_vjp_surface_bundle(
+            archive,
+            shard_surfaces=[bad_shard],
         )
 
 
@@ -167,6 +180,8 @@ def test_full_video_vjp_surface_bundle_writes_materializer_ready_npz(tmp_path: P
     assert Path(manifest["manifest_path"]).is_file()
     assert manifest["linearization_archive_sha"] == sha
     assert manifest["budget_spend_authority"] is True
+    assert manifest["optimizer_update_authority"] is True
+    assert manifest["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
     payload = np.load(manifest["surface_path"])
     assert payload["joint_weight"].shape == (2, 2, 16, 16, 3)
     assert payload["rate_attack_deadzone_mask"].shape == (2, 2, 16, 16, 3)
@@ -176,6 +191,7 @@ def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -
     contract = build_z8_full_video_vjp_acquisition_contract()
 
     assert "full_video_pair_grid_coverage" in contract["contest_budget_spend_requires"]
+    assert "single_optimizer_update_after_full_shard_reduction" in contract["contest_budget_spend_requires"]
     assert "declared_corpus_manifest" in contract["production_budget_spend_requires"]
     assert contract["minibatch_window_gradients_role"] == "ranking_probe_only_between_full_video_passes"
     assert contract["score_claim"] is False

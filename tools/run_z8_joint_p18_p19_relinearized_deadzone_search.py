@@ -55,6 +55,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--distortion-weight", type=float, default=10_000.0)
     parser.add_argument("--interaction-penalty-weight", type=float, default=10_000.0)
     parser.add_argument("--allow-reused-surface", action="store_true")
+    parser.add_argument(
+        "--allow-stale-surfaces",
+        action="store_true",
+        help=(
+            "Allow surfaces whose embedded linearization_archive_sha does not match "
+            "the current archive. Exact full-video relinearization keeps this off."
+        ),
+    )
     parser.add_argument("--max-pairs", type=int, default=None)
     parser.add_argument("--allow-without-pose-null-mask", action="store_true")
     parser.add_argument(
@@ -85,6 +93,7 @@ def main() -> int:
         emit_archive_zip=not args.no_archive_zip,
         emit_receiver_proof=args.emit_receiver_proof,
         require_full_video_surface_coverage=not args.allow_broadcast_surface,
+        require_surface_archive_freshness=not args.allow_stale_surfaces,
     )
     manifest = materialize_joint_p18_p19_relinearized_deadzone_search(
         args.archive_bin.read_bytes(),

@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -21,6 +23,7 @@ from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfil
     Z8JointCoefficientRelinearizationSearchConfig,
     Z8JointCoefficientWaterfillConfig,
     apply_joint_p18_p19_deadzone_to_z8_archive,
+    load_joint_p18_p19_surface_file,
     materialize_joint_p18_p19_deadzone_candidate,
     materialize_joint_p18_p19_relinearized_deadzone_search,
     run_joint_p18_p19_relinearized_deadzone_search,
@@ -53,6 +56,20 @@ def _archive_bytes(*, num_pairs: int = 1) -> bytes:
     return build_z8hpc1_archive_bytes_from_canonical_quadruple(binding, f0, f1)
 
 
+def _surface_for_archive(
+    archive_bytes: bytes,
+    joint_weight: np.ndarray,
+    pose_null_mask: np.ndarray | None,
+) -> dict[str, Any]:
+    return {
+        "joint_weight": joint_weight,
+        "rate_attack_deadzone_mask": pose_null_mask,
+        "linearization_archive_sha": hashlib.sha256(archive_bytes).hexdigest(),
+        "evidence_scope": "full_video",
+        "target_mode": "contest_video_overfit",
+    }
+
+
 def test_joint_p18_p19_deadzone_mutates_wavelet_details_and_reduces_rate() -> None:
     archive_bytes = _archive_bytes()
     original = parse_archive(archive_bytes)
@@ -62,8 +79,7 @@ def test_joint_p18_p19_deadzone_mutates_wavelet_details_and_reduces_rate() -> No
 
     result = apply_joint_p18_p19_deadzone_to_z8_archive(
         archive_bytes,
-        joint_weight=joint_weight,
-        rate_attack_deadzone_mask=pose_null_mask,
+        joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
         config=Z8JointCoefficientWaterfillConfig(
             joint_weight_quantile=1.0,
             coefficient_deadzone_quantile=1.0,
@@ -79,6 +95,7 @@ def test_joint_p18_p19_deadzone_mutates_wavelet_details_and_reduces_rate() -> No
     assert result["rate_report"]["after_wavelet_blob_bytes"] < result["rate_report"]["before_wavelet_blob_bytes"]
     assert result["distortion_report"]["small_receiver_distortion_measured"] is True
     assert result["distortion_report"]["max_abs_delta"] > 0.0
+    assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
     np.testing.assert_allclose(
         mutated_pyramids[0]["frame_0_top_ll"],
         original_pyramids[0]["frame_0_top_ll"],
@@ -101,8 +118,7 @@ def test_joint_p18_p19_deadzone_materializer_emits_byte_closed_archive(
     manifest = materialize_joint_p18_p19_deadzone_candidate(
         archive_bytes,
         tmp_path,
-        joint_weight=joint_weight,
-        rate_attack_deadzone_mask=pose_null_mask,
+        joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
         config=Z8JointCoefficientWaterfillConfig(
             joint_weight_quantile=1.0,
             coefficient_deadzone_quantile=1.0,
@@ -130,8 +146,7 @@ def test_joint_p18_p19_deadzone_rejects_pair_broadcast_surface_for_full_video() 
     with pytest.raises(ValueError, match="full_archive_pair_grid"):
         apply_joint_p18_p19_deadzone_to_z8_archive(
             archive_bytes,
-            joint_weight=joint_weight,
-            rate_attack_deadzone_mask=pose_null_mask,
+            joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
             config=Z8JointCoefficientWaterfillConfig(
                 joint_weight_quantile=1.0,
                 coefficient_deadzone_quantile=1.0,
@@ -150,8 +165,8 @@ def test_relinearized_search_requires_fresh_surfaces() -> None:
         run_joint_p18_p19_relinearized_deadzone_search(
             archive_bytes,
             surfaces=[
-                (joint_weight, pose_null_mask),
-                (joint_weight.copy(), pose_null_mask.copy()),
+                _surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
+                _surface_for_archive(archive_bytes, joint_weight.copy(), pose_null_mask.copy()),
             ],
             config=Z8JointCoefficientRelinearizationSearchConfig(
                 joint_weight_quantiles=(1.0,),
@@ -176,13 +191,15 @@ def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
     joint_weight_1[..., :8, :8, :] = 0.0
     pose_null_mask = np.ones_like(joint_weight_0, dtype=bool)
 
+    def surface_provider(_iteration_index: int, current_archive: bytes) -> dict[str, Any]:
+        current_sha = hashlib.sha256(current_archive).hexdigest()
+        joint_weight = joint_weight_0 if current_sha == hashlib.sha256(archive_bytes).hexdigest() else joint_weight_1
+        return _surface_for_archive(current_archive, joint_weight, pose_null_mask)
+
     manifest = materialize_joint_p18_p19_relinearized_deadzone_search(
         archive_bytes,
         tmp_path,
-        surfaces=[
-            (joint_weight_0, pose_null_mask),
-            (joint_weight_1, pose_null_mask),
-        ],
+        surface_provider=surface_provider,
         config=Z8JointCoefficientRelinearizationSearchConfig(
             joint_weight_quantiles=(1.0,),
             coefficient_deadzone_quantiles=(0.5, 1.0),
@@ -197,6 +214,7 @@ def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
     assert manifest["schema"] == Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA
     assert manifest["iterations_accepted"] == 2
     assert manifest["candidate_count"] == 4
+    assert all(row["surface_freshness_report"]["fresh_for_current_archive"] for row in manifest["accepted_candidates"])
     assert Path(manifest["candidate_bin_path"]).is_file()
     assert Path(manifest["archive_zip_path"]).is_file()
     assert Path(manifest["manifest_path"]).is_file()
@@ -208,3 +226,56 @@ def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
     assert manifest["receiver_proof_executed"] is False
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_joint_p18_p19_deadzone_rejects_stale_surface() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    with pytest.raises(ValueError, match="stale_tangent_plane"):
+        apply_joint_p18_p19_deadzone_to_z8_archive(
+            archive_bytes,
+            joint_weight={
+                "joint_weight": joint_weight,
+                "rate_attack_deadzone_mask": pose_null_mask,
+                "linearization_archive_sha": "b" * 64,
+                "evidence_scope": "full_video",
+            },
+            config=Z8JointCoefficientWaterfillConfig(
+                joint_weight_quantile=1.0,
+                coefficient_deadzone_quantile=1.0,
+                quantization_step=0.25,
+            ),
+        )
+
+
+def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
+    tmp_path: Path,
+) -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+    surface = _surface_for_archive(archive_bytes, joint_weight, pose_null_mask)
+    surface_path = tmp_path / "surface.npz"
+    np.savez_compressed(
+        surface_path,
+        joint_weight=joint_weight,
+        rate_attack_deadzone_mask=pose_null_mask,
+        linearization_archive_sha=np.asarray(surface["linearization_archive_sha"]),
+        evidence_scope=np.asarray(surface["evidence_scope"]),
+        target_mode=np.asarray(surface["target_mode"]),
+    )
+
+    loaded = load_joint_p18_p19_surface_file(surface_path)
+    result = apply_joint_p18_p19_deadzone_to_z8_archive(
+        archive_bytes,
+        joint_weight=loaded,
+        config=Z8JointCoefficientWaterfillConfig(
+            joint_weight_quantile=1.0,
+            coefficient_deadzone_quantile=1.0,
+            quantization_step=0.25,
+        ),
+    )
+
+    assert result["surface_freshness_report"]["fresh_for_current_archive"] is True

@@ -107,6 +107,8 @@ def build_z8_full_video_vjp_acquisition_plan(
         "full_video_residency_required": True,
         "surface_linearization_archive_sha_required": True,
         "surface_relinearization_required_after_accepted_mutation": True,
+        "pair_chunk_updates_forbidden": True,
+        "optimizer_update_semantics": "single_update_after_all_pair_shards_reduce",
         "minibatch_window_gradients_policy": (
             "ranking_probe_only_between_full_video_passes"
             if cfg.allow_minibatch_probe_between_full_passes
@@ -156,6 +158,11 @@ def assemble_z8_full_video_vjp_surface_bundle(
     mask_chunks: list[np.ndarray] = []
     shard_reports: list[dict[str, Any]] = []
     for shard_index, raw in enumerate(sorted(shard_surfaces, key=lambda row: int(row.get("pair_start", -1)))):
+        if raw.get("optimizer_update_applied") or raw.get("budget_spend_authority"):
+            raise ValueError(
+                "full-video VJP shards cannot carry optimizer update authority; "
+                "assemble the complete archive-pinned pair grid before updating"
+            )
         pair_start = int(raw.get("pair_start", -1))
         pair_end = int(raw.get("pair_end", -1))
         if pair_start != expected_start or pair_end <= pair_start:
@@ -184,6 +191,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 "pair_end": pair_end,
                 "pair_count": int(pair_end - pair_start),
                 "linearization_archive_sha": pinned,
+                "optimizer_update_applied": False,
             }
         )
 
@@ -208,8 +216,13 @@ def assemble_z8_full_video_vjp_surface_bundle(
         "pair_coverage_fraction": float(expected_start / archive_num_pairs) if archive_num_pairs else 1.0,
         "full_video_surface_coverage": bool(full_coverage),
         "full_video_vjp_is_first_class_acquisition_lane": True,
+        "full_video_reduction_complete": bool(full_coverage),
         "minibatch_window_gradients_budget_spend_authority": False,
         "budget_spend_authority": bool(full_coverage),
+        "optimizer_update_authority": bool(full_coverage),
+        "optimizer_update_semantics": (
+            "single_update_after_all_pair_shards_reduce" if full_coverage else "no_update_partial_surface_probe_only"
+        ),
         "surface_relinearization_required_after_accepted_mutation": True,
         "joint_weight": joint_full,
         "rate_attack_deadzone_mask": mask_full,
@@ -252,6 +265,8 @@ def write_z8_full_video_vjp_surface_bundle(
         "covered_pair_count": bundle["covered_pair_count"],
         "full_video_pair_count": bundle["full_video_pair_count"],
         "budget_spend_authority": bundle["budget_spend_authority"],
+        "optimizer_update_authority": bundle["optimizer_update_authority"],
+        "optimizer_update_semantics": bundle["optimizer_update_semantics"],
         "shard_count": bundle["shard_count"],
         "score_claim": False,
         "promotion_eligible": False,
@@ -276,6 +291,7 @@ def build_z8_full_video_vjp_acquisition_contract() -> dict[str, Any]:
         "contest_budget_spend_requires": [
             "full_video_pair_grid_coverage",
             "linearization_archive_sha_equals_current_archive_sha",
+            "single_optimizer_update_after_full_shard_reduction",
             "relinearize_after_each_accepted_archive_mutation",
             "receiver_proof_plus_exact_cpu_cuda_before_score_authority",
         ],

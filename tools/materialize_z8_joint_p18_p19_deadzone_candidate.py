@@ -25,6 +25,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--coefficient-deadzone-quantile", type=float, default=0.50)
     parser.add_argument("--quantization-step", type=float, default=1.0 / 255.0)
     parser.add_argument("--max-pairs", type=int, default=None)
+    parser.add_argument(
+        "--allow-stale-surface",
+        action="store_true",
+        help=(
+            "Allow a surface whose embedded linearization_archive_sha does not match "
+            "the archive. Exact full-video acquisition keeps this off."
+        ),
+    )
     parser.add_argument("--allow-without-pose-null-mask", action="store_true")
     parser.add_argument(
         "--allow-broadcast-surface",
@@ -38,7 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    joint_weight, safe_mask = load_joint_p18_p19_surface_file(args.surface)
+    surface = load_joint_p18_p19_surface_file(args.surface)
     config = Z8JointCoefficientWaterfillConfig(
         joint_weight_quantile=args.joint_weight_quantile,
         coefficient_deadzone_quantile=args.coefficient_deadzone_quantile,
@@ -48,12 +56,12 @@ def main() -> int:
         emit_archive_zip=not args.no_archive_zip,
         emit_receiver_proof=args.emit_receiver_proof,
         require_full_video_surface_coverage=not args.allow_broadcast_surface,
+        require_surface_archive_freshness=not args.allow_stale_surface,
     )
     manifest = materialize_joint_p18_p19_deadzone_candidate(
         args.archive_bin.read_bytes(),
         args.output_dir,
-        joint_weight=joint_weight,
-        rate_attack_deadzone_mask=safe_mask,
+        joint_weight=surface,
         config=config,
         repo_root=args.repo_root,
     )

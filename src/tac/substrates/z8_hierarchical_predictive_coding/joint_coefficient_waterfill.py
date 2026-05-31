@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -62,6 +62,7 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "dispatch_attempted": False,
     "gpu_launched": False,
 }
+FULL_VIDEO_EVIDENCE_SCOPE = "full_video"
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,7 @@ class Z8JointCoefficientWaterfillConfig:
     emit_archive_zip: bool = True
     emit_receiver_proof: bool = False
     require_full_video_surface_coverage: bool = True
+    require_surface_archive_freshness: bool = True
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -116,6 +118,7 @@ class Z8JointCoefficientRelinearizationSearchConfig:
     emit_archive_zip: bool = True
     emit_receiver_proof: bool = False
     require_full_video_surface_coverage: bool = True
+    require_surface_archive_freshness: bool = True
 
     def __post_init__(self) -> None:
         if self.max_iterations <= 0:
@@ -160,7 +163,12 @@ def _normalize_surface_array(value: Any, *, name: str) -> np.ndarray:
     return arr
 
 
-def _surface_digest(joint_weight: Any, safe_mask: Any | None) -> str:
+def _surface_digest(
+    joint_weight: Any,
+    safe_mask: Any | None,
+    *,
+    linearization_archive_sha: str | None = None,
+) -> str:
     h = hashlib.sha256()
     joint = np.ascontiguousarray(np.asarray(joint_weight, dtype=np.float64))
     h.update(str(joint.shape).encode("utf-8"))
@@ -169,20 +177,67 @@ def _surface_digest(joint_weight: Any, safe_mask: Any | None) -> str:
         mask = np.ascontiguousarray(np.asarray(safe_mask, dtype=bool))
         h.update(str(mask.shape).encode("utf-8"))
         h.update(mask.tobytes())
+    if linearization_archive_sha:
+        h.update(str(linearization_archive_sha).strip().lower().encode("ascii"))
     return h.hexdigest()
 
 
-def _surface_pair(surface: Any) -> tuple[Any, Any | None]:
-    if isinstance(surface, dict):
+def _surface_string(value: Any | None) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, np.ndarray):
+        if value.shape == ():
+            return str(value.item()).strip() or None
+        if value.size == 1:
+            return str(value.reshape(-1)[0]).strip() or None
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _surface_payload(
+    surface: Any,
+    rate_attack_deadzone_mask: Any | None = None,
+) -> dict[str, Any]:
+    if isinstance(surface, Mapping):
         if "joint_weight" not in surface:
             raise ValueError("surface dict must contain joint_weight")
-        return surface["joint_weight"], surface.get("rate_attack_deadzone_mask")
+        return {
+            "joint_weight": surface["joint_weight"],
+            "rate_attack_deadzone_mask": surface.get(
+                "rate_attack_deadzone_mask",
+                rate_attack_deadzone_mask,
+            ),
+            "linearization_archive_sha": _surface_string(
+                surface.get("linearization_archive_sha") or surface.get("archive_sha256")
+            ),
+            "evidence_scope": _surface_string(surface.get("evidence_scope")),
+            "target_mode": _surface_string(surface.get("target_mode")),
+        }
     if isinstance(surface, tuple) and len(surface) == 2:
-        return surface[0], surface[1]
-    return surface, None
+        return _surface_payload(
+            {"joint_weight": surface[0], "rate_attack_deadzone_mask": surface[1]},
+            rate_attack_deadzone_mask=rate_attack_deadzone_mask,
+        )
+    if isinstance(surface, tuple) and len(surface) == 3:
+        meta = dict(surface[2] or {})
+        meta.update({"joint_weight": surface[0], "rate_attack_deadzone_mask": surface[1]})
+        return _surface_payload(meta, rate_attack_deadzone_mask=rate_attack_deadzone_mask)
+    return {
+        "joint_weight": surface,
+        "rate_attack_deadzone_mask": rate_attack_deadzone_mask,
+        "linearization_archive_sha": None,
+        "evidence_scope": None,
+        "target_mode": None,
+    }
 
 
-def load_joint_p18_p19_surface_file(path: str | Path) -> tuple[Any, Any | None]:
+def _surface_pair(surface: Any) -> tuple[Any, Any | None]:
+    payload = _surface_payload(surface)
+    return payload["joint_weight"], payload.get("rate_attack_deadzone_mask")
+
+
+def load_joint_p18_p19_surface_file(path: str | Path) -> dict[str, Any]:
     """Load a joint surface file consumed by Z8 materializer/search CLIs."""
 
     p = Path(path)
@@ -191,13 +246,21 @@ def load_joint_p18_p19_surface_file(path: str | Path) -> tuple[Any, Any | None]:
         if "joint_weight" not in data:
             raise ValueError(f"{p} must contain joint_weight")
         mask = data.get("rate_attack_deadzone_mask", None)
-        return data["joint_weight"], mask
+        return _surface_payload(
+            {
+                "joint_weight": data["joint_weight"],
+                "rate_attack_deadzone_mask": mask,
+                "linearization_archive_sha": data.get("linearization_archive_sha", None),
+                "evidence_scope": data.get("evidence_scope", None),
+                "target_mode": data.get("target_mode", None),
+            }
+        )
     if p.suffix == ".npy":
-        return np.load(p), None
+        return _surface_payload(np.load(p))
     payload = json.loads(p.read_text(encoding="utf-8"))
     if "joint_weight" not in payload:
         raise ValueError(f"{p} JSON must contain joint_weight")
-    return payload["joint_weight"], payload.get("rate_attack_deadzone_mask")
+    return _surface_payload(payload)
 
 
 def _declared_pair_count(arr: np.ndarray | None) -> int | None:
@@ -233,6 +296,38 @@ def _full_video_surface_coverage_report(
         "rate_attack_deadzone_mask_declared_pair_count": safe_pair_count,
         "full_video_surface_coverage": bool(joint_ok and mask_ok),
         "blocker": (None if joint_ok and mask_ok else "joint_p18_p19_surface_does_not_cover_full_archive_pair_grid"),
+    }
+
+
+def _looks_like_sha256(value: str | None) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _surface_freshness_report(
+    *,
+    surface_payload: Mapping[str, Any],
+    current_archive_sha256: str,
+) -> dict[str, Any]:
+    linearized_at = _surface_string(surface_payload.get("linearization_archive_sha"))
+    evidence_scope = _surface_string(surface_payload.get("evidence_scope"))
+    blockers: list[str] = []
+    if not _looks_like_sha256(linearized_at):
+        blockers.append("z8_joint_surface_linearization_archive_sha_missing")
+    elif str(linearized_at).lower() != str(current_archive_sha256).lower():
+        blockers.append(
+            "z8_joint_surface_stale_tangent_plane:"
+            f"linearized_at={linearized_at}:current_archive={current_archive_sha256}"
+        )
+    if evidence_scope is not None and evidence_scope != FULL_VIDEO_EVIDENCE_SCOPE:
+        blockers.append(f"z8_joint_surface_not_full_video_scope:{evidence_scope}")
+    return {
+        "schema": "z8_joint_p18_p19_surface_freshness_report.v1",
+        "current_archive_sha256": current_archive_sha256,
+        "linearization_archive_sha": linearized_at,
+        "evidence_scope": evidence_scope,
+        "fresh_for_current_archive": not blockers,
+        "blockers": blockers,
     }
 
 
@@ -506,11 +601,16 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
     """Return mutated Z8HPC1 bytes plus rate/distortion measurement metadata."""
 
     cfg = config or Z8JointCoefficientWaterfillConfig()
-    joint_surface = _normalize_surface_array(joint_weight, name="joint_weight")
-    safe_mask = _as_bool_mask(rate_attack_deadzone_mask)
+    surface = _surface_payload(
+        joint_weight,
+        rate_attack_deadzone_mask=rate_attack_deadzone_mask,
+    )
+    joint_surface = _normalize_surface_array(surface["joint_weight"], name="joint_weight")
+    safe_mask = _as_bool_mask(surface.get("rate_attack_deadzone_mask"))
     if safe_mask is not None and safe_mask.shape != joint_surface.shape and safe_mask.size != 1:
         raise ValueError("rate_attack_deadzone_mask must match joint_weight shape or be scalar")
     arc = parse_archive(archive_bytes)
+    current_archive_sha256 = hashlib.sha256(archive_bytes).hexdigest()
     coverage_report = _full_video_surface_coverage_report(
         joint_surface=joint_surface,
         safe_mask=safe_mask,
@@ -519,6 +619,12 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
     )
     if cfg.require_full_video_surface_coverage and not coverage_report["full_video_surface_coverage"]:
         raise ValueError(str(coverage_report["blocker"]))
+    freshness_report = _surface_freshness_report(
+        surface_payload=surface,
+        current_archive_sha256=current_archive_sha256,
+    )
+    if cfg.require_surface_archive_freshness and not freshness_report["fresh_for_current_archive"]:
+        raise ValueError(",".join(str(item) for item in freshness_report["blockers"]))
     pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
     mutated_pyramids, coeff_report = _mutate_pair_pyramids(
         pair_pyramids,
@@ -574,12 +680,13 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         "schema": Z8_JOINT_COEFFICIENT_WATERFILL_SCHEMA,
         "role": Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE,
         "mutated_archive_bytes": mutated_archive,
-        "original_archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "original_archive_sha256": current_archive_sha256,
         "mutated_archive_sha256": hashlib.sha256(mutated_archive).hexdigest(),
         "coefficient_report": coeff_report,
         "rate_report": rate_report,
         "distortion_report": distortion,
         "full_video_surface_coverage_report": coverage_report,
+        "surface_freshness_report": freshness_report,
         "axis_tag": "[macOS-CPU advisory]",
         "allowed_use": "local_z8_rate_attack_materialization_and_acquisition_signal",
         "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
@@ -647,14 +754,15 @@ def materialize_joint_p18_p19_deadzone_candidate(
 def run_joint_p18_p19_relinearized_deadzone_search(
     archive_bytes: bytes,
     *,
-    surfaces: Sequence[Any],
+    surfaces: Sequence[Any] | None = None,
+    surface_provider: Callable[[int, bytes], Any] | None = None,
     config: Z8JointCoefficientRelinearizationSearchConfig | None = None,
 ) -> dict[str, Any]:
     """Run a bounded iterative Z8 dead-zone search over fresh joint surfaces."""
 
     cfg = config or Z8JointCoefficientRelinearizationSearchConfig()
-    if not surfaces:
-        raise ValueError("surfaces must not be empty")
+    if surface_provider is None and not surfaces:
+        raise ValueError("surfaces must not be empty unless surface_provider is provided")
     original = bytes(archive_bytes)
     current = original
     seen_surface_digests: set[str] = set()
@@ -663,9 +771,21 @@ def run_joint_p18_p19_relinearized_deadzone_search(
     previous_cumulative_mse = 0.0
     final_blocker: str | None = None
 
-    for iteration_index, raw_surface in enumerate(surfaces[: cfg.max_iterations]):
-        joint_weight, safe_mask = _surface_pair(raw_surface)
-        digest = _surface_digest(joint_weight, safe_mask)
+    for iteration_index in range(cfg.max_iterations):
+        if surface_provider is not None:
+            raw_surface = surface_provider(iteration_index, current)
+        else:
+            assert surfaces is not None
+            if iteration_index >= len(surfaces):
+                final_blocker = f"surface_sequence_exhausted_before_max_iterations:iteration={iteration_index}"
+                break
+            raw_surface = surfaces[iteration_index]
+        surface = _surface_payload(raw_surface)
+        digest = _surface_digest(
+            surface["joint_weight"],
+            surface.get("rate_attack_deadzone_mask"),
+            linearization_archive_sha=surface.get("linearization_archive_sha"),
+        )
         if cfg.require_fresh_surface_per_iteration and digest in seen_surface_digests:
             raise ValueError(
                 "fresh surface required for iterative relinearization; duplicate "
@@ -687,11 +807,11 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         emit_archive_zip=False,
                         emit_receiver_proof=False,
                         require_full_video_surface_coverage=bool(cfg.require_full_video_surface_coverage),
+                        require_surface_archive_freshness=bool(cfg.require_surface_archive_freshness),
                     )
                     result = apply_joint_p18_p19_deadzone_to_z8_archive(
                         current,
-                        joint_weight=joint_weight,
-                        rate_attack_deadzone_mask=safe_mask,
+                        joint_weight=surface,
                         config=waterfill_cfg,
                     )
                     mutated = bytes(result["mutated_archive_bytes"])
@@ -717,6 +837,7 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         "incremental_distortion_report": result["distortion_report"],
                         "cumulative_distortion_report": cumulative_distortion,
                         "full_video_surface_coverage_report": result["full_video_surface_coverage_report"],
+                        "surface_freshness_report": result["surface_freshness_report"],
                         "coefficient_summary": {
                             key: value for key, value in result["coefficient_report"].items() if key != "subband_stats"
                         },
@@ -770,7 +891,8 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
     archive_bytes: bytes,
     output_dir: str | Path,
     *,
-    surfaces: Sequence[Any],
+    surfaces: Sequence[Any] | None = None,
+    surface_provider: Callable[[int, bytes], Any] | None = None,
     config: Z8JointCoefficientRelinearizationSearchConfig | None = None,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
@@ -780,6 +902,7 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
     result = run_joint_p18_p19_relinearized_deadzone_search(
         archive_bytes,
         surfaces=surfaces,
+        surface_provider=surface_provider,
         config=cfg,
     )
     final_archive = bytes(result["final_archive_bytes_payload"])
@@ -832,6 +955,7 @@ __all__ = [
     "Z8JointCoefficientRelinearizationSearchConfig",
     "Z8JointCoefficientWaterfillConfig",
     "apply_joint_p18_p19_deadzone_to_z8_archive",
+    "load_joint_p18_p19_surface_file",
     "materialize_joint_p18_p19_deadzone_candidate",
     "materialize_joint_p18_p19_relinearized_deadzone_search",
     "run_joint_p18_p19_relinearized_deadzone_search",
