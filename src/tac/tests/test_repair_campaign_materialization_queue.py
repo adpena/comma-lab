@@ -17,6 +17,13 @@ from comma_lab.scheduler.repair_campaign_materialization_queue import (
     REPAIR_CAMPAIGN_FAMILY_MATERIALIZER_MANIFEST_SCHEMA,
     build_repair_campaign_byte_closed_materialization_queue,
 )
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
+from tac.optimization.archive_bound_candidate_contract_audit import (
+    ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_QUEUE_SCHEMA,
+    ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_ROW_SCHEMA,
+)
 from tac.optimization.repair_archive_candidate_intake import (
     REPAIR_ARCHIVE_CANDIDATE_INTAKE_SCHEMA,
     build_repair_campaign_work_order_from_archives,
@@ -779,6 +786,53 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
         queue_id="unit_repair_materialization",
     )
     queue_path = _write_json(tmp_path / "repair_materialization_queue.json", queue)
+    backlog_path = _write_json(
+        tmp_path / "contract_migration_backlog.json",
+        {
+            "schema": ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_QUEUE_SCHEMA,
+            "row_count": 1,
+            "rows": [
+                {
+                    "schema": ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_ROW_SCHEMA,
+                    "row_id": "archive_bound_contract_migration__0000__range_coder__materializer__archive__at_entropy_coder",
+                    "group_key": "range_coder|materializer|archive|at_entropy_coder",
+                    "family": "range_coder",
+                    "stage": "materializer",
+                    "scope": "archive",
+                    "entropy_position_label": "at_entropy_coder",
+                    "finding_count": 7,
+                    "source_paths": ["experiments/results/range_probe.json"],
+                    "source_sample_pointers": ["/archive_variant"],
+                    "work_selection_kind": "contract_migration_or_blocker_work",
+                    "smallest_executable_task": {
+                        "task_kind": "smallest_byte_closed_materializer_contract_migration",
+                        "required_output": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+                    },
+                    "required_output_contract_schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+                    "required_evidence": ["candidate_archive_sha256"],
+                    "acquisition_spend_preconditions": ["shared_contract_valid"],
+                    "contract_required_before_acquisition_spend": True,
+                    "posterior_ledger_required_before_acquisition_spend": True,
+                    "budget_spend_allowed": False,
+                    "ready_for_budget_spend": False,
+                    "allowed_use": "migration_backlog_routing_only",
+                    "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
+                    **_false_authority(),
+                }
+            ],
+            "acquisition_contract": {
+                "schema": "archive_bound_contract_migration_acquisition_guard.v1",
+                "shared_contract_surface_required": True,
+                "posterior_ledger_surface_required": True,
+                "migration_rows_may_not_spend_budget": True,
+                "migration_rows_may_only_open_materializer_or_blocker_work": True,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
     summary_path = tmp_path / "floor_loop_summary.json"
     posterior_path = tmp_path / "floor_loop_posterior.jsonl"
 
@@ -788,6 +842,8 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
             str(REPO_ROOT / "tools" / "run_repair_campaign_autonomous_floor_loop.py"),
             "--materialization-queue",
             str(queue_path),
+            "--contract-migration-backlog",
+            str(backlog_path),
             "--output-dir",
             str(tmp_path / "loop"),
             "--summary-out",
@@ -808,6 +864,19 @@ def test_repair_campaign_autonomous_floor_loop_cli_fails_closed(
     assert result.returncode == 0, result.stderr
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert summary["schema"] == "repair_campaign_autonomous_floor_loop.v1"
+    assert summary["contract_migration_backlog_consumed"] is True
+    assert summary["contract_migration_selected_work_order_count"] == 1
+    assert summary["contract_migration_selected_families"] == ["range_coder"]
+    assert summary["contract_migration_backlog_work_selection"]["selected_row_ids"] == [
+        "archive_bound_contract_migration__0000__range_coder__materializer__archive__at_entropy_coder"
+    ]
+    assert (
+        tmp_path / "loop" / "repair_contract_migration_backlog_work_selection.json"
+    ).is_file()
+    assert any(
+        blocker.startswith("contract_migration_backlog_pending:")
+        for blocker in summary["blockers"]
+    )
     stack_of_stacks = summary["predictive_coding_stack_of_stacks_plan"]
     assert stack_of_stacks["provenance_clean"] is True
     assert stack_of_stacks["compound_c_leakage_detected"] is False
@@ -1146,9 +1215,10 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
     )
     iteration = summary["iterations"][0]
     selected_report = iteration["frontier_selected_queue_report"]
-    assert summary["frontier_executable_selection_consumed"] is True
-    assert selected_report["selected_experiment_count"] == 2
-    assert selected_report["skipped_experiment_count"] == 1
+    assert summary["frontier_executable_selection_consumed"] is False
+    assert selected_report["selection_active"] is True
+    assert selected_report["selected_experiment_count"] == 0
+    assert selected_report["skipped_experiment_count"] == 3
     assert (
         selected_report["archive_bound_candidate_default_contract"][
             "candidate_archive_emission_default"
@@ -1161,22 +1231,21 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
         ]
         == 0
     )
-    assert selected_report["refused_non_contract_candidate_count"] == 0
-    assert summary["bounded_runner_refused_non_contract_candidate_count"] == 0
+    assert selected_report["refused_non_contract_candidate_count"] == 2
+    assert selected_report["refused_non_contract_candidate_experiment_ids"] == [
+        "segnet_region_ready",
+        "selector_codec_ready",
+    ]
+    assert summary["bounded_runner_refused_non_contract_candidate_count"] == 2
     assert summary["measured_mlx_posterior_budget_routing_update_count"] > 0
     assert summary["entropy_stage_materializer_work_order_count"] > 0
-    assert iteration["worker_queue_path"].endswith(
-        "iteration_1_frontier_selected_queue.json"
-    )
+    assert iteration["worker_queue_path"].endswith("queue.json")
     selected_queue = json.loads(
         (output_dir / "iteration_1_frontier_selected_queue.json").read_text(
             encoding="utf-8"
         )
     )
-    assert [experiment["id"] for experiment in selected_queue["experiments"]] == [
-        "segnet_region_ready",
-        "selector_codec_ready",
-    ]
+    assert selected_queue["experiments"] == []
     assert summary["stop_reason"] == "precise_exact_axis_blocker"
     assert summary["exact_dispatch_preclaim_gate_count"] == 2
     assert summary["failure_rebudgeting_update_count"] == 2

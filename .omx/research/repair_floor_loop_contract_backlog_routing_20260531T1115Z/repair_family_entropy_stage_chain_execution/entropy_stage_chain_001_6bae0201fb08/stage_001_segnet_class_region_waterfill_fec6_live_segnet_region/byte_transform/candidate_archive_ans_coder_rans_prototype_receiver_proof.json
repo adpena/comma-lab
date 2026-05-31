@@ -1,0 +1,120 @@
+{
+  "blockers": [
+    "ans_coder_exact_axis_adjudication_missing",
+    "contest_runtime_decoder_adapter_integration_missing",
+    "ans_coder_prototype_not_rate_positive"
+  ],
+  "candidate_archive": {
+    "bytes": 179319,
+    "path": ".omx/research/repair_floor_loop_contract_backlog_routing_20260531T1115Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_001_segnet_class_region_waterfill_fec6_live_segnet_region/byte_transform/candidate_archive_ans_coder_rans_prototype.zip",
+    "sha256": "d200035228b62cef5d14d43e519e1b66b16ff27875e4421d694f7d7d9370d942"
+  },
+  "candidate_member": {
+    "bytes": 179219,
+    "name": "x",
+    "sha256": "81ffeb2e29487062d5b02bb62ce075007254250aecc40650d63de6a010f9539b",
+    "zip_compressed_bytes": 179219,
+    "zip_compression_method": 0
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "contest_runtime_adapter_integrated": false,
+  "contest_runtime_decoder_adapter_integrated": false,
+  "contest_runtime_decoder_adapter_ready": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "materializer_id": "repair_family_byte_transform_executor:ans_coder_rans_prototype",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "ans_coder_rans_prototype_decode_adapter_proof.v1",
+  "proof_scope": "encoded_member_decodes_to_source_member_payload",
+  "prototype_codec": {
+    "coded_member_bytes": 179219,
+    "coded_member_sha256": "81ffeb2e29487062d5b02bb62ce075007254250aecc40650d63de6a010f9539b",
+    "coder_family": "ans",
+    "decoded_member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+    "schema": "repair_archive_entropy_coder_prototype_codec.v1",
+    "semantic_entropy_stage": "at_entropy_coder_fractional_code_boundary",
+    "source_member_bytes": 178417,
+    "source_member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+    "transform_kind": "ans_coder_rans_prototype",
+    "zero_order_entropy_stats": {
+      "byte_count": 178417,
+      "entropy_bits_per_symbol": 7.998654500449476,
+      "schema": "repair_archive_zero_order_entropy_stats.v1",
+      "unique_symbol_count": 256,
+      "zero_order_lower_bound_bits": 1427095.940006694,
+      "zero_order_lower_bound_bytes": 178387,
+      "zero_order_redundancy_bytes": 30
+    }
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "repair_family_ans_coder_rans_prototype_v1.receiver.v1",
+  "receiver_contract_kind": "repair_archive_ans_rans_prototype_runtime_adapter",
+  "receiver_contract_satisfied": true,
+  "runtime_adapter_manifest": {
+    "coder_family": "ans",
+    "contest_runtime_adapter_integrated": false,
+    "contest_runtime_decoder_adapter_integrated": false,
+    "contest_runtime_decoder_adapter_ready": false,
+    "decode_function": "ans_rans_prototype_decode",
+    "decode_only_receiver_contract": true,
+    "encode_function": "ans_rans_prototype_encode",
+    "module": "tac.optimization.repair_entropy_coder_runtime_adapters",
+    "network_access": false,
+    "packet_magic_hex": "544143414e533100",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "readiness_blockers": [
+      "contest_runtime_decoder_adapter_integration_missing"
+    ],
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_adapter_ready": true,
+    "runtime_adapter_scope": "member_decode_helper_only",
+    "schema": "repair_entropy_coder_runtime_adapter_manifest.v1",
+    "score_claim": false,
+    "scorer_state_access": false,
+    "sidecar_fetch": false,
+    "stdlib_only": true,
+    "transform_kind": "ans_coder_rans_prototype"
+  },
+  "runtime_adapter_ready": true,
+  "runtime_adapter_scope": "member_decode_helper_only",
+  "runtime_consumption_probe": {
+    "archive_zip_readable": true,
+    "decoded_matches_source_member": true,
+    "decoded_member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+    "decoder_adapter_function": "ans_rans_prototype_decode",
+    "decoder_adapter_invoked": true,
+    "decoder_adapter_module": "tac.optimization.repair_entropy_coder_runtime_adapters",
+    "encoded_member_sha256": "81ffeb2e29487062d5b02bb62ce075007254250aecc40650d63de6a010f9539b",
+    "passed": true,
+    "schema": "ans_coder_rans_prototype_decode_probe.v1",
+    "selected_member_name": "x",
+    "source_member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "repair_archive_entropy_coder_prototype_runtime_consumption_proof.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178517,
+    "path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/intake/source_archive_custody/fec6_live/receiver_closed_archive.zip",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+  },
+  "source_member": {
+    "bytes": 178417,
+    "name": "x",
+    "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+    "zip_compressed_bytes": 178417,
+    "zip_compression_method": 0
+  },
+  "target_kind": "repair_family_ans_coder_rans_prototype_v1"
+}

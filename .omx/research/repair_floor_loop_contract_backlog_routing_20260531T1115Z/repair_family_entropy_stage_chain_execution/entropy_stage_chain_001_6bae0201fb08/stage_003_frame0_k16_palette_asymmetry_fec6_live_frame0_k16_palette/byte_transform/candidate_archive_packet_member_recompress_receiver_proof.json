@@ -1,0 +1,73 @@
+{
+  "candidate_archive": {
+    "bytes": 178514,
+    "path": "/Users/adpena/Projects/pact/.omx/research/repair_floor_loop_contract_backlog_routing_20260531T1115Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_003_frame0_k16_palette_asymmetry_fec6_live_frame0_k16_palette/byte_transform/candidate_archive_packet_member_recompress.zip",
+    "sha256": "ba77cbfad59f77611830fec799710b54f3397da395b1cb5712f8063f883beb01"
+  },
+  "candidate_archive_sha256": "ba77cbfad59f77611830fec799710b54f3397da395b1cb5712f8063f883beb01",
+  "candidate_member": {
+    "bytes": 178414,
+    "name": "x",
+    "sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+    "zip_compressed_bytes": 178414,
+    "zip_compressed_payload_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+    "zip_compressed_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+    "zip_compression_method": "stored"
+  },
+  "candidate_member_payload_identical_to_source": true,
+  "candidate_member_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "packet_member_recompress_adapter",
+  "member_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+  "proof_scope": "zip_member_payload_identity_after_archive_recompression",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "candidate_member_bytes": 178414,
+    "candidate_member_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+    "passed": true,
+    "schema": "packet_member_payload_identity_probe.v1",
+    "source_member_bytes": 178414,
+    "source_member_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_compression": {
+    "candidate_archive_bytes": 178514,
+    "compression_method": "stored",
+    "compresslevel": null,
+    "saved_bytes": 0,
+    "source_archive_bytes": 178514
+  },
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178514,
+    "path": "/Users/adpena/Projects/pact/.omx/research/repair_floor_loop_contract_backlog_routing_20260531T1115Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_002_posenet_null_bottom_decile_fec6_live_posenet_bottom_decile/byte_transform/candidate_archive_fec6_selector_payload_mutation.zip",
+    "sha256": "ba77cbfad59f77611830fec799710b54f3397da395b1cb5712f8063f883beb01"
+  },
+  "source_member": {
+    "bytes": 178414,
+    "name": "x",
+    "sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+    "zip_compressed_bytes": 178414,
+    "zip_compressed_payload_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+    "zip_compressed_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+    "zip_compression_method": "stored"
+  },
+  "source_member_sha256": "b04fde884ce0f0db55168da8fefc957c8493b755af30e5855c03dec4772d2f97",
+  "target_kind": "packet_member_recompress_v1"
+}

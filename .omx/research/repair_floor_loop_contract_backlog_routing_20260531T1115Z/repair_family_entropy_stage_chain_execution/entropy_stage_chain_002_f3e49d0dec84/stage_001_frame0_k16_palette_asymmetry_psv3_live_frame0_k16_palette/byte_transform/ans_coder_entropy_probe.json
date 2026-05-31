@@ -1,0 +1,48 @@
+{
+  "archive_native_transform_kind": "ans_coder_entropy_probe",
+  "blockers": [
+    "ans_coder_materializer_missing",
+    "ans_coder_runtime_adapter_missing"
+  ],
+  "budget_spend_allowed": false,
+  "charged_bits_changed": false,
+  "coder_family": "ans",
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "estimated_zero_order_savings_bytes": 87,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "materializer_status": "probe_only_materializer_missing",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": false,
+  "runtime_consumption_proof_ready": false,
+  "schema": "repair_archive_entropy_coder_boundary_probe.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_member": {
+    "bytes": 104458,
+    "name": "0.bin",
+    "sha256": "f02577606a96d8c4ce6584530b111f771b05e9a140d3f11c030292e833275e19",
+    "zip_compressed_bytes": 104458,
+    "zip_compression_method": 0
+  },
+  "semantic_entropy_stage": "at_entropy_coder_fractional_code_boundary",
+  "source_archive_bytes": 112133,
+  "source_archive_path": ".omx/research/repair_multi_archive_autonomous_stage_disciplined_psv3_fec6_20260528T0648Z/intake/source_archive_custody/psv3_live/receiver_closed_archive.zip",
+  "source_archive_sha256": "f3e49d0dec8402ef5d3233bf726c7f73372e93a955c8a002b67faf7bfb2484d6",
+  "zero_order_entropy_stats": {
+    "byte_count": 104458,
+    "entropy_bits_per_symbol": 7.993314998397663,
+    "schema": "repair_archive_zero_order_entropy_stats.v1",
+    "unique_symbol_count": 256,
+    "zero_order_lower_bound_bits": 834965.6981026231,
+    "zero_order_lower_bound_bytes": 104371,
+    "zero_order_redundancy_bytes": 87
+  }
+}

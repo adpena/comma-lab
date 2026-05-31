@@ -25,6 +25,10 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.optimization.archive_bound_candidate_contract_audit import (  # noqa: E402
+    ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_QUEUE_SCHEMA,
+    ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_ROW_SCHEMA,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import (  # noqa: E402
     FALSE_AUTHORITY,
 )
@@ -96,6 +100,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--require-family-id", action="append", default=[])
     parser.add_argument("--require-all-queue-families", action="store_true")
     parser.add_argument("--submission-dir", action="append", default=[], type=Path)
+    parser.add_argument("--contract-migration-backlog", type=Path)
     parser.add_argument("--execute-local", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
@@ -123,6 +128,33 @@ def _load_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise RepairCampaignAutonomousFloorLoopError(f"{path} must contain a JSON object")
+    return payload
+
+
+def _load_contract_migration_backlog(
+    path: Path | None,
+) -> dict[str, Any]:
+    if path is None:
+        return {
+            "schema": ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_QUEUE_SCHEMA,
+            "row_count": 0,
+            "rows": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    payload = _load_json(path)
+    if payload.get("schema") != ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_QUEUE_SCHEMA:
+        raise RepairCampaignAutonomousFloorLoopError(
+            "contract migration backlog must have schema "
+            f"{ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_QUEUE_SCHEMA}; "
+            f"got {payload.get('schema')!r}"
+        )
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"contract_migration_backlog:{path}",
+    )
     return payload
 
 
@@ -660,6 +692,81 @@ def _frontier_selected_queue(
         context="repair_campaign_frontier_selected_queue_report_after_contract",
     )
     return filtered_queue, report
+
+
+def _contract_migration_backlog_work_selection(
+    *,
+    backlog: dict[str, Any],
+    backlog_path: Path | None,
+    limit: int = 12,
+) -> dict[str, Any]:
+    rows = [row for row in backlog.get("rows") or [] if isinstance(row, dict)]
+    eligible = [
+        row
+        for row in rows
+        if row.get("schema") == ARCHIVE_BOUND_CONTRACT_MIGRATION_BACKLOG_ROW_SCHEMA
+        and row.get("work_selection_kind") == "contract_migration_or_blocker_work"
+    ]
+    selected = sorted(
+        eligible,
+        key=lambda row: (
+            -int(row.get("finding_count") or 0),
+            str(row.get("family") or ""),
+            str(row.get("stage") or ""),
+            str(row.get("scope") or ""),
+            str(row.get("entropy_position_label") or ""),
+        ),
+    )[: max(0, limit)]
+    blockers = [
+        f"contract_migration_backlog_pending:{row.get('row_id')}"
+        for row in selected
+        if row.get("row_id")
+    ]
+    selection = {
+        "schema": "repair_campaign_contract_migration_backlog_work_selection.v1",
+        "source_backlog_path": None if backlog_path is None else _repo_rel(backlog_path),
+        "source_backlog_schema": backlog.get("schema"),
+        "source_backlog_row_count": len(rows),
+        "eligible_work_order_count": len(eligible),
+        "selected_work_order_count": len(selected),
+        "selected_work_order_limit": limit,
+        "selected_row_ids": [str(row.get("row_id") or "") for row in selected],
+        "selected_families": ordered_unique(
+            str(row.get("family") or "") for row in selected if row.get("family")
+        ),
+        "selected_stages": ordered_unique(
+            str(row.get("stage") or "") for row in selected if row.get("stage")
+        ),
+        "selected_scopes": ordered_unique(
+            str(row.get("scope") or "") for row in selected if row.get("scope")
+        ),
+        "selected_entropy_positions": ordered_unique(
+            str(row.get("entropy_position_label") or "")
+            for row in selected
+            if row.get("entropy_position_label")
+        ),
+        "selected_work_orders": selected,
+        "routing_policy": (
+            "open the smallest byte-closed materializer or precise blocker task "
+            "before acquisition may spend on this family/stage/scope"
+        ),
+        "required_output_contract_schema": "tac_archive_bound_candidate_contract.v1",
+        "contract_required_before_acquisition_spend": True,
+        "posterior_ledger_required_before_acquisition_spend": True,
+        "blockers": blockers,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        selection,
+        context="repair_campaign_contract_migration_backlog_work_selection",
+    )
+    return selection
 
 
 def _entropy_compiler_stage(row: dict[str, Any]) -> str:
@@ -1211,10 +1318,18 @@ def _build_summary(
     required_family_ids: Sequence[str] = (),
     require_all_queue_families: bool = False,
     submission_dirs: Sequence[Path] = (),
+    contract_migration_backlog_path: Path | None = None,
     overwrite_artifacts: bool = False,
 ) -> dict[str, Any]:
     queue = _load_json(queue_path)
     require_no_truthy_authority_fields(queue, context="autonomous_floor_loop_queue")
+    contract_migration_backlog = _load_contract_migration_backlog(
+        contract_migration_backlog_path
+    )
+    contract_migration_work_selection = _contract_migration_backlog_work_selection(
+        backlog=contract_migration_backlog,
+        backlog_path=contract_migration_backlog_path,
+    )
     queue_family_ids = _queue_family_ids(queue)
     required_families = ordered_unique(
         [
@@ -1345,6 +1460,9 @@ def _build_summary(
             break
     stack_plan_path = output_dir / "repair_family_stack_search_plan.json"
     exact_handoff_plan_path = output_dir / "repair_family_exact_handoff_plan.json"
+    contract_migration_work_selection_path = (
+        output_dir / "repair_contract_migration_backlog_work_selection.json"
+    )
     entropy_stage_materializer_work_orders = (
         _compile_entropy_stage_materializer_work_orders(final_stack_plan)
     )
@@ -1417,6 +1535,40 @@ def _build_summary(
         "materialization_queue_schema": queue.get("schema"),
         "output_dir": _repo_rel(output_dir),
         "posterior_path": None if posterior_path is None else str(posterior_path),
+        "contract_migration_backlog_path": (
+            None
+            if contract_migration_backlog_path is None
+            else _repo_rel(contract_migration_backlog_path)
+        ),
+        "contract_migration_backlog_schema": contract_migration_backlog.get("schema"),
+        "contract_migration_backlog_row_count": int(
+            contract_migration_backlog.get("row_count")
+            or len(contract_migration_backlog.get("rows") or [])
+        ),
+        "contract_migration_backlog_consumed": (
+            contract_migration_backlog_path is not None
+        ),
+        "contract_migration_backlog_work_selection_path": _repo_rel(
+            contract_migration_work_selection_path
+        ),
+        "contract_migration_backlog_work_selection": (
+            contract_migration_work_selection
+        ),
+        "contract_migration_selected_work_order_count": (
+            contract_migration_work_selection["selected_work_order_count"]
+        ),
+        "contract_migration_selected_families": (
+            contract_migration_work_selection["selected_families"]
+        ),
+        "contract_migration_selected_stages": (
+            contract_migration_work_selection["selected_stages"]
+        ),
+        "contract_migration_selected_scopes": (
+            contract_migration_work_selection["selected_scopes"]
+        ),
+        "contract_migration_selected_entropy_positions": (
+            contract_migration_work_selection["selected_entropy_positions"]
+        ),
         "byte_credit_budget": byte_credit_budget,
         "max_iterations": max_iterations,
         "max_steps_per_iteration": max_steps_per_iteration,
@@ -1731,6 +1883,7 @@ def _build_summary(
             "probe_only_entropy_variant_signals_open_queue_owned_materializer_backlog_tasks",
             "range_ans_runtime_adapters_decode_candidate_members_inside_receiver_proofs",
             "fec_selector_header_huffman_range_ans_zip_variants_emit_common_archive_bound_candidate_contracts",
+            "contract_migration_backlog_rows_become_runner_work_selection",
             "validated_predictive_coding_stack_of_stacks_consumed_by_runner",
             "precise_blocker_report_names_next_unblocked_action",
         ],
@@ -1742,15 +1895,16 @@ def _build_summary(
                 *_string_list(predictive_stack_plan.get("blockers")),
                 *[
                     blocker
-                    for item in iterations
-                    if isinstance(item.get("frontier_selected_queue_report"), dict)
-                    for blocker in _string_list(
-                        item["frontier_selected_queue_report"].get("blockers")
-                    )
+                for item in iterations
+                if isinstance(item.get("frontier_selected_queue_report"), dict)
+                for blocker in _string_list(
+                    item["frontier_selected_queue_report"].get("blockers")
+                )
                     if str(blocker).startswith(
                         "bounded_runner_refused_non_contract_candidate_path:"
                     )
                 ],
+                *_string_list(contract_migration_work_selection.get("blockers")),
                 *(
                     []
                     if final_stack_plan.get("execution_report_count")
@@ -1793,6 +1947,11 @@ def main(argv: list[str] | None = None) -> int:
             required_family_ids=tuple(args.require_family_id),
             require_all_queue_families=bool(args.require_all_queue_families),
             submission_dirs=tuple(args.submission_dir),
+            contract_migration_backlog_path=(
+                None
+                if args.contract_migration_backlog is None
+                else _resolve(args.contract_migration_backlog)
+            ),
             overwrite_artifacts=bool(args.overwrite),
         )
         stack_plan_path = output_dir / "repair_family_stack_search_plan.json"
@@ -1819,10 +1978,17 @@ def main(argv: list[str] | None = None) -> int:
         entropy_stage_materializer_work_orders_path = (
             output_dir / "repair_family_entropy_stage_materializer_work_orders.json"
         )
+        contract_migration_work_selection_path = (
+            output_dir / "repair_contract_migration_backlog_work_selection.json"
+        )
         entropy_stage_chain_execution_bundle_path = (
             output_dir / "repair_family_entropy_stage_chain_execution_bundle.json"
         )
         for path, payload in (
+            (
+                contract_migration_work_selection_path,
+                summary["contract_migration_backlog_work_selection"],
+            ),
             (
                 entropy_stage_materializer_work_orders_path,
                 summary["entropy_stage_materializer_work_orders"],

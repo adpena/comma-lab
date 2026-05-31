@@ -2046,8 +2046,12 @@ def _runtime_proof_record(
             **FALSE_AUTHORITY,
         }, blockers
     candidate = _mapping(archive_bound_contract.get("candidate_archive"))
+    identity = _mapping(archive_bound_contract.get("contract_identity"))
     path_text = str(
-        candidate.get("runtime_consumption_proof_path") or ""
+        candidate.get("runtime_consumption_proof_path")
+        or archive_bound_contract.get("runtime_consumption_proof_path")
+        or identity.get("runtime_consumption_proof_path")
+        or ""
     ).strip()
     blockers: list[str] = []
     present = False
@@ -2540,15 +2544,61 @@ def _chain_exact_handoff_candidate_row(
             for contract in contracts
             if contract.get("selected_archive_transform_variant") is True
         ]
+        chain_archive = _mapping(chain_report.get("candidate_archive"))
+        final_stage_archive = _mapping(final_stage.get("stage_output_archive"))
+        target_archive_path = str(
+            chain_archive.get("path") or final_stage_archive.get("path") or ""
+        ).strip()
+        target_archive_sha = str(
+            chain_archive.get("sha256") or final_stage_archive.get("sha256") or ""
+        ).strip()
+        path_matching_contracts = [
+            contract
+            for contract in (selected_contracts or contracts)
+            for candidate in [_mapping(contract.get("candidate_archive"))]
+            if target_archive_path
+            and str(candidate.get("path") or "").strip() == target_archive_path
+        ]
+        sha_matching_contracts = [
+            contract
+            for contract in (selected_contracts or contracts)
+            for candidate in [_mapping(contract.get("candidate_archive"))]
+            if target_archive_sha
+            and str(candidate.get("sha256") or "").strip() == target_archive_sha
+        ]
+        matching_contracts = (
+            path_matching_contracts
+            if path_matching_contracts
+            else sha_matching_contracts
+        )
         archive_bound_contract = (
-            selected_contracts[0] if selected_contracts else contracts[0] if contracts else {}
+            matching_contracts[0]
+            if matching_contracts
+            else selected_contracts[-1]
+            if selected_contracts
+            else contracts[-1]
+            if contracts
+            else {}
         )
     candidate_archive = dict(_mapping(archive_bound_contract.get("candidate_archive")))
+    for archive in (
+        _mapping(final_stage.get("stage_output_archive")),
+        _mapping(chain_report.get("candidate_archive")),
+    ):
+        candidate_archive.update(
+            {key: value for key, value in archive.items() if value not in ("", None)}
+        )
+    contract_identity = _mapping(archive_bound_contract.get("contract_identity"))
     runtime_proof_path = str(
-        candidate_archive.get("runtime_consumption_proof_path") or ""
+        final_stage.get("stage_runtime_consumption_proof_path")
+        or candidate_archive.get("runtime_consumption_proof_path")
+        or archive_bound_contract.get("runtime_consumption_proof_path")
+        or contract_identity.get("runtime_consumption_proof_path")
+        or ""
     ).strip()
     runtime_proof_ready = (
         archive_bound_contract.get("runtime_consumption_proof_ready") is True
+        or candidate_archive.get("runtime_consumption_proof_ready") is True
     )
     runtime_proof = {
         "schema": "repair_family_exact_handoff_runtime_proof_custody.v1",
