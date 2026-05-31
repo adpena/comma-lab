@@ -180,6 +180,7 @@ __all__ = [
     "hi_nerv",
     "hybrid_renderer_residual",
     "pr101_lc_v2_clone",
+    "predictive_coding_stack_of_stacks",
     "sane_hnerv",
     "self_compress_nn",
     "siren",
