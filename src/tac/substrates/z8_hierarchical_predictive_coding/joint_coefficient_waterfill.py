@@ -63,6 +63,8 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "gpu_launched": False,
 }
 FULL_VIDEO_EVIDENCE_SCOPE = "full_video"
+FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION = "full_video_exact_accumulation"
+SINGLE_UPDATE_AFTER_FULL_REDUCTION = "single_update_after_all_pair_shards_reduce"
 
 
 @dataclass(frozen=True)
@@ -78,6 +80,7 @@ class Z8JointCoefficientWaterfillConfig:
     emit_receiver_proof: bool = False
     require_full_video_surface_coverage: bool = True
     require_surface_archive_freshness: bool = True
+    require_exact_full_video_gradient_reduction: bool = True
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -119,6 +122,7 @@ class Z8JointCoefficientRelinearizationSearchConfig:
     emit_receiver_proof: bool = False
     require_full_video_surface_coverage: bool = True
     require_surface_archive_freshness: bool = True
+    require_exact_full_video_gradient_reduction: bool = True
 
     def __post_init__(self) -> None:
         if self.max_iterations <= 0:
@@ -195,6 +199,18 @@ def _surface_string(value: Any | None) -> str | None:
     return text or None
 
 
+def _surface_bool(value: Any | None) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, np.ndarray):
+        if value.shape == ():
+            return bool(value.item())
+        if value.size == 1:
+            return bool(value.reshape(-1)[0])
+        return None
+    return bool(value)
+
+
 def _surface_payload(
     surface: Any,
     rate_attack_deadzone_mask: Any | None = None,
@@ -213,6 +229,12 @@ def _surface_payload(
             ),
             "evidence_scope": _surface_string(surface.get("evidence_scope")),
             "target_mode": _surface_string(surface.get("target_mode")),
+            "gradient_reduction_semantics": _surface_string(surface.get("gradient_reduction_semantics")),
+            "gradient_reduction_authority": _surface_bool(surface.get("gradient_reduction_authority")),
+            "optimizer_update_authority": _surface_bool(surface.get("optimizer_update_authority")),
+            "optimizer_update_semantics": _surface_string(surface.get("optimizer_update_semantics")),
+            "full_video_reduction_complete": _surface_bool(surface.get("full_video_reduction_complete")),
+            "budget_spend_authority": _surface_bool(surface.get("budget_spend_authority")),
         }
     if isinstance(surface, tuple) and len(surface) == 2:
         return _surface_payload(
@@ -229,6 +251,12 @@ def _surface_payload(
         "linearization_archive_sha": None,
         "evidence_scope": None,
         "target_mode": None,
+        "gradient_reduction_semantics": None,
+        "gradient_reduction_authority": None,
+        "optimizer_update_authority": None,
+        "optimizer_update_semantics": None,
+        "full_video_reduction_complete": None,
+        "budget_spend_authority": None,
     }
 
 
@@ -253,6 +281,21 @@ def load_joint_p18_p19_surface_file(path: str | Path) -> dict[str, Any]:
                 "linearization_archive_sha": data.get("linearization_archive_sha", None),
                 "evidence_scope": data.get("evidence_scope", None),
                 "target_mode": data.get("target_mode", None),
+                "gradient_reduction_semantics": data.get(
+                    "gradient_reduction_semantics",
+                    None,
+                ),
+                "gradient_reduction_authority": data.get(
+                    "gradient_reduction_authority",
+                    None,
+                ),
+                "optimizer_update_authority": data.get("optimizer_update_authority", None),
+                "optimizer_update_semantics": data.get("optimizer_update_semantics", None),
+                "full_video_reduction_complete": data.get(
+                    "full_video_reduction_complete",
+                    None,
+                ),
+                "budget_spend_authority": data.get("budget_spend_authority", None),
             }
         )
     if p.suffix == ".npy":
@@ -327,6 +370,42 @@ def _surface_freshness_report(
         "linearization_archive_sha": linearized_at,
         "evidence_scope": evidence_scope,
         "fresh_for_current_archive": not blockers,
+        "blockers": blockers,
+    }
+
+
+def _surface_gradient_reduction_report(
+    *,
+    surface_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    semantics = _surface_string(surface_payload.get("gradient_reduction_semantics"))
+    gradient_authority = _surface_bool(surface_payload.get("gradient_reduction_authority"))
+    optimizer_authority = _surface_bool(surface_payload.get("optimizer_update_authority"))
+    optimizer_semantics = _surface_string(surface_payload.get("optimizer_update_semantics"))
+    full_video_reduction_complete = _surface_bool(surface_payload.get("full_video_reduction_complete"))
+    budget_spend_authority = _surface_bool(surface_payload.get("budget_spend_authority"))
+    blockers: list[str] = []
+    if semantics != FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION:
+        blockers.append("z8_joint_surface_gradient_reduction_not_exact_full_video_accumulation")
+    if gradient_authority is not True:
+        blockers.append("z8_joint_surface_gradient_reduction_authority_missing")
+    if optimizer_authority is not True:
+        blockers.append("z8_joint_surface_optimizer_update_authority_missing")
+    if optimizer_semantics != SINGLE_UPDATE_AFTER_FULL_REDUCTION:
+        blockers.append("z8_joint_surface_optimizer_update_semantics_not_single_full_reduction")
+    if full_video_reduction_complete is not True:
+        blockers.append("z8_joint_surface_full_video_reduction_not_complete")
+    if budget_spend_authority is not True:
+        blockers.append("z8_joint_surface_budget_spend_authority_missing")
+    return {
+        "schema": "z8_joint_p18_p19_surface_gradient_reduction_report.v1",
+        "gradient_reduction_semantics": semantics,
+        "gradient_reduction_authority": gradient_authority,
+        "optimizer_update_authority": optimizer_authority,
+        "optimizer_update_semantics": optimizer_semantics,
+        "full_video_reduction_complete": full_video_reduction_complete,
+        "budget_spend_authority": budget_spend_authority,
+        "exact_full_video_gradient_reduction": not blockers,
         "blockers": blockers,
     }
 
@@ -625,6 +704,14 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
     )
     if cfg.require_surface_archive_freshness and not freshness_report["fresh_for_current_archive"]:
         raise ValueError(",".join(str(item) for item in freshness_report["blockers"]))
+    gradient_reduction_report = _surface_gradient_reduction_report(
+        surface_payload=surface,
+    )
+    if (
+        cfg.require_exact_full_video_gradient_reduction
+        and not gradient_reduction_report["exact_full_video_gradient_reduction"]
+    ):
+        raise ValueError(",".join(str(item) for item in gradient_reduction_report["blockers"]))
     pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
     mutated_pyramids, coeff_report = _mutate_pair_pyramids(
         pair_pyramids,
@@ -687,6 +774,7 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         "distortion_report": distortion,
         "full_video_surface_coverage_report": coverage_report,
         "surface_freshness_report": freshness_report,
+        "surface_gradient_reduction_report": gradient_reduction_report,
         "axis_tag": "[macOS-CPU advisory]",
         "allowed_use": "local_z8_rate_attack_materialization_and_acquisition_signal",
         "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
@@ -808,6 +896,9 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         emit_receiver_proof=False,
                         require_full_video_surface_coverage=bool(cfg.require_full_video_surface_coverage),
                         require_surface_archive_freshness=bool(cfg.require_surface_archive_freshness),
+                        require_exact_full_video_gradient_reduction=bool(
+                            cfg.require_exact_full_video_gradient_reduction
+                        ),
                     )
                     result = apply_joint_p18_p19_deadzone_to_z8_archive(
                         current,
@@ -838,6 +929,7 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         "cumulative_distortion_report": cumulative_distortion,
                         "full_video_surface_coverage_report": result["full_video_surface_coverage_report"],
                         "surface_freshness_report": result["surface_freshness_report"],
+                        "surface_gradient_reduction_report": result["surface_gradient_reduction_report"],
                         "coefficient_summary": {
                             key: value for key, value in result["coefficient_report"].items() if key != "subband_stats"
                         },
@@ -948,6 +1040,8 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
 
 
 __all__ = [
+    "FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION",
+    "SINGLE_UPDATE_AFTER_FULL_REDUCTION",
     "Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE",
     "Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA",
     "Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA",

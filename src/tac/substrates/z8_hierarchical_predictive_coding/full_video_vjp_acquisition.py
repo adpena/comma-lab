@@ -32,6 +32,8 @@ from tac.substrates.z8_hierarchical_predictive_coding.archive import parse_archi
 
 Z8_FULL_VIDEO_VJP_ACQUISITION_PLAN_SCHEMA = "z8_full_video_vjp_acquisition_plan.v1"
 Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA = "z8_full_video_vjp_surface_bundle.v1"
+FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION = "full_video_exact_accumulation"
+SINGLE_UPDATE_AFTER_FULL_REDUCTION = "single_update_after_all_pair_shards_reduce"
 
 
 @dataclass(frozen=True)
@@ -109,7 +111,8 @@ def build_z8_full_video_vjp_acquisition_plan(
         "surface_linearization_archive_sha_required": True,
         "surface_relinearization_required_after_accepted_mutation": True,
         "pair_chunk_updates_forbidden": True,
-        "optimizer_update_semantics": "single_update_after_all_pair_shards_reduce",
+        "gradient_reduction_semantics": FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+        "optimizer_update_semantics": SINGLE_UPDATE_AFTER_FULL_REDUCTION,
         "minibatch_window_gradients_policy": (
             "ranking_probe_only_between_full_video_passes"
             if cfg.allow_minibatch_probe_between_full_passes
@@ -159,7 +162,12 @@ def assemble_z8_full_video_vjp_surface_bundle(
     mask_chunks: list[np.ndarray] = []
     shard_reports: list[dict[str, Any]] = []
     for shard_index, raw in enumerate(sorted(shard_surfaces, key=lambda row: int(row.get("pair_start", -1)))):
-        if raw.get("optimizer_update_applied") or raw.get("budget_spend_authority"):
+        if (
+            raw.get("optimizer_update_applied")
+            or raw.get("budget_spend_authority")
+            or raw.get("optimizer_update_authority")
+            or raw.get("gradient_reduction_authority")
+        ):
             raise ValueError(
                 "full-video VJP shards cannot carry optimizer update authority; "
                 "assemble the complete archive-pinned pair grid before updating"
@@ -218,11 +226,15 @@ def assemble_z8_full_video_vjp_surface_bundle(
         "full_video_surface_coverage": bool(full_coverage),
         "full_video_vjp_is_first_class_acquisition_lane": True,
         "full_video_reduction_complete": bool(full_coverage),
+        "gradient_reduction_semantics": (
+            FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION if full_coverage else "proposal_or_sampled"
+        ),
+        "gradient_reduction_authority": bool(full_coverage),
         "minibatch_window_gradients_budget_spend_authority": False,
         "budget_spend_authority": bool(full_coverage),
         "optimizer_update_authority": bool(full_coverage),
         "optimizer_update_semantics": (
-            "single_update_after_all_pair_shards_reduce" if full_coverage else "no_update_partial_surface_probe_only"
+            SINGLE_UPDATE_AFTER_FULL_REDUCTION if full_coverage else "no_update_partial_surface_probe_only"
         ),
         "surface_relinearization_required_after_accepted_mutation": True,
         "joint_weight": joint_full,
@@ -252,6 +264,12 @@ def write_z8_full_video_vjp_surface_bundle(
         linearization_archive_sha=np.asarray(str(bundle["linearization_archive_sha"])),
         evidence_scope=np.asarray(str(bundle["evidence_scope"])),
         target_mode=np.asarray(str(bundle["target_mode"])),
+        gradient_reduction_semantics=np.asarray(str(bundle["gradient_reduction_semantics"])),
+        gradient_reduction_authority=np.asarray(bool(bundle["gradient_reduction_authority"])),
+        optimizer_update_authority=np.asarray(bool(bundle["optimizer_update_authority"])),
+        optimizer_update_semantics=np.asarray(str(bundle["optimizer_update_semantics"])),
+        full_video_reduction_complete=np.asarray(bool(bundle["full_video_reduction_complete"])),
+        budget_spend_authority=np.asarray(bool(bundle["budget_spend_authority"])),
     )
     manifest = {
         "schema": "z8_full_video_vjp_surface_bundle_manifest.v1",
@@ -265,6 +283,8 @@ def write_z8_full_video_vjp_surface_bundle(
         "full_video_surface_coverage": bundle["full_video_surface_coverage"],
         "covered_pair_count": bundle["covered_pair_count"],
         "full_video_pair_count": bundle["full_video_pair_count"],
+        "gradient_reduction_semantics": bundle["gradient_reduction_semantics"],
+        "gradient_reduction_authority": bundle["gradient_reduction_authority"],
         "budget_spend_authority": bundle["budget_spend_authority"],
         "optimizer_update_authority": bundle["optimizer_update_authority"],
         "optimizer_update_semantics": bundle["optimizer_update_semantics"],
@@ -318,14 +338,20 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
             "shard_index": int(np.asarray(data.get("shard_index", 0)).reshape(-1)[0]),
             "pair_start": int(np.asarray(data["pair_start"]).reshape(-1)[0]),
             "pair_end": int(np.asarray(data["pair_end"]).reshape(-1)[0]),
-            "linearization_archive_sha": str(
-                np.asarray(data["linearization_archive_sha"]).reshape(-1)[0]
-            ),
+            "linearization_archive_sha": str(np.asarray(data["linearization_archive_sha"]).reshape(-1)[0]),
             "joint_weight": np.asarray(data["joint_weight"], dtype=np.float64),
             "rate_attack_deadzone_mask": np.asarray(
                 data["rate_attack_deadzone_mask"],
                 dtype=bool,
             ),
+            "optimizer_update_applied": bool(np.asarray(data.get("optimizer_update_applied", False)).reshape(-1)[0]),
+            "optimizer_update_authority": bool(
+                np.asarray(data.get("optimizer_update_authority", False)).reshape(-1)[0]
+            ),
+            "gradient_reduction_authority": bool(
+                np.asarray(data.get("gradient_reduction_authority", False)).reshape(-1)[0]
+            ),
+            "budget_spend_authority": bool(np.asarray(data.get("budget_spend_authority", False)).reshape(-1)[0]),
         }
     payload = json.loads(p.read_text(encoding="utf-8"))
     return {
@@ -339,6 +365,8 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
             dtype=bool,
         ),
         "optimizer_update_applied": bool(payload.get("optimizer_update_applied", False)),
+        "optimizer_update_authority": bool(payload.get("optimizer_update_authority", False)),
+        "gradient_reduction_authority": bool(payload.get("gradient_reduction_authority", False)),
         "budget_spend_authority": bool(payload.get("budget_spend_authority", False)),
     }
 

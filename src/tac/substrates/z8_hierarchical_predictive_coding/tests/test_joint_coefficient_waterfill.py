@@ -17,6 +17,8 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     parse_pair_blobs_from_wavelet_blob,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill import (
+    FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+    SINGLE_UPDATE_AFTER_FULL_REDUCTION,
     Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE,
     Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA,
     Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA,
@@ -67,6 +69,12 @@ def _surface_for_archive(
         "linearization_archive_sha": hashlib.sha256(archive_bytes).hexdigest(),
         "evidence_scope": "full_video",
         "target_mode": "contest_video_overfit",
+        "gradient_reduction_semantics": FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+        "gradient_reduction_authority": True,
+        "optimizer_update_authority": True,
+        "optimizer_update_semantics": SINGLE_UPDATE_AFTER_FULL_REDUCTION,
+        "full_video_reduction_complete": True,
+        "budget_spend_authority": True,
     }
 
 
@@ -96,6 +104,7 @@ def test_joint_p18_p19_deadzone_mutates_wavelet_details_and_reduces_rate() -> No
     assert result["distortion_report"]["small_receiver_distortion_measured"] is True
     assert result["distortion_report"]["max_abs_delta"] > 0.0
     assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
+    assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
     np.testing.assert_allclose(
         mutated_pyramids[0]["frame_0_top_ll"],
         original_pyramids[0]["frame_0_top_ll"],
@@ -215,6 +224,10 @@ def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
     assert manifest["iterations_accepted"] == 2
     assert manifest["candidate_count"] == 4
     assert all(row["surface_freshness_report"]["fresh_for_current_archive"] for row in manifest["accepted_candidates"])
+    assert all(
+        row["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"]
+        for row in manifest["accepted_candidates"]
+    )
     assert Path(manifest["candidate_bin_path"]).is_file()
     assert Path(manifest["archive_zip_path"]).is_file()
     assert Path(manifest["manifest_path"]).is_file()
@@ -250,6 +263,30 @@ def test_joint_p18_p19_deadzone_rejects_stale_surface() -> None:
         )
 
 
+def test_joint_p18_p19_deadzone_rejects_non_exact_reduced_surface() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+    surface = _surface_for_archive(archive_bytes, joint_weight, pose_null_mask)
+    surface["gradient_reduction_semantics"] = "minibatch_probe"
+    surface["gradient_reduction_authority"] = False
+    surface["optimizer_update_authority"] = False
+    surface["optimizer_update_semantics"] = "optimizer_update_per_pair_chunk"
+    surface["full_video_reduction_complete"] = False
+    surface["budget_spend_authority"] = False
+
+    with pytest.raises(ValueError, match="gradient_reduction_not_exact_full_video_accumulation"):
+        apply_joint_p18_p19_deadzone_to_z8_archive(
+            archive_bytes,
+            joint_weight=surface,
+            config=Z8JointCoefficientWaterfillConfig(
+                joint_weight_quantile=1.0,
+                coefficient_deadzone_quantile=1.0,
+                quantization_step=0.25,
+            ),
+        )
+
+
 def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
     tmp_path: Path,
 ) -> None:
@@ -265,6 +302,12 @@ def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
         linearization_archive_sha=np.asarray(surface["linearization_archive_sha"]),
         evidence_scope=np.asarray(surface["evidence_scope"]),
         target_mode=np.asarray(surface["target_mode"]),
+        gradient_reduction_semantics=np.asarray(surface["gradient_reduction_semantics"]),
+        gradient_reduction_authority=np.asarray(surface["gradient_reduction_authority"]),
+        optimizer_update_authority=np.asarray(surface["optimizer_update_authority"]),
+        optimizer_update_semantics=np.asarray(surface["optimizer_update_semantics"]),
+        full_video_reduction_complete=np.asarray(surface["full_video_reduction_complete"]),
+        budget_spend_authority=np.asarray(surface["budget_spend_authority"]),
     )
 
     loaded = load_joint_p18_p19_surface_file(surface_path)
@@ -279,3 +322,4 @@ def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
     )
 
     assert result["surface_freshness_report"]["fresh_for_current_archive"] is True
+    assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True

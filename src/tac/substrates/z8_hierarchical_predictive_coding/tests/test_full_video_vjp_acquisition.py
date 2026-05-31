@@ -14,6 +14,8 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     build_z8hpc1_archive_bytes_from_canonical_quadruple,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition import (
+    FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+    SINGLE_UPDATE_AFTER_FULL_REDUCTION,
     Z8FullVideoVjpAcquisitionConfig,
     assemble_z8_full_video_vjp_surface_bundle,
     build_z8_full_video_vjp_acquisition_contract,
@@ -84,7 +86,8 @@ def test_full_video_vjp_plan_shards_archive_pairs_and_marks_probes_non_authority
     ]
     assert plan["parallel_workers"] == 3
     assert plan["pair_chunk_updates_forbidden"] is True
-    assert plan["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
+    assert plan["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
+    assert plan["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
     assert plan["minibatch_window_gradients_budget_spend_authority"] is False
     assert plan["score_claim"] is False
 
@@ -109,9 +112,11 @@ def test_full_video_vjp_surface_bundle_requires_archive_pinned_complete_shards()
     assert bundle["linearization_archive_sha"] == sha
     assert bundle["full_video_surface_coverage"] is True
     assert bundle["full_video_reduction_complete"] is True
+    assert bundle["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
+    assert bundle["gradient_reduction_authority"] is True
     assert bundle["budget_spend_authority"] is True
     assert bundle["optimizer_update_authority"] is True
-    assert bundle["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
+    assert bundle["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
     assert bundle["joint_weight"].shape == (4, 2, 16, 16, 3)
     assert bundle["rate_attack_deadzone_mask"].shape == (4, 2, 16, 16, 3)
 
@@ -143,6 +148,14 @@ def test_full_video_vjp_surface_bundle_rejects_partial_or_stale_shards() -> None
         assemble_z8_full_video_vjp_surface_bundle(
             archive,
             shard_surfaces=[bad_shard],
+        )
+
+    bad_authority_shard = _surface_shard(start=0, end=4, archive_sha=sha, value=0.0, shard_index=0)
+    bad_authority_shard["gradient_reduction_authority"] = True
+    with pytest.raises(ValueError, match="cannot carry optimizer update authority"):
+        assemble_z8_full_video_vjp_surface_bundle(
+            archive,
+            shard_surfaces=[bad_authority_shard],
         )
 
 
@@ -181,12 +194,18 @@ def test_full_video_vjp_surface_bundle_writes_materializer_ready_npz(tmp_path: P
     assert Path(manifest["surface_path"]).is_file()
     assert Path(manifest["manifest_path"]).is_file()
     assert manifest["linearization_archive_sha"] == sha
+    assert manifest["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
+    assert manifest["gradient_reduction_authority"] is True
     assert manifest["budget_spend_authority"] is True
     assert manifest["optimizer_update_authority"] is True
-    assert manifest["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
+    assert manifest["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
     payload = np.load(manifest["surface_path"])
     assert payload["joint_weight"].shape == (2, 2, 16, 16, 3)
     assert payload["rate_attack_deadzone_mask"].shape == (2, 2, 16, 16, 3)
+    assert str(payload["gradient_reduction_semantics"]) == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
+    assert bool(payload["gradient_reduction_authority"]) is True
+    assert bool(payload["optimizer_update_authority"]) is True
+    assert str(payload["optimizer_update_semantics"]) == SINGLE_UPDATE_AFTER_FULL_REDUCTION
 
 
 def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Path) -> None:
@@ -216,8 +235,11 @@ def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Pat
 
     assert Path(plan["plan_path"]).is_file()
     assert loaded["linearization_archive_sha"] == sha
+    assert loaded["gradient_reduction_authority"] is False
+    assert bundle["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
+    assert bundle["gradient_reduction_authority"] is True
     assert bundle["budget_spend_authority"] is True
-    assert bundle["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
+    assert bundle["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
 
 
 def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -> None:
