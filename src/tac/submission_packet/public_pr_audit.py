@@ -26,12 +26,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.submission_packet.linter import LintSeverity, lint_pr_body
 
 PUBLIC_PR_AUDIT_SCHEMA_VERSION = "public_submission_pr_audit_v1_20260527"
 PUBLIC_PR_AUDIT_HELPER = "tac.submission_packet.audit_public_submission_pr"
 DEFAULT_TARGET_REPO = "commaai/comma_video_compression_challenge"
 DEFAULT_RELEASE_ASSET_NAME = "archive.zip"
+PUBLIC_PR_AUDIT_ARCHIVE_BOUND_FAMILY = "public_submission_pr_audit"
+PUBLIC_PR_AUDIT_ARCHIVE_BOUND_TRANSFORM_KIND = "public_frontier_pr_archive_audit"
 
 FORBIDDEN_PUBLIC_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"Claude", "forbidden_token_claude"),
@@ -229,8 +234,73 @@ class PublicSubmissionAuditResult:
     def overall_clean(self) -> bool:
         return self.error_count == 0
 
+    def _archive_bound_contract_fields(self) -> dict[str, object]:
+        zip_path = self.zip_audit.path if self.zip_audit is not None else ""
+        zip_ok = self.zip_audit.ok if self.zip_audit is not None else False
+        smoke_ok = self.inflate_smoke.ok if self.inflate_smoke is not None else False
+        blocker_ids = [
+            f"{finding.surface}:{finding.rule}"
+            for finding in self.findings
+            if finding.severity == "error"
+        ]
+        if self.zip_audit is not None:
+            blocker_ids.extend(self.zip_audit.blockers)
+        if self.inflate_smoke is None:
+            blocker_ids.append("public_pr_audit_inflate_smoke_not_run")
+        elif not smoke_ok:
+            blocker_ids.append("public_pr_audit_inflate_smoke_failed")
+        archive_sha = self.archive_sha256 or (
+            self.zip_audit.sha256 if self.zip_audit is not None else None
+        )
+        candidate_id_suffix = archive_sha[:16] if isinstance(archive_sha, str) else "missing"
+        row = {
+            "schema": "public_submission_pr_audit_archive_bound_candidate_row.v1",
+            "candidate_id": f"public_pr_audit_{self.pr_number}_{candidate_id_suffix}",
+            "candidate_family": PUBLIC_PR_AUDIT_ARCHIVE_BOUND_FAMILY,
+            "archive_native_transform_kind": PUBLIC_PR_AUDIT_ARCHIVE_BOUND_TRANSFORM_KIND,
+            "candidate_archive_path": zip_path,
+            "candidate_archive_sha256": archive_sha,
+            "candidate_archive_bytes": self.archive_bytes,
+            "byte_closed_candidate_materialized": zip_ok,
+            "candidate_archive_materialized": zip_ok,
+            "runtime_adapter_ready": smoke_ok,
+            "contest_runtime_decoder_adapter_ready": smoke_ok,
+            "runtime_adapter_manifest": {
+                "schema": "public_pr_audit_runtime_adapter_manifest.v1",
+                "submission_name": self.submission_name,
+                "head_sha": self.head_sha,
+                "inflate_smoke_ok": smoke_ok,
+                "inflate_smoke_raw_sha256": (
+                    self.inflate_smoke.raw_sha256 if self.inflate_smoke is not None else None
+                ),
+                "runtime_adapter_ready": smoke_ok,
+                "contest_runtime_decoder_adapter_ready": smoke_ok,
+            },
+            "runtime_consumption_proof_ready": False,
+            "receiver_contract_satisfied": False,
+            "receiver_contract_kind": "public_pr_audit_requires_shared_receiver_proof",
+            "semantic_payload_changed": False,
+            "score_affecting_payload_changed": True,
+            "exact_axis_score_affecting_adjudication_required": True,
+            "charged_bits_changed": True,
+            "blockers": blocker_ids,
+            "canonical_anti_pattern_ids": [
+                "proxy_or_advisory_signal_masquerades_as_score_authority",
+                "public_pr_audit_without_archive_bound_receiver_proof",
+            ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+        }
+        return archive_bound_candidate_contract_fields_for_row(
+            row,
+            family_id=PUBLIC_PR_AUDIT_ARCHIVE_BOUND_FAMILY,
+            candidate_chain_id=str(row["candidate_id"]),
+        )
+
     def as_dict(self) -> dict[str, object]:
-        return {
+        payload = {
             "schema_version": self.schema_version,
             "target_repo": self.target_repo,
             "pr_number": self.pr_number,
@@ -259,6 +329,8 @@ class PublicSubmissionAuditResult:
             "axis_tag": "[predicted]",
             "evidence_grade": "[predicted; public-submission-pr-audit]",
         }
+        payload.update(self._archive_bound_contract_fields())
+        return payload
 
 
 def _utc_now() -> str:

@@ -64541,7 +64541,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "experiments/preflight_public_replay_intake.py"
+          "evidence": "src/tac/submission_packet/public_pr_audit.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -64565,7 +64565,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_public_replay_preflight_contract_first_20260531T040355Z_codex.md"
+          "evidence": ".omx/research/codex_findings_public_pr_audit_contract_migration_20260531T040613Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -64582,5 +64582,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T04:04:09Z"
+  "updated_at": "2026-05-31T04:06:26Z"
 }

@@ -88,10 +88,17 @@ def test_audit_zip_flags_hidden_macos_members(tmp_path: Path) -> None:
 
 def test_self_test_is_no_network_and_clean() -> None:
     result = self_test_result()
+    payload = result.as_dict()
 
     assert result.overall_clean
     assert result.submission_name == "sample_submission"
     assert result.archive_sha256 == "a" * 64
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    contract = payload["archive_bound_candidate_contract"]
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is False
+    assert "public_frontier" in contract["archive_substrate_tags"]
+    assert "public_pr_audit_inflate_smoke_not_run" in contract["blockers"]
 
 
 def test_full_audit_uses_runner_and_fails_on_public_hazards(tmp_path: Path, monkeypatch) -> None:
@@ -287,4 +294,11 @@ def test_inflate_smoke_records_raw_output_sha(tmp_path: Path, monkeypatch) -> No
     assert result.inflate_smoke is not None
     assert result.inflate_smoke.ok
     assert result.inflate_smoke.raw_sha256 == raw_sha
-    assert result.as_dict()["inflate_smoke"]["raw_sha256"] == raw_sha
+    payload = result.as_dict()
+    assert payload["inflate_smoke"]["raw_sha256"] == raw_sha
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    contract = payload["archive_bound_candidate_contract"]
+    assert contract["archive_file_custody"]["custody_complete"] is True
+    assert contract["runtime_adapter_ready"] is True
+    assert contract["receiver_contract_satisfied"] is False
+    assert "archive_bound_receiver_runtime_proof_missing" in contract["blockers"]
