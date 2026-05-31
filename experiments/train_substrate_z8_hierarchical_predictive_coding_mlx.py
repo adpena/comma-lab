@@ -112,6 +112,25 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Weight on the gradient-reachable Hinton-KL T=2.0 scorer "
         "surrogate term in the --full score-aware loss (0.0 disables).",
     )
+    parser.add_argument(
+        "--pose-distillation-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Weight on the REAL PoseNet pose-MSE distillation term in --full. "
+            "Default 1.0 keeps M12a frontier work bound to the dominant pose "
+            "axis instead of repeating the SegNet-only pose-drift failure."
+        ),
+    )
+    parser.add_argument(
+        "--allow-mock-scorer-teacher",
+        action="store_true",
+        help=(
+            "Allow the scorer-blind mock teacher in --full. Default is fail-"
+            "closed real SegNet + real PoseNet teacher construction; this flag "
+            "is only for explicit $0 no-real-scorer research smoke."
+        ),
+    )
     # M9 canonical quadruple binding-integration flag (operator-routed
     # Yousfi-cascade TOP-1 post-M6; 2026-05-30). When set, _full_main routes
     # through the canonical M4+M5+M6+M8 compose pattern at
@@ -208,6 +227,31 @@ def _build_parser() -> argparse.ArgumentParser:
             "proportionally scale each stage. Used only when "
             "--pr95-faithful-curriculum-enabled."
         ),
+    )
+    parser.add_argument(
+        "--grad-clip-max-norm",
+        type=float,
+        default=1.0,
+        help="Wave N+11 stabilizer: grad-clip max L2 norm (<=0 disables).",
+    )
+    parser.add_argument(
+        "--warmup-epochs",
+        type=int,
+        default=5,
+        help="Wave N+11 stabilizer: LR warmup epochs.",
+    )
+    parser.add_argument(
+        "--weight-decay",
+        type=float,
+        default=1e-4,
+        help="Wave N+11 stabilizer: AdamW weight decay.",
+    )
+    parser.add_argument(
+        "--optimizer-kind",
+        type=str,
+        default="adamw",
+        choices=("adamw", "rmsprop"),
+        help="Optimizer for the MLX score-aware adapter.",
     )
     return parser
 
@@ -415,8 +459,16 @@ def _full_main(args: argparse.Namespace) -> int:
     from tac.substrates._shared.mlx_score_aware_full_main import (
         MlxScoreAwareHarnessError,
         RendererBundle,
+        build_mlx_posenet_pair_teacher,
+        build_mlx_segnet_pair_teacher,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        DEFAULT_POSE_DIMS,
+        DEFAULT_SEGNET_CLASSES,
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
     )
     from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
         Z8HierarchicalConfig,
@@ -446,6 +498,43 @@ def _full_main(args: argparse.Namespace) -> int:
     except MlxScoreAwareHarnessError as exc:
         print(f"[Z8 MLX full] FATAL: {exc}", file=sys.stderr)
         return 65
+    scorer_teacher = None
+    pose_scorer_teacher = None
+    learnable_student_head = None
+    learnable_pose_student_head = None
+    pose_distillation_weight = 0.0
+    if (
+        float(args.distillation_weight) > 0.0
+        and not bool(args.allow_mock_scorer_teacher)
+    ):
+        teacherless_bundle = RendererBundle(
+            model=model,
+            target_rgb_0=target_rgb_0,
+            target_rgb_1=target_rgb_1,
+            num_pairs=int(args.num_pairs),
+            forward_convention="call_b2chw_255",
+            distillation_weight=0.0,
+            pose_distillation_weight=0.0,
+            pose_dims=DEFAULT_POSE_DIMS,
+        )
+        scorer_teacher = build_mlx_segnet_pair_teacher(
+            teacherless_bundle,
+            device="cpu",
+        )
+        pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+            teacherless_bundle,
+            device="cpu",
+        )
+        learnable_student_head = build_learnable_student_head(
+            num_classes=DEFAULT_SEGNET_CLASSES,
+            in_channels=3,
+            seed=int(args.seed),
+        )
+        learnable_pose_student_head = build_learnable_pose_student_head(
+            pose_dims=DEFAULT_POSE_DIMS,
+            seed=int(args.seed),
+        )
+        pose_distillation_weight = float(args.pose_distillation_weight)
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
@@ -453,29 +542,52 @@ def _full_main(args: argparse.Namespace) -> int:
         num_pairs=int(args.num_pairs),
         forward_convention="call_b2chw_255",
         distillation_weight=float(args.distillation_weight),
+        scorer_teacher=scorer_teacher,
+        learnable_student_head=learnable_student_head,
+        pose_distillation_weight=pose_distillation_weight,
+        pose_scorer_teacher=pose_scorer_teacher,
+        learnable_pose_student_head=learnable_pose_student_head,
+        pose_dims=DEFAULT_POSE_DIMS,
+        allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
+        substrate_artifact_metadata={
+            "m12a_score_binding": (
+                "real_segnet_posenet_hinton_t2"
+                if scorer_teacher is not None
+                else "explicit_mock_or_reconstruction_proxy"
+            ),
+            "z8_trainer_mode": "full",
+        },
     )
+    grad_clip = float(args.grad_clip_max_norm)
     artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
         substrate_id="z8_hierarchical_predictive_coding",
-        lane_id="lane_path_3_f_z8_hierarchical_predictive_coding_cargo_cult_first_20260526",
+        lane_id="lane_z8_m12a_modal_t4_l2_long_training_per_catalog_325_symposium_proceed_with_revisions_20260530",
         output_dir=args.output_dir,
         epochs=int(args.epochs),
         batch_pair_indices_per_step=min(int(args.num_pairs), 8),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
+        ema_decay=0.997,
         pr95_faithful_curriculum_enabled=bool(
             getattr(args, "pr95_faithful_curriculum_enabled", False)
         ),
         pr95_curriculum_total_epochs=getattr(
             args, "pr95_curriculum_total_epochs", None
         ),
+        grad_clip_max_norm=(grad_clip if grad_clip > 0.0 else None),
+        warmup_epochs=int(args.warmup_epochs),
+        weight_decay=float(args.weight_decay),
+        optimizer_kind=str(args.optimizer_kind),
         notes=(
             "Z8 hierarchical predictive coding MLX-first score-aware full "
             "training via canonical mlx_score_aware_full_main harness; real "
-            "contest video + reconstruction + Hinton-KL T=2.0 scorer surrogate; "
+            "contest video + reconstruction + REAL Hinton-distilled SegNet "
+            "(KL T=2.0) + REAL PoseNet (pose-MSE) teachers; Wave N+11 "
+            "stabilizer (EMA 0.997 + grad-clip + warmup + weight decay); "
             "non-promotable [macOS-MLX research-signal] per Catalog "
-            "#192/#317/#341; per-axis + MLX->PyTorch bridge + paired CUDA/CPU "
-            "anchor DEFERRED to sister L2 Phase 2 symposium."
+            "#192/#317/#341; MLX->PyTorch bridge + paired CUDA/CPU anchor "
+            "remain the exact promotion gate."
         ),
     )
     print(

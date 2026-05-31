@@ -49,7 +49,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TRAINER_PATH = (
     REPO_ROOT / "experiments" / "train_substrate_z8_hierarchical_predictive_coding_mlx.py"
@@ -183,19 +182,22 @@ def test_canonical_quadruple_forward_step_returns_all_canonical_signals() -> Non
     binding = build_canonical_quadruple_binding_from_z8_config(cfg)
     target = np.random.RandomState(0).rand(1, 32, 32, 3).astype(np.float32)
     result = canonical_quadruple_forward_step(binding, target)
-    # Canonical compose pattern emits all 6 observability signals.
+    # Canonical compose pattern emits all observability signals, including the
+    # Rev #3 Wyner-Ziv side-info provenance label.
     expected_keys = {
         "per_level_l2_loss",
         "wavelet_subband_l2_norm",
         "mamba2_state_l2_norm",
         "wyner_ziv_payload_bytes",
         "wyner_ziv_round_trip_error",
+        "wyner_ziv_side_info_source",
         "total_loss",
     }
     assert set(result.keys()) == expected_keys
     assert len(result["per_level_l2_loss"]) == cfg.num_levels
     assert len(result["wavelet_subband_l2_norm"]) == cfg.num_levels
     assert result["wyner_ziv_payload_bytes"] > 0
+    assert result["wyner_ziv_side_info_source"] == "top_ll_per_channel_spatial_mean"
     assert result["mamba2_state_l2_norm"] >= 0.0
 
 
@@ -703,8 +705,8 @@ def test_build_progress_m9_predecessors_all_landed() -> None:
     ensures the precondition for M9 LANDED is met.
     """
     from tac.substrates.z8_hierarchical_predictive_coding.build_progress import (
-        BuildMilestoneStatus,
         Z8_PHASE_2_BUILD_MILESTONES,
+        BuildMilestoneStatus,
     )
 
     by_id = {m.milestone_id: m for m in Z8_PHASE_2_BUILD_MILESTONES}

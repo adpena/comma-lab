@@ -4,9 +4,8 @@
 # PROCEED_WITH_REVISIONS unanimous 23-of-23 T3 grand council (2026-05-30).
 #
 # Trainer: experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py
-#   --canonical-quadruple-binding mode (M9 canonical compose pattern; routes
-#   through tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding
-#   per Catalog #312 quadruple binding-depth).
+#   full mode (M12a Yousfi Revision #1 active route; canonical
+#   mlx_score_aware_full_main with real SegNet + PoseNet Hinton teachers).
 #
 # Lane: lane_z8_m12a_modal_t4_l2_long_training_per_catalog_325_symposium_proceed_with_revisions_20260530
 # Recipe: .omx/operator_authorize_recipes/substrate_z8_hierarchical_predictive_coding_modal_t4_dispatch.yaml
@@ -24,7 +23,7 @@
 # ${ARR[@]+"${ARR[@]}"} so the script tolerates `set -u` on macOS bash 3.2.
 #
 # Per Catalog #326 multi-key trainer mode resolution: Z8_TRAINER_MODE primary
-# (canonical_quadruple|full|smoke) with fail-loud warning when no key set.
+# (full|canonical_quadruple|smoke) with fail-loud warning on invalid values.
 #
 # Per Catalog #204 cross-driver expansion: 3-branch Modal-aware OUTPUT_DIR
 # resolution (Z8_OUTPUT_DIR explicit > /modal_results when MODAL_RUNTIME=1 >
@@ -87,13 +86,19 @@ Z8_ENABLE_GT_SCORER_CACHE="${Z8_ENABLE_GT_SCORER_CACHE:-1}"
 Z8_ENABLE_TORCH_COMPILE="${Z8_ENABLE_TORCH_COMPILE:-0}"
 
 # Catalog #326 multi-key trainer mode resolution: Z8_TRAINER_MODE primary
-# (canonical_quadruple|full|smoke) with fail-loud warning when no key set.
-# Default to canonical_quadruple per the M12a recipe + M9 commit bb48f691c
-# canonical compose pattern. SMOKE_ONLY is a sister env var preserved for
-# backward compatibility with the sister Z3/Z4/Z5 drivers.
+# (full|canonical_quadruple|smoke) with fail-loud warning when no key set.
+# Default to full per the M12a Yousfi Revision #1 recipe; canonical_quadruple
+# remains an explicit legacy/diagnostic mode and M12c substrate-engineering
+# reactivation path. SMOKE_ONLY is a sister env var preserved for backward
+# compatibility with the sister Z3/Z4/Z5 drivers.
 Z8_TRAINER_MODE="${Z8_TRAINER_MODE:-${SMOKE_ONLY:+smoke}}"
-Z8_TRAINER_MODE="${Z8_TRAINER_MODE:-canonical_quadruple}"
+Z8_TRAINER_MODE="${Z8_TRAINER_MODE:-full}"
 SMOKE_ONLY="${SMOKE_ONLY:-0}"
+Z8_POSE_DISTILLATION_WEIGHT="${Z8_POSE_DISTILLATION_WEIGHT:-1.0}"
+Z8_GRAD_CLIP_MAX_NORM="${Z8_GRAD_CLIP_MAX_NORM:-1.0}"
+Z8_WARMUP_EPOCHS="${Z8_WARMUP_EPOCHS:-5}"
+Z8_WEIGHT_DECAY="${Z8_WEIGHT_DECAY:-1e-4}"
+Z8_OPTIMIZER_KIND="${Z8_OPTIMIZER_KIND:-adamw}"
 
 DISPATCH_INSTANCE_JOB_ID="${Z8_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${Z8_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -214,6 +219,11 @@ cat > "$PROVENANCE" <<EOF
   "enable_autocast_fp16": "$Z8_ENABLE_AUTOCAST_FP16",
   "enable_gt_scorer_cache": "$Z8_ENABLE_GT_SCORER_CACHE",
   "enable_torch_compile": "$Z8_ENABLE_TORCH_COMPILE",
+  "pose_distillation_weight": "$Z8_POSE_DISTILLATION_WEIGHT",
+  "grad_clip_max_norm": "$Z8_GRAD_CLIP_MAX_NORM",
+  "warmup_epochs": "$Z8_WARMUP_EPOCHS",
+  "weight_decay": "$Z8_WEIGHT_DECAY",
+  "optimizer_kind": "$Z8_OPTIMIZER_KIND",
   "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
   "started_at_utc": "$(date -u +%FT%TZ)",
   "evidence_grade": "[scaffold-only-no-score-claim-until-auth-eval-lands]",
@@ -236,8 +246,8 @@ fi
 PYBIN_RESOLVED="$CLAIM_PYTHON"
 
 # Catalog #326 multi-key mode resolution: route to the canonical trainer mode.
-# canonical_quadruple is the M12a default per the recipe; smoke is the L0
-# fallback for fixture-scope; full is reserved for the MLX-only path.
+# full is the M12a active route per the recipe; smoke is the L0 fallback for
+# fixture-scope; canonical_quadruple remains explicit M9/M12c diagnostic mode.
 TRAINER_ARGS=(
     --video-path "$Z8_VIDEO_PATH"
     --epochs "$Z8_EPOCHS"
@@ -256,6 +266,11 @@ case "$Z8_TRAINER_MODE" in
     full)
         TRAINER_ARGS+=(
             --output-dir "$Z8_OUTPUT_DIR"
+            --pose-distillation-weight "$Z8_POSE_DISTILLATION_WEIGHT"
+            --grad-clip-max-norm "$Z8_GRAD_CLIP_MAX_NORM"
+            --warmup-epochs "$Z8_WARMUP_EPOCHS"
+            --weight-decay "$Z8_WEIGHT_DECAY"
+            --optimizer-kind "$Z8_OPTIMIZER_KIND"
         )
         ;;
     smoke)
@@ -302,6 +317,23 @@ if artifact_path.is_file():
         sys.exit(0)
     except json.JSONDecodeError:
         pass
+
+# Check canonical MLX full-training artifact (M12a full mode).
+training_artifact_path = output_dir / "training_artifact.json"
+if training_artifact_path.is_file():
+    try:
+        artifact = json.loads(training_artifact_path.read_text())
+    except json.JSONDecodeError:
+        artifact = {}
+    axis = artifact.get("axis_tag") or artifact.get("evidence_grade") or "macOS-MLX research-signal"
+    epochs = artifact.get("total_epochs_completed", artifact.get("epochs", 0))
+    promotable = artifact.get("promotable", False)
+    score_claim_valid = artifact.get("score_claim_valid", False)
+    if score_claim_valid is True and artifact.get("auth_eval_score_axis") == "contest_cuda":
+        print(f"[contest-CUDA] score_claim=true epochs={epochs}")
+    else:
+        print(f"[{axis}] score_claim=false epochs={epochs} promotable={promotable}")
+    sys.exit(0)
 
 # Fallback: check stats.json (sister substrate convention).
 stats_path = output_dir / "stats.json"
