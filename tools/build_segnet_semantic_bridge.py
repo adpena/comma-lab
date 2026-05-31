@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -28,13 +29,17 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.analysis.segnet_boundary_marginals import logit_margin  # noqa: E402
+from tac.analysis.segnet_boundary_marginals import (  # noqa: E402
+    boundary_mask_from_labels,
+    logit_margin,
+)
 from tac.analysis.segnet_semantic_bridge import (  # noqa: E402
     FALSE_AUTHORITY,
     GENERALIZATION_MODES,
     SegnetSemanticBridgeError,
     SemanticBridgeConfig,
     build_segnet_semantic_bridge,
+    crammer_singer_hinge_for_targets,
     top2_class_indices,
 )
 from tac.repo_io import (  # noqa: E402
@@ -80,6 +85,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="Optional PNG visualization for the highest-hinge sample.",
     )
+    parser.add_argument(
+        "--surface-out",
+        type=Path,
+        help=(
+            "Optional NPZ for executable per-pixel repair surfaces. Defaults to "
+            "<json-out>.semantic_surfaces.npz."
+        ),
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -101,6 +114,7 @@ def build_live_bridge(
     hinge_margin: float,
     pair_component_xray: Path | None,
     figure_out: Path | None,
+    surface_out: Path | None,
     allow_overwrite: bool,
 ) -> dict[str, Any]:
     upstream_dir = _resolve(upstream_dir)
@@ -120,7 +134,11 @@ def build_live_bridge(
     from modules import SegNet, segnet_sd_path  # type: ignore
     from safetensors.torch import load_file  # type: ignore
 
-    torch_device = torch.device(device_name)
+    torch_device = (
+        torch.device("cuda", int(os.environ.get("LOCAL_RANK", "0")))
+        if device_name == "cuda"
+        else torch.device(device_name)
+    )
     segnet = SegNet().eval().to(torch_device)
     segnet_model_path = upstream_dir / "models" / Path(segnet_sd_path).name
     segnet.load_state_dict(load_file(segnet_model_path, device=str(torch_device)))
@@ -227,6 +245,23 @@ def build_live_bridge(
             else None
         ),
     }
+    if surface_out is not None:
+        surface_path = _resolve(surface_out)
+        surface_record = _write_surface_npz(
+            source_logits=source_logits_all,
+            candidate_logits=candidate_logits_all,
+            sample_ids=sample_ids,
+            boundary_dilation=boundary_dilation,
+            hinge_margin=hinge_margin,
+            path=surface_path,
+            allow_overwrite=allow_overwrite,
+        )
+        bridge["semantic_surface_artifacts"] = {
+            "schema": "segnet_semantic_bridge_surface_artifacts.v1",
+            "argmax_margin_boundary_npz": surface_record,
+            "false_authority": True,
+            **FALSE_AUTHORITY,
+        }
     if figure_out is not None:
         figure_path = _resolve(figure_out)
         _render_figure(
@@ -244,6 +279,67 @@ def build_live_bridge(
             }
         }
     return bridge
+
+
+def _write_surface_npz(
+    *,
+    source_logits: np.ndarray,
+    candidate_logits: np.ndarray,
+    sample_ids: list[int],
+    boundary_dilation: int,
+    hinge_margin: float,
+    path: Path,
+    allow_overwrite: bool,
+) -> dict[str, Any]:
+    if path.exists() and not allow_overwrite:
+        raise SegnetSemanticBridgeError(f"refusing to overwrite existing surface: {path}")
+    source_labels = source_logits.argmax(axis=1).astype(np.uint8)
+    candidate_labels = candidate_logits.argmax(axis=1).astype(np.uint8)
+    source_top2 = top2_class_indices(source_logits).astype(np.uint8)
+    source_margins = logit_margin(source_logits).astype(np.float32)
+    candidate_margins = logit_margin(candidate_logits).astype(np.float32)
+    wrong_mask = (source_labels != candidate_labels).astype(np.uint8)
+    boundary_mask = boundary_mask_from_labels(
+        source_labels.astype(np.int64),
+        dilation=boundary_dilation,
+    ).astype(np.uint8)
+    hinge_map = crammer_singer_hinge_for_targets(
+        candidate_logits,
+        source_labels.astype(np.int64),
+        margin=hinge_margin,
+    ).astype(np.float32)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        path,
+        source_argmax=source_labels,
+        candidate_argmax=candidate_labels,
+        source_top2=source_top2,
+        source_margin=source_margins,
+        candidate_margin=candidate_margins,
+        boundary_mask=boundary_mask,
+        wrong_mask=wrong_mask,
+        hinge_map=hinge_map,
+        sample_ids=np.asarray(sample_ids, dtype=np.int64),
+    )
+    return {
+        "path": str(path),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+        "arrays": [
+            "source_argmax",
+            "candidate_argmax",
+            "source_top2",
+            "source_margin",
+            "candidate_margin",
+            "boundary_mask",
+            "wrong_mask",
+            "hinge_map",
+            "sample_ids",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _load_pair_component_rows(path: Path) -> dict[int, Mapping[str, Any]]:
@@ -347,6 +443,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         json_out = _resolve(args.json_out)
+        surface_out = _resolve(args.surface_out) if args.surface_out else (
+            json_out.with_suffix(".semantic_surfaces.npz")
+        )
         bridge = build_live_bridge(
             inflated_dir=args.inflated_dir,
             upstream_dir=args.upstream_dir,
@@ -363,6 +462,7 @@ def main(argv: list[str] | None = None) -> int:
             hinge_margin=args.hinge_margin,
             pair_component_xray=args.pair_component_xray,
             figure_out=args.figure_out,
+            surface_out=surface_out,
             allow_overwrite=bool(args.overwrite),
         )
         bridge = attach_tool_run_manifest(

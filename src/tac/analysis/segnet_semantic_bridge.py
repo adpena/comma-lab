@@ -247,6 +247,7 @@ def build_segnet_semantic_bridge(
                 "class-transition concentration, and byte-credit pressure"
             ),
             "parallel_candidate_lanes": [
+                "deterministic_boundary_repair",
                 "deterministic_boundary_postfilter",
                 "mlx_lora_or_dora_boundary_adapter",
                 "contest_fixed_selector_correction_mask",
@@ -563,23 +564,64 @@ def _executable_backlog(
     )[:3]
     boundary_pressure = float(summary["boundary_error_share"])
     low_margin_pressure = float(summary["low_source_margin_error_share"])
+    def _mode_gate(row_mode: str) -> dict[str, Any]:
+        enqueueable = (
+            config.generalization_mode == "mixed"
+            or row_mode == config.generalization_mode
+            or (
+                config.generalization_mode == "contest_fixed_dataset"
+                and row_mode == "mixed"
+            )
+        )
+        return {
+            "enqueueable_under_requested_generalization_mode": enqueueable,
+            "compatibility_blockers": (
+                []
+                if enqueueable
+                else [
+                    f"{row_mode}_lane_not_enqueueable_for_"
+                    f"{config.generalization_mode}_bridge"
+                ]
+            ),
+        }
+
     return [
         {
-            "family_id": "deterministic_boundary_postfilter",
+            "family_id": "deterministic_boundary_repair",
             "generalization_mode": "contest_fixed_dataset",
             "why": (
                 "fixed contest videos permit source-indexed correction masks or "
-                "deterministic local rules when archive bytes can pay for them"
+                "class/boundary rule tables when archive bytes can pay for them"
             ),
             "acquisition_features": {
                 "boundary_error_share": boundary_pressure,
                 "hinge_loss_sum": summary["hinge_loss_sum"],
             },
             "next_materializer_task": (
-                "emit byte-closed correction-mask or rule-table candidate and "
-                "prove inflate.sh consumes it"
+                "emit byte-closed correction-mask or class-boundary rule-table "
+                "candidate and prove inflate.sh consumes it"
             ),
             "score_authority": False,
+            **_mode_gate("contest_fixed_dataset"),
+        },
+        {
+            "family_id": "deterministic_boundary_postfilter",
+            "generalization_mode": "contest_fixed_dataset",
+            "why": (
+                "post-decode deterministic filters can target boundary argmax "
+                "hinge mass without retraining the representation"
+            ),
+            "acquisition_features": {
+                "boundary_error_share": boundary_pressure,
+                "low_source_margin_error_share": low_margin_pressure,
+                "hinge_loss_sum": summary["hinge_loss_sum"],
+            },
+            "next_materializer_task": (
+                "emit byte-closed runtime postfilter candidate, bind filter "
+                "parameters in archive/runtime custody, and prove inflate.sh consumes it"
+            ),
+            "score_authority": False,
+            **_mode_gate("contest_fixed_dataset"),
         },
         {
             "family_id": "mlx_lora_or_dora_boundary_adapter",
@@ -604,6 +646,7 @@ def _executable_backlog(
                 "export only through shared runtime bridge"
             ),
             "score_authority": False,
+            **_mode_gate("mixed"),
         },
         {
             "family_id": "fleet_adaptable_boundary_rule_induction",
@@ -627,6 +670,7 @@ def _executable_backlog(
                 "compare against contest-overfit lane without merging authority"
             ),
             "score_authority": False,
+            **_mode_gate("fleet_adaptable"),
         },
     ]
 

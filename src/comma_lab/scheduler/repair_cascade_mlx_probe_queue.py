@@ -100,6 +100,30 @@ _CANONICAL_MLX_REPAIR_FAMILY_CAMPAIGNS: tuple[dict[str, Any], ...] = (
     },
 )
 
+_MEASUREMENT_ARTIFACT_KEYS: dict[str, tuple[str, ...]] = {
+    "segnet_semantic_bridge_artifact": ("segnet_semantic_bridge_artifact_path",),
+    "boundary_argmax_hinge_marginal_surface": (
+        "boundary_argmax_hinge_marginal_surface_path",
+    ),
+    "local_mlx_boundary_argmax_hinge_probe": (
+        "local_mlx_boundary_argmax_hinge_probe_path",
+    ),
+    "pose_axis_guard_measurement": ("pose_axis_guard_measurement_path",),
+    "byte_closed_boundary_repair_materializer": (
+        "byte_closed_boundary_repair_materializer_path",
+    ),
+    "byte_closed_runtime_postfilter_materializer": (
+        "byte_closed_runtime_postfilter_materializer_path",
+    ),
+    "mlx_lora_boundary_adapter_smoke": ("mlx_lora_boundary_adapter_smoke_path",),
+    "fleet_holdout_or_online_calibration_split": (
+        "fleet_holdout_or_online_calibration_split_path",
+    ),
+    "byte_closed_contest_fixed_repair_materializer": (
+        "byte_closed_contest_fixed_repair_materializer_path",
+    ),
+}
+
 
 class RepairCascadeMlxProbeQueueError(ValueError):
     """Raised when a structural repair-cascade probe queue cannot be built."""
@@ -191,6 +215,9 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
     rows: list[dict[str, Any]] = []
     candidate_id = _slug(payload.get("candidate_id") or "segnet_semantic_bridge")
     summary = _mapping(payload.get("summary"))
+    surface = _mapping(payload.get("semantic_surface_artifacts"))
+    surface_npz = _mapping(surface.get("argmax_margin_boundary_npz"))
+    surface_path = str(surface_npz.get("path") or "").strip()
     class_rows = [
         dict(row)
         for row in payload.get("class_rows") or []
@@ -207,14 +234,22 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
     for index, backlog in enumerate(payload.get("executable_backlog") or [], start=1):
         if not isinstance(backlog, Mapping):
             continue
+        row_blockers = _string_list(backlog.get("compatibility_blockers"))
+        if backlog.get("enqueueable_under_requested_generalization_mode") is False:
+            continue
         family_id = _slug(backlog.get("family_id") or f"semantic_bridge_family_{index}")
         mode = str(backlog.get("generalization_mode") or payload.get("generalization_mode") or "")
+        acquisition_features = _mapping(backlog.get("acquisition_features"))
         required_measurements = [
             "segnet_semantic_bridge_artifact",
             "boundary_argmax_hinge_marginal_surface",
             "local_mlx_boundary_argmax_hinge_probe",
             "pose_axis_guard_measurement",
         ]
+        if "deterministic_boundary_repair" in family_id:
+            required_measurements.append("byte_closed_boundary_repair_materializer")
+        if "postfilter" in family_id:
+            required_measurements.append("byte_closed_runtime_postfilter_materializer")
         if "lora" in family_id or "adapter" in family_id:
             required_measurements.append("mlx_lora_boundary_adapter_smoke")
         if mode == "fleet_adaptable":
@@ -247,6 +282,13 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
                         "out_of_pair_spread_fraction": summary.get(
                             "error_is_out_of_pair_spread_fraction"
                         ),
+                        "boundary_error_share": acquisition_features.get(
+                            "boundary_error_share"
+                        ),
+                        "low_source_margin_error_share": acquisition_features.get(
+                            "low_source_margin_error_share"
+                        ),
+                        "hinge_loss_sum": acquisition_features.get("hinge_loss_sum"),
                         "top_source_classes": [
                             {
                                 "class_id": row.get("class_id"),
@@ -260,8 +302,13 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
                     }
                 ],
                 "required_probe_measurements": ordered_unique(required_measurements),
+                "repair_candidate_family_id": family_id,
+                "repair_candidate_generalization_mode": mode,
+                "segnet_semantic_bridge_artifact_path": None,
+                "boundary_argmax_hinge_marginal_surface_path": surface_path or None,
                 "next_queue_action": backlog.get("next_materializer_task"),
                 "blockers": [
+                    *row_blockers,
                     "byte_closed_archive_materializer_required_before_score_claim",
                     "receiver_runtime_proof_required_before_exact_dispatch",
                     "exact_cpu_cuda_eval_required_before_promotion",
@@ -308,13 +355,23 @@ def _required_probe_measurements(cascade: Mapping[str, Any]) -> list[str]:
     ]
 
 
+def _artifact_keys_for_measurements(measurements: Sequence[str]) -> list[str]:
+    keys: list[str] = []
+    for measurement in measurements:
+        keys.extend(_MEASUREMENT_ARTIFACT_KEYS.get(str(measurement), ()))
+    return ordered_unique(keys)
+
+
 def _artifact_status(
     cascade: Mapping[str, Any],
     key: str,
     *,
     repo_root: str | Path,
+    source_payload_path: str | Path | None = None,
 ) -> dict[str, Any]:
     text = str(cascade.get(key) or "").strip()
+    if not text and key == "segnet_semantic_bridge_artifact_path" and source_payload_path:
+        text = str(source_payload_path)
     path = _resolve(text, repo_root) if text else None
     exists = bool(path is not None and path.is_file())
     return {
@@ -428,10 +485,17 @@ def build_repair_cascade_mlx_probe_spec(
             "runtime_consumption_proof_path",
             "repair_dynamics_palette_probe_matrix_path",
             "entropy_boundary_probe_manifest_path",
+            *_artifact_keys_for_measurements(measurements),
         ]
     )
     artifact_status = [
-        _artifact_status(cascade, key, repo_root=repo_root) for key in artifact_keys
+        _artifact_status(
+            cascade,
+            key,
+            repo_root=repo_root,
+            source_payload_path=source_payload_path,
+        )
+        for key in artifact_keys
     ]
     repair_family_campaign_rows = _canonical_repair_family_campaign_rows(
         cascade=cascade,
@@ -459,6 +523,10 @@ def build_repair_cascade_mlx_probe_spec(
         "cascade_id": cascade_id,
         "cascade_label": cascade.get("label"),
         "source_relation": cascade.get("source_relation"),
+        "repair_candidate_family_id": cascade.get("repair_candidate_family_id"),
+        "repair_candidate_generalization_mode": cascade.get(
+            "repair_candidate_generalization_mode"
+        ),
         "pipeline_position": cascade.get("pipeline_position"),
         "targeted_positions": [dict(row) for row in _targeted_positions(cascade)],
         "required_probe_measurements": measurements,
@@ -528,6 +596,51 @@ def _safe_int(value: Any) -> int:
 
 def _stable_sha256(payload: Mapping[str, Any]) -> str:
     return sha256_bytes(json_text(payload).encode("utf-8"))
+
+
+def _semantic_bridge_feature_vector(
+    *,
+    targeted_positions: Sequence[Mapping[str, Any]],
+    probe_result: Mapping[str, Any],
+) -> dict[str, Any]:
+    semantic_positions = [
+        row
+        for row in targeted_positions
+        if str(row.get("position_id") or "").startswith("segnet_semantic_bridge:")
+    ]
+    if not semantic_positions:
+        return {}
+    row = semantic_positions[0]
+    top_classes = [
+        item
+        for item in row.get("top_source_classes") or []
+        if isinstance(item, Mapping)
+    ]
+    return {
+        "semantic_bridge_candidate_family_id": probe_result.get(
+            "repair_candidate_family_id"
+        ),
+        "semantic_bridge_generalization_mode": probe_result.get(
+            "repair_candidate_generalization_mode"
+        ),
+        "semantic_bridge_argmax_disagreement_rate": row.get(
+            "argmax_disagreement_rate"
+        ),
+        "semantic_bridge_out_of_pair_spread_fraction": row.get(
+            "out_of_pair_spread_fraction"
+        ),
+        "semantic_bridge_boundary_error_share": row.get("boundary_error_share"),
+        "semantic_bridge_low_source_margin_error_share": row.get(
+            "low_source_margin_error_share"
+        ),
+        "semantic_bridge_hinge_loss_sum": row.get("hinge_loss_sum"),
+        "semantic_bridge_top_source_class_ids": [
+            item.get("class_id") for item in top_classes if "class_id" in item
+        ],
+        "semantic_bridge_top_source_class_names": [
+            item.get("class_name") for item in top_classes if "class_name" in item
+        ],
+    }
 
 
 def _file_record(
@@ -602,6 +715,10 @@ def build_repair_cascade_mlx_probe_result(
         "cascade_label": probe_spec.get("cascade_label"),
         "source_payload_path": probe_spec.get("source_payload_path"),
         "source_payload_schema": probe_spec.get("source_payload_schema"),
+        "repair_candidate_family_id": probe_spec.get("repair_candidate_family_id"),
+        "repair_candidate_generalization_mode": probe_spec.get(
+            "repair_candidate_generalization_mode"
+        ),
         "pipeline_position": probe_spec.get("pipeline_position"),
         "targeted_positions": list(probe_spec.get("targeted_positions") or []),
         "component_response_axis": "[macOS-MLX research-signal]",
@@ -703,6 +820,10 @@ def build_repair_cascade_mlx_learning_signal(
         if isinstance(row, Mapping)
     ]
     measurements = _string_list(probe_result.get("required_probe_measurements"))
+    semantic_features = _semantic_bridge_feature_vector(
+        targeted_positions=targeted_positions,
+        probe_result=probe_result,
+    )
     ready = probe_result.get("local_mlx_probe_execution_ready") is True
     recommended_policy = (
         "increase_priority_for_exact_axis_component_response_replay"
@@ -726,7 +847,10 @@ def build_repair_cascade_mlx_learning_signal(
         "learning_signal_kind": probe_result.get("learning_signal_kind"),
         "typed_response_id": f"repair_cascade_mlx_probe:{cascade_id}",
         "candidate_id": cascade_id,
-        "family_id": "entropy_position_cascade",
+        "family_id": (
+            probe_result.get("repair_candidate_family_id")
+            or "entropy_position_cascade"
+        ),
         "component_response_axis": probe_result.get("component_response_axis"),
         "evidence_grade": (
             "local_mlx_cascade_probe_result_ready_for_component_response"
@@ -810,6 +934,7 @@ def build_repair_cascade_mlx_learning_signal(
                 "requested_repair_bytes": _safe_int(
                     probe_result.get("requested_repair_bytes")
                 ),
+                **semantic_features,
             },
             "posterior_update_blockers": [
                 "cascade_mlx_learning_signal_is_not_score_authority",

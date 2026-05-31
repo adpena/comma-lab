@@ -73,7 +73,8 @@ def _real_segnet_teacher_logits(frames_nhwc: np.ndarray, *, downsample: int) -> 
     logits = logits.detach().float().numpy()  # (N, C, Hs, Ws)
     if downsample > 1:
         # average-pool the SPATIAL axes to shrink the pixel count for a fast A/B
-        # (the argmax structure + margin distribution are preserved by pooling).
+        # This is a training-dynamics proxy: pooled logits can change argmax
+        # decisions, so scorer-fidelity claims require --downsample 1.
         nC, c, hs, ws = logits.shape
         hs2, ws2 = hs // downsample, ws // downsample
         logits = logits[:, :, : hs2 * downsample, : ws2 * downsample]
@@ -208,6 +209,14 @@ def main() -> int:
         "axis_tag": "[macOS-MLX research-signal]",
         "real_teacher": "contest SegNet (smp.Unet EfficientNet-B2) on upstream/videos/0.mkv",
         "n_frames": args.n_frames,
+        "downsample": args.downsample,
+        "scorer_fidelity": (
+            "full_scorer_grid"
+            if args.downsample == 1
+            else "pooled_logit_training_dynamics_proxy"
+        ),
+        "argmax_preservation_claim": args.downsample == 1,
+        "full_grid_rerun_required_for_exact_scorer_fidelity": args.downsample != 1,
         "n_pixels": n_pixels,
         "n_classes": n_classes,
         "boundary_band_fraction": band_frac,

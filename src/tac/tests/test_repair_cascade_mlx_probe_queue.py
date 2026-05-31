@@ -163,10 +163,11 @@ def test_repair_cascade_probe_spec_consumes_segnet_semantic_bridge_backlog(
         ],
         **_false_authority(),
     }
+    bridge_path = _write_json(tmp_path / "segnet_semantic_bridge.json", semantic_bridge)
 
     spec = build_repair_cascade_mlx_probe_spec(
         source_payload=semantic_bridge,
-        source_payload_path=tmp_path / "segnet_semantic_bridge.json",
+        source_payload_path=bridge_path,
         cascade_id="bridge_unit_mlx_lora_or_dora_boundary_adapter",
         repo_root=tmp_path,
     )
@@ -178,10 +179,147 @@ def test_repair_cascade_probe_spec_consumes_segnet_semantic_bridge_backlog(
         spec["required_probe_measurements"]
     )
     assert "mlx_lora_boundary_adapter_smoke" in spec["required_probe_measurements"]
+    assert "mlx_lora_boundary_adapter_smoke_path" in (
+        spec["required_local_mlx_artifacts"]
+    )
     targeted = spec["targeted_positions"][0]
     assert targeted["out_of_pair_spread_fraction"] == 0.25
     assert targeted["top_source_classes"][0]["class_name"] == "lane_markings"
     assert spec["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_cascade_probe_spec_names_deterministic_bridge_materializers(
+    tmp_path: Path,
+) -> None:
+    surface_path = tmp_path / "semantic_surfaces.npz"
+    surface_path.write_bytes(b"surface")
+    semantic_bridge = {
+        "schema": "segnet_semantic_bridge.v1",
+        "candidate_id": "bridge_unit",
+        "generalization_mode": "mixed",
+        "summary": {
+            "argmax_disagreement_rate": 0.125,
+            "error_is_out_of_pair_spread_fraction": 0.25,
+        },
+        "class_rows": [],
+        "semantic_surface_artifacts": {
+            "schema": "segnet_semantic_bridge_surface_artifacts.v1",
+            "argmax_margin_boundary_npz": {
+                "path": str(surface_path),
+                "bytes": surface_path.stat().st_size,
+                "sha256": "stub",
+            },
+        },
+        "executable_backlog": [
+            {
+                "family_id": "deterministic_boundary_repair",
+                "generalization_mode": "contest_fixed_dataset",
+                "next_materializer_task": "emit correction mask",
+                "score_authority": False,
+            },
+            {
+                "family_id": "deterministic_boundary_postfilter",
+                "generalization_mode": "contest_fixed_dataset",
+                "next_materializer_task": "emit postfilter",
+                "score_authority": False,
+            },
+        ],
+        **_false_authority(),
+    }
+    bridge_path = _write_json(tmp_path / "segnet_semantic_bridge.json", semantic_bridge)
+
+    repair_spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=semantic_bridge,
+        source_payload_path=bridge_path,
+        cascade_id="bridge_unit_deterministic_boundary_repair",
+        repo_root=tmp_path,
+    )
+    postfilter_spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=semantic_bridge,
+        source_payload_path=bridge_path,
+        cascade_id="bridge_unit_deterministic_boundary_postfilter",
+        repo_root=tmp_path,
+    )
+
+    assert "byte_closed_boundary_repair_materializer" in (
+        repair_spec["required_probe_measurements"]
+    )
+    assert "byte_closed_runtime_postfilter_materializer" in (
+        postfilter_spec["required_probe_measurements"]
+    )
+    assert "segnet_semantic_bridge_artifact_path:missing_or_unverified" not in (
+        repair_spec["missing_local_mlx_artifacts"]
+    )
+    assert "boundary_argmax_hinge_marginal_surface_path:missing_or_unverified" not in (
+        repair_spec["missing_local_mlx_artifacts"]
+    )
+    assert repair_spec["score_claim"] is False
+    assert postfilter_spec["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_cascade_learning_signal_preserves_semantic_family_features(
+    tmp_path: Path,
+) -> None:
+    semantic_bridge = {
+        "schema": "segnet_semantic_bridge.v1",
+        "candidate_id": "bridge_unit",
+        "generalization_mode": "mixed",
+        "summary": {
+            "argmax_disagreement_rate": 0.125,
+            "error_is_out_of_pair_spread_fraction": 0.25,
+        },
+        "class_rows": [
+            {
+                "class_id": 2,
+                "class_name": "road_edge",
+                "wrong_pixels": 9,
+                "error_rate_within_source_class": 0.3,
+            }
+        ],
+        "executable_backlog": [
+            {
+                "family_id": "deterministic_boundary_postfilter",
+                "generalization_mode": "contest_fixed_dataset",
+                "acquisition_features": {
+                    "boundary_error_share": 0.75,
+                    "low_source_margin_error_share": 0.5,
+                    "hinge_loss_sum": 123.0,
+                },
+                "next_materializer_task": "emit postfilter",
+                "score_authority": False,
+            }
+        ],
+        **_false_authority(),
+    }
+    bridge_path = _write_json(tmp_path / "segnet_semantic_bridge.json", semantic_bridge)
+    spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=semantic_bridge,
+        source_payload_path=bridge_path,
+        cascade_id="bridge_unit_deterministic_boundary_postfilter",
+        repo_root=tmp_path,
+    )
+    result = build_repair_cascade_mlx_probe_result(
+        probe_spec=spec,
+        probe_spec_path=tmp_path / "repair_cascade_mlx_probe_spec.json",
+        repo_root=tmp_path,
+    )
+    result_path = _write_json(tmp_path / "repair_cascade_mlx_probe_result.json", result)
+
+    signal = build_repair_cascade_mlx_learning_signal(
+        probe_result=result,
+        probe_result_path=result_path,
+        repo_root=tmp_path,
+    )
+
+    assert signal["family_id"] == "deterministic_boundary_postfilter"
+    features = signal["local_planning_update"]["planner_feature_vector"]
+    assert features["semantic_bridge_candidate_family_id"] == (
+        "deterministic_boundary_postfilter"
+    )
+    assert features["semantic_bridge_argmax_disagreement_rate"] == 0.125
+    assert features["semantic_bridge_out_of_pair_spread_fraction"] == 0.25
+    assert features["semantic_bridge_boundary_error_share"] == 0.75
+    assert features["semantic_bridge_top_source_class_names"] == ["road_edge"]
 
 
 def test_repair_cascade_mlx_probe_result_records_missing_mlx_inputs(

@@ -145,6 +145,12 @@ def test_bridge_exposes_all_parallel_generalization_lanes() -> None:
     assert top2_class_indices(source_logits).shape == labels.shape
     modes = {row["generalization_mode"] for row in bridge["executable_backlog"]}
     assert modes == {"contest_fixed_dataset", "mixed", "fleet_adaptable"}
+    families = {row["family_id"] for row in bridge["executable_backlog"]}
+    assert {
+        "deterministic_boundary_repair",
+        "deterministic_boundary_postfilter",
+        "mlx_lora_or_dora_boundary_adapter",
+    }.issubset(families)
     assert (
         bridge["contest_overfit_policy"]["allowed_for_contest_fixed_dataset"]
         is False
