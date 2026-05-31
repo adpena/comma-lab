@@ -8,6 +8,8 @@ CI) per the canonical try/except import guard in mlx_renderer.py.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 mlx = pytest.importorskip("mlx", reason="MLX is not available on this host")
@@ -18,10 +20,13 @@ from tac.substrates.z6_v2_cargo_cult_unwind.architecture import (  # noqa: E402
     Z6V2Substrate,
 )
 from tac.substrates.z6_v2_cargo_cult_unwind.archive import (  # noqa: E402
-    pack_archive,
     parse_archive,
 )
 from tac.substrates.z6_v2_cargo_cult_unwind.archive_candidate import (  # noqa: E402
+    Z6_V2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+    Z6_V2_MLX_ARCHIVE_CANDIDATE_FAMILY,
+    Z6_V2_MLX_ARCHIVE_TRANSFORM_KIND,
+    export_z6_v2_mlx_archive,
     pack_archive_from_exported_state_dict,
     z6_v2_meta_from_config,
 )
@@ -120,6 +125,54 @@ def test_pack_archive_from_exported_state_dict_roundtrip():
     assert decoder_keys == expected_decoder_keys, (
         f"missing decoder keys: {expected_decoder_keys - decoder_keys}"
     )
+
+
+def test_export_z6_v2_mlx_archive_emits_fail_closed_candidate_package_for_truncated_smoke(
+    tmp_path,
+):
+    """Z6-v2 truncated MLX smoke exports package but fails receiver proof."""
+    cfg = Z6V2Config(num_pairs=2)
+    model = Z6V2SubstrateMLX(cfg)
+
+    archive_zip, archive_sha, archive_size = export_z6_v2_mlx_archive(
+        model,
+        tmp_path / "z6_v2_mlx_export",
+    )
+
+    assert archive_zip.is_file()
+    assert len(archive_sha) == 64
+    assert archive_size == archive_zip.stat().st_size
+    adapter_package_path = archive_zip.parent / "archive_bound_candidate_adapter_package.json"
+    assert adapter_package_path.is_file()
+    adapter_package = json.loads(adapter_package_path.read_text(encoding="utf-8"))
+    assert adapter_package["schema"] == Z6_V2_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA
+    receiver_proof = adapter_package["receiver_proof"]
+    assert receiver_proof["runtime_consumption_proof_ready"] is False
+    assert receiver_proof["receiver_contract_satisfied"] is False
+    assert receiver_proof["receiver_output_sha256"] is None
+    assert receiver_proof["receiver_output_retained"] is False
+    assert "requires 600 pairs" in receiver_proof["stderr"]
+    assert "z6_v2_generated_inflate_sh_returned_nonzero" in receiver_proof["blockers"]
+    assert not (archive_zip.parent / "receiver_proof" / "runtime_out" / "0").exists()
+
+    shared_package = adapter_package["archive_bound_candidate_adapter_package"]
+    assert shared_package["candidate_family"] == Z6_V2_MLX_ARCHIVE_CANDIDATE_FAMILY
+    assert shared_package["ready_contract_count"] == 0
+    assert shared_package["receiver_proof_gate_passed_count"] == 0
+    contract = shared_package["candidate_rows"][0]["archive_bound_candidate_contract"]
+    assert contract["archive_native_transform_kind"] == Z6_V2_MLX_ARCHIVE_TRANSFORM_KIND
+    assert contract["entropy_position_label"] == "before_entropy_coder"
+    assert "z6_v2" in contract["archive_substrate_tags"]
+    assert "z7_mamba2" not in contract["archive_substrate_tags"]
+    assert contract["runtime_adapter_ready"] is True
+    assert contract["contest_runtime_decoder_adapter_ready"] is True
+    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    exact_blockers = shared_package["exact_axis_blockers"][0]["blockers"]
+    assert "archive_bound_candidate_not_ready_for_exact_handoff" in exact_blockers
+    assert "z6_v2_generated_inflate_sh_returned_nonzero" in exact_blockers
+    assert "contest_cpu_or_cuda_authority_required" in exact_blockers
+    assert "lane_preclaim_required_before_exact_eval" in exact_blockers
 
 
 def test_mlx_renderer_no_pose_dim_attribute_not_ia3_modulation():

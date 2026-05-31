@@ -619,9 +619,14 @@ def archive_substrate_tags_for_transform_kind(transform_kind: str) -> list[str]:
                 "neural_archive",
                 "predictive_coding",
                 "mlx_substrate",
-                "z7_mamba2",
             ]
         )
+        if "z7" in kind or "mamba" in kind:
+            tags.append("z7_mamba2")
+        if "z6" in kind or "rao_ballard" in kind:
+            tags.append("z6_v2")
+        if "z5" in kind:
+            tags.append("z5")
         if "ssd" in kind or "ssd_reference" in kind:
             tags.append("ssd_reference")
     if "prototype" in kind:

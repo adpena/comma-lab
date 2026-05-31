@@ -208,6 +208,15 @@ def test_archive_contract_classifies_z7_mlx_predictive_coding_as_before_coder() 
     assert "z7_mamba2" in reference_tags
     assert "ssd_reference" not in reference_tags
 
+    z6_tags = archive_substrate_tags_for_transform_kind(
+        "z6_v2_mlx_rao_ballard_predictive_coding_archive"
+    )
+    assert entropy_position_label_for_transform_kind(
+        "z6_v2_mlx_rao_ballard_predictive_coding_archive"
+    ) == "before_entropy_coder"
+    assert "z6_v2" in z6_tags
+    assert "z7_mamba2" not in z6_tags
+
 
 def test_archive_contract_consumes_nested_runtime_adapter_manifest(
     tmp_path: Path,
