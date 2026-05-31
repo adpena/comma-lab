@@ -34,6 +34,7 @@ from tac.substrates.z8_hierarchical_predictive_coding.archive_candidate import (
     export_z8hpc1_archive_bytes,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+    build_canonical_quadruple_binding_from_z8_config,
     pack_pair_pyramids_to_wavelet_blob,
     parse_pair_blobs_from_wavelet_blob,
     reconstruct_pair_rgb_from_pyramid,
@@ -46,6 +47,7 @@ from tac.substrates.z8_hierarchical_predictive_coding.mallat_dwt_adapter import 
     WaveletDetail2D,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+    _binding_config_from_archive,
     projected_pair_pyramids_from_archive_bytes,
 )
 
@@ -71,6 +73,9 @@ FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION = "full_video_exact_accumulation"
 SINGLE_UPDATE_AFTER_FULL_REDUCTION = "single_update_after_all_pair_shards_reduce"
 TRUE_P19_POSE_SURFACE_KIND = "per_axis_posenet_jacobian_mahalanobis_v1"
 P19_POSE_SURFACE_BLOCKER = "p19_pose_surface_not_true_per_axis_jacobian"
+WAVELET_ADJOINT_PROJECTION_METHOD = "mallat_orthonormal_analysis_adjoint_v1"
+SAFE_MASK_SUPPORT_PROJECTION_METHOD = "area_support_fraction_conservative_v1"
+BYTE_RATE_GRADIENT_BLOCKER = "z8_byte_rate_gradient_not_differentiated_through_quantizer_entropy_codec"
 
 
 @dataclass(frozen=True)
@@ -89,6 +94,7 @@ class Z8JointCoefficientWaterfillConfig:
     require_exact_full_video_gradient_reduction: bool = True
     require_true_p19_pose_surface: bool = True
     require_p18_class_boundary_surface: bool = True
+    require_rd_waterfill_authority: bool = True
     measure_receiver_distortion: bool = True
     mutate_coefficients: bool = True
     entropy_code_quantized_details: bool = False
@@ -160,6 +166,7 @@ class Z8JointCoefficientRelinearizationSearchConfig:
     require_exact_full_video_gradient_reduction: bool = True
     require_true_p19_pose_surface: bool = True
     require_p18_class_boundary_surface: bool = True
+    require_rd_waterfill_authority: bool = True
     local_replay_prefilter_top_k: int | None = None
     skip_receiver_mse_proxy_when_full_video_replay: bool = True
     mutate_coefficients: bool = True
@@ -341,6 +348,15 @@ def _surface_payload(
             "segnet_class_boundary_blockers": _surface_list(
                 surface.get("segnet_class_boundary_blockers")
             ),
+            "implicit_allocator_authority": _surface_bool(
+                surface.get("implicit_allocator_authority")
+            ),
+            "implicit_allocator_blockers": _surface_list(surface.get("implicit_allocator_blockers")),
+            "byte_rate_gradient_authority": _surface_bool(
+                surface.get("byte_rate_gradient_authority")
+            ),
+            "byte_rate_gradient_kind": _surface_string(surface.get("byte_rate_gradient_kind")),
+            "byte_rate_gradient_blockers": _surface_list(surface.get("byte_rate_gradient_blockers")),
         }
     if isinstance(surface, tuple) and len(surface) == 2:
         return _surface_payload(
@@ -370,6 +386,11 @@ def _surface_payload(
         "pose_surface_blockers": [],
         "segnet_class_boundary_authority": None,
         "segnet_class_boundary_blockers": [],
+        "implicit_allocator_authority": None,
+        "implicit_allocator_blockers": [],
+        "byte_rate_gradient_authority": None,
+        "byte_rate_gradient_kind": None,
+        "byte_rate_gradient_blockers": [],
     }
 
 
@@ -420,6 +441,23 @@ def load_joint_p18_p19_surface_file(path: str | Path) -> dict[str, Any]:
                 "segnet_class_boundary_blockers": data.get(
                     "segnet_class_boundary_blockers_json",
                     data.get("segnet_class_boundary_blockers", None),
+                ),
+                "implicit_allocator_authority": data.get(
+                    "implicit_allocator_authority",
+                    None,
+                ),
+                "implicit_allocator_blockers": data.get(
+                    "implicit_allocator_blockers_json",
+                    data.get("implicit_allocator_blockers", None),
+                ),
+                "byte_rate_gradient_authority": data.get(
+                    "byte_rate_gradient_authority",
+                    None,
+                ),
+                "byte_rate_gradient_kind": data.get("byte_rate_gradient_kind", None),
+                "byte_rate_gradient_blockers": data.get(
+                    "byte_rate_gradient_blockers_json",
+                    data.get("byte_rate_gradient_blockers", None),
                 ),
             }
         )
@@ -597,6 +635,50 @@ def _surface_p18_class_boundary_report(
     }
 
 
+def _surface_rd_waterfill_authority_report(
+    *,
+    surface_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    allocator_authority = _surface_bool(surface_payload.get("implicit_allocator_authority"))
+    allocator_blockers = _surface_list(surface_payload.get("implicit_allocator_blockers"))
+    budget_spend_authority = _surface_bool(surface_payload.get("budget_spend_authority"))
+    blockers: list[str] = []
+    if allocator_authority is not True:
+        blockers.append("z8_joint_surface_implicit_kkt_dykstra_allocator_authority_missing")
+    if budget_spend_authority is not True:
+        blockers.append("z8_joint_surface_budget_spend_authority_missing")
+    blockers.extend(allocator_blockers)
+    return {
+        "schema": "z8_joint_p18_p19_rd_waterfill_authority_report.v1",
+        "implicit_allocator_authority": allocator_authority,
+        "budget_spend_authority": budget_spend_authority,
+        "rd_waterfill_authority": not blockers,
+        "blockers": blockers,
+    }
+
+
+def _surface_byte_rate_gradient_report(
+    *,
+    surface_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    authority = _surface_bool(surface_payload.get("byte_rate_gradient_authority"))
+    kind = _surface_string(surface_payload.get("byte_rate_gradient_kind"))
+    blockers = _surface_list(surface_payload.get("byte_rate_gradient_blockers"))
+    if authority is not True and BYTE_RATE_GRADIENT_BLOCKER not in blockers:
+        blockers.append(BYTE_RATE_GRADIENT_BLOCKER)
+    return {
+        "schema": "z8_byte_rate_gradient_authority_report.v1",
+        "byte_rate_gradient_authority": authority,
+        "byte_rate_gradient_kind": kind or "hard_archive_byte_delta_measurement_only",
+        "byte_rate_gradient_blockers": blockers,
+        "allowed_rate_signal": "measured_archive_byte_delta_after_hard_materialization",
+        "forbidden_rate_signal": "differentiable_byte_gradient_claim_without_quantizer_entropy_codec_vjp",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _surface_slice_for_pair_frame(
     arr: np.ndarray,
     *,
@@ -654,6 +736,10 @@ def _resize_hw_mean(
     return out
 
 
+def _binding_for_archive(arc: Any) -> Any:
+    return build_canonical_quadruple_binding_from_z8_config(_binding_config_from_archive(arc))
+
+
 def _project_surface_to_subband(
     arr: np.ndarray,
     *,
@@ -665,6 +751,77 @@ def _project_surface_to_subband(
         _surface_slice_for_pair_frame(arr, pair_idx=pair_idx, frame_idx=frame_idx),
         target_shape=subband_shape,
     )
+
+
+def _frame_grid_for_detail_chain(
+    arr: np.ndarray,
+    *,
+    pair_idx: int,
+    frame_idx: int,
+    details: Sequence[WaveletDetail2D],
+) -> np.ndarray:
+    if not details:
+        raise ValueError("details must not be empty")
+    first = np.asarray(details[0].lh, dtype=np.float64)
+    if first.ndim != 3:
+        raise ValueError(f"detail subbands must be HWC; got {first.shape}")
+    target_shape = (int(first.shape[0]) * 2, int(first.shape[1]) * 2, int(first.shape[2]))
+    return _resize_hw_mean(
+        _surface_slice_for_pair_frame(arr, pair_idx=pair_idx, frame_idx=frame_idx),
+        target_shape=target_shape,
+    )
+
+
+def _project_joint_surface_to_detail_subbands(
+    arr: np.ndarray,
+    *,
+    binding: Any,
+    pair_idx: int,
+    frame_idx: int,
+    details: Sequence[WaveletDetail2D],
+) -> list[dict[str, np.ndarray]]:
+    """Project pixel/pair joint weights into coefficient space via DWT adjoint."""
+
+    if len(getattr(binding, "m5_per_level", ())) < len(details):
+        raise ValueError("binding does not expose enough Mallat levels for detail projection")
+    current = _frame_grid_for_detail_chain(
+        arr,
+        pair_idx=pair_idx,
+        frame_idx=frame_idx,
+        details=details,
+    )[None, ...]
+    projected: list[dict[str, np.ndarray]] = []
+    for level_idx, _detail in enumerate(details):
+        ll, detail_projection = binding.m5_per_level[level_idx].decompose_to_next_level(current)
+        projected.append(
+            {
+                "lh": np.abs(np.asarray(detail_projection.lh, dtype=np.float64))[0],
+                "hl": np.abs(np.asarray(detail_projection.hl, dtype=np.float64))[0],
+                "hh": np.abs(np.asarray(detail_projection.hh, dtype=np.float64))[0],
+            }
+        )
+        current = np.asarray(ll, dtype=np.float64)
+    return projected
+
+
+def _project_safe_mask_to_detail_support(
+    arr: np.ndarray,
+    *,
+    pair_idx: int,
+    frame_idx: int,
+    details: Sequence[WaveletDetail2D],
+) -> list[dict[str, np.ndarray]]:
+    projected: list[dict[str, np.ndarray]] = []
+    for detail in details:
+        first = np.asarray(detail.lh, dtype=np.float32)
+        support = _project_surface_to_subband(
+            arr,
+            pair_idx=pair_idx,
+            frame_idx=frame_idx,
+            subband_shape=first.shape,
+        )
+        projected.append({"lh": support, "hl": support, "hh": support})
+    return projected
 
 
 def _quantize_selected(
@@ -707,8 +864,8 @@ def _quantize_selected(
 def _mutate_detail(
     detail: WaveletDetail2D,
     *,
-    projected_joint: np.ndarray,
-    projected_safe: np.ndarray | None,
+    projected_joint_by_subband: Mapping[str, np.ndarray],
+    projected_safe_by_subband: Mapping[str, np.ndarray] | None,
     level_idx: int,
     config: Z8JointCoefficientWaterfillConfig,
 ) -> tuple[WaveletDetail2D, list[dict[str, Any]]]:
@@ -716,6 +873,12 @@ def _mutate_detail(
     stats: list[dict[str, Any]] = []
     for subband_name in ("lh", "hl", "hh"):
         coeff = np.asarray(getattr(detail, subband_name), dtype=np.float32)
+        projected_joint = np.asarray(projected_joint_by_subband[subband_name], dtype=np.float64)
+        projected_safe = (
+            np.asarray(projected_safe_by_subband[subband_name], dtype=np.float64)
+            if projected_safe_by_subband is not None
+            else None
+        )
         if projected_joint.shape != coeff.shape:
             raise ValueError(f"projected_joint shape {projected_joint.shape} != coeff shape {coeff.shape}")
         if projected_safe is not None and projected_safe.shape != coeff.shape:
@@ -731,6 +894,10 @@ def _mutate_detail(
             {
                 "level_index": int(level_idx),
                 "subband": subband_name,
+                "joint_projection_method": WAVELET_ADJOINT_PROJECTION_METHOD,
+                "safe_mask_projection_method": (
+                    SAFE_MASK_SUPPORT_PROJECTION_METHOD if projected_safe is not None else None
+                ),
             }
         )
         stats.append(sub_stats)
@@ -747,6 +914,7 @@ def _mutate_detail(
 def _mutate_pair_pyramids(
     pair_pyramids: list[dict[str, Any]],
     *,
+    binding: Any,
     joint_surface: np.ndarray,
     safe_mask: np.ndarray | None,
     config: Z8JointCoefficientWaterfillConfig,
@@ -761,28 +929,29 @@ def _mutate_pair_pyramids(
         next_pyramid = dict(pyramid)
         for frame_idx, details_key in enumerate(("frame_0_details", "frame_1_details")):
             next_details: list[WaveletDetail2D] = []
-            for level_idx, detail in enumerate(pyramid[details_key]):
-                first_subband = np.asarray(detail.lh, dtype=np.float32)
-                projected_joint = _project_surface_to_subband(
-                    joint_surface,
+            source_details = list(pyramid[details_key])
+            joint_projection = _project_joint_surface_to_detail_subbands(
+                joint_surface,
+                binding=binding,
+                pair_idx=pair_idx,
+                frame_idx=frame_idx,
+                details=source_details,
+            )
+            safe_projection = (
+                _project_safe_mask_to_detail_support(
+                    safe_mask,
                     pair_idx=pair_idx,
                     frame_idx=frame_idx,
-                    subband_shape=first_subband.shape,
+                    details=source_details,
                 )
-                projected_safe = (
-                    _project_surface_to_subband(
-                        safe_mask,
-                        pair_idx=pair_idx,
-                        frame_idx=frame_idx,
-                        subband_shape=first_subband.shape,
-                    )
-                    if safe_mask is not None
-                    else None
-                )
+                if safe_mask is not None
+                else None
+            )
+            for level_idx, detail in enumerate(source_details):
                 mutated, stats = _mutate_detail(
                     detail,
-                    projected_joint=projected_joint,
-                    projected_safe=projected_safe,
+                    projected_joint_by_subband=joint_projection[level_idx],
+                    projected_safe_by_subband=(safe_projection[level_idx] if safe_projection is not None else None),
                     level_idx=level_idx,
                     config=config,
                 )
@@ -805,6 +974,14 @@ def _mutate_pair_pyramids(
         "dead_zoned_coefficients": zeroed,
         "eligible_fraction": float(eligible / total) if total else 0.0,
         "dead_zoned_fraction": float(zeroed / total) if total else 0.0,
+        "projection_report": {
+            "schema": "z8_joint_surface_to_wavelet_coefficient_projection.v1",
+            "joint_projection_method": WAVELET_ADJOINT_PROJECTION_METHOD,
+            "safe_mask_projection_method": SAFE_MASK_SUPPORT_PROJECTION_METHOD if safe_mask is not None else None,
+            "wavelet_adjoint_projection_authority": True,
+            "area_pool_joint_projection_used": False,
+            "projection_blockers": [],
+        },
         "subband_stats": subband_stats,
     }
 
@@ -847,6 +1024,15 @@ def _identity_pair_pyramid_report(
         "dead_zoned_coefficients": 0,
         "eligible_fraction": 0.0,
         "dead_zoned_fraction": 0.0,
+        "projection_report": {
+            "schema": "z8_joint_surface_to_wavelet_coefficient_projection.v1",
+            "joint_projection_method": "storage_only_no_projection_required",
+            "safe_mask_projection_method": None,
+            "wavelet_adjoint_projection_authority": True,
+            "area_pool_joint_projection_used": False,
+            "projection_blockers": [],
+            "storage_only_no_surface_required": True,
+        },
         "subband_stats": subband_stats,
     }
 
@@ -1049,6 +1235,32 @@ def _maybe_run_inflate_runtime_benchmark(
     return report
 
 
+def _exact_axis_blocker_report(
+    *,
+    exact_axis_blocker: str,
+    receiver_proof_executed: bool,
+    archive_zip_sha256: str | None,
+    candidate_bin_sha256: str,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not str(exact_axis_blocker or "").strip():
+        blockers.append("exact_axis_blocker_missing")
+    if receiver_proof_executed and not archive_zip_sha256:
+        blockers.append("receiver_proof_claim_without_archive_zip_sha256")
+    return {
+        "schema": "z8_exact_axis_blocker_audit.v1",
+        "exact_axis_blocker": str(exact_axis_blocker or ""),
+        "exact_axis_blocker_present": not any(blocker == "exact_axis_blocker_missing" for blocker in blockers),
+        "exact_axis_blocker_stale": False,
+        "receiver_proof_executed": bool(receiver_proof_executed),
+        "archive_zip_sha256": archive_zip_sha256,
+        "candidate_bin_sha256": candidate_bin_sha256,
+        "required_next_authority": "contest_cpu_or_cuda_exact_eval_payload",
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def apply_joint_p18_p19_deadzone_to_z8_archive(
     archive_bytes: bytes,
     *,
@@ -1101,6 +1313,10 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
             and not p18_class_boundary_report["p18_class_boundary_surface"]
         ):
             raise ValueError(",".join(str(item) for item in p18_class_boundary_report["blockers"]))
+        rd_waterfill_report = _surface_rd_waterfill_authority_report(surface_payload=surface)
+        if cfg.require_rd_waterfill_authority and not rd_waterfill_report["rd_waterfill_authority"]:
+            raise ValueError(",".join(str(item) for item in rd_waterfill_report["blockers"]))
+        byte_rate_gradient_report = _surface_byte_rate_gradient_report(surface_payload=surface)
     else:
         joint_surface = np.zeros((), dtype=np.float64)
         safe_mask = None
@@ -1156,10 +1372,32 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
             "blockers": [],
             "storage_only_no_surface_required": True,
         }
+        rd_waterfill_report = {
+            "schema": "z8_joint_p18_p19_rd_waterfill_authority_report.v1",
+            "implicit_allocator_authority": None,
+            "budget_spend_authority": None,
+            "rd_waterfill_authority": True,
+            "blockers": [],
+            "storage_only_no_surface_required": True,
+        }
+        byte_rate_gradient_report = {
+            "schema": "z8_byte_rate_gradient_authority_report.v1",
+            "byte_rate_gradient_authority": False,
+            "byte_rate_gradient_kind": "hard_archive_byte_delta_measurement_only",
+            "byte_rate_gradient_blockers": [BYTE_RATE_GRADIENT_BLOCKER],
+            "allowed_rate_signal": "measured_archive_byte_delta_after_hard_materialization",
+            "forbidden_rate_signal": "differentiable_byte_gradient_claim_without_quantizer_entropy_codec_vjp",
+            "storage_only_no_surface_required": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
     pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
     if cfg.mutate_coefficients:
+        binding = _binding_for_archive(arc)
         mutated_pyramids, coeff_report = _mutate_pair_pyramids(
             pair_pyramids,
+            binding=binding,
             joint_surface=joint_surface,
             safe_mask=safe_mask,
             config=cfg,
@@ -1207,10 +1445,13 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
                 "mutate_coefficients": bool(cfg.mutate_coefficients),
                 "require_full_video_surface_coverage": bool(cfg.require_full_video_surface_coverage),
                 "require_p18_class_boundary_surface": bool(cfg.require_p18_class_boundary_surface),
+                "require_rd_waterfill_authority": bool(cfg.require_rd_waterfill_authority),
                 "entropy_code_quantized_details": bool(cfg.entropy_code_quantized_details),
                 "entropy_detail_quantization_step": entropy_detail_step,
                 "entropy_detail_quantization_steps": dict(cfg.entropy_detail_quantization_steps or {}),
                 "lossless_brotli_precondition_details": bool(cfg.lossless_brotli_precondition_details),
+                "joint_projection_method": coeff_report["projection_report"]["joint_projection_method"],
+                "byte_rate_gradient_authority": False,
             },
         },
         num_levels=arc.num_levels,
@@ -1264,6 +1505,8 @@ def apply_joint_p18_p19_deadzone_to_z8_archive(
         "surface_gradient_reduction_report": gradient_reduction_report,
         "surface_true_p19_report": true_p19_report,
         "surface_p18_class_boundary_report": p18_class_boundary_report,
+        "surface_rd_waterfill_authority_report": rd_waterfill_report,
+        "byte_rate_gradient_report": byte_rate_gradient_report,
         "axis_tag": "[macOS-CPU advisory]",
         "allowed_use": "local_z8_rate_attack_materialization_and_acquisition_signal",
         "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
@@ -1320,10 +1563,22 @@ def materialize_joint_p18_p19_deadzone_candidate(
                 inflate_runtime_benchmark_work_order,
                 config=cfg,
             )
+    exact_axis_blocker = (
+        "contest_cpu_cuda_eval_not_executed"
+        if cfg.emit_receiver_proof
+        else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+    )
+    candidate_bin_sha256 = hashlib.sha256(mutated_archive).hexdigest()
+    exact_axis_blocker_report = _exact_axis_blocker_report(
+        exact_axis_blocker=exact_axis_blocker,
+        receiver_proof_executed=bool(cfg.emit_receiver_proof),
+        archive_zip_sha256=archive_sha256,
+        candidate_bin_sha256=candidate_bin_sha256,
+    )
     manifest = {
         "schema": Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA,
         "candidate_bin_path": candidate_bin.as_posix(),
-        "candidate_bin_sha256": hashlib.sha256(mutated_archive).hexdigest(),
+        "candidate_bin_sha256": candidate_bin_sha256,
         "candidate_bin_bytes": len(mutated_archive),
         "archive_zip_path": archive_zip_path.as_posix() if archive_zip_path else None,
         "archive_zip_sha256": archive_sha256,
@@ -1332,11 +1587,8 @@ def materialize_joint_p18_p19_deadzone_candidate(
         "inflate_runtime_benchmark_work_order": inflate_runtime_benchmark_work_order,
         "inflate_runtime_benchmark_report": inflate_runtime_benchmark_report,
         "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
-        "exact_axis_blocker": (
-            "contest_cpu_cuda_eval_not_executed"
-            if cfg.emit_receiver_proof
-            else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
-        ),
+        "exact_axis_blocker": exact_axis_blocker,
+        "exact_axis_blocker_report": exact_axis_blocker_report,
         "waterfill_result": {key: value for key, value in result.items() if key != "mutated_archive_bytes"},
         **FALSE_AUTHORITY,
     }
@@ -1413,6 +1665,9 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         require_exact_full_video_gradient_reduction=bool(
                             cfg.require_exact_full_video_gradient_reduction
                         ),
+                        require_true_p19_pose_surface=bool(cfg.require_true_p19_pose_surface),
+                        require_p18_class_boundary_surface=bool(cfg.require_p18_class_boundary_surface),
+                        require_rd_waterfill_authority=bool(cfg.require_rd_waterfill_authority),
                         measure_receiver_distortion=measure_receiver_proxy,
                         mutate_coefficients=bool(cfg.mutate_coefficients),
                         entropy_code_quantized_details=bool(cfg.entropy_code_quantized_details),
@@ -1494,6 +1749,9 @@ def run_joint_p18_p19_relinearized_deadzone_search(
                         "surface_freshness_report": result["surface_freshness_report"],
                         "surface_gradient_reduction_report": result["surface_gradient_reduction_report"],
                         "surface_true_p19_report": result["surface_true_p19_report"],
+                        "surface_p18_class_boundary_report": result["surface_p18_class_boundary_report"],
+                        "surface_rd_waterfill_authority_report": result["surface_rd_waterfill_authority_report"],
+                        "byte_rate_gradient_report": result["byte_rate_gradient_report"],
                         "coefficient_summary": {
                             key: value for key, value in result["coefficient_report"].items() if key != "subband_stats"
                         },
@@ -1647,11 +1905,23 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
                 config=cfg,
             )
 
+    exact_axis_blocker = (
+        "contest_cpu_cuda_eval_not_executed"
+        if cfg.emit_receiver_proof
+        else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+    )
+    candidate_bin_sha256 = hashlib.sha256(final_archive).hexdigest()
+    exact_axis_blocker_report = _exact_axis_blocker_report(
+        exact_axis_blocker=exact_axis_blocker,
+        receiver_proof_executed=bool(cfg.emit_receiver_proof),
+        archive_zip_sha256=archive_sha256,
+        candidate_bin_sha256=candidate_bin_sha256,
+    )
     manifest = {key: value for key, value in result.items() if key != "final_archive_bytes_payload"}
     manifest.update(
         {
             "candidate_bin_path": final_bin.as_posix(),
-            "candidate_bin_sha256": hashlib.sha256(final_archive).hexdigest(),
+            "candidate_bin_sha256": candidate_bin_sha256,
             "candidate_bin_bytes": len(final_archive),
             "archive_zip_path": (archive_zip_path.as_posix() if archive_zip_path else None),
             "archive_zip_sha256": archive_sha256,
@@ -1660,11 +1930,8 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
             "inflate_runtime_benchmark_work_order": inflate_runtime_benchmark_work_order,
             "inflate_runtime_benchmark_report": inflate_runtime_benchmark_report,
             "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
-            "exact_axis_blocker": (
-                "contest_cpu_cuda_eval_not_executed"
-                if cfg.emit_receiver_proof
-                else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
-            ),
+            "exact_axis_blocker": exact_axis_blocker,
+            "exact_axis_blocker_report": exact_axis_blocker_report,
             **FALSE_AUTHORITY,
         }
     )

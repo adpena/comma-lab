@@ -24,11 +24,14 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
 from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill import (
     FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
     SINGLE_UPDATE_AFTER_FULL_REDUCTION,
+    WAVELET_ADJOINT_PROJECTION_METHOD,
     Z8_JOINT_COEFFICIENT_RATE_ATTACK_ROLE,
     Z8_JOINT_COEFFICIENT_RELINEARIZED_SEARCH_SCHEMA,
     Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA,
     Z8JointCoefficientRelinearizationSearchConfig,
     Z8JointCoefficientWaterfillConfig,
+    _binding_for_archive,
+    _project_joint_surface_to_detail_subbands,
     apply_joint_p18_p19_deadzone_to_z8_archive,
     load_joint_p18_p19_surface_file,
     materialize_joint_p18_p19_deadzone_candidate,
@@ -87,6 +90,13 @@ def _surface_for_archive(
         "pose_surface_blockers": [],
         "segnet_class_boundary_authority": True,
         "segnet_class_boundary_blockers": [],
+        "implicit_allocator_authority": True,
+        "implicit_allocator_blockers": [],
+        "byte_rate_gradient_authority": False,
+        "byte_rate_gradient_kind": "hard_archive_byte_delta_measurement_only",
+        "byte_rate_gradient_blockers": [
+            "z8_byte_rate_gradient_not_differentiated_through_quantizer_entropy_codec"
+        ],
     }
 
 
@@ -119,6 +129,12 @@ def test_joint_p18_p19_deadzone_mutates_wavelet_details_and_reduces_rate() -> No
     assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
     assert result["surface_true_p19_report"]["true_p19_pose_surface"] is True
     assert result["surface_p18_class_boundary_report"]["p18_class_boundary_surface"] is True
+    assert result["surface_rd_waterfill_authority_report"]["rd_waterfill_authority"] is True
+    assert result["byte_rate_gradient_report"]["byte_rate_gradient_authority"] is False
+    assert result["coefficient_report"]["projection_report"]["joint_projection_method"] == (
+        WAVELET_ADJOINT_PROJECTION_METHOD
+    )
+    assert result["coefficient_report"]["projection_report"]["area_pool_joint_projection_used"] is False
     np.testing.assert_allclose(
         mutated_pyramids[0]["frame_0_top_ll"],
         original_pyramids[0]["frame_0_top_ll"],
@@ -164,6 +180,8 @@ def test_joint_p18_p19_deadzone_materializer_emits_byte_closed_archive(
         "tools/benchmark_z8_submission_inflate_runtime.py"
     )
     assert manifest["exact_axis_blocker"] == ("receiver_proof_and_contest_cpu_cuda_eval_not_executed")
+    assert manifest["exact_axis_blocker_report"]["exact_axis_blocker_present"] is True
+    assert manifest["exact_axis_blocker_report"]["exact_axis_blocker_stale"] is False
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
 
@@ -189,6 +207,47 @@ def test_joint_materializer_rejects_legacy_non_true_p19_surface() -> None:
                 quantization_step=0.25,
             ),
         )
+
+
+def test_joint_materializer_rejects_missing_rd_waterfill_authority() -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+    surface = _surface_for_archive(archive_bytes, joint_weight, pose_null_mask)
+    surface["implicit_allocator_authority"] = False
+    surface["implicit_allocator_blockers"] = ["unit_allocator_blocker"]
+
+    with pytest.raises(ValueError, match="implicit_kkt_dykstra_allocator_authority_missing"):
+        apply_joint_p18_p19_deadzone_to_z8_archive(
+            archive_bytes,
+            joint_weight=surface,
+            config=Z8JointCoefficientWaterfillConfig(
+                joint_weight_quantile=1.0,
+                coefficient_deadzone_quantile=1.0,
+                quantization_step=0.25,
+            ),
+        )
+
+
+def test_wavelet_adjoint_projection_pushes_pixel_surface_into_detail_bands() -> None:
+    archive_bytes = _archive_bytes()
+    arc = parse_archive(archive_bytes)
+    binding = _binding_for_archive(arc)
+    pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
+    yy, xx = np.indices((16, 16))
+    checker = np.where((yy + xx) % 2 == 0, 1.0, -1.0).astype(np.float64)
+    surface = np.repeat(checker[None, None, :, :, None], 3, axis=-1)
+
+    projected = _project_joint_surface_to_detail_subbands(
+        surface,
+        binding=binding,
+        pair_idx=0,
+        frame_idx=0,
+        details=pyramids[0]["frame_0_details"],
+    )
+
+    assert projected[0]["hh"].shape == pyramids[0]["frame_0_details"][0].hh.shape
+    assert float(np.max(projected[0]["hh"])) > 0.0
 
 
 def test_quantized_detail_entropy_codec_roundtrips_pair_pyramids() -> None:
@@ -806,6 +865,13 @@ def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
         pose_inverse_variance=np.asarray(surface["pose_inverse_variance"], dtype=np.float64),
         segnet_class_boundary_authority=np.asarray(surface["segnet_class_boundary_authority"]),
         segnet_class_boundary_blockers_json=np.asarray("[]"),
+        implicit_allocator_authority=np.asarray(surface["implicit_allocator_authority"]),
+        implicit_allocator_blockers_json=np.asarray("[]"),
+        byte_rate_gradient_authority=np.asarray(False),
+        byte_rate_gradient_kind=np.asarray("hard_archive_byte_delta_measurement_only"),
+        byte_rate_gradient_blockers_json=np.asarray(
+            "[\"z8_byte_rate_gradient_not_differentiated_through_quantizer_entropy_codec\"]"
+        ),
     )
 
     loaded = load_joint_p18_p19_surface_file(surface_path)
@@ -823,3 +889,5 @@ def test_joint_p18_p19_npz_surface_loader_preserves_archive_freshness(
     assert result["surface_gradient_reduction_report"]["exact_full_video_gradient_reduction"] is True
     assert result["surface_true_p19_report"]["true_p19_pose_surface"] is True
     assert result["surface_p18_class_boundary_report"]["p18_class_boundary_surface"] is True
+    assert result["surface_rd_waterfill_authority_report"]["rd_waterfill_authority"] is True
+    assert result["byte_rate_gradient_report"]["byte_rate_gradient_blockers"]

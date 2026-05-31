@@ -1,0 +1,2493 @@
+{
+  "artifacts": [
+    {
+      "associated_zip": {
+        "bytes": 152202740,
+        "contest_rate_term": 101.34555711872603,
+        "member_count": 23,
+        "member_read_errors": [],
+        "members": [
+          {
+            "compressed_bytes": 152090556,
+            "compression_type": 8,
+            "filename": "0.bin",
+            "matches_expected_member_sha256": true,
+            "read_error": null,
+            "sha256": "9a1ba69190bcf0086499151d868ba5616e07984b8ce7ace94d93e49fedfda840",
+            "uncompressed_bytes": 152070180
+          },
+          {
+            "compressed_bytes": 21258,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "36dc0be355ea9e7d60cea882cc2c88b1e54a3afcf4ad8ac68de2025f0746eb0c",
+            "uncompressed_bytes": 78626
+          },
+          {
+            "compressed_bytes": 14964,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/mamba2_predictor.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f6347398b7fe7e5306f415ad9f455f2effae63acebecfa4a37a1fb3ca1674d81",
+            "uncompressed_bytes": 53260
+          },
+          {
+            "compressed_bytes": 12803,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f57eb2356f1fd9625eb97c0c17e3bd58cdb50f62fa7138c49273d286f3215615",
+            "uncompressed_bytes": 44702
+          },
+          {
+            "compressed_bytes": 8875,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "0ee58e93945c5d2ed5e416842992119252b2b0241df342b1eebe5ae31a10d388",
+            "uncompressed_bytes": 31164
+          },
+          {
+            "compressed_bytes": 7338,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "9a8db2ce76b83aa03a2c9bfdb8b98836a03c10a9757be513d07bb48288f7cfdc",
+            "uncompressed_bytes": 23578
+          },
+          {
+            "compressed_bytes": 7141,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/archive.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "fa480859ab408017150843f35dfceb742498e556792bb548e527ad8c4e2f63f0",
+            "uncompressed_bytes": 25006
+          },
+          {
+            "compressed_bytes": 6153,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_payload_bridge.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5b32b6e9b68560976dd0e4e820e7c05832e761a23f65da80a9b011883716a22c",
+            "uncompressed_bytes": 28520
+          },
+          {
+            "compressed_bytes": 6032,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/loss.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f7bec7825a126006b0144b65d46c851af13f5d06342439c43f2110b5ee2826f9",
+            "uncompressed_bytes": 18551
+          },
+          {
+            "compressed_bytes": 5684,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "3f632825fe0a58c4ee36fc49b6d970b5224e2864d433912e1b9482420aaf1dbe",
+            "uncompressed_bytes": 19045
+          },
+          {
+            "compressed_bytes": 5100,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "a1219e38868a2ec3451992ad25b86e8181e47e9a012a54837d7b661a83cce7cd",
+            "uncompressed_bytes": 14861
+          },
+          {
+            "compressed_bytes": 4196,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/daubechies_wavelet_codec.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "49040b2efdfeb7b57e26a7c1ba31500e532cf5ca75593079afc2674018f7512a",
+            "uncompressed_bytes": 12088
+          },
+          {
+            "compressed_bytes": 3985,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "51b224fe484ab2985b34f194b6a5c69afc2a954c0ef9f0caed453a2fc461cde3",
+            "uncompressed_bytes": 11251
+          },
+          {
+            "compressed_bytes": 2621,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/inflate_runtime.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "dd7c3def09b6eab4ce8b65b6ed271a2fbd884b741002ffbd099072d92938a4a1",
+            "uncompressed_bytes": 6269
+          },
+          {
+            "compressed_bytes": 1017,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_custody.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5f07ca96335bf6d56ccc64f5a2c20a0c41182d29c96fe7d77a749f0515944fdd",
+            "uncompressed_bytes": 3566
+          },
+          {
+            "compressed_bytes": 580,
+            "compression_type": 8,
+            "filename": "inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "1b3a44e85c0204c44fd2f3c938b5acc497886d1f558fe18cb6b558d686e36917",
+            "uncompressed_bytes": 1149
+          },
+          {
+            "compressed_bytes": 331,
+            "compression_type": 8,
+            "filename": "inflate.sh",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "95f5142333b5e727618ce60f8b5e6918a34d56efd85e11ee16095f4989f72e0e",
+            "uncompressed_bytes": 460
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          }
+        ],
+        "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/mlx_replay_from_saved_bundle/local_replay_byte_closed/iter_0000_cand_00000/archive.zip",
+        "sha256": "27622c64f51483a0285a6b6c06d2a0428be5fdb35a42334c27bef9d9737c0485",
+        "total_compressed_member_bytes": 152198646,
+        "total_uncompressed_member_bytes": 152442276,
+        "zero_bin_member_count": 1,
+        "zero_bin_member_matches_expected": true,
+        "zip_container_overhead_bytes": 4094,
+        "zip_custody_ok": true
+      },
+      "contest_paid_bytes_best_available": 152202740,
+      "contest_paid_rate_term_best_available": 101.34555711872603,
+      "contest_zip_candidate_bytes": 152202740,
+      "contest_zip_custody_ok": true,
+      "detail_payload_bytes": 165888000,
+      "detail_payload_share_of_wavelet_blob": 1.09107939,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 152040265,
+      "label": "raw_local_replay",
+      "nearby_manifest_fields": [
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/mlx_replay_from_saved_bundle/local_replay_byte_closed/iter_0000_cand_00000/z8_hpc1_runtime_payload_bridge_report.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_hpc1_runtime_payload_bridge_report.v1",
+          "score_claim": false,
+          "sha256": "1efc578fa20de54eccaf2b5629268fc9c605ed47a56c54287fc1f3dd3a30fc4e"
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/mlx_replay_from_saved_bundle/local_replay_byte_closed/iter_0000_cand_00000/0.bin",
+      "sections": [
+        {
+          "bytes": 152040265,
+          "contest_rate_term_if_paid_directly": 101.23737168531751,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99980328,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00014996,
+          "start": 152045761
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 3.551e-05,
+          "start": 96
+        },
+        {
+          "bytes": 1584,
+          "contest_rate_term_if_paid_directly": 0.0010547205817455195,
+          "section": "meta_blob",
+          "share_of_0bin": 1.042e-05,
+          "start": 152068596
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 4.1e-07,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 2.2e-07,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 2e-07,
+          "start": 152068565
+        }
+      ],
+      "sha256": "9a1ba69190bcf0086499151d868ba5616e07984b8ce7ace94d93e49fedfda840",
+      "wavelet_blob_share_of_0bin": 0.99980328,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "float32_raw": 7200
+        },
+        "detail_codec_payload_bytes": {
+          "float32_raw": 165888000
+        },
+        "float32_detail_subband_count": 7200,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "1": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 0,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 165888000,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 152070180,
+      "z8_0bin_contest_rate_term_if_paid_directly": 101.25729085590015
+    },
+    {
+      "associated_zip": {
+        "bytes": 16838,
+        "contest_rate_term": 0.01121173305267112,
+        "member_count": 1,
+        "member_read_errors": [
+          {
+            "compressed_bytes": 16730,
+            "compression_type": 8,
+            "filename": "0.bin",
+            "matches_expected_member_sha256": null,
+            "read_error": "Bad CRC-32 for file '0.bin'",
+            "sha256": null,
+            "uncompressed_bytes": 152070180
+          }
+        ],
+        "members": [
+          {
+            "compressed_bytes": 16730,
+            "compression_type": 8,
+            "filename": "0.bin",
+            "matches_expected_member_sha256": null,
+            "read_error": "Bad CRC-32 for file '0.bin'",
+            "sha256": null,
+            "uncompressed_bytes": 152070180
+          }
+        ],
+        "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/mlx_replay_from_saved_bundle/local_replay_byte_closed/iter_0000_cand_00001/archive.zip",
+        "sha256": "f35c56fca701282fd80aaa87106c1184afb5ec08ede0ec744a9cf94cb488c8bd",
+        "total_compressed_member_bytes": 16730,
+        "total_uncompressed_member_bytes": 152070180,
+        "zero_bin_member_count": 1,
+        "zero_bin_member_matches_expected": false,
+        "zip_container_overhead_bytes": 108,
+        "zip_custody_ok": false
+      },
+      "contest_paid_bytes_best_available": 152070180,
+      "contest_paid_rate_term_best_available": 101.25729085590015,
+      "contest_zip_candidate_bytes": 16838,
+      "contest_zip_custody_ok": false,
+      "detail_payload_bytes": 165888000,
+      "detail_payload_share_of_wavelet_blob": 1.09107939,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 152040265,
+      "label": "raw_local_replay_zip_tiny",
+      "nearby_manifest_fields": [],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/mlx_replay_from_saved_bundle/local_replay_byte_closed/iter_0000_cand_00001/0.bin",
+      "sections": [
+        {
+          "bytes": 152040265,
+          "contest_rate_term_if_paid_directly": 101.23737168531751,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99980328,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00014996,
+          "start": 152045761
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 3.551e-05,
+          "start": 96
+        },
+        {
+          "bytes": 1584,
+          "contest_rate_term_if_paid_directly": 0.0010547205817455195,
+          "section": "meta_blob",
+          "share_of_0bin": 1.042e-05,
+          "start": 152068596
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 4.1e-07,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 2.2e-07,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 2e-07,
+          "start": 152068565
+        }
+      ],
+      "sha256": "db59698f992ddfe7e4b8f39289cac2f09a8e16cf5a26b675df1e200835535b3f",
+      "wavelet_blob_share_of_0bin": 0.99980328,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "float32_raw": 7200
+        },
+        "detail_codec_payload_bytes": {
+          "float32_raw": 165888000
+        },
+        "float32_detail_subband_count": 7200,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "1": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 0,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 165888000,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 152070180,
+      "z8_0bin_contest_rate_term_if_paid_directly": 101.25729085590015
+    },
+    {
+      "associated_zip": null,
+      "contest_paid_bytes_best_available": 54376497,
+      "contest_paid_rate_term_best_available": 36.20707736687089,
+      "contest_zip_candidate_bytes": null,
+      "contest_zip_custody_ok": null,
+      "detail_payload_bytes": 165888000,
+      "detail_payload_share_of_wavelet_blob": 3.05241699,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 54346441,
+      "label": "lossless_precondition",
+      "nearby_manifest_fields": [
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/lossless_f32_brotli_precondition_storage_only_probe_20260531Tlocal/z8_joint_p18_p19_relinearized_search_manifest.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_joint_p18_p19_coefficient_relinearized_search.v1",
+          "score_claim": false,
+          "sha256": "e7f8b7bedd9a8a7c6b8cf6dac01cfd159eab85455303b674f938c9bba0fa8bb5"
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/lossless_f32_brotli_precondition_storage_only_probe_20260531Tlocal/0.bin",
+      "sections": [
+        {
+          "bytes": 54346441,
+          "contest_rate_term_if_paid_directly": 36.18706431017585,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99944726,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00041937,
+          "start": 54351937
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 9.931e-05,
+          "start": 96
+        },
+        {
+          "bytes": 1725,
+          "contest_rate_term_if_paid_directly": 0.0011486066941357456,
+          "section": "meta_blob",
+          "share_of_0bin": 3.172e-05,
+          "start": 54374772
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 1.14e-06,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 6.3e-07,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 5.7e-07,
+          "start": 54374741
+        }
+      ],
+      "sha256": "591d6a0713ec90cc22f79c5f7e4283b3078bf9016d9ccf1d2b54e8c613780caf",
+      "wavelet_blob_share_of_0bin": 0.99944726,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "f32_byte_shuffle": 7200
+        },
+        "detail_codec_payload_bytes": {
+          "f32_byte_shuffle": 165888000
+        },
+        "float32_detail_subband_count": 0,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "3": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 7200,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 165888000,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 54376497,
+      "z8_0bin_contest_rate_term_if_paid_directly": 36.20707736687089
+    },
+    {
+      "associated_zip": {
+        "bytes": 28384582,
+        "contest_rate_term": 18.900128055330427,
+        "member_count": 23,
+        "member_read_errors": [],
+        "members": [
+          {
+            "compressed_bytes": 28266795,
+            "compression_type": 8,
+            "filename": "0.bin",
+            "matches_expected_member_sha256": true,
+            "read_error": null,
+            "sha256": "66d60fc3af779df78f8af10fbdf227fb677e1f199e7c5c161f4b333a62220eec",
+            "uncompressed_bytes": 28284642
+          },
+          {
+            "compressed_bytes": 26789,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "cfb870b9570f2c1251a7cc529adcae798cfe6d1e7fba1d227e346759371b5497",
+            "uncompressed_bytes": 103888
+          },
+          {
+            "compressed_bytes": 14964,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/mamba2_predictor.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f6347398b7fe7e5306f415ad9f455f2effae63acebecfa4a37a1fb3ca1674d81",
+            "uncompressed_bytes": 53260
+          },
+          {
+            "compressed_bytes": 12803,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f57eb2356f1fd9625eb97c0c17e3bd58cdb50f62fa7138c49273d286f3215615",
+            "uncompressed_bytes": 44702
+          },
+          {
+            "compressed_bytes": 8875,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "0ee58e93945c5d2ed5e416842992119252b2b0241df342b1eebe5ae31a10d388",
+            "uncompressed_bytes": 31164
+          },
+          {
+            "compressed_bytes": 7338,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "9a8db2ce76b83aa03a2c9bfdb8b98836a03c10a9757be513d07bb48288f7cfdc",
+            "uncompressed_bytes": 23578
+          },
+          {
+            "compressed_bytes": 7141,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/archive.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "fa480859ab408017150843f35dfceb742498e556792bb548e527ad8c4e2f63f0",
+            "uncompressed_bytes": 25006
+          },
+          {
+            "compressed_bytes": 6153,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_payload_bridge.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5b32b6e9b68560976dd0e4e820e7c05832e761a23f65da80a9b011883716a22c",
+            "uncompressed_bytes": 28520
+          },
+          {
+            "compressed_bytes": 6032,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/loss.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f7bec7825a126006b0144b65d46c851af13f5d06342439c43f2110b5ee2826f9",
+            "uncompressed_bytes": 18551
+          },
+          {
+            "compressed_bytes": 5684,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "3f632825fe0a58c4ee36fc49b6d970b5224e2864d433912e1b9482420aaf1dbe",
+            "uncompressed_bytes": 19045
+          },
+          {
+            "compressed_bytes": 5100,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "a1219e38868a2ec3451992ad25b86e8181e47e9a012a54837d7b661a83cce7cd",
+            "uncompressed_bytes": 14861
+          },
+          {
+            "compressed_bytes": 4196,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/daubechies_wavelet_codec.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "49040b2efdfeb7b57e26a7c1ba31500e532cf5ca75593079afc2674018f7512a",
+            "uncompressed_bytes": 12088
+          },
+          {
+            "compressed_bytes": 3985,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "51b224fe484ab2985b34f194b6a5c69afc2a954c0ef9f0caed453a2fc461cde3",
+            "uncompressed_bytes": 11251
+          },
+          {
+            "compressed_bytes": 2621,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/inflate_runtime.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "dd7c3def09b6eab4ce8b65b6ed271a2fbd884b741002ffbd099072d92938a4a1",
+            "uncompressed_bytes": 6269
+          },
+          {
+            "compressed_bytes": 1017,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_custody.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5f07ca96335bf6d56ccc64f5a2c20a0c41182d29c96fe7d77a749f0515944fdd",
+            "uncompressed_bytes": 3566
+          },
+          {
+            "compressed_bytes": 652,
+            "compression_type": 8,
+            "filename": "inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "a22e40201ae63805fd5db3b5f12606f94543a26d41c7b2721a2cbf1f59b72f42",
+            "uncompressed_bytes": 1302
+          },
+          {
+            "compressed_bytes": 331,
+            "compression_type": 8,
+            "filename": "inflate.sh",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "95f5142333b5e727618ce60f8b5e6918a34d56efd85e11ee16095f4989f72e0e",
+            "uncompressed_bytes": 460
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          }
+        ],
+        "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_storage_only_full600_max_subband_mse_2e-5_receiver_proof_v2_raw_runtime/archive.zip",
+        "sha256": "40ce3ad2119c71cdbcecf1bf468d2855bfd5616601da35991af28186aaa75d1a",
+        "total_compressed_member_bytes": 28380488,
+        "total_uncompressed_member_bytes": 28682153,
+        "zero_bin_member_count": 1,
+        "zero_bin_member_matches_expected": true,
+        "zip_container_overhead_bytes": 4094,
+        "zip_custody_ok": true
+      },
+      "contest_paid_bytes_best_available": 28384582,
+      "contest_paid_rate_term_best_available": 18.900128055330427,
+      "contest_zip_candidate_bytes": 28384582,
+      "contest_zip_custody_ok": true,
+      "detail_payload_bytes": 31741974,
+      "detail_payload_share_of_wavelet_blob": 1.12344506,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 28254140,
+      "label": "storage_only_receiver_proven",
+      "nearby_manifest_fields": [
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_storage_only_full600_max_subband_mse_2e-5_receiver_proof_v2_raw_runtime/z8_hpc1_runtime_payload_bridge_report.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_hpc1_runtime_payload_bridge_report.v1",
+          "score_claim": false,
+          "sha256": "0c42f2ebdd64c659a018d6f872593493e2ff597c04da1fe3b55a2ee2a9688a13"
+        },
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_storage_only_full600_max_subband_mse_2e-5_receiver_proof_v2_raw_runtime/z8_joint_p18_p19_deadzone_manifest.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_joint_p18_p19_coefficient_deadzone_candidate.v1",
+          "score_claim": false,
+          "sha256": "b00ffc666a469595dd2f3fc67fd5b26f0088c90eb92250555777d9e472241950"
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_storage_only_full600_max_subband_mse_2e-5_receiver_proof_v2_raw_runtime/0.bin",
+      "sections": [
+        {
+          "bytes": 28254140,
+          "contest_rate_term_if_paid_directly": 18.813272081767266,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99892161,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00080623,
+          "start": 28259636
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 0.00019092,
+          "start": 96
+        },
+        {
+          "bytes": 2171,
+          "contest_rate_term_if_paid_directly": 0.001445579787228234,
+          "section": "meta_blob",
+          "share_of_0bin": 7.676e-05,
+          "start": 28282471
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 2.19e-06,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 1.2e-06,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 1.1e-06,
+          "start": 28282440
+        }
+      ],
+      "sha256": "66d60fc3af779df78f8af10fbdf227fb677e1f199e7c5c161f4b333a62220eec",
+      "wavelet_blob_share_of_0bin": 0.99892161,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "qi16_constriction_range": 3637,
+          "zigzag_u16_byteplane": 3563
+        },
+        "detail_codec_payload_bytes": {
+          "qi16_constriction_range": 15323670,
+          "zigzag_u16_byteplane": 16418304
+        },
+        "float32_detail_subband_count": 0,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "2": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 7200,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 31741974,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 28284642,
+      "z8_0bin_contest_rate_term_if_paid_directly": 18.833582111555398
+    },
+    {
+      "associated_zip": {
+        "bytes": 24573973,
+        "contest_rate_term": 16.362799935832506,
+        "member_count": 23,
+        "member_read_errors": [],
+        "members": [
+          {
+            "compressed_bytes": 24456186,
+            "compression_type": 8,
+            "filename": "0.bin",
+            "matches_expected_member_sha256": true,
+            "read_error": null,
+            "sha256": "a725297c92f164857c6e76f04bd28e268e06888c86b781610ed129d3e77601e3",
+            "uncompressed_bytes": 24475266
+          },
+          {
+            "compressed_bytes": 26789,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "cfb870b9570f2c1251a7cc529adcae798cfe6d1e7fba1d227e346759371b5497",
+            "uncompressed_bytes": 103888
+          },
+          {
+            "compressed_bytes": 14964,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/mamba2_predictor.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f6347398b7fe7e5306f415ad9f455f2effae63acebecfa4a37a1fb3ca1674d81",
+            "uncompressed_bytes": 53260
+          },
+          {
+            "compressed_bytes": 12803,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f57eb2356f1fd9625eb97c0c17e3bd58cdb50f62fa7138c49273d286f3215615",
+            "uncompressed_bytes": 44702
+          },
+          {
+            "compressed_bytes": 8875,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "0ee58e93945c5d2ed5e416842992119252b2b0241df342b1eebe5ae31a10d388",
+            "uncompressed_bytes": 31164
+          },
+          {
+            "compressed_bytes": 7338,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "9a8db2ce76b83aa03a2c9bfdb8b98836a03c10a9757be513d07bb48288f7cfdc",
+            "uncompressed_bytes": 23578
+          },
+          {
+            "compressed_bytes": 7141,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/archive.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "fa480859ab408017150843f35dfceb742498e556792bb548e527ad8c4e2f63f0",
+            "uncompressed_bytes": 25006
+          },
+          {
+            "compressed_bytes": 6153,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_payload_bridge.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5b32b6e9b68560976dd0e4e820e7c05832e761a23f65da80a9b011883716a22c",
+            "uncompressed_bytes": 28520
+          },
+          {
+            "compressed_bytes": 6032,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/loss.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f7bec7825a126006b0144b65d46c851af13f5d06342439c43f2110b5ee2826f9",
+            "uncompressed_bytes": 18551
+          },
+          {
+            "compressed_bytes": 5684,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "3f632825fe0a58c4ee36fc49b6d970b5224e2864d433912e1b9482420aaf1dbe",
+            "uncompressed_bytes": 19045
+          },
+          {
+            "compressed_bytes": 5100,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "a1219e38868a2ec3451992ad25b86e8181e47e9a012a54837d7b661a83cce7cd",
+            "uncompressed_bytes": 14861
+          },
+          {
+            "compressed_bytes": 4196,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/daubechies_wavelet_codec.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "49040b2efdfeb7b57e26a7c1ba31500e532cf5ca75593079afc2674018f7512a",
+            "uncompressed_bytes": 12088
+          },
+          {
+            "compressed_bytes": 3985,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "51b224fe484ab2985b34f194b6a5c69afc2a954c0ef9f0caed453a2fc461cde3",
+            "uncompressed_bytes": 11251
+          },
+          {
+            "compressed_bytes": 2621,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/inflate_runtime.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "dd7c3def09b6eab4ce8b65b6ed271a2fbd884b741002ffbd099072d92938a4a1",
+            "uncompressed_bytes": 6269
+          },
+          {
+            "compressed_bytes": 1017,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_custody.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5f07ca96335bf6d56ccc64f5a2c20a0c41182d29c96fe7d77a749f0515944fdd",
+            "uncompressed_bytes": 3566
+          },
+          {
+            "compressed_bytes": 652,
+            "compression_type": 8,
+            "filename": "inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "a22e40201ae63805fd5db3b5f12606f94543a26d41c7b2721a2cbf1f59b72f42",
+            "uncompressed_bytes": 1302
+          },
+          {
+            "compressed_bytes": 331,
+            "compression_type": 8,
+            "filename": "inflate.sh",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "95f5142333b5e727618ce60f8b5e6918a34d56efd85e11ee16095f4989f72e0e",
+            "uncompressed_bytes": 460
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          }
+        ],
+        "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/archive.zip",
+        "sha256": "df32840163a48b632f0e5d171a3caee3910e56f94dbce86fb236bc4e038521bb",
+        "total_compressed_member_bytes": 24569879,
+        "total_uncompressed_member_bytes": 24872777,
+        "zero_bin_member_count": 1,
+        "zero_bin_member_matches_expected": true,
+        "zip_container_overhead_bytes": 4094,
+        "zip_custody_ok": true
+      },
+      "contest_paid_bytes_best_available": 24573973,
+      "contest_paid_rate_term_best_available": 16.362799935832506,
+      "contest_zip_candidate_bytes": 24573973,
+      "contest_zip_custody_ok": true,
+      "detail_payload_bytes": 20570658,
+      "detail_payload_share_of_wavelet_blob": 0.84151568,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 24444771,
+      "label": "rd_waterfill",
+      "nearby_manifest_fields": [
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/z8_hpc1_runtime_payload_bridge_report.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_hpc1_runtime_payload_bridge_report.v1",
+          "score_claim": false,
+          "sha256": "a76e67a46d4a6787c4989c7ffcb6dbdda47bad12549e8b4374f469051ab53e58"
+        },
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/z8_joint_p18_p19_deadzone_manifest.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_joint_p18_p19_coefficient_deadzone_candidate.v1",
+          "score_claim": false,
+          "sha256": "1492bb06083a33fcdc716a4ed413b0669c84264e9bd50068d323874534a916d1"
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/0.bin",
+      "sections": [
+        {
+          "bytes": 24444771,
+          "contest_rate_term_if_paid_directly": 16.276769627371213,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99875405,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00093172,
+          "start": 24450267
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 0.00022063,
+          "start": 96
+        },
+        {
+          "bytes": 2164,
+          "contest_rate_term_if_paid_directly": 0.001440918774556379,
+          "section": "meta_blob",
+          "share_of_0bin": 8.842e-05,
+          "start": 24473102
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 2.53e-06,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 1.39e-06,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 1.27e-06,
+          "start": 24473071
+        }
+      ],
+      "sha256": "a725297c92f164857c6e76f04bd28e268e06888c86b781610ed129d3e77601e3",
+      "wavelet_blob_share_of_0bin": 0.99875405,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "qi16_constriction_range": 5780,
+          "zigzag_u16_byteplane": 1420
+        },
+        "detail_codec_payload_bytes": {
+          "qi16_constriction_range": 14027298,
+          "zigzag_u16_byteplane": 6543360
+        },
+        "float32_detail_subband_count": 0,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "2": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 7200,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 20570658,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 24475266,
+      "z8_0bin_contest_rate_term_if_paid_directly": 16.297074996146673
+    },
+    {
+      "associated_zip": {
+        "bytes": 23376927,
+        "contest_rate_term": 15.565736139433422,
+        "member_count": 23,
+        "member_read_errors": [],
+        "members": [
+          {
+            "compressed_bytes": 23259220,
+            "compression_type": 8,
+            "filename": "0.bin",
+            "matches_expected_member_sha256": true,
+            "read_error": null,
+            "sha256": "a1d472141d5bf036c5fadc6a65dfc341946cb20d7295a8a3b0598b584aeab86b",
+            "uncompressed_bytes": 23278362
+          },
+          {
+            "compressed_bytes": 26781,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "53c0a5c3aba60e4e0c809a77653bde40447867c467935bcb84d3d81508cdccbf",
+            "uncompressed_bytes": 103833
+          },
+          {
+            "compressed_bytes": 14964,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/mamba2_predictor.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f6347398b7fe7e5306f415ad9f455f2effae63acebecfa4a37a1fb3ca1674d81",
+            "uncompressed_bytes": 53260
+          },
+          {
+            "compressed_bytes": 12803,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f57eb2356f1fd9625eb97c0c17e3bd58cdb50f62fa7138c49273d286f3215615",
+            "uncompressed_bytes": 44702
+          },
+          {
+            "compressed_bytes": 8875,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "0ee58e93945c5d2ed5e416842992119252b2b0241df342b1eebe5ae31a10d388",
+            "uncompressed_bytes": 31164
+          },
+          {
+            "compressed_bytes": 7338,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "9a8db2ce76b83aa03a2c9bfdb8b98836a03c10a9757be513d07bb48288f7cfdc",
+            "uncompressed_bytes": 23578
+          },
+          {
+            "compressed_bytes": 7141,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/archive.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "fa480859ab408017150843f35dfceb742498e556792bb548e527ad8c4e2f63f0",
+            "uncompressed_bytes": 25006
+          },
+          {
+            "compressed_bytes": 6153,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_payload_bridge.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5b32b6e9b68560976dd0e4e820e7c05832e761a23f65da80a9b011883716a22c",
+            "uncompressed_bytes": 28520
+          },
+          {
+            "compressed_bytes": 6032,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/loss.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f7bec7825a126006b0144b65d46c851af13f5d06342439c43f2110b5ee2826f9",
+            "uncompressed_bytes": 18551
+          },
+          {
+            "compressed_bytes": 5684,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "3f632825fe0a58c4ee36fc49b6d970b5224e2864d433912e1b9482420aaf1dbe",
+            "uncompressed_bytes": 19045
+          },
+          {
+            "compressed_bytes": 5100,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "a1219e38868a2ec3451992ad25b86e8181e47e9a012a54837d7b661a83cce7cd",
+            "uncompressed_bytes": 14861
+          },
+          {
+            "compressed_bytes": 4196,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/daubechies_wavelet_codec.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "49040b2efdfeb7b57e26a7c1ba31500e532cf5ca75593079afc2674018f7512a",
+            "uncompressed_bytes": 12088
+          },
+          {
+            "compressed_bytes": 3985,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "51b224fe484ab2985b34f194b6a5c69afc2a954c0ef9f0caed453a2fc461cde3",
+            "uncompressed_bytes": 11251
+          },
+          {
+            "compressed_bytes": 2621,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/inflate_runtime.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "dd7c3def09b6eab4ce8b65b6ed271a2fbd884b741002ffbd099072d92938a4a1",
+            "uncompressed_bytes": 6269
+          },
+          {
+            "compressed_bytes": 1017,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_custody.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5f07ca96335bf6d56ccc64f5a2c20a0c41182d29c96fe7d77a749f0515944fdd",
+            "uncompressed_bytes": 3566
+          },
+          {
+            "compressed_bytes": 580,
+            "compression_type": 8,
+            "filename": "inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "1b3a44e85c0204c44fd2f3c938b5acc497886d1f558fe18cb6b558d686e36917",
+            "uncompressed_bytes": 1149
+          },
+          {
+            "compressed_bytes": 331,
+            "compression_type": 8,
+            "filename": "inflate.sh",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "95f5142333b5e727618ce60f8b5e6918a34d56efd85e11ee16095f4989f72e0e",
+            "uncompressed_bytes": 460
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          }
+        ],
+        "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0156_zip_probe_fast_selector/archive.zip",
+        "sha256": "2c076bddb53df13b25ecf57dc0660fb9b5f0a758603a0ac833154a8cf99da3bd",
+        "total_compressed_member_bytes": 23372833,
+        "total_uncompressed_member_bytes": 23675665,
+        "zero_bin_member_count": 1,
+        "zero_bin_member_matches_expected": true,
+        "zip_container_overhead_bytes": 4094,
+        "zip_custody_ok": true
+      },
+      "contest_paid_bytes_best_available": 23376927,
+      "contest_paid_rate_term_best_available": 15.565736139433422,
+      "contest_zip_candidate_bytes": 23376927,
+      "contest_zip_custody_ok": true,
+      "detail_payload_bytes": 18752146,
+      "detail_payload_share_of_wavelet_blob": 0.80660435,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 23248258,
+      "label": "q0156",
+      "nearby_manifest_fields": [
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0156_zip_probe_fast_selector/z8_joint_p18_p19_relinearized_search_manifest.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_joint_p18_p19_coefficient_relinearized_search.v1",
+          "score_claim": false,
+          "sha256": "d5987fcd1f43430ee25781a9ba4b6d673587ba52b7c9b08709d1e28dc442beae"
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0156_zip_probe_fast_selector/0.bin",
+      "sections": [
+        {
+          "bytes": 23248258,
+          "contest_rate_term_if_paid_directly": 15.480060733794145,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99870678,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00097962,
+          "start": 23253754
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 0.00023198,
+          "start": 96
+        },
+        {
+          "bytes": 1773,
+          "contest_rate_term_if_paid_directly": 0.0011805679238856097,
+          "section": "meta_blob",
+          "share_of_0bin": 7.617e-05,
+          "start": 23276589
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 2.66e-06,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 1.46e-06,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 1.33e-06,
+          "start": 23276558
+        }
+      ],
+      "sha256": "a1d472141d5bf036c5fadc6a65dfc341946cb20d7295a8a3b0598b584aeab86b",
+      "wavelet_blob_share_of_0bin": 0.99870678,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "qi16_constriction_range": 5974,
+          "zigzag_u16_byteplane": 1226
+        },
+        "detail_codec_payload_bytes": {
+          "qi16_constriction_range": 13102738,
+          "zigzag_u16_byteplane": 5649408
+        },
+        "float32_detail_subband_count": 0,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "2": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 7200,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 18752146,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 23278362,
+      "z8_0bin_contest_rate_term_if_paid_directly": 15.500105751718936
+    },
+    {
+      "associated_zip": {
+        "bytes": 33110463,
+        "contest_rate_term": 22.046898230570388,
+        "member_count": 23,
+        "member_read_errors": [],
+        "members": [
+          {
+            "compressed_bytes": 32992756,
+            "compression_type": 8,
+            "filename": "0.bin",
+            "matches_expected_member_sha256": true,
+            "read_error": null,
+            "sha256": "7b3dd65a496d9698e45788caef99b6ada67029cd5f8815e23820c9ba4d9ec7a8",
+            "uncompressed_bytes": 33008778
+          },
+          {
+            "compressed_bytes": 26781,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "53c0a5c3aba60e4e0c809a77653bde40447867c467935bcb84d3d81508cdccbf",
+            "uncompressed_bytes": 103833
+          },
+          {
+            "compressed_bytes": 14964,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/mamba2_predictor.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f6347398b7fe7e5306f415ad9f455f2effae63acebecfa4a37a1fb3ca1674d81",
+            "uncompressed_bytes": 53260
+          },
+          {
+            "compressed_bytes": 12803,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f57eb2356f1fd9625eb97c0c17e3bd58cdb50f62fa7138c49273d286f3215615",
+            "uncompressed_bytes": 44702
+          },
+          {
+            "compressed_bytes": 8875,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "0ee58e93945c5d2ed5e416842992119252b2b0241df342b1eebe5ae31a10d388",
+            "uncompressed_bytes": 31164
+          },
+          {
+            "compressed_bytes": 7338,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "9a8db2ce76b83aa03a2c9bfdb8b98836a03c10a9757be513d07bb48288f7cfdc",
+            "uncompressed_bytes": 23578
+          },
+          {
+            "compressed_bytes": 7141,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/archive.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "fa480859ab408017150843f35dfceb742498e556792bb548e527ad8c4e2f63f0",
+            "uncompressed_bytes": 25006
+          },
+          {
+            "compressed_bytes": 6153,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_payload_bridge.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5b32b6e9b68560976dd0e4e820e7c05832e761a23f65da80a9b011883716a22c",
+            "uncompressed_bytes": 28520
+          },
+          {
+            "compressed_bytes": 6032,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/loss.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f7bec7825a126006b0144b65d46c851af13f5d06342439c43f2110b5ee2826f9",
+            "uncompressed_bytes": 18551
+          },
+          {
+            "compressed_bytes": 5684,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "3f632825fe0a58c4ee36fc49b6d970b5224e2864d433912e1b9482420aaf1dbe",
+            "uncompressed_bytes": 19045
+          },
+          {
+            "compressed_bytes": 5100,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "a1219e38868a2ec3451992ad25b86e8181e47e9a012a54837d7b661a83cce7cd",
+            "uncompressed_bytes": 14861
+          },
+          {
+            "compressed_bytes": 4196,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/daubechies_wavelet_codec.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "49040b2efdfeb7b57e26a7c1ba31500e532cf5ca75593079afc2674018f7512a",
+            "uncompressed_bytes": 12088
+          },
+          {
+            "compressed_bytes": 3985,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "51b224fe484ab2985b34f194b6a5c69afc2a954c0ef9f0caed453a2fc461cde3",
+            "uncompressed_bytes": 11251
+          },
+          {
+            "compressed_bytes": 2621,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/inflate_runtime.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "dd7c3def09b6eab4ce8b65b6ed271a2fbd884b741002ffbd099072d92938a4a1",
+            "uncompressed_bytes": 6269
+          },
+          {
+            "compressed_bytes": 1017,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_custody.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5f07ca96335bf6d56ccc64f5a2c20a0c41182d29c96fe7d77a749f0515944fdd",
+            "uncompressed_bytes": 3566
+          },
+          {
+            "compressed_bytes": 580,
+            "compression_type": 8,
+            "filename": "inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "1b3a44e85c0204c44fd2f3c938b5acc497886d1f558fe18cb6b558d686e36917",
+            "uncompressed_bytes": 1149
+          },
+          {
+            "compressed_bytes": 331,
+            "compression_type": 8,
+            "filename": "inflate.sh",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "95f5142333b5e727618ce60f8b5e6918a34d56efd85e11ee16095f4989f72e0e",
+            "uncompressed_bytes": 460
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          }
+        ],
+        "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0039_zip_probe_fast_selector/archive.zip",
+        "sha256": "e392e4adc986be18e9e2d33c1b4a3b8bf4bc6b60b06d4c058e301c66703f21c8",
+        "total_compressed_member_bytes": 33106369,
+        "total_uncompressed_member_bytes": 33406081,
+        "zero_bin_member_count": 1,
+        "zero_bin_member_matches_expected": true,
+        "zip_container_overhead_bytes": 4094,
+        "zip_custody_ok": true
+      },
+      "contest_paid_bytes_best_available": 33110463,
+      "contest_paid_rate_term_best_available": 22.046898230570388,
+      "contest_zip_candidate_bytes": 33110463,
+      "contest_zip_custody_ok": true,
+      "detail_payload_bytes": 65231582,
+      "detail_payload_share_of_wavelet_blob": 1.97799077,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 32978709,
+      "label": "q0039",
+      "nearby_manifest_fields": [
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0039_zip_probe_fast_selector/z8_joint_p18_p19_relinearized_search_manifest.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_joint_p18_p19_coefficient_relinearized_search.v1",
+          "score_claim": false,
+          "sha256": "4cc3b9c9ac00c34248ed24e6b99592e1cc146832b7deb8185b10d960c211944d"
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0039_zip_probe_fast_selector/0.bin",
+      "sections": [
+        {
+          "bytes": 32978709,
+          "contest_rate_term_if_paid_directly": 21.95916865006073,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99908906,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00069085,
+          "start": 32984205
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 0.00016359,
+          "start": 96
+        },
+        {
+          "bytes": 1738,
+          "contest_rate_term_if_paid_directly": 0.0011572628605263338,
+          "section": "meta_blob",
+          "share_of_0bin": 5.265e-05,
+          "start": 33007040
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 1.88e-06,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 1.03e-06,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 9.4e-07,
+          "start": 33007009
+        }
+      ],
+      "sha256": "7b3dd65a496d9698e45788caef99b6ada67029cd5f8815e23820c9ba4d9ec7a8",
+      "wavelet_blob_share_of_0bin": 0.99908906,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "qi16_constriction_range": 1355,
+          "zigzag_u16_byteplane": 5845
+        },
+        "detail_codec_payload_bytes": {
+          "qi16_constriction_range": 7262942,
+          "zigzag_u16_byteplane": 57968640
+        },
+        "float32_detail_subband_count": 0,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "2": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 7200,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 65231582,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 33008778,
+      "z8_0bin_contest_rate_term_if_paid_directly": 21.97919036292216
+    },
+    {
+      "associated_zip": {
+        "bytes": 28504909,
+        "contest_rate_term": 18.98024886558276,
+        "member_count": 23,
+        "member_read_errors": [],
+        "members": [
+          {
+            "compressed_bytes": 28388676,
+            "compression_type": 8,
+            "filename": "0.bin",
+            "matches_expected_member_sha256": true,
+            "read_error": null,
+            "sha256": "c82125e45c617df2bc3b7a0d0829581e974e45f9b85d423d04b9d3eaa59223e9",
+            "uncompressed_bytes": 28406255
+          },
+          {
+            "compressed_bytes": 25307,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f0840fd29e3aec354eefec5195ce7e801d92a2d991a03ac33d098ee86cf6259c",
+            "uncompressed_bytes": 97284
+          },
+          {
+            "compressed_bytes": 14964,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/mamba2_predictor.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f6347398b7fe7e5306f415ad9f455f2effae63acebecfa4a37a1fb3ca1674d81",
+            "uncompressed_bytes": 53260
+          },
+          {
+            "compressed_bytes": 12803,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f57eb2356f1fd9625eb97c0c17e3bd58cdb50f62fa7138c49273d286f3215615",
+            "uncompressed_bytes": 44702
+          },
+          {
+            "compressed_bytes": 8875,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "0ee58e93945c5d2ed5e416842992119252b2b0241df342b1eebe5ae31a10d388",
+            "uncompressed_bytes": 31164
+          },
+          {
+            "compressed_bytes": 7338,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "9a8db2ce76b83aa03a2c9bfdb8b98836a03c10a9757be513d07bb48288f7cfdc",
+            "uncompressed_bytes": 23578
+          },
+          {
+            "compressed_bytes": 7141,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/archive.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "fa480859ab408017150843f35dfceb742498e556792bb548e527ad8c4e2f63f0",
+            "uncompressed_bytes": 25006
+          },
+          {
+            "compressed_bytes": 6153,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_payload_bridge.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5b32b6e9b68560976dd0e4e820e7c05832e761a23f65da80a9b011883716a22c",
+            "uncompressed_bytes": 28520
+          },
+          {
+            "compressed_bytes": 6032,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/loss.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "f7bec7825a126006b0144b65d46c851af13f5d06342439c43f2110b5ee2826f9",
+            "uncompressed_bytes": 18551
+          },
+          {
+            "compressed_bytes": 5684,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "3f632825fe0a58c4ee36fc49b6d970b5224e2864d433912e1b9482420aaf1dbe",
+            "uncompressed_bytes": 19045
+          },
+          {
+            "compressed_bytes": 5100,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "a1219e38868a2ec3451992ad25b86e8181e47e9a012a54837d7b661a83cce7cd",
+            "uncompressed_bytes": 14861
+          },
+          {
+            "compressed_bytes": 4196,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/daubechies_wavelet_codec.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "49040b2efdfeb7b57e26a7c1ba31500e532cf5ca75593079afc2674018f7512a",
+            "uncompressed_bytes": 12088
+          },
+          {
+            "compressed_bytes": 3985,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "51b224fe484ab2985b34f194b6a5c69afc2a954c0ef9f0caed453a2fc461cde3",
+            "uncompressed_bytes": 11251
+          },
+          {
+            "compressed_bytes": 2621,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/inflate_runtime.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "dd7c3def09b6eab4ce8b65b6ed271a2fbd884b741002ffbd099072d92938a4a1",
+            "uncompressed_bytes": 6269
+          },
+          {
+            "compressed_bytes": 1017,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_custody.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "5f07ca96335bf6d56ccc64f5a2c20a0c41182d29c96fe7d77a749f0515944fdd",
+            "uncompressed_bytes": 3566
+          },
+          {
+            "compressed_bytes": 580,
+            "compression_type": 8,
+            "filename": "inflate.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "1b3a44e85c0204c44fd2f3c938b5acc497886d1f558fe18cb6b558d686e36917",
+            "uncompressed_bytes": 1149
+          },
+          {
+            "compressed_bytes": 331,
+            "compression_type": 8,
+            "filename": "inflate.sh",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "95f5142333b5e727618ce60f8b5e6918a34d56efd85e11ee16095f4989f72e0e",
+            "uncompressed_bytes": 460
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/optimization/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/_shared/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          },
+          {
+            "compressed_bytes": 2,
+            "compression_type": 8,
+            "filename": "src/tac/symposium_impls/__init__.py",
+            "matches_expected_member_sha256": false,
+            "read_error": null,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "uncompressed_bytes": 0
+          }
+        ],
+        "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_contest_rate_export/archive.zip",
+        "sha256": "4a89254dfb659cc68f78aa4f8ec008a539d13f2b434d765c31380dfe9cd32dfc",
+        "total_compressed_member_bytes": 28500815,
+        "total_uncompressed_member_bytes": 28797009,
+        "zero_bin_member_count": 1,
+        "zero_bin_member_matches_expected": true,
+        "zip_container_overhead_bytes": 4094,
+        "zip_custody_ok": true
+      },
+      "contest_paid_bytes_best_available": 28504909,
+      "contest_paid_rate_term_best_available": 18.98024886558276,
+      "contest_zip_candidate_bytes": 28504909,
+      "contest_zip_custody_ok": true,
+      "detail_payload_bytes": 19670586,
+      "detail_payload_share_of_wavelet_blob": 0.69320588,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 28376254,
+      "label": "contest_rate_export",
+      "nearby_manifest_fields": [],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_contest_rate_export/0.bin",
+      "sections": [
+        {
+          "bytes": 28376254,
+          "contest_rate_term_if_paid_directly": 18.894582781968825,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99894386,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00080278,
+          "start": 28381750
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 0.0001901,
+          "start": 96
+        },
+        {
+          "bytes": 1670,
+          "contest_rate_term_if_paid_directly": 0.001111984451714026,
+          "section": "meta_blob",
+          "share_of_0bin": 5.879e-05,
+          "start": 28404585
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 2.18e-06,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 1.2e-06,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 1.09e-06,
+          "start": 28404554
+        }
+      ],
+      "sha256": "c82125e45c617df2bc3b7a0d0829581e974e45f9b85d423d04b9d3eaa59223e9",
+      "wavelet_blob_share_of_0bin": 0.99894386,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "qi16_static_range": 7200
+        },
+        "detail_codec_payload_bytes": {
+          "qi16_static_range": 19670586
+        },
+        "float32_detail_subband_count": 0,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "2": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 7200,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 19670586,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 28406255,
+      "z8_0bin_contest_rate_term_if_paid_directly": 18.914559216421445
+    },
+    {
+      "associated_zip": null,
+      "contest_paid_bytes_best_available": 10195155,
+      "contest_paid_rate_term_best_available": 6.788535235218271,
+      "contest_zip_candidate_bytes": null,
+      "contest_zip_custody_ok": null,
+      "detail_payload_bytes": 840770,
+      "detail_payload_share_of_wavelet_blob": 0.08271144,
+      "dominant_section": "wavelet_blob",
+      "dominant_section_bytes": 10165099,
+      "label": "quantized_detail_probe",
+      "nearby_manifest_fields": [
+        {
+          "blockers": null,
+          "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/z8_joint_p18_p19_relinearized_search_manifest.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "z8_joint_p18_p19_coefficient_relinearized_search.v1",
+          "score_claim": false,
+          "sha256": "8ae0915d1fbaecea1d59e3c77244656f6218b3433d4ce97c4d8ec5bbe5febca1"
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/0.bin",
+      "sections": [
+        {
+          "bytes": 10165099,
+          "contest_rate_term_if_paid_directly": 6.768522178523231,
+          "section": "wavelet_blob",
+          "share_of_0bin": 0.99705193,
+          "start": 5496
+        },
+        {
+          "bytes": 22804,
+          "contest_rate_term_if_paid_directly": 0.015184247566997995,
+          "section": "wyner_ziv_blob",
+          "share_of_0bin": 0.00223675,
+          "start": 10170595
+        },
+        {
+          "bytes": 5400,
+          "contest_rate_term_if_paid_directly": 0.0035956383468597254,
+          "section": "indices_blob",
+          "share_of_0bin": 0.00052966,
+          "start": 96
+        },
+        {
+          "bytes": 1725,
+          "contest_rate_term_if_paid_directly": 0.0011486066941357456,
+          "section": "meta_blob",
+          "share_of_0bin": 0.0001692,
+          "start": 10193430
+        },
+        {
+          "bytes": 62,
+          "contest_rate_term_if_paid_directly": 4.1283255093574625e-05,
+          "section": "z8hpc1_header",
+          "share_of_0bin": 6.08e-06,
+          "start": 0
+        },
+        {
+          "bytes": 34,
+          "contest_rate_term_if_paid_directly": 2.2639204406153826e-05,
+          "section": "decoder_blob",
+          "share_of_0bin": 3.33e-06,
+          "start": 62
+        },
+        {
+          "bytes": 31,
+          "contest_rate_term_if_paid_directly": 2.0641627546787313e-05,
+          "section": "dreamer_state_blob",
+          "share_of_0bin": 3.04e-06,
+          "start": 10193399
+        }
+      ],
+      "sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb",
+      "wavelet_blob_share_of_0bin": 0.99705193,
+      "wavelet_detail_codec_summary": {
+        "detail_codec_method_counts": {
+          "qi16_zero_rle": 7200
+        },
+        "detail_codec_payload_bytes": {
+          "qi16_zero_rle": 840770
+        },
+        "float32_detail_subband_count": 0,
+        "num_pairs": 600,
+        "pair_blob_schema_counts": {
+          "2": 600
+        },
+        "quantized_or_preconditioned_detail_subband_count": 7200,
+        "schema": "z8_wavelet_detail_codec_summary.v1",
+        "total_detail_coefficients": 41472000,
+        "total_detail_payload_bytes": 840770,
+        "total_detail_subbands": 7200
+      },
+      "z8_0bin_bytes": 10195155,
+      "z8_0bin_contest_rate_term_if_paid_directly": 6.788535235218271
+    }
+  ],
+  "contest_original_bytes": 37545489,
+  "evidence_grade": "byte_profile_only",
+  "opportunities": [
+    {
+      "evidence": {
+        "best_0bin_bytes": 10195155,
+        "best_0bin_label": "quantized_detail_probe",
+        "best_paid_bytes": 10195155,
+        "best_paid_label": "quantized_detail_probe",
+        "best_valid_zip_bytes": 23376927,
+        "best_valid_zip_label": "q0156",
+        "largest_paid_bytes": 152202740,
+        "largest_paid_label": "raw_local_replay"
+      },
+      "finding": "Rank candidates by archive.zip bytes when a valid sibling ZIP exists; inner 0.bin bytes can be the wrong objective when outer ZIP exploits structured zeros or is blocked by already-random entropy-coded payloads.",
+      "priority": 0,
+      "surface": "contest_zip_bytes_are_authority"
+    },
+    {
+      "evidence": {
+        "best_valid_zip_bytes": 23376927,
+        "best_valid_zip_label": "q0156",
+        "multiple_over_rate_term_0_20": 77.83,
+        "target_bytes_for_rate_term_0_20": 300363
+      },
+      "finding": "The best custody-valid Z8 ZIP is still far above the byte range where rate stops dominating. Incremental entropy-mode polishing cannot close this alone; the next lever must remove or generate most residual wavelet coefficients, not merely recode them.",
+      "priority": 0,
+      "surface": "z8_rate_gap_to_competitive_range"
+    },
+    {
+      "evidence": {
+        "member_count": 1,
+        "member_read_error_count": 1,
+        "zero_bin_member_count": 1,
+        "zero_bin_member_matches_expected": false,
+        "zip_path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/mlx_replay_from_saved_bundle/local_replay_byte_closed/iter_0000_cand_00001/archive.zip"
+      },
+      "finding": "Associated archive.zip does not prove it contains the profiled 0.bin. Treat the rate comparison as blocked until custody is repaired.",
+      "label": "raw_local_replay_zip_tiny",
+      "priority": 0,
+      "surface": "zip_custody_mismatch"
+    },
+    {
+      "evidence": {
+        "contest_rate_term_if_paid_directly": 6.788535235218271,
+        "z8_0bin_bytes": 10195155
+      },
+      "finding": "The smallest observed inner Z8 packet is not yet a custody-valid contest ZIP in this profile. Highest-EV next action is package, inflate-proof, and full-replay it before inventing a new coder.",
+      "label": "quantized_detail_probe",
+      "priority": 0,
+      "surface": "smallest_inner_packet_missing_zip_receiver_proof"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99980328,
+        "z8_0bin_bytes": 152070180
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "raw_local_replay",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99980328,
+        "z8_0bin_bytes": 152070180
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "raw_local_replay_zip_tiny",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99944726,
+        "z8_0bin_bytes": 54376497
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "lossless_precondition",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99892161,
+        "z8_0bin_bytes": 28284642
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "storage_only_receiver_proven",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99875405,
+        "z8_0bin_bytes": 24475266
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "rd_waterfill",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99870678,
+        "z8_0bin_bytes": 23278362
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "q0156",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99908906,
+        "z8_0bin_bytes": 33008778
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "q0039",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99894386,
+        "z8_0bin_bytes": 28406255
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "contest_rate_export",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "cheapest_observed_label": "quantized_detail_probe",
+        "forced_range_paid_bytes": 28504909
+      },
+      "finding": "Forcing one entropy mode globally loses against the per-subband portfolio. Sparse bands want run/byte-plane structure; dense bands can use range coding.",
+      "label": "contest_rate_export",
+      "priority": 1,
+      "surface": "forced_range_coding_regression"
+    },
+    {
+      "evidence": {
+        "wavelet_blob_share_of_0bin": 0.99705193,
+        "z8_0bin_bytes": 10195155
+      },
+      "finding": "The Z8 rate axis is still a wavelet-pyramid byte problem; decoder, Dreamer state, indices, and meta are second-order.",
+      "label": "quantized_detail_probe",
+      "priority": 1,
+      "surface": "wavelet_blob_dominates_0bin"
+    },
+    {
+      "evidence": {
+        "float32_detail_subband_count": 7200,
+        "total_detail_subbands": 7200
+      },
+      "finding": "Raw float detail subbands remain: quantize/byteplane/RLE/range mode selection is still a first-order compression opportunity, but must be accepted by full replay because coefficients are scorer-active.",
+      "label": "raw_local_replay",
+      "priority": 2,
+      "surface": "float32_detail_storage"
+    },
+    {
+      "evidence": {
+        "compressed_0bin_member_bytes": 152090556,
+        "runtime_and_zip_overhead_bytes": 112184,
+        "zip_bytes": 152202740
+      },
+      "finding": "The Python runtime bundle is small relative to today's wavelet blob, but it is already larger than a 0.05 rate-term budget. Once residual bytes collapse, runtime tree-shaking or a thinner adapter becomes first-order.",
+      "label": "raw_local_replay",
+      "priority": 2,
+      "surface": "runtime_payload_overhead_future_dominates"
+    },
+    {
+      "evidence": {
+        "float32_detail_subband_count": 7200,
+        "total_detail_subbands": 7200
+      },
+      "finding": "Raw float detail subbands remain: quantize/byteplane/RLE/range mode selection is still a first-order compression opportunity, but must be accepted by full replay because coefficients are scorer-active.",
+      "label": "raw_local_replay_zip_tiny",
+      "priority": 2,
+      "surface": "float32_detail_storage"
+    },
+    {
+      "evidence": {
+        "compressed_0bin_member_bytes": 28266795,
+        "runtime_and_zip_overhead_bytes": 117787,
+        "zip_bytes": 28384582
+      },
+      "finding": "The Python runtime bundle is small relative to today's wavelet blob, but it is already larger than a 0.05 rate-term budget. Once residual bytes collapse, runtime tree-shaking or a thinner adapter becomes first-order.",
+      "label": "storage_only_receiver_proven",
+      "priority": 2,
+      "surface": "runtime_payload_overhead_future_dominates"
+    },
+    {
+      "evidence": {
+        "compressed_0bin_member_bytes": 24456186,
+        "runtime_and_zip_overhead_bytes": 117787,
+        "zip_bytes": 24573973
+      },
+      "finding": "The Python runtime bundle is small relative to today's wavelet blob, but it is already larger than a 0.05 rate-term budget. Once residual bytes collapse, runtime tree-shaking or a thinner adapter becomes first-order.",
+      "label": "rd_waterfill",
+      "priority": 2,
+      "surface": "runtime_payload_overhead_future_dominates"
+    },
+    {
+      "evidence": {
+        "compressed_0bin_member_bytes": 23259220,
+        "runtime_and_zip_overhead_bytes": 117707,
+        "zip_bytes": 23376927
+      },
+      "finding": "The Python runtime bundle is small relative to today's wavelet blob, but it is already larger than a 0.05 rate-term budget. Once residual bytes collapse, runtime tree-shaking or a thinner adapter becomes first-order.",
+      "label": "q0156",
+      "priority": 2,
+      "surface": "runtime_payload_overhead_future_dominates"
+    },
+    {
+      "evidence": {
+        "compressed_0bin_member_bytes": 32992756,
+        "runtime_and_zip_overhead_bytes": 117707,
+        "zip_bytes": 33110463
+      },
+      "finding": "The Python runtime bundle is small relative to today's wavelet blob, but it is already larger than a 0.05 rate-term budget. Once residual bytes collapse, runtime tree-shaking or a thinner adapter becomes first-order.",
+      "label": "q0039",
+      "priority": 2,
+      "surface": "runtime_payload_overhead_future_dominates"
+    },
+    {
+      "evidence": {
+        "compressed_0bin_member_bytes": 28388676,
+        "runtime_and_zip_overhead_bytes": 116233,
+        "zip_bytes": 28504909
+      },
+      "finding": "The Python runtime bundle is small relative to today's wavelet blob, but it is already larger than a 0.05 rate-term budget. Once residual bytes collapse, runtime tree-shaking or a thinner adapter becomes first-order.",
+      "label": "contest_rate_export",
+      "priority": 2,
+      "surface": "runtime_payload_overhead_future_dominates"
+    }
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "z8_rate_axis_artifact_profile.v1",
+  "score_claim": false,
+  "tool": "tools/profile_z8_rate_axis_artifacts.py"
+}

@@ -160,6 +160,10 @@ def test_full_video_vjp_surface_bundle_requires_archive_pinned_complete_shards()
     assert bundle["optimizer_update_authority"] is True
     assert bundle["surface_assembly_backend"] == "global_kkt_dykstra_after_full_shard_reduction.v1"
     assert bundle["implicit_allocator_authority"] is True
+    assert bundle["byte_rate_gradient_authority"] is False
+    assert bundle["byte_rate_gradient_blockers"] == [
+        "z8_byte_rate_gradient_not_differentiated_through_quantizer_entropy_codec"
+    ]
     assert bundle["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
     assert bundle["joint_weight"].shape == (4, 2, 16, 16, 3)
     assert bundle["rate_attack_deadzone_mask"].shape == (4, 2, 16, 16, 3)
@@ -288,6 +292,8 @@ def test_full_video_vjp_surface_bundle_writes_materializer_ready_npz(tmp_path: P
     assert manifest["budget_spend_authority"] is True
     assert manifest["optimizer_update_authority"] is True
     assert manifest["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
+    assert manifest["byte_rate_gradient_authority"] is False
+    assert manifest["byte_rate_gradient_blockers"]
     payload = np.load(manifest["surface_path"])
     assert payload["joint_weight"].shape == (2, 2, 16, 16, 3)
     assert payload["rate_attack_deadzone_mask"].shape == (2, 2, 16, 16, 3)
@@ -296,6 +302,8 @@ def test_full_video_vjp_surface_bundle_writes_materializer_ready_npz(tmp_path: P
     assert bool(payload["optimizer_update_authority"]) is True
     assert str(payload["optimizer_update_semantics"]) == SINGLE_UPDATE_AFTER_FULL_REDUCTION
     assert bool(payload["implicit_allocator_authority"]) is True
+    assert bool(payload["byte_rate_gradient_authority"]) is False
+    assert str(payload["byte_rate_gradient_kind"]) == "hard_archive_byte_delta_measurement_only"
 
 
 def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Path) -> None:
@@ -438,6 +446,7 @@ def test_mlx_vjp_shard_producer_emits_true_p19_exact_reduction_surface(tmp_path:
     assert bundle["budget_spend_blockers"] == []
     assert bundle["pose_surface_authority"] is True
     assert bundle["segnet_class_boundary_authority"] is True
+    assert bundle["byte_rate_gradient_authority"] is False
     assert bundle["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
     bundle_manifest = write_z8_full_video_vjp_surface_bundle(bundle, tmp_path / "bundle")
     with np.load(bundle_manifest["surface_path"]) as data:

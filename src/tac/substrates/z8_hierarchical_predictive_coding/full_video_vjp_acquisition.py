@@ -46,6 +46,7 @@ Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA = "z8_full_video_vjp_surface_bundle.v1"
 Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND = "mlx_autograd_raw_pair_p18_p19_vjp.v1"
 Z8_FULL_VIDEO_MLX_REPLAY_SCHEMA = "z8_full_video_mlx_replay.v1"
 CONTEST_RATE_NORMALIZER_BYTES = 37_545_489.0
+Z8_BYTE_RATE_GRADIENT_BLOCKER = "z8_byte_rate_gradient_not_differentiated_through_quantizer_entropy_codec"
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -1296,6 +1297,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
         }
     authority_blockers = sorted(set(pose_surface_blockers + class_boundary_blockers))
     budget_spend_authority = bool(full_coverage and pose_surface_authority and class_boundary_authority)
+    byte_rate_gradient_blockers = [Z8_BYTE_RATE_GRADIENT_BLOCKER]
     return {
         "schema": Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA,
         "surface_assembly_backend": "global_kkt_dykstra_after_full_shard_reduction.v1",
@@ -1340,6 +1342,12 @@ def assemble_z8_full_video_vjp_surface_bundle(
             budget_spend_authority and global_surface.get("implicit_allocator_authority", False)
         ),
         "implicit_allocator_blockers": list(global_surface.get("implicit_allocator_blockers") or []),
+        "byte_rate_gradient_authority": False,
+        "byte_rate_gradient_kind": "hard_archive_byte_delta_measurement_only",
+        "byte_rate_gradient_blockers": byte_rate_gradient_blockers,
+        "byte_rate_term_authority": (
+            "measured_after_hard_archive_materialization_not_differentiable_vjp"
+        ),
         "global_joint_surface_report": {
             key: value
             for key, value in global_surface.items()
@@ -1403,6 +1411,14 @@ def write_z8_full_video_vjp_surface_bundle(
             json.dumps(_jsonable(bundle.get("segnet_class_boundary_blockers", [])), sort_keys=True)
         ),
         implicit_allocator_authority=np.asarray(bool(bundle.get("implicit_allocator_authority", False))),
+        implicit_allocator_blockers_json=np.asarray(
+            json.dumps(_jsonable(bundle.get("implicit_allocator_blockers", [])), sort_keys=True)
+        ),
+        byte_rate_gradient_authority=np.asarray(bool(bundle.get("byte_rate_gradient_authority", False))),
+        byte_rate_gradient_kind=np.asarray(str(bundle.get("byte_rate_gradient_kind", ""))),
+        byte_rate_gradient_blockers_json=np.asarray(
+            json.dumps(_jsonable(bundle.get("byte_rate_gradient_blockers", [])), sort_keys=True)
+        ),
         pose_surface_kind=np.asarray(str(bundle.get("pose_surface_kind", ""))),
         pose_surface_authority=np.asarray(bool(bundle.get("pose_surface_authority", False))),
         pose_axis_count=np.asarray(int(bundle.get("pose_axis_count", 0))),
@@ -1435,6 +1451,10 @@ def write_z8_full_video_vjp_surface_bundle(
         "segnet_class_boundary_blockers": bundle.get("segnet_class_boundary_blockers", []),
         "implicit_allocator_authority": bundle.get("implicit_allocator_authority", False),
         "implicit_allocator_blockers": bundle.get("implicit_allocator_blockers", []),
+        "byte_rate_gradient_authority": bundle.get("byte_rate_gradient_authority", False),
+        "byte_rate_gradient_kind": bundle.get("byte_rate_gradient_kind"),
+        "byte_rate_gradient_blockers": bundle.get("byte_rate_gradient_blockers", []),
+        "byte_rate_term_authority": bundle.get("byte_rate_term_authority"),
         "shard_count": bundle["shard_count"],
         "score_claim": False,
         "promotion_eligible": False,
