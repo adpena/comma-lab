@@ -6,8 +6,12 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
 from tac.substrates.time_traveler_l5_z7_mamba2.archive_candidate import (
+    pack_archive_from_exported_state_dict,
     z7_mamba2_meta_from_config,
+    z7_mamba2_pytorch_config_from_mlx,
 )
 from tac.substrates.time_traveler_l5_z7_mamba2.mlx_native import (
     Z7Mamba2MLXRenderConfig,
@@ -25,9 +29,76 @@ def test_z7_mlx_config_declares_reference_s6_not_canonical_ssd() -> None:
 def test_z7_mlx_archive_meta_carries_ssd_claim_blocker() -> None:
     meta = z7_mamba2_meta_from_config(Z7Mamba2MLXRenderConfig(num_pairs=2))
 
+    assert meta["use_canonical_ssd_mlx_backend"] is False
+    assert meta["ssd_nheads"] is None
+    assert meta["ssd_headdim"] is None
     assert meta["mamba2_mlx_backend_lineage"] == "reference_s6_mlx"
     assert meta["canonical_ssd_mlx_backend_wired"] is False
     assert meta["canonical_ssd_mlx_blocker"] == "canonical_ssd_mlx_backend_not_wired"
+
+
+def test_z7_mlx_config_can_opt_into_canonical_ssd_with_export_blocker() -> None:
+    cfg = Z7Mamba2MLXRenderConfig(
+        num_pairs=2,
+        d_model=8,
+        expand=2,
+        d_state=4,
+        use_canonical_ssd_mlx_backend=True,
+        ssd_nheads=2,
+    )
+
+    assert cfg.d_inner == 16
+    assert cfg.effective_ssd_nheads == 2
+    assert cfg.effective_ssd_headdim == 8
+    assert cfg.mamba2_mlx_backend_lineage == (
+        "canonical_mamba2_ssd_mlx_z7_gated_experimental"
+    )
+    assert cfg.canonical_ssd_mlx_backend_wired is True
+    assert cfg.canonical_ssd_mlx_blocker == (
+        "canonical_ssd_mlx_pytorch_bridge_export_not_wired"
+    )
+
+
+def test_z7_mlx_config_rejects_phantom_ssd_provenance() -> None:
+    with pytest.raises(ValueError, match="requires use_canonical_ssd"):
+        Z7Mamba2MLXRenderConfig(
+            num_pairs=2,
+            canonical_ssd_mlx_backend_wired=True,
+        )
+
+    with pytest.raises(ValueError, match="does not divide d_inner"):
+        Z7Mamba2MLXRenderConfig(
+            num_pairs=2,
+            d_model=8,
+            expand=2,
+            use_canonical_ssd_mlx_backend=True,
+            ssd_nheads=3,
+        )
+
+
+def test_z7_mlx_archive_meta_records_canonical_ssd_without_export_authority() -> None:
+    cfg = Z7Mamba2MLXRenderConfig(
+        num_pairs=2,
+        d_model=8,
+        expand=2,
+        d_state=4,
+        use_canonical_ssd_mlx_backend=True,
+        ssd_nheads=2,
+    )
+    meta = z7_mamba2_meta_from_config(cfg)
+
+    assert meta["use_canonical_ssd_mlx_backend"] is True
+    assert meta["ssd_nheads"] == 2
+    assert meta["ssd_headdim"] == 8
+    assert meta["canonical_ssd_mlx_backend_wired"] is True
+    assert meta["canonical_ssd_mlx_blocker"] == (
+        "canonical_ssd_mlx_pytorch_bridge_export_not_wired"
+    )
+
+    with pytest.raises(NotImplementedError, match="pytorch_bridge_export_not_wired"):
+        z7_mamba2_pytorch_config_from_mlx(cfg)
+    with pytest.raises(NotImplementedError, match="legacy S6-shaped Z7MCM2"):
+        pack_archive_from_exported_state_dict(exported_state_dict={}, mlx_cfg=cfg)
 
 
 def test_z7_full_mlx_trainer_threads_backend_lineage_into_harness_bundle() -> None:
@@ -78,6 +149,9 @@ def test_z7_full_mlx_trainer_threads_backend_lineage_into_harness_bundle() -> No
     assert {
         "schema",
         "mamba2_mlx_backend_lineage",
+        "use_canonical_ssd_mlx_backend",
+        "ssd_nheads",
+        "ssd_headdim",
         "canonical_ssd_mlx_backend_wired",
         "backend_claim_blockers",
         "math_fidelity_scope",

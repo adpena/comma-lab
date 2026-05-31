@@ -86,6 +86,7 @@ Canonical-vs-unique decision per layer (Catalog #290):
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -146,6 +147,25 @@ _FLAT_PARAM_ATTRS: tuple[str, ...] = (
     "residuals",
 )
 
+_SSD_PARAM_ATTRS: tuple[str, ...] = (
+    "ssd_A_log",
+    "ssd_B_proj_w",
+    "ssd_C_proj_w",
+    "ssd_dt_proj_w",
+    "ssd_dt_proj_b",
+    "ssd_D",
+)
+
+_S6_ONLY_PARAM_ATTRS: frozenset[str] = frozenset(
+    {
+        "mamba_A_log",
+        "mamba_B_proj_w",
+        "mamba_C_proj_w",
+        "mamba_dt_proj_w",
+        "mamba_dt_proj_b",
+    }
+)
+
 
 class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignore[misc]
     """``mlx.nn.Module`` wrapper around ``Z7Mamba2MLXNativeRenderer``.
@@ -176,14 +196,36 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         self.cfg = cfg
         self._seed = int(seed)
 
-        # Build the existing renderer once; it owns all parameter creation +
-        # Kaiming inits + forward equations. We then republish its parameter
+        # Build the existing renderer once; it owns all S6/PyTorch-bridge
+        # parameter creation + Kaiming inits + decoder weights. Canonical
+        # SSD-MLX opt-in deliberately uses a bridge-compatible init renderer
+        # with SSD disabled; the real SSD recurrent core lives in this module
+        # and export remains fail-closed until the runtime adapter exists.
+        renderer_cfg = cfg
+        if cfg.use_canonical_ssd_mlx_backend:
+            renderer_cfg = replace(
+                cfg,
+                use_canonical_ssd_mlx_backend=False,
+                ssd_nheads=None,
+                ssd_headdim=None,
+                mamba2_mlx_backend_lineage="reference_s6_mlx",
+                canonical_ssd_mlx_backend_wired=False,
+                canonical_ssd_mlx_blocker="canonical_ssd_mlx_backend_not_wired",
+            )
+        # We then republish its parameter
         # references as our own attributes so mlx.nn.Module.parameters() can
         # auto-discover them via tree_flatten.
-        self._renderer = Z7Mamba2MLXNativeRenderer(cfg, seed=seed)
+        self._renderer = Z7Mamba2MLXNativeRenderer(renderer_cfg, seed=seed)
 
         # Republish flat scalar parameters as mx.array attributes.
-        for name in _FLAT_PARAM_ATTRS:
+        flat_param_attrs = _FLAT_PARAM_ATTRS
+        if cfg.use_canonical_ssd_mlx_backend:
+            flat_param_attrs = tuple(
+                name
+                for name in _FLAT_PARAM_ATTRS
+                if name not in _S6_ONLY_PARAM_ATTRS
+            )
+        for name in flat_param_attrs:
             setattr(self, name, getattr(self._renderer, name))
 
         # Republish the decoder PixelShuffle conv stack as parallel lists.
@@ -191,6 +233,39 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         # tree_flatten (verified at landing — see module docstring).
         self.dec_block_w: list[Any] = list(self._renderer.dec_block_w)
         self.dec_block_b: list[Any] = list(self._renderer.dec_block_b)
+
+        if cfg.use_canonical_ssd_mlx_backend:
+            assert mx is not None
+            nheads = int(cfg.effective_ssd_nheads or 0)
+            headdim = int(cfg.effective_ssd_headdim or 0)
+            if nheads <= 0 or headdim <= 0:
+                raise ValueError(
+                    "canonical SSD-MLX backend requires positive "
+                    f"nheads/headdim, got {nheads}/{headdim}"
+                )
+            if nheads * headdim != cfg.d_inner:
+                raise ValueError(
+                    f"SSD shape mismatch: nheads*headdim={nheads * headdim} "
+                    f"must equal d_inner={cfg.d_inner}"
+                )
+            # Match tac.optimization.mamba2_predictor._CanonicalHelperSSDCell:
+            # A_log has one scalar per head, B/C/dt project from x_inner, D is
+            # a zero-initialized optional skip, and the Z7 gate/out_proj wraps
+            # the canonical SSD recurrence output.
+            self.ssd_A_log = mx.log(
+                mx.arange(1, nheads + 1, dtype=mx.float32)
+            )
+            self.ssd_B_proj_w = self._renderer._kaiming_linear(
+                cfg.d_inner, nheads * cfg.d_state
+            )
+            self.ssd_C_proj_w = self._renderer._kaiming_linear(
+                cfg.d_inner, nheads * cfg.d_state
+            )
+            self.ssd_dt_proj_w = self._renderer._kaiming_linear(
+                cfg.d_inner, nheads
+            )
+            self.ssd_dt_proj_b = mx.zeros((nheads,), dtype=mx.float32)
+            self.ssd_D = mx.zeros((nheads, headdim), dtype=mx.float32)
 
         # Ego motion buffer is NON-trainable contest side-info loaded from
         # real video; expose it as a plain attribute (mlx.nn.Module's
@@ -355,6 +430,12 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         # init).
         if cfg.identity_predictor:
             h_state = None
+        elif cfg.use_canonical_ssd_mlx_backend:
+            nheads = int(cfg.effective_ssd_nheads or 0)
+            headdim = int(cfg.effective_ssd_headdim or 0)
+            h_state = mx.zeros(
+                (1, nheads, headdim, cfg.d_state), dtype=mx.float32
+            )
         else:
             d_inner = cfg.d_inner
             h_state = mx.zeros((1, d_inner, cfg.d_state), dtype=mx.float32)
@@ -365,9 +446,16 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         for t in range(cfg.num_pairs):
             if cfg.stateful is False and not cfg.identity_predictor:
                 # Stateless ablation: reset hidden state before each pair.
-                h_state = mx.zeros(
-                    (1, cfg.d_inner, cfg.d_state), dtype=mx.float32
-                )
+                if cfg.use_canonical_ssd_mlx_backend:
+                    nheads = int(cfg.effective_ssd_nheads or 0)
+                    headdim = int(cfg.effective_ssd_headdim or 0)
+                    h_state = mx.zeros(
+                        (1, nheads, headdim, cfg.d_state), dtype=mx.float32
+                    )
+                else:
+                    h_state = mx.zeros(
+                        (1, cfg.d_inner, cfg.d_state), dtype=mx.float32
+                    )
             ego_t = self.ego_motion_buffer[t : t + 1]
             pred, h_state = self._predict_step_native(z, ego_t, h_state)
             z = pred + self.residuals[t : t + 1]
@@ -405,6 +493,8 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         cfg = self.cfg
         if cfg.identity_predictor:
             return x_t, h_state
+        if cfg.use_canonical_ssd_mlx_backend:
+            return self._mamba2_ssd_step_native(x_t, h_state)
         d_inner = cfg.d_inner
 
         # Input + gate projection
@@ -432,6 +522,56 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         y_inner = y_inner * mx.sigmoid(z_gate)
         y_t = y_inner @ self.mamba_out_proj_w.T
         return y_t, h_t
+
+    def _mamba2_ssd_step_native(
+        self, x_t: Any, h_state: Any
+    ) -> tuple[Any, Any]:
+        """Z7-gated canonical Mamba-2 SSD step using the shared MLX helper.
+
+        This mirrors ``tac.optimization.mamba2_predictor._CanonicalHelperSSDCell``
+        at the projection/wrapper layer and delegates the recurrent update to
+        ``tac.substrates._shared.mamba2_ssd.mamba2_ssd_step_mlx``. Provenance
+        is intentionally split: the recurrence core is canonical SSD-MLX, while
+        PyTorch bridge/export is blocked until a matching runtime adapter exists.
+        """
+        from tac.substrates._shared.mamba2_ssd import (
+            Mamba2SSDMLXState,
+            mamba2_ssd_step_mlx,
+        )
+
+        cfg = self.cfg
+        batch = int(x_t.shape[0])
+        d_inner = cfg.d_inner
+        nheads = int(cfg.effective_ssd_nheads or 0)
+        headdim = int(cfg.effective_ssd_headdim or 0)
+
+        xz = x_t @ self.mamba_in_proj_w.T
+        x_inner = xz[:, :d_inner]
+        z_gate = xz[:, d_inner:]
+        x_per_head = mx.reshape(x_inner, (batch, nheads, headdim))
+        B_t = mx.reshape(
+            x_inner @ self.ssd_B_proj_w.T,
+            (batch, nheads, cfg.d_state),
+        )
+        C_t = mx.reshape(
+            x_inner @ self.ssd_C_proj_w.T,
+            (batch, nheads, cfg.d_state),
+        )
+        dt_t = nn.softplus(x_inner @ self.ssd_dt_proj_w.T + self.ssd_dt_proj_b)
+
+        next_state, y_per_head = mamba2_ssd_step_mlx(
+            state=Mamba2SSDMLXState(h=h_state),
+            x_t=x_per_head,
+            A_log=self.ssd_A_log,
+            B_t=B_t,
+            C_t=C_t,
+            dt_t=dt_t,
+            D=self.ssd_D,
+        )
+        y_inner = mx.reshape(y_per_head, (batch, d_inner))
+        y_inner = y_inner * mx.sigmoid(z_gate)
+        y_t = y_inner @ self.mamba_out_proj_w.T
+        return y_t, next_state.h
 
     def reconstruct_all_pairs(self) -> tuple[Any, Any, Any]:
         """Full-sequence replay + decode; gradient-preserving MLX-native.
@@ -504,6 +644,14 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         flow into the exported state dict. Field names + shapes match the
         canonical PyTorch :class:`Z7Mamba2PredictiveCodingSubstrate` 1:1.
         """
+        if self.cfg.use_canonical_ssd_mlx_backend:
+            raise NotImplementedError(
+                "canonical_ssd_mlx_pytorch_bridge_export_not_wired: "
+                "Z7 canonical SSD-MLX training uses a different recurrent "
+                "parameterization from the existing S6-shaped PyTorch bridge. "
+                "Export is intentionally blocked until the matching contest "
+                "runtime adapter is implemented."
+            )
         self._sync_to_renderer()
         return self._renderer.export_state_dict()
 
@@ -511,6 +659,13 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
         self, state: dict[str, np.ndarray]
     ) -> None:
         """Load parameters from a numpy state dict; mirror into our attributes."""
+        if self.cfg.use_canonical_ssd_mlx_backend:
+            raise NotImplementedError(
+                "canonical_ssd_mlx_state_dict_import_not_wired: existing "
+                "Z7 numpy state_dict bridge is S6-shaped and cannot be loaded "
+                "into the canonical SSD-MLX recurrence without an explicit "
+                "adapter."
+            )
         self._renderer.load_state_dict_from_numpy(state)
         # Re-publish into our attributes so mlx.nn.Module.parameters() sees
         # the loaded values.
@@ -522,7 +677,18 @@ class Z7Mamba2MLXModule(nn.Module if nn is not None else object):  # type: ignor
 
     def num_parameters(self) -> int:
         """Total trainable parameter float count (delegates to renderer)."""
-        return self._renderer.num_parameters()
+        total = int(self._renderer.num_parameters())
+        if self.cfg.use_canonical_ssd_mlx_backend:
+            nheads = int(self.cfg.effective_ssd_nheads or 0)
+            d_inner = self.cfg.d_inner
+            total -= 3 * d_inner * self.cfg.d_state
+            total -= d_inner * d_inner + d_inner
+            total += nheads
+            total += d_inner * nheads * self.cfg.d_state
+            total += d_inner * nheads * self.cfg.d_state
+            total += d_inner * nheads + nheads
+            total += nheads * int(self.cfg.effective_ssd_headdim or 0)
+        return total
 
     @classmethod
     def from_pytorch_config(

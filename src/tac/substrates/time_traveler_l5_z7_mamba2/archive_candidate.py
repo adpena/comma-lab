@@ -75,6 +75,12 @@ def z7_mamba2_pytorch_config_from_mlx(
     ``Z7Mamba2MLXRenderConfig`` docstring); we fill in the PyTorch-specific
     fields with their canonical defaults so ``pack_archive`` validates clean.
     """
+    if bool(getattr(mlx_cfg, "use_canonical_ssd_mlx_backend", False)):
+        raise NotImplementedError(
+            "canonical_ssd_mlx_pytorch_bridge_export_not_wired: Z7 canonical "
+            "SSD-MLX artifacts cannot be translated through the existing "
+            "S6-shaped PyTorch archive config without a dedicated runtime adapter."
+        )
     return Z7Mamba2PredictiveCodingConfig(
         latent_dim=mlx_cfg.latent_dim,
         ego_motion_dim=mlx_cfg.ego_motion_dim,
@@ -186,6 +192,19 @@ def z7_mamba2_meta_from_config(
         "stateful": bool(cfg.stateful),
         "identity_predictor": bool(cfg.identity_predictor),
         "context_conditioning_mode": "none",
+        "use_canonical_ssd_mlx_backend": bool(
+            getattr(cfg, "use_canonical_ssd_mlx_backend", False)
+        ),
+        "ssd_nheads": (
+            int(cfg.effective_ssd_nheads)
+            if getattr(cfg, "effective_ssd_nheads", None) is not None
+            else None
+        ),
+        "ssd_headdim": (
+            int(cfg.effective_ssd_headdim)
+            if getattr(cfg, "effective_ssd_headdim", None) is not None
+            else None
+        ),
         "mamba2_mlx_backend_lineage": str(cfg.mamba2_mlx_backend_lineage),
         "canonical_ssd_mlx_backend_wired": bool(cfg.canonical_ssd_mlx_backend_wired),
         "canonical_ssd_mlx_blocker": str(cfg.canonical_ssd_mlx_blocker),
@@ -198,6 +217,12 @@ def pack_archive_from_exported_state_dict(
     mlx_cfg: Z7Mamba2MLXRenderConfig,
 ) -> bytes:
     """Pack a PyTorch-layout exported MLX state dict into Z7MCM2 ``0.bin`` bytes."""
+    if bool(getattr(mlx_cfg, "use_canonical_ssd_mlx_backend", False)):
+        raise NotImplementedError(
+            "canonical_ssd_mlx_pytorch_bridge_export_not_wired: Z7 canonical "
+            "SSD-MLX uses a canonical SSD recurrent core and must not be "
+            "packed through the legacy S6-shaped Z7MCM2 bridge."
+        )
     (
         encoder_sd,
         decoder_sd,

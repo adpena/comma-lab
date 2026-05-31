@@ -230,6 +230,13 @@ def _full_main(args: argparse.Namespace) -> int:
         d_state=int(args.d_state) if args.d_state is not None else 16,
         d_model=int(args.d_model) if args.d_model is not None else 64,
         expand=int(args.expand) if args.expand is not None else 2,
+        use_canonical_ssd_mlx_backend=bool(args.use_canonical_ssd_mlx_backend),
+        ssd_nheads=(
+            int(args.ssd_nheads) if args.ssd_nheads is not None else None
+        ),
+        ssd_headdim=(
+            int(args.ssd_headdim) if args.ssd_headdim is not None else None
+        ),
     )
     model = Z7Mamba2MLXModule(cfg, seed=int(args.seed))
     out_h, out_w = int(cfg.output_height), int(cfg.output_width)
@@ -243,12 +250,28 @@ def _full_main(args: argparse.Namespace) -> int:
         "schema": "mlx_substrate_backend_lineage.v1",
         "substrate_id": "time_traveler_l5_z7_mamba2_mlx_local",
         "mamba2_mlx_backend_lineage": cfg.mamba2_mlx_backend_lineage,
+        "use_canonical_ssd_mlx_backend": bool(
+            cfg.use_canonical_ssd_mlx_backend
+        ),
+        "ssd_nheads": (
+            int(cfg.effective_ssd_nheads)
+            if cfg.effective_ssd_nheads is not None
+            else None
+        ),
+        "ssd_headdim": (
+            int(cfg.effective_ssd_headdim)
+            if cfg.effective_ssd_headdim is not None
+            else None
+        ),
         "canonical_ssd_mlx_backend_wired": bool(
             cfg.canonical_ssd_mlx_backend_wired
         ),
         "backend_claim_blockers": [cfg.canonical_ssd_mlx_blocker],
         "math_fidelity_scope": (
-            "trainable_mlx_score_aware_z7_mamba2_module_with_reference_s6_"
+            "trainable_mlx_score_aware_z7_mamba2_module_with_canonical_ssd_"
+            "mlx_recurrence_core; archive_export_blocked_until_runtime_bridge"
+            if cfg.use_canonical_ssd_mlx_backend
+            else "trainable_mlx_score_aware_z7_mamba2_module_with_reference_s6_"
             "recurrence; canonical_mamba2_ssd_backend_not_claimed"
         ),
     }
@@ -430,7 +453,19 @@ def _smoke_main(args: argparse.Namespace) -> int:
     # MLX-LOCAL artifacts are NON-PROMOTABLE [macOS-MLX research-signal].
     MLX_EVIDENCE_GRADE = "[macOS-MLX research-signal]"
 
-    cfg = Z7Mamba2MLXRenderConfig(num_pairs=min(int(args.num_pairs), 8))
+    cfg = Z7Mamba2MLXRenderConfig(
+        num_pairs=min(int(args.num_pairs), 8),
+        d_state=int(args.d_state) if args.d_state is not None else 16,
+        d_model=int(args.d_model) if args.d_model is not None else 64,
+        expand=int(args.expand) if args.expand is not None else 2,
+        use_canonical_ssd_mlx_backend=bool(args.use_canonical_ssd_mlx_backend),
+        ssd_nheads=(
+            int(args.ssd_nheads) if args.ssd_nheads is not None else None
+        ),
+        ssd_headdim=(
+            int(args.ssd_headdim) if args.ssd_headdim is not None else None
+        ),
+    )
     model = Z7Mamba2MLXModule(cfg, seed=int(args.seed))
     # Single forward to validate the architecture binds end-to-end.
     idx_np = list(range(min(4, cfg.num_pairs)))
@@ -503,6 +538,19 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "output_height": int(cfg.output_height),
             "output_width": int(cfg.output_width),
             "stateful": bool(cfg.stateful),
+            "use_canonical_ssd_mlx_backend": bool(
+                cfg.use_canonical_ssd_mlx_backend
+            ),
+            "ssd_nheads": (
+                int(cfg.effective_ssd_nheads)
+                if cfg.effective_ssd_nheads is not None
+                else None
+            ),
+            "ssd_headdim": (
+                int(cfg.effective_ssd_headdim)
+                if cfg.effective_ssd_headdim is not None
+                else None
+            ),
             "mamba2_mlx_backend_lineage": str(cfg.mamba2_mlx_backend_lineage),
             "canonical_ssd_mlx_backend_wired": bool(
                 cfg.canonical_ssd_mlx_backend_wired
@@ -523,6 +571,17 @@ def _smoke_main(args: argparse.Namespace) -> int:
         },
         "forward_convention": "reconstruct_pair_nchw01",
         "mamba2_mlx_backend_lineage": str(cfg.mamba2_mlx_backend_lineage),
+        "use_canonical_ssd_mlx_backend": bool(cfg.use_canonical_ssd_mlx_backend),
+        "ssd_nheads": (
+            int(cfg.effective_ssd_nheads)
+            if cfg.effective_ssd_nheads is not None
+            else None
+        ),
+        "ssd_headdim": (
+            int(cfg.effective_ssd_headdim)
+            if cfg.effective_ssd_headdim is not None
+            else None
+        ),
         "canonical_ssd_mlx_backend_wired": bool(
             cfg.canonical_ssd_mlx_backend_wired
         ),
@@ -552,8 +611,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
                 "trainable MLX module construction + single forward pass only. "
                 "Non-promotable by construction per Catalog #192/#317/#341; "
                 "exact CPU/CUDA authority still requires PyTorch bridge export "
-                "and paired contest-axis replay. Canonical SSD authority is "
-                "also blocked until canonical_ssd_mlx_backend_not_wired is "
+                "and paired contest-axis replay. Canonical SSD-MLX recurrent "
+                "core provenance is recorded separately from archive/runtime "
+                "custody; export remains blocked until the backend blocker is "
                 "closed."
             ),
         },
@@ -726,6 +786,34 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Wave N+11 stabilizer: Mamba-2 expand factor (default 2; "
             "smaller --expand 1 halves d_inner)."
+        ),
+    )
+    p.add_argument(
+        "--use-canonical-ssd-mlx-backend",
+        action="store_true",
+        help=(
+            "Run the Z7 recurrent core through the canonical "
+            "tac.substrates._shared.mamba2_ssd MLX step helper. This is "
+            "MLX-local research signal only; archive/export remains fail-closed "
+            "until the matching PyTorch/runtime bridge is implemented."
+        ),
+    )
+    p.add_argument(
+        "--ssd-nheads",
+        type=int,
+        default=None,
+        help=(
+            "Canonical SSD-MLX head count. Defaults to 1 when "
+            "--use-canonical-ssd-mlx-backend is set."
+        ),
+    )
+    p.add_argument(
+        "--ssd-headdim",
+        type=int,
+        default=None,
+        help=(
+            "Canonical SSD-MLX per-head dimension. If omitted, derived from "
+            "d_inner / ssd_nheads."
         ),
     )
     return p

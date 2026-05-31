@@ -64,12 +64,12 @@ Canonical-vs-unique decision per layer (extends parent
    is NOT yet implemented in MLX. Operator iterates with ``"none"`` mode
    only at L0; the affine path lands as a sister L1 EXTENSION once a council
    anchor justifies the per-pair affine modulation cost on MLX.
-5. **SSD lineage (FAIL-CLOSED)**: this renderer still uses the MLX port of
-   the reference S6-shaped recurrence, not the canonical
-   ``tac.substrates._shared.mamba2_ssd`` helper. Artifacts therefore carry
-   ``mamba2_mlx_backend_lineage="reference_s6_mlx"`` and
-   ``canonical_ssd_mlx_backend_wired=False`` until an SSD-backed MLX path
-   lands.
+5. **SSD lineage (OPT-IN + FAIL-CLOSED EXPORT)**: default behavior remains
+   the MLX port of the reference S6-shaped recurrence for PyTorch bridge
+   compatibility. ``use_canonical_ssd_mlx_backend=True`` switches the
+   recurrent core to the canonical
+   ``tac.substrates._shared.mamba2_ssd`` MLX step helper, but PyTorch bridge
+   export remains blocked until a matching contest runtime adapter lands.
 
 Architecture mirror (PyTorch -> MLX field names preserved for byte-stable
 export bridge per Catalog #1251):
@@ -194,10 +194,19 @@ class Z7Mamba2MLXRenderConfig:
         mamba2_mlx_backend_lineage: current MLX recurrence implementation
             lineage. ``"reference_s6_mlx"`` is advisory-only and must not be
             promoted as canonical SSD.
-        canonical_ssd_mlx_backend_wired: false until this config delegates to
-            ``tac.substrates._shared.mamba2_ssd`` or an MLX SSD sibling.
+        use_canonical_ssd_mlx_backend: opt into the canonical MLX SSD
+            recurrence core. This is a real training backend, not a score or
+            archive-export authority claim.
+        ssd_nheads: optional SSD head count. If omitted with
+            ``use_canonical_ssd_mlx_backend=True``, defaults to 1.
+        ssd_headdim: optional SSD per-head dim. If omitted, derived from
+            ``d_inner // ssd_nheads``. If both ``ssd_nheads`` and
+            ``ssd_headdim`` are supplied their product must equal
+            ``d_inner``.
+        canonical_ssd_mlx_backend_wired: true only when the recurrent core
+            delegates to ``tac.substrates._shared.mamba2_ssd``.
         canonical_ssd_mlx_blocker: exact fail-closed blocker for any canonical
-            SSD claim on current Z7 MLX artifacts.
+            SSD archive/export claim on current Z7 MLX artifacts.
     """
 
     latent_dim: int = 24
@@ -217,14 +226,86 @@ class Z7Mamba2MLXRenderConfig:
     output_height: int = EVAL_HW[0]
     output_width: int = EVAL_HW[1]
     latent_init_std: float = 0.02
+    use_canonical_ssd_mlx_backend: bool = False
+    ssd_nheads: int | None = None
+    ssd_headdim: int | None = None
     mamba2_mlx_backend_lineage: str = "reference_s6_mlx"
     canonical_ssd_mlx_backend_wired: bool = False
     canonical_ssd_mlx_blocker: str = "canonical_ssd_mlx_backend_not_wired"
+
+    def __post_init__(self) -> None:
+        """Validate and normalize the optional canonical SSD-MLX backend."""
+        if self.use_canonical_ssd_mlx_backend:
+            nheads = self.effective_ssd_nheads
+            headdim = self.effective_ssd_headdim
+            if nheads is None or headdim is None:
+                raise ValueError("canonical SSD-MLX backend requires SSD dimensions")
+            if nheads <= 0:
+                raise ValueError(f"ssd_nheads must be positive, got {nheads}")
+            if headdim <= 0:
+                raise ValueError(f"ssd_headdim must be positive, got {headdim}")
+            if nheads * headdim != self.d_inner:
+                raise ValueError(
+                    f"ssd_nheads*ssd_headdim must equal d_inner={self.d_inner}; "
+                    f"got {nheads}*{headdim}={nheads * headdim}"
+                )
+            object.__setattr__(
+                self,
+                "mamba2_mlx_backend_lineage",
+                "canonical_mamba2_ssd_mlx_z7_gated_experimental",
+            )
+            object.__setattr__(self, "canonical_ssd_mlx_backend_wired", True)
+            object.__setattr__(
+                self,
+                "canonical_ssd_mlx_blocker",
+                "canonical_ssd_mlx_pytorch_bridge_export_not_wired",
+            )
+        elif self.canonical_ssd_mlx_backend_wired:
+            raise ValueError(
+                "canonical_ssd_mlx_backend_wired=True requires "
+                "use_canonical_ssd_mlx_backend=True"
+            )
 
     @property
     def d_inner(self) -> int:
         """Mamba-2 inner dim after expansion (d_model * expand)."""
         return self.expand * self.d_model
+
+    @property
+    def effective_ssd_nheads(self) -> int | None:
+        """SSD head count when the canonical SSD-MLX backend is active."""
+        if not self.use_canonical_ssd_mlx_backend:
+            return None
+        if self.ssd_nheads is not None:
+            return int(self.ssd_nheads)
+        if self.ssd_headdim is not None:
+            if self.ssd_headdim <= 0:
+                raise ValueError(
+                    f"ssd_headdim must be positive, got {self.ssd_headdim}"
+                )
+            if self.d_inner % int(self.ssd_headdim) != 0:
+                raise ValueError(
+                    f"ssd_headdim={self.ssd_headdim} does not divide "
+                    f"d_inner={self.d_inner}"
+                )
+            return self.d_inner // int(self.ssd_headdim)
+        return 1
+
+    @property
+    def effective_ssd_headdim(self) -> int | None:
+        """SSD per-head dimension when the canonical SSD-MLX backend is active."""
+        if not self.use_canonical_ssd_mlx_backend:
+            return None
+        if self.ssd_headdim is not None:
+            return int(self.ssd_headdim)
+        nheads = self.ssd_nheads if self.ssd_nheads is not None else 1
+        if nheads <= 0:
+            raise ValueError(f"ssd_nheads must be positive, got {nheads}")
+        if self.d_inner % int(nheads) != 0:
+            raise ValueError(
+                f"ssd_nheads={nheads} does not divide d_inner={self.d_inner}"
+            )
+        return self.d_inner // int(nheads)
 
     @property
     def predictor_input_dim(self) -> int:
@@ -305,6 +386,13 @@ class Z7Mamba2MLXNativeRenderer:
         require_mlx()
         import mlx.core as mx
 
+        if cfg.use_canonical_ssd_mlx_backend:
+            raise NotImplementedError(
+                "Z7Mamba2MLXNativeRenderer preserves the reference S6-shaped "
+                "PyTorch bridge path only. Use Z7Mamba2MLXModule for the "
+                "canonical SSD-MLX recurrent core; archive/runtime export "
+                "remains blocked by canonical_ssd_mlx_pytorch_bridge_export_not_wired."
+            )
         if cfg.num_pairs <= 0:
             raise ValueError("num_pairs must be positive")
         if cfg.decoder_num_upsample_blocks <= 0:
