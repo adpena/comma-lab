@@ -179,7 +179,7 @@ boundary fidelity is a candidate allocation signal, not dead signal.
 
 ## 3. Concrete state after today's landing
 
-Implemented + tested (28/28 green) in `mlx_loss.py`:
+Implemented + tested (38/38 green) in `mlx_loss.py`:
 
 - `segnet_boundary_band_weights_mlx` — 0-D geometry (Object 1).
 - `boundary_argmax_hinge_loss` — raw-logit all-impostor hinge (the `d_seg`-faithful
@@ -189,6 +189,39 @@ Implemented + tested (28/28 green) in `mlx_loss.py`:
   soft baseline; the A/B σ-sweep was run against it).
 - `segnet_class_pair_transition_matrix` — 1-D lower-D abstraction (NEW; observability).
 - `pose_sensitivity_weighted_mse_loss` — the pose-axis sister (AIL reweight).
+
+### 3.1 — Empirical: the 4-arm A/B confirms the hinge is the `d_seg`-faithful loss
+
+`tools/ab_boundary_tckd_vs_kl_t2.py` now runs a four-arm matrix (closes §5 step 5)
+on REAL contest SegNet logits (8 frames, downsample 4, near-correct init
+`teacher + N(0, 2²)`, same init + 60 Adam steps for all arms — apples-to-apples).
+Artifact: `.omx/research/ab_boundary_four_arm_nearcorrect_20260531.json`
+(`[macOS-MLX research-signal]`, `score_claim=false`, `promotable=false`).
+
+| arm | final `d_seg` | vs KL |
+|---|---|---|
+| KL T=2.0 | 0.006480 | — |
+| target-vs-rest TCKD | 0.026357 | −306.8% |
+| runner-up-aware decision-TCKD | 0.006582 | −1.6% |
+| **impostor-complete hinge** | **0.000000** | **+100.0%** |
+
+The hinge drove `d_seg` to **exactly zero** from `init d_seg = 0.3057`; every soft
+loss plateaued at a non-zero floor (0.0065–0.0264). This is the direct empirical
+confirmation of the operator's diagnosis ("pure top1/top2 decision KD misses an
+out-of-pair impostor class, so it can be zero while `d_seg` is wrong"):
+decision-TCKD *lost* (−1.6%), because matching the teacher's boundary *softness*
+competes with becoming argmax-correct, and because a top1/top2 objective leaves
+top3/4/5 impostors untouched. The hinge cannot be zero while `d_seg > 0` —
+`max_{j≠target}` sweeps every impostor and the zero-set is exactly
+`{argmax-correct}`.
+
+**Honest regime caveat.** This is the near-correct **free-field** regime: the
+student is an unconstrained per-pixel logit field, so the hinge trivially reaches
+`d_seg = 0`. It validates the **mechanism** (soft KD ≠ `d_seg`-faithful) and the
+**direction** (the hinge is the score-faithful loss), NOT a substrate result. The
+substrate setting (student = a constrained renderer, not a free field) is the
+§5-step-1 wire-in, where the empirical question becomes whether the boundary-band
+weighting + impostor-completeness still help under the renderer's capacity bound.
 
 ## 4. Operator-routable semantic bridge
 
@@ -247,6 +280,8 @@ rank, kill, promote, or replace `[contest-CPU]` / `[contest-CUDA]` auth eval.
 4. **Frequency-response probe:** multiply `segnet_boundary_band_weights_mlx` by a
    wavelet band-survival mask only after perturbation or candidate-vs-GT band
    comparisons show which wavelet bands alter the 384×512 argmax/margin surface.
-5. **A/B matrix:** extend `tools/ab_boundary_tckd_vs_kl_t2.py` into a four-arm
-   matrix: KL, target-vs-rest TCKD, decision-KD, and argmax hinge, each measured
-   under the observed transition regime and margin distribution.
+5. **A/B matrix: LANDED (§3.1).** `tools/ab_boundary_tckd_vs_kl_t2.py` is now a
+   four-arm matrix (KL, target-vs-rest TCKD, decision-KD, argmax hinge). The
+   near-correct-regime run confirms the hinge is the `d_seg`-faithful loss
+   (`d_seg → 0.0` vs soft-loss floors 0.0065–0.0264). Remaining: re-run under the
+   substrate-renderer regime + sweep `margin_i` by semantic region / boundary band.

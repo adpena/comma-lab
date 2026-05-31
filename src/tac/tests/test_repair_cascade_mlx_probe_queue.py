@@ -134,6 +134,56 @@ def test_repair_cascade_mlx_probe_spec_names_exact_missing_artifacts(
     )
 
 
+def test_repair_cascade_probe_spec_consumes_segnet_semantic_bridge_backlog(
+    tmp_path: Path,
+) -> None:
+    semantic_bridge = {
+        "schema": "segnet_semantic_bridge.v1",
+        "candidate_id": "bridge_unit",
+        "generalization_mode": "mixed",
+        "summary": {
+            "argmax_disagreement_rate": 0.125,
+            "error_is_out_of_pair_spread_fraction": 0.25,
+        },
+        "class_rows": [
+            {
+                "class_id": 1,
+                "class_name": "lane_markings",
+                "wrong_pixels": 12,
+                "error_rate_within_source_class": 0.4,
+            }
+        ],
+        "executable_backlog": [
+            {
+                "family_id": "mlx_lora_or_dora_boundary_adapter",
+                "generalization_mode": "mixed",
+                "next_materializer_task": "train MLX boundary adapter",
+                "score_authority": False,
+            }
+        ],
+        **_false_authority(),
+    }
+
+    spec = build_repair_cascade_mlx_probe_spec(
+        source_payload=semantic_bridge,
+        source_payload_path=tmp_path / "segnet_semantic_bridge.json",
+        cascade_id="bridge_unit_mlx_lora_or_dora_boundary_adapter",
+        repo_root=tmp_path,
+    )
+
+    assert spec["schema"] == REPAIR_CASCADE_MLX_PROBE_SPEC_SCHEMA
+    assert spec["source_payload_schema"] == "segnet_semantic_bridge.v1"
+    assert spec["pipeline_position"] == "scorer_entropy_repair_before_selector_codec"
+    assert "local_mlx_boundary_argmax_hinge_probe" in (
+        spec["required_probe_measurements"]
+    )
+    assert "mlx_lora_boundary_adapter_smoke" in spec["required_probe_measurements"]
+    targeted = spec["targeted_positions"][0]
+    assert targeted["out_of_pair_spread_fraction"] == 0.25
+    assert targeted["top_source_classes"][0]["class_name"] == "lane_markings"
+    assert spec["ready_for_exact_eval_dispatch"] is False
+
+
 def test_repair_cascade_mlx_probe_result_records_missing_mlx_inputs(
     tmp_path: Path,
 ) -> None:

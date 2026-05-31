@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from comma_lab.scheduler.experiment_queue import QUEUE_SCHEMA, normalize_queue_definition
+from tac.analysis.segnet_semantic_bridge import SEGNET_SEMANTIC_BRIDGE_SCHEMA
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -186,6 +187,91 @@ def _cascade_rows_from_score_report(payload: Mapping[str, Any]) -> list[dict[str
     return rows
 
 
+def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    candidate_id = _slug(payload.get("candidate_id") or "segnet_semantic_bridge")
+    summary = _mapping(payload.get("summary"))
+    class_rows = [
+        dict(row)
+        for row in payload.get("class_rows") or []
+        if isinstance(row, Mapping)
+    ]
+    top_class_rows = sorted(
+        class_rows,
+        key=lambda row: (
+            float(row.get("error_rate_within_source_class") or 0.0),
+            _safe_int(row.get("wrong_pixels")),
+        ),
+        reverse=True,
+    )[:3]
+    for index, backlog in enumerate(payload.get("executable_backlog") or [], start=1):
+        if not isinstance(backlog, Mapping):
+            continue
+        family_id = _slug(backlog.get("family_id") or f"semantic_bridge_family_{index}")
+        mode = str(backlog.get("generalization_mode") or payload.get("generalization_mode") or "")
+        required_measurements = [
+            "segnet_semantic_bridge_artifact",
+            "boundary_argmax_hinge_marginal_surface",
+            "local_mlx_boundary_argmax_hinge_probe",
+            "pose_axis_guard_measurement",
+        ]
+        if "lora" in family_id or "adapter" in family_id:
+            required_measurements.append("mlx_lora_boundary_adapter_smoke")
+        if mode == "fleet_adaptable":
+            required_measurements.append("fleet_holdout_or_online_calibration_split")
+        if mode == "contest_fixed_dataset":
+            required_measurements.append("byte_closed_contest_fixed_repair_materializer")
+        rows.append(
+            {
+                "schema": REPAIR_CASCADE_OPPORTUNITY_ROW_SCHEMA,
+                "cascade_id": f"{candidate_id}_{family_id}",
+                "label": str(backlog.get("family_id") or family_id),
+                "source_relation": "segnet_semantic_bridge_executable_backlog",
+                "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+                "targeted_positions": [
+                    {
+                        "position_id": f"segnet_semantic_bridge:{family_id}",
+                        "entropy_surface": "scorer_entropy",
+                        "operation_levels": [
+                            "pixel",
+                            "boundary",
+                            "region",
+                            "frame",
+                            "batch",
+                            "full_video",
+                        ],
+                        "generalization_mode": mode,
+                        "argmax_disagreement_rate": summary.get(
+                            "argmax_disagreement_rate"
+                        ),
+                        "out_of_pair_spread_fraction": summary.get(
+                            "error_is_out_of_pair_spread_fraction"
+                        ),
+                        "top_source_classes": [
+                            {
+                                "class_id": row.get("class_id"),
+                                "class_name": row.get("class_name"),
+                                "error_rate": row.get(
+                                    "error_rate_within_source_class"
+                                ),
+                            }
+                            for row in top_class_rows
+                        ],
+                    }
+                ],
+                "required_probe_measurements": ordered_unique(required_measurements),
+                "next_queue_action": backlog.get("next_materializer_task"),
+                "blockers": [
+                    "byte_closed_archive_materializer_required_before_score_claim",
+                    "receiver_runtime_proof_required_before_exact_dispatch",
+                    "exact_cpu_cuda_eval_required_before_promotion",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
 def repair_cascade_rows_from_payload(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Return structural repair-cascade rows from supported source payloads."""
 
@@ -194,9 +280,11 @@ def repair_cascade_rows_from_payload(payload: Mapping[str, Any]) -> list[dict[st
         return _cascade_rows_from_work_order(payload)
     if schema == REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA:
         return _cascade_rows_from_score_report(payload)
+    if schema == SEGNET_SEMANTIC_BRIDGE_SCHEMA:
+        return _cascade_rows_from_segnet_semantic_bridge(payload)
     raise RepairCascadeMlxProbeQueueError(
         "repair cascade MLX probe queue requires a repair waterfill work order "
-        "or repair campaign score report"
+        "or repair campaign score report or SegNet semantic bridge"
     )
 
 

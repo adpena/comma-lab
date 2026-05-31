@@ -93,6 +93,7 @@ def main() -> int:
     ap.add_argument("--lr", type=float, default=0.3)
     ap.add_argument("--temperature", type=float, default=2.0)
     ap.add_argument("--tau-boundary", type=float, default=1.0)
+    ap.add_argument("--hinge-margin", type=float, default=1.0)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
@@ -101,6 +102,8 @@ def main() -> int:
     import mlx.optimizers as optim
 
     from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+        boundary_argmax_hinge_loss,
+        boundary_decision_tckd_loss,
         boundary_weighted_tckd_loss,
         hinton_distilled_kl_t2_loss,
         segnet_boundary_band_weights_mlx,
@@ -124,7 +127,7 @@ def main() -> int:
         return float((mx.argmax(student, axis=-1) != teacher_argmax).astype(mx.float32).mean())
 
     def run(objective: str) -> dict:
-        student = mx.array(init)  # same init for both arms
+        student = mx.array(init)  # same init for ALL arms (apples-to-apples)
         opt = optim.Adam(learning_rate=args.lr)
         teacher_sg = mx.stop_gradient(teacher)
         traj = [d_seg(student)]
@@ -132,10 +135,23 @@ def main() -> int:
             loss_fn = lambda s: hinton_distilled_kl_t2_loss(  # noqa: E731
                 s, teacher_sg, temperature=args.temperature
             )
-        else:
+        elif objective == "boundary_tckd":  # target-vs-rest TCKD (Object 2, binarised)
             loss_fn = lambda s: boundary_weighted_tckd_loss(  # noqa: E731
                 s, teacher_sg, temperature=args.temperature, tau_boundary=args.tau_boundary
             )
+        elif objective == "boundary_decision_tckd":  # runner-up-AWARE top1<->top2
+            loss_fn = lambda s: boundary_decision_tckd_loss(  # noqa: E731
+                s, teacher_sg, temperature=args.temperature, tau_boundary=args.tau_boundary
+            )
+        elif objective == "boundary_argmax_hinge":  # impostor-COMPLETE Crammer-Singer hinge
+            # margin REPLACES temperature: raw-logit surrogate whose zero-set is
+            # EXACTLY {argmax-correct}; max_{j!=target} sweeps ALL impostor classes
+            # (incl out-of-pair top3/4/5) -> nonzero whenever d_seg is wrong.
+            loss_fn = lambda s: boundary_argmax_hinge_loss(  # noqa: E731
+                s, teacher_sg, margin=args.hinge_margin, tau_boundary=args.tau_boundary
+            )
+        else:
+            raise ValueError(f"unknown objective: {objective}")
         grad_fn = mx.value_and_grad(loss_fn)
         for _ in range(args.steps):
             loss, g = grad_fn(student)
@@ -146,14 +162,45 @@ def main() -> int:
 
     kl = run("kl_t2")
     tckd = run("boundary_tckd")
+    dec = run("boundary_decision_tckd")
+    hinge = run("boundary_argmax_hinge")
 
     init_dseg = kl["init_d_seg"]
-    # relative d_seg reduction vs KL T=2.0 at matched steps (the falsifiable metric).
-    rel_reduction = (
-        (kl["final_d_seg"] - tckd["final_d_seg"]) / kl["final_d_seg"]
-        if kl["final_d_seg"] > 0
+
+    def _rel(arm: dict) -> float:
+        # relative d_seg reduction vs KL T=2.0 at matched steps (the falsifiable metric).
+        return (
+            (kl["final_d_seg"] - arm["final_d_seg"]) / kl["final_d_seg"]
+            if kl["final_d_seg"] > 0
+            else 0.0
+        )
+
+    rel_reduction = _rel(tckd)  # target-vs-rest TCKD (the original metric; back-compat)
+    rel_reduction_decision = _rel(dec)  # runner-up-aware decision-TCKD (the headline arm)
+    rel_reduction_hinge = _rel(hinge)  # impostor-complete Crammer-Singer hinge (the loss-side fix)
+    # does the runner-up identity help OVER target-vs-rest? (Object 2 marginal value)
+    decision_over_tckd = (
+        (tckd["final_d_seg"] - dec["final_d_seg"]) / tckd["final_d_seg"]
+        if tckd["final_d_seg"] > 0
         else 0.0
     )
+    # does the impostor-COMPLETE hinge help OVER the soft losses? (the operator's
+    # "out-of-pair impostor class" insight: soft losses can be zero while d_seg is
+    # wrong; the hinge cannot be -> it should win when impostors are out-of-pair).
+    hinge_over_best_soft = (
+        (min(tckd["final_d_seg"], dec["final_d_seg"]) - hinge["final_d_seg"])
+        / min(tckd["final_d_seg"], dec["final_d_seg"])
+        if min(tckd["final_d_seg"], dec["final_d_seg"]) > 0
+        else 0.0
+    )
+    # winner among the four arms (lowest final d_seg).
+    arms = {
+        "kl_t2": kl["final_d_seg"],
+        "boundary_tckd": tckd["final_d_seg"],
+        "boundary_decision_tckd": dec["final_d_seg"],
+        "boundary_argmax_hinge": hinge["final_d_seg"],
+    }
+    winner = min(arms, key=arms.get)
     result = {
         "evidence_grade": "[macOS-MLX research-signal]",
         "score_claim": False,
@@ -169,22 +216,38 @@ def main() -> int:
         "lr": args.lr,
         "temperature": args.temperature,
         "tau_boundary": args.tau_boundary,
+        "hinge_margin": args.hinge_margin,
         "init_d_seg": init_dseg,
         "kl_t2_final_d_seg": kl["final_d_seg"],
         "boundary_tckd_final_d_seg": tckd["final_d_seg"],
+        "boundary_decision_tckd_final_d_seg": dec["final_d_seg"],
+        "boundary_argmax_hinge_final_d_seg": hinge["final_d_seg"],
         "relative_d_seg_reduction_vs_kl_t2": rel_reduction,
+        "relative_d_seg_reduction_decision_vs_kl_t2": rel_reduction_decision,
+        "relative_d_seg_reduction_hinge_vs_kl_t2": rel_reduction_hinge,
+        "runner_up_identity_marginal_vs_target_vs_rest": decision_over_tckd,
+        "impostor_complete_hinge_marginal_vs_best_soft": hinge_over_best_soft,
+        "winner": winner,
         "prediction_threshold": 0.08,
         "prediction_holds": rel_reduction >= 0.08,
+        "decision_prediction_holds": rel_reduction_decision >= 0.08,
+        "hinge_prediction_holds": rel_reduction_hinge >= 0.08,
         "kl_t2_trajectory": kl["trajectory"],
         "boundary_tckd_trajectory": tckd["trajectory"],
+        "boundary_decision_tckd_trajectory": dec["trajectory"],
+        "boundary_argmax_hinge_trajectory": hinge["trajectory"],
         "wall_clock_s": round(time.time() - t0, 1),
     }
     print(json.dumps({k: v for k, v in result.items() if "trajectory" not in k}, indent=2))
     print(
-        f"\nVERDICT: init d_seg={init_dseg:.4f} | KL T=2.0 -> {kl['final_d_seg']:.4f} | "
-        f"boundary-TCKD -> {tckd['final_d_seg']:.4f} | "
-        f"relative reduction = {rel_reduction * 100:.1f}% "
-        f"({'>=8% PREDICTION HOLDS' if rel_reduction >= 0.08 else '<8% prediction NOT met'})"
+        f"\nVERDICT: init d_seg={init_dseg:.4f} | "
+        f"KL T=2.0 -> {kl['final_d_seg']:.4f} | "
+        f"target-vs-rest TCKD -> {tckd['final_d_seg']:.4f} ({rel_reduction * 100:+.1f}% vs KL) | "
+        f"runner-up-aware decision-TCKD -> {dec['final_d_seg']:.4f} "
+        f"({rel_reduction_decision * 100:+.1f}% vs KL) | "
+        f"impostor-complete hinge -> {hinge['final_d_seg']:.4f} "
+        f"({rel_reduction_hinge * 100:+.1f}% vs KL) | "
+        f"WINNER: {winner} | hinge worth {hinge_over_best_soft * 100:+.1f}% over best soft loss"
     )
     if args.out:
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
