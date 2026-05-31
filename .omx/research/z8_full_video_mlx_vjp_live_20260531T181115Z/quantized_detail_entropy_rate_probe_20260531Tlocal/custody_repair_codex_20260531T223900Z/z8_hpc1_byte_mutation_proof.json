@@ -1,0 +1,433 @@
+{
+  "archive_bytes": 10195155,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223900Z/0.bin",
+  "axis_tag": "[macOS-CPU advisory]",
+  "base_recon_pixel_count": 44236800,
+  "custody_only_sections": [],
+  "custody_section_to_member": {
+    "decoder_blob": "decoder_weight_custody",
+    "dreamer_state_blob": "dreamer_v3_rssm_state_custody",
+    "indices_blob": "dreamer_v3_categorical_indices_custody"
+  },
+  "distinguishing_feature": "wavelet_blob",
+  "distinguishing_feature_consumed": true,
+  "evidence_grade": "advisory",
+  "honest_architecture_note": "Z8 contest inflate reconstructs pixels from wavelet_blob via Mallat perfect reconstruction and consumes wyner_ziv_blob by projecting the decoded top state into frame_1 top-LL. Decoder, indices, and Dreamer sections are consumed by the deterministic stack-context projection path; trained MLX renderer export remains a separate promotion blocker.",
+  "mamba_dreamer_wyner_ziv_pixel_consumption_proven": true,
+  "pixel_consumed_sections": [
+    "wavelet_blob",
+    "wyner_ziv_blob",
+    "decoder_blob",
+    "indices_blob",
+    "dreamer_state_blob"
+  ],
+  "predictive_stack_pixel_consumption": {
+    "all_required_sections_pixel_consumed": true,
+    "custody_only_sections": [],
+    "full_stack_pixel_consumption_claim": false,
+    "next_required_tasks": [
+      "serialize_trained_mlx_renderer_state_into_z8hpc1_archive",
+      "replay_archive_bound_candidate_on_contest_cpu_cuda_exact_axis"
+    ],
+    "pixel_consumed_sections": [
+      "wavelet_blob",
+      "wyner_ziv_blob",
+      "decoder_blob",
+      "indices_blob",
+      "dreamer_state_blob"
+    ],
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "required_sections": [
+      "wavelet_blob",
+      "wyner_ziv_blob",
+      "decoder_blob",
+      "indices_blob",
+      "dreamer_state_blob"
+    ],
+    "schema": "z8_hpc1_predictive_stack_pixel_consumption.v1",
+    "score_claim": false,
+    "status": "section_pixel_consumption_proven_trained_export_pending",
+    "trained_mlx_renderer_archive_export_ready": false
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223900Z/z8_hpc1_byte_mutation_proof.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "z8_hierarchical_predictive_coding_distinguishing_feature_byte_mutation_proof.v1",
+  "score_claim": false,
+  "section_pixel_consumption_proofs": {
+    "decoder_blob": {
+      "archive_member": "decoder_weight_custody",
+      "frame_0_max_abs_delta": 0.0,
+      "frame_1_max_abs_delta": 0.0020917952060699463,
+      "pixel_consumption_proven": true,
+      "proof_kind": "valid_stack_context_payload_mutation",
+      "receiver_projection": "stack_context_vector_to_frame_1_top_ll",
+      "section": "decoder_blob"
+    },
+    "dreamer_state_blob": {
+      "archive_member": "dreamer_v3_rssm_state_custody",
+      "frame_0_max_abs_delta": 0.0,
+      "frame_1_max_abs_delta": 0.0020917877554893494,
+      "pixel_consumption_proven": true,
+      "proof_kind": "valid_stack_context_payload_mutation",
+      "receiver_projection": "stack_context_vector_to_frame_1_top_ll",
+      "section": "dreamer_state_blob"
+    },
+    "indices_blob": {
+      "archive_member": "dreamer_v3_categorical_indices_custody",
+      "frame_0_max_abs_delta": 0.0,
+      "frame_1_max_abs_delta": 0.0020917952060699463,
+      "pixel_consumption_proven": true,
+      "proof_kind": "valid_stack_context_payload_mutation",
+      "receiver_projection": "stack_context_vector_to_frame_1_top_ll",
+      "section": "indices_blob"
+    },
+    "wavelet_blob": {
+      "max_abs_pixel_delta": 0.04854317754507065,
+      "pixel_consumption_proven": true,
+      "proof_kind": "raw_byte_mutation",
+      "receiver_projection": "mallat_wavelet_reconstruction",
+      "section": "wavelet_blob"
+    },
+    "wyner_ziv_blob": {
+      "frame_0_max_abs_delta": 0.0,
+      "frame_1_max_abs_delta": 0.00472414493560791,
+      "pixel_consumption_proven": true,
+      "proof_kind": "valid_semantic_payload_mutation",
+      "receiver_projection": "wyner_ziv_top_state_to_frame_1_top_ll",
+      "section": "wyner_ziv_blob"
+    }
+  },
+  "sections": {
+    "decoder_blob": {
+      "length": 34,
+      "max_abs_pixel_delta": 0.0,
+      "n_parse_error": 7,
+      "n_pixel_changed": 0,
+      "n_zero_delta": 0,
+      "offsets_probed": 7,
+      "per_offset": [
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 4,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 8,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 12,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 16,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 21,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 25,
+          "result": "parse_error"
+        },
+        {
+          "err": "ValueError('state_dict blob truncated reading shape')",
+          "offset_in_section": 29,
+          "result": "parse_error"
+        }
+      ],
+      "present": true,
+      "section": "decoder_blob",
+      "verdict": "PARSE_GUARD_ONLY"
+    },
+    "dreamer_state_blob": {
+      "length": 31,
+      "max_abs_pixel_delta": 0.0,
+      "n_parse_error": 5,
+      "n_pixel_changed": 0,
+      "n_zero_delta": 2,
+      "offsets_probed": 7,
+      "per_offset": [
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 4,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 7,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 11,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 15,
+          "result": "parse_error"
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 19,
+          "result": "parse_error"
+        },
+        {
+          "max_abs_delta": 0.0,
+          "offset_in_section": 23
+        },
+        {
+          "max_abs_delta": 0.0,
+          "offset_in_section": 27
+        }
+      ],
+      "present": true,
+      "section": "dreamer_state_blob",
+      "verdict": "PARSE_GUARD_ONLY"
+    },
+    "indices_blob": {
+      "length": 5400,
+      "max_abs_pixel_delta": 0.002091802656650543,
+      "n_parse_error": 0,
+      "n_pixel_changed": 7,
+      "n_zero_delta": 0,
+      "offsets_probed": 7,
+      "per_offset": [
+        {
+          "max_abs_delta": 0.002091802656650543,
+          "offset_in_section": 4
+        },
+        {
+          "max_abs_delta": 0.002091802656650543,
+          "offset_in_section": 774
+        },
+        {
+          "max_abs_delta": 0.0020917952060699463,
+          "offset_in_section": 1545
+        },
+        {
+          "max_abs_delta": 0.0020917952060699463,
+          "offset_in_section": 2316
+        },
+        {
+          "max_abs_delta": 0.0020917952060699463,
+          "offset_in_section": 3087
+        },
+        {
+          "max_abs_delta": 0.0020917952060699463,
+          "offset_in_section": 3858
+        },
+        {
+          "max_abs_delta": 0.0020917952060699463,
+          "offset_in_section": 4629
+        }
+      ],
+      "present": true,
+      "section": "indices_blob",
+      "verdict": "PIXEL_CONSUMED"
+    },
+    "wavelet_blob": {
+      "length": 10165099,
+      "max_abs_pixel_delta": 0.04854317754507065,
+      "n_parse_error": 2,
+      "n_pixel_changed": 5,
+      "n_zero_delta": 0,
+      "offsets_probed": 7,
+      "per_offset": [
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 4,
+          "result": "parse_error"
+        },
+        {
+          "max_abs_delta": 3.0800700187683105e-05,
+          "offset_in_section": 1452160
+        },
+        {
+          "max_abs_delta": 0.0007373988628387451,
+          "offset_in_section": 2904316
+        },
+        {
+          "max_abs_delta": 0.0003571808338165283,
+          "offset_in_section": 4356473
+        },
+        {
+          "max_abs_delta": 6.0401856899261475e-05,
+          "offset_in_section": 5808629
+        },
+        {
+          "max_abs_delta": 0.04854317754507065,
+          "offset_in_section": 7260786
+        },
+        {
+          "err": "error('brotli: decoder failed')",
+          "offset_in_section": 8712942,
+          "result": "parse_error"
+        }
+      ],
+      "present": true,
+      "section": "wavelet_blob",
+      "verdict": "PIXEL_CONSUMED"
+    },
+    "wyner_ziv_blob": {
+      "length": 22804,
+      "max_abs_pixel_delta": 0.0,
+      "n_parse_error": 7,
+      "n_pixel_changed": 0,
+      "n_zero_delta": 0,
+      "offsets_probed": 7,
+      "per_offset": [
+        {
+          "err": "ValueError('Z8 Wyner-Ziv blob truncated reading pair 1')",
+          "offset_in_section": 4,
+          "result": "parse_error"
+        },
+        {
+          "err": "WynerZivCoderHeaderError('zlib decompression failed: Error -3 while decompressin",
+          "offset_in_section": 3261,
+          "result": "parse_error"
+        },
+        {
+          "err": "WynerZivCoderShapeMismatchError('payload header state_dim (4278190096) must equa",
+          "offset_in_section": 6518,
+          "result": "parse_error"
+        },
+        {
+          "err": "WynerZivCoderHeaderError(\"payload magic mismatch: expected b'WZ16'; got b'W\\\\xa5",
+          "offset_in_section": 9775,
+          "result": "parse_error"
+        },
+        {
+          "err": "WynerZivCoderHeaderError('zlib decompression failed: Error -3 while decompressin",
+          "offset_in_section": 13032,
+          "result": "parse_error"
+        },
+        {
+          "err": "WynerZivCoderHeaderError('residual_dtype_marker must be 0 (fp32) or 1 (fp16); go",
+          "offset_in_section": 16289,
+          "result": "parse_error"
+        },
+        {
+          "err": "WynerZivCoderShapeMismatchError('payload header batch_size (65281) must equal si",
+          "offset_in_section": 19546,
+          "result": "parse_error"
+        }
+      ],
+      "present": true,
+      "section": "wyner_ziv_blob",
+      "verdict": "PARSE_GUARD_ONLY"
+    }
+  },
+  "stack_context_pixel_consumption_proven": true,
+  "stack_context_semantic_payload_mutation_receiver_proofs": {
+    "archive_member_byte_closed": true,
+    "axis_tag": "[macOS-CPU advisory]",
+    "dispatch_attempted": false,
+    "evidence_grade": "receiver-runtime-local-proof",
+    "gpu_launched": false,
+    "per_section": {
+      "decoder_blob": {
+        "expected_changed_frame": "frame_1",
+        "frame_0_max_abs_delta": 0.0,
+        "frame_1_max_abs_delta": 0.0020917952060699463,
+        "mutation": {
+          "mutated_archive_sha256": "690dbda42b39c11df88d8ef8ae7a7a8e1192a774dc895d029e7368d0bd507e4a",
+          "mutated_pair_index": 0,
+          "mutated_section": "decoder_blob",
+          "mutation_kind": "valid_semantic_stack_context_payload_mutation",
+          "original_archive_sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb"
+        },
+        "section": "decoder_blob",
+        "section_pixel_consumption_proven": true,
+        "valid_semantic_payload_mutation": true
+      },
+      "dreamer_state_blob": {
+        "expected_changed_frame": "frame_1",
+        "frame_0_max_abs_delta": 0.0,
+        "frame_1_max_abs_delta": 0.0020917877554893494,
+        "mutation": {
+          "mutated_archive_sha256": "f92b2580cd40a10b2ce0c2d776dbb6665aed7c334d760751de893984570d1777",
+          "mutated_pair_index": 0,
+          "mutated_section": "dreamer_state_blob",
+          "mutation_kind": "valid_semantic_stack_context_payload_mutation",
+          "original_archive_sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb"
+        },
+        "section": "dreamer_state_blob",
+        "section_pixel_consumption_proven": true,
+        "valid_semantic_payload_mutation": true
+      },
+      "indices_blob": {
+        "expected_changed_frame": "frame_1",
+        "frame_0_max_abs_delta": 0.0,
+        "frame_1_max_abs_delta": 0.0020917952060699463,
+        "mutation": {
+          "mutated_archive_sha256": "3fe16ec08664940858bcd79e7306d8d5d8612d98186f1e6a2934f423f18903ea",
+          "mutated_pair_index": 0,
+          "mutated_section": "indices_blob",
+          "mutation_kind": "valid_semantic_stack_context_payload_mutation",
+          "original_archive_sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb"
+        },
+        "section": "indices_blob",
+        "section_pixel_consumption_proven": true,
+        "valid_semantic_payload_mutation": true
+      }
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_runtime_path": "projected_pair_pyramids_from_archive_bytes->stack_context_vector_from_archive->project_decoded_top_states_into_pair_pyramids->reconstruct_pair_rgb_from_pyramid",
+    "schema": "z8_hpc1_stack_context_payload_mutation_receiver_proofs.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "stack_context_sections_pixel_consumed": [
+      "decoder_blob",
+      "indices_blob",
+      "dreamer_state_blob"
+    ],
+    "valid_semantic_stack_context_payload_mutations": true
+  },
+  "wyner_ziv_payload_pixel_consumption_proven": true,
+  "wyner_ziv_semantic_payload_mutation_receiver_proof": {
+    "archive_member_byte_closed": true,
+    "axis_tag": "[macOS-CPU advisory]",
+    "dispatch_attempted": false,
+    "evidence_grade": "receiver-runtime-local-proof",
+    "expected_changed_frame": "frame_1",
+    "frame_0_max_abs_delta": 0.0,
+    "frame_1_max_abs_delta": 0.00472414493560791,
+    "gpu_launched": false,
+    "mutation": {
+      "decoded_top_state_max_abs_delta": 1.0,
+      "mutated_archive_sha256": "7781659335b8cc3131e5fd8e0476c9aca3c999c049a08bdda422093c75593d1c",
+      "mutated_pair_index": 0,
+      "mutated_payload_bytes": 45,
+      "mutation_mode": "zero_top_state",
+      "mutation_scale": 0.5,
+      "original_archive_sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb",
+      "original_payload_bytes": 34
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "proof_path": null,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_runtime_path": "inflate.decode_wyner_ziv_top_states_from_archive->project_decoded_top_states_into_pair_pyramids->reconstruct_pair_rgb_from_pyramid",
+    "schema": "z8_hpc1_wyner_ziv_payload_mutation_receiver_proof.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "valid_semantic_wyner_ziv_payload_mutation": true,
+    "wyner_ziv_top_state_pixel_consumption_proven": true
+  }
+}

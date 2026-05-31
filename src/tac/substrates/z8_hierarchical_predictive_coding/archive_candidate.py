@@ -343,6 +343,7 @@ def export_z8hpc1_archive_bytes(
             proof_schema=Z8_HPC_RECEIVER_PROOF_SCHEMA,
             proof_filename="z8_hpc1_receiver_proof.json",
             candidate_label="z8_hpc1",
+            expected_receiver_output_name="0.raw",
             expected_receiver_output_bytes=CONTEST_RAW_BYTES,
             retain_receiver_output=retain_receiver_proof_output,
             runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(
@@ -447,6 +448,7 @@ def export_z8hpc1_archive_bound_candidate_package(
         proof_schema=Z8_HPC_RECEIVER_PROOF_SCHEMA,
         proof_filename="z8_hpc1_receiver_proof.json",
         candidate_label="z8_hpc1",
+        expected_receiver_output_name="0.raw",
         expected_receiver_output_bytes=CONTEST_RAW_BYTES,
         retain_receiver_output=retain_receiver_proof_output,
         runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(
