@@ -358,3 +358,135 @@ per-frame-isolated optimization. The binding is:
   local move *proposer* only — never the score authority. All surfaces remain
   `[macOS-MLX research-signal]` / non-promotable per Catalog #127/#192/#317/#323/#341
   until a paired CPU+CUDA full-video replay ratifies a byte-closed candidate.
+
+---
+
+## APPEND 2026-05-31 (operator directive) — deterministic nonsmooth bilevel optimal-control SUPERSEDES "better minibatches"
+
+APPEND-ONLY per Catalog #110/#113. This SUPERSEDES the FRAMING of the prior
+"Practical stochastic approximation" section: the stochastic/minibatch form is
+demoted to **probe-ranking only, never authority**. The ideal object is not
+"less-biased SGD" — it is a deterministic nonsmooth bilevel optimal-control
+problem over the full video and archive.
+
+### Operator directive (verbatim, binding)
+
+> "The way to do better is to stop thinking of it as 'better minibatches' and
+> formulate it as a deterministic nonsmooth bilevel optimal-control problem over
+> the full video and archive."
+
+### The ideal object
+
+```
+min over {renderer, state, quantizer, allocation, archive} decisions
+
+  S = 100*d_seg(full_video)
+    + sqrt(10*d_pose(full_video))
+    + 25*archive_bytes/N
+
+subject to:
+  deterministic decoder/runtime
+  legal archive grammar
+  exact custody
+  hardware/eval axis constraints
+```
+
+### The 8 bleeding-edge mandates (the upgrade over stochastic approximation)
+
+1. **Full-video deterministic VJP — chunking is EXACT ACCUMULATION, not
+   sampling.** `grad = sum(pair_chunk_grads)` over the WHOLE video. This is the
+   full-batch gradient evaluated with memory scheduling; it is NOT a stochastic
+   estimate. (Corrects the prior section's `mx.vjp on minibatches = unbiased
+   stochastic estimate` framing: the chunk loop is memory scheduling of the full
+   batch, not Monte-Carlo over pairs.)
+
+2. **Adjoint / checkpointed full-sequence backprop.** For Z8 / Z7 / Dreamer /
+   Mamba use scan/adjoint-style backprop through the recurrent / state-space
+   dynamics. Gradient checkpointing is the canonical compute-for-memory move for
+   long sequences: recompute activations during backward rather than dropping to
+   random batches (less activation memory, some recompute cost).
+
+3. **Implicit differentiation THROUGH the allocator (the FORBIDDEN-freeze
+   correction).** Water-fill is NOT "compute sensitivity, freeze it, allocate."
+   It is an inner optimization LAYER: `a*(θ) = argmin_a D(θ,a) + λ·R(a)`; then
+   differentiate through the KKT / optimality conditions (OptNet / CVXPYlayers
+   differentiable-optimization-layer lineage; implicit-function-theorem through
+   the solver). The frozen-sensitivity threshold is a Phase-1 baseline ONLY; the
+   canonical allocator is bilevel.
+
+4. **Nonsmooth but score-aligned losses.** Soft KL / probability matching is
+   WRONG near SegNet boundaries (the argmax-flip rate `d_seg` is nonsmooth).
+   Use margin / subgradient objects: Crammer-Singer hinge, Fenchel-Young
+   structured losses (connect convex losses ↔ structured prediction ↔ sparsity ↔
+   generalized entropies ↔ margins), Clarke-subgradient treatment of argmax
+   regions. (This is the SegNet sister of the existing `boundary_argmax_hinge`
+   Z8 seg-lever finding — formalize it as Fenchel-Young.)
+
+5. **Joint P18/P19 objective WITH interaction terms** (extends the surface):
+   ```
+   w_i = 100*|dL_seg/dx_i|
+       + (5/sqrt(10*d_pose))*||J_pose,i||_{Sigma^-1}
+       + interaction terms
+   ```
+   SegNet boundary flips and PoseNet Mahalanobis/null-subset behavior are
+   optimized TOGETHER (second-order coupling), not summed as two frozen maps.
+
+6. **Sequential convex / trust-region solve (the non-stochastic loop).**
+   `full-video VJP → solve allocator/quantizer subproblem → materialize archive
+   → exact inflate/eval → accept/reject → relinearize`. Minibatch/window
+   gradients may RANK probes; they are NEVER authority. (This is the prior
+   fresh-surface / mandatory full-video replay discipline, now named as the
+   canonical SCP/trust-region outer loop.)
+
+7. **Discrete archive decisions need mixed continuous/discrete math.**
+   Quantization and bytes are discontinuous; `archive_bytes` is NOT a smooth
+   loss. STE is a BRIDGE only — then CERTIFY with exact replay. For final coder
+   decisions use DP, branch-and-bound, coordinate descent with EXACT byte deltas,
+   or MILP/convex relaxations where tractable.
+
+8. **The frontier is NOT "more SGD."** It is full-video variational
+   optimization with implicit solver gradients, nonsmooth margin objectives,
+   exact archive acceptance, and second-order interaction modeling.
+
+### Contest mode vs production mode
+
+```
+contest mode:                         production mode:
+  full-video resident MLX tensors       same math, but streaming/minibatch ALLOWED
+  deterministic pair-chunk VJP          regularized across clips
+    accumulation (exact full-batch)     validation-heldout behavior matters
+  implicit-diff waterfill allocator     anti-overfit constraints on
+  STE/prox through quantization           scorer-specific repairs
+  exact archive replay after accepts
+  NO stochastic authority
+```
+
+### Phased implementation roadmap (Carmack MVP-first; binds #1591/#1592/Z8 rate-attack)
+
+- **Phase 1 (in-flight subagent `a797c158`):** full-video EXACT-ACCUMULATION
+  VJP joint `w_i` → freeze-allocate dead-zone baseline → exact archive replay
+  accept/reject via `tools/z8_600pair_byte_closed_contest_score_advisory.py`.
+  This IS a valid Phase 1 of mandate 6 (SCP outer loop) with a frozen Phase-1
+  inner solve. Honestly tag as Phase-1 baseline. The allocator interface must be
+  shaped so Phase 2 can slot the implicit-diff layer in WITHOUT a rewrite.
+- **Phase 2:** implicit-diff allocator — `a*(θ)=argmin_a D+λR` differentiated
+  through KKT (OptNet/CVXPYlayers); replaces the frozen threshold (mandate 3).
+- **Phase 3:** nonsmooth margin loss — Fenchel-Young / Crammer-Singer hinge /
+  Clarke-subgradient for the SegNet argmax surface (mandate 4).
+- **Phase 4:** adjoint/checkpointed full-sequence backprop for Z8/Z7/Dreamer/
+  Mamba state-space dynamics (mandate 2).
+- **Phase 5:** discrete archive coder via DP / branch-and-bound / exact-byte-
+  delta coordinate descent (mandate 7); STE certified by exact replay.
+- **Outer loop (all phases):** sequential-convex / trust-region accept/reject
+  with full-video inflate/eval as sole authority (mandate 6).
+
+### Canonical follow-ons (per Catalog #344)
+
+- Register the deterministic-bilevel objective + the interaction-term joint
+  `w_i` as canonical equations once Phase 1 lands its first empirical anchor
+  (`FORMALIZATION_PENDING` until then).
+- References for the eventual canonical-equation provenance: OptNet (Amos &
+  Kolter 2017), CVXPYlayers (Agrawal et al. 2019), Fenchel-Young losses (Blondel
+  et al. JMLR), gradient checkpointing (Chen et al. 2016 / HF docs), INR video /
+  RNeRV long-training design, Geometric-Transformation-Embedded Mamba learned
+  video compression.
