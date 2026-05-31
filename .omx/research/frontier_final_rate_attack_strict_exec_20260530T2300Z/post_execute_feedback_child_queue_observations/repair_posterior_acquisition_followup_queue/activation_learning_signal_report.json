@@ -1,0 +1,242 @@
+{
+  "allowed_use": "blocked_activation_plan_learning_signal_bundle_only",
+  "blocked_signal_count": 2,
+  "budget_spend_allowed": false,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+  "gpu_launched": false,
+  "learning_signal_rows": [
+    {
+      "allowed_use": "blocked_activation_plan_acquisition_update_only",
+      "blockers": [
+        "experiment_status:frozen",
+        "exact_auth_eval_handoff_requires_contest_axis_claim",
+        "no_available_local_queue_or_artifact_for_posterior_route",
+        "missing_prerequisite_artifact:exact_auth_eval_handoff",
+        "activation_plan_learning_signal_is_not_score_authority",
+        "component_response_or_receiver_credit_required_before_budget_spend",
+        "exact_axis_eval_required_before_promotion_or_dispatch"
+      ],
+      "budget_spend_allowed": false,
+      "candidate_id": "repair_posterior_followup_route_byte_closed_candidate_to_exact_auth_eval_handoff",
+      "charged_bits_changed": false,
+      "component_response_axis": "blocked_or_unmeasured_component_response_axis",
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "evidence_grade": "blocked_queue_activation_plan_only",
+      "exact_cuda_auth_eval": false,
+      "family_id": "repair-posterior-acquisition",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "learning_signal_kind": "blocked_child_queue_activation_plan",
+      "local_planning_update": {
+        "budget_spend_allowed": false,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "local_planning_update_ready": true,
+        "planner_feature_vector": {
+          "activation_action_count": 3,
+          "activation_actions": [
+            "thaw_queue_definition_after_prerequisite_evidence_lands",
+            "route_byte_closed_candidate_to_exact_auth_eval_handoff",
+            "inspect_queue_owned_prerequisite"
+          ],
+          "activation_blocker_count": 7,
+          "blocked_experiment_count": 2,
+          "entropy_stage_contract_miss": false,
+          "evidence_surface_count": 3,
+          "evidence_surfaces": [
+            "queue_definition_status",
+            "contest_cpu_or_cuda_auth_axis_payload",
+            "experiment_metadata_or_step_postconditions"
+          ],
+          "has_exact_auth_eval_request": true,
+          "has_receiver_closed_budget_request": false,
+          "has_targeted_component_response_request": true,
+          "missing_artifact_count": 0,
+          "receiver_credit_exhausted": false,
+          "selection_blocker_class": "exact_axis_handoff_missing",
+          "stackability_remeasure_required": false,
+          "step_count": 1
+        },
+        "posterior_surface": "repair_campaign_stackability_local_mlx_posterior",
+        "posterior_update_blockers": [
+          "activation_plan_learning_signal_is_not_score_authority",
+          "component_response_or_receiver_credit_required_before_budget_spend",
+          "exact_axis_eval_required_before_promotion_or_dispatch"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_acquisition_policy": "increase_priority_for_targeted_component_response_harvest",
+        "recommended_stackability_followup": "do_not_run_stackability_until_activation_blockers_clear",
+        "schema": "repair_campaign_local_planning_update.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "missing_artifacts": [],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "replay_identity": {
+        "environment_sha256": null,
+        "execution_context_sha256": null,
+        "hash_manifest_sha256": "762cb2c8e1b92c7258c685307579dffed658437fee1690d542b7c43756cef09a",
+        "replay_argv_sha256": null,
+        "replay_identity_kind": "blocked_child_queue_activation_plan",
+        "schema": "repair_campaign_activation_plan_replay_identity.v1",
+        "source_records_sha256": "fe639f3e2a424c9eac0795e099a47039e5fea961a9421e7b145c079a44d6a869"
+      },
+      "schema": "repair_campaign_learning_signal.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_artifacts": [
+        {
+          "bytes": 6135,
+          "label": "child_queue_activation_plan",
+          "path": ".omx/research/frontier_final_rate_attack_strict_exec_20260530T2300Z/post_execute_feedback_child_queue_observations/repair_posterior_acquisition_followup_queue/activation_plan.json",
+          "sha256": "113076005ce0b9e9fbf5d6d8ad4ba5898edb8c0d94ca027da6b0192d14948f0d"
+        }
+      ],
+      "typed_response_id": "activation_plan:frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_repair_posterior_acquisition_followup:repair_posterior_followup_route_byte_closed_candidate_to_exact_auth_eval_handoff"
+    },
+    {
+      "allowed_use": "blocked_activation_plan_acquisition_update_only",
+      "blockers": [
+        "experiment_status:frozen",
+        "no_available_local_queue_or_artifact_for_posterior_route",
+        "missing_prerequisite_artifact:repair_campaign_byte_closed_materialization_queue",
+        "activation_plan_learning_signal_is_not_score_authority",
+        "component_response_or_receiver_credit_required_before_budget_spend",
+        "exact_axis_eval_required_before_promotion_or_dispatch"
+      ],
+      "budget_spend_allowed": false,
+      "candidate_id": "repair_posterior_followup_implement_or_run_repair_family_byte_transform",
+      "charged_bits_changed": false,
+      "component_response_axis": "blocked_or_unmeasured_component_response_axis",
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "evidence_grade": "blocked_queue_activation_plan_only",
+      "exact_cuda_auth_eval": false,
+      "family_id": "repair-posterior-acquisition",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "learning_signal_kind": "blocked_child_queue_activation_plan",
+      "local_planning_update": {
+        "budget_spend_allowed": false,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "local_planning_update_ready": true,
+        "planner_feature_vector": {
+          "activation_action_count": 2,
+          "activation_actions": [
+            "thaw_queue_definition_after_prerequisite_evidence_lands",
+            "inspect_queue_owned_prerequisite"
+          ],
+          "activation_blocker_count": 6,
+          "blocked_experiment_count": 2,
+          "entropy_stage_contract_miss": false,
+          "evidence_surface_count": 2,
+          "evidence_surfaces": [
+            "queue_definition_status",
+            "experiment_metadata_or_step_postconditions"
+          ],
+          "has_exact_auth_eval_request": false,
+          "has_receiver_closed_budget_request": false,
+          "has_targeted_component_response_request": true,
+          "missing_artifact_count": 0,
+          "receiver_credit_exhausted": false,
+          "selection_blocker_class": "component_response_missing",
+          "stackability_remeasure_required": false,
+          "step_count": 1
+        },
+        "posterior_surface": "repair_campaign_stackability_local_mlx_posterior",
+        "posterior_update_blockers": [
+          "activation_plan_learning_signal_is_not_score_authority",
+          "component_response_or_receiver_credit_required_before_budget_spend",
+          "exact_axis_eval_required_before_promotion_or_dispatch"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_acquisition_policy": "increase_priority_for_targeted_component_response_harvest",
+        "recommended_stackability_followup": "do_not_run_stackability_until_activation_blockers_clear",
+        "schema": "repair_campaign_local_planning_update.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "missing_artifacts": [],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "replay_identity": {
+        "environment_sha256": null,
+        "execution_context_sha256": null,
+        "hash_manifest_sha256": "a60ed926858eefeccf72b96b00fb26bb75b6d91c52c627b43894987b94c7ab7c",
+        "replay_argv_sha256": null,
+        "replay_identity_kind": "blocked_child_queue_activation_plan",
+        "schema": "repair_campaign_activation_plan_replay_identity.v1",
+        "source_records_sha256": "fe639f3e2a424c9eac0795e099a47039e5fea961a9421e7b145c079a44d6a869"
+      },
+      "schema": "repair_campaign_learning_signal.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_artifacts": [
+        {
+          "bytes": 6135,
+          "label": "child_queue_activation_plan",
+          "path": ".omx/research/frontier_final_rate_attack_strict_exec_20260530T2300Z/post_execute_feedback_child_queue_observations/repair_posterior_acquisition_followup_queue/activation_plan.json",
+          "sha256": "113076005ce0b9e9fbf5d6d8ad4ba5898edb8c0d94ca027da6b0192d14948f0d"
+        }
+      ],
+      "typed_response_id": "activation_plan:frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_repair_posterior_acquisition_followup:repair_posterior_followup_implement_or_run_repair_family_byte_transform"
+    }
+  ],
+  "learning_signal_schema": "repair_campaign_learning_signal.v1",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_budget_spend": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "repair_campaign_blocked_learning_signal_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_activation_plan": {
+    "bytes": 6135,
+    "label": "child_queue_activation_plan",
+    "path": ".omx/research/frontier_final_rate_attack_strict_exec_20260530T2300Z/post_execute_feedback_child_queue_observations/repair_posterior_acquisition_followup_queue/activation_plan.json",
+    "sha256": "113076005ce0b9e9fbf5d6d8ad4ba5898edb8c0d94ca027da6b0192d14948f0d"
+  }
+}

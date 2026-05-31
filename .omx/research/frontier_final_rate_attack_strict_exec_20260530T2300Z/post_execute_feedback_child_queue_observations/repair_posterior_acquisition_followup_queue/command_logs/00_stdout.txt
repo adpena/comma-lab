@@ -1,0 +1,22 @@
+{
+  "auto_parallelism": {
+    "local_only": {
+      "max_parallel": 4,
+      "resource_limits": {
+        "local_cpu": 2,
+        "local_io_heavy": 2
+      }
+    },
+    "with_cloud": {
+      "max_parallel": 4,
+      "resource_limits": {
+        "local_cpu": 2,
+        "local_io_heavy": 2
+      }
+    }
+  },
+  "experiment_count": 4,
+  "queue_id": "frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_repair_posterior_acquisition_followup",
+  "step_count": 7,
+  "valid": true
+}

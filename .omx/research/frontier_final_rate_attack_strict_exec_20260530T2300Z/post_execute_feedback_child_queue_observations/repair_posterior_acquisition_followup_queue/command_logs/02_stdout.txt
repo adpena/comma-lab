@@ -1,0 +1,28 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 1,
+  "max_experiments": null,
+  "max_parallel": 4,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_repair_posterior_acquisition_followup",
+  "requested_max_parallel": 4,
+  "resource_limits": {
+    "local_cpu": 2,
+    "local_io_heavy": 2
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-30T23:59:16Z",
+  "started_experiment_ids": [],
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_repair_posterior_acquisition_followup.sqlite",
+  "step_results": [],
+  "steps_started": 0,
+  "stop_reason": "idle_limit_reached",
+  "stop_signals": [],
+  "success_count": 0
+}

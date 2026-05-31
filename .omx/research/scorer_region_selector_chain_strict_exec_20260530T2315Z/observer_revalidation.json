@@ -1,0 +1,859 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 8,
+      "resource_limits": {
+        "local_cpu": 8
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu"
+    ],
+    "with_cloud": {
+      "max_parallel": 8,
+      "resource_limits": {
+        "local_cpu": 8
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-05-31T00:01:40Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "scorer_region_selector_repack_chain": {
+        "artifact_record_bytes_mean": 66458.55555555556,
+        "artifact_record_bytes_sum": 598127,
+        "artifact_record_count": 15,
+        "artifact_record_raw_bytes_mean": 66458.55555555556,
+        "artifact_record_raw_bytes_sum": 598127,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6707456249860115,
+        "elapsed_seconds_mean": 0.3049763750168495,
+        "elapsed_seconds_min": 0.11577600002055988,
+        "elapsed_seconds_sum": 2.7447873751516454,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 5902.555555555556,
+        "log_bytes_sum": 53123,
+        "resource_kind_counts": {
+          "local_cpu": 9
+        },
+        "run_count": 9,
+        "step_ids": [
+          "build_p18_p19_chain_context",
+          "emit_composed_chain_report",
+          "emit_receiver_closed_distortion_budget_attack_plan",
+          "emit_scorer_region_exact_ready_bridge_inputs",
+          "materialize_frame1_region_waterfill_runtime_patch",
+          "materialize_p11_selector_context_recode",
+          "materialize_p15_archive_zip_repack",
+          "materialize_p18_segnet_region_waterfill",
+          "materialize_p19_posenet_null_pairs"
+        ],
+        "success_count": 9
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 66458.55555555556,
+        "artifact_record_bytes_sum": 598127,
+        "artifact_record_count": 15,
+        "artifact_record_raw_bytes_mean": 66458.55555555556,
+        "artifact_record_raw_bytes_sum": 598127,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6707456249860115,
+        "elapsed_seconds_mean": 0.3049763750168495,
+        "elapsed_seconds_min": 0.11577600002055988,
+        "elapsed_seconds_sum": 2.7447873751516454,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 5902.555555555556,
+        "log_bytes_sum": 53123,
+        "resource_kind_counts": {
+          "local_cpu": 9
+        },
+        "run_count": 9,
+        "step_ids": [
+          "build_p18_p19_chain_context",
+          "emit_composed_chain_report",
+          "emit_receiver_closed_distortion_budget_attack_plan",
+          "emit_scorer_region_exact_ready_bridge_inputs",
+          "materialize_frame1_region_waterfill_runtime_patch",
+          "materialize_p11_selector_context_recode",
+          "materialize_p15_archive_zip_repack",
+          "materialize_p18_segnet_region_waterfill",
+          "materialize_p19_posenet_null_pairs"
+        ],
+        "success_count": 9
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "scorer_region_selector_repack_chain.build_p18_p19_chain_context": {
+        "artifact_record_bytes_mean": 7255.0,
+        "artifact_record_bytes_sum": 7255,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7255.0,
+        "artifact_record_raw_bytes_sum": 7255,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6650697080185637,
+        "elapsed_seconds_mean": 0.6650697080185637,
+        "elapsed_seconds_min": 0.6650697080185637,
+        "elapsed_seconds_sum": 0.6650697080185637,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 461.0,
+        "log_bytes_sum": 461,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_p18_p19_chain_context"
+        ],
+        "success_count": 1
+      },
+      "scorer_region_selector_repack_chain.emit_composed_chain_report": {
+        "artifact_record_bytes_mean": 7259.0,
+        "artifact_record_bytes_sum": 7259,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7259.0,
+        "artifact_record_raw_bytes_sum": 7259,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6707456249860115,
+        "elapsed_seconds_mean": 0.6707456249860115,
+        "elapsed_seconds_min": 0.6707456249860115,
+        "elapsed_seconds_sum": 0.6707456249860115,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 493.0,
+        "log_bytes_sum": 493,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_composed_chain_report"
+        ],
+        "success_count": 1
+      },
+      "scorer_region_selector_repack_chain.emit_receiver_closed_distortion_budget_attack_plan": {
+        "artifact_record_bytes_mean": 143529.0,
+        "artifact_record_bytes_sum": 143529,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 143529.0,
+        "artifact_record_raw_bytes_sum": 143529,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.11614104197360575,
+        "elapsed_seconds_mean": 0.11614104197360575,
+        "elapsed_seconds_min": 0.11614104197360575,
+        "elapsed_seconds_sum": 0.11614104197360575,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 455.0,
+        "log_bytes_sum": 455,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_receiver_closed_distortion_budget_attack_plan"
+        ],
+        "success_count": 1
+      },
+      "scorer_region_selector_repack_chain.emit_scorer_region_exact_ready_bridge_inputs": {
+        "artifact_record_bytes_mean": 53882.0,
+        "artifact_record_bytes_sum": 53882,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 53882.0,
+        "artifact_record_raw_bytes_sum": 53882,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6576669160276651,
+        "elapsed_seconds_mean": 0.6576669160276651,
+        "elapsed_seconds_min": 0.6576669160276651,
+        "elapsed_seconds_sum": 0.6576669160276651,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 374.0,
+        "log_bytes_sum": 374,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_scorer_region_exact_ready_bridge_inputs"
+        ],
+        "success_count": 1
+      },
+      "scorer_region_selector_repack_chain.materialize_frame1_region_waterfill_runtime_patch": {
+        "artifact_record_bytes_mean": 3779.0,
+        "artifact_record_bytes_sum": 3779,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 3779.0,
+        "artifact_record_raw_bytes_sum": 3779,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.11638870899332687,
+        "elapsed_seconds_mean": 0.11638870899332687,
+        "elapsed_seconds_min": 0.11638870899332687,
+        "elapsed_seconds_sum": 0.11638870899332687,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 644.0,
+        "log_bytes_sum": 644,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "materialize_frame1_region_waterfill_runtime_patch"
+        ],
+        "success_count": 1
+      },
+      "scorer_region_selector_repack_chain.materialize_p11_selector_context_recode": {
+        "artifact_record_bytes_mean": 17466.0,
+        "artifact_record_bytes_sum": 17466,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 17466.0,
+        "artifact_record_raw_bytes_sum": 17466,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.16949575004400685,
+        "elapsed_seconds_mean": 0.16949575004400685,
+        "elapsed_seconds_min": 0.16949575004400685,
+        "elapsed_seconds_sum": 0.16949575004400685,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 17306.0,
+        "log_bytes_sum": 17306,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "materialize_p11_selector_context_recode"
+        ],
+        "success_count": 1
+      },
+      "scorer_region_selector_repack_chain.materialize_p15_archive_zip_repack": {
+        "artifact_record_bytes_mean": 214892.0,
+        "artifact_record_bytes_sum": 214892,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 214892.0,
+        "artifact_record_raw_bytes_sum": 214892,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.1163708750391379,
+        "elapsed_seconds_mean": 0.1163708750391379,
+        "elapsed_seconds_min": 0.1163708750391379,
+        "elapsed_seconds_sum": 0.1163708750391379,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 32571.0,
+        "log_bytes_sum": 32571,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "materialize_p15_archive_zip_repack"
+        ],
+        "success_count": 1
+      },
+      "scorer_region_selector_repack_chain.materialize_p18_segnet_region_waterfill": {
+        "artifact_record_bytes_mean": 133365.0,
+        "artifact_record_bytes_sum": 133365,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 133365.0,
+        "artifact_record_raw_bytes_sum": 133365,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.11577600002055988,
+        "elapsed_seconds_mean": 0.11577600002055988,
+        "elapsed_seconds_min": 0.11577600002055988,
+        "elapsed_seconds_sum": 0.11577600002055988,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 425.0,
+        "log_bytes_sum": 425,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "materialize_p18_segnet_region_waterfill"
+        ],
+        "success_count": 1
+      },
+      "scorer_region_selector_repack_chain.materialize_p19_posenet_null_pairs": {
+        "artifact_record_bytes_mean": 16700.0,
+        "artifact_record_bytes_sum": 16700,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 16700.0,
+        "artifact_record_raw_bytes_sum": 16700,
+        "candidate_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.11713275004876778,
+        "elapsed_seconds_mean": 0.11713275004876778,
+        "elapsed_seconds_min": 0.11713275004876778,
+        "elapsed_seconds_sum": 0.11713275004876778,
+        "experiment_ids": [
+          "scorer_region_selector_repack_chain"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 394.0,
+        "log_bytes_sum": 394,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "materialize_p19_posenet_null_pairs"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "scorer_region_selector_repack_chain": [
+        "scorer_region_selector_repack_chain"
+      ]
+    },
+    "event_count": 9,
+    "promotion_eligible": false,
+    "queue_id": "scorer_region_selector_chain_strict_exec_20260530T2315Z",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "scorer_region_selector_chain_strict_exec_20260530T2315Z",
+  "queue_sha256": "347ea813e1e16a4d5f5239a2aac63dc17084c70171483b8fb3aba4813dee0820",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 8
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 9,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "scorer_region_selector_chain_strict_exec_20260530T2315Z",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 300
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 8,
+        "current_timeout_seconds_max": 300,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.11713275004876778,
+        "elapsed_seconds_p95": 0.6707456249860115,
+        "observed_failure_count": 0,
+        "observed_run_count": 9,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 300,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_scorer_region_selector_chain_strict_exec_20260530T2315Z.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-31T00:01:24Z",
+    "event_count": 31,
+    "max_event_id": 31,
+    "max_step_updated_at_utc": "2026-05-31T00:01:31Z",
+    "queue_id": "scorer_region_selector_chain_strict_exec_20260530T2315Z",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_scorer_region_selector_chain_strict_exec_20260530T2315Z.sqlite",
+    "step_state_count": 9
+  },
+  "status_counts": {
+    "succeeded": 9
+  },
+  "step_count": 9,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [
+    {
+      "attempts": 1,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/chain_context.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "materializer": {
+              "blockers": [],
+              "candidate_archive": {
+                "actual_bytes": 178493,
+                "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "blockers": [],
+                "expected_bytes": 178493,
+                "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "label": "json_equals_materializer_candidate_archive",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/submission_dir/archive.zip",
+                "schema": "observer_file_custody_revalidation.v1",
+                "valid": true
+              },
+              "schema": "observer_materializer_payload_revalidation.v1",
+              "valid": true
+            },
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 17306,
+          "candidate_archive": {
+            "bytes": 178493,
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/submission_dir/archive.zip",
+            "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+          },
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "feca_selector_reparameterization_manifest.v1",
+          "materializer_delta_source": "selected_payload",
+          "materializer_id": "feca_selector_reparameterize_adapter",
+          "mtime_utc": "2026-05-31T00:01:30Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "readiness_blockers": [
+            "candidate_requires_full_frame_inflate_output_parity_before_score_claim",
+            "candidate_requires_exact_auth_eval_before_promotion"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "source_runtime_native_selector_context_recode",
+          "receiver_contract_satisfied": true,
+          "receiver_verification": {
+            "blockers": [],
+            "receiver_contract_satisfied": true,
+            "runtime_adapter_ready": true
+          },
+          "runtime_consumption_proof_path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/feca_selector_runtime_consumption_proof.json",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "selected_payload_candidate_archive_bytes": 178493,
+          "selected_payload_saved_bytes": 0,
+          "selected_payload_source_archive_bytes": 178493,
+          "serialized_archive_delta_candidate_archive_bytes": 178493,
+          "serialized_archive_delta_realized_saved_bytes": 0,
+          "serialized_archive_delta_savings_realized": false,
+          "serialized_archive_delta_schema": "serialized_archive_delta_contract.v1",
+          "serialized_archive_delta_source_archive_bytes": 178493,
+          "serialized_archive_delta_status": "zero_delta",
+          "target_kind": "selector_stream_context_recode_v1"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "false_authority": {
+              "blockers": [],
+              "schema": "observer_false_authority_revalidation.v1",
+              "valid": true
+            },
+            "materializer": {
+              "blockers": [],
+              "candidate_archive": {
+                "actual_bytes": 178493,
+                "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "blockers": [],
+                "expected_bytes": 178493,
+                "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "label": "json_false_authority_materializer_candidate_archive",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/submission_dir/archive.zip",
+                "schema": "observer_file_custody_revalidation.v1",
+                "valid": true
+              },
+              "schema": "observer_materializer_payload_revalidation.v1",
+              "valid": true
+            },
+            "postcondition_type": "json_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 17306,
+          "candidate_archive": {
+            "bytes": 178493,
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/submission_dir/archive.zip",
+            "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+          },
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "exists": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "json_schema": "feca_selector_reparameterization_manifest.v1",
+          "materializer_delta_source": "selected_payload",
+          "materializer_id": "feca_selector_reparameterize_adapter",
+          "mtime_utc": "2026-05-31T00:01:30Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_false_authority",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "readiness_blockers": [
+            "candidate_requires_full_frame_inflate_output_parity_before_score_claim",
+            "candidate_requires_exact_auth_eval_before_promotion"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "source_runtime_native_selector_context_recode",
+          "receiver_contract_satisfied": true,
+          "receiver_verification": {
+            "blockers": [],
+            "receiver_contract_satisfied": true,
+            "runtime_adapter_ready": true
+          },
+          "runtime_consumption_proof_path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/feca_selector_runtime_consumption_proof.json",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "selected_payload_candidate_archive_bytes": 178493,
+          "selected_payload_saved_bytes": 0,
+          "selected_payload_source_archive_bytes": 178493,
+          "serialized_archive_delta_candidate_archive_bytes": 178493,
+          "serialized_archive_delta_realized_saved_bytes": 0,
+          "serialized_archive_delta_savings_realized": false,
+          "serialized_archive_delta_schema": "serialized_archive_delta_contract.v1",
+          "serialized_archive_delta_source_archive_bytes": 178493,
+          "serialized_archive_delta_status": "zero_delta",
+          "target_kind": "selector_stream_context_recode_v1"
+        }
+      ],
+      "experiment_id": "scorer_region_selector_repack_chain",
+      "experiment_status": "queued",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/scorer_region_selector_chain_strict_exec_20260530T2315Z/scorer_region_selector_repack_chain/materialize_p11_selector_context_recode/20260531T000130Z_f2f2cba9214adfd1.log",
+      "log_tail": [],
+      "pid": 95864,
+      "processes": [],
+      "resource_kind": "local_cpu",
+      "status": "succeeded",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "succeeded",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-31T00:01:30Z",
+      "worker_run_id": "f2f2cba9214adfd1"
+    },
+    {
+      "attempts": 1,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive.zip",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p11_selector_context_recode/submission_dir/archive.zip"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "materializer": {
+              "blockers": [],
+              "candidate_archive": {
+                "actual_bytes": 178493,
+                "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "blockers": [],
+                "expected_bytes": 178493,
+                "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "label": "json_equals_materializer_candidate_archive",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive.zip",
+                "schema": "observer_file_custody_revalidation.v1",
+                "valid": true
+              },
+              "schema": "observer_materializer_payload_revalidation.v1",
+              "valid": true
+            },
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 32571,
+          "candidate_archive": {
+            "bytes": 178493,
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive.zip",
+            "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+          },
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "archive_zip_repack_candidate.v1",
+          "materializer_delta_source": "selected_repack",
+          "materializer_id": "archive_zip_repack_adapter",
+          "mtime_utc": "2026-05-31T00:01:30Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "readiness_blockers": [
+            "candidate_not_rate_positive"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+          "receiver_contract_satisfied": true,
+          "receiver_verification": {
+            "blockers": [],
+            "proof_present": true,
+            "proof_schema": "family_agnostic_runtime_consumption_proof_v1",
+            "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+            "receiver_contract_satisfied": true,
+            "runtime_adapter_ready": false,
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1"
+          },
+          "runtime_consumption_proof_path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "selected_repack_candidate_archive_bytes": 178493,
+          "selected_repack_saved_bytes": 0,
+          "selected_repack_source_archive_bytes": 178493,
+          "serialized_archive_delta_candidate_archive_bytes": 178493,
+          "serialized_archive_delta_realized_saved_bytes": 0,
+          "serialized_archive_delta_savings_realized": false,
+          "serialized_archive_delta_schema": "serialized_archive_delta_contract.v1",
+          "serialized_archive_delta_source_archive_bytes": 178493,
+          "serialized_archive_delta_status": "zero_delta",
+          "target_kind": "archive_zip_repack_v1"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "false_authority": {
+              "blockers": [],
+              "schema": "observer_false_authority_revalidation.v1",
+              "valid": true
+            },
+            "materializer": {
+              "blockers": [],
+              "candidate_archive": {
+                "actual_bytes": 178493,
+                "actual_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "blockers": [],
+                "expected_bytes": 178493,
+                "expected_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+                "label": "json_false_authority_materializer_candidate_archive",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive.zip",
+                "schema": "observer_file_custody_revalidation.v1",
+                "valid": true
+              },
+              "schema": "observer_materializer_payload_revalidation.v1",
+              "valid": true
+            },
+            "postcondition_type": "json_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 32571,
+          "candidate_archive": {
+            "bytes": 178493,
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive.zip",
+            "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+          },
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "archive_zip_repack_candidate.v1",
+          "materializer_delta_source": "selected_repack",
+          "materializer_id": "archive_zip_repack_adapter",
+          "mtime_utc": "2026-05-31T00:01:30Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_false_authority",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "readiness_blockers": [
+            "candidate_not_rate_positive"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+          "receiver_contract_satisfied": true,
+          "receiver_verification": {
+            "blockers": [],
+            "proof_present": true,
+            "proof_schema": "family_agnostic_runtime_consumption_proof_v1",
+            "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+            "receiver_contract_satisfied": true,
+            "runtime_adapter_ready": false,
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1"
+          },
+          "runtime_consumption_proof_path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_chain_strict_exec_20260530T2315Z/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "selected_repack_candidate_archive_bytes": 178493,
+          "selected_repack_saved_bytes": 0,
+          "selected_repack_source_archive_bytes": 178493,
+          "serialized_archive_delta_candidate_archive_bytes": 178493,
+          "serialized_archive_delta_realized_saved_bytes": 0,
+          "serialized_archive_delta_savings_realized": false,
+          "serialized_archive_delta_schema": "serialized_archive_delta_contract.v1",
+          "serialized_archive_delta_source_archive_bytes": 178493,
+          "serialized_archive_delta_status": "zero_delta",
+          "target_kind": "archive_zip_repack_v1"
+        }
+      ],
+      "experiment_id": "scorer_region_selector_repack_chain",
+      "experiment_status": "queued",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/scorer_region_selector_chain_strict_exec_20260530T2315Z/scorer_region_selector_repack_chain/materialize_p15_archive_zip_repack/20260531T000130Z_b9b75505a881e8b4.log",
+      "log_tail": [],
+      "pid": 95890,
+      "processes": [],
+      "resource_kind": "local_cpu",
+      "status": "succeeded",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "succeeded",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-31T00:01:30Z",
+      "worker_run_id": "b9b75505a881e8b4"
+    }
+  ],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "control_status": ".venv/bin/python tools/queue_control.py --queue <queue-path> status",
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute",
+    "stop_freeze": ".venv/bin/python tools/queue_control.py --queue <queue-path> stop --reason '<reason>'",
+    "supervise": ".venv/bin/python tools/queue_supervisor.py --queue <queue-path> --output-dir <output-dir> --execute",
+    "tail_logs": ".venv/bin/python tools/queue_control.py --queue <queue-path> tail-logs --lines 80"
+  }
+}

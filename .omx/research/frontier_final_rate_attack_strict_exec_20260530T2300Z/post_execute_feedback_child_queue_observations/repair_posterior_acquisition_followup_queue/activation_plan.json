@@ -1,0 +1,155 @@
+{
+  "activation_actions": [
+    {
+      "activation_action": "thaw_queue_definition_after_prerequisite_evidence_lands",
+      "blocker": "experiment_status:frozen",
+      "evidence_surface": "queue_definition_status"
+    },
+    {
+      "activation_action": "route_byte_closed_candidate_to_exact_auth_eval_handoff",
+      "blocker": "missing_prerequisite_artifact:exact_auth_eval_handoff",
+      "evidence_surface": "contest_cpu_or_cuda_auth_axis_payload"
+    },
+    {
+      "activation_action": "inspect_queue_owned_prerequisite",
+      "blocker": "missing_prerequisite_artifact:repair_campaign_byte_closed_materialization_queue",
+      "evidence_surface": "experiment_metadata_or_step_postconditions"
+    }
+  ],
+  "allowed_use": "local_child_queue_activation_planning_only",
+  "blocked_experiment_count": 2,
+  "blocked_experiments": [
+    {
+      "activation_actions": [
+        {
+          "activation_action": "thaw_queue_definition_after_prerequisite_evidence_lands",
+          "blocker": "experiment_status:frozen",
+          "evidence_surface": "queue_definition_status"
+        },
+        {
+          "activation_action": "route_byte_closed_candidate_to_exact_auth_eval_handoff",
+          "blocker": "exact_auth_eval_handoff_requires_contest_axis_claim",
+          "evidence_surface": "contest_cpu_or_cuda_auth_axis_payload"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "no_available_local_queue_or_artifact_for_posterior_route",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        },
+        {
+          "activation_action": "route_byte_closed_candidate_to_exact_auth_eval_handoff",
+          "blocker": "missing_prerequisite_artifact:exact_auth_eval_handoff",
+          "evidence_surface": "contest_cpu_or_cuda_auth_axis_payload"
+        }
+      ],
+      "activation_blockers": [
+        "experiment_status:frozen",
+        "exact_auth_eval_handoff_requires_contest_axis_claim",
+        "no_available_local_queue_or_artifact_for_posterior_route",
+        "missing_prerequisite_artifact:exact_auth_eval_handoff"
+      ],
+      "experiment_id": "repair_posterior_followup_route_byte_closed_candidate_to_exact_auth_eval_handoff",
+      "lane_id": null,
+      "status": "frozen",
+      "step_count": 1,
+      "step_evidence_refs": [
+        {
+          "postcondition_paths": [],
+          "postcondition_types": [],
+          "requires": [],
+          "resource_kind": "local_cpu",
+          "step_id": "inspect_missing_posterior_followup_prerequisites",
+          "telemetry_input_artifact_paths": [],
+          "telemetry_output_artifact_paths": []
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "repair-posterior-acquisition",
+        "queue-owned-feedback",
+        "no-score-authority"
+      ]
+    },
+    {
+      "activation_actions": [
+        {
+          "activation_action": "thaw_queue_definition_after_prerequisite_evidence_lands",
+          "blocker": "experiment_status:frozen",
+          "evidence_surface": "queue_definition_status"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "no_available_local_queue_or_artifact_for_posterior_route",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "missing_prerequisite_artifact:repair_campaign_byte_closed_materialization_queue",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        }
+      ],
+      "activation_blockers": [
+        "experiment_status:frozen",
+        "no_available_local_queue_or_artifact_for_posterior_route",
+        "missing_prerequisite_artifact:repair_campaign_byte_closed_materialization_queue"
+      ],
+      "experiment_id": "repair_posterior_followup_implement_or_run_repair_family_byte_transform",
+      "lane_id": null,
+      "status": "frozen",
+      "step_count": 1,
+      "step_evidence_refs": [
+        {
+          "postcondition_paths": [],
+          "postcondition_types": [],
+          "requires": [],
+          "resource_kind": "local_cpu",
+          "step_id": "inspect_missing_posterior_followup_prerequisites",
+          "telemetry_input_artifact_paths": [],
+          "telemetry_output_artifact_paths": []
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "repair-posterior-acquisition",
+        "queue-owned-feedback",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-30T23:59:17Z",
+  "gpu_launched": false,
+  "mathematical_contract": {
+    "hard_constraints": [
+      "score_claim_false_until_contest_auth_axis_eval",
+      "promotion_false_until_byte_closed_runtime_receiver_proof",
+      "budget_spend_false_until_receiver_closed_saved_bytes_exist"
+    ],
+    "objective": "minimize_delta_score_under_rate_and_runtime_constraints",
+    "state_variables": [
+      "bytes_delta",
+      "segnet_response",
+      "posenet_response",
+      "interaction_terms",
+      "entropy_position",
+      "receiver_runtime_identity"
+    ]
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_repair_posterior_acquisition_followup",
+  "queue_path": ".omx/research/frontier_final_rate_attack_strict_exec_20260530T2300Z/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+  "queue_sha256": "c3b443a2305dbdef7cab373967c6636d19e8c29371dd6e542da4192c6bc44828",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_final_rate_attack_child_queue_activation_plan.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

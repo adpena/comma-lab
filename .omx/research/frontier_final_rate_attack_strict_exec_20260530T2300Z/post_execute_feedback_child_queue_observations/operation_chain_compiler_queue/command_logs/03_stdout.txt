@@ -1,0 +1,295 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {
+      "local_cpu": 1
+    },
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_io_heavy"
+    ],
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-05-30T23:58:12Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "chain_registered_multisurface_materializer_program": {
+        "artifact_record_bytes_mean": 10186.0,
+        "artifact_record_bytes_sum": 20372,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 10186.0,
+        "artifact_record_raw_bytes_sum": 20372,
+        "candidate_ids": [
+          "chain_registered_multisurface_materializer_program"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.7232426249538548,
+        "elapsed_seconds_mean": 0.6928776665008627,
+        "elapsed_seconds_min": 0.6625127080478705,
+        "elapsed_seconds_sum": 1.3857553330017254,
+        "experiment_ids": [
+          "chain_registered_multisurface_materializer_program"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 833.5,
+        "log_bytes_sum": 1667,
+        "resource_kind_counts": {
+          "local_io_heavy": 2
+        },
+        "run_count": 2,
+        "step_ids": [
+          "emit_byte_range_stage_inputs",
+          "emit_operation_chain_stage_plan"
+        ],
+        "success_count": 2
+      }
+    },
+    "by_resource_kind": {
+      "local_io_heavy": {
+        "artifact_record_bytes_mean": 10186.0,
+        "artifact_record_bytes_sum": 20372,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 10186.0,
+        "artifact_record_raw_bytes_sum": 20372,
+        "candidate_ids": [
+          "chain_registered_multisurface_materializer_program"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.7232426249538548,
+        "elapsed_seconds_mean": 0.6928776665008627,
+        "elapsed_seconds_min": 0.6625127080478705,
+        "elapsed_seconds_sum": 1.3857553330017254,
+        "experiment_ids": [
+          "chain_registered_multisurface_materializer_program"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 833.5,
+        "log_bytes_sum": 1667,
+        "resource_kind_counts": {
+          "local_io_heavy": 2
+        },
+        "run_count": 2,
+        "step_ids": [
+          "emit_byte_range_stage_inputs",
+          "emit_operation_chain_stage_plan"
+        ],
+        "success_count": 2
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "chain_registered_multisurface_materializer_program.emit_byte_range_stage_inputs": {
+        "artifact_record_bytes_mean": 7208.0,
+        "artifact_record_bytes_sum": 7208,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7208.0,
+        "artifact_record_raw_bytes_sum": 7208,
+        "candidate_ids": [
+          "chain_registered_multisurface_materializer_program"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.7232426249538548,
+        "elapsed_seconds_mean": 0.7232426249538548,
+        "elapsed_seconds_min": 0.7232426249538548,
+        "elapsed_seconds_sum": 0.7232426249538548,
+        "experiment_ids": [
+          "chain_registered_multisurface_materializer_program"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1016.0,
+        "log_bytes_sum": 1016,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_byte_range_stage_inputs"
+        ],
+        "success_count": 1
+      },
+      "chain_registered_multisurface_materializer_program.emit_operation_chain_stage_plan": {
+        "artifact_record_bytes_mean": 13164.0,
+        "artifact_record_bytes_sum": 13164,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 13164.0,
+        "artifact_record_raw_bytes_sum": 13164,
+        "candidate_ids": [
+          "chain_registered_multisurface_materializer_program"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.6625127080478705,
+        "elapsed_seconds_mean": 0.6625127080478705,
+        "elapsed_seconds_min": 0.6625127080478705,
+        "elapsed_seconds_sum": 0.6625127080478705,
+        "experiment_ids": [
+          "chain_registered_multisurface_materializer_program"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 651.0,
+        "log_bytes_sum": 651,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_operation_chain_stage_plan"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "chain_registered_multisurface_materializer_program": [
+        "chain_registered_multisurface_materializer_program"
+      ]
+    },
+    "event_count": 2,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_chain_compiler",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_chain_compiler",
+  "queue_sha256": "7b6e9ddbd2c1b2fe749573762fb77a65ae8247afc76fe6bb3a711678ba2c7e5c",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 1
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 0,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 2,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_chain_compiler",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_io_heavy": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_io_heavy": 120
+    },
+    "resource_policies": {
+      "local_io_heavy": {
+        "advisory_only": true,
+        "concurrency_reason": "cap_io_heavy_pressure",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 120,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.7232426249538548,
+        "elapsed_seconds_p95": 0.7232426249538548,
+        "observed_failure_count": 0,
+        "observed_run_count": 2,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 120,
+        "resource_kind": "local_io_heavy",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_chain_compiler.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-30T23:58:09Z",
+    "event_count": 10,
+    "max_event_id": 10,
+    "max_step_updated_at_utc": "2026-05-30T23:58:11Z",
+    "queue_id": "frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_chain_compiler",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_strict_exec_20260530T2300Z_post_execute_feedback_chain_compiler.sqlite",
+    "step_state_count": 2
+  },
+  "status_counts": {
+    "succeeded": 2
+  },
+  "step_count": 2,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "control_status": ".venv/bin/python tools/queue_control.py --queue <queue-path> status",
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute",
+    "stop_freeze": ".venv/bin/python tools/queue_control.py --queue <queue-path> stop --reason '<reason>'",
+    "supervise": ".venv/bin/python tools/queue_supervisor.py --queue <queue-path> --output-dir <output-dir> --execute",
+    "tail_logs": ".venv/bin/python tools/queue_control.py --queue <queue-path> tail-logs --lines 80"
+  }
+}
