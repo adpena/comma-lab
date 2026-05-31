@@ -44,7 +44,7 @@ Z8_HPC_RECEIVER_PROOF_SCHEMA = (
 Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID = "z8_hierarchical_predictive_coding_archive_export"
 Z8_HPC_ARCHIVE_CANDIDATE_FAMILY = "z8_hierarchical_predictive_coding"
 Z8_HPC_ARCHIVE_TRANSFORM_KIND = (
-    "z8_hpc1_mallat_wavelet_pixel_consumed_predictive_stack_archive"
+    "z8_hpc1_mallat_wavelet_pixel_consumed_partial_predictive_stack_archive"
 )
 Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS: tuple[str, ...] = ("wavelet_coeffs_blob",)
 Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS: tuple[str, ...] = (
@@ -125,6 +125,25 @@ def _z8_runtime_adapter_manifest_extra(
     byte_mutation_proof: Mapping[str, Any] | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
+    mamba_dreamer_wz_proven = (
+        byte_mutation_proof is not None
+        and byte_mutation_proof.get(
+            "mamba_dreamer_wyner_ziv_pixel_consumption_proven"
+        )
+        is True
+    )
+    if mamba_dreamer_wz_proven:
+        runtime_consumption_status = "pixel_consumed_proven"
+    elif byte_mutation_proof is not None:
+        runtime_consumption_status = (
+            "archive_bound_custody_only_distinguishing_feature_mutation"
+            "_proved_not_pixel_consumed"
+        )
+    else:
+        runtime_consumption_status = (
+            "archive_bound_custody_only_pending_distinguishing_feature"
+            "_mutation_proofs"
+        )
     manifest = {
         "schema": "z8_hpc1_runtime_adapter_manifest.v1",
         "predictive_coding_family": (
@@ -136,7 +155,7 @@ def _z8_runtime_adapter_manifest_extra(
         ),
         "full_stack_pixel_consumption_claim": False,
         "mamba_dreamer_wyner_ziv_runtime_consumption_status": (
-            "archive_bound_custody_only_pending_distinguishing_feature_mutation_proofs"
+            runtime_consumption_status
         ),
         "runtime_module_files": list(Z8_RUNTIME_MODULE_FILES),
         "vendored_tac_subpackages": [

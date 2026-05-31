@@ -142,6 +142,35 @@ def _anti_pattern_id_values(value: Any) -> list[str]:
 
 def _canonical_anti_pattern_ids(candidate: Mapping[str, Any]) -> list[str]:
     coverage = _mapping(candidate.get("archive_entropy_substrate_coverage"))
+    runtime_manifest = _mapping(candidate.get("runtime_adapter_manifest"))
+    transform_kind = _first_text(
+        candidate.get("archive_native_transform_kind"),
+        candidate.get("target_kind"),
+        candidate.get("materializer_id"),
+        candidate.get("schema"),
+    ).lower()
+    predictive_stack = any(
+        token in transform_kind
+        for token in (
+            "z8",
+            "z7",
+            "mamba",
+            "dreamer",
+            "rssm",
+            "wyner_ziv",
+            "predictive_coding",
+        )
+    )
+    custody_only_sections = _string_list(
+        runtime_manifest.get("stack_custody_not_yet_pixel_consumed_sections")
+    )
+    full_stack_claim = runtime_manifest.get("full_stack_pixel_consumption_claim") is True
+    byte_mutation_proof = _mapping(runtime_manifest.get("byte_mutation_consumption_proof"))
+    mamba_dreamer_wz_proven = (
+        runtime_manifest.get("mamba_dreamer_wyner_ziv_pixel_consumption_proven") is True
+        or byte_mutation_proof.get("mamba_dreamer_wyner_ziv_pixel_consumption_proven")
+        is True
+    )
     return ordered_unique(
         [
             *_anti_pattern_id_values(candidate.get("anti_pattern_id")),
@@ -152,6 +181,29 @@ def _canonical_anti_pattern_ids(candidate: Mapping[str, Any]) -> list[str]:
             *_anti_pattern_id_values(candidate.get("anti_pattern_protections")),
             *_anti_pattern_id_values(coverage.get("anti_pattern_protections")),
             *_anti_pattern_id_values(coverage.get("anti_pattern_matches")),
+            *(
+                ["predictive_stack_custody_without_receiver_pixel_consumption_v1"]
+                if predictive_stack and custody_only_sections
+                else []
+            ),
+            *(
+                ["partial_predictive_stack_wavelet_only_runtime_v1"]
+                if predictive_stack and custody_only_sections and not full_stack_claim
+                else []
+            ),
+            *(
+                ["mamba_dreamer_wyner_ziv_custody_only_not_pixel_consumed_v1"]
+                if predictive_stack
+                and any(
+                    section in {"wyner_ziv_blob", "dreamer_state_blob"}
+                    or "mamba" in section
+                    or "dreamer" in section
+                    or "wyner" in section
+                    for section in custody_only_sections
+                )
+                and not mamba_dreamer_wz_proven
+                else []
+            ),
         ]
     )
 
@@ -162,7 +214,13 @@ def _anti_pattern_acquisition_penalty(anti_pattern_ids: Sequence[str]) -> float:
         anti_pattern_id = str(raw_id or "").lower()
         if not anti_pattern_id:
             continue
-        if (
+        if "predictive_stack_custody_without_receiver_pixel_consumption" in anti_pattern_id:
+            penalty += 0.18
+        elif "mamba_dreamer_wyner_ziv_custody_only" in anti_pattern_id:
+            penalty += 0.16
+        elif "partial_predictive_stack_wavelet_only_runtime" in anti_pattern_id:
+            penalty += 0.12
+        elif (
             "proxy_or_advisory" in anti_pattern_id
             or "masquerades_as_score" in anti_pattern_id
         ):
@@ -867,6 +925,97 @@ def _runtime_adapter_manifest(row: Mapping[str, Any]) -> dict[str, Any]:
     return manifest
 
 
+def _runtime_payload_consumption_surface(
+    runtime_manifest: Mapping[str, Any],
+    *,
+    transform_kind: str,
+) -> dict[str, Any]:
+    proof = _mapping(runtime_manifest.get("byte_mutation_consumption_proof"))
+    manifest_pixel_consumed = _string_list(
+        runtime_manifest.get("pixel_consumed_archive_sections")
+    )
+    proof_pixel_consumed = _string_list(proof.get("pixel_consumed_sections"))
+    manifest_custody_only = _string_list(
+        runtime_manifest.get("stack_custody_not_yet_pixel_consumed_sections")
+    )
+    proof_custody_only = _string_list(proof.get("custody_only_sections"))
+    pixel_consumed_sections = ordered_unique(
+        [*manifest_pixel_consumed, *proof_pixel_consumed]
+    )
+    custody_only_sections = ordered_unique(
+        [*manifest_custody_only, *proof_custody_only]
+    )
+    declared = bool(pixel_consumed_sections or custody_only_sections)
+    kind = transform_kind.lower()
+    predictive_stack = any(
+        token in kind
+        for token in (
+            "z8",
+            "z7",
+            "mamba",
+            "dreamer",
+            "rssm",
+            "wyner_ziv",
+            "predictive_coding",
+        )
+    )
+    full_stack_claim = runtime_manifest.get("full_stack_pixel_consumption_claim") is True
+    mamba_dreamer_wz_proven = (
+        runtime_manifest.get("mamba_dreamer_wyner_ziv_pixel_consumption_proven") is True
+        or proof.get("mamba_dreamer_wyner_ziv_pixel_consumption_proven") is True
+    )
+    all_manifested_payload_sections_pixel_consumed = declared and not custody_only_sections
+    full_stack_pixel_consumption_proven = bool(
+        full_stack_claim
+        and all_manifested_payload_sections_pixel_consumed
+        and (not predictive_stack or mamba_dreamer_wz_proven)
+    )
+    incomplete_predictive_stack = bool(
+        predictive_stack and declared and not full_stack_pixel_consumption_proven
+    )
+    next_materializer_tasks = []
+    for section in custody_only_sections:
+        next_materializer_tasks.append(
+            f"wire_{section}_decode_into_receiver_pixel_output"
+        )
+    if incomplete_predictive_stack and not custody_only_sections:
+        next_materializer_tasks.append("prove_predictive_stack_pixel_consumption")
+    penalty = 0.0
+    if custody_only_sections:
+        penalty += min(0.16, 0.04 * len(custody_only_sections))
+    if incomplete_predictive_stack:
+        penalty += 0.10
+    if declared and not pixel_consumed_sections:
+        penalty += 0.08
+    status = "runtime_payload_consumption_metadata_absent"
+    if full_stack_pixel_consumption_proven:
+        status = "full_stack_pixel_consumption_proven"
+    elif declared and custody_only_sections:
+        status = "partial_runtime_payload_consumption_custody_sections_pending"
+    elif declared and pixel_consumed_sections:
+        status = "declared_pixel_consumed_sections_only"
+    return {
+        "schema": "tac_archive_bound_runtime_payload_consumption.v1",
+        "declared": declared,
+        "predictive_stack": predictive_stack,
+        "pixel_consumed_archive_sections": pixel_consumed_sections,
+        "custody_only_archive_sections": custody_only_sections,
+        "all_manifested_payload_sections_pixel_consumed": (
+            all_manifested_payload_sections_pixel_consumed
+        ),
+        "full_stack_pixel_consumption_claim": full_stack_claim,
+        "mamba_dreamer_wyner_ziv_pixel_consumption_proven": mamba_dreamer_wz_proven,
+        "full_stack_pixel_consumption_proven": full_stack_pixel_consumption_proven,
+        "incomplete_predictive_stack_runtime": incomplete_predictive_stack,
+        "next_materializer_tasks": ordered_unique(next_materializer_tasks),
+        "acquisition_penalty": round(min(0.30, penalty), 6),
+        "status": status,
+        "allowed_use": "runtime_payload_consumption_acquisition_demote_and_next_task_signal",
+        "forbidden_use": "score_claim_or_exact_axis_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def archive_bound_candidate_contract_fields_for_row(
     row: Mapping[str, Any],
     *,
@@ -1093,6 +1242,11 @@ def build_archive_bound_candidate_contract(
         if isinstance(entropy_position_label, str) and entropy_position_label.strip()
         else entropy_position_label_for_transform_kind(transform_kind)
     )
+    runtime_manifest = dict(_mapping(candidate.get("runtime_adapter_manifest")))
+    runtime_payload_consumption = _runtime_payload_consumption_surface(
+        runtime_manifest,
+        transform_kind=transform_kind,
+    )
     materialized = candidate.get("materialized") is True
     proof_ready = candidate.get("runtime_consumption_proof_ready") is True
     receiver_satisfied = candidate.get("receiver_contract_satisfied") is True
@@ -1160,15 +1314,22 @@ def build_archive_bound_candidate_contract(
         and receiver_satisfied
         and file_custody.get("custody_complete") is True
     )
-    acquisition_penalty = _contract_penalty(
-        blockers=blockers,
-        anti_pattern_ids=anti_pattern_ids,
-        materialized=materialized,
-        receiver_proof_ready=proof_ready,
-        receiver_contract_satisfied=receiver_satisfied,
-        byte_credit_exhausted=byte_credit_exhausted,
-        prototype_only=prototype_only,
-        probe_only=probe_only,
+    acquisition_penalty = round(
+        min(
+            0.95,
+            _contract_penalty(
+                blockers=blockers,
+                anti_pattern_ids=anti_pattern_ids,
+                materialized=materialized,
+                receiver_proof_ready=proof_ready,
+                receiver_contract_satisfied=receiver_satisfied,
+                byte_credit_exhausted=byte_credit_exhausted,
+                prototype_only=prototype_only,
+                probe_only=probe_only,
+            )
+            + _safe_float(runtime_payload_consumption.get("acquisition_penalty")),
+        ),
+        6,
     )
     identity = {
         "schema": "tac_archive_bound_candidate_contract_identity.v1",
@@ -1206,20 +1367,20 @@ def build_archive_bound_candidate_contract(
         "runtime_consumption_proof_ready": proof_ready,
         "receiver_contract_kind": candidate.get("receiver_contract_kind"),
         "receiver_contract_satisfied": receiver_satisfied,
-        "runtime_adapter_manifest": dict(
-            _mapping(candidate.get("runtime_adapter_manifest"))
+        "runtime_adapter_manifest": runtime_manifest,
+        "runtime_payload_consumption": runtime_payload_consumption,
+        "runtime_payload_consumption_penalty": runtime_payload_consumption.get(
+            "acquisition_penalty"
+        ),
+        "full_stack_predictive_runtime_ready": (
+            runtime_payload_consumption.get("full_stack_pixel_consumption_proven")
+            is True
         ),
         "runtime_adapter_ready": candidate.get("runtime_adapter_ready") is True
-        or _mapping(candidate.get("runtime_adapter_manifest")).get(
-            "runtime_adapter_ready"
-        )
-        is True,
+        or runtime_manifest.get("runtime_adapter_ready") is True,
         "contest_runtime_decoder_adapter_ready": (
             candidate.get("contest_runtime_decoder_adapter_ready") is True
-            or _mapping(candidate.get("runtime_adapter_manifest")).get(
-                "contest_runtime_decoder_adapter_ready"
-            )
-            is True
+            or runtime_manifest.get("contest_runtime_decoder_adapter_ready") is True
         ),
         "archive_file_custody": file_custody,
         "candidate_archive": {
@@ -1340,6 +1501,19 @@ def build_archive_bound_candidate_contract_surface(
         "runtime_adapter_ready_contract_count": sum(
             1 for contract in contracts if contract.get("runtime_adapter_ready") is True
         ),
+        "runtime_payload_consumption_incomplete_count": sum(
+            1
+            for contract in contracts
+            if _mapping(contract.get("runtime_payload_consumption")).get(
+                "incomplete_predictive_stack_runtime"
+            )
+            is True
+        ),
+        "full_stack_predictive_runtime_ready_count": sum(
+            1
+            for contract in contracts
+            if contract.get("full_stack_predictive_runtime_ready") is True
+        ),
         "receiver_contract_satisfied_count": sum(
             1
             for contract in contracts
@@ -1372,6 +1546,13 @@ def build_archive_bound_candidate_contract_surface(
         "anti_pattern_acquisition_penalty_sum": round(
             sum(
                 _safe_float(contract.get("anti_pattern_acquisition_penalty"))
+                for contract in contracts
+            ),
+            6,
+        ),
+        "runtime_payload_consumption_penalty_sum": round(
+            sum(
+                _safe_float(contract.get("runtime_payload_consumption_penalty"))
                 for contract in contracts
             ),
             6,

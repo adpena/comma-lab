@@ -154,6 +154,44 @@ class _NestedRuntimeManifestArchiveAdapter(_FixtureArchiveAdapter):
         return [row]
 
 
+class _PartialPredictiveStackArchiveAdapter(_FixtureArchiveAdapter):
+    adapter_id = "fixture_partial_predictive_stack_adapter"
+    candidate_family = "z8_hierarchical_predictive_coding"
+
+    def emit_archive_bound_candidate_rows(
+        self,
+        context: Mapping[str, Any],
+    ) -> Sequence[Mapping[str, Any]]:
+        row = dict(super().emit_archive_bound_candidate_rows(context)[0])
+        row["target_kind"] = (
+            "z8_hpc1_mallat_wavelet_pixel_consumed_partial_predictive_stack_archive"
+        )
+        row["runtime_adapter_manifest"] = {
+            "schema": "z8_hpc1_runtime_adapter_manifest.v1",
+            "runtime_adapter_ready": True,
+            "contest_runtime_decoder_adapter_ready": True,
+            "full_stack_pixel_consumption_claim": False,
+            "pixel_consumed_archive_sections": ["wavelet_blob"],
+            "stack_custody_not_yet_pixel_consumed_sections": [
+                "decoder_blob",
+                "indices_blob",
+                "wyner_ziv_blob",
+                "dreamer_state_blob",
+            ],
+            "byte_mutation_consumption_proof": {
+                "pixel_consumed_sections": ["wavelet_blob"],
+                "custody_only_sections": [
+                    "decoder_blob",
+                    "indices_blob",
+                    "wyner_ziv_blob",
+                    "dreamer_state_blob",
+                ],
+                "mamba_dreamer_wyner_ziv_pixel_consumption_proven": False,
+            },
+        }
+        return [row]
+
+
 def test_archive_bound_adapter_spine_emits_full_pipeline_package(
     tmp_path: Path,
 ) -> None:
@@ -304,6 +342,53 @@ def test_archive_contract_consumes_nested_runtime_adapter_manifest(
         "fixture_nested_runtime_manifest.v1"
     )
     assert "archive_bound_receiver_runtime_proof_missing" not in contract["blockers"]
+
+
+def test_archive_contract_demotes_partial_predictive_stack_runtime(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _PartialPredictiveStackArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+
+    surface = package["archive_bound_candidate_contract_surfaces"][0]
+    contract = package["candidate_rows"][0]["archive_bound_candidate_contract"]
+    runtime_consumption = contract["runtime_payload_consumption"]
+
+    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is True
+    assert contract["full_stack_predictive_runtime_ready"] is False
+    assert runtime_consumption["pixel_consumed_archive_sections"] == ["wavelet_blob"]
+    assert "wyner_ziv_blob" in runtime_consumption["custody_only_archive_sections"]
+    assert "dreamer_state_blob" in runtime_consumption["custody_only_archive_sections"]
+    assert runtime_consumption["incomplete_predictive_stack_runtime"] is True
+    assert (
+        runtime_consumption["mamba_dreamer_wyner_ziv_pixel_consumption_proven"]
+        is False
+    )
+    assert (
+        "predictive_stack_custody_without_receiver_pixel_consumption_v1"
+        in contract["canonical_anti_pattern_ids"]
+    )
+    assert (
+        "mamba_dreamer_wyner_ziv_custody_only_not_pixel_consumed_v1"
+        in contract["canonical_anti_pattern_ids"]
+    )
+    assert contract["runtime_payload_consumption_penalty"] > 0
+    assert contract["anti_pattern_acquisition_penalty"] > 0
+    assert contract["acquisition_penalty"] >= (
+        contract["anti_pattern_acquisition_penalty"]
+        + contract["runtime_payload_consumption_penalty"]
+    )
+    assert surface["runtime_payload_consumption_incomplete_count"] == 1
+    assert surface["full_stack_predictive_runtime_ready_count"] == 0
+    assert surface["runtime_payload_consumption_penalty_sum"] == (
+        contract["runtime_payload_consumption_penalty"]
+    )
+    assert (
+        "wire_wyner_ziv_blob_decode_into_receiver_pixel_output"
+        in runtime_consumption["next_materializer_tasks"]
+    )
 
 
 def test_mlx_triage_fails_closed_on_incomplete_archive_custody(

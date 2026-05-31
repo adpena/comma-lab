@@ -123,6 +123,12 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
             mutation_proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"]
             is False
         )
+        status = manifest_extra["mamba_dreamer_wyner_ziv_runtime_consumption_status"]
+        expected_status = (
+            "archive_bound_custody_only_distinguishing_feature_mutation"
+            "_proved_not_pixel_consumed"
+        )
+        assert status == expected_status
         assert "mamba_mallat_dreamer_wyner_ziv_stack" not in (
             manifest_extra["predictive_coding_family"]
         )
@@ -181,6 +187,7 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
     assert wrapped["adapter_id"] == Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID
     assert row["candidate_family"] == Z8_HPC_ARCHIVE_CANDIDATE_FAMILY
     assert row["target_kind"] == Z8_HPC_ARCHIVE_TRANSFORM_KIND
+    assert "partial_predictive_stack" in row["target_kind"]
     assert "mamba_mallat_dreamer_wyner_ziv" not in row["target_kind"]
     assert "wavelet_pixel_consumed" in row["target_kind"]
     assert row["byte_closed_candidate_materialized"] is True
