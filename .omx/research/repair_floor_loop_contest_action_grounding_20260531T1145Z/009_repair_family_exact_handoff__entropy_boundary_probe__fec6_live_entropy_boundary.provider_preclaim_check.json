@@ -1,0 +1,28 @@
+{
+  "blockers": [
+    "lightning_studio_missing",
+    "lightning_teamspace_missing",
+    "lightning_owner_missing",
+    "lightning_ssh_target_missing"
+  ],
+  "dispatch_attempted": false,
+  "env_status": {
+    "LIGHTNING_ORG": "missing",
+    "LIGHTNING_SDK_USER": "missing",
+    "LIGHTNING_SSH_TARGET": "missing",
+    "LIGHTNING_STUDIO": "missing",
+    "LIGHTNING_TEAMSPACE": "missing"
+  },
+  "generated_at_utc": "2026-05-31T11:12:48Z",
+  "job_id": "repair_family_exact_handoff__entropy_boundary_probe__fec6_live_entropy_boundary",
+  "preclaim_ready": false,
+  "promotion_eligible": false,
+  "provider": "lightning",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "redaction_policy": "presence_only_no_env_values_written",
+  "schema": "exact_dispatch_provider_preclaim_check.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "tool": "tools/check_exact_dispatch_provider_preclaim.py"
+}

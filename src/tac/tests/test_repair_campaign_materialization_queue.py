@@ -1210,6 +1210,30 @@ def test_repair_campaign_autonomous_floor_loop_preserves_precise_terminal_class(
     assert result.returncode == 0, result.stderr
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert summary["stack_search_plan"]["candidate_improvement_observed"] is True
+    contest_functional = summary["stack_search_plan"]["contest_space_action_functional"]
+    assert contest_functional["schema"] == "contest_space_action_functional.v1"
+    assert contest_functional["objective_equation"].startswith("S = 100*d_seg")
+    assert contest_functional["row_count"] == 2
+    assert contest_functional["local_gate_passed_count"] == 2
+    rate_per_byte = contest_functional["rate_score_per_byte"]
+    contest_rows = {
+        row["candidate_id"]: row for row in contest_functional["rows"]
+    }
+    segnet_action = contest_rows["segnet_class_region_waterfill_chain"]
+    assert segnet_action["action_kind"] == "repair_budget_spend"
+    assert segnet_action["component_distortion_delta_score_units"] == -0.002
+    assert segnet_action["observed_net_delta_score_units"] == pytest.approx(
+        -0.002 + 32 * rate_per_byte
+    )
+    stack_rows_by_family = {
+        row["family_id"]: row for row in summary["stack_search_plan"]["stack_rows"]
+    }
+    assert stack_rows_by_family["segnet_class_region_waterfill"][
+        "local_mlx_distortion_expected_improvement_score_units"
+    ] == pytest.approx(0.002)
+    assert stack_rows_by_family["segnet_class_region_waterfill"][
+        "contest_space_expected_improvement_score_units"
+    ] == pytest.approx(0.002 - 32 * rate_per_byte)
     assert summary["primary_stack_acquisition_terminal_outcome"] == (
         "precise_exact_axis_blocker"
     )

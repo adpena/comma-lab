@@ -14,6 +14,16 @@ from tac.optimization.archive_bound_candidate_contract import (
     has_archive_bound_candidate_contract_payload,
     selected_archive_bound_candidate_contract_from_payload,
 )
+from tac.optimization.contest_space_action import (
+    CONTEST_OBJECTIVE_EQUATION,
+    CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA,
+    RATE_SCORE_PER_BYTE,
+    build_contest_space_action_functional,
+    build_hydration_contract,
+    build_rate_distortion_action_row,
+    build_repair_budget_action_row,
+    rate_score_credit,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
@@ -349,6 +359,95 @@ def _byte_credit_feasible(report: Mapping[str, Any], remaining_budget: int | Non
     return requested <= max(0, remaining_budget)
 
 
+def _contest_space_hydration_for_stack_row(
+    *,
+    report: Mapping[str, Any],
+    levels: Sequence[str],
+    contract_exact_handoff_ready: bool,
+) -> dict[str, Any]:
+    delta = _mapping(report.get("mlx_local_probe_delta"))
+    axis = str(
+        delta.get("component_response_axis")
+        or report.get("component_response_replay_axis_tag")
+        or "[macOS-MLX research-signal]"
+    ).strip()
+    exact_gate = _mapping(report.get("exact_eval_handoff_gate"))
+    runtime_ready = (
+        exact_gate.get("archive_bound_runtime_consumption_proof_ready") is True
+        or report.get("runtime_consumption_proof_path") is not None
+        or report.get("receiver_contract_satisfied") is True
+    )
+    return build_hydration_contract(
+        video_scope="+".join(_string_list(levels)) or "scope_unknown",
+        scorer_axis=axis or "[macOS-MLX research-signal]",
+        archive_axis=(
+            "archive_bound_candidate_contract_exact_handoff_ready"
+            if contract_exact_handoff_ready
+            else "local_archive_transform_contract_pending"
+        ),
+        runtime_contract=(
+            "receiver_decode_only_runtime_proof_observed"
+            if runtime_ready
+            else "receiver_decode_only_runtime_proof_required"
+        ),
+        sample_count=None,
+    )
+
+
+def _contest_action_row_for_stack_row(
+    *,
+    candidate_id: str,
+    combined_delta_score_units: float,
+    delta_payload_bytes: int,
+    archive_native_saved_bytes: int,
+    remaining_budget: int | None,
+    hydration: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build the contest objective row that acquisition must optimize.
+
+    ``combined_delta_score_units`` is the local scorer-component delta
+    (SegNet/PoseNet in score units). Archive-byte movement is added here using
+    the official contest rate coefficient, so downstream stack search no
+    longer treats byte pressure as a side penalty detached from the objective.
+    """
+
+    net_byte_delta = int(delta_payload_bytes) - int(archive_native_saved_bytes)
+    if net_byte_delta <= 0:
+        saved_bytes = abs(net_byte_delta)
+        net_delta = combined_delta_score_units - rate_score_credit(saved_bytes)
+        action_row = build_rate_distortion_action_row(
+            candidate_id=candidate_id,
+            observed_net_delta_score_units=net_delta,
+            saved_bytes=saved_bytes,
+            hydration=hydration,
+        )
+    else:
+        action_row = build_repair_budget_action_row(
+            candidate_id=candidate_id,
+            expected_distortion_delta_score_units=combined_delta_score_units,
+            repair_spend_bytes=net_byte_delta,
+            available_rate_credit_bytes=remaining_budget,
+            hydration=hydration,
+        )
+    action_row.update(
+        {
+            "component_distortion_delta_score_units": combined_delta_score_units,
+            "delta_payload_bytes": int(delta_payload_bytes),
+            "archive_native_saved_bytes": int(archive_native_saved_bytes),
+            "net_rate_byte_delta": int(net_byte_delta),
+            "net_rate_saved_bytes": max(0, -int(net_byte_delta)),
+            "net_repair_spend_bytes": max(0, int(net_byte_delta)),
+            "rate_score_per_byte": RATE_SCORE_PER_BYTE,
+            "contest_objective_equation": CONTEST_OBJECTIVE_EQUATION,
+        }
+    )
+    require_no_truthy_authority_fields(
+        action_row,
+        context=f"repair_family_stack_contest_action_row:{candidate_id}",
+    )
+    return action_row
+
+
 def _stack_row_key(row: Mapping[str, Any]) -> str:
     return "|".join(
         [
@@ -382,7 +481,7 @@ def _stack_row(
     family = str(report.get("family_id") or "unclassified_repair_family")
     delta = _mapping(report.get("mlx_local_probe_delta"))
     combined_delta = _safe_float(delta.get("combined_delta_score_units"))
-    local_improvement = max(0.0, -combined_delta)
+    raw_local_improvement = max(0.0, -combined_delta)
     levels = _scope_levels(report)
     entropy_order = _stage_order(report)
     byte_delta = _mapping(report.get("byte_transform_delta"))
@@ -432,6 +531,27 @@ def _stack_row(
     allocated_repair_bytes = _safe_int(report.get("allocated_repair_bytes"))
     delta_bytes = allocated_repair_bytes or _safe_int(byte_delta.get("bytes"))
     archive_native_saved_bytes = _safe_int(report.get("archive_native_saved_bytes"))
+    hydration = _contest_space_hydration_for_stack_row(
+        report=report,
+        levels=levels,
+        contract_exact_handoff_ready=contract_exact_handoff_ready,
+    )
+    contest_action_row = _contest_action_row_for_stack_row(
+        candidate_id=(
+            str(report.get("candidate_chain_id") or "").strip()
+            or str(report.get("typed_response_id") or "").strip()
+            or family
+        ),
+        combined_delta_score_units=combined_delta,
+        delta_payload_bytes=delta_bytes,
+        archive_native_saved_bytes=archive_native_saved_bytes,
+        remaining_budget=remaining_budget,
+        hydration=hydration,
+    )
+    contest_space_net_delta = _safe_float(
+        contest_action_row.get("observed_net_delta_score_units")
+    )
+    contest_space_improvement = max(0.0, -contest_space_net_delta)
     exact_gate = _mapping(report.get("exact_eval_handoff_gate"))
     demotion = dict(posterior_demotions.get(family) or {})
     demotion_multiplier = _safe_float(demotion.get("demotion_multiplier")) or 1.0
@@ -449,7 +569,9 @@ def _stack_row(
     feasible = _byte_credit_feasible(report, remaining_budget)
     negative_demoted = demotion.get("demoted") is True
     score = (
-        (local_improvement / max(1, delta_bytes)) * acquisition_multiplier * (1.0 - min(0.95, stack_penalty))
+        (contest_space_improvement / max(1, abs(_safe_int(contest_action_row.get("net_rate_byte_delta"))) or delta_bytes))
+        * acquisition_multiplier
+        * (1.0 - min(0.95, stack_penalty))
         if feasible
         else 0.0
     )
@@ -537,6 +659,19 @@ def _stack_row(
             archive_bound_contract.get("archive_bound_candidate_ready") is True
         ),
         "legacy_archive_bound_signal_observed": legacy_archive_bound_signal,
+        "contest_objective_equation": CONTEST_OBJECTIVE_EQUATION,
+        "contest_rate_score_per_byte": RATE_SCORE_PER_BYTE,
+        "contest_space_hydration": hydration,
+        "contest_space_action_row": contest_action_row,
+        "contest_space_action_kind": contest_action_row.get("action_kind"),
+        "contest_space_net_delta_score_units": contest_space_net_delta,
+        "contest_space_expected_improvement_score_units": contest_space_improvement,
+        "contest_space_rate_adjusted_gate_passed": (
+            contest_action_row.get("acceptance_state") == "local_gate_passed"
+        ),
+        "local_mlx_distortion_expected_improvement_score_units": (
+            raw_local_improvement
+        ),
         "archive_entropy_substrate_coverage": dict(archive_entropy_coverage),
         "archive_entropy_substrate_materialized_substrates": _string_list(
             archive_entropy_coverage.get("materialized_substrates")
@@ -604,7 +739,7 @@ def _stack_row(
             contract_exact_handoff_ready
         ),
         "local_mlx_combined_delta_score_units": combined_delta,
-        "local_mlx_expected_improvement_score_units": local_improvement,
+        "local_mlx_expected_improvement_score_units": contest_space_improvement,
         "stackability_penalty": stack_penalty,
         "posterior_demotion": demotion,
         "posterior_acquisition_prior": demotion,
@@ -694,6 +829,19 @@ def _interaction_feature_vector(row: Mapping[str, Any]) -> dict[str, Any]:
             row.get("archive_variant_materializer_runtime_adapter_ready_task_count")
         ),
         "negative_posterior_demoted": (row.get("automatic_negative_result_demoted") is True),
+        "contest_space_action_kind": row.get("contest_space_action_kind"),
+        "contest_space_net_delta_score_units": _safe_float(
+            row.get("contest_space_net_delta_score_units")
+        ),
+        "contest_space_expected_improvement_score_units": _safe_float(
+            row.get("contest_space_expected_improvement_score_units")
+        ),
+        "contest_space_rate_adjusted_gate_passed": (
+            row.get("contest_space_rate_adjusted_gate_passed") is True
+        ),
+        "local_mlx_distortion_expected_improvement_score_units": _safe_float(
+            row.get("local_mlx_distortion_expected_improvement_score_units")
+        ),
         "local_mlx_expected_improvement_score_units": _safe_float(
             row.get("local_mlx_expected_improvement_score_units")
         ),
@@ -1807,6 +1955,30 @@ def _build_posterior_acquisition_surface(
     return surface
 
 
+def _build_stack_contest_action_functional(
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    hydration = build_hydration_contract(
+        video_scope="stack_search_mixed_fractal_scope",
+        scorer_axis="[macOS-MLX research-signal]",
+        archive_axis="archive_bound_candidate_contract_or_migration_blocker",
+        runtime_contract="receiver_decode_only_runtime_proof_required",
+        sample_count=None,
+    )
+    return build_contest_space_action_functional(
+        rows=[
+            _mapping(row.get("contest_space_action_row"))
+            for row in rows
+            if _mapping(row.get("contest_space_action_row"))
+        ],
+        hydration=hydration,
+        objective=(
+            "minimize_delta_S_equals_deltaSegNet_plus_deltaPoseNet_plus_"
+            "rate_score_per_byte_times_delta_bytes_under_receiver_and_exact_axis_constraints"
+        ),
+    )
+
+
 def _budget_routing_decision(
     *,
     rows: Sequence[Mapping[str, Any]],
@@ -2297,6 +2469,7 @@ def plan_repair_family_stack_search(
         ]
     )
     posterior_acquisition_surface = _build_posterior_acquisition_surface(demotions)
+    contest_space_action_functional = _build_stack_contest_action_functional(rows)
     budget_routing_decision = _budget_routing_decision(
         rows=rows,
         posterior_surface=posterior_acquisition_surface,
@@ -2317,6 +2490,21 @@ def plan_repair_family_stack_search(
             "then_entropy_boundary_then_post_container"
         ),
         "fractal_scope_order": list(_LEVEL_ORDER),
+        "contest_objective_equation": CONTEST_OBJECTIVE_EQUATION,
+        "contest_rate_score_per_byte": RATE_SCORE_PER_BYTE,
+        "contest_space_action_functional_schema": (
+            CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA
+        ),
+        "contest_space_action_functional": contest_space_action_functional,
+        "contest_space_action_row_count": (
+            contest_space_action_functional["row_count"]
+        ),
+        "contest_space_local_gate_passed_count": (
+            contest_space_action_functional["local_gate_passed_count"]
+        ),
+        "contest_space_best_observed_net_delta_score_units": (
+            contest_space_action_functional["best_observed_net_delta_score_units"]
+        ),
         "stack_rows": rows,
         "interaction_tensor": interaction_tensor,
         "interaction_tensor_cell_count": interaction_tensor["cell_count"],

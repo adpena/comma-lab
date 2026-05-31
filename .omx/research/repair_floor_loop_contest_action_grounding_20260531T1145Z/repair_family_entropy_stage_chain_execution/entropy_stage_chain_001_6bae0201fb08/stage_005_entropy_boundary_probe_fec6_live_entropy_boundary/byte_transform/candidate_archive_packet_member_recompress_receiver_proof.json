@@ -1,0 +1,73 @@
+{
+  "candidate_archive": {
+    "bytes": 178501,
+    "path": "/Users/adpena/Projects/pact/.omx/research/repair_floor_loop_contest_action_grounding_20260531T1145Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_005_entropy_boundary_probe_fec6_live_entropy_boundary/byte_transform/candidate_archive_packet_member_recompress.zip",
+    "sha256": "76acefd3919e2f62e1c86170150755d3755ca68392df548536c0b5ecdd13852f"
+  },
+  "candidate_archive_sha256": "76acefd3919e2f62e1c86170150755d3755ca68392df548536c0b5ecdd13852f",
+  "candidate_member": {
+    "bytes": 178401,
+    "name": "x",
+    "sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+    "zip_compressed_bytes": 178401,
+    "zip_compressed_payload_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+    "zip_compressed_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+    "zip_compression_method": "stored"
+  },
+  "candidate_member_payload_identical_to_source": true,
+  "candidate_member_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "packet_member_recompress_adapter",
+  "member_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+  "proof_scope": "zip_member_payload_identity_after_archive_recompression",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "candidate_member_bytes": 178401,
+    "candidate_member_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+    "passed": true,
+    "schema": "packet_member_payload_identity_probe.v1",
+    "source_member_bytes": 178401,
+    "source_member_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_compression": {
+    "candidate_archive_bytes": 178501,
+    "compression_method": "stored",
+    "compresslevel": null,
+    "saved_bytes": 0,
+    "source_archive_bytes": 178501
+  },
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178501,
+    "path": "/Users/adpena/Projects/pact/.omx/research/repair_floor_loop_contest_action_grounding_20260531T1145Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_004_per_region_selector_codec_fec6_live_selector_codec/byte_transform/candidate_archive_fec6_selector_payload_mutation.zip",
+    "sha256": "76acefd3919e2f62e1c86170150755d3755ca68392df548536c0b5ecdd13852f"
+  },
+  "source_member": {
+    "bytes": 178401,
+    "name": "x",
+    "sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+    "zip_compressed_bytes": 178401,
+    "zip_compressed_payload_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+    "zip_compressed_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+    "zip_compression_method": "stored"
+  },
+  "source_member_sha256": "0d018da4a9b022e1b870a64fa92c3b89b84cdea7b897ae6c00379d919c32c318",
+  "target_kind": "packet_member_recompress_v1"
+}

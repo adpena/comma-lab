@@ -1,0 +1,120 @@
+{
+  "blockers": [
+    "range_coder_exact_axis_adjudication_missing",
+    "contest_runtime_decoder_adapter_integration_missing",
+    "range_coder_prototype_not_rate_positive"
+  ],
+  "candidate_archive": {
+    "bytes": 180936,
+    "path": ".omx/research/repair_floor_loop_contest_action_grounding_20260531T1145Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_003_segnet_class_region_waterfill_fec6_live_segnet_region/byte_transform/candidate_archive_range_coder_lzma_prototype.zip",
+    "sha256": "0ffeb64dc4abb6d39ec7ed46583a375474061aaf9924f6cb4f1cec4fb5e710f3"
+  },
+  "candidate_member": {
+    "bytes": 180836,
+    "name": "x",
+    "sha256": "9f4f3b245059d77596420dccb368561b15288e8228423914bc2c3031a7c3c0d2",
+    "zip_compressed_bytes": 180836,
+    "zip_compression_method": 0
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "contest_runtime_adapter_integrated": false,
+  "contest_runtime_decoder_adapter_integrated": false,
+  "contest_runtime_decoder_adapter_ready": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "materializer_id": "repair_family_byte_transform_executor:range_coder_lzma_prototype",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "range_coder_lzma_prototype_decode_adapter_proof.v1",
+  "proof_scope": "encoded_member_decodes_to_source_member_payload",
+  "prototype_codec": {
+    "coded_member_bytes": 180836,
+    "coded_member_sha256": "9f4f3b245059d77596420dccb368561b15288e8228423914bc2c3031a7c3c0d2",
+    "coder_family": "range",
+    "decoded_member_sha256": "32bb7bc97854caf0d3d1ba7c0b7ea58033fa72faae3034563d45a5bcab6ee7c2",
+    "schema": "repair_archive_entropy_coder_prototype_codec.v1",
+    "semantic_entropy_stage": "at_entropy_coder_fractional_code_boundary",
+    "source_member_bytes": 178409,
+    "source_member_sha256": "32bb7bc97854caf0d3d1ba7c0b7ea58033fa72faae3034563d45a5bcab6ee7c2",
+    "transform_kind": "range_coder_lzma_prototype",
+    "zero_order_entropy_stats": {
+      "byte_count": 178409,
+      "entropy_bits_per_symbol": 7.998665282822438,
+      "schema": "repair_archive_zero_order_entropy_stats.v1",
+      "unique_symbol_count": 256,
+      "zero_order_lower_bound_bits": 1427033.8744430684,
+      "zero_order_lower_bound_bytes": 178380,
+      "zero_order_redundancy_bytes": 29
+    }
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "repair_family_range_coder_lzma_prototype_v1.receiver.v1",
+  "receiver_contract_kind": "repair_archive_range_lzma_prototype_runtime_adapter",
+  "receiver_contract_satisfied": true,
+  "runtime_adapter_manifest": {
+    "coder_family": "range",
+    "contest_runtime_adapter_integrated": false,
+    "contest_runtime_decoder_adapter_integrated": false,
+    "contest_runtime_decoder_adapter_ready": false,
+    "decode_function": "range_lzma_prototype_decode",
+    "decode_only_receiver_contract": true,
+    "encode_function": "range_lzma_prototype_encode",
+    "module": "tac.optimization.repair_entropy_coder_runtime_adapters",
+    "network_access": false,
+    "packet_magic_hex": "544143524e473100",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "readiness_blockers": [
+      "contest_runtime_decoder_adapter_integration_missing"
+    ],
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_adapter_ready": true,
+    "runtime_adapter_scope": "member_decode_helper_only",
+    "schema": "repair_entropy_coder_runtime_adapter_manifest.v1",
+    "score_claim": false,
+    "scorer_state_access": false,
+    "sidecar_fetch": false,
+    "stdlib_only": true,
+    "transform_kind": "range_coder_lzma_prototype"
+  },
+  "runtime_adapter_ready": true,
+  "runtime_adapter_scope": "member_decode_helper_only",
+  "runtime_consumption_probe": {
+    "archive_zip_readable": true,
+    "decoded_matches_source_member": true,
+    "decoded_member_sha256": "32bb7bc97854caf0d3d1ba7c0b7ea58033fa72faae3034563d45a5bcab6ee7c2",
+    "decoder_adapter_function": "range_lzma_prototype_decode",
+    "decoder_adapter_invoked": true,
+    "decoder_adapter_module": "tac.optimization.repair_entropy_coder_runtime_adapters",
+    "encoded_member_sha256": "9f4f3b245059d77596420dccb368561b15288e8228423914bc2c3031a7c3c0d2",
+    "passed": true,
+    "schema": "range_coder_lzma_prototype_decode_probe.v1",
+    "selected_member_name": "x",
+    "source_member_sha256": "32bb7bc97854caf0d3d1ba7c0b7ea58033fa72faae3034563d45a5bcab6ee7c2"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "repair_archive_entropy_coder_prototype_runtime_consumption_proof.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178509,
+    "path": ".omx/research/repair_floor_loop_contest_action_grounding_20260531T1145Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_002_frame0_k16_palette_asymmetry_fec6_live_frame0_k16_palette/byte_transform/candidate_archive_fec6_selector_payload_mutation.zip",
+    "sha256": "dae59bc39930bda523a1db28811163f523f6db6f2d9013858cb1e39dce6f191e"
+  },
+  "source_member": {
+    "bytes": 178409,
+    "name": "x",
+    "sha256": "32bb7bc97854caf0d3d1ba7c0b7ea58033fa72faae3034563d45a5bcab6ee7c2",
+    "zip_compressed_bytes": 178409,
+    "zip_compression_method": 0
+  },
+  "target_kind": "repair_family_range_coder_lzma_prototype_v1"
+}

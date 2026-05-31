@@ -1,0 +1,97 @@
+{
+  "candidate_archive": {
+    "bytes": 178515,
+    "path": "/Users/adpena/Projects/pact/.omx/research/repair_floor_loop_contest_action_grounding_20260531T1145Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_002_frame0_k16_palette_asymmetry_fec6_live_frame0_k16_palette/byte_transform/candidate_archive_native_zip_repack.zip",
+    "sha256": "dab082a8d7654896fef063b5851c5cbecc4458d4f79e44e9d382ec624b29a532"
+  },
+  "candidate_archive_sha256": "dab082a8d7654896fef063b5851c5cbecc4458d4f79e44e9d382ec624b29a532",
+  "candidate_member_sha256s": {
+    "x": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403"
+  },
+  "candidate_members": [
+    {
+      "bytes": 178415,
+      "name": "x",
+      "sha256": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403",
+      "zip_compressed_bytes": 178415,
+      "zip_compressed_payload_sha256": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403",
+      "zip_compressed_sha256": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403",
+      "zip_compression_method": "stored"
+    }
+  ],
+  "charged_bits_changed": true,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "archive_zip_repack_adapter",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "archive_zip_repack_payload_identity_receiver_proof.v1",
+  "proof_scope": "archive_zip_member_payload_identity_after_repack",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "all_member_payloads_identical": true,
+    "member_count": 1,
+    "member_proofs": [
+      {
+        "candidate_member_bytes": 178415,
+        "candidate_member_sha256": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403",
+        "candidate_zip_compressed_bytes": 178415,
+        "candidate_zip_compression_method": "stored",
+        "member_name": "x",
+        "member_payload_identical_to_source": true,
+        "passed": true,
+        "source_member_bytes": 178415,
+        "source_member_sha256": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403",
+        "source_zip_compressed_bytes": 178415,
+        "source_zip_compression_method": "stored"
+      }
+    ],
+    "passed": true,
+    "same_member_name_set": true,
+    "schema": "archive_zip_repack_payload_identity_probe.v1"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_repack": {
+    "candidate_archive_bytes": 178515,
+    "compression_plan": [
+      {
+        "member_name": "x",
+        "zip_compression_method": "stored",
+        "zip_compresslevel": null
+      }
+    ],
+    "member_count": 1,
+    "plan_key": "x:stored:default",
+    "saved_bytes": 0,
+    "source_archive_bytes": 178515,
+    "strategy": "uniform"
+  },
+  "source_archive": {
+    "bytes": 178515,
+    "path": "/Users/adpena/Projects/pact/.omx/research/repair_floor_loop_contest_action_grounding_20260531T1145Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_001_posenet_null_bottom_decile_fec6_live_posenet_bottom_decile/byte_transform/candidate_archive_fec6_selector_payload_mutation.zip",
+    "sha256": "dab082a8d7654896fef063b5851c5cbecc4458d4f79e44e9d382ec624b29a532"
+  },
+  "source_members": [
+    {
+      "bytes": 178415,
+      "name": "x",
+      "sha256": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403",
+      "zip_compressed_bytes": 178415,
+      "zip_compressed_payload_sha256": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403",
+      "zip_compressed_sha256": "b848870d3e0853e51e8d89c3f03da70a91717b1587cfacd07a68fe91f9ca7403",
+      "zip_compression_method": "stored"
+    }
+  ],
+  "target_kind": "archive_zip_repack_v1"
+}

@@ -1,0 +1,48 @@
+{
+  "archive_native_transform_kind": "range_coder_entropy_probe",
+  "blockers": [
+    "range_coder_materializer_missing",
+    "range_coder_runtime_adapter_missing"
+  ],
+  "budget_spend_allowed": false,
+  "charged_bits_changed": false,
+  "coder_family": "range",
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "estimated_zero_order_savings_bytes": 29,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "materializer_status": "probe_only_materializer_missing",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": false,
+  "runtime_consumption_proof_ready": false,
+  "schema": "repair_archive_entropy_coder_boundary_probe.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_member": {
+    "bytes": 178409,
+    "name": "x",
+    "sha256": "32bb7bc97854caf0d3d1ba7c0b7ea58033fa72faae3034563d45a5bcab6ee7c2",
+    "zip_compressed_bytes": 178409,
+    "zip_compression_method": 0
+  },
+  "semantic_entropy_stage": "at_entropy_coder_fractional_code_boundary",
+  "source_archive_bytes": 178509,
+  "source_archive_path": ".omx/research/repair_floor_loop_contest_action_grounding_20260531T1145Z/repair_family_entropy_stage_chain_execution/entropy_stage_chain_001_6bae0201fb08/stage_002_frame0_k16_palette_asymmetry_fec6_live_frame0_k16_palette/byte_transform/candidate_archive_fec6_selector_payload_mutation.zip",
+  "source_archive_sha256": "dae59bc39930bda523a1db28811163f523f6db6f2d9013858cb1e39dce6f191e",
+  "zero_order_entropy_stats": {
+    "byte_count": 178409,
+    "entropy_bits_per_symbol": 7.998665282822438,
+    "schema": "repair_archive_zero_order_entropy_stats.v1",
+    "unique_symbol_count": 256,
+    "zero_order_lower_bound_bits": 1427033.8744430684,
+    "zero_order_lower_bound_bytes": 178380,
+    "zero_order_redundancy_bytes": 29
+  }
+}
