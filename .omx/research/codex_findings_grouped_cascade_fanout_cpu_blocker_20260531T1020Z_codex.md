@@ -60,6 +60,16 @@ blockers: exact auth required, all observed CPU rows failed, MLX/CPU split,
 archive-specific master-gradient anchor missing for this campaign, and the
 pixel-gradient cache covering only a partial sample.
 
+2026-05-31T10:36Z follow-up: the acquisition policy now embeds
+`contest_space_action_functional.v1`, so the queue no longer treats
+"rate saved" and "distortion spent" as prose. Each local CPU row carries the
+hydrated contest objective
+`S = 100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489`,
+`rate_score_per_byte`, estimated distortion spend after rate credit, and the
+extra bytes required to break even. The functional is explicitly
+planning-only: score, promotion, rank/kill, and exact-dispatch authority remain
+false until CPU/CUDA auth eval produces a byte-closed contest-axis artifact.
+
 ## Current Blocker
 
 The P18/P19/P11/P15 receiver-closed cascade is not exact-auth ready from the

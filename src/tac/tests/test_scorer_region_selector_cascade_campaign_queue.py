@@ -359,6 +359,8 @@ def test_acquisition_policy_consumes_cpu_negative_and_gradient_priors(tmp_path: 
     assert policy["master_gradient_prior"]["shape"] == [4, 3, 3]
     assert policy["pixel_gradient_prior"]["available"] is True
     assert policy["pixel_gradient_prior"]["shape"] == [2, 4, 4]
-    assert policy["rate_credit_rows"][0]["estimated_distortion_spend_after_rate_credit"] > 0.0
+    assert policy["rate_credit_rows"][0]["estimated_distortion_spend_score_units"] > 0.0
+    assert policy["contest_space_action_functional"]["row_count"] == 1
+    assert policy["contest_space_action_functional"]["local_gate_passed_count"] == 0
     assert policy["score_claim"] is False
     assert "current_operator_family_all_observed_local_cpu_rows_failed" in policy["blockers"]

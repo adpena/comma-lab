@@ -26,7 +26,13 @@ from tac.optimization.scorer_region_operator_contract import (
     build_scorer_region_operator_contract,
 )
 from tac.repo_io import sha256_file
-from tac.master_gradient import CONTEST_RATE_DENOM_BYTES
+from tac.optimization.contest_space_action import (
+    CONTEST_RATE_DENOM_BYTES,
+    RATE_SCORE_PER_BYTE,
+    build_contest_space_action_functional,
+    build_hydration_contract,
+    build_rate_distortion_action_row,
+)
 from tac.substrates.uniward_per_pixel_distortion.weight_map import (
     compute_per_pixel_uniward_weight_map_numpy,
 )
@@ -49,7 +55,6 @@ DEFAULT_PIXEL_GRADIENT_CACHE_PATH = Path(
     ".omx/research/uniward_per_pixel_n_plus_1_artifacts_20260526/"
     "real_scorer_gradients_cache.npz"
 )
-RATE_SCORE_PER_BYTE = 25.0 / CONTEST_RATE_DENOM_BYTES
 FULL600_MLX_OPERATING_POINT = {
     "d_seg": 0.0012223561610638473,
     "d_pose": 0.0017157510650319333,
@@ -1469,22 +1474,34 @@ def build_scorer_region_selector_cascade_acquisition_policy(
     observed_count = len(local_cpu_rows)
     split_rate = split_count / observed_count if observed_count else 0.0
     best_delta = min(deltas) if deltas else None
-    rate_credit_by_row = []
+    hydration = build_hydration_contract(
+        video_scope="receiver_closed_campaign_local_component_scope",
+        scorer_axis="[macOS-CPU advisory]+[macOS-MLX research-signal]",
+        archive_axis="current_cpu_frontier_family_candidate_archive",
+        runtime_contract="inflate.sh_receiver_patch_output_change_plus_local_component_spot_checks",
+        sample_count=observed_count,
+    )
+    action_rows = []
     for row in local_cpu_rows:
         saved = _saved_bytes(row)
         delta = _local_delta(row)
         if delta is None:
             continue
-        rate_credit = saved * RATE_SCORE_PER_BYTE
-        rate_credit_by_row.append(
-            {
-                "variant_id": row.get("variant_id"),
-                "saved_bytes": saved,
-                "rate_score_credit": rate_credit,
-                "observed_net_delta_vs_auth_frontier": delta,
-                "estimated_distortion_spend_after_rate_credit": delta + rate_credit,
-            }
+        action_rows.append(
+            build_rate_distortion_action_row(
+                candidate_id=str(row.get("variant_id") or ""),
+                observed_net_delta_score_units=delta,
+                saved_bytes=saved,
+                local_cpu_score=_safe_number(row.get("local_cpu_canonical_score")),
+                local_cpu_avg_segnet_dist=_safe_number(row.get("local_cpu_avg_segnet_dist")),
+                local_cpu_avg_posenet_dist=_safe_number(row.get("local_cpu_avg_posenet_dist")),
+                hydration=hydration,
+            )
         )
+    contest_action_functional = build_contest_space_action_functional(
+        rows=action_rows,
+        hydration=hydration,
+    )
     master_gradient = _summarize_master_gradient_tensor(
         repo_root=repo_root,
         tensor_path=master_gradient_tensor_path,
@@ -1541,6 +1558,7 @@ def build_scorer_region_selector_cascade_acquisition_policy(
             "rate_score_per_byte": RATE_SCORE_PER_BYTE,
             "empirical_budget_accounting": "observed_net_delta + saved_bytes*rate_score_per_byte",
             "optimization_direction": "minimize_expected_delta_s_under_receiver_proof_constraints",
+            "contest_space_action_functional_schema": contest_action_functional["schema"],
         },
         "campaign_summary": {
             "variant_count": campaign_report.get("variant_count"),
@@ -1558,7 +1576,8 @@ def build_scorer_region_selector_cascade_acquisition_policy(
             ),
         },
         "empirical_dimension_effects": _dimension_effects(rows),
-        "rate_credit_rows": rate_credit_by_row,
+        "rate_credit_rows": action_rows,
+        "contest_space_action_functional": contest_action_functional,
         "master_gradient_prior": master_gradient,
         "pixel_gradient_prior": pixel_gradient,
         "next_queue_policy": {
