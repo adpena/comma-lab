@@ -64285,6 +64285,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z7_mamba2_real_hinton_long_mlx_run_20260530",
+      "name": "Z7-Mamba-2 REAL-Hinton-teacher long MLX run (Wave N+11 mock-teacher gap fix)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/_shared/mlx_score_aware/tests/test_z7_real_hinton_teacher_pose_axis.py (11 tests PASS: real pose-axis non-zero + gradient flow + mock-vs-real distinct); smoke probe .omx/research/z7_real_hinton_smoke_probe_20260531T013318Z confirms real teacher fires (pose=316.69 seg=6.22 non-zero)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z7_mamba2_real_hinton_long_mlx_run_landed_20260530.md (real-teacher diagnosis + 11 tests + 3-axis adversarial review + Wave N+11 reactivation verdict)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=substrate_engineering; the REAL optimal version missing from Wave N+11 HALT: real SegNet KL T=2.0 + real PoseNet pose-MSE Hinton-distilled teachers (NO --allow-mock-scorer-teacher) so pose-axis is REAL non-zero; 600pair long MLX-LOCAL with Wave N+11 stabilizer (grad-clip 1.0 + warmup 5 + weight_decay 1e-4 + d_state=8 + EMA 0.997); non-promotable [macOS-MLX research-signal] per Catalog #192/#317/#341"
     }
   ],
   "level_rules": {
@@ -64294,5 +64335,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T01:39:17Z"
+  "updated_at": "2026-05-31T01:46:20Z"
 }
