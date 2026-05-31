@@ -56,6 +56,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--full-video-d-pose", type=float, default=None)
     parser.add_argument("--rgb-value-range", type=float, default=255.0)
     parser.add_argument("--scorer-hw", default="384,512")
+    parser.add_argument(
+        "--pose-axis-count",
+        type=int,
+        default=6,
+        help="Number of PoseNet output axes to VJP for true P19; default is contest first-six pose axes.",
+    )
+    parser.add_argument(
+        "--pose-inverse-variance",
+        default="1,1,1,1,1,1",
+        help=(
+            "Comma-separated inverse-variance weights for the Mahalanobis P19 "
+            "norm. Identity matches upstream first-six pose MSE."
+        ),
+    )
     parser.add_argument("--seg-margin-delta", type=float, default=1.0)
     parser.add_argument("--pose-null-threshold", type=float, default=1e-8)
     parser.add_argument(
@@ -72,6 +86,16 @@ def _parse_hw(text: str) -> tuple[int, int]:
     if len(parts) != 2:
         raise ValueError("--scorer-hw must be formatted as H,W")
     return int(parts[0]), int(parts[1])
+
+
+def _parse_float_tuple(text: str) -> tuple[float, ...]:
+    parts = [part.strip() for part in str(text).split(",") if part.strip()]
+    if not parts:
+        raise ValueError("--pose-inverse-variance must contain at least one value")
+    values = tuple(float(part) for part in parts)
+    if any(value <= 0.0 for value in values):
+        raise ValueError("--pose-inverse-variance entries must be positive")
+    return values
 
 
 def main() -> int:
@@ -117,6 +141,8 @@ def main() -> int:
                 target_mode=args.target_mode,
                 rgb_value_range=float(args.rgb_value_range),
                 scorer_hw=_parse_hw(args.scorer_hw),
+                pose_axis_count=int(args.pose_axis_count),
+                pose_inverse_variance=_parse_float_tuple(args.pose_inverse_variance),
                 seg_margin_delta=float(args.seg_margin_delta),
                 pose_null_threshold=float(args.pose_null_threshold),
             ),

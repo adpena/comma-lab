@@ -70,6 +70,7 @@ def _surface_shard(
 ) -> dict:
     shape = (end - start, 2, 16, 16, 3)
     joint = np.full(shape, value, dtype=np.float32)
+    pose_axis_count = 6
     return {
         "shard_index": shard_index,
         "pair_start": start,
@@ -78,11 +79,14 @@ def _surface_shard(
         "joint_weight": joint,
         "rate_attack_deadzone_mask": np.ones(shape, dtype=bool),
         "segnet_argmax_gradient_abs": joint,
-        "pose_jacobian_abs": np.zeros(shape, dtype=np.float32),
+        "pose_jacobian_abs": np.zeros((*shape, pose_axis_count), dtype=np.float32),
         "pose_surface_kind": TRUE_P19_POSE_SURFACE_KIND,
         "pose_jacobian_abs_is_true_jacobian": True,
         "pose_surface_authority": True,
         "pose_surface_blockers": [],
+        "pose_axis_count": pose_axis_count,
+        "pose_inverse_variance": [1.0] * pose_axis_count,
+        "pose_inverse_variance_source": "test_true_p19",
         "full_video_d_pose": 0.01,
         "pose_null_threshold": 1e-8,
         "archive_runtime_candidate_custody": True,
@@ -310,7 +314,7 @@ def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Pat
         joint_weight=np.zeros((2, 2, 16, 16, 3), dtype=np.float32),
         rate_attack_deadzone_mask=np.ones((2, 2, 16, 16, 3), dtype=bool),
         segnet_argmax_gradient_abs=np.zeros((2, 2, 16, 16, 3), dtype=np.float32),
-        pose_jacobian_abs=np.zeros((2, 2, 16, 16, 3), dtype=np.float32),
+        pose_jacobian_abs=np.zeros((2, 2, 16, 16, 3, 1), dtype=np.float32),
         metadata_json=np.asarray(
             '{"archive_runtime_candidate_custody": true, '
             '"gradient_values_are_full_video_objective_contributions": true, '
@@ -351,7 +355,7 @@ def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -
     assert contract["score_claim"] is False
 
 
-def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_path: Path) -> None:
+def test_mlx_vjp_shard_producer_emits_true_p19_exact_reduction_surface(tmp_path: Path) -> None:
     mx = pytest.importorskip("mlx.core")
 
     archive = _archive_bytes(num_pairs=2)
@@ -385,11 +389,14 @@ def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_
     assert shard["budget_spend_authority"] is False
     assert shard["archive_runtime_candidate_custody"] is True
     assert shard["gradient_values_are_full_video_objective_contributions"] is True
-    assert shard["pose_surface_kind"] == SCALAR_POSE_LOSS_VJP_SURFACE_KIND
-    assert shard["pose_jacobian_abs_is_true_jacobian"] is False
-    assert shard["pose_surface_authority"] is False
-    assert shard["pose_surface_blockers"] == [P19_POSE_SURFACE_BLOCKER]
+    assert shard["pose_surface_kind"] == TRUE_P19_POSE_SURFACE_KIND
+    assert shard["pose_jacobian_abs_is_true_jacobian"] is True
+    assert shard["pose_surface_authority"] is True
+    assert shard["pose_axis_count"] == 6
+    assert shard["pose_inverse_variance"] == [1.0] * 6
+    assert shard["pose_surface_blockers"] == []
     assert shard["joint_weight"].shape == candidate.shape
+    assert shard["pose_jacobian_abs"].shape == (*candidate.shape, 6)
     assert shard["rate_attack_deadzone_mask"].shape == candidate.shape
     assert shard["segnet_vjp_abs_max"] > 0.0
     assert shard["pose_vjp_abs_max"] > 0.0
@@ -407,9 +414,10 @@ def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_
     assert loaded["budget_spend_authority"] is False
     assert bundle["full_video_reduction_complete"] is True
     assert bundle["gradient_reduction_authority"] is True
-    assert bundle["budget_spend_authority"] is False
-    assert bundle["budget_spend_blockers"] == [P19_POSE_SURFACE_BLOCKER]
-    assert bundle["optimizer_update_semantics"] == "no_update_pose_surface_not_true_p19_jacobian"
+    assert bundle["budget_spend_authority"] is True
+    assert bundle["budget_spend_blockers"] == []
+    assert bundle["pose_surface_authority"] is True
+    assert bundle["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
 
 
 def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_path: Path) -> None:
@@ -431,8 +439,9 @@ def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_
     assert bundle["full_video_surface_coverage"] is True
     assert bundle["full_video_reduction_complete"] is True
     assert bundle["gradient_reduction_authority"] is True
-    assert bundle["budget_spend_authority"] is False
-    assert bundle["budget_spend_blockers"] == [P19_POSE_SURFACE_BLOCKER]
+    assert bundle["budget_spend_authority"] is True
+    assert bundle["budget_spend_blockers"] == []
+    assert bundle["pose_surface_authority"] is True
     assert bundle["joint_weight"].shape == reference_pairs.shape
     assert Path(bundle["surface_provider_bundle_manifest"]["manifest_path"]).is_file()
 

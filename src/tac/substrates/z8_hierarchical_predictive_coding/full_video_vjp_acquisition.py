@@ -106,6 +106,8 @@ class Z8FullVideoMlxVjpShardConfig:
     rgb_value_range: float = 255.0
     scorer_hw: tuple[int, int] = (384, 512)
     seg_margin_delta: float = 1.0
+    pose_axis_count: int = 6
+    pose_inverse_variance: tuple[float, ...] = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
     pose_null_threshold: float = 1e-8
     require_archive_runtime_candidate_custody: bool = True
     candidate_custody_atol: float = 0.0
@@ -128,6 +130,14 @@ class Z8FullVideoMlxVjpShardConfig:
             raise ValueError("scorer_hw must be positive and at least 2x2")
         if self.seg_margin_delta < 0.0:
             raise ValueError("seg_margin_delta must be >= 0")
+        if self.pose_axis_count <= 0:
+            raise ValueError("pose_axis_count must be positive")
+        if not self.pose_inverse_variance:
+            raise ValueError("pose_inverse_variance must not be empty")
+        if any(value <= 0.0 for value in self.pose_inverse_variance):
+            raise ValueError("pose_inverse_variance entries must be > 0")
+        if len(self.pose_inverse_variance) < self.pose_axis_count:
+            raise ValueError("pose_inverse_variance must cover pose_axis_count")
         if self.pose_null_threshold < 0.0:
             raise ValueError("pose_null_threshold must be >= 0")
         if self.candidate_custody_atol < 0.0:
@@ -353,39 +363,47 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         hinge = mx.maximum(0.0, other_logit - true_logit + float(config.seg_margin_delta))
         return mx.mean(hinge)
 
-    pose_axis_count = min(6, int(ref_pose.shape[-1]))
+    pose_axis_count = min(int(config.pose_axis_count), int(ref_pose.shape[-1]))
+    if pose_axis_count <= 0:
+        raise ValueError("PoseNet output must expose at least one pose axis")
+    pose_inverse_variance = tuple(float(value) for value in config.pose_inverse_variance[:pose_axis_count])
 
-    def pose_mse_loss(pair_rgb_255: Any) -> Any:
+    def pose_axis_mean(pair_rgb_255: Any, *, axis: int) -> Any:
         _seg_input, pose_input = _mlx_pairs_to_scorer_inputs_nhwc(
             pair_rgb_255,
             scorer_hw=config.scorer_hw,
         )
         pose = mlx_scorer.posenet(pose_input)["pose"]
-        dims = min(pose_axis_count, int(pose.shape[-1]))
-        diff = pose[..., :dims] - ref_pose[..., :dims]
-        return mx.mean(diff * diff)
+        return mx.mean(pose[..., axis])
 
     seg_grad = mx.grad(seg_margin_loss)(cand_mx)
-    pose_grad = mx.grad(pose_mse_loss)(cand_mx)
-    mx.eval(seg_grad, pose_grad)
+    pose_axis_grads = [
+        mx.grad(lambda pair_rgb_255, axis=axis: pose_axis_mean(pair_rgb_255, axis=axis))(cand_mx)
+        for axis in range(pose_axis_count)
+    ]
+    mx.eval(seg_grad, *pose_axis_grads)
     objective_shard_weight = float(config.pair_end - config.pair_start) / float(config.full_video_pair_count)
     seg_grad_np = (
         np.abs(_mlx_value_to_numpy(seg_grad)).astype(np.float64, copy=False) * objective_shard_weight
     )
-    pose_grad_np = (
-        np.abs(_mlx_value_to_numpy(pose_grad)).astype(np.float64, copy=False) * objective_shard_weight
+    pose_jacobian_np = np.stack(
+        [
+            np.abs(_mlx_value_to_numpy(axis_grad)).astype(np.float64, copy=False) * objective_shard_weight
+            for axis_grad in pose_axis_grads
+        ],
+        axis=-1,
     )
 
     full_atom_count = int(config.full_video_pair_count * np.prod(cand_full.shape[1:]))
     surface = build_joint_p18_p19_waterfill_surface(
         segnet_argmax_gradient=seg_grad_np,
-        pose_jacobian=pose_grad_np[..., None],
+        pose_jacobian=pose_jacobian_np,
         config=JointP18P19WaterfillConfig(
             d_pose=float(config.full_video_d_pose),
-            pose_inverse_variance=(1.0,),
+            pose_inverse_variance=pose_inverse_variance,
             target_mode=config.normalized_target_mode,
             pose_null_threshold=float(config.pose_null_threshold),
-            evidence_scope=PROPOSAL_ONLY_SCOPE,
+            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
             full_video_atom_count=full_atom_count,
             linearization_archive_sha=archive_sha,
             gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
@@ -421,13 +439,14 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         "preprocess_backend": "mlx_bilinear_resize_align_corners_false_plus_mlx_yuv6",
         "segnet_loss_kind": "reference_argmax_nonsmooth_margin_hinge_vjp",
         "seg_margin_delta": float(config.seg_margin_delta),
-        "pose_loss_kind": "reference_pose_head_first6_mse_vjp",
-        "pose_surface_kind": SCALAR_POSE_LOSS_VJP_SURFACE_KIND,
+        "pose_loss_kind": "per_axis_posenet_mean_output_vjp",
+        "pose_surface_kind": TRUE_P19_POSE_SURFACE_KIND,
         "pose_axis_count": int(pose_axis_count),
-        "pose_inverse_variance_source": "unit_scalar_proxy_not_contest_mahalanobis",
-        "pose_jacobian_abs_is_true_jacobian": False,
-        "pose_surface_authority": False,
-        "pose_surface_blockers": [P19_POSE_SURFACE_BLOCKER],
+        "pose_inverse_variance": list(pose_inverse_variance),
+        "pose_inverse_variance_source": "config_pose_inverse_variance",
+        "pose_jacobian_abs_is_true_jacobian": True,
+        "pose_surface_authority": True,
+        "pose_surface_blockers": [],
         "full_video_d_pose": float(config.full_video_d_pose),
         "pose_null_threshold": float(config.pose_null_threshold),
         "scorer_hw": [int(config.scorer_hw[0]), int(config.scorer_hw[1])],
@@ -437,9 +456,9 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         "archive_runtime_candidate_custody": bool(custody["archive_runtime_candidate_custody"]),
         "archive_runtime_candidate_custody_report": custody,
         "segnet_vjp_abs_max": float(seg_grad_np.max(initial=0.0)),
-        "pose_vjp_abs_max": float(pose_grad_np.max(initial=0.0)),
+        "pose_vjp_abs_max": float(pose_jacobian_np.max(initial=0.0)),
         "segnet_argmax_gradient_abs": seg_grad_np,
-        "pose_jacobian_abs": pose_grad_np,
+        "pose_jacobian_abs": pose_jacobian_np,
         "joint_weight": joint,
         "rate_attack_deadzone_mask": mask,
         "joint_surface_report": {
@@ -888,6 +907,20 @@ def _as_array(row: Mapping[str, Any], key: str, *, dtype: Any) -> np.ndarray:
     return arr
 
 
+def _as_pose_jacobian_array(row: Mapping[str, Any], key: str, *, dtype: Any) -> np.ndarray:
+    if key not in row:
+        raise ValueError(f"surface shard missing {key}")
+    arr = np.asarray(row[key], dtype=dtype)
+    if arr.ndim != 6:
+        raise ValueError(
+            f"{key} shard must have shape (pairs, frames, H, W, C, pose_axis); got {arr.shape}"
+        )
+    if np.issubdtype(arr.dtype, np.floating) and not np.all(np.isfinite(arr)):
+        nonfinite = int(arr.size - np.count_nonzero(np.isfinite(arr)))
+        raise ValueError(f"{key} shard contains non-finite values ({nonfinite}/{arr.size})")
+    return arr
+
+
 def _finite_surface_array(value: Any, *, name: str, dtype: Any) -> np.ndarray:
     arr = np.asarray(value, dtype=dtype)
     if arr.size == 0:
@@ -896,6 +929,20 @@ def _finite_surface_array(value: Any, *, name: str, dtype: Any) -> np.ndarray:
         nonfinite = int(arr.size - np.count_nonzero(np.isfinite(arr)))
         raise ValueError(f"{name} contains non-finite values ({nonfinite}/{arr.size})")
     return arr
+
+
+def _pose_inverse_variance_from_raw(raw: Mapping[str, Any]) -> tuple[float, ...]:
+    value = raw.get("pose_inverse_variance")
+    if value is None:
+        return ()
+    arr = np.asarray(value, dtype=np.float64).reshape(-1)
+    if arr.size == 0:
+        return ()
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("pose_inverse_variance contains non-finite values")
+    if np.any(arr <= 0.0):
+        raise ValueError("pose_inverse_variance entries must be > 0")
+    return tuple(float(v) for v in arr)
 
 
 def assemble_z8_full_video_vjp_surface_bundle(
@@ -918,6 +965,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
     pose_surface_blockers: list[str] = []
     full_video_d_pose: float | None = None
     pose_null_threshold: float = 1e-8
+    pose_inverse_variance: tuple[float, ...] | None = None
     for shard_index, raw in enumerate(sorted(shard_surfaces, key=lambda row: int(row.get("pair_start", -1)))):
         if (
             raw.get("optimizer_update_applied")
@@ -953,20 +1001,30 @@ def assemble_z8_full_video_vjp_surface_bundle(
         joint = _as_array(raw, "joint_weight", dtype=np.float64)
         mask = _as_array(raw, "rate_attack_deadzone_mask", dtype=bool)
         seg_grad = _as_array(raw, "segnet_argmax_gradient_abs", dtype=np.float64)
-        pose_grad = _as_array(raw, "pose_jacobian_abs", dtype=np.float64)
+        pose_grad = _as_pose_jacobian_array(raw, "pose_jacobian_abs", dtype=np.float64)
         if joint.shape[0] != pair_end - pair_start or mask.shape != joint.shape:
             raise ValueError("surface shard pair span and tensor shape disagree")
-        if seg_grad.shape != joint.shape or pose_grad.shape != joint.shape:
-            raise ValueError("surface shard raw gradient tensors must match joint_weight shape")
+        if seg_grad.shape != joint.shape:
+            raise ValueError("surface shard SegNet gradient tensor must match joint_weight shape")
+        if pose_grad.ndim < 1 or pose_grad.shape[:-1] != joint.shape:
+            raise ValueError(
+                "surface shard PoseNet Jacobian tensor must have joint_weight shape plus pose axis dimension"
+            )
+        shard_pose_inverse_variance = _pose_inverse_variance_from_raw(raw)
         pose_surface_kind = str(raw.get("pose_surface_kind") or "missing_pose_surface_kind")
         pose_surface_true = (
             pose_surface_kind == TRUE_P19_POSE_SURFACE_KIND
             and raw.get("pose_jacobian_abs_is_true_jacobian") is True
             and raw.get("pose_surface_authority") is True
+            and len(shard_pose_inverse_variance) == int(pose_grad.shape[-1])
         )
         if not pose_surface_true:
             shard_pose_blockers = list(raw.get("pose_surface_blockers") or [])
             pose_surface_blockers.extend(shard_pose_blockers or [P19_POSE_SURFACE_BLOCKER])
+        elif pose_inverse_variance is None:
+            pose_inverse_variance = shard_pose_inverse_variance
+        elif pose_inverse_variance != shard_pose_inverse_variance:
+            pose_surface_blockers.append("p19_pose_inverse_variance_inconsistent_across_shards")
         shard_d_pose = raw.get("full_video_d_pose")
         if shard_d_pose is None:
             raise ValueError("surface shard missing full_video_d_pose")
@@ -993,6 +1051,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 "optimizer_update_applied": False,
                 "pose_surface_kind": pose_surface_kind,
                 "pose_surface_authority": bool(pose_surface_true),
+                "pose_axis_count": int(pose_grad.shape[-1]),
             }
         )
 
@@ -1011,10 +1070,10 @@ def assemble_z8_full_video_vjp_surface_bundle(
         pose_grad_full = np.concatenate(pose_grad_chunks, axis=0)
         global_surface = build_joint_p18_p19_waterfill_surface(
             segnet_argmax_gradient=seg_grad_full,
-            pose_jacobian=pose_grad_full[..., None],
+            pose_jacobian=pose_grad_full,
             config=JointP18P19WaterfillConfig(
                 d_pose=float(full_video_d_pose if full_video_d_pose is not None else 0.0),
-                pose_inverse_variance=(1.0,),
+                pose_inverse_variance=pose_inverse_variance or (1.0,),
                 target_mode=str(plan["target_mode"]),
                 pose_null_threshold=float(pose_null_threshold),
                 evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE if pose_surface_authority else PROPOSAL_ONLY_SCOPE,
@@ -1074,6 +1133,8 @@ def assemble_z8_full_video_vjp_surface_bundle(
         else SCALAR_POSE_LOSS_VJP_SURFACE_KIND,
         "pose_surface_authority": bool(pose_surface_authority),
         "pose_surface_blockers": authority_blockers,
+        "pose_axis_count": len(pose_inverse_variance or ()),
+        "pose_inverse_variance": list(pose_inverse_variance or ()),
         "implicit_allocator_authority": bool(
             budget_spend_authority and global_surface.get("implicit_allocator_authority", False)
         ),
@@ -1134,6 +1195,8 @@ def write_z8_full_video_vjp_surface_bundle(
         implicit_allocator_authority=np.asarray(bool(bundle.get("implicit_allocator_authority", False))),
         pose_surface_kind=np.asarray(str(bundle.get("pose_surface_kind", ""))),
         pose_surface_authority=np.asarray(bool(bundle.get("pose_surface_authority", False))),
+        pose_axis_count=np.asarray(int(bundle.get("pose_axis_count", 0))),
+        pose_inverse_variance=np.asarray(bundle.get("pose_inverse_variance", []), dtype=np.float64),
     )
     manifest = {
         "schema": "z8_full_video_vjp_surface_bundle_manifest.v1",
@@ -1156,6 +1219,8 @@ def write_z8_full_video_vjp_surface_bundle(
         "pose_surface_kind": bundle.get("pose_surface_kind"),
         "pose_surface_authority": bundle.get("pose_surface_authority", False),
         "pose_surface_blockers": bundle.get("pose_surface_blockers", []),
+        "pose_axis_count": bundle.get("pose_axis_count", 0),
+        "pose_inverse_variance": bundle.get("pose_inverse_variance", []),
         "implicit_allocator_authority": bundle.get("implicit_allocator_authority", False),
         "implicit_allocator_blockers": bundle.get("implicit_allocator_blockers", []),
         "shard_count": bundle["shard_count"],
@@ -1308,6 +1373,15 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
                 np.asarray(metadata.get("gradient_reduction_authority", False)).reshape(-1)[0]
             ),
             "budget_spend_authority": bool(np.asarray(metadata.get("budget_spend_authority", False)).reshape(-1)[0]),
+            "pose_surface_kind": str(metadata.get("pose_surface_kind", "")),
+            "pose_axis_count": int(metadata.get("pose_axis_count", 0) or 0),
+            "pose_inverse_variance": list(metadata.get("pose_inverse_variance") or []),
+            "pose_inverse_variance_source": str(metadata.get("pose_inverse_variance_source", "")),
+            "pose_jacobian_abs_is_true_jacobian": bool(
+                metadata.get("pose_jacobian_abs_is_true_jacobian", False)
+            ),
+            "pose_surface_authority": bool(metadata.get("pose_surface_authority", False)),
+            "pose_surface_blockers": list(metadata.get("pose_surface_blockers") or []),
             "archive_runtime_candidate_custody": bool(
                 np.asarray(metadata.get("archive_runtime_candidate_custody", False)).reshape(-1)[0]
             ),
@@ -1332,6 +1406,13 @@ def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any
         "optimizer_update_authority": bool(payload.get("optimizer_update_authority", False)),
         "gradient_reduction_authority": bool(payload.get("gradient_reduction_authority", False)),
         "budget_spend_authority": bool(payload.get("budget_spend_authority", False)),
+        "pose_surface_kind": str(payload.get("pose_surface_kind", "")),
+        "pose_axis_count": int(payload.get("pose_axis_count", 0) or 0),
+        "pose_inverse_variance": list(payload.get("pose_inverse_variance") or []),
+        "pose_inverse_variance_source": str(payload.get("pose_inverse_variance_source", "")),
+        "pose_jacobian_abs_is_true_jacobian": bool(payload.get("pose_jacobian_abs_is_true_jacobian", False)),
+        "pose_surface_authority": bool(payload.get("pose_surface_authority", False)),
+        "pose_surface_blockers": list(payload.get("pose_surface_blockers") or []),
         "archive_runtime_candidate_custody": bool(payload.get("archive_runtime_candidate_custody", False)),
         "gradient_values_are_full_video_objective_contributions": bool(
             payload.get("gradient_values_are_full_video_objective_contributions", False)
