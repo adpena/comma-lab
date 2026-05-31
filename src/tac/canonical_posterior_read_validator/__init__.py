@@ -441,29 +441,17 @@ def validate_memo_claim_against_canonical_posterior(
             adjudicated_at_utc=adj_utc,
         )
 
-    # Canonical anti-patterns are structural LESSONS that operator-facing
-    # memos are SUPPOSED to reference (e.g. a canonical_anti_pattern_refs
-    # block). Referencing an active anti-pattern id is canonical behavior,
-    # NOT a phantom-score-VALUE citation -> CLEAN (non-blocking). The
-    # phantom-score bug class (Catalog #382) targets falsified score VALUES
-    # (e.g. alpha=4.74), which flow through the canonical_equations surface,
-    # not anti-pattern lesson ids. (Fixed 2026-05-31: severity->PHANTOM
-    # conflated bug-class danger with token-value phantom-ness.)
+    # Canonical anti-patterns (PHANTOM / FALSIFIED / INVALIDATED per severity)
     ap_match = _query_canonical_anti_patterns(claim_token)
     if ap_match is not None:
         ap_id, severity, summary, last_recal = ap_match
-        # severity describes how dangerous the BUG CLASS is, not whether
-        # this token's VALUE is phantom; an active anti-pattern reference is CLEAN.
-        verdict = PosteriorReadVerdict.CLEAN
+        verdict = _classify_anti_pattern_severity(severity)
         return CanonicalPosteriorReadValidationVerdict(
             claim_token=claim_token,
             verdict=verdict,
             matched_anchor_id=ap_id,
             matched_anchor_source="canonical_anti_patterns",
-            matched_anchor_summary=(
-                f"canonical anti-pattern reference (CLEAN; non-blocking) — "
-                f"{summary} (severity={severity})"
-            ),
+            matched_anchor_summary=f"{summary} (severity={severity})",
             canonical_provenance=_build_predicted_provenance(
                 "validate_memo_claim_against_canonical_posterior"
             ),

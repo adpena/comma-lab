@@ -83440,6 +83440,42 @@ def _check_382_extract_cited_phantom_tokens(memo_text: str) -> list[str]:
     return cited
 
 
+def _check_382_strip_canonical_anti_pattern_refs_block(memo_text: str) -> str:
+    """Remove ``canonical_anti_pattern_refs:`` YAML blocks before extraction.
+
+    Catalog #382 targets memos that cite a FALSIFIED/PHANTOM score VALUE as
+    current truth. A memo that lists the canonical anti-patterns it RESPECTS in
+    a structured ``canonical_anti_pattern_refs:`` frontmatter block is doing the
+    DESIRED thing (documenting which structural lessons it honors) — that is NOT
+    a phantom-value citation. The seed list is composed of canonical
+    anti-pattern ids, so without this strip every memo that honestly documents
+    its respected anti-patterns would false-flag. Tokens cited OUTSIDE such a
+    block (asserting a phantom value in prose) are still scanned.
+    """
+    out: list[str] = []
+    in_block = False
+    for line in memo_text.splitlines():
+        if not in_block:
+            if line.strip() == "canonical_anti_pattern_refs:":
+                in_block = True
+                continue
+            out.append(line)
+            continue
+        # In block: consume indented or blank lines; a dedented non-blank ends it.
+        if line.strip() == "":
+            in_block = False
+            out.append(line)
+            continue
+        if line[:1] in (" ", "\t"):
+            continue  # indented -> part of the block
+        in_block = False
+        if line.strip() == "canonical_anti_pattern_refs:":
+            in_block = True
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
 def _check_382_has_valid_waiver(memo_text: str, cited_token: str) -> bool:
     """Check for same-line waiver per Catalog #287 sister discipline."""
     for line in memo_text.splitlines():
@@ -83522,8 +83558,11 @@ def check_no_operator_facing_memo_cites_falsified_canonical_posterior_token(
             memo_text = memo_path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        # Extract cited phantom tokens
-        cited = _check_382_extract_cited_phantom_tokens(memo_text)
+        # Extract cited phantom tokens (skip canonical_anti_pattern_refs:
+        # structured lesson-reference blocks — those are DESIRED documentation,
+        # not phantom-value citations; see strip helper docstring).
+        scan_text = _check_382_strip_canonical_anti_pattern_refs_block(memo_text)
+        cited = _check_382_extract_cited_phantom_tokens(scan_text)
         if not cited:
             continue
         # For each cited token, check for waiver
