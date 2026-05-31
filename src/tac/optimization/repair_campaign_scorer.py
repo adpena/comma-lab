@@ -16,6 +16,12 @@ from pathlib import Path
 from typing import Any
 
 from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
+from tac.optimization.contest_space_action import (
+    CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA,
+    build_contest_space_action_functional,
+    build_hydration_contract,
+    build_repair_budget_action_row,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.family_agnostic_materializers import (
     verify_runtime_consumption_proof,
@@ -2063,6 +2069,55 @@ def _receiver_closed_rate_credit_bytes(payload: Mapping[str, Any]) -> int:
     return max(0, from_ledger)
 
 
+def _archive_axis_from_repair_payload(payload: Mapping[str, Any]) -> str:
+    source_archive = _mapping(payload.get("source_archive"))
+    rate_credit = _mapping(payload.get("receiver_closed_rate_credit"))
+    archive_sha = _first_sha256_text(
+        payload.get("source_archive_sha256"),
+        payload.get("archive_sha256"),
+        payload.get("candidate_archive_sha256"),
+        source_archive.get("sha256"),
+        source_archive.get("archive_sha256"),
+        rate_credit.get("source_archive_sha256"),
+        rate_credit.get("archive_sha256"),
+    )
+    if archive_sha is not None:
+        return archive_sha
+    archive_id = str(
+        payload.get("source_archive_id")
+        or payload.get("archive_id")
+        or rate_credit.get("source_archive_id")
+        or rate_credit.get("archive_id")
+        or ""
+    ).strip()
+    return archive_id or "repair_campaign_archive_axis_unknown"
+
+
+def _contest_space_hydration_for_repair(
+    payload: Mapping[str, Any],
+    *,
+    row_count: int,
+) -> dict[str, Any]:
+    video_scope = str(
+        payload.get("video_scope")
+        or payload.get("target_profile_id")
+        or payload.get("target_video_id")
+        or "frontier_repair_campaign_declared_video_scope"
+    ).strip()
+    runtime_contract = str(
+        payload.get("runtime_contract")
+        or payload.get("receiver_runtime_contract")
+        or "receiver_closed_rate_parent_then_repair_materialization_then_local_cpu_gate"
+    ).strip()
+    return build_hydration_contract(
+        video_scope=video_scope or "frontier_repair_campaign_declared_video_scope",
+        scorer_axis="[macOS-MLX research-signal] acquisition + local CPU gate before exact auth",
+        archive_axis=_archive_axis_from_repair_payload(payload),
+        runtime_contract=runtime_contract,
+        sample_count=row_count,
+    )
+
+
 def _row_entropy_stage_index(row: Mapping[str, Any]) -> int:
     for container in (row, _mapping(row.get("multiscale_action_row"))):
         entropy_pipeline = _mapping(container.get("entropy_pipeline_position"))
@@ -2143,6 +2198,7 @@ def _build_optimizer_decision(
         entropy_stage_index = _row_entropy_stage_index(row)
         interaction_order = _row_interaction_order(row)
         selection_score = _interaction_aware_selection_score(row)
+        contest_action_row = dict(_mapping(row.get("contest_space_action_row")))
         candidate_evaluation_order.append(
             {
                 "optimizer_candidate_evaluation_index": optimizer_index,
@@ -2159,6 +2215,7 @@ def _build_optimizer_decision(
                 "interaction_aware_selection_score": selection_score,
                 "campaign_score": row.get("campaign_score"),
                 "requested_repair_bytes": requested_bytes,
+                "contest_space_action_row": contest_action_row,
                 "budget_spend_allowed": False,
                 "ready_for_exact_eval_dispatch": False,
                 **FALSE_AUTHORITY,
@@ -2216,6 +2273,7 @@ def _build_optimizer_decision(
                     "multiscale_action_row": dict(
                         _mapping(row.get("multiscale_action_row"))
                     ),
+                    "contest_space_action_row": contest_action_row,
                     "receiver_proof_status": dict(receiver_proof_status),
                     "repair_materialization_lineage": dict(materialization_lineage),
                     "hard_legal_runtime_constraints": _string_list(
@@ -2301,6 +2359,7 @@ def _build_optimizer_decision(
                 "multiscale_action_row": dict(
                     _mapping(row.get("multiscale_action_row"))
                 ),
+                "contest_space_action_row": contest_action_row,
                 "receiver_proof_status": dict(
                     _mapping(row.get("receiver_proof_status"))
                 ),
@@ -2656,6 +2715,11 @@ def score_repair_campaign(
         for row in campaign_input_rows
         if row.get("source_row_kind") == "repair_cascade_opportunity"
     )
+    receiver_closed_rate_credit_bytes = _receiver_closed_rate_credit_bytes(payload)
+    contest_space_hydration = _contest_space_hydration_for_repair(
+        payload,
+        row_count=len(campaign_input_rows),
+    )
     rows: list[dict[str, Any]] = []
     for index, row in enumerate(campaign_input_rows, start=1):
         require_no_truthy_authority_fields(
@@ -2738,6 +2802,27 @@ def score_repair_campaign(
             receiver_proof_status=receiver_proof,
             execution_gate=gate,
         )
+        contest_action_row = build_repair_budget_action_row(
+            candidate_id=str(
+                row.get("typed_response_id")
+                or row.get("candidate_id")
+                or row.get("cascade_id")
+                or f"repair_campaign_row_{index}"
+            ),
+            expected_distortion_delta_score_units=objective_delta,
+            repair_spend_bytes=requested_bytes,
+            available_rate_credit_bytes=receiver_closed_rate_credit_bytes,
+            hydration=contest_space_hydration,
+        )
+        if gate.get("recommended_queue_status") != "ready_for_local_mlx_advisory_execution":
+            contest_action_row["blockers"] = ordered_unique(
+                [
+                    *_string_list(contest_action_row.get("blockers")),
+                    "local_mlx_advisory_custody_missing",
+                ]
+            )
+            if contest_action_row.get("acceptance_state") == "local_gate_passed":
+                contest_action_row["acceptance_state"] = "local_gate_failed"
         scored_row = {
             "schema": REPAIR_CAMPAIGN_SCORE_ROW_SCHEMA,
             "source_row_schema": row.get("schema"),
@@ -2768,6 +2853,7 @@ def score_repair_campaign(
             "per_op_bytes_delta": per_op_bytes_delta,
             "component_response_terms": component_response_terms,
             "multiscale_action_row": multiscale_action,
+            "contest_space_action_row": contest_action_row,
             "receiver_proof_status": receiver_proof,
             "repair_materialization_lineage": materialization_lineage,
             "hard_legal_runtime_constraints": hard_constraints,
@@ -2817,6 +2903,9 @@ def score_repair_campaign(
         action = row.get("multiscale_action_row")
         if isinstance(action, dict):
             action["campaign_rank"] = rank
+        contest_action = row.get("contest_space_action_row")
+        if isinstance(contest_action, dict):
+            contest_action["campaign_rank"] = rank
     ready_rows = [
         row
         for row in rows
@@ -2828,10 +2917,38 @@ def score_repair_campaign(
         for row in rows
         for artifact in _string_list(row["execution_gate"].get("missing_artifacts"))
     )
+    contest_space_action_functional = build_contest_space_action_functional(
+        rows=[
+            row["contest_space_action_row"]
+            for row in rows
+            if isinstance(row.get("contest_space_action_row"), Mapping)
+        ],
+        hydration=contest_space_hydration,
+        objective="minimize_contest_score_delta_after_receiver_closed_rate_repair",
+    )
     optimizer_decision = _build_optimizer_decision(
         payload=payload,
         rows=rows,
         posterior_summary=posterior_summary,
+    )
+    optimizer_decision["contest_space_action_functional_schema"] = (
+        CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA
+    )
+    optimizer_decision["contest_space_action_functional_row_count"] = (
+        contest_space_action_functional["row_count"]
+    )
+    optimizer_decision["contest_space_local_gate_passed_count"] = (
+        contest_space_action_functional["local_gate_passed_count"]
+    )
+    optimizer_decision["contest_space_best_net_delta_score_units"] = (
+        contest_space_action_functional["best_observed_net_delta_score_units"]
+    )
+    optimizer_decision["contest_space_action_kind_histogram"] = dict(
+        contest_space_action_functional["action_kind_histogram"]
+    )
+    require_no_truthy_authority_fields(
+        optimizer_decision,
+        context="repair_campaign_optimizer_decision_contest_space_extension",
     )
     multiscale_ledger = _multiscale_action_ledger(rows)
     report = {
@@ -2848,6 +2965,7 @@ def score_repair_campaign(
         "operator_family_priors": repair_operator_family_priors(),
         "structural_repair_opportunity_count": structural_opportunity_count,
         "multiscale_action_ledger": multiscale_ledger,
+        "contest_space_action_functional": contest_space_action_functional,
         "missing_artifacts": missing_artifacts,
         "optimizer_decision": optimizer_decision,
         "rows": rows,

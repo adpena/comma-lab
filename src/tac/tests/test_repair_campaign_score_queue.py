@@ -19,6 +19,10 @@ from comma_lab.scheduler.repair_campaign_score_queue import (
     summarize_repair_campaign_score_queue,
     summarize_repair_posterior_acquisition_followup_queue,
 )
+from tac.optimization.contest_space_action import (
+    CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA,
+    CONTEST_SPACE_REPAIR_BUDGET_ACTION_KIND,
+)
 from tac.optimization.repair_campaign_chain_contract import (
     REPAIR_CAMPAIGN_ENTROPY_STAGE_CHAIN_CONTRACT_SCHEMA,
     REPAIR_CAMPAIGN_REQUIRED_OPTIMIZER_SOLVER,
@@ -34,6 +38,7 @@ from tac.optimization.repair_campaign_scorer import (
     REPAIR_CAMPAIGN_POSTERIOR_ACQUISITION_FOLLOWUP_SCHEMA,
     REPAIR_CAMPAIGN_POSTERIOR_PRIOR_SUMMARY_SCHEMA,
     REPAIR_CAMPAIGN_SCORE_REPORT_SCHEMA,
+    score_repair_campaign,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -581,6 +586,46 @@ def test_repair_campaign_score_queue_can_bind_posterior_prior_input(
     assert loop["exact_eval_handoff_fail_closed"] is True
     assert loop["posterior_routes_update_from_positive_and_negative_results"] is True
     assert loop["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_campaign_score_report_uses_contest_space_action_spine(
+    tmp_path: Path,
+) -> None:
+    report = score_repair_campaign(
+        payload=_work_order(tmp_path),
+        repo_root=REPO_ROOT,
+    )
+
+    functional = report["contest_space_action_functional"]
+    assert functional["schema"] == CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA
+    assert functional["row_count"] == 2
+    assert functional["action_kind_histogram"] == {
+        CONTEST_SPACE_REPAIR_BUDGET_ACTION_KIND: 2,
+    }
+    assert functional["local_gate_passed_count"] == 1
+    assert functional["saved_bytes_total"] == -48
+    assert functional["rate_score_credit_total"] < 0.0
+
+    first_row = report["rows"][0]
+    action_row = first_row["contest_space_action_row"]
+    assert action_row["action_kind"] == CONTEST_SPACE_REPAIR_BUDGET_ACTION_KIND
+    assert action_row["repair_spend_bytes"] == 32
+    assert action_row["saved_bytes"] == -32
+    assert action_row["available_rate_credit_bytes"] == 40
+    assert action_row["acceptance_state"] == "local_gate_passed"
+    assert action_row["net_delta_after_rate_spend_score_units"] < 0.0
+
+    decision = report["optimizer_decision"]
+    assert (
+        decision["contest_space_action_functional_schema"]
+        == CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA
+    )
+    assert decision["contest_space_action_functional_row_count"] == 2
+    assert decision["contest_space_local_gate_passed_count"] == 1
+    assert decision["contest_space_best_net_delta_score_units"] < 0.0
+    assert decision["selected_allocation_rows"][0]["contest_space_action_row"][
+        "repair_spend_bytes"
+    ] == 32
 
 
 def test_repair_posterior_acquisition_followup_queue_routes_to_child_queue(

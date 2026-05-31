@@ -6,11 +6,13 @@ import pytest
 
 from tac.optimization.contest_space_action import (
     CONTEST_RATE_DENOM_BYTES,
+    CONTEST_SPACE_REPAIR_BUDGET_ACTION_KIND,
     RATE_SCORE_PER_BYTE,
     ContestSpaceActionError,
     build_contest_space_action_functional,
     build_hydration_contract,
     build_rate_distortion_action_row,
+    build_repair_budget_action_row,
     contest_rate_from_archive_bytes,
     contest_score_from_components,
     rate_score_credit,
@@ -90,6 +92,48 @@ def test_contest_space_action_functional_aggregates_rows_fail_closed() -> None:
     assert functional["saved_bytes_total"] == 3
     assert functional["component_terms"]["rate_denominator_bytes"] == CONTEST_RATE_DENOM_BYTES
     assert functional["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_budget_action_row_charges_spent_rate_credit() -> None:
+    hydration = build_hydration_contract(
+        video_scope="unit_test_video_scope",
+        scorer_axis="[macOS-MLX research-signal]",
+        archive_axis="unit_test_archive",
+        runtime_contract="receiver_closed_rate_then_repair",
+        sample_count=1,
+    )
+    row = build_repair_budget_action_row(
+        candidate_id="repair_candidate_a",
+        expected_distortion_delta_score_units=-0.0010,
+        repair_spend_bytes=32,
+        available_rate_credit_bytes=40,
+        hydration=hydration,
+    )
+
+    assert row["action_kind"] == CONTEST_SPACE_REPAIR_BUDGET_ACTION_KIND
+    assert row["repair_spend_bytes"] == 32
+    assert row["saved_bytes"] == -32
+    assert row["rate_score_cost"] == 32 * RATE_SCORE_PER_BYTE
+    assert row["rate_score_credit"] == -32 * RATE_SCORE_PER_BYTE
+    assert row["net_delta_after_rate_spend_score_units"] == (
+        -0.0010 + 32 * RATE_SCORE_PER_BYTE
+    )
+    assert row["max_repair_spend_bytes_to_break_even"] > 32
+    assert row["rate_credit_margin_bytes_after_spend"] == 8
+    assert row["acceptance_state"] == "local_gate_passed"
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_repair_budget_action_row_fails_when_rate_spend_erases_gain() -> None:
+    row = build_repair_budget_action_row(
+        candidate_id="repair_candidate_b",
+        expected_distortion_delta_score_units=-0.00000001,
+        repair_spend_bytes=40,
+        available_rate_credit_bytes=40,
+    )
+
+    assert row["acceptance_state"] == "local_gate_failed"
+    assert "net_delta_after_rate_spend_not_improving" in row["blockers"]
 
 
 def test_hydration_contract_rejects_ambiguous_scope() -> None:

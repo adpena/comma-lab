@@ -23,6 +23,8 @@ from tac.optimization.proxy_candidate_contract import (
 CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA = "contest_space_action_functional.v1"
 CONTEST_SPACE_ACTION_ROW_SCHEMA = "contest_space_action_row.v1"
 CONTEST_SPACE_HYDRATION_SCHEMA = "contest_space_hydration_contract.v1"
+CONTEST_SPACE_RATE_DISTORTION_ACTION_KIND = "rate_distortion_candidate"
+CONTEST_SPACE_REPAIR_BUDGET_ACTION_KIND = "repair_budget_spend"
 
 SEG_SCORE_MULTIPLIER = 100.0
 POSE_SQRT_INNER_MULTIPLIER = 10.0
@@ -154,6 +156,7 @@ def build_rate_distortion_action_row(
     extra_saved = math.ceil(delta / RATE_SCORE_PER_BYTE) if delta is not None and delta > 0.0 else 0
     row = {
         "schema": CONTEST_SPACE_ACTION_ROW_SCHEMA,
+        "action_kind": CONTEST_SPACE_RATE_DISTORTION_ACTION_KIND,
         "candidate_id": str(candidate_id),
         "observed_net_delta_score_units": delta,
         "saved_bytes": int(saved),
@@ -184,6 +187,103 @@ def build_rate_distortion_action_row(
     return row
 
 
+def build_repair_budget_action_row(
+    *,
+    candidate_id: str,
+    expected_distortion_delta_score_units: float | None,
+    repair_spend_bytes: int | float | None,
+    available_rate_credit_bytes: int | float | None = None,
+    local_cpu_score: float | None = None,
+    local_cpu_avg_segnet_dist: float | None = None,
+    local_cpu_avg_posenet_dist: float | None = None,
+    hydration: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build one row for spending receiver-closed rate credit on repair.
+
+    A repair row is the inverse of a pure rate row: spending bytes is a positive
+    rate cost, so the local distortion delta must beat that cost before the
+    planner can treat the candidate as a local winner.
+    """
+
+    candidate = _non_empty_string(candidate_id, field="candidate_id")
+    delta = _number(expected_distortion_delta_score_units)
+    spend = _number(repair_spend_bytes) if repair_spend_bytes is not None else 0.0
+    if spend is None or spend < 0.0:
+        raise ContestSpaceActionError(
+            f"repair_spend_bytes must be finite non-negative, got {repair_spend_bytes!r}"
+        )
+    available = (
+        _number(available_rate_credit_bytes)
+        if available_rate_credit_bytes is not None
+        else None
+    )
+    if available is not None and available < 0.0:
+        raise ContestSpaceActionError(
+            "available_rate_credit_bytes must be finite non-negative or None, "
+            f"got {available_rate_credit_bytes!r}"
+        )
+    spend_int = int(spend)
+    saved_bytes = -spend_int
+    rate_cost = spend * RATE_SCORE_PER_BYTE
+    net_delta = delta + rate_cost if delta is not None else None
+    break_even_spend = (
+        math.floor(max(0.0, -delta) / RATE_SCORE_PER_BYTE)
+        if delta is not None and delta < 0.0
+        else 0
+    )
+    credit_margin = int(available) - spend_int if available is not None else None
+    blockers = []
+    if delta is None:
+        blockers.append("expected_distortion_delta_missing")
+    if available is not None and spend > available:
+        blockers.append("repair_spend_exceeds_available_rate_credit")
+    if net_delta is not None and net_delta >= 0.0:
+        blockers.append("net_delta_after_rate_spend_not_improving")
+    acceptance_state = (
+        "missing_delta"
+        if delta is None
+        else "local_gate_passed"
+        if not blockers and net_delta is not None and net_delta < 0.0
+        else "local_gate_failed"
+    )
+    row = {
+        "schema": CONTEST_SPACE_ACTION_ROW_SCHEMA,
+        "action_kind": CONTEST_SPACE_REPAIR_BUDGET_ACTION_KIND,
+        "candidate_id": candidate,
+        "expected_distortion_delta_score_units": delta,
+        "repair_spend_bytes": spend_int,
+        "available_rate_credit_bytes": int(available) if available is not None else None,
+        "rate_score_cost": rate_cost,
+        "rate_score_credit": -rate_cost,
+        "saved_bytes": saved_bytes,
+        "observed_net_delta_score_units": net_delta,
+        "net_delta_after_rate_spend_score_units": net_delta,
+        "estimated_distortion_spend_equation": (
+            "expected_distortion_delta_score_units + repair_spend_bytes*rate_score_per_byte"
+        ),
+        "estimated_distortion_spend_score_units": delta,
+        "break_even_equation": (
+            "floor(max(-expected_distortion_delta_score_units, 0) / rate_score_per_byte)"
+        ),
+        "max_repair_spend_bytes_to_break_even": int(break_even_spend),
+        "rate_credit_margin_bytes_after_spend": credit_margin,
+        "local_cpu_score": _number(local_cpu_score),
+        "local_cpu_avg_segnet_dist": _number(local_cpu_avg_segnet_dist),
+        "local_cpu_avg_posenet_dist": _number(local_cpu_avg_posenet_dist),
+        "hydration": dict(hydration) if hydration is not None else None,
+        "acceptance_state": acceptance_state,
+        "blockers": ordered_unique(blockers),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        row,
+        context=f"contest_space_repair_budget_action_row:{candidate}",
+    )
+    return row
+
+
 def build_contest_space_action_functional(
     *,
     rows: Sequence[Mapping[str, Any]],
@@ -205,6 +305,10 @@ def build_contest_space_action_functional(
         for row in action_rows
         if row.get("estimated_distortion_spend_score_units") is not None
     )
+    action_kind_histogram: dict[str, int] = {}
+    for row in action_rows:
+        action_kind = str(row.get("action_kind") or "unknown_action_kind")
+        action_kind_histogram[action_kind] = action_kind_histogram.get(action_kind, 0) + 1
     payload = {
         "schema": CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA,
         "row_schema": CONTEST_SPACE_ACTION_ROW_SCHEMA,
@@ -227,6 +331,7 @@ def build_contest_space_action_functional(
         "saved_bytes_total": saved_total,
         "rate_score_credit_total": rate_credit_total,
         "estimated_distortion_spend_score_units_total": distortion_spend_total,
+        "action_kind_histogram": dict(sorted(action_kind_histogram.items())),
         "break_even_extra_saved_bytes_min": min(
             (int(row.get("extra_saved_bytes_to_break_even") or 0) for row in action_rows),
             default=None,
@@ -252,16 +357,19 @@ def build_contest_space_action_functional(
 
 
 __all__ = [
+    "CONTEST_OBJECTIVE_EQUATION",
+    "CONTEST_RATE_DENOM_BYTES",
     "CONTEST_SPACE_ACTION_FUNCTIONAL_SCHEMA",
     "CONTEST_SPACE_ACTION_ROW_SCHEMA",
     "CONTEST_SPACE_HYDRATION_SCHEMA",
-    "CONTEST_OBJECTIVE_EQUATION",
-    "CONTEST_RATE_DENOM_BYTES",
+    "CONTEST_SPACE_RATE_DISTORTION_ACTION_KIND",
+    "CONTEST_SPACE_REPAIR_BUDGET_ACTION_KIND",
     "RATE_SCORE_PER_BYTE",
     "ContestSpaceActionError",
     "build_contest_space_action_functional",
     "build_hydration_contract",
     "build_rate_distortion_action_row",
+    "build_repair_budget_action_row",
     "contest_rate_from_archive_bytes",
     "contest_score_from_components",
     "rate_score_credit",
