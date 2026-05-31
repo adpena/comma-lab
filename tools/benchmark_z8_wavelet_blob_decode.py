@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Benchmark Z8 wavelet-blob decode throughput on a byte-closed archive."""
+"""Benchmark Z8 wavelet-blob parser throughput on a byte-closed archive.
+
+This is not a full contest ``inflate.sh`` runtime benchmark; it isolates the
+archive member parser used by the Z8 detail entropy codecs.
+"""
 
 from __future__ import annotations
 
@@ -48,23 +52,24 @@ def benchmark_archive_decode(
     best = min(timings)
     mean = sum(timings) / len(timings)
     return {
-        "schema": "z8_wavelet_blob_decode_benchmark.v1",
-        "purpose": "Decode-throughput budget check for Z8 detail entropy codecs.",
+        "schema": "z8_wavelet_blob_parse_benchmark.v1",
+        "purpose": "Wavelet-blob parser throughput check for Z8 detail entropy codecs.",
         **NON_PROMOTABLE_MARKERS,
+        "benchmark_scope": "wavelet_blob_parser_only_not_full_contest_inflate",
         "archive_path": archive_path.as_posix(),
         "archive_bytes": len(archive_bytes),
         "wavelet_blob_bytes": len(arc.wavelet_coeffs_blob),
         "pair_count": int(pair_count),
         "repeat": int(repeat),
-        "decode_seconds_best": float(best),
-        "decode_seconds_mean": float(mean),
+        "wavelet_blob_parse_seconds_best": float(best),
+        "wavelet_blob_parse_seconds_mean": float(mean),
         "pairs_per_second_best": float(pair_count / best) if best > 0 else None,
         "auth_eval_window_seconds": float(auth_eval_window_seconds),
-        "auth_eval_window_fraction_best": (
+        "parser_only_auth_eval_window_fraction_best": (
             float(best / auth_eval_window_seconds) if auth_eval_window_seconds > 0 else None
         ),
         "detail_codec_summary": summary,
-        "blockers": [],
+        "blockers": ["full_contest_inflate_sh_runtime_not_measured"],
     }
 
 

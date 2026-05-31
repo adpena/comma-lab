@@ -58,6 +58,9 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "gpu_launched": False,
 }
 SINGLE_UPDATE_AFTER_FULL_REDUCTION = "single_update_after_all_pair_shards_reduce"
+TRUE_P19_POSE_SURFACE_KIND = "per_axis_posenet_jacobian_mahalanobis_v1"
+SCALAR_POSE_LOSS_VJP_SURFACE_KIND = "scalar_first6_pose_mse_vjp_proxy_v1"
+P19_POSE_SURFACE_BLOCKER = "p19_pose_surface_not_true_per_axis_jacobian"
 
 
 @dataclass(frozen=True)
@@ -350,13 +353,15 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         hinge = mx.maximum(0.0, other_logit - true_logit + float(config.seg_margin_delta))
         return mx.mean(hinge)
 
+    pose_axis_count = min(6, int(ref_pose.shape[-1]))
+
     def pose_mse_loss(pair_rgb_255: Any) -> Any:
         _seg_input, pose_input = _mlx_pairs_to_scorer_inputs_nhwc(
             pair_rgb_255,
             scorer_hw=config.scorer_hw,
         )
         pose = mlx_scorer.posenet(pose_input)["pose"]
-        dims = min(6, int(pose.shape[-1]), int(ref_pose.shape[-1]))
+        dims = min(pose_axis_count, int(pose.shape[-1]))
         diff = pose[..., :dims] - ref_pose[..., :dims]
         return mx.mean(diff * diff)
 
@@ -417,6 +422,12 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         "segnet_loss_kind": "reference_argmax_nonsmooth_margin_hinge_vjp",
         "seg_margin_delta": float(config.seg_margin_delta),
         "pose_loss_kind": "reference_pose_head_first6_mse_vjp",
+        "pose_surface_kind": SCALAR_POSE_LOSS_VJP_SURFACE_KIND,
+        "pose_axis_count": int(pose_axis_count),
+        "pose_inverse_variance_source": "unit_scalar_proxy_not_contest_mahalanobis",
+        "pose_jacobian_abs_is_true_jacobian": False,
+        "pose_surface_authority": False,
+        "pose_surface_blockers": [P19_POSE_SURFACE_BLOCKER],
         "full_video_d_pose": float(config.full_video_d_pose),
         "pose_null_threshold": float(config.pose_null_threshold),
         "scorer_hw": [int(config.scorer_hw[0]), int(config.scorer_hw[1])],
@@ -904,6 +915,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
     seg_grad_chunks: list[np.ndarray] = []
     pose_grad_chunks: list[np.ndarray] = []
     shard_reports: list[dict[str, Any]] = []
+    pose_surface_blockers: list[str] = []
     full_video_d_pose: float | None = None
     pose_null_threshold: float = 1e-8
     for shard_index, raw in enumerate(sorted(shard_surfaces, key=lambda row: int(row.get("pair_start", -1)))):
@@ -946,6 +958,15 @@ def assemble_z8_full_video_vjp_surface_bundle(
             raise ValueError("surface shard pair span and tensor shape disagree")
         if seg_grad.shape != joint.shape or pose_grad.shape != joint.shape:
             raise ValueError("surface shard raw gradient tensors must match joint_weight shape")
+        pose_surface_kind = str(raw.get("pose_surface_kind") or "missing_pose_surface_kind")
+        pose_surface_true = (
+            pose_surface_kind == TRUE_P19_POSE_SURFACE_KIND
+            and raw.get("pose_jacobian_abs_is_true_jacobian") is True
+            and raw.get("pose_surface_authority") is True
+        )
+        if not pose_surface_true:
+            shard_pose_blockers = list(raw.get("pose_surface_blockers") or [])
+            pose_surface_blockers.extend(shard_pose_blockers or [P19_POSE_SURFACE_BLOCKER])
         shard_d_pose = raw.get("full_video_d_pose")
         if shard_d_pose is None:
             raise ValueError("surface shard missing full_video_d_pose")
@@ -970,6 +991,8 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 "archive_runtime_candidate_custody": True,
                 "gradient_values_are_full_video_objective_contributions": True,
                 "optimizer_update_applied": False,
+                "pose_surface_kind": pose_surface_kind,
+                "pose_surface_authority": bool(pose_surface_true),
             }
         )
 
@@ -980,6 +1003,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
             "full-video VJP surface does not cover archive pair grid: "
             f"covered={expected_start} required={archive_num_pairs}"
         )
+    pose_surface_authority = full_coverage and not pose_surface_blockers
     joint_full = np.concatenate(joint_chunks, axis=0) if joint_chunks else np.zeros((0, 2, 1, 1, 1))
     mask_full = np.concatenate(mask_chunks, axis=0) if mask_chunks else np.zeros_like(joint_full, dtype=bool)
     if full_coverage:
@@ -993,7 +1017,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 pose_inverse_variance=(1.0,),
                 target_mode=str(plan["target_mode"]),
                 pose_null_threshold=float(pose_null_threshold),
-                evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+                evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE if pose_surface_authority else PROPOSAL_ONLY_SCOPE,
                 full_video_atom_count=int(seg_grad_full.size),
                 linearization_archive_sha=archive_sha,
                 gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
@@ -1001,11 +1025,19 @@ def assemble_z8_full_video_vjp_surface_bundle(
         )
         joint_full = np.asarray(global_surface["joint_weight"], dtype=np.float64)
         mask_full = np.asarray(global_surface["rate_attack_deadzone_mask"], dtype=bool)
+        if not pose_surface_authority:
+            global_surface = {
+                **global_surface,
+                "implicit_allocator_authority": False,
+                "implicit_allocator_blockers": sorted(set(pose_surface_blockers)),
+            }
     else:
         global_surface = {
             "implicit_allocator_authority": False,
             "implicit_allocator_blockers": ["partial_full_video_vjp_surface_probe_only"],
         }
+    authority_blockers = sorted(set(pose_surface_blockers))
+    budget_spend_authority = bool(full_coverage and pose_surface_authority)
     return {
         "schema": Z8_FULL_VIDEO_VJP_SURFACE_BUNDLE_SCHEMA,
         "surface_assembly_backend": "global_kkt_dykstra_after_full_shard_reduction.v1",
@@ -1025,12 +1057,26 @@ def assemble_z8_full_video_vjp_surface_bundle(
         ),
         "gradient_reduction_authority": bool(full_coverage),
         "minibatch_window_gradients_budget_spend_authority": False,
-        "budget_spend_authority": bool(full_coverage),
-        "optimizer_update_authority": bool(full_coverage),
+        "budget_spend_authority": budget_spend_authority,
+        "budget_spend_blockers": authority_blockers,
+        "optimizer_update_authority": budget_spend_authority,
         "optimizer_update_semantics": (
-            SINGLE_UPDATE_AFTER_FULL_REDUCTION if full_coverage else "no_update_partial_surface_probe_only"
+            SINGLE_UPDATE_AFTER_FULL_REDUCTION
+            if budget_spend_authority
+            else (
+                "no_update_pose_surface_not_true_p19_jacobian"
+                if full_coverage
+                else "no_update_partial_surface_probe_only"
+            )
         ),
-        "implicit_allocator_authority": bool(global_surface.get("implicit_allocator_authority", False)),
+        "pose_surface_kind": TRUE_P19_POSE_SURFACE_KIND
+        if pose_surface_authority
+        else SCALAR_POSE_LOSS_VJP_SURFACE_KIND,
+        "pose_surface_authority": bool(pose_surface_authority),
+        "pose_surface_blockers": authority_blockers,
+        "implicit_allocator_authority": bool(
+            budget_spend_authority and global_surface.get("implicit_allocator_authority", False)
+        ),
         "implicit_allocator_blockers": list(global_surface.get("implicit_allocator_blockers") or []),
         "global_joint_surface_report": {
             key: value
@@ -1086,6 +1132,8 @@ def write_z8_full_video_vjp_surface_bundle(
         full_video_reduction_complete=np.asarray(bool(bundle["full_video_reduction_complete"])),
         budget_spend_authority=np.asarray(bool(bundle["budget_spend_authority"])),
         implicit_allocator_authority=np.asarray(bool(bundle.get("implicit_allocator_authority", False))),
+        pose_surface_kind=np.asarray(str(bundle.get("pose_surface_kind", ""))),
+        pose_surface_authority=np.asarray(bool(bundle.get("pose_surface_authority", False))),
     )
     manifest = {
         "schema": "z8_full_video_vjp_surface_bundle_manifest.v1",
@@ -1104,6 +1152,10 @@ def write_z8_full_video_vjp_surface_bundle(
         "budget_spend_authority": bundle["budget_spend_authority"],
         "optimizer_update_authority": bundle["optimizer_update_authority"],
         "optimizer_update_semantics": bundle["optimizer_update_semantics"],
+        "budget_spend_blockers": bundle.get("budget_spend_blockers", []),
+        "pose_surface_kind": bundle.get("pose_surface_kind"),
+        "pose_surface_authority": bundle.get("pose_surface_authority", False),
+        "pose_surface_blockers": bundle.get("pose_surface_blockers", []),
         "implicit_allocator_authority": bundle.get("implicit_allocator_authority", False),
         "implicit_allocator_blockers": bundle.get("implicit_allocator_blockers", []),
         "shard_count": bundle["shard_count"],
@@ -1301,6 +1353,7 @@ def build_z8_full_video_vjp_acquisition_contract() -> dict[str, Any]:
             "linearization_archive_sha_equals_current_archive_sha",
             "candidate_pairs_equal_archive_runtime_reconstruction",
             "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation",
+            "true_per_axis_posenet_jacobian_mahalanobis_surface",
             "single_optimizer_update_after_full_shard_reduction",
             "relinearize_after_each_accepted_archive_mutation",
             "receiver_proof_plus_exact_cpu_cuda_before_score_authority",
@@ -1319,6 +1372,9 @@ def build_z8_full_video_vjp_acquisition_contract() -> dict[str, Any]:
 
 
 __all__ = [
+    "P19_POSE_SURFACE_BLOCKER",
+    "SCALAR_POSE_LOSS_VJP_SURFACE_KIND",
+    "TRUE_P19_POSE_SURFACE_KIND",
     "Z8_FULL_VIDEO_MLX_REPLAY_SCHEMA",
     "Z8_FULL_VIDEO_VJP_ACQUISITION_PLAN_SCHEMA",
     "Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND",

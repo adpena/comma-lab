@@ -15,7 +15,10 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
 )
 from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition import (
     FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+    P19_POSE_SURFACE_BLOCKER,
+    SCALAR_POSE_LOSS_VJP_SURFACE_KIND,
     SINGLE_UPDATE_AFTER_FULL_REDUCTION,
+    TRUE_P19_POSE_SURFACE_KIND,
     Z8_FULL_VIDEO_VJP_MLX_SHARD_BACKEND,
     Z8FullVideoMlxVjpShardConfig,
     Z8FullVideoVjpAcquisitionConfig,
@@ -76,6 +79,10 @@ def _surface_shard(
         "rate_attack_deadzone_mask": np.ones(shape, dtype=bool),
         "segnet_argmax_gradient_abs": joint,
         "pose_jacobian_abs": np.zeros(shape, dtype=np.float32),
+        "pose_surface_kind": TRUE_P19_POSE_SURFACE_KIND,
+        "pose_jacobian_abs_is_true_jacobian": True,
+        "pose_surface_authority": True,
+        "pose_surface_blockers": [],
         "full_video_d_pose": 0.01,
         "pose_null_threshold": 1e-8,
         "archive_runtime_candidate_custody": True,
@@ -143,6 +150,7 @@ def test_full_video_vjp_surface_bundle_requires_archive_pinned_complete_shards()
     assert bundle["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
     assert bundle["gradient_reduction_authority"] is True
     assert bundle["budget_spend_authority"] is True
+    assert bundle["pose_surface_authority"] is True
     assert bundle["optimizer_update_authority"] is True
     assert bundle["surface_assembly_backend"] == "global_kkt_dykstra_after_full_shard_reduction.v1"
     assert bundle["implicit_allocator_authority"] is True
@@ -321,8 +329,11 @@ def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Pat
     assert loaded["gradient_reduction_authority"] is False
     assert bundle["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
     assert bundle["gradient_reduction_authority"] is True
-    assert bundle["budget_spend_authority"] is True
-    assert bundle["optimizer_update_semantics"] == SINGLE_UPDATE_AFTER_FULL_REDUCTION
+    assert bundle["budget_spend_authority"] is False
+    assert bundle["budget_spend_blockers"] == [P19_POSE_SURFACE_BLOCKER]
+    assert bundle["pose_surface_kind"] == SCALAR_POSE_LOSS_VJP_SURFACE_KIND
+    assert bundle["pose_surface_authority"] is False
+    assert bundle["optimizer_update_semantics"] == "no_update_pose_surface_not_true_p19_jacobian"
 
 
 def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -> None:
@@ -333,6 +344,7 @@ def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -
     assert "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation" in contract[
         "contest_budget_spend_requires"
     ]
+    assert "true_per_axis_posenet_jacobian_mahalanobis_surface" in contract["contest_budget_spend_requires"]
     assert "single_optimizer_update_after_full_shard_reduction" in contract["contest_budget_spend_requires"]
     assert "declared_corpus_manifest" in contract["production_budget_spend_requires"]
     assert contract["minibatch_window_gradients_role"] == "ranking_probe_only_between_full_video_passes"
@@ -373,6 +385,10 @@ def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_
     assert shard["budget_spend_authority"] is False
     assert shard["archive_runtime_candidate_custody"] is True
     assert shard["gradient_values_are_full_video_objective_contributions"] is True
+    assert shard["pose_surface_kind"] == SCALAR_POSE_LOSS_VJP_SURFACE_KIND
+    assert shard["pose_jacobian_abs_is_true_jacobian"] is False
+    assert shard["pose_surface_authority"] is False
+    assert shard["pose_surface_blockers"] == [P19_POSE_SURFACE_BLOCKER]
     assert shard["joint_weight"].shape == candidate.shape
     assert shard["rate_attack_deadzone_mask"].shape == candidate.shape
     assert shard["segnet_vjp_abs_max"] > 0.0
@@ -391,7 +407,9 @@ def test_mlx_vjp_shard_producer_emits_non_authority_exact_reduction_surface(tmp_
     assert loaded["budget_spend_authority"] is False
     assert bundle["full_video_reduction_complete"] is True
     assert bundle["gradient_reduction_authority"] is True
-    assert bundle["budget_spend_authority"] is True
+    assert bundle["budget_spend_authority"] is False
+    assert bundle["budget_spend_blockers"] == [P19_POSE_SURFACE_BLOCKER]
+    assert bundle["optimizer_update_semantics"] == "no_update_pose_surface_not_true_p19_jacobian"
 
 
 def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_path: Path) -> None:
@@ -413,7 +431,8 @@ def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_
     assert bundle["full_video_surface_coverage"] is True
     assert bundle["full_video_reduction_complete"] is True
     assert bundle["gradient_reduction_authority"] is True
-    assert bundle["budget_spend_authority"] is True
+    assert bundle["budget_spend_authority"] is False
+    assert bundle["budget_spend_blockers"] == [P19_POSE_SURFACE_BLOCKER]
     assert bundle["joint_weight"].shape == reference_pairs.shape
     assert Path(bundle["surface_provider_bundle_manifest"]["manifest_path"]).is_file()
 
