@@ -1,0 +1,68 @@
+{
+  "baseline": {
+    "channels": 3,
+    "frames": 1200,
+    "height": 96,
+    "mae_rgb255": 4.297382315176504,
+    "max_abs_rgb255": 233.0,
+    "metric_scope": "decoder_grid_lowres_advisory_not_contest_score",
+    "mse_rgb255": 67.43166517469618,
+    "promotion_eligible": false,
+    "psnr_rgb255_db": 29.84216476480419,
+    "schema": "hprc_compact_receiver_decoder_grid_reconstruction_metrics.v1",
+    "score_claim": false,
+    "width": 128
+  },
+  "metric_scope": "decoder_grid_lowres_advisory_not_contest_score",
+  "next_authority_step": "use this ranking for acquisition only; promote with full inflate plus contest CPU/CUDA SegNet/PoseNet replay",
+  "promotion_eligible": false,
+  "schema": "hprc_compact_receiver_section_value_profile.v1",
+  "score_claim": false,
+  "section_rows": [
+    {
+      "delta_mse_per_kib": 57.10691244609597,
+      "delta_mse_rgb255": 67.53561618381076,
+      "neutralized_mse_rgb255": 134.96728135850694,
+      "neutralized_psnr_rgb255_db": 26.8285186087399,
+      "section": "selectors_rc",
+      "section_bytes": 1211,
+      "valid_neutral_packet": true
+    },
+    {
+      "delta_mse_per_kib": 3.0495005234819272,
+      "delta_mse_rgb255": 658.7516736291956,
+      "neutralized_mse_rgb255": 726.1833388038917,
+      "neutralized_psnr_rgb255_db": 19.520340804173646,
+      "section": "decoder_qw",
+      "section_bytes": 221204,
+      "valid_neutral_packet": true
+    },
+    {
+      "delta_mse_per_kib": 0.7073551666004024,
+      "delta_mse_rgb255": 8.301061559606481,
+      "neutralized_mse_rgb255": 75.73272673430266,
+      "neutralized_psnr_rgb255_db": 29.337967671181353,
+      "section": "latents_rc",
+      "section_bytes": 12017,
+      "valid_neutral_packet": true
+    },
+    {
+      "delta_mse_per_kib": 0.025013010240168335,
+      "delta_mse_rgb255": 67.53561618381076,
+      "neutralized_mse_rgb255": 134.96728135850694,
+      "neutralized_psnr_rgb255_db": 26.8285186087399,
+      "section": "residual_rc",
+      "section_bytes": 2764820,
+      "valid_neutral_packet": true
+    },
+    {
+      "delta_mse_per_kib": -0.0865945404245703,
+      "delta_mse_rgb255": -0.6102209020543938,
+      "neutralized_mse_rgb255": 66.82144427264178,
+      "neutralized_psnr_rgb255_db": 29.881645026627734,
+      "section": "receiver_state",
+      "section_bytes": 7216,
+      "valid_neutral_packet": true
+    }
+  ]
+}

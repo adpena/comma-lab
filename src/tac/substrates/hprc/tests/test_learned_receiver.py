@@ -14,6 +14,8 @@ from tac.substrates.hprc.learned_receiver import (
     COMPACT_RECEIVER_MODE,
     build_compact_receiver_packet_from_lowres_frames,
     compact_receiver_reconstruction_metrics,
+    compact_receiver_section_byte_profile,
+    compact_receiver_section_value_profile,
     decode_compact_receiver_packet,
     mutate_compact_receiver_section,
     render_compact_receiver_frame,
@@ -72,6 +74,14 @@ def test_compact_receiver_packet_decodes_semantic_sections() -> None:
     assert metrics["metric_scope"] == "decoder_grid_lowres_advisory_not_contest_score"
     assert metrics["frames"] == 4
     assert metrics["score_claim"] is False
+    byte_profile = compact_receiver_section_byte_profile(packet)
+    rows = {row["section"]: row for row in byte_profile["section_rows"]}
+    assert rows["residual_rc"]["bytes"] > rows["latents_rc"]["bytes"]
+    assert byte_profile["score_claim"] is False
+    value_profile = compact_receiver_section_value_profile(compact, _frames())
+    assert value_profile["metric_scope"] == "decoder_grid_lowres_advisory_not_contest_score"
+    assert value_profile["score_claim"] is False
+    assert any(row["delta_mse_rgb255"] > 0 for row in value_profile["section_rows"])
 
 
 def test_compact_receiver_section_proof_uses_valid_semantic_mutations() -> None:

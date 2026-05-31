@@ -1,0 +1,137 @@
+{
+  "archive_bytes": 1161290,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/archive.zip",
+  "archive_sha256": "8a5deb8603cc64f75593288125e904ee6d1f4cf055705025b7abb21bf757f1a5",
+  "compression_methods": {
+    "deflated": 9
+  },
+  "evidence_grade": "byte_profile_only",
+  "member_count": 9,
+  "members": [
+    {
+      "compressed_bytes": 1145665,
+      "compression_method": "deflated",
+      "crc32": "4d2abd6e",
+      "filename": "0.bin",
+      "sha256": "f8ad8b6b04fd46bb35459e147c865ee32978d95718f72f7f1c3f4f051f2a205b",
+      "uncompressed_bytes": 3008245
+    },
+    {
+      "compressed_bytes": 634,
+      "compression_method": "deflated",
+      "crc32": "96f2bf6d",
+      "filename": "inflate.py",
+      "sha256": "1f3a4cada1ca93d8e60a0a542dfd9566380f89f0466b09a881e0370111ebd610",
+      "uncompressed_bytes": 1244
+    },
+    {
+      "compressed_bytes": 310,
+      "compression_method": "deflated",
+      "crc32": "24dabb20",
+      "filename": "inflate.sh",
+      "sha256": "2502c55ba6c944219dc136e721256db77c8490a771ccf9d5b08cfc607369c7c3",
+      "uncompressed_bytes": 431
+    },
+    {
+      "compressed_bytes": 2,
+      "compression_method": "deflated",
+      "crc32": "00000000",
+      "filename": "src/tac/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressed_bytes": 0
+    },
+    {
+      "compressed_bytes": 2,
+      "compression_method": "deflated",
+      "crc32": "00000000",
+      "filename": "src/tac/substrates/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressed_bytes": 0
+    },
+    {
+      "compressed_bytes": 2,
+      "compression_method": "deflated",
+      "crc32": "00000000",
+      "filename": "src/tac/substrates/hprc/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressed_bytes": 0
+    },
+    {
+      "compressed_bytes": 3826,
+      "compression_method": "deflated",
+      "crc32": "962f4355",
+      "filename": "src/tac/substrates/hprc/archive.py",
+      "sha256": "9832bde1a1411464e942c6f05f084c52bd2b0d7503b315d403c414f7bfece30d",
+      "uncompressed_bytes": 12225
+    },
+    {
+      "compressed_bytes": 1829,
+      "compression_method": "deflated",
+      "crc32": "53844b13",
+      "filename": "src/tac/substrates/hprc/inflate.py",
+      "sha256": "8867777587f890c2d7f4620ba4da75d39de96d8fe04638a484378911ccf4fa34",
+      "uncompressed_bytes": 5384
+    },
+    {
+      "compressed_bytes": 7874,
+      "compression_method": "deflated",
+      "crc32": "2870617e",
+      "filename": "src/tac/substrates/hprc/learned_receiver.py",
+      "sha256": "55170a0ff618a4edede7f428028c06fe3238c47b153b383d877eb93240fb9596",
+      "uncompressed_bytes": 34772
+    }
+  ],
+  "profile_by_suffix": [
+    {
+      "compressed_bytes": 1145665,
+      "key": ".bin",
+      "member_count": 1,
+      "uncompressed_bytes": 3008245
+    },
+    {
+      "compressed_bytes": 14169,
+      "key": ".py",
+      "member_count": 7,
+      "uncompressed_bytes": 53625
+    },
+    {
+      "compressed_bytes": 310,
+      "key": ".sh",
+      "member_count": 1,
+      "uncompressed_bytes": 431
+    }
+  ],
+  "profile_by_top_level": [
+    {
+      "compressed_bytes": 1145665,
+      "key": "0.bin",
+      "member_count": 1,
+      "uncompressed_bytes": 3008245
+    },
+    {
+      "compressed_bytes": 13535,
+      "key": "src",
+      "member_count": 6,
+      "uncompressed_bytes": 52381
+    },
+    {
+      "compressed_bytes": 634,
+      "key": "inflate.py",
+      "member_count": 1,
+      "uncompressed_bytes": 1244
+    },
+    {
+      "compressed_bytes": 310,
+      "key": "inflate.sh",
+      "member_count": 1,
+      "uncompressed_bytes": 431
+    }
+  ],
+  "rate_term": 0.7732553436712464,
+  "schema": "archive_byte_profile_v1",
+  "score_claim": false,
+  "tool": "experiments/profile_archive_bytes.py",
+  "total_compressed_member_bytes": 1160144,
+  "total_uncompressed_member_bytes": 3062301,
+  "zip_overhead_bytes": 1146
+}

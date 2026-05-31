@@ -1,0 +1,419 @@
+{
+  "archive_zip_bytes": 1161290,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/archive.zip",
+  "archive_zip_profile_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/hprc_compact_receiver_archive_zip_profile.json",
+  "archive_zip_sha256": "8a5deb8603cc64f75593288125e904ee6d1f4cf055705025b7abb21bf757f1a5",
+  "byte_ledger_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/hprc_archive_byte_ledger.json",
+  "component_budget_profile": {
+    "archive_member_profile": {
+      "members": [
+        {
+          "compressed_bytes": 1145665,
+          "compression_method": "deflated",
+          "crc32": "4d2abd6e",
+          "filename": "0.bin",
+          "sha256": "f8ad8b6b04fd46bb35459e147c865ee32978d95718f72f7f1c3f4f051f2a205b",
+          "uncompressed_bytes": 3008245
+        },
+        {
+          "compressed_bytes": 634,
+          "compression_method": "deflated",
+          "crc32": "96f2bf6d",
+          "filename": "inflate.py",
+          "sha256": "1f3a4cada1ca93d8e60a0a542dfd9566380f89f0466b09a881e0370111ebd610",
+          "uncompressed_bytes": 1244
+        },
+        {
+          "compressed_bytes": 310,
+          "compression_method": "deflated",
+          "crc32": "24dabb20",
+          "filename": "inflate.sh",
+          "sha256": "2502c55ba6c944219dc136e721256db77c8490a771ccf9d5b08cfc607369c7c3",
+          "uncompressed_bytes": 431
+        },
+        {
+          "compressed_bytes": 2,
+          "compression_method": "deflated",
+          "crc32": "00000000",
+          "filename": "src/tac/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "uncompressed_bytes": 0
+        },
+        {
+          "compressed_bytes": 2,
+          "compression_method": "deflated",
+          "crc32": "00000000",
+          "filename": "src/tac/substrates/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "uncompressed_bytes": 0
+        },
+        {
+          "compressed_bytes": 2,
+          "compression_method": "deflated",
+          "crc32": "00000000",
+          "filename": "src/tac/substrates/hprc/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "uncompressed_bytes": 0
+        },
+        {
+          "compressed_bytes": 3826,
+          "compression_method": "deflated",
+          "crc32": "962f4355",
+          "filename": "src/tac/substrates/hprc/archive.py",
+          "sha256": "9832bde1a1411464e942c6f05f084c52bd2b0d7503b315d403c414f7bfece30d",
+          "uncompressed_bytes": 12225
+        },
+        {
+          "compressed_bytes": 1829,
+          "compression_method": "deflated",
+          "crc32": "53844b13",
+          "filename": "src/tac/substrates/hprc/inflate.py",
+          "sha256": "8867777587f890c2d7f4620ba4da75d39de96d8fe04638a484378911ccf4fa34",
+          "uncompressed_bytes": 5384
+        },
+        {
+          "compressed_bytes": 7874,
+          "compression_method": "deflated",
+          "crc32": "2870617e",
+          "filename": "src/tac/substrates/hprc/learned_receiver.py",
+          "sha256": "55170a0ff618a4edede7f428028c06fe3238c47b153b383d877eb93240fb9596",
+          "uncompressed_bytes": 34772
+        }
+      ],
+      "profile_by_top_level": [
+        {
+          "compressed_bytes": 1145665,
+          "key": "0.bin",
+          "member_count": 1,
+          "uncompressed_bytes": 3008245
+        },
+        {
+          "compressed_bytes": 13535,
+          "key": "src",
+          "member_count": 6,
+          "uncompressed_bytes": 52381
+        },
+        {
+          "compressed_bytes": 634,
+          "key": "inflate.py",
+          "member_count": 1,
+          "uncompressed_bytes": 1244
+        },
+        {
+          "compressed_bytes": 310,
+          "key": "inflate.sh",
+          "member_count": 1,
+          "uncompressed_bytes": 431
+        }
+      ],
+      "zip_overhead_bytes": 1146
+    },
+    "archive_zip_bytes": 1161290,
+    "bytes_over_sub019_zero_distortion_ceiling": 875945,
+    "compression_factor_needed_for_sub019_zero_distortion": 4.06977518442587,
+    "contest_rate_term": 0.7732553436712464,
+    "hprc_payload_section_bytes": 3007829,
+    "mathematical_authority": "component profile is an allocator input; final optimal bytes require MLX/exact SegNet-PoseNet-rate RD curves and Lagrangian lambda solve",
+    "promotion_eligible": false,
+    "schema": "hprc_compact_receiver_component_budget_profile.v1",
+    "score_claim": false,
+    "section_budget_rows": [
+      {
+        "allocation_status": "requires_scorer_rd_curve_and_lagrangian_lambda",
+        "bytes_to_remove_at_proportional_budget": 2085466,
+        "current_payload_bytes": 2764820,
+        "decoder_grid_proxy_delta_mse": 67.53561618381076,
+        "decoder_grid_proxy_delta_mse_per_kib": 0.025013010240168335,
+        "decoder_grid_proxy_value_available": true,
+        "entropy_position": "before_entropy_coder",
+        "pipeline_stage": "pre_entropy_scorer_weighted_residual_tokens",
+        "proportional_budget_basis": "current archive.zip-to-hprc-payload compression ratio; not an optimal allocation",
+        "section": "residual_rc",
+        "share_of_hprc_payload": 0.91920784,
+        "zero_distortion_sub019_proportional_budget_bytes": 679354
+      },
+      {
+        "allocation_status": "requires_scorer_rd_curve_and_lagrangian_lambda",
+        "bytes_to_remove_at_proportional_budget": 166852,
+        "current_payload_bytes": 221204,
+        "decoder_grid_proxy_delta_mse": 658.7516736291956,
+        "decoder_grid_proxy_delta_mse_per_kib": 3.0495005234819272,
+        "decoder_grid_proxy_value_available": true,
+        "entropy_position": "before_entropy_coder",
+        "pipeline_stage": "pre_entropy_learned_renderer_weights",
+        "proportional_budget_basis": "current archive.zip-to-hprc-payload compression ratio; not an optimal allocation",
+        "section": "decoder_qw",
+        "share_of_hprc_payload": 0.07354274,
+        "zero_distortion_sub019_proportional_budget_bytes": 54352
+      },
+      {
+        "allocation_status": "requires_scorer_rd_curve_and_lagrangian_lambda",
+        "bytes_to_remove_at_proportional_budget": 9065,
+        "current_payload_bytes": 12017,
+        "decoder_grid_proxy_delta_mse": 8.301061559606481,
+        "decoder_grid_proxy_delta_mse_per_kib": 0.7073551666004024,
+        "decoder_grid_proxy_value_available": true,
+        "entropy_position": "before_entropy_coder",
+        "pipeline_stage": "pre_entropy_frame_latent_stream",
+        "proportional_budget_basis": "current archive.zip-to-hprc-payload compression ratio; not an optimal allocation",
+        "section": "latents_rc",
+        "share_of_hprc_payload": 0.00399524,
+        "zero_distortion_sub019_proportional_budget_bytes": 2952
+      },
+      {
+        "allocation_status": "requires_scorer_rd_curve_and_lagrangian_lambda",
+        "bytes_to_remove_at_proportional_budget": 5443,
+        "current_payload_bytes": 7216,
+        "decoder_grid_proxy_delta_mse": -0.6102209020543938,
+        "decoder_grid_proxy_delta_mse_per_kib": -0.0865945404245703,
+        "decoder_grid_proxy_value_available": true,
+        "entropy_position": "before_entropy_coder",
+        "pipeline_stage": "decode_time_temporal_state_stream",
+        "proportional_budget_basis": "current archive.zip-to-hprc-payload compression ratio; not an optimal allocation",
+        "section": "receiver_state",
+        "share_of_hprc_payload": 0.00239907,
+        "zero_distortion_sub019_proportional_budget_bytes": 1773
+      },
+      {
+        "allocation_status": "requires_scorer_rd_curve_and_lagrangian_lambda",
+        "bytes_to_remove_at_proportional_budget": 914,
+        "current_payload_bytes": 1211,
+        "decoder_grid_proxy_delta_mse": 67.53561618381076,
+        "decoder_grid_proxy_delta_mse_per_kib": 57.10691244609597,
+        "decoder_grid_proxy_value_available": true,
+        "entropy_position": "before_entropy_coder",
+        "pipeline_stage": "pre_entropy_frame_selector_stream",
+        "proportional_budget_basis": "current archive.zip-to-hprc-payload compression ratio; not an optimal allocation",
+        "section": "selectors_rc",
+        "share_of_hprc_payload": 0.00040262,
+        "zero_distortion_sub019_proportional_budget_bytes": 297
+      },
+      {
+        "allocation_status": "requires_scorer_rd_curve_and_lagrangian_lambda",
+        "bytes_to_remove_at_proportional_budget": 832,
+        "current_payload_bytes": 1102,
+        "decoder_grid_proxy_delta_mse": null,
+        "decoder_grid_proxy_delta_mse_per_kib": 0.0,
+        "decoder_grid_proxy_value_available": false,
+        "entropy_position": "after_transform_metadata",
+        "pipeline_stage": "custody_and_provenance_metadata",
+        "proportional_budget_basis": "current archive.zip-to-hprc-payload compression ratio; not an optimal allocation",
+        "section": "manifest_json",
+        "share_of_hprc_payload": 0.00036638,
+        "zero_distortion_sub019_proportional_budget_bytes": 270
+      },
+      {
+        "allocation_status": "requires_scorer_rd_curve_and_lagrangian_lambda",
+        "bytes_to_remove_at_proportional_budget": 196,
+        "current_payload_bytes": 259,
+        "decoder_grid_proxy_delta_mse": null,
+        "decoder_grid_proxy_delta_mse_per_kib": 0.0,
+        "decoder_grid_proxy_value_available": false,
+        "entropy_position": "after_transform_metadata",
+        "pipeline_stage": "allocator_contract_metadata",
+        "proportional_budget_basis": "current archive.zip-to-hprc-payload compression ratio; not an optimal allocation",
+        "section": "rdo_plan",
+        "share_of_hprc_payload": 8.611e-05,
+        "zero_distortion_sub019_proportional_budget_bytes": 63
+      }
+    ],
+    "sub019_zero_distortion_archive_byte_ceiling": 285345,
+    "target_section_payload_budget_at_current_archive_compression_ratio": 739065
+  },
+  "component_budget_profile_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/hprc_compact_receiver_component_budget_profile.json",
+  "decoder_grid_reconstruction_metrics": {
+    "channels": 3,
+    "frames": 1200,
+    "height": 96,
+    "mae_rgb255": 4.297382315176504,
+    "max_abs_rgb255": 233.0,
+    "metric_scope": "decoder_grid_lowres_advisory_not_contest_score",
+    "mse_rgb255": 67.43166517469618,
+    "promotion_eligible": false,
+    "psnr_rgb255_db": 29.84216476480419,
+    "schema": "hprc_compact_receiver_decoder_grid_reconstruction_metrics.v1",
+    "score_claim": false,
+    "width": 128
+  },
+  "decoder_grid_reconstruction_metrics_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/hprc_compact_receiver_decoder_grid_reconstruction_metrics.json",
+  "exact_axis_blocker": "contest_cpu_cuda_exact_eval_not_executed",
+  "hprc_0bin_bytes": 3008245,
+  "hprc_0bin_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/0.bin",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/receiver_proof/hprc_receiver_proof.json",
+  "schema": "hprc_compact_receiver_candidate_materialization_result.v1",
+  "score_claim": false,
+  "section_byte_profile": {
+    "basis_count": 5,
+    "decoder_grid_height": 96,
+    "decoder_grid_width": 128,
+    "frames": 1200,
+    "hprc_payload_section_bytes": 3007829,
+    "low_hanging_fruit": [
+      {
+        "bytes": 2764820,
+        "next_action": "entropy-code residual int8 tokens with significance map or learned prior",
+        "reason": "block residual stream dominates compact HPRC payload",
+        "target": "residual_rc"
+      },
+      {
+        "bytes": 12017,
+        "next_action": "delta-code pair latents and range/ANS code residual symbols",
+        "reason": "dense int16 latent stream is small but still directly optimizable",
+        "target": "latents_rc"
+      },
+      {
+        "bytes": 3007829,
+        "next_action": "sweep decoder grid and residual grid under exact replay before demotion",
+        "reason": "96x128 grid is low enough for rate but risks SegNet/PoseNet loss after camera upsample",
+        "target": "decoder_grid"
+      }
+    ],
+    "pairs": 600,
+    "promotion_eligible": false,
+    "receiver_mode": "compact_numpy_receiver_v1",
+    "residual_grid_height": 24,
+    "residual_grid_width": 32,
+    "schema": "hprc_compact_receiver_section_byte_profile.v1",
+    "score_claim": false,
+    "section_rows": [
+      {
+        "bytes": 2764820,
+        "section": "residual_rc",
+        "share_of_hprc_payload": 0.91920784
+      },
+      {
+        "bytes": 221204,
+        "section": "decoder_qw",
+        "share_of_hprc_payload": 0.07354274
+      },
+      {
+        "bytes": 12017,
+        "section": "latents_rc",
+        "share_of_hprc_payload": 0.00399524
+      },
+      {
+        "bytes": 7216,
+        "section": "receiver_state",
+        "share_of_hprc_payload": 0.00239907
+      },
+      {
+        "bytes": 1211,
+        "section": "selectors_rc",
+        "share_of_hprc_payload": 0.00040262
+      },
+      {
+        "bytes": 1102,
+        "section": "manifest_json",
+        "share_of_hprc_payload": 0.00036638
+      },
+      {
+        "bytes": 259,
+        "section": "rdo_plan",
+        "share_of_hprc_payload": 8.611e-05
+      }
+    ]
+  },
+  "section_byte_profile_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/hprc_compact_receiver_section_byte_profile.json",
+  "section_value_profile": {
+    "baseline": {
+      "channels": 3,
+      "frames": 1200,
+      "height": 96,
+      "mae_rgb255": 4.297382315176504,
+      "max_abs_rgb255": 233.0,
+      "metric_scope": "decoder_grid_lowres_advisory_not_contest_score",
+      "mse_rgb255": 67.43166517469618,
+      "promotion_eligible": false,
+      "psnr_rgb255_db": 29.84216476480419,
+      "schema": "hprc_compact_receiver_decoder_grid_reconstruction_metrics.v1",
+      "score_claim": false,
+      "width": 128
+    },
+    "metric_scope": "decoder_grid_lowres_advisory_not_contest_score",
+    "next_authority_step": "use this ranking for acquisition only; promote with full inflate plus contest CPU/CUDA SegNet/PoseNet replay",
+    "promotion_eligible": false,
+    "schema": "hprc_compact_receiver_section_value_profile.v1",
+    "score_claim": false,
+    "section_rows": [
+      {
+        "delta_mse_per_kib": 57.10691244609597,
+        "delta_mse_rgb255": 67.53561618381076,
+        "neutralized_mse_rgb255": 134.96728135850694,
+        "neutralized_psnr_rgb255_db": 26.8285186087399,
+        "section": "selectors_rc",
+        "section_bytes": 1211,
+        "valid_neutral_packet": true
+      },
+      {
+        "delta_mse_per_kib": 3.0495005234819272,
+        "delta_mse_rgb255": 658.7516736291956,
+        "neutralized_mse_rgb255": 726.1833388038917,
+        "neutralized_psnr_rgb255_db": 19.520340804173646,
+        "section": "decoder_qw",
+        "section_bytes": 221204,
+        "valid_neutral_packet": true
+      },
+      {
+        "delta_mse_per_kib": 0.7073551666004024,
+        "delta_mse_rgb255": 8.301061559606481,
+        "neutralized_mse_rgb255": 75.73272673430266,
+        "neutralized_psnr_rgb255_db": 29.337967671181353,
+        "section": "latents_rc",
+        "section_bytes": 12017,
+        "valid_neutral_packet": true
+      },
+      {
+        "delta_mse_per_kib": 0.025013010240168335,
+        "delta_mse_rgb255": 67.53561618381076,
+        "neutralized_mse_rgb255": 134.96728135850694,
+        "neutralized_psnr_rgb255_db": 26.8285186087399,
+        "section": "residual_rc",
+        "section_bytes": 2764820,
+        "valid_neutral_packet": true
+      },
+      {
+        "delta_mse_per_kib": -0.0865945404245703,
+        "delta_mse_rgb255": -0.6102209020543938,
+        "neutralized_mse_rgb255": 66.82144427264178,
+        "neutralized_psnr_rgb255_db": 29.881645026627734,
+        "section": "receiver_state",
+        "section_bytes": 7216,
+        "valid_neutral_packet": true
+      }
+    ]
+  },
+  "section_value_profile_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/hprc_compact_receiver_section_value_profile.json",
+  "source_manifest_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z/hprc_compact_receiver_source_manifest.json",
+  "zero_distortion_compression_gap_rows": [
+    {
+      "authority": "rate_only_zero_distortion_ceiling_not_score_claim",
+      "bytes_over_zero_distortion_ceiling": 875945,
+      "compression_factor_needed_from_current": 4.06977518442587,
+      "target_score": 0.19,
+      "zero_distortion_archive_byte_ceiling": 285345
+    },
+    {
+      "authority": "rate_only_zero_distortion_ceiling_not_score_claim",
+      "bytes_over_zero_distortion_ceiling": 890963,
+      "compression_factor_needed_from_current": 4.29587129661484,
+      "target_score": 0.18,
+      "zero_distortion_archive_byte_ceiling": 270327
+    },
+    {
+      "authority": "rate_only_zero_distortion_ceiling_not_score_claim",
+      "bytes_over_zero_distortion_ceiling": 936018,
+      "compression_factor_needed_from_current": 5.1550569977627045,
+      "target_score": 0.15,
+      "zero_distortion_archive_byte_ceiling": 225272
+    },
+    {
+      "authority": "rate_only_zero_distortion_ceiling_not_score_claim",
+      "bytes_over_zero_distortion_ceiling": 1011109,
+      "compression_factor_needed_from_current": 7.732602659457588,
+      "target_score": 0.1,
+      "zero_distortion_archive_byte_ceiling": 150181
+    }
+  ]
+}
