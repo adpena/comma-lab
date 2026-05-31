@@ -11,6 +11,7 @@ surface bundle contract consumed by the coefficient materializer.
 from __future__ import annotations
 
 import hashlib
+import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -279,6 +280,69 @@ def write_z8_full_video_vjp_surface_bundle(
     return manifest
 
 
+def write_z8_full_video_vjp_acquisition_plan(
+    archive_bytes: bytes,
+    output_dir: str | Path,
+    *,
+    config: Z8FullVideoVjpAcquisitionConfig | None = None,
+) -> dict[str, Any]:
+    """Write the deterministic full-video VJP shard plan for queue execution."""
+
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    plan = build_z8_full_video_vjp_acquisition_plan(archive_bytes, config=config)
+    plan_path = out_dir / "z8_full_video_vjp_acquisition_plan.json"
+    write_json(plan_path, plan)
+    plan["plan_path"] = plan_path.as_posix()
+    write_json(plan_path, plan)
+    return plan
+
+
+def load_z8_full_video_vjp_surface_shard_file(path: str | Path) -> dict[str, Any]:
+    """Load one archive-pinned full-video VJP shard from NPZ or JSON."""
+
+    p = Path(path)
+    if p.suffix == ".npz":
+        data = np.load(p)
+        required = {
+            "joint_weight",
+            "rate_attack_deadzone_mask",
+            "pair_start",
+            "pair_end",
+            "linearization_archive_sha",
+        }
+        missing = sorted(key for key in required if key not in data)
+        if missing:
+            raise ValueError(f"{p} missing required shard keys: {missing}")
+        return {
+            "shard_index": int(np.asarray(data.get("shard_index", 0)).reshape(-1)[0]),
+            "pair_start": int(np.asarray(data["pair_start"]).reshape(-1)[0]),
+            "pair_end": int(np.asarray(data["pair_end"]).reshape(-1)[0]),
+            "linearization_archive_sha": str(
+                np.asarray(data["linearization_archive_sha"]).reshape(-1)[0]
+            ),
+            "joint_weight": np.asarray(data["joint_weight"], dtype=np.float64),
+            "rate_attack_deadzone_mask": np.asarray(
+                data["rate_attack_deadzone_mask"],
+                dtype=bool,
+            ),
+        }
+    payload = json.loads(p.read_text(encoding="utf-8"))
+    return {
+        "shard_index": int(payload.get("shard_index", 0)),
+        "pair_start": int(payload["pair_start"]),
+        "pair_end": int(payload["pair_end"]),
+        "linearization_archive_sha": str(payload["linearization_archive_sha"]),
+        "joint_weight": np.asarray(payload["joint_weight"], dtype=np.float64),
+        "rate_attack_deadzone_mask": np.asarray(
+            payload["rate_attack_deadzone_mask"],
+            dtype=bool,
+        ),
+        "optimizer_update_applied": bool(payload.get("optimizer_update_applied", False)),
+        "budget_spend_authority": bool(payload.get("budget_spend_authority", False)),
+    }
+
+
 def build_z8_full_video_vjp_acquisition_contract() -> dict[str, Any]:
     """Return the stable contract embedded in Z8 driver metadata."""
 
@@ -315,5 +379,7 @@ __all__ = [
     "assemble_z8_full_video_vjp_surface_bundle",
     "build_z8_full_video_vjp_acquisition_contract",
     "build_z8_full_video_vjp_acquisition_plan",
+    "load_z8_full_video_vjp_surface_shard_file",
+    "write_z8_full_video_vjp_acquisition_plan",
     "write_z8_full_video_vjp_surface_bundle",
 ]

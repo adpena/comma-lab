@@ -18,6 +18,8 @@ from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition
     assemble_z8_full_video_vjp_surface_bundle,
     build_z8_full_video_vjp_acquisition_contract,
     build_z8_full_video_vjp_acquisition_plan,
+    load_z8_full_video_vjp_surface_shard_file,
+    write_z8_full_video_vjp_acquisition_plan,
     write_z8_full_video_vjp_surface_bundle,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
@@ -185,6 +187,37 @@ def test_full_video_vjp_surface_bundle_writes_materializer_ready_npz(tmp_path: P
     payload = np.load(manifest["surface_path"])
     assert payload["joint_weight"].shape == (2, 2, 16, 16, 3)
     assert payload["rate_attack_deadzone_mask"].shape == (2, 2, 16, 16, 3)
+
+
+def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Path) -> None:
+    archive = _archive_bytes(num_pairs=2)
+    plan = write_z8_full_video_vjp_acquisition_plan(
+        archive,
+        tmp_path / "plan",
+        config=Z8FullVideoVjpAcquisitionConfig(pair_chunk_size=1),
+    )
+    sha = plan["archive_sha256"]
+    shard_path = tmp_path / "shard0.npz"
+    np.savez_compressed(
+        shard_path,
+        shard_index=np.asarray(0),
+        pair_start=np.asarray(0),
+        pair_end=np.asarray(2),
+        linearization_archive_sha=np.asarray(sha),
+        joint_weight=np.zeros((2, 2, 16, 16, 3), dtype=np.float32),
+        rate_attack_deadzone_mask=np.ones((2, 2, 16, 16, 3), dtype=bool),
+    )
+
+    loaded = load_z8_full_video_vjp_surface_shard_file(shard_path)
+    bundle = assemble_z8_full_video_vjp_surface_bundle(
+        archive,
+        shard_surfaces=[loaded],
+    )
+
+    assert Path(plan["plan_path"]).is_file()
+    assert loaded["linearization_archive_sha"] == sha
+    assert bundle["budget_spend_authority"] is True
+    assert bundle["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
 
 
 def test_full_video_vjp_contract_keeps_contest_and_production_modes_explicit() -> None:

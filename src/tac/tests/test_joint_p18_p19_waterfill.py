@@ -7,12 +7,14 @@ import pytest
 from tac.optimization.joint_p18_p19_waterfill import (
     CONTEST_VIDEO_OVERFIT_MODE,
     FULL_VIDEO_AUTHORITY_SCOPE,
+    FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
     JOINT_P18_P19_RATE_ATTACK_ROLE,
     JOINT_P18_P19_WEIGHT_FORMULA,
     JointP18P19WaterfillAuthorityError,
     JointP18P19WaterfillConfig,
     build_joint_p18_p19_waterfill_surface,
     mahalanobis_pose_jacobian_norm,
+    require_exact_full_video_gradient_reduction,
     require_fresh_joint_surface,
     require_full_video_joint_surface,
     surface_is_stale_for_archive,
@@ -46,6 +48,7 @@ def _full_video_surface(
             evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
             full_video_atom_count=seg.size,
             linearization_archive_sha=sha,
+            gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
         ),
     )
 
@@ -93,6 +96,11 @@ def test_joint_p18_p19_weight_uses_segnet_and_pose_mahalanobis_terms() -> None:
     assert surface["safe_rate_spend_mask"].tolist() == [True, False, False]
     assert surface["full_video_authority"] is False
     assert "joint_p18_p19_surface_not_full_video_scope" in surface["full_video_authority_blockers"]
+    assert surface["gradient_reduction_authority"] is False
+    assert (
+        "joint_p18_p19_gradient_reduction_not_exact_full_video_accumulation" in surface["gradient_reduction_blockers"]
+    )
+    assert surface["optimizer_update_semantics"] == "no_update_probe_only"
     assert surface["ready_for_budget_spend"] is False
     assert surface["score_claim"] is False
     assert surface["ready_for_exact_eval_dispatch"] is False
@@ -132,6 +140,7 @@ def test_joint_p18_p19_requires_full_video_authority_for_budget_spend() -> None:
     assert authoritative["full_video_authority_blockers"] == []
     assert authoritative["ready_for_budget_spend"] is False
     assert "joint_p18_p19_linearization_archive_sha_missing" in authoritative["fresh_surface_blockers"]
+    assert authoritative["gradient_reduction_authority"] is False
 
 
 def test_joint_p18_p19_rejects_partial_full_video_coverage() -> None:
@@ -184,6 +193,9 @@ def test_surface_carries_local_tangent_plane_markers_and_pinned_sha() -> None:
     assert surface["surface_is_local_tangent_plane"] is True
     assert surface["recompute_required_after_archive_mutation"] is True
     assert surface["linearization_archive_sha"] == sha
+    assert surface["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
+    assert surface["pair_chunk_updates_forbidden"] is True
+    assert surface["optimizer_update_semantics"] == "single_update_after_all_pair_shards_reduce"
 
 
 def test_surface_is_stale_for_archive_detects_accepted_mutation() -> None:
@@ -244,6 +256,7 @@ def test_joint_surface_target_mode_toggle_records_production_contract() -> None:
             evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
             full_video_atom_count=seg.size,
             linearization_archive_sha=ARCHIVE_A_SHA,
+            gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
         ),
     )
 
@@ -252,6 +265,43 @@ def test_joint_surface_target_mode_toggle_records_production_contract() -> None:
     assert surface["corpus_manifest_required"] is True
     assert surface["ready_for_budget_spend"] is True
     assert surface["objective_mode_contract"]["no_hidden_video_or_corpus_binding"] is True
+
+
+def test_joint_surface_requires_exact_full_video_reduction_for_budget_spend() -> None:
+    seg = np.array([0.01, 0.02], dtype=np.float64)
+    sampled = build_joint_p18_p19_waterfill_surface(
+        segnet_argmax_gradient=seg,
+        pose_jacobian=np.zeros((2, 1), dtype=np.float64),
+        config=JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+            full_video_atom_count=seg.size,
+            linearization_archive_sha=ARCHIVE_A_SHA,
+        ),
+    )
+
+    require_full_video_joint_surface(sampled)
+    require_fresh_joint_surface(sampled, current_archive_sha=ARCHIVE_A_SHA)
+    assert sampled["ready_for_budget_spend"] is False
+    with pytest.raises(JointP18P19WaterfillAuthorityError, match="not_exact_full_video_accumulation"):
+        require_exact_full_video_gradient_reduction(sampled)
+
+    exact = build_joint_p18_p19_waterfill_surface(
+        segnet_argmax_gradient=seg,
+        pose_jacobian=np.zeros((2, 1), dtype=np.float64),
+        config=JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+            full_video_atom_count=seg.size,
+            linearization_archive_sha=ARCHIVE_A_SHA,
+            gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+        ),
+    )
+
+    require_exact_full_video_gradient_reduction(exact)
+    assert exact["ready_for_budget_spend"] is True
 
 
 def test_joint_surface_rejects_unknown_target_mode() -> None:
@@ -290,6 +340,7 @@ def test_coverage_and_freshness_are_orthogonal_and_both_required() -> None:
             d_pose=1e-4,
             pose_inverse_variance=(1.0,),
             linearization_archive_sha=archive_a,
+            gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
         ),
     )
     require_fresh_joint_surface(crop_fresh, current_archive_sha=archive_a)  # fresh: ok

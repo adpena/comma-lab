@@ -55,6 +55,8 @@ JOINT_P18_P19_RATE_ATTACK_ROLE = (
 )
 FULL_VIDEO_AUTHORITY_SCOPE = "full_video"
 PROPOSAL_ONLY_SCOPE = "proposal_only"
+FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION = "full_video_exact_accumulation"
+PROPOSAL_OR_SAMPLED_REDUCTION = "proposal_or_sampled"
 
 
 class JointP18P19WaterfillAuthorityError(ValueError):
@@ -78,6 +80,7 @@ class JointP18P19WaterfillConfig:
     evidence_scope: str = PROPOSAL_ONLY_SCOPE
     full_video_atom_count: int | None = None
     linearization_archive_sha: str | None = None
+    gradient_reduction_semantics: str = PROPOSAL_OR_SAMPLED_REDUCTION
 
     def __post_init__(self) -> None:
         if self.d_pose < 0.0:
@@ -93,6 +96,14 @@ class JointP18P19WaterfillConfig:
         normalize_target_optimization_mode(self.target_mode)
         if self.evidence_scope not in {PROPOSAL_ONLY_SCOPE, FULL_VIDEO_AUTHORITY_SCOPE}:
             raise ValueError(f"evidence_scope must be {PROPOSAL_ONLY_SCOPE!r} or {FULL_VIDEO_AUTHORITY_SCOPE!r}")
+        if self.gradient_reduction_semantics not in {
+            PROPOSAL_OR_SAMPLED_REDUCTION,
+            FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+        }:
+            raise ValueError(
+                "gradient_reduction_semantics must be "
+                f"{PROPOSAL_OR_SAMPLED_REDUCTION!r} or {FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION!r}"
+            )
         if self.full_video_atom_count is not None and self.full_video_atom_count <= 0:
             raise ValueError("full_video_atom_count must be positive when provided")
         if self.linearization_archive_sha is not None and not _looks_like_sha256(self.linearization_archive_sha):
@@ -147,6 +158,12 @@ def _fresh_surface_blockers(linearization_archive_sha: str | None) -> list[str]:
     return []
 
 
+def _gradient_reduction_blockers(gradient_reduction_semantics: str) -> list[str]:
+    if gradient_reduction_semantics != FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION:
+        return ["joint_p18_p19_gradient_reduction_not_exact_full_video_accumulation"]
+    return []
+
+
 def require_full_video_joint_surface(
     surface: dict[str, Any],
     *,
@@ -157,6 +174,24 @@ def require_full_video_joint_surface(
     blockers = list(surface.get("full_video_authority_blockers") or [])
     if surface.get("full_video_authority") is not True or blockers:
         detail = ",".join(str(blocker) for blocker in blockers) or "full_video_authority_false"
+        raise JointP18P19WaterfillAuthorityError(f"{context}: {detail}")
+
+
+def require_exact_full_video_gradient_reduction(
+    surface: dict[str, Any],
+    *,
+    context: str = "joint_p18_p19_waterfill_surface",
+) -> None:
+    """Refuse budget spend from sampled gradients or chunk-local updates.
+
+    Chunking is allowed only as deterministic memory scheduling:
+    ``grad = sum(pair_chunk_grads)`` over the entire video, then one optimizer
+    update. Pair/window shards must never update independently.
+    """
+
+    blockers = list(surface.get("gradient_reduction_blockers") or [])
+    if surface.get("gradient_reduction_authority") is not True or blockers:
+        detail = ",".join(str(blocker) for blocker in blockers) or "gradient_reduction_authority_false"
         raise JointP18P19WaterfillAuthorityError(f"{context}: {detail}")
 
 
@@ -241,11 +276,12 @@ def build_joint_p18_p19_waterfill_surface(
         full_video_atom_count=config.full_video_atom_count,
     )
     fresh_blockers = _fresh_surface_blockers(config.linearization_archive_sha)
+    gradient_reduction_blockers = _gradient_reduction_blockers(config.gradient_reduction_semantics)
     target_mode = config.normalized_target_mode
     pose_null_mask = pose_norm <= float(config.pose_null_threshold)
     rate_attack_deadzone_mask = pose_null_mask & (joint <= np.median(joint))
     distortion_protect_mask = ~rate_attack_deadzone_mask
-    ready_for_budget_spend = not authority_blockers and not fresh_blockers
+    ready_for_budget_spend = not authority_blockers and not fresh_blockers and not gradient_reduction_blockers
     return {
         "schema": JOINT_P18_P19_WATERFILL_SCHEMA,
         "formula": JOINT_P18_P19_WEIGHT_FORMULA,
@@ -275,6 +311,13 @@ def build_joint_p18_p19_waterfill_surface(
         ),
         "full_video_authority": not authority_blockers,
         "full_video_authority_blockers": authority_blockers,
+        "gradient_reduction_semantics": config.gradient_reduction_semantics,
+        "gradient_reduction_authority": not gradient_reduction_blockers,
+        "gradient_reduction_blockers": gradient_reduction_blockers,
+        "pair_chunk_updates_forbidden": True,
+        "optimizer_update_semantics": (
+            "single_update_after_all_pair_shards_reduce" if not gradient_reduction_blockers else "no_update_probe_only"
+        ),
         "linearization_archive_sha": config.linearization_archive_sha,
         "surface_is_local_tangent_plane": True,
         "recompute_required_after_archive_mutation": True,
@@ -298,14 +341,17 @@ def build_joint_p18_p19_waterfill_surface(
 __all__ = [
     "CONTEST_VIDEO_OVERFIT_MODE",
     "FULL_VIDEO_AUTHORITY_SCOPE",
+    "FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION",
     "JOINT_P18_P19_RATE_ATTACK_ROLE",
     "JOINT_P18_P19_WATERFILL_SCHEMA",
     "JOINT_P18_P19_WEIGHT_FORMULA",
     "PROPOSAL_ONLY_SCOPE",
+    "PROPOSAL_OR_SAMPLED_REDUCTION",
     "JointP18P19WaterfillAuthorityError",
     "JointP18P19WaterfillConfig",
     "build_joint_p18_p19_waterfill_surface",
     "mahalanobis_pose_jacobian_norm",
+    "require_exact_full_video_gradient_reduction",
     "require_fresh_joint_surface",
     "require_full_video_joint_surface",
     "surface_is_stale_for_archive",
