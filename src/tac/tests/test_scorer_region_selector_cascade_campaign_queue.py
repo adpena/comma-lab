@@ -238,4 +238,17 @@ def test_campaign_report_harvests_variant_learning_rows(tmp_path: Path) -> None:
     assert report["rows"][0]["candidate_passed_local_cpu_gate"] is False
     assert "local_cpu_score_not_below_auth_frontier" in report["blockers"]
     assert report["rows"][0]["output_change_observed"] is True
+    assert report["mlx_positive_full_cpu_negative_split_count"] == 1
+    update = report["posterior_acquisition_updates"][0]
+    assert update["operator_position_group"] == ["P19", "P18", "P11", "P15"]
+    assert update["mlx_acquisition_positive"] is True
+    assert update["full_cpu_negative"] is True
+    assert update["mlx_positive_full_cpu_negative_split"] is True
+    assert update["cpu_pre_gate_status"] == "failed"
+    assert update["byte_pressure"]["saved_bytes"] == 10
+    assert update["posterior_budget_routing_decision"] == (
+        "demote_grouped_stack_and_remeasure_cpu_before_budget"
+    )
+    assert update["budget_spend_allowed"] is False
+    assert update["ready_for_exact_eval_dispatch"] is False
     assert report["score_claim"] is False

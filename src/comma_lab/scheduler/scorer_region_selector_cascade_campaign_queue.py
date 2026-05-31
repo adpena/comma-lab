@@ -640,6 +640,81 @@ def _best_dataset_delta(dataset: Mapping[str, Any]) -> float | None:
     return min(values) if values else None
 
 
+def _safe_number(value: Any) -> float | None:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    return float(value)
+
+
+def _saved_bytes(row: Mapping[str, Any]) -> int:
+    for key in (
+        "cumulative_rate_saved_bytes_vs_source",
+        "selector_saved_bytes",
+        "repack_saved_bytes_after_selector",
+    ):
+        value = row.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+    return 0
+
+
+def _posterior_acquisition_update(row: Mapping[str, Any]) -> dict[str, Any]:
+    dataset_delta = _safe_number(row.get("best_dataset_delta_vs_baseline_score"))
+    local_delta = _safe_number(row.get("local_cpu_delta_vs_auth_frontier"))
+    mlx_positive = dataset_delta is not None and dataset_delta < 0.0
+    cpu_present = row.get("local_cpu_present") is True
+    cpu_gate_passed = row.get("candidate_passed_local_cpu_gate") is True
+    cpu_negative = cpu_present and not cpu_gate_passed
+    split = mlx_positive and cpu_negative
+    output_change = row.get("raw_shape_preserving_output_change_observed") is True
+    bridge_present = row.get("exact_ready_bridge_present") is True
+    saved_bytes = _saved_bytes(row)
+    stack_penalty = 0.0
+    if split:
+        stack_penalty += 0.22
+    if not output_change:
+        stack_penalty += 0.06
+    if not bridge_present:
+        stack_penalty += 0.04
+    if saved_bytes <= 0:
+        stack_penalty += 0.05
+    if cpu_gate_passed:
+        decision = "promote_to_exact_ready_bridge_preclaim"
+    elif split:
+        decision = "demote_grouped_stack_and_remeasure_cpu_before_budget"
+    elif mlx_positive and not cpu_present:
+        decision = "queue_cpu_pre_gate_before_exact_or_materializer_budget"
+    elif cpu_negative:
+        decision = "demote_or_rebudget_after_negative_cpu_pre_gate"
+    else:
+        decision = "hold_until_mlx_or_cpu_evidence"
+    return {
+        "schema": "scorer_region_cascade_posterior_acquisition_update.v1",
+        "variant_id": row.get("variant_id"),
+        "operator_position_group": ["P19", "P18", "P11", "P15"],
+        "mlx_acquisition_positive": mlx_positive,
+        "full_cpu_negative": cpu_negative,
+        "mlx_positive_full_cpu_negative_split": split,
+        "best_dataset_delta_vs_baseline_score": dataset_delta,
+        "local_cpu_delta_vs_auth_frontier": local_delta,
+        "cpu_pre_gate_status": (
+            "passed" if cpu_gate_passed else "failed" if cpu_present else "missing"
+        ),
+        "byte_pressure": {
+            "saved_bytes": saved_bytes,
+            "credit_state": "available" if saved_bytes > 0 else "exhausted_or_absent",
+            "byte_pressure_penalty": 0.0 if saved_bytes > 0 else 0.05,
+        },
+        "stack_penalty": round(stack_penalty, 6),
+        "posterior_budget_routing_decision": decision,
+        "negative_evidence_demotes_family_stage_scope": split or cpu_negative,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_scorer_region_selector_cascade_campaign_report(
     *,
     repo_root: str | Path,
@@ -821,6 +896,9 @@ def build_scorer_region_selector_cascade_campaign_report(
         return (3, float("inf"), str(row["variant_id"]))
 
     rows.sort(key=ranking_key)
+    posterior_acquisition_updates = [
+        _posterior_acquisition_update(row) for row in rows
+    ]
     best_selection_basis = None
     if rows:
         best_key = ranking_key(rows[0])
@@ -857,6 +935,12 @@ def build_scorer_region_selector_cascade_campaign_report(
         "local_cpu_variant_count": sum(1 for row in rows if row["local_cpu_present"]),
         "mlx_variant_count": sum(1 for row in rows if row["mlx_response_present"]),
         "rows": rows,
+        "posterior_acquisition_updates": posterior_acquisition_updates,
+        "mlx_positive_full_cpu_negative_split_count": sum(
+            1
+            for update in posterior_acquisition_updates
+            if update["mlx_positive_full_cpu_negative_split"] is True
+        ),
         "best_variant_id": rows[0]["variant_id"] if rows else None,
         "best_variant_selection_basis": best_selection_basis,
         "blockers": blockers,
