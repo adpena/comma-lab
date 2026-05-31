@@ -1,0 +1,456 @@
+{
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/0.bin",
+  "archive_sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb",
+  "archive_total_bytes": 10195155,
+  "axis_tag": "[macOS-CPU advisory]",
+  "brotli_probe_quality": 1,
+  "evidence_grade": "macOS-CPU-advisory",
+  "frame1_copy_from_frame0_zero_byte_mse": 0.0022211591713130474,
+  "interpretation": {
+    "binding_surface": "top-LL float32 approximation after detail payload collapse",
+    "conditional_residual": "store frame1 top-LL residual conditioned on exact frame0 top-LL",
+    "direct_quantization": "quantize top-LL values and entropy-code symbols",
+    "promotion_rule": "advisory only until a materializer emits byte-closed archive and full-video local replay accepts"
+  },
+  "pairs_measured": 600,
+  "promotable": false,
+  "promotion_eligible": false,
+  "quant_steps": [
+    0.00390625,
+    0.0078125,
+    0.015625,
+    0.03125,
+    0.0625,
+    0.125,
+    0.25
+  ],
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "z8_top_ll_entropy_headroom_report.v1",
+  "score_claim": false,
+  "surfaces": [
+    {
+      "abs_max": 4.226555347442627,
+      "abs_mean": 0.33691635727882385,
+      "best_quantized_by_brotli": {
+        "brotli_bytes_per_value": 0.170619,
+        "bytes_per_value": 2.0,
+        "distortion_mse": 0.005549783352762461,
+        "method": "zigzag_u16_byteplane",
+        "nonzero_fraction": 0.7923697916666667,
+        "order0_symbol_floor_bytes": 351117.2,
+        "payload_brotli_bytes": 235864,
+        "payload_bytes": 2764800,
+        "quant_step": 0.25
+      },
+      "f32_byteshuffle_brotli_bytes": 4325702,
+      "quant_sweep": [
+        {
+          "brotli_bytes_per_value": 0.91834,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 1.2703609399977722e-06,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9999110243055556,
+          "order0_symbol_floor_bytes": 1335921.9,
+          "payload_brotli_bytes": 1269513,
+          "payload_bytes": 2764800,
+          "quant_step": 0.00390625
+        },
+        {
+          "brotli_bytes_per_value": 0.839899,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 5.092055744171375e-06,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9997981770833333,
+          "order0_symbol_floor_bytes": 1163325.9,
+          "payload_brotli_bytes": 1161076,
+          "payload_bytes": 2764800,
+          "quant_step": 0.0078125
+        },
+        {
+          "brotli_bytes_per_value": 0.696174,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 2.0304125428083353e-05,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9993048321759259,
+          "order0_symbol_floor_bytes": 991087.5,
+          "payload_brotli_bytes": 962391,
+          "payload_bytes": 2764800,
+          "quant_step": 0.015625
+        },
+        {
+          "brotli_bytes_per_value": 0.511036,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 8.14754021121189e-05,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9948553240740741,
+          "order0_symbol_floor_bytes": 819427.6,
+          "payload_brotli_bytes": 706456,
+          "payload_bytes": 2764800,
+          "quant_step": 0.03125
+        },
+        {
+          "brotli_bytes_per_value": 0.360752,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.0003310574684292078,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9693894675925926,
+          "order0_symbol_floor_bytes": 653602.0,
+          "payload_brotli_bytes": 498704,
+          "payload_bytes": 2764800,
+          "quant_step": 0.0625
+        },
+        {
+          "brotli_bytes_per_value": 0.246157,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.0012951084645465016,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9148806423611111,
+          "order0_symbol_floor_bytes": 494604.5,
+          "payload_brotli_bytes": 340287,
+          "payload_bytes": 2764800,
+          "quant_step": 0.125
+        },
+        {
+          "brotli_bytes_per_value": 0.170619,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.005549783352762461,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.7923697916666667,
+          "order0_symbol_floor_bytes": 351117.2,
+          "payload_brotli_bytes": 235864,
+          "payload_bytes": 2764800,
+          "quant_step": 0.25
+        }
+      ],
+      "raw_f32_brotli_bytes": 4954723,
+      "raw_f32_bytes": 5529600,
+      "shape": [
+        600,
+        24,
+        32,
+        3
+      ],
+      "surface": "frame0_top_ll",
+      "value_count": 1382400
+    },
+    {
+      "abs_max": 4.31203031539917,
+      "abs_mean": 0.33691781759262085,
+      "best_quantized_by_brotli": {
+        "brotli_bytes_per_value": 0.170485,
+        "bytes_per_value": 2.0,
+        "distortion_mse": 0.005552781280130148,
+        "method": "zigzag_u16_byteplane",
+        "nonzero_fraction": 0.79228515625,
+        "order0_symbol_floor_bytes": 351089.0,
+        "payload_brotli_bytes": 235679,
+        "payload_bytes": 2764800,
+        "quant_step": 0.25
+      },
+      "f32_byteshuffle_brotli_bytes": 4326005,
+      "quant_sweep": [
+        {
+          "brotli_bytes_per_value": 0.918351,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 1.2721998245979194e-06,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9999008969907407,
+          "order0_symbol_floor_bytes": 1335981.7,
+          "payload_brotli_bytes": 1269528,
+          "payload_bytes": 2764800,
+          "quant_step": 0.00390625
+        },
+        {
+          "brotli_bytes_per_value": 0.839958,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 5.092694664199371e-06,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9997887731481482,
+          "order0_symbol_floor_bytes": 1163379.6,
+          "payload_brotli_bytes": 1161158,
+          "payload_bytes": 2764800,
+          "quant_step": 0.0078125
+        },
+        {
+          "brotli_bytes_per_value": 0.695645,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 2.0368546756799333e-05,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9993033854166666,
+          "order0_symbol_floor_bytes": 991113.7,
+          "payload_brotli_bytes": 961659,
+          "payload_bytes": 2764800,
+          "quant_step": 0.015625
+        },
+        {
+          "brotli_bytes_per_value": 0.511233,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 8.136821270454675e-05,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9948032407407408,
+          "order0_symbol_floor_bytes": 819509.2,
+          "payload_brotli_bytes": 706728,
+          "payload_bytes": 2764800,
+          "quant_step": 0.03125
+        },
+        {
+          "brotli_bytes_per_value": 0.360893,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.00033050699857994914,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9692534722222222,
+          "order0_symbol_floor_bytes": 653627.1,
+          "payload_brotli_bytes": 498899,
+          "payload_bytes": 2764800,
+          "quant_step": 0.0625
+        },
+        {
+          "brotli_bytes_per_value": 0.246297,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.001295333495363593,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9149146412037037,
+          "order0_symbol_floor_bytes": 494635.2,
+          "payload_brotli_bytes": 340481,
+          "payload_bytes": 2764800,
+          "quant_step": 0.125
+        },
+        {
+          "brotli_bytes_per_value": 0.170485,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.005552781280130148,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.79228515625,
+          "order0_symbol_floor_bytes": 351089.0,
+          "payload_brotli_bytes": 235679,
+          "payload_bytes": 2764800,
+          "quant_step": 0.25
+        }
+      ],
+      "raw_f32_brotli_bytes": 4954745,
+      "raw_f32_bytes": 5529600,
+      "shape": [
+        600,
+        24,
+        32,
+        3
+      ],
+      "surface": "frame1_top_ll",
+      "value_count": 1382400
+    },
+    {
+      "abs_max": 4.31203031539917,
+      "abs_mean": 0.33691710233688354,
+      "best_quantized_by_brotli": {
+        "brotli_bytes_per_value": 0.170607,
+        "bytes_per_value": 2.0,
+        "distortion_mse": 0.005551282316446304,
+        "method": "zigzag_u16_byteplane",
+        "nonzero_fraction": 0.7923274739583334,
+        "order0_symbol_floor_bytes": 702206.6,
+        "payload_brotli_bytes": 471695,
+        "payload_bytes": 5529600,
+        "quant_step": 0.25
+      },
+      "f32_byteshuffle_brotli_bytes": 8651615,
+      "quant_sweep": [
+        {
+          "brotli_bytes_per_value": 0.917947,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 1.271280325454427e-06,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9999059606481482,
+          "order0_symbol_floor_bytes": 2672004.2,
+          "payload_brotli_bytes": 2537940,
+          "payload_bytes": 5529600,
+          "quant_step": 0.00390625
+        },
+        {
+          "brotli_bytes_per_value": 0.83988,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 5.092375431559049e-06,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9997934751157408,
+          "order0_symbol_floor_bytes": 2326757.3,
+          "payload_brotli_bytes": 2322099,
+          "payload_bytes": 5529600,
+          "quant_step": 0.0078125
+        },
+        {
+          "brotli_bytes_per_value": 0.695165,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 2.033633427345194e-05,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9993041087962963,
+          "order0_symbol_floor_bytes": 1982226.6,
+          "payload_brotli_bytes": 1921992,
+          "payload_bytes": 5529600,
+          "quant_step": 0.015625
+        },
+        {
+          "brotli_bytes_per_value": 0.510477,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 8.142180740833282e-05,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9948292824074074,
+          "order0_symbol_floor_bytes": 1638948.8,
+          "payload_brotli_bytes": 1411368,
+          "payload_bytes": 5529600,
+          "quant_step": 0.03125
+        },
+        {
+          "brotli_bytes_per_value": 0.360674,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.00033078223350457847,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9693214699074074,
+          "order0_symbol_floor_bytes": 1307235.3,
+          "payload_brotli_bytes": 997192,
+          "payload_bytes": 5529600,
+          "quant_step": 0.0625
+        },
+        {
+          "brotli_bytes_per_value": 0.246277,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.0012952209217473865,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9148976417824074,
+          "order0_symbol_floor_bytes": 989241.9,
+          "payload_brotli_bytes": 680907,
+          "payload_bytes": 5529600,
+          "quant_step": 0.125
+        },
+        {
+          "brotli_bytes_per_value": 0.170607,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.005551282316446304,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.7923274739583334,
+          "order0_symbol_floor_bytes": 702206.6,
+          "payload_brotli_bytes": 471695,
+          "payload_bytes": 5529600,
+          "quant_step": 0.25
+        }
+      ],
+      "raw_f32_brotli_bytes": 9909432,
+      "raw_f32_bytes": 11059200,
+      "shape": [
+        1200,
+        24,
+        32,
+        3
+      ],
+      "surface": "both_frames_top_ll_concat",
+      "value_count": 2764800
+    },
+    {
+      "abs_max": 2.390554666519165,
+      "abs_mean": 0.025473831221461296,
+      "best_quantized_by_brotli": {
+        "brotli_bytes_per_value": 0.020777,
+        "bytes_per_value": 2.0,
+        "distortion_mse": 0.0010082595981657505,
+        "method": "zigzag_u16_byteplane",
+        "nonzero_fraction": 0.017040653935185186,
+        "order0_symbol_floor_bytes": 26144.9,
+        "payload_brotli_bytes": 28722,
+        "payload_bytes": 2764800,
+        "quant_step": 0.25
+      },
+      "f32_byteshuffle_brotli_bytes": 4316343,
+      "quant_sweep": [
+        {
+          "brotli_bytes_per_value": 0.639162,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 1.2702021194854751e-06,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.9291782407407407,
+          "order0_symbol_floor_bytes": 878525.9,
+          "payload_brotli_bytes": 883578,
+          "payload_bytes": 2764800,
+          "quant_step": 0.00390625
+        },
+        {
+          "brotli_bytes_per_value": 0.535007,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 5.089505975774955e-06,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.8594892939814814,
+          "order0_symbol_floor_bytes": 706440.8,
+          "payload_brotli_bytes": 739594,
+          "payload_bytes": 2764800,
+          "quant_step": 0.0078125
+        },
+        {
+          "brotli_bytes_per_value": 0.453931,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 2.0322009731899016e-05,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.7284975405092593,
+          "order0_symbol_floor_bytes": 536396.5,
+          "payload_brotli_bytes": 627514,
+          "payload_bytes": 2764800,
+          "quant_step": 0.015625
+        },
+        {
+          "brotli_bytes_per_value": 0.351387,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 7.973153697093949e-05,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.5114633969907407,
+          "order0_symbol_floor_bytes": 371975.2,
+          "payload_brotli_bytes": 485757,
+          "payload_bytes": 2764800,
+          "quant_step": 0.03125
+        },
+        {
+          "brotli_bytes_per_value": 0.231202,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.0002729289699345827,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.2494994212962963,
+          "order0_symbol_floor_bytes": 215301.7,
+          "payload_brotli_bytes": 319613,
+          "payload_bytes": 2764800,
+          "quant_step": 0.0625
+        },
+        {
+          "brotli_bytes_per_value": 0.09115,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.0006492558168247342,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.07078993055555556,
+          "order0_symbol_floor_bytes": 84461.8,
+          "payload_brotli_bytes": 126006,
+          "payload_bytes": 2764800,
+          "quant_step": 0.125
+        },
+        {
+          "brotli_bytes_per_value": 0.020777,
+          "bytes_per_value": 2.0,
+          "distortion_mse": 0.0010082595981657505,
+          "method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.017040653935185186,
+          "order0_symbol_floor_bytes": 26144.9,
+          "payload_brotli_bytes": 28722,
+          "payload_bytes": 2764800,
+          "quant_step": 0.25
+        }
+      ],
+      "raw_f32_brotli_bytes": 4923945,
+      "raw_f32_bytes": 5529600,
+      "shape": [
+        600,
+        24,
+        32,
+        3
+      ],
+      "surface": "frame1_minus_frame0_residual",
+      "value_count": 1382400
+    }
+  ],
+  "tool": "tools/z8_top_ll_entropy_headroom_report.py",
+  "total_pairs_in_archive": 600,
+  "wavelet_blob_bytes": 10165099
+}

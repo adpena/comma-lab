@@ -1,0 +1,18 @@
+[z8-headroom] archive=0.bin [macOS-CPU advisory] NON-PROMOTABLE
+[z8-headroom] 600/600 pairs, 41,472,000 detail coeffs, wavelet_blob=28,376,254B
+[z8-headroom] workers=12
+[z8-headroom] headline (detail-band bytes for the sampled pairs):
+    Δ=0.03125 current=  21,373,146B v2=   9,392,460B floor=   9,389,418B headroom=  56.0% dist=8.145e-05
+    Δ=0.0625 current=  21,373,146B v2=   4,538,450B floor=   4,536,526B headroom=  78.8% dist=2.111e-04
+    Δ=0.125 current=  21,373,146B v2=   1,204,737B floor=   1,401,246B headroom=  94.4% dist=3.801e-04
+    Δ=0.25  current=  21,373,146B v2=     293,287B floor=     471,717B headroom=  98.6% dist=5.448e-04
+    Δ=0.5   current=  21,373,146B v2=      84,611B floor=     139,387B headroom=  99.6% dist=7.618e-04
+    Δ=1.0   current=  21,373,146B v2=      14,944B floor=      25,124B headroom=  99.9% dist=9.809e-04
+[z8-headroom] per-subband current vs best-v2 bytes/coeff (Δ-swept):
+    L0_hh      n=11,059,200 |c|~0.0136 current=0.486 bpc -> v2[qi16_zero_rle]=0.000 bpc (floor=0.000, Δ=1.0, nz=0.0%)
+    L0_hl      n=11,059,200 |c|~0.0172 current=0.518 bpc -> v2[qi16_zero_rle]=0.000 bpc (floor=0.001, Δ=1.0, nz=0.0%)
+    L0_lh      n=11,059,200 |c|~0.0147 current=0.501 bpc -> v2[qi16_zero_rle]=0.000 bpc (floor=0.000, Δ=1.0, nz=0.0%)
+    L1_hh      n=2,764,800 |c|~0.0180 current=0.538 bpc -> v2[qi16_zero_rle]=0.000 bpc (floor=0.000, Δ=1.0, nz=0.0%)
+    L1_hl      n=2,764,800 |c|~0.0302 current=0.606 bpc -> v2[qi16_zero_rle]=0.002 bpc (floor=0.004, Δ=1.0, nz=0.3%)
+    L1_lh      n=2,764,800 |c|~0.0211 current=0.565 bpc -> v2[qi16_zero_rle]=0.001 bpc (floor=0.001, Δ=1.0, nz=0.1%)
+[z8-headroom] wrote /Users/adpena/Projects/pact/.omx/research/z8_hpc_rate_axis_push_20260531T220400Z_codex/full600_coarse_entropy_headroom.json

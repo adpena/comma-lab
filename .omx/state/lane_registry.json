@@ -65640,6 +65640,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "hprc_hierarchical_predictive_receiver_codec",
+      "name": "HPRC hierarchical predictive receiver codec",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/hprc/archive.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/hprc_minimal_archive_candidate_20260531T225027Z/hprc_archive_byte_ledger.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "src/tac/substrates/hprc/tests/test_archive.py"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/hprc_hierarchical_predictive_receiver_codec_design_20260531T223400Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -65649,5 +65690,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T17:46:19Z"
+  "updated_at": "2026-05-31T22:58:13Z"
 }

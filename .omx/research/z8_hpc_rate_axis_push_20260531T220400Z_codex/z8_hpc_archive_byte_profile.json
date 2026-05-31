@@ -1,0 +1,868 @@
+{
+  "archive": {
+    "base_channels": 3,
+    "bytes": 28406255,
+    "decoder_latent_dim": 8,
+    "num_categories_per_level": [
+      16,
+      8,
+      4
+    ],
+    "num_groups_per_level": [
+      4,
+      3,
+      2
+    ],
+    "num_levels": 3,
+    "num_pairs": 600,
+    "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_contest_rate_export/0.bin",
+    "schema_version": 1,
+    "sha256": "c82125e45c617df2bc3b7a0d0829581e974e45f9b85d423d04b9d3eaa59223e9",
+    "wavelet_basis_id": 0
+  },
+  "auxiliary_evidence_blockers": [],
+  "auxiliary_evidence_bound_to_archive": true,
+  "axis_tag": "[macOS-CPU advisory]",
+  "evidence_grade": "macOS-CPU-advisory",
+  "headroom_profile": {
+    "advisory_markers": {
+      "axis_tag": "[macOS-CPU advisory]",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    "archive_total_bytes": 28406255,
+    "headline_by_quant_step": [
+      {
+        "current_detail_bytes": 21373146.0,
+        "headroom_bytes": 11980686.0,
+        "headroom_fraction": 0.5605,
+        "mean_distortion_mse": 8.144968839284654e-05,
+        "quant_step": 0.03125,
+        "structured_shannon_floor_detail_bytes": 9389418.1,
+        "v2_codec_detail_bytes": 9392460.0,
+        "v2_vs_floor_gap_bytes": 3041.9
+      },
+      {
+        "current_detail_bytes": 21373146.0,
+        "headroom_bytes": 16834696.0,
+        "headroom_fraction": 0.7877,
+        "mean_distortion_mse": 0.00021113188025386384,
+        "quant_step": 0.0625,
+        "structured_shannon_floor_detail_bytes": 4536526.4,
+        "v2_codec_detail_bytes": 4538450.0,
+        "v2_vs_floor_gap_bytes": 1923.6
+      },
+      {
+        "current_detail_bytes": 21373146.0,
+        "headroom_bytes": 20168409.0,
+        "headroom_fraction": 0.9436,
+        "mean_distortion_mse": 0.0003800761497889956,
+        "quant_step": 0.125,
+        "structured_shannon_floor_detail_bytes": 1401246.5,
+        "v2_codec_detail_bytes": 1204737.0,
+        "v2_vs_floor_gap_bytes": -196509.5
+      },
+      {
+        "current_detail_bytes": 21373146.0,
+        "headroom_bytes": 21079859.0,
+        "headroom_fraction": 0.9863,
+        "mean_distortion_mse": 0.000544817508974423,
+        "quant_step": 0.25,
+        "structured_shannon_floor_detail_bytes": 471717.3,
+        "v2_codec_detail_bytes": 293287.0,
+        "v2_vs_floor_gap_bytes": -178430.3
+      },
+      {
+        "current_detail_bytes": 21373146.0,
+        "headroom_bytes": 21288535.0,
+        "headroom_fraction": 0.996,
+        "mean_distortion_mse": 0.0007618276363549133,
+        "quant_step": 0.5,
+        "structured_shannon_floor_detail_bytes": 139387.1,
+        "v2_codec_detail_bytes": 84611.0,
+        "v2_vs_floor_gap_bytes": -54776.1
+      },
+      {
+        "current_detail_bytes": 21373146.0,
+        "headroom_bytes": 21358202.0,
+        "headroom_fraction": 0.9993,
+        "mean_distortion_mse": 0.000980905684021612,
+        "quant_step": 1.0,
+        "structured_shannon_floor_detail_bytes": 25124.3,
+        "v2_codec_detail_bytes": 14944.0,
+        "v2_vs_floor_gap_bytes": -10180.3
+      }
+    ],
+    "pairs_measured": 600,
+    "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_contest_rate_export/0.bin",
+    "total_pairs_in_archive": 600,
+    "wavelet_blob_bytes": 28376254
+  },
+  "local_replay_profile": null,
+  "opportunities": [
+    {
+      "archive_fraction": 0.998944,
+      "current_bytes": 28376254,
+      "entropy_position": "ARCHIVE/PAYLOAD_BEFORE_OUTER_ZIP",
+      "name": "wavelet_blob_dominance",
+      "next_action": "continue Z8 work only through wavelet/top-state byte reductions; other sections are not current rate binders",
+      "verdict": "binding_rate_axis"
+    },
+    {
+      "best_measured_headroom_row": {
+        "current_detail_bytes": 21373146.0,
+        "headroom_bytes": 21358202.0,
+        "headroom_fraction": 0.9993,
+        "mean_distortion_mse": 0.000980905684021612,
+        "quant_step": 1.0,
+        "structured_shannon_floor_detail_bytes": 25124.3,
+        "v2_codec_detail_bytes": 14944.0,
+        "v2_vs_floor_gap_bytes": -10180.3
+      },
+      "current_detail_payload_bytes": 19670586,
+      "entropy_position": "AT_DETAIL_SYMBOL_CODER",
+      "name": "detail_coeff_quantize_entropy_code",
+      "next_action": "materialize RD schedules from full-video headroom rows, replay locally, and let exact archive projection accept or reject",
+      "verdict": "real_large_lever_but_distortion_operating_point_must_be_full_replay_gated"
+    },
+    {
+      "entropy_position": "AT_DETAIL_SYMBOL_CODER / RUNTIME_DECODE",
+      "method_counts": {
+        "qi16_static_range": 7200
+      },
+      "name": "legacy_static_range_detail_codec",
+      "next_action": "benchmark full inflate decode and transcode to native constriction/RLE/byteplane if static-range decode threatens the auth window",
+      "verdict": "byte_viable_but_runtime_suspect_until_benchmarked"
+    },
+    {
+      "archive_fraction_if_uncompressed": 0.389323,
+      "current_raw_top_ll_bytes_inside_pair_blobs": 11059200,
+      "entropy_position": "BEFORE_DETAIL_ENTROPY_CODER",
+      "name": "top_ll_float_payload",
+      "next_action": "build top-LL RD curves: delta/DC quantization, predictive top-LL from frame0, Wyner-Ziv conditional residual, and entropy-code accepted residuals",
+      "verdict": "next_binding_after_detail_collapse"
+    },
+    {
+      "entropy_position": "PACKET_LAYOUT / OUTER_CONTEXT",
+      "name": "solid_pair_blob_coding",
+      "next_action": "replace independent per-pair brotli members with global section coding plus indexed seek table when q=11 is positive; otherwise rerun at q=11 before demotion",
+      "solid_pair_raw_brotli_delta_vs_current_pair_blobs": -402311,
+      "verdict": "positive_candidate"
+    },
+    {
+      "current_bytes": 29939,
+      "entropy_position": "ARCHIVE_CONTROL_AND_STACK_CUSTODY",
+      "largest_rows": [
+        {
+          "archive_fraction": 0.00080278,
+          "bytes": 22804,
+          "codec_profile": {
+            "brotli_bytes": 2019,
+            "brotli_quality": 11,
+            "bz2_9_bytes": 2576,
+            "order0_entropy_floor_bytes": 10637.2,
+            "raw_bytes": 22804,
+            "zlib9_bytes": 2598,
+            "zstd19_bytes": null
+          },
+          "name": "wyner_ziv_blob",
+          "sha256": "66f1df9c871497c1f62edf455dc470ac9a48fe084e0eea6c42671894d3bf2109",
+          "start": 28381750
+        },
+        {
+          "archive_fraction": 0.0001901,
+          "bytes": 5400,
+          "codec_profile": {
+            "brotli_bytes": 13,
+            "brotli_quality": 11,
+            "bz2_9_bytes": 45,
+            "order0_entropy_floor_bytes": -0.0,
+            "raw_bytes": 5400,
+            "zlib9_bytes": 27,
+            "zstd19_bytes": null
+          },
+          "name": "indices_blob",
+          "sha256": "df469ce41663d86d700926e5e24b6cd731777363a8f519c7f034c2831ac2db4b",
+          "start": 96
+        },
+        {
+          "archive_fraction": 5.879e-05,
+          "bytes": 1670,
+          "codec_profile": {
+            "brotli_bytes": 618,
+            "brotli_quality": 11,
+            "bz2_9_bytes": 779,
+            "order0_entropy_floor_bytes": 978.4,
+            "raw_bytes": 1670,
+            "zlib9_bytes": 693,
+            "zstd19_bytes": null
+          },
+          "name": "meta_blob",
+          "sha256": "6b1a8979ecff471074e88f724cbfa59b934d428acf2c5c6d5577bca46800c483",
+          "start": 28404585
+        },
+        {
+          "archive_fraction": 1.2e-06,
+          "bytes": 34,
+          "codec_profile": {
+            "brotli_bytes": 38,
+            "brotli_quality": 11,
+            "bz2_9_bytes": 96,
+            "order0_entropy_floor_bytes": 20.9,
+            "raw_bytes": 34,
+            "zlib9_bytes": 43,
+            "zstd19_bytes": null
+          },
+          "name": "decoder_blob",
+          "sha256": "c04931616f6a74587412180ee9918802d02dfdd02ddfdf7b6827a90bd292a76e",
+          "start": 62
+        },
+        {
+          "archive_fraction": 1.09e-06,
+          "bytes": 31,
+          "codec_profile": {
+            "brotli_bytes": 35,
+            "brotli_quality": 11,
+            "bz2_9_bytes": 91,
+            "order0_entropy_floor_bytes": 18.7,
+            "raw_bytes": 31,
+            "zlib9_bytes": 40,
+            "zstd19_bytes": null
+          },
+          "name": "dreamer_state_blob",
+          "sha256": "861457ac54853a2537d16ccea75ae1e1bed800a1b357477fbf17c9413199d6d0",
+          "start": 28404554
+        }
+      ],
+      "name": "non_wavelet_sections",
+      "next_action": "receiver-proof elision/proceduralization only for sections not consumed by runtime; do not spend primary effort here before top-LL/detail collapse",
+      "verdict": "secondary_until_wavelet_rate_axis_moves"
+    },
+    {
+      "archive_zip_bytes": 28504909,
+      "entropy_position": "AFTER_PRIMARY_PAYLOAD_ENTROPY",
+      "name": "outer_zip_and_repack",
+      "next_action": "run deterministic min-zip/rebrotli only after payload grammar changes; after-entropy transforms cannot fix float payload entropy",
+      "verdict": "minor_unless_runtime_members_or_headers_are_large",
+      "zip_vs_0bin_delta_bytes": 98654
+    },
+    {
+      "bytes_ratio_to_frontier": 159.698,
+      "entropy_position": "OBJECTIVE_RATE_TERM",
+      "frontier_archive_bytes": 178493,
+      "local_replay_summary": null,
+      "name": "contest_rate_distance",
+      "next_action": "gate Z8 exact-auth only after byte-closed local archive is near frontier-byte scale and MLX/CPU distortion remains plausible",
+      "profiled_archive_bytes": 28504909,
+      "verdict": "must_get_to_same_order_of_magnitude_before_exact_auth"
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "z8_hpc_archive_byte_profile.v1",
+  "score_claim": false,
+  "tool": "tools/profile_z8_hpc_archive_bytes.py",
+  "wavelet_blob_profile": {
+    "by_frame_level_subband": [
+      {
+        "bytes_per_coeff": 0.427644,
+        "coefficients": 5529600,
+        "count": 600,
+        "key": "frame_0_details:L0:hh",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 2364703
+        },
+        "payload_bytes": 2364703,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.470953,
+        "coefficients": 5529600,
+        "count": 600,
+        "key": "frame_0_details:L0:hl",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 2604182
+        },
+        "payload_bytes": 2604182,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.440994,
+        "coefficients": 5529600,
+        "count": 600,
+        "key": "frame_0_details:L0:lh",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 2438522
+        },
+        "payload_bytes": 2438522,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.531983,
+        "coefficients": 1382400,
+        "count": 600,
+        "key": "frame_0_details:L1:hh",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 735413
+        },
+        "payload_bytes": 735413,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.655436,
+        "coefficients": 1382400,
+        "count": 600,
+        "key": "frame_0_details:L1:hl",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 906075
+        },
+        "payload_bytes": 906075,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.568947,
+        "coefficients": 1382400,
+        "count": 600,
+        "key": "frame_0_details:L1:lh",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 786512
+        },
+        "payload_bytes": 786512,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.42749,
+        "coefficients": 5529600,
+        "count": 600,
+        "key": "frame_1_details:L0:hh",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 2363848
+        },
+        "payload_bytes": 2363848,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.471043,
+        "coefficients": 5529600,
+        "count": 600,
+        "key": "frame_1_details:L0:hl",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 2604681
+        },
+        "payload_bytes": 2604681,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.440826,
+        "coefficients": 5529600,
+        "count": 600,
+        "key": "frame_1_details:L0:lh",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 2437591
+        },
+        "payload_bytes": 2437591,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.532496,
+        "coefficients": 1382400,
+        "count": 600,
+        "key": "frame_1_details:L1:hh",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 736122
+        },
+        "payload_bytes": 736122,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.656214,
+        "coefficients": 1382400,
+        "count": 600,
+        "key": "frame_1_details:L1:hl",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 907150
+        },
+        "payload_bytes": 907150,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      },
+      {
+        "bytes_per_coeff": 0.568422,
+        "coefficients": 1382400,
+        "count": 600,
+        "key": "frame_1_details:L1:lh",
+        "method_counts": {
+          "qi16_static_range": 600
+        },
+        "method_payload_bytes": {
+          "qi16_static_range": 785787
+        },
+        "payload_bytes": 785787,
+        "quantization_step_counts": {
+          "0.007843137718737125": 600
+        }
+      }
+    ],
+    "detail_codec_header_bytes": 64800,
+    "detail_codec_method_counts": {
+      "qi16_static_range": 7200
+    },
+    "detail_codec_payload_bytes": {
+      "qi16_static_range": 19670586
+    },
+    "detail_coefficients": 41472000,
+    "detail_list_header_bytes": 1200,
+    "detail_payload_bytes": 19670586,
+    "detail_payload_bytes_per_coeff": 0.47431,
+    "detail_shape_header_bytes": 43200,
+    "length_prefix_bytes": 2404,
+    "num_pairs": 600,
+    "pair_blob_compressed_bytes": 28373850,
+    "pair_blob_compressed_length_stats": {
+      "count": 600,
+      "max": 51288,
+      "mean": 47289.75,
+      "min": 45299,
+      "p50": 47249,
+      "p90": 48507,
+      "p99": 49656,
+      "total": 28373850
+    },
+    "pair_blob_raw_length_stats": {
+      "count": 600,
+      "max": 55791,
+      "mean": 51411.31,
+      "min": 49192,
+      "p50": 51340,
+      "p90": 53030,
+      "p99": 54254,
+      "total": 30846786
+    },
+    "pair_blob_schema_counts": {
+      "2": 600
+    },
+    "quantization_step_counts": {
+      "0.007843137718737125": 7200
+    },
+    "schema": "z8_wavelet_blob_byte_profile.v1",
+    "solid_pair_raw_brotli_bytes": 27971539,
+    "solid_pair_raw_brotli_delta_vs_current_pair_blobs": -402311,
+    "solid_pair_raw_brotli_quality": 11,
+    "solid_pair_raw_bytes": 30846786,
+    "top_ll_header_bytes": 7200,
+    "top_ll_raw_payload_bytes": 11059200,
+    "wavelet_blob_bytes": 28376254
+  },
+  "z8hpc1_sections": [
+    {
+      "archive_fraction": 2.18e-06,
+      "bytes": 62,
+      "codec_profile": {
+        "brotli_bytes": 62,
+        "brotli_quality": 11,
+        "bz2_9_bytes": 92,
+        "order0_entropy_floor_bytes": 24.6,
+        "raw_bytes": 62,
+        "zlib9_bytes": 57,
+        "zstd19_bytes": null
+      },
+      "name": "z8hpc1_header",
+      "sha256": "4e80da9a0131947e638402082ce382a85a1040237a72c63e7f443eb08fd615d1",
+      "start": 0
+    },
+    {
+      "archive_fraction": 1.2e-06,
+      "bytes": 34,
+      "codec_profile": {
+        "brotli_bytes": 38,
+        "brotli_quality": 11,
+        "bz2_9_bytes": 96,
+        "order0_entropy_floor_bytes": 20.9,
+        "raw_bytes": 34,
+        "zlib9_bytes": 43,
+        "zstd19_bytes": null
+      },
+      "name": "decoder_blob",
+      "sha256": "c04931616f6a74587412180ee9918802d02dfdd02ddfdf7b6827a90bd292a76e",
+      "start": 62
+    },
+    {
+      "archive_fraction": 0.0001901,
+      "bytes": 5400,
+      "codec_profile": {
+        "brotli_bytes": 13,
+        "brotli_quality": 11,
+        "bz2_9_bytes": 45,
+        "order0_entropy_floor_bytes": -0.0,
+        "raw_bytes": 5400,
+        "zlib9_bytes": 27,
+        "zstd19_bytes": null
+      },
+      "name": "indices_blob",
+      "sha256": "df469ce41663d86d700926e5e24b6cd731777363a8f519c7f034c2831ac2db4b",
+      "start": 96
+    },
+    {
+      "archive_fraction": 0.99894386,
+      "bytes": 28376254,
+      "codec_profile": {
+        "brotli_bytes": 28376342,
+        "brotli_quality": 11,
+        "bz2_9_bytes": 28500306,
+        "order0_entropy_floor_bytes": 28375198.4,
+        "raw_bytes": 28376254,
+        "zlib9_bytes": 28384920,
+        "zstd19_bytes": null
+      },
+      "name": "wavelet_blob",
+      "sha256": "d8f721769837063e3201a5258d903a8339a9436496e7cd939668d5428fc270fb",
+      "start": 5496
+    },
+    {
+      "archive_fraction": 0.00080278,
+      "bytes": 22804,
+      "codec_profile": {
+        "brotli_bytes": 2019,
+        "brotli_quality": 11,
+        "bz2_9_bytes": 2576,
+        "order0_entropy_floor_bytes": 10637.2,
+        "raw_bytes": 22804,
+        "zlib9_bytes": 2598,
+        "zstd19_bytes": null
+      },
+      "name": "wyner_ziv_blob",
+      "sha256": "66f1df9c871497c1f62edf455dc470ac9a48fe084e0eea6c42671894d3bf2109",
+      "start": 28381750
+    },
+    {
+      "archive_fraction": 1.09e-06,
+      "bytes": 31,
+      "codec_profile": {
+        "brotli_bytes": 35,
+        "brotli_quality": 11,
+        "bz2_9_bytes": 91,
+        "order0_entropy_floor_bytes": 18.7,
+        "raw_bytes": 31,
+        "zlib9_bytes": 40,
+        "zstd19_bytes": null
+      },
+      "name": "dreamer_state_blob",
+      "sha256": "861457ac54853a2537d16ccea75ae1e1bed800a1b357477fbf17c9413199d6d0",
+      "start": 28404554
+    },
+    {
+      "archive_fraction": 5.879e-05,
+      "bytes": 1670,
+      "codec_profile": {
+        "brotli_bytes": 618,
+        "brotli_quality": 11,
+        "bz2_9_bytes": 779,
+        "order0_entropy_floor_bytes": 978.4,
+        "raw_bytes": 1670,
+        "zlib9_bytes": 693,
+        "zstd19_bytes": null
+      },
+      "name": "meta_blob",
+      "sha256": "6b1a8979ecff471074e88f724cbfa59b934d428acf2c5c6d5577bca46800c483",
+      "start": 28404585
+    }
+  ],
+  "zip_profile": {
+    "bytes": 28504909,
+    "member_count": 23,
+    "member_rows": [
+      {
+        "compress_size": 28388676,
+        "compress_type": 8,
+        "crc": "ff9171db",
+        "file_size": 28406255,
+        "filename": "0.bin",
+        "flag_bits": 0,
+        "header_offset": 0,
+        "sha256": "c82125e45c617df2bc3b7a0d0829581e974e45f9b85d423d04b9d3eaa59223e9"
+      },
+      {
+        "compress_size": 331,
+        "compress_type": 8,
+        "crc": "69bfcfe7",
+        "file_size": 460,
+        "filename": "inflate.sh",
+        "flag_bits": 0,
+        "header_offset": 28388711,
+        "sha256": "95f5142333b5e727618ce60f8b5e6918a34d56efd85e11ee16095f4989f72e0e"
+      },
+      {
+        "compress_size": 580,
+        "compress_type": 8,
+        "crc": "dc33b7b3",
+        "file_size": 1149,
+        "filename": "inflate.py",
+        "flag_bits": 0,
+        "header_offset": 28389082,
+        "sha256": "1b3a44e85c0204c44fd2f3c938b5acc497886d1f558fe18cb6b558d686e36917"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "filename": "src/tac/__init__.py",
+        "flag_bits": 0,
+        "header_offset": 28389702,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "filename": "src/tac/optimization/__init__.py",
+        "flag_bits": 0,
+        "header_offset": 28389753,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "compress_size": 14964,
+        "compress_type": 8,
+        "crc": "048dc29f",
+        "file_size": 53260,
+        "filename": "src/tac/optimization/mamba2_predictor.py",
+        "flag_bits": 0,
+        "header_offset": 28389817,
+        "sha256": "f6347398b7fe7e5306f415ad9f455f2effae63acebecfa4a37a1fb3ca1674d81"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "filename": "src/tac/substrates/__init__.py",
+        "flag_bits": 0,
+        "header_offset": 28404851,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "filename": "src/tac/substrates/_shared/__init__.py",
+        "flag_bits": 0,
+        "header_offset": 28404913,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "compress_size": 2621,
+        "compress_type": 8,
+        "crc": "08e5053f",
+        "file_size": 6269,
+        "filename": "src/tac/substrates/_shared/inflate_runtime.py",
+        "flag_bits": 0,
+        "header_offset": 28404983,
+        "sha256": "dd7c3def09b6eab4ce8b65b6ed271a2fbd884b741002ffbd099072d92938a4a1"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py",
+        "flag_bits": 0,
+        "header_offset": 28407679,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "compress_size": 7141,
+        "compress_type": 8,
+        "crc": "c0e7bd62",
+        "file_size": 25006,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/archive.py",
+        "flag_bits": 0,
+        "header_offset": 28407775,
+        "sha256": "fa480859ab408017150843f35dfceb742498e556792bb548e527ad8c4e2f63f0"
+      },
+      {
+        "compress_size": 7338,
+        "compress_type": 8,
+        "crc": "6a82f7a6",
+        "file_size": 23578,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py",
+        "flag_bits": 0,
+        "header_offset": 28415009,
+        "sha256": "9a8db2ce76b83aa03a2c9bfdb8b98836a03c10a9757be513d07bb48288f7cfdc"
+      },
+      {
+        "compress_size": 25307,
+        "compress_type": 8,
+        "crc": "92434fb8",
+        "file_size": 97284,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py",
+        "flag_bits": 0,
+        "header_offset": 28422449,
+        "sha256": "f0840fd29e3aec354eefec5195ce7e801d92a2d991a03ac33d098ee86cf6259c"
+      },
+      {
+        "compress_size": 3985,
+        "compress_type": 8,
+        "crc": "7212e41c",
+        "file_size": 11251,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py",
+        "flag_bits": 0,
+        "header_offset": 28447869,
+        "sha256": "51b224fe484ab2985b34f194b6a5c69afc2a954c0ef9f0caed453a2fc461cde3"
+      },
+      {
+        "compress_size": 6032,
+        "compress_type": 8,
+        "crc": "bdf4622c",
+        "file_size": 18551,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/loss.py",
+        "flag_bits": 0,
+        "header_offset": 28451947,
+        "sha256": "f7bec7825a126006b0144b65d46c851af13f5d06342439c43f2110b5ee2826f9"
+      },
+      {
+        "compress_size": 5100,
+        "compress_type": 8,
+        "crc": "8f8a693f",
+        "file_size": 14861,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py",
+        "flag_bits": 0,
+        "header_offset": 28458069,
+        "sha256": "a1219e38868a2ec3451992ad25b86e8181e47e9a012a54837d7b661a83cce7cd"
+      },
+      {
+        "compress_size": 5684,
+        "compress_type": 8,
+        "crc": "5e468331",
+        "file_size": 19045,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py",
+        "flag_bits": 0,
+        "header_offset": 28463273,
+        "sha256": "3f632825fe0a58c4ee36fc49b6d970b5224e2864d433912e1b9482420aaf1dbe"
+      },
+      {
+        "compress_size": 1017,
+        "compress_type": 8,
+        "crc": "7d6878bc",
+        "file_size": 3566,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_custody.py",
+        "flag_bits": 0,
+        "header_offset": 28469057,
+        "sha256": "5f07ca96335bf6d56ccc64f5a2c20a0c41182d29c96fe7d77a749f0515944fdd"
+      },
+      {
+        "compress_size": 6153,
+        "compress_type": 8,
+        "crc": "1af1b2fd",
+        "file_size": 28520,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_payload_bridge.py",
+        "flag_bits": 0,
+        "header_offset": 28470175,
+        "sha256": "5b32b6e9b68560976dd0e4e820e7c05832e761a23f65da80a9b011883716a22c"
+      },
+      {
+        "compress_size": 8875,
+        "compress_type": 8,
+        "crc": "1881b46c",
+        "file_size": 31164,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py",
+        "flag_bits": 0,
+        "header_offset": 28476436,
+        "sha256": "0ee58e93945c5d2ed5e416842992119252b2b0241df342b1eebe5ae31a10d388"
+      },
+      {
+        "compress_size": 12803,
+        "compress_type": 8,
+        "crc": "24bcd918",
+        "file_size": 44702,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py",
+        "flag_bits": 0,
+        "header_offset": 28485419,
+        "sha256": "f57eb2356f1fd9625eb97c0c17e3bd58cdb50f62fa7138c49273d286f3215615"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "filename": "src/tac/symposium_impls/__init__.py",
+        "flag_bits": 0,
+        "header_offset": 28498323,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "compress_size": 4196,
+        "compress_type": 8,
+        "crc": "947df0c8",
+        "file_size": 12088,
+        "filename": "src/tac/symposium_impls/daubechies_wavelet_codec.py",
+        "flag_bits": 0,
+        "header_offset": 28498390,
+        "sha256": "49040b2efdfeb7b57e26a7c1ba31500e532cf5ca75593079afc2674018f7512a"
+      }
+    ],
+    "path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_contest_rate_export/archive.zip",
+    "sha256": "4a89254dfb659cc68f78aa4f8ec008a539d13f2b434d765c31380dfe9cd32dfc",
+    "total_member_compressed_bytes": 28500815,
+    "total_member_uncompressed_bytes": 28797009,
+    "zip_container_overhead_bytes": 4094
+  }
+}

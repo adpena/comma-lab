@@ -1,0 +1,95 @@
+[
+  {
+    "bin": 10195155,
+    "detail_payload": 840770,
+    "methods": {
+      "qi16_zero_rle": 7200
+    },
+    "profile": "quantized_detail_entropy_rate_probe_20260531Tlocal",
+    "qsteps": {
+      "0.25": 7200
+    },
+    "ratio_to_frontier": 57.12,
+    "top_ll": 11059200,
+    "wavelet": 10165099,
+    "zip_or_bin": 10195155
+  },
+  {
+    "bin": 23278362,
+    "detail_payload": 18752146,
+    "methods": {
+      "qi16_constriction_range": 5974,
+      "zigzag_u16_byteplane": 1226
+    },
+    "profile": "entropy_coded_q0156_zip_probe_fast_selector",
+    "qsteps": {
+      "0.015625": 7200
+    },
+    "ratio_to_frontier": 130.97,
+    "top_ll": 11059200,
+    "wavelet": 23248258,
+    "zip_or_bin": 23376927
+  },
+  {
+    "bin": 24475266,
+    "detail_payload": 20570658,
+    "methods": {
+      "qi16_constriction_range": 5780,
+      "zigzag_u16_byteplane": 1420
+    },
+    "profile": "z8_hpc_rd_candidate_byte_profile",
+    "qsteps": {
+      "0.015625": 7200
+    },
+    "ratio_to_frontier": 137.67,
+    "top_ll": 11059200,
+    "wavelet": 24444771,
+    "zip_or_bin": 24573973
+  },
+  {
+    "bin": 28406255,
+    "detail_payload": 19670586,
+    "methods": {
+      "qi16_static_range": 7200
+    },
+    "profile": "z8_hpc_archive_byte_profile",
+    "qsteps": {
+      "0.007843137718737125": 7200
+    },
+    "ratio_to_frontier": 159.7,
+    "top_ll": 11059200,
+    "wavelet": 28376254,
+    "zip_or_bin": 28504909
+  },
+  {
+    "bin": 28429438,
+    "detail_payload": 45441864,
+    "methods": {
+      "qi16_zero_rle": 7200
+    },
+    "profile": "entropy_coded_rate_only_probe_fast_contest_zip",
+    "qsteps": {
+      "0.007843137718737125": 7200
+    },
+    "ratio_to_frontier": 159.83,
+    "top_ll": 11059200,
+    "wavelet": 28399392,
+    "zip_or_bin": 28529069
+  },
+  {
+    "bin": 33008778,
+    "detail_payload": 65231582,
+    "methods": {
+      "qi16_constriction_range": 1355,
+      "zigzag_u16_byteplane": 5845
+    },
+    "profile": "entropy_coded_q0039_zip_probe_fast_selector",
+    "qsteps": {
+      "0.00390625": 7200
+    },
+    "ratio_to_frontier": 185.5,
+    "top_ll": 11059200,
+    "wavelet": 32978709,
+    "zip_or_bin": 33110463
+  }
+]
