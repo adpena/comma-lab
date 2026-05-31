@@ -46,6 +46,17 @@ class ArchiveBoundCandidateContractError(ValueError):
     """Raised when archive-bound candidate contract payloads are invalid."""
 
 
+def _require_no_truthy_contract_authority(
+    payload: Mapping[str, Any],
+    *,
+    context: str,
+) -> None:
+    try:
+        require_no_truthy_authority_fields(payload, context=context)
+    except ValueError as exc:
+        raise ArchiveBoundCandidateContractError(str(exc)) from exc
+
+
 _DUPLICATE_BOOL_CONTRACT_FIELDS = (
     "archive_bound_candidate_ready",
     "archive_bound_candidate_ready_for_exact_handoff",
@@ -345,7 +356,7 @@ def _validated_contract_from_payload(
     *,
     label: str,
 ) -> dict[str, Any]:
-    require_no_truthy_authority_fields(payload, context=label)
+    _require_no_truthy_contract_authority(payload, context=label)
     if payload.get("schema") != ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA:
         raise ArchiveBoundCandidateContractError(f"{label} schema mismatch")
     return dict(payload)
@@ -358,7 +369,7 @@ def archive_bound_candidate_contracts_from_payload(
 ) -> list[dict[str, Any]]:
     """Extract validated archive-bound contracts from any shared payload shape."""
 
-    require_no_truthy_authority_fields(payload, context=label)
+    _require_no_truthy_contract_authority(payload, context=label)
     schema = payload.get("schema")
     if schema == ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA:
         rows = payload.get("candidate_rows")
@@ -1236,7 +1247,7 @@ def build_archive_bound_candidate_contract(
         "rank_or_kill_eligible": False,
         **FALSE_AUTHORITY,
     }
-    require_no_truthy_authority_fields(
+    _require_no_truthy_contract_authority(
         contract,
         context=f"archive_bound_candidate_contract:{transform_kind}",
     )
@@ -1369,7 +1380,7 @@ def build_archive_bound_candidate_contract_surface(
         "ready_for_exact_eval_dispatch": False,
         **FALSE_AUTHORITY,
     }
-    require_no_truthy_authority_fields(
+    _require_no_truthy_contract_authority(
         surface,
         context="archive_bound_candidate_contract_surface",
     )

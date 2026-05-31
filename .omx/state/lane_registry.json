@@ -64541,7 +64541,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/comma_lab/scheduler/experiment_queue_observer.py"
+          "evidence": "src/tac/optimization/archive_bound_candidate_contract.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -64565,7 +64565,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_experiment_queue_observer_contract_readiness_20260531T092924Z_codex.md"
+          "evidence": ".omx/research/codex_findings_archive_contract_error_boundary_20260531T093545Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -64623,5 +64623,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T09:29:46Z"
+  "updated_at": "2026-05-31T09:36:12Z"
 }

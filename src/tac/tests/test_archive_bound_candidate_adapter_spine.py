@@ -322,6 +322,23 @@ def test_archive_contract_reader_rejects_stale_duplicate_fields(
         )
 
 
+def test_archive_contract_reader_wraps_truthy_authority_as_contract_error(
+    tmp_path: Path,
+) -> None:
+    package = build_archive_bound_candidate_adapter_package(
+        _FixtureArchiveAdapter(tmp_path),
+        repo_root=tmp_path,
+    )
+    row = dict(package["candidate_rows"][0])
+    row["ready_for_exact_eval_dispatch"] = True
+
+    with pytest.raises(
+        ArchiveBoundCandidateContractError,
+        match="forbidden truthy authority fields: ready_for_exact_eval_dispatch=truthy",
+    ):
+        archive_bound_candidate_contracts_from_payload(row)
+
+
 def test_archive_contract_routes_anti_patterns_into_acquisition_penalty(
     tmp_path: Path,
 ) -> None:
