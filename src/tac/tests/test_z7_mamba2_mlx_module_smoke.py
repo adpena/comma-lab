@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -14,6 +15,21 @@ pytestmark = pytest.mark.skipif(
     importlib.util.find_spec("mlx") is None,
     reason="Z7-Mamba-2 MLX module smoke requires mlx on Apple Silicon",
 )
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_TRAINER_PATH = _REPO_ROOT / "experiments" / (
+    "train_substrate_time_traveler_l5_z7_mamba2_mlx_local.py"
+)
+
+
+def _load_z7_trainer_module():
+    spec = importlib.util.spec_from_file_location("z7_mamba2_mlx_local_trainer", _TRAINER_PATH)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_z7_mamba2_mlx_module_forward_shape_and_false_authority() -> None:
@@ -40,6 +56,9 @@ def test_z7_mamba2_mlx_module_forward_shape_and_false_authority() -> None:
     assert tuple(int(x) for x in rgb_1.shape) == (2, 3, 384, 512)
     assert tuple(int(x) for x in latents.shape) == (2, 24)
     assert model.num_parameters() > 0
+    assert cfg.mamba2_mlx_backend_lineage == "reference_s6_mlx"
+    assert cfg.canonical_ssd_mlx_backend_wired is False
+    assert cfg.canonical_ssd_mlx_blocker == "canonical_ssd_mlx_backend_not_wired"
 
 
 def test_z7_mamba2_mlx_smoke_manifest_uses_trainable_module(tmp_path: Path) -> None:
@@ -49,12 +68,9 @@ def test_z7_mamba2_mlx_smoke_manifest_uses_trainable_module(tmp_path: Path) -> N
     if resolved.startswith(("/tmp/", "/private/tmp/")):
         pytest.skip("smoke CLI intentionally refuses persisted /tmp artifacts")
 
-    from experiments.train_substrate_time_traveler_l5_z7_mamba2_mlx_local import (
-        _build_parser,
-        _smoke_main,
-    )
+    trainer = _load_z7_trainer_module()
 
-    parser = _build_parser()
+    parser = trainer._build_parser()
     args = parser.parse_args(
         [
             "--smoke",
@@ -64,7 +80,7 @@ def test_z7_mamba2_mlx_smoke_manifest_uses_trainable_module(tmp_path: Path) -> N
             str(output_dir),
         ]
     )
-    assert _smoke_main(args) == 0
+    assert trainer._smoke_main(args) == 0
 
     manifest = json.loads((output_dir / "smoke_manifest.json").read_text())
     assert manifest["renderer_module"].endswith(".mlx_module")
@@ -72,5 +88,11 @@ def test_z7_mamba2_mlx_smoke_manifest_uses_trainable_module(tmp_path: Path) -> N
     assert manifest["score_claim"] is False
     assert manifest["promotable"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["mamba2_mlx_backend_lineage"] == "reference_s6_mlx"
+    assert manifest["canonical_ssd_mlx_backend_wired"] is False
+    assert manifest["canonical_ssd_mlx_blocker"] == (
+        "canonical_ssd_mlx_backend_not_wired"
+    )
+    assert "canonical_ssd_mlx_backend_not_wired" in manifest["backend_claim_blockers"]
     assert "BLOCKED pending" not in manifest["canonical_provenance"]["rationale"]
     assert manifest["forward_smoke"]["latents_shape"] == [2, 24]

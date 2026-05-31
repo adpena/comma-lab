@@ -64,6 +64,26 @@ def test_archive_family_fingerprint_covers_non_fec_payload_families(tmp_path: Pa
     assert "hnerv_latent_sidecar_hdm" in probes["hdm.zip"]
 
 
+def test_pact_nerv_torch_runtime_blocker_is_separate_from_score_adapter(
+    tmp_path: Path,
+) -> None:
+    psv4 = _write_zip(
+        tmp_path / "psv4_torch.zip",
+        {"0.bin": b"PSV4\x01payload", "inflate.py": b"import torch\n"},
+    )
+
+    probe = fingerprint_archive_family(psv4, repo_root=tmp_path)
+
+    assert "pact_nerv_selector_v4_packet" in probe["detected_archive_families"]
+    assert probe["score_affecting_adapter_implemented"] is True
+    assert probe["numpy_portable_inflate"] is False
+    assert probe["runtime_portability_blockers"] == [
+        "pact_nerv_inflate_torch_dependency"
+    ]
+    assert probe["score_claim"] is False
+    assert probe["ready_for_exact_eval_dispatch"] is False
+
+
 def test_archive_family_coverage_report_rolls_up_adapter_gaps(tmp_path: Path) -> None:
     archives = [
         _write_zip(tmp_path / "fec5.zip", {"x": _fp11_selector_payload(b"FEC5")}),

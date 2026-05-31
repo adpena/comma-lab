@@ -44,7 +44,7 @@ The MLX → Z7MCM2 path:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
@@ -54,13 +54,15 @@ from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
 )
-from tac.substrates.time_traveler_l5_z7_mamba2.archive import pack_archive
 from tac.substrates.time_traveler_l5_z7_mamba2.architecture import (
     Z7Mamba2PredictiveCodingConfig,
 )
-from tac.substrates.time_traveler_l5_z7_mamba2.mlx_native import (
-    Z7Mamba2MLXRenderConfig,
-)
+from tac.substrates.time_traveler_l5_z7_mamba2.archive import pack_archive
+
+if TYPE_CHECKING:
+    from tac.substrates.time_traveler_l5_z7_mamba2.mlx_native import (
+        Z7Mamba2MLXRenderConfig,
+    )
 
 
 def z7_mamba2_pytorch_config_from_mlx(
@@ -184,6 +186,9 @@ def z7_mamba2_meta_from_config(
         "stateful": bool(cfg.stateful),
         "identity_predictor": bool(cfg.identity_predictor),
         "context_conditioning_mode": "none",
+        "mamba2_mlx_backend_lineage": str(cfg.mamba2_mlx_backend_lineage),
+        "canonical_ssd_mlx_backend_wired": bool(cfg.canonical_ssd_mlx_backend_wired),
+        "canonical_ssd_mlx_blocker": str(cfg.canonical_ssd_mlx_blocker),
     }
 
 

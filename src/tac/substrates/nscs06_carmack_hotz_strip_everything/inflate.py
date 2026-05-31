@@ -33,6 +33,11 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.codec.pr98_channel_balance_zero_byte_bolt_on import (
+    Pr98ChannelBalanceConfig,
+    apply_pr98_channel_balance_to_decoded_pair,
+)
+
 from .archive import (
     POSE_DIMS,
     decode_class_label_stream,
@@ -40,6 +45,26 @@ from .archive import (
     dequantize_pose_deltas,
     parse_archive,
 )
+
+_PR98_L28_NSCS06_CONFIG = Pr98ChannelBalanceConfig(
+    substrate_id="nscs06_carmack_hotz_strip_everything"
+)
+
+
+def _apply_pr98_l28_channel_balance_to_pair_uint8(
+    frame_0: np.ndarray, frame_1: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Apply canonical L28 PR98 balance to an HWC uint8 frame pair."""
+    pair = np.stack((frame_0, frame_1), axis=0).transpose(0, 3, 1, 2)[None]
+    balanced = apply_pr98_channel_balance_to_decoded_pair(
+        pair.astype(np.float32),
+        _PR98_L28_NSCS06_CONFIG,
+    )[0]
+    frame_0_balanced, frame_1_balanced = balanced.transpose(0, 2, 3, 1)
+    return (
+        frame_0_balanced.round().astype(np.uint8),
+        frame_1_balanced.round().astype(np.uint8),
+    )
 
 
 def _grayscale_plus_chroma_to_rgb(
@@ -186,6 +211,9 @@ def inflate_one_video(archive_bytes: bytes, output_stem: Path) -> Path:
                 gray_full, cls_full, arc.chroma_rgb
             )
             frame_1 = _affine_warp_frame1_from_frame0(frame_0, pose[p])
+            frame_0, frame_1 = _apply_pr98_l28_channel_balance_to_pair_uint8(
+                frame_0, frame_1
+            )
             for off, frame in ((0, frame_0), (1, frame_1)):
                 fh.write(np.ascontiguousarray(frame, dtype=np.uint8).tobytes())
                 if debug_png_dir is not None:

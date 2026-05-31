@@ -33,12 +33,18 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 
+from tac.codec.pr98_channel_balance_zero_byte_bolt_on import (
+    Pr98ChannelBalanceConfig,
+    apply_pr98_channel_balance_to_decoded_pair_torch,
+)
+
 from .architecture import Pr101LcV2CloneConfig, Pr101LcV2CloneSubstrate
 from .archive import parse_archive
 
 # PR101 source line 16: CAMERA_H, CAMERA_W = 874, 1164
 _CAMERA_H = 874
 _CAMERA_W = 1164
+_PR98_L28_PR101_CONFIG = Pr98ChannelBalanceConfig(substrate_id="pr101_lc_v2_clone")
 
 
 def inflate_one_video(
@@ -97,8 +103,14 @@ def inflate_one_video(
                 mode="bicubic",
                 align_corners=False,
             )
+            up_pair = up.view(batch, 2, 3, _CAMERA_H, _CAMERA_W)
+            apply_pr98_channel_balance_to_decoded_pair_torch(
+                up_pair,
+                _PR98_L28_PR101_CONFIG,
+            )
             frames = (
-                up.clamp(0, 255)
+                up_pair.reshape(batch * 2, 3, _CAMERA_H, _CAMERA_W)
+                .clamp(0, 255)
                 .permute(0, 2, 3, 1)
                 .round()
                 .to(torch.uint8)

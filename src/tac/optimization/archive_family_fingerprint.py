@@ -106,6 +106,11 @@ _FAMILY_AUTOMATION_SURFACES: Mapping[str, tuple[str, tuple[str, ...], str]] = {
     ),
 }
 
+_PACT_NERV_RUNTIME_FAMILIES: tuple[str, ...] = (
+    "pact_nerv_selector_v3_packet",
+    "pact_nerv_selector_v4_packet",
+)
+
 
 def _repo_rel(path: str | Path, repo_root: str | Path | None) -> str:
     value = Path(path)
@@ -243,6 +248,33 @@ def _families_from_payload(
     return ordered_unique(families), details
 
 
+def _runtime_portability_blockers_from_archive(
+    archive: zipfile.ZipFile,
+    *,
+    families: list[str],
+    member_names: list[str],
+) -> list[str]:
+    """Detect runtime portability blockers separately from score adapters."""
+    if not any(family in families for family in _PACT_NERV_RUNTIME_FAMILIES):
+        return []
+
+    runtime_candidates = [
+        name
+        for name in member_names
+        if name == "inflate.py" or name.endswith("/inflate.py")
+    ]
+    blockers: list[str] = []
+    for name in runtime_candidates:
+        try:
+            text = archive.read(name).decode("utf-8", errors="ignore")
+        except (OSError, KeyError, zipfile.BadZipFile):
+            continue
+        if "import torch" in text or "from torch" in text:
+            blockers.append("pact_nerv_inflate_torch_dependency")
+            break
+    return ordered_unique(blockers)
+
+
 def fingerprint_archive_family(
     archive_path: str | Path,
     *,
@@ -261,6 +293,7 @@ def fingerprint_archive_family(
     primary_bytes = 0
     primary_compressed_bytes = 0
     primary_compression_method = None
+    runtime_portability_blockers: list[str] = []
 
     if not path.is_file():
         blockers.append("archive_missing")
@@ -289,6 +322,11 @@ def fingerprint_archive_family(
                     member_name=primary.filename,
                     member_count=len(infos),
                     payload=payload,
+                    member_names=member_names,
+                )
+                runtime_portability_blockers = _runtime_portability_blockers_from_archive(
+                    archive,
+                    families=families,
                     member_names=member_names,
                 )
         except (OSError, ValueError, zipfile.BadZipFile, struct.error, KeyError) as exc:
@@ -324,6 +362,8 @@ def fingerprint_archive_family(
         "coder_boundary_adapter_available": path.is_file() and not blockers,
         "post_container_adapter_available": path.is_file() and not blockers,
         "score_affecting_unsupported_families_fail_closed": bool(unsupported_score),
+        "numpy_portable_inflate": not bool(runtime_portability_blockers),
+        "runtime_portability_blockers": runtime_portability_blockers,
         "blockers": ordered_unique(blockers),
         "score_claim": False,
         "promotion_eligible": False,

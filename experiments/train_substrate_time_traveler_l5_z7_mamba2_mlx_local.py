@@ -18,50 +18,17 @@ distilled scorer-bound gradient. THIS trainer is the canonical Z7-Mamba-2
 sister-architecture probe per Catalog #308 (N>=3 alternative-probe-methodology)
 within the SAME paradigm class.
 
-**SCAFFOLD STATE (Catalog #240 + #325 OPTIMAL_FORM_DISPATCH_OK):**
+**CURRENT STATE (Catalog #240 + #325 OPTIMAL_FORM_DISPATCH_OK):**
 
-This trainer is L1 SCAFFOLD per Catalog #240 (recipe-vs-trainer-state
-consistency) + Catalog #220 (operational mechanism status:
-``pre_build_substrate_engineering``). The ``_full_main`` body RAISES
-``NotImplementedError`` because the canonical harness requires
-``mlx.nn.value_and_grad(self.model, _loss_fn_inner)`` per
-``src/tac/substrates/_shared/mlx_score_aware/adapter.py`` line 161, but the
-existing ``Z7Mamba2MLXNativeRenderer`` at
-``src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_native.py`` is a plain
-Python class — it does NOT extend ``mlx.nn.Module`` and does NOT expose
-``.parameters()`` per the harness contract.
-
-**OPERATOR-ROUTABLE REACTIVATION CRITERIA** per the landing memo at
-``.omx/research/z7_mamba2_state_space_hinton_distill_600pair_long_mlx_landed_20260528.md``
-section 10 "Operator-routable next":
-
-1. Author ``src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_module.py``
-   with ``class Z7Mamba2MLXModule(mlx.nn.Module)`` wrapping the existing
-   ``Z7Mamba2MLXNativeRenderer`` parameters as either:
-   (a) nested ``mlx.nn.Linear`` + ``mlx.nn.Conv2d`` submodules (most canonical;
-       mirrors ``Z6V2SubstrateMLX`` at
-       ``src/tac/substrates/z6_v2_cargo_cult_unwind/mlx_renderer.py:252``),
-   (b) ``mx.array`` attributes registered via ``self.update({...})`` (less
-       canonical but lower-touch).
-2. Implement ``reconstruct_pair(pair_indices_np) -> (rgb_0, rgb_1, latents)``
-   delegating to the existing forward logic.
-3. Sister tests at
-   ``src/tac/substrates/time_traveler_l5_z7_mamba2/tests/test_mlx_module.py``
-   verifying byte-parity vs ``Z7Mamba2MLXNativeRenderer.export_state_dict``.
-4. Replace the ``_full_main`` body's NotImplementedError with the canonical
-   Z6-v2 pattern from
-   ``experiments/train_substrate_z6_v2_cargo_cult_unwind_mlx_local.py`` lines
-   116-272 (substitute ``Z7Mamba2MLXModule`` for ``Z6V2SubstrateMLX`` and
-   ``Z7Mamba2MLXRenderConfig`` for ``Z6V2Config``; keep all canonical harness
-   + Hinton-distilled SegNet + PoseNet teacher wiring UNCHANGED).
-5. Author ``src/tac/substrates/time_traveler_l5_z7_mamba2/archive_candidate.py``
-   sister of ``src/tac/substrates/z6_v2_cargo_cult_unwind/archive_candidate.py``
-   (~100 LOC) for MLX state_dict -> Z7MCM2 archive bridge.
-6. Run 600-pair MLX-LOCAL ~2000 epoch training on M5 Max ($0 GPU).
-7. Run per-axis decomposition vs Z6-v2 paired-anchor comparison.
-8. APPEND empirical anchor to ``z7_mamba2_state_space_predictive_coding_pose_axis_savings_v1``
-   canonical equation in
-   ``.omx/state/canonical_equations_registry.jsonl``.
+The trainer now routes ``--full`` through ``Z7Mamba2MLXModule`` and the
+canonical MLX score-aware harness, and ``archive_candidate.py`` can emit a
+byte-closed Z7MCM2 archive from the MLX module state. The remaining fail-closed
+gap is narrower and explicit: the MLX recurrence lineage is still
+``reference_s6_mlx`` rather than canonical
+``tac.substrates._shared.mamba2_ssd``. Any artifact from this path must carry
+``canonical_ssd_mlx_backend_wired=false`` and blocker
+``canonical_ssd_mlx_backend_not_wired`` until Z7 delegates to the canonical SSD
+helper or an MLX SSD sibling.
 
 **Smoke command (RUNNABLE)::**
 
@@ -73,7 +40,7 @@ end-to-end + a single forward pass produces correctly-shaped output. The smoke
 WORKS today (the renderer is functional; only the MLX-FIRST training harness
 binding is blocked).
 
-**Full command (BLOCKED per Catalog #240 until migration completes)::**
+**Full command (ADVISORY; MLX-local, no score authority)::**
 
     .venv/bin/python experiments/train_substrate_time_traveler_l5_z7_mamba2_mlx_local.py \\
         --full --output-dir .omx/research/z7_mamba2_mlx_long_<utc> \\
@@ -522,6 +489,11 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "output_height": int(cfg.output_height),
             "output_width": int(cfg.output_width),
             "stateful": bool(cfg.stateful),
+            "mamba2_mlx_backend_lineage": str(cfg.mamba2_mlx_backend_lineage),
+            "canonical_ssd_mlx_backend_wired": bool(
+                cfg.canonical_ssd_mlx_backend_wired
+            ),
+            "canonical_ssd_mlx_blocker": str(cfg.canonical_ssd_mlx_blocker),
         },
         "forward_smoke": {
             "input_indices": idx_np,
@@ -536,6 +508,12 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "rgb_1_mean": float(mx.mean(rgb_1)),
         },
         "forward_convention": "reconstruct_pair_nchw01",
+        "mamba2_mlx_backend_lineage": str(cfg.mamba2_mlx_backend_lineage),
+        "canonical_ssd_mlx_backend_wired": bool(
+            cfg.canonical_ssd_mlx_backend_wired
+        ),
+        "canonical_ssd_mlx_blocker": str(cfg.canonical_ssd_mlx_blocker),
+        "backend_claim_blockers": [str(cfg.canonical_ssd_mlx_blocker)],
         "evidence_grade": MLX_EVIDENCE_GRADE,
         "axis_tag": MLX_EVIDENCE_GRADE,
         "score_claim": False,
@@ -560,7 +538,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
                 "trainable MLX module construction + single forward pass only. "
                 "Non-promotable by construction per Catalog #192/#317/#341; "
                 "exact CPU/CUDA authority still requires PyTorch bridge export "
-                "and paired contest-axis replay."
+                "and paired contest-axis replay. Canonical SSD authority is "
+                "also blocked until canonical_ssd_mlx_backend_not_wired is "
+                "closed."
             ),
         },
     }

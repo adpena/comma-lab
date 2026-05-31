@@ -64,6 +64,12 @@ Canonical-vs-unique decision per layer (extends parent
    is NOT yet implemented in MLX. Operator iterates with ``"none"`` mode
    only at L0; the affine path lands as a sister L1 EXTENSION once a council
    anchor justifies the per-pair affine modulation cost on MLX.
+5. **SSD lineage (FAIL-CLOSED)**: this renderer still uses the MLX port of
+   the reference S6-shaped recurrence, not the canonical
+   ``tac.substrates._shared.mamba2_ssd`` helper. Artifacts therefore carry
+   ``mamba2_mlx_backend_lineage="reference_s6_mlx"`` and
+   ``canonical_ssd_mlx_backend_wired=False`` until an SSD-backed MLX path
+   lands.
 
 Architecture mirror (PyTorch -> MLX field names preserved for byte-stable
 export bridge per Catalog #1251):
@@ -185,6 +191,13 @@ class Z7Mamba2MLXRenderConfig:
         output_width: contest scorer width (512).
         latent_init_std: trainable latent_init std for initialization
             (0.02 per Z7-LSTM/GRU canonical).
+        mamba2_mlx_backend_lineage: current MLX recurrence implementation
+            lineage. ``"reference_s6_mlx"`` is advisory-only and must not be
+            promoted as canonical SSD.
+        canonical_ssd_mlx_backend_wired: false until this config delegates to
+            ``tac.substrates._shared.mamba2_ssd`` or an MLX SSD sibling.
+        canonical_ssd_mlx_blocker: exact fail-closed blocker for any canonical
+            SSD claim on current Z7 MLX artifacts.
     """
 
     latent_dim: int = 24
@@ -204,6 +217,9 @@ class Z7Mamba2MLXRenderConfig:
     output_height: int = EVAL_HW[0]
     output_width: int = EVAL_HW[1]
     latent_init_std: float = 0.02
+    mamba2_mlx_backend_lineage: str = "reference_s6_mlx"
+    canonical_ssd_mlx_backend_wired: bool = False
+    canonical_ssd_mlx_blocker: str = "canonical_ssd_mlx_backend_not_wired"
 
     @property
     def d_inner(self) -> int:

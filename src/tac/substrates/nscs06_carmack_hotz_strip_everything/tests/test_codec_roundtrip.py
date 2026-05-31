@@ -52,6 +52,9 @@ from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import (
     NUM_SEGNET_CLASSES,
     build_class_conditional_cdf,
 )
+from tac.substrates.nscs06_carmack_hotz_strip_everything.inflate import (
+    _apply_pr98_l28_channel_balance_to_pair_uint8,
+)
 
 
 def _build_synthetic_archive(
@@ -107,6 +110,23 @@ def _chroma_blob_offset(blob: bytes) -> int:
         _cls_len,
     ) = fields
     return CH06_HEADER_SIZE + palette_len + cdf_len + grayscale_len + pose_len + meta_len
+
+
+def test_pr98_l28_postprocess_uses_canonical_pair_contract() -> None:
+    """NSCS06 runtime applies L28 via the canonical helper semantics."""
+    frame_0 = np.full((2, 3, 3), 10, dtype=np.uint8)
+    frame_1 = np.full((2, 3, 3), 20, dtype=np.uint8)
+
+    out_0, out_1 = _apply_pr98_l28_channel_balance_to_pair_uint8(frame_0, frame_1)
+
+    assert out_0.dtype == np.uint8
+    assert out_1.dtype == np.uint8
+    assert (out_0[..., 0] == 9).all()
+    assert (out_0[..., 1] == 10).all()
+    assert (out_0[..., 2] == 9).all()
+    assert (out_1[..., 0] == 20).all()
+    assert (out_1[..., 1] == 19).all()
+    assert (out_1[..., 2] == 20).all()
 
 
 # ---------------------------------------------------------------------------
