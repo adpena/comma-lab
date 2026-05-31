@@ -18,6 +18,7 @@ from tac.substrates.hprc.learned_receiver import (
     compact_receiver_section_value_profile,
     decode_compact_receiver_packet,
     mutate_compact_receiver_section,
+    neutralize_compact_receiver_section,
     render_compact_receiver_frame,
 )
 
@@ -145,3 +146,35 @@ def test_compact_receiver_manifest_mutation_is_metadata_only() -> None:
     mutated_packet = pack_hprc_packet(mutated, config=packet.config)
 
     assert hprc_preview_digest(mutated_packet) == hprc_preview_digest(packet_bytes)
+
+
+def test_compact_receiver_neutralization_returns_valid_packet() -> None:
+    packet_bytes = build_compact_receiver_packet_from_lowres_frames(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+    packet = parse_hprc_packet(packet_bytes)
+
+    neutralized = neutralize_compact_receiver_section(packet, HprcSectionKind.RESIDUAL_RC)
+    compact = decode_compact_receiver_packet(parse_hprc_packet(neutralized))
+
+    assert compact.residual.q.shape == (4, 2, 3, 3)
+    assert np.count_nonzero(compact.residual.q) == 0
+    assert hprc_preview_digest(neutralized) != hprc_preview_digest(packet_bytes)
+
+
+def test_compact_receiver_local_acquisition_frame_cap(tmp_path: Path, monkeypatch) -> None:
+    packet_bytes = build_compact_receiver_packet_from_lowres_frames(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+    out = tmp_path / "0.raw"
+    monkeypatch.setenv("PACT_LOCAL_ACQUISITION_MAX_PAIRS", "1")
+
+    inflate_one_video(packet_bytes, out, device="cpu")
+
+    assert out.stat().st_size == 2 * CAMERA_H * CAMERA_W * 3

@@ -1232,6 +1232,8 @@ _KNOWN_ARCHIVE_BASENAMES = (
     "p",                        # top-submission-style packed payload member
     "x",                        # PR65/henosis-style packed payload member
     "fb",                       # PR89-style charged final-bias atom
+    "inflate.sh",               # charged portable receiver entrypoint
+    "inflate.py",               # charged portable receiver entrypoint
 )
 _FORBIDDEN_ARCHIVE_NAMES = (
     ".DS_Store", "__MACOSX", "._",  # macOS resource forks
@@ -1269,6 +1271,7 @@ def _validate_archive_members(members: list[str]) -> None:
             logical_lower = lower[:-3] if lower.endswith(".br") else lower
             if (
                 basename not in _KNOWN_ARCHIVE_BASENAMES
+                and not _is_known_archive_runtime_member(lower)
                 and not any(lower.endswith(s) for s in _KNOWN_ARCHIVE_SUFFIXES)
                 and not (
                     lower.endswith(".br")
@@ -1292,6 +1295,26 @@ def _validate_archive_members(members: list[str]) -> None:
             f"intentionally, append its suffix or exact basename to the "
             f"archive whitelist in experiments/contest_auth_eval.py."
         )
+
+
+def _is_known_archive_runtime_member(lower_member: str) -> bool:
+    """Return true for charged Python runtime closure members."""
+
+    if not lower_member.endswith(".py"):
+        return False
+    parts = lower_member.split("/")
+    if "" in parts or ".." in parts or "\\" in lower_member:
+        return False
+    if lower_member in {
+        "src/tac/__init__.py",
+        "src/tac/substrates/__init__.py",
+    }:
+        return True
+    return (
+        lower_member.startswith("src/tac/substrates/")
+        or lower_member.startswith("src/tac/codec/")
+        or lower_member.startswith("src/tac/runtime/")
+    )
 
 
 def _parse_inflate_env_overrides(items: list[str] | None) -> dict[str, str]:

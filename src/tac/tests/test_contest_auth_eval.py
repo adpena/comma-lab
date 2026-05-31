@@ -967,9 +967,30 @@ def test_archive_member_validator_accepts_brotli_logical_members(cae):
     )
 
 
+def test_archive_member_validator_accepts_charged_runtime_closure(cae):
+    """Archive-contained receivers pay bytes for their portable runtime closure."""
+    cae._validate_archive_members(
+        [
+            "0.bin",
+            "inflate.sh",
+            "inflate.py",
+            "src/tac/__init__.py",
+            "src/tac/substrates/__init__.py",
+            "src/tac/substrates/hprc/archive.py",
+            "src/tac/substrates/hprc/inflate.py",
+            "src/tac/substrates/hprc/learned_receiver.py",
+        ]
+    )
+
+
 def test_archive_member_validator_rejects_unknown_brotli_logical_member(cae):
     with pytest.raises(RuntimeError, match="UNKNOWN file types"):
         cae._validate_archive_members(["debug.dat.br"])
+
+
+def test_archive_member_validator_rejects_noncanonical_runtime_path(cae):
+    with pytest.raises(RuntimeError, match="UNKNOWN file types"):
+        cae._validate_archive_members(["src/tac/substrates/../debug.py"])
 
 
 def test_archive_member_validator_still_rejects_unknown_extensionless_debug_member(cae):

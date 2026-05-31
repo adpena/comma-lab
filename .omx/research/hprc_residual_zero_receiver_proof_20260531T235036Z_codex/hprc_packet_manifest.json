@@ -1,0 +1,88 @@
+{
+  "byte_accounting": {
+    "authority_note": "hprc.bin payload accounting only; contest byte ceiling must include archive.zip, inflate runtime, config, tables, and any bundled decoder dependencies before promotion",
+    "contest_rate_bytes_authority": false,
+    "header_bytes": 38,
+    "packet_bytes": 3008245,
+    "runtime_bytes_included": false,
+    "section_payload_bytes": 3007829,
+    "section_table_bytes": 378,
+    "zip_container_bytes_included": false
+  },
+  "config": {
+    "color_transform_id": 1,
+    "decoder_family_id": 1201,
+    "frames": 1200,
+    "gop_size": 2,
+    "height": 96,
+    "pairs": 600,
+    "width": 128
+  },
+  "magic": "HPRC",
+  "promotion_eligible": false,
+  "receiver_proof": {
+    "required_for_promotion": "valid semantic section mutation plus full receiver replay; raw byte flip/hash failure is parser integrity only",
+    "status": "raw_flip_only"
+  },
+  "schema": "hprc_packet_manifest.v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "sections": [
+    {
+      "crc32": "90c18bb2",
+      "id": 1,
+      "length": 221204,
+      "name": "decoder_qw",
+      "offset": 416,
+      "sha256": "b1ab18c257e7b82747b386bccc551d4226b885fdfd59fa8e0bff72ddf21e1e9e"
+    },
+    {
+      "crc32": "0eaa4b93",
+      "id": 2,
+      "length": 12017,
+      "name": "latents_rc",
+      "offset": 221620,
+      "sha256": "bc13abf46251bbccd8bf9def073dc4acacb521280a67372ae83caec45e0e51dc"
+    },
+    {
+      "crc32": "be1ad9ea",
+      "id": 4,
+      "length": 1211,
+      "name": "selectors_rc",
+      "offset": 233637,
+      "sha256": "b436159be9604ab2667329d27991e624e5eeba07440ae2225dfc60b5f8126ace"
+    },
+    {
+      "crc32": "e2c06138",
+      "id": 5,
+      "length": 2764820,
+      "name": "residual_rc",
+      "offset": 234848,
+      "sha256": "23ee8bd0820f0077f1322dea2d54401a03a13fa3a7b3a4eb8baf3c454b24ea34"
+    },
+    {
+      "crc32": "9f2bf7e2",
+      "id": 6,
+      "length": 259,
+      "name": "rdo_plan",
+      "offset": 2999668,
+      "sha256": "5591a9ef3a8438cd021fba547e01754052c4147fd2df4297eae1ad25ffde9b80"
+    },
+    {
+      "crc32": "a2893d30",
+      "id": 7,
+      "length": 7216,
+      "name": "receiver_state",
+      "offset": 2999927,
+      "sha256": "f15db983c0fadb628a7b19f07f2288d9612681878482fd1bac78f984433e46ea"
+    },
+    {
+      "crc32": "2cbb4834",
+      "id": 8,
+      "length": 1102,
+      "name": "manifest_json",
+      "offset": 3007143,
+      "sha256": "5f3ca72e89c861b70dfe35b3e555e4c49a600d5f29fb1200218cd783fd841b41"
+    }
+  ]
+}

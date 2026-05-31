@@ -1,0 +1,297 @@
+{
+  "archive_sha256": "650dcf9177945644a4132653a268dbd312d1df94045653ac99b9e585d5833c67",
+  "archive_size_bytes": 1141492,
+  "avg_posenet_dist": 188.26930236816406,
+  "avg_segnet_dist": 0.5081074833869934,
+  "batch_pairs": 1,
+  "batch_process": {
+    "job_count": 6,
+    "job_index": 2,
+    "output": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_20260531T234949Z/mlx_responses/neutralize_decoder_qw.json",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "mlx_scorer_response_batch_process_member.v1",
+    "score_claim": false
+  },
+  "batch_process_summary": {
+    "batch_process_wall_seconds": 10.634613037109375,
+    "job_count": 6,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "mlx_scorer_response_batch_process_summary.v1",
+    "score_claim": false
+  },
+  "batch_shape_research_signal_allowed": false,
+  "cache_identity": {
+    "candidate": {
+      "archive_sha256": "650dcf9177945644a4132653a268dbd312d1df94045653ac99b9e585d5833c67",
+      "array_sha256": {
+        "pair_indices": "06448129f72a7e3fa7263b978cee5a0492e507b13a5b394981af472df1f1c3a2",
+        "posenet_yuv6_pair": "47c31f38a53a13d0a9ff8b46f52baa43e2534d45d47b5e4e70cf23f617de8e72",
+        "segnet_last_rgb": "8c1c59d7bc693e31a8f182d3b1492e4864dec2ac719963972a8ebcca9ce67ef1"
+      },
+      "auth_eval_identity_audit": null,
+      "cache_integrity": {
+        "array_sha256": {
+          "pair_indices": "06448129f72a7e3fa7263b978cee5a0492e507b13a5b394981af472df1f1c3a2",
+          "posenet_yuv6_pair": "47c31f38a53a13d0a9ff8b46f52baa43e2534d45d47b5e4e70cf23f617de8e72",
+          "segnet_last_rgb": "8c1c59d7bc693e31a8f182d3b1492e4864dec2ac719963972a8ebcca9ce67ef1"
+        },
+        "artifact_bytes": {
+          "pair_indices": 160,
+          "posenet_yuv6_pair": 4718720,
+          "segnet_last_rgb": 4718720
+        },
+        "artifact_sha256": {
+          "pair_indices": "fc619b204806cd97b9155d867357c3a073f5e1f25803ffa3e0655f9330bcd391",
+          "posenet_yuv6_pair": "d42e1249d99ebb57f301191df36acaabd4ccfa048dba60310f475c952185bdf4",
+          "segnet_last_rgb": "c32222a96228680f5de0f98e75f0f125381767b8f73af0a6064fbaf1c5a44226"
+        },
+        "blockers": [],
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "integrity_mode": "manifest",
+        "manifest_hashes_reused": true,
+        "passed": true,
+        "strict_rehash_performed": false
+      },
+      "candidate_cache_identity_mode": "unaudited_debug_override",
+      "eligible_for_local_mlx_local_advisory_debug": false,
+      "eligible_for_local_mlx_transfer_calibration": false,
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "inflated_outputs_aggregate_sha256": "65d87f2842fac5b0018ae022e56b6bb4de3d1bd0756eee5831c7112a3ddfe7f0",
+      "local_cpu_advisory_cache_identity_audit": null,
+      "pair_count": 2,
+      "pair_indices_shape": [
+        2,
+        2
+      ],
+      "path": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_20260531T234949Z/mlx_caches/neutralize_decoder_qw",
+      "posenet_yuv6_pair_shape": [
+        2,
+        12,
+        192,
+        256
+      ],
+      "raw_sha256": "65d52469ada476418de3d0bfeb85e62ec69322ea2b26a2535add5c0cdb210d2a",
+      "segnet_last_rgb_shape": [
+        2,
+        3,
+        384,
+        512
+      ]
+    },
+    "pair_index_alignment_mode": "candidate_subset_by_pair_indices",
+    "pair_indices_equal": false,
+    "reference": {
+      "archive_sha256": null,
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+        "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+      },
+      "auth_eval_identity_audit": null,
+      "cache_integrity": {
+        "array_sha256": {
+          "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+          "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+          "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+        },
+        "artifact_bytes": {
+          "pair_indices": 9728,
+          "posenet_yuv6_pair": 1415577728,
+          "segnet_last_rgb": 1415577728
+        },
+        "artifact_sha256": {
+          "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+          "posenet_yuv6_pair": "65fba1abb0de07a6b1af4170d65c54e5eaec78a54928b6005913736885e56f8f",
+          "segnet_last_rgb": "604ed34ba21a4c8201227ac52472a5dc6120ac5d7c78a8292f983f914b1b1886"
+        },
+        "blockers": [],
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "integrity_mode": "manifest",
+        "manifest_hashes_reused": true,
+        "passed": true,
+        "strict_rehash_performed": false
+      },
+      "eligible_for_local_mlx_local_advisory_debug": false,
+      "eligible_for_local_mlx_transfer_calibration": false,
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "inflated_outputs_aggregate_sha256": null,
+      "local_cpu_advisory_cache_identity_audit": null,
+      "pair_count": 600,
+      "pair_indices_shape": [
+        600,
+        2
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+      "posenet_yuv6_pair_shape": [
+        600,
+        12,
+        192,
+        256
+      ],
+      "raw_sha256": null,
+      "segnet_last_rgb_shape": [
+        600,
+        3,
+        384,
+        512
+      ]
+    },
+    "reference_row_indices_sha256": "ab91cafa209992635fe5b62cea5fae4b5620666bf44c444ef94e903b5bda0bc0",
+    "reference_row_window": [
+      0,
+      1
+    ]
+  },
+  "cache_integrity": {
+    "candidate": {
+      "array_sha256": {
+        "pair_indices": "06448129f72a7e3fa7263b978cee5a0492e507b13a5b394981af472df1f1c3a2",
+        "posenet_yuv6_pair": "47c31f38a53a13d0a9ff8b46f52baa43e2534d45d47b5e4e70cf23f617de8e72",
+        "segnet_last_rgb": "8c1c59d7bc693e31a8f182d3b1492e4864dec2ac719963972a8ebcca9ce67ef1"
+      },
+      "artifact_bytes": {
+        "pair_indices": 160,
+        "posenet_yuv6_pair": 4718720,
+        "segnet_last_rgb": 4718720
+      },
+      "artifact_sha256": {
+        "pair_indices": "fc619b204806cd97b9155d867357c3a073f5e1f25803ffa3e0655f9330bcd391",
+        "posenet_yuv6_pair": "d42e1249d99ebb57f301191df36acaabd4ccfa048dba60310f475c952185bdf4",
+        "segnet_last_rgb": "c32222a96228680f5de0f98e75f0f125381767b8f73af0a6064fbaf1c5a44226"
+      },
+      "blockers": [],
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "integrity_mode": "manifest",
+      "manifest_hashes_reused": true,
+      "passed": true,
+      "strict_rehash_performed": false
+    },
+    "reference": {
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+        "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+      },
+      "artifact_bytes": {
+        "pair_indices": 9728,
+        "posenet_yuv6_pair": 1415577728,
+        "segnet_last_rgb": 1415577728
+      },
+      "artifact_sha256": {
+        "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+        "posenet_yuv6_pair": "65fba1abb0de07a6b1af4170d65c54e5eaec78a54928b6005913736885e56f8f",
+        "segnet_last_rgb": "604ed34ba21a4c8201227ac52472a5dc6120ac5d7c78a8292f983f914b1b1886"
+      },
+      "blockers": [],
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "integrity_mode": "manifest",
+      "manifest_hashes_reused": true,
+      "passed": true,
+      "strict_rehash_performed": false
+    }
+  },
+  "candidate_cache_pairs": 2,
+  "candidate_generation_only": true,
+  "canonical_score": 94.96083165076145,
+  "canonical_score_source": "score_recomputed_from_components",
+  "components": {
+    "artifacts": {
+      "posenet_distortion": {
+        "bytes": 132,
+        "path": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_20260531T234949Z/mlx_window_components/neutralize_decoder_qw/window_0001_0002/posenet_distortion.npy",
+        "sha256": "70adcc4e423a3b70e972cc8e9bce2498095a4e6420afb004f7cd5cc774501544"
+      },
+      "segnet_distortion": {
+        "bytes": 132,
+        "path": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_20260531T234949Z/mlx_window_components/neutralize_decoder_qw/window_0001_0002/segnet_distortion.npy",
+        "sha256": "e33f0143b0e1e5b84f3c6524e9cabacdbbccd5324c705b889619c896be4b3d42"
+      }
+    },
+    "posenet_sha256": "0e32e2e13f14168db43712240fdcee76bc33a987edbffa53c05cf18ba5a7fb29",
+    "posenet_shape": [
+      1
+    ],
+    "segnet_sha256": "d0603b13840e918d8e008c45d1c619d6c32e699db151ac1eb2b936166dd0f1e6",
+    "segnet_shape": [
+      1
+    ]
+  },
+  "device_contract": {
+    "allowed_uses": [
+      "local_tensor_ingestion_debug_only",
+      "non_authoritative_component_smoke"
+    ],
+    "batch_pairs_allowed_without_invariance_override": 1,
+    "batch_shape_research_signal_blocker": "mlx_scorer_response_non_singleton_batches_require_explicit_batch_shape_research_signal_allowance",
+    "batch_shape_research_signal_required": false,
+    "candidate_cache_identity_mode": "unaudited_debug_override",
+    "candidate_cache_transfer_blocker": "mlx_scorer_response_candidate_cache_requires_passing_auth_identity_audit",
+    "forbidden_uses": [
+      "auth_eval",
+      "score_claim",
+      "promotion",
+      "rank_or_kill",
+      "leaderboard_claim",
+      "replacement_for_cuda_t4_or_linux_x86_64_eval"
+    ],
+    "gpu_batch_pairs_allowed_without_invariance_override": 1,
+    "gpu_batch_shape_blocker": "mlx_gpu_scorer_response_requires_singleton_batches_until_invariance_passes",
+    "gpu_research_signal_blocker": "mlx_gpu_scorer_response_requires_explicit_research_signal_allowance",
+    "gpu_research_signal_required": false,
+    "local_advisory_cache_identity_blocker": "mlx_scorer_response_local_advisory_cache_identity_requires_explicit_allowance",
+    "local_cpu_advisory_cache_identity_allowed": false,
+    "unaudited_candidate_cache_debug_allowed": true
+  },
+  "elapsed_seconds": null,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "gpu_research_signal_allowed": false,
+  "hardware_substrate": "MLX cpu",
+  "inflated_outputs_aggregate_sha256": "65d87f2842fac5b0018ae022e56b6bb4de3d1bd0756eee5831c7112a3ddfe7f0",
+  "max_pairs": 1,
+  "n_samples": 1,
+  "pair_window": [
+    1,
+    2
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_unscaled": 0.030402906724693344,
+  "raw_sha256": "65d52469ada476418de3d0bfeb85e62ec69322ea2b26a2535add5c0cdb210d2a",
+  "ready_for_exact_eval_dispatch": false,
+  "reference_cache_pairs": 600,
+  "requires_exact_eval_before_promotion": true,
+  "response_family": "hprc_component_neutralization_neutralize_decoder_qw",
+  "run_id": "mlx_scorer_response:window:1:2",
+  "schema_version": "mlx_scorer_response.v1",
+  "score_axis": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "score_rate_contribution": 0.7600726681173336,
+  "score_recomputed_from_components": 94.96083165076145,
+  "source_pair_window": [
+    [
+      0,
+      1
+    ],
+    [
+      2,
+      3
+    ]
+  ],
+  "start_pair": 1,
+  "total_cache_pairs": 2,
+  "window_split_source": {
+    "parent_n_samples": 2,
+    "parent_pair_window": [
+      0,
+      2
+    ],
+    "schema_version": "mlx_scorer_response_window_split.v1"
+  }
+}
