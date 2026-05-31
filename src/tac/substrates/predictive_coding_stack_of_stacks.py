@@ -96,7 +96,10 @@ CANONICAL_STACK_MEMBERS: dict[str, PredictiveCodingStackMember] = {
             "tac.substrates.z8_hierarchical_predictive_coding."
             "canonical_quadruple_binding.build_z8hpc1_archive_bytes_from_canonical_quadruple"
         ),
-        archive_bound_bridge_entrypoint=None,
+        archive_bound_bridge_entrypoint=(
+            "tac.substrates.z8_hierarchical_predictive_coding.archive_candidate."
+            "export_z8hpc1_archive_bound_candidate_package"
+        ),
         tags=("z8", "predictive_coding", "mallat", "dreamer_v3", "wyner_ziv"),
     ),
     "z7_mamba2": PredictiveCodingStackMember(

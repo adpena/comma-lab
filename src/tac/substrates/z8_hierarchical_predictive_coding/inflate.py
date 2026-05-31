@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 
@@ -122,23 +123,17 @@ def inflate_one_video_from_archive_bytes(
         parse_pair_blobs_from_wavelet_blob,
         reconstruct_pair_rgb_from_pyramid,
     )
-    from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
-        Z8HierarchicalConfig,
-    )
 
     # Rebuild the binding from the archive's grammar so the M5 Mallat
     # inverse chain is the SAME adapter the trainer used. The canonical
     # config fields are determined by the archive header / meta.
-    cfg = Z8HierarchicalConfig(
+    cfg = SimpleNamespace(
         num_levels=arc.num_levels,
         num_groups_per_level=tuple(arc.num_groups_per_level),
         num_categories_per_level=tuple(arc.num_categories_per_level),
-        base_channels=arc.base_channels,
-        decoder_latent_dim=arc.decoder_latent_dim,
         num_pairs=arc.num_pairs,
         deterministic_state_dim=16,  # M9 canonical default
-        gumbel_temperature=1.0,
-        use_straight_through=True,
+        ego_motion_dim=6,
         eval_size=(eval_h, eval_w),
     )
     binding = build_canonical_quadruple_binding_from_z8_config(cfg)
@@ -211,6 +206,12 @@ def inflate_one_video_l0_scaffold(
     )
 
 
+# Shared runtime emitters expect the conventional ``inflate_one_video`` symbol.
+# Keep it as a direct alias so generated contest wrappers can import the Z8
+# runtime without touching MLX-only trainer modules.
+inflate_one_video = inflate_one_video_from_archive_bytes
+
+
 def _read_single_member_archive_bytes(archive_dir: Path) -> bytes:
     """Read the single contest archive member, failing on ambiguity."""
     zero_bin = archive_dir / "0.bin"
@@ -258,6 +259,7 @@ __all__ = [
     "CONTEST_OUT_W",
     "CONTEST_RAW_BYTES",
     "_read_single_member_archive_bytes",
+    "inflate_one_video",
     "inflate_one_video_from_archive_bytes",
     "inflate_one_video_l0_scaffold",
     "main_cli",

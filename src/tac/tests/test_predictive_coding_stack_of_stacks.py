@@ -54,24 +54,23 @@ def test_strict_stack_rejects_falsified_compound_c_leakage() -> None:
         )
 
 
-def test_exact_bridge_requirement_blocks_archive_bytes_only_members() -> None:
+def test_exact_bridge_requirement_is_complete_for_validated_stack() -> None:
     plan = build_predictive_coding_stack_of_stacks_plan(
         ["z8", "dreamer", "z7", "z6", "z4"],
         require_archive_bound_bridge=True,
     )
 
     assert plan["provenance_clean"] is True
-    assert plan["archive_bound_bridge_complete"] is False
-    assert plan["archive_bound_bridge_ready_count"] == 4
-    assert plan["stack_executable"] is False
-    assert "z8_hierarchical_predictive_coding_archive_bound_bridge_missing" in (
-        plan["blockers"]
-    )
+    assert plan["archive_bound_bridge_complete"] is True
+    assert plan["archive_bound_bridge_ready_count"] == 5
+    assert plan["stack_executable"] is True
+    assert not plan["blockers"]
     assert "dreamer_v3_rssm_archive_bound_bridge_missing" not in plan["blockers"]
     bridge_ready = {
         row["member_id"]: row["archive_bound_bridge_ready"]
         for row in plan["member_rows"]
     }
+    assert bridge_ready["z8_hierarchical_predictive_coding"] is True
     assert bridge_ready["dreamer_v3_rssm"] is True
     assert bridge_ready["z7_mamba2"] is True
     assert bridge_ready["z6_v2_cargo_cult_unwind"] is True
