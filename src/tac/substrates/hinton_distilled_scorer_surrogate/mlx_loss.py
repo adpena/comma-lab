@@ -263,6 +263,63 @@ def segnet_boundary_band_weights_mlx(
     return mx.exp(-margin / tau_boundary)
 
 
+def segnet_class_pair_transition_matrix(
+    teacher_logits: Any,
+    *,
+    tau_boundary: float = 1.0,
+    num_classes: int | None = None,
+) -> Any:
+    """LOWER-dimensional boundary abstraction: the ``KxK`` decision-surface matrix.
+
+    Collapses the 2D spatial boundary band into a ``KxK`` class-pair histogram
+    ``T[a, b] = sum_{i : top1(i)=a, top2(i)=b} w_i`` where ``w_i`` is the boundary-band
+    weight and ``(a, b)`` is the teacher's (decision, runner-up) class pair at pixel
+    ``i``. This is the DERIVED answer to "which decision surfaces dominate ``d_seg``":
+    for the comma10k 5-class SegNet (0 road / 1 lane / 2 undrivable / 3 movable /
+    4 my-car), the mass concentrates on the road<->undrivable and road<->lane
+    surfaces — the spatially-dominant boundaries. It is a diagnostic (no params, no
+    training): every entry is read directly off the teacher's sorted logits.
+
+    Why it matters for the OPTIMAL teacher: ``d_seg`` weights all flips UNIFORMLY,
+    so this matrix is for OBSERVABILITY (per CLAUDE.md "Max observability"), NOT for
+    importance-weighting the loss — imposing per-pair weights would optimise a
+    DIFFERENT objective than the contest (the openpilot qpmap "more bits to road
+    boundaries" production heuristic diverges from the uniform-per-flip ``d_seg``).
+
+    Args:
+        teacher_logits: MLX ``(..., num_classes)`` real-SegNet per-pixel logits.
+        tau_boundary: boundary-band temperature for ``w_i``.
+        num_classes: ``K`` (defaults to the last-axis size of ``teacher_logits``).
+
+    Returns:
+        MLX ``(K, K)`` matrix; ``T[a, b]`` = boundary mass with top1=a, top2=b. The
+        diagonal is structurally 0 (top1 != top2). Row/col 0 dominance = road.
+    """
+    _require_mlx()
+    if tau_boundary <= 0.0:
+        raise ValueError(f"tau_boundary must be > 0; got {tau_boundary}")
+    classes = int(teacher_logits.shape[-1])
+    k = int(num_classes) if num_classes is not None else classes
+    if k < 2:
+        raise ValueError(f"num_classes must be >= 2; got {k}")
+    if k < classes:
+        raise ValueError(
+            f"num_classes ({k}) must be >= teacher class axis ({classes})"
+        )
+    flat = teacher_logits.reshape(-1, classes)  # (P, C)
+    order = mx.argsort(flat, axis=-1)  # ascending
+    top1 = order[..., -1]  # (P,)
+    top2 = order[..., -2]  # (P,)
+    w = mx.stop_gradient(
+        segnet_boundary_band_weights_mlx(flat, tau_boundary=tau_boundary)
+    )  # (P,)
+    eye = mx.eye(k)
+    oh1 = mx.take(eye, top1, axis=0)  # (P, K)
+    oh2 = mx.take(eye, top2, axis=0)  # (P, K)
+    # T[a,b] = sum_i w_i * oh1[i,a] * oh2[i,b]  ==  (oh1 * w).T @ oh2
+    return mx.matmul((oh1 * w[:, None]).T, oh2)  # (K, K)
+
+
 def boundary_weighted_tckd_loss(
     student_logits: Any,
     teacher_logits: Any,
@@ -335,6 +392,78 @@ def boundary_weighted_tckd_loss(
     )  # (...)
     denom = mx.sum(w) + _NUMERIC_FLOOR
     return (temperature * temperature) * mx.sum(w * tckd) / denom
+
+
+def boundary_decision_tckd_loss(
+    student_logits: Any,
+    teacher_logits: Any,
+    *,
+    temperature: float = DEFAULT_DISTILLATION_TEMPERATURE,
+    tau_boundary: float = 1.0,
+) -> Any:
+    """Runner-up-AWARE boundary-decision distillation (the OPTIMAL seg teacher v2).
+
+    Fixes the "TCKD-loses-runner-up" property of :func:`boundary_weighted_tckd_loss`:
+    target-vs-rest binarisation ``[p_target, 1-p_target]`` lumps ALL non-target
+    classes into "rest", so on a weak-margin boundary it cannot model WHICH class is
+    the competitor. But ``d_seg`` flips happen specifically at the **top1<->top2
+    decision surface** (the third/fourth/fifth classes are far below and irrelevant
+    to whether THIS pixel flips). So the faithful object is the binary decision over
+    the teacher's TWO competing classes::
+
+        a, b      = teacher's top-1 (decision) and top-2 (runner-up) class indices
+        q_teach   = softmax([teacher_a/T, teacher_b/T])     (the 2-way decision)
+        q_stud    = softmax([student_a/T, student_b/T])     (student at SAME pair)
+        decKL_i   = KL(q_stud || q_teach)                   (2-class, not target-vs-rest)
+        L_seg**   = T^2 * sum_i w_i * decKL_i / sum_i w_i
+
+    This is the DERIVED "perfectly model the boundary" object: the boundary IS the
+    top1<->top2 surface, and we distil exactly that surface (zero params — read off
+    the teacher's sorted logits). On confident interiors top1>>top2 so ``q_teach``
+    is near-degenerate and ``decKL`` ->0; the band weight ``w_i`` zeros it anyway.
+    Strictly more faithful than :func:`boundary_weighted_tckd_loss` because it
+    preserves the runner-up identity that the contest argmax-flip actually contests.
+
+    Args:
+        student_logits: MLX ``(..., num_classes)`` student per-pixel logits.
+        teacher_logits: MLX ``(..., num_classes)`` real-SegNet logits (caller passes
+            ``mx.stop_gradient`` if frozen).
+        temperature: distillation ``T`` (default 2.0).
+        tau_boundary: boundary-band temperature ``tau_b``.
+
+    Returns:
+        Scalar MLX array (the boundary-weighted decision-KD loss).
+    """
+    _require_mlx()
+    if temperature <= 0.0:
+        raise ValueError(
+            f"temperature must be > 0 (Hinton 2014 canonical T=2.0); got {temperature}"
+        )
+    if tau_boundary <= 0.0:
+        raise ValueError(f"tau_boundary must be > 0; got {tau_boundary}")
+    # teacher's top-1 (decision) and top-2 (runner-up) class indices.
+    order = mx.argsort(teacher_logits, axis=-1)  # ascending -> [-1]=top1, [-2]=top2
+    top1_idx = order[..., -1:]  # (..., 1)
+    top2_idx = order[..., -2:-1]  # (..., 1)
+    # gather the TWO competing logits for teacher AND student at the SAME pair.
+    t1 = mx.take_along_axis(teacher_logits, top1_idx, axis=-1)
+    t2 = mx.take_along_axis(teacher_logits, top2_idx, axis=-1)
+    s1 = mx.take_along_axis(student_logits, top1_idx, axis=-1)
+    s2 = mx.take_along_axis(student_logits, top2_idx, axis=-1)
+    teacher_pair = mx.concatenate([t1, t2], axis=-1)  # (..., 2)
+    student_pair = mx.concatenate([s1, s2], axis=-1)  # (..., 2)
+    teacher_dec = softmax_with_temperature(teacher_pair, temperature)  # (..., 2)
+    student_dec = softmax_with_temperature(student_pair, temperature)  # (..., 2)
+    eps = _NUMERIC_FLOOR
+    p_s = mx.clip(student_dec, eps, 1.0)
+    p_t = mx.clip(teacher_dec, eps, 1.0)
+    # 2-class KL(student || teacher) over the decision pair.
+    decision_kl = mx.sum(p_s * (mx.log(p_s) - mx.log(p_t)), axis=-1)  # (...)
+    w = mx.stop_gradient(
+        segnet_boundary_band_weights_mlx(teacher_logits, tau_boundary=tau_boundary)
+    )  # (...)
+    denom = mx.sum(w) + _NUMERIC_FLOOR
+    return (temperature * temperature) * mx.sum(w * decision_kl) / denom
 
 
 def pose_sensitivity_weighted_mse_loss(

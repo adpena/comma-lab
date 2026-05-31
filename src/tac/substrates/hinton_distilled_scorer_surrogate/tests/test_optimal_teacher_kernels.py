@@ -23,11 +23,13 @@ mx = pytest.importorskip("mlx.core")
 import mlx.optimizers as optim  # noqa: E402
 
 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (  # noqa: E402
+    boundary_decision_tckd_loss,
     boundary_weighted_tckd_loss,
     hinton_distilled_kl_t2_loss,
     pose_distillation_mse_loss,
     pose_sensitivity_weighted_mse_loss,
     segnet_boundary_band_weights_mlx,
+    segnet_class_pair_transition_matrix,
 )
 
 
@@ -265,3 +267,125 @@ def test_pose_loss_rejects_bad_K():
         pose_sensitivity_weighted_mse_loss(tp, tp, num_scored_dims=0)
     with pytest.raises(ValueError):
         pose_sensitivity_weighted_mse_loss(tp, tp, num_scored_dims=13)
+
+
+# --------------------------------------------------------------------------- #
+# boundary_decision_tckd_loss — the runner-up-AWARE top1<->top2 decision KD.
+# (Object 2: the boundary IS the top1<->top2 surface; distil exactly that.)
+# --------------------------------------------------------------------------- #
+def _mixed_5class_teacher(seed: int = 0):
+    """Confident-road interior + a road<->undrivable boundary band."""
+    mx.random.seed(seed)
+    p, c = 400, 5
+    teacher = mx.random.normal((p, c)) * 0.4
+    boost = mx.zeros((p, c))
+    boost[:100, 0] = 6.0  # confident road interior
+    teacher = teacher + boost
+    band = mx.zeros((p, c))
+    band[100:200, 0] = 3.0  # road
+    band[100:200, 2] = 2.9  # undrivable (the runner-up at the boundary)
+    return mx.stop_gradient(teacher + band)
+
+
+def test_decision_tckd_zero_when_student_equals_teacher():
+    teacher = _mixed_5class_teacher()
+    # NO-FAKE: an identity input must give ~0 loss (not a constant).
+    assert float(boundary_decision_tckd_loss(teacher, teacher)) < 1e-5
+
+
+def test_decision_tckd_positive_when_student_differs():
+    teacher = _mixed_5class_teacher()
+    student = teacher + mx.random.normal(teacher.shape) * 0.5
+    val = float(boundary_decision_tckd_loss(student, teacher))
+    assert val > 0.0 and np.isfinite(val)
+
+
+def test_decision_tckd_gradient_flows():
+    teacher = _mixed_5class_teacher()
+    student = teacher + mx.random.normal(teacher.shape) * 0.5
+
+    def loss_fn(s):
+        return boundary_decision_tckd_loss(s, teacher)
+
+    g = mx.grad(loss_fn)(student)
+    assert bool(mx.all(mx.isfinite(g)))
+    assert float(mx.sqrt(mx.sum(g * g))) > 0.0  # actually trains (non-zero grad)
+
+
+def test_decision_tckd_distinct_from_target_vs_rest():
+    """The runner-up-aware objective is genuinely different from target-vs-rest.
+
+    If it were the same functional, both losses would coincide. They must not:
+    decision-TCKD distils ``[p_top1, p_top2]``; target-vs-rest distils
+    ``[p_target, 1-p_target]`` (lumps top2..topK). On a weak-margin boundary the
+    runner-up identity matters, so the two objectives MUST diverge.
+    """
+    teacher = _mixed_5class_teacher()
+    student = teacher + mx.random.normal(teacher.shape) * 0.5
+    dec = float(boundary_decision_tckd_loss(student, teacher))
+    tvr = float(boundary_weighted_tckd_loss(student, teacher))
+    assert abs(dec - tvr) > 1e-4  # distinct objective, not a rename
+
+
+def test_decision_tckd_concentrates_on_boundary_not_interior():
+    """The boundary band drives the loss; confident interiors contribute ~0.
+
+    Perturb ONLY the confident-road interior (margin ~6) vs ONLY the boundary
+    band (margin ~0.1). The boundary perturbation must produce a much larger
+    loss because ``w_i`` (and ``decKL_i``) are ~0 on the confident interior.
+    """
+    teacher = _mixed_5class_teacher()
+    # interior-only perturbation (pixels 0..100, margin ~6 => band weight ~0)
+    s_interior = mx.array(teacher)
+    pert_i = mx.zeros(teacher.shape)
+    pert_i[:100, 1] = 2.0
+    s_interior = s_interior + pert_i
+    # boundary-only perturbation (pixels 100..200, margin ~0.1 => band weight ~1)
+    s_boundary = mx.array(teacher)
+    pert_b = mx.zeros(teacher.shape)
+    pert_b[100:200, 2] = 2.0  # push the runner-up across the decision
+    s_boundary = s_boundary + pert_b
+    l_interior = float(boundary_decision_tckd_loss(s_interior, teacher))
+    l_boundary = float(boundary_decision_tckd_loss(s_boundary, teacher))
+    assert l_boundary > 5.0 * max(l_interior, 1e-9)
+
+
+def test_decision_tckd_rejects_nonpositive_params():
+    teacher = _mixed_5class_teacher()
+    with pytest.raises(ValueError):
+        boundary_decision_tckd_loss(teacher, teacher, temperature=0.0)
+    with pytest.raises(ValueError):
+        boundary_decision_tckd_loss(teacher, teacher, tau_boundary=-1.0)
+
+
+# --------------------------------------------------------------------------- #
+# segnet_class_pair_transition_matrix — the lower-D class-pair abstraction.
+# --------------------------------------------------------------------------- #
+def test_transition_matrix_shape_and_zero_diagonal():
+    teacher = _mixed_5class_teacher()
+    t = np.array(segnet_class_pair_transition_matrix(teacher, num_classes=5))
+    assert t.shape == (5, 5)
+    # top1 != top2 structurally => diagonal is exactly 0.
+    assert np.allclose(np.diag(t), 0.0)
+    assert (t >= 0.0).all()  # boundary mass is non-negative
+
+
+def test_transition_matrix_concentrates_on_synthesized_surface():
+    """The dominant decision surface must be the road<->undrivable boundary.
+
+    NO-FAKE: the kernel reads (top1, top2) off the teacher's sorted logits, so
+    the synthesized road(0)<->undrivable(2) band must dominate — proving the
+    matrix reflects the actual decision structure, not a constant.
+    """
+    teacher = _mixed_5class_teacher()
+    t = np.array(segnet_class_pair_transition_matrix(teacher, tau_boundary=2.0, num_classes=5))
+    a, b = np.unravel_index(int(np.argmax(t)), t.shape)
+    assert {a, b} == {0, 2}  # road <-> undrivable is the dominant surface
+
+
+def test_transition_matrix_rejects_bad_args():
+    teacher = _mixed_5class_teacher()
+    with pytest.raises(ValueError):
+        segnet_class_pair_transition_matrix(teacher, tau_boundary=0.0)
+    with pytest.raises(ValueError):
+        segnet_class_pair_transition_matrix(teacher, num_classes=4)  # < class axis
