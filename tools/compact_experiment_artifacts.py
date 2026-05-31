@@ -18,6 +18,7 @@ from comma_lab.artifact_retention import (  # noqa: E402
     build_retention_plan,
     dumps_json,
     execute_retention_plan,
+    sha256_file,
 )
 from comma_lab.operator_storage_waterfall import (  # noqa: E402
     POLICY_ID,
@@ -119,6 +120,13 @@ def _default_execution_journal_path(args: argparse.Namespace) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    expected_output_sha256 = args.expected_output_sha256
+    if (
+        args.json_output is not None
+        and args.json_output.is_file()
+        and expected_output_sha256 is None
+    ):
+        expected_output_sha256 = sha256_file(args.json_output)
     include_kinds = None if args.include_kinds is None else set(args.include_kinds)
     plan = build_retention_plan(
         args.roots,
@@ -166,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.json_output,
                 payload,
                 allow_overwrite=True,
-                expected_existing_sha256=args.expected_output_sha256,
+                expected_existing_sha256=expected_output_sha256,
             )
         except ArtifactWriteError as exc:
             print(f"FATAL: {exc}", file=sys.stderr)

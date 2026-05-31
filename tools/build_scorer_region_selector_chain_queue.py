@@ -64,6 +64,54 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--receiver-patch-output-change-contest-full-sample-claim",
         action="store_true",
     )
+    parser.add_argument("--include-local-component-loop", action="store_true")
+    parser.add_argument("--local-component-upstream-dir", type=Path, default=Path("upstream"))
+    parser.add_argument(
+        "--local-component-video-names-file",
+        type=Path,
+        default=Path("upstream/public_test_video_names.txt"),
+    )
+    parser.add_argument("--local-component-inflate-timeout-seconds", type=int, default=1800)
+    parser.add_argument("--local-component-evaluate-timeout-seconds", type=int, default=1800)
+    parser.add_argument("--include-mlx-component-response", action="store_true")
+    parser.add_argument(
+        "--mlx-reference-cache-dir",
+        type=Path,
+        default=Path(
+            "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+        ),
+    )
+    parser.add_argument("--mlx-device", choices=("cpu", "gpu"), default="gpu")
+    parser.add_argument("--mlx-cache-batch-pairs", type=int, default=1)
+    parser.add_argument("--mlx-batch-pairs", type=int, default=1)
+    parser.add_argument("--mlx-max-pairs", type=int, default=12)
+    parser.add_argument(
+        "--mlx-full-sample",
+        action="store_true",
+        help="Run MLX response over all pairs instead of --mlx-max-pairs.",
+    )
+    parser.add_argument("--include-scorer-response-dataset", action="store_true")
+    parser.add_argument("--scorer-response-baseline-score", type=float)
+    parser.add_argument("--scorer-response-baseline-archive-bytes", type=int)
+    parser.add_argument("--include-local-component-retention-plan", action="store_true")
+    parser.add_argument("--execute-local-component-retention", action="store_true")
+    parser.add_argument(
+        "--local-component-retention-action",
+        choices=("move", "delete"),
+        default="move",
+    )
+    parser.add_argument("--local-component-retention-min-bytes", default="1")
+    parser.add_argument(
+        "--local-component-retention-cold-store-root",
+        action="append",
+        type=Path,
+        default=[],
+    )
+    parser.add_argument(
+        "--local-component-retention-cold-store-reserve-gb",
+        type=float,
+        default=40.0,
+    )
     parser.add_argument(
         "--chain-label",
         default="cascade_c_p19_p18_to_p11_selector_context_then_p15_repack",
@@ -124,6 +172,40 @@ def main(argv: list[str] | None = None) -> int:
             ),
             receiver_patch_output_change_contest_full_sample_claim=(
                 args.receiver_patch_output_change_contest_full_sample_claim
+            ),
+            include_local_component_loop=args.include_local_component_loop,
+            local_component_upstream_dir=args.local_component_upstream_dir,
+            local_component_video_names_file=args.local_component_video_names_file,
+            local_component_inflate_timeout_seconds=(
+                args.local_component_inflate_timeout_seconds
+            ),
+            local_component_evaluate_timeout_seconds=(
+                args.local_component_evaluate_timeout_seconds
+            ),
+            include_mlx_component_response=args.include_mlx_component_response,
+            mlx_reference_cache_dir=args.mlx_reference_cache_dir,
+            mlx_device=args.mlx_device,
+            mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
+            mlx_batch_pairs=args.mlx_batch_pairs,
+            mlx_max_pairs=None if args.mlx_full_sample else args.mlx_max_pairs,
+            include_scorer_response_dataset=args.include_scorer_response_dataset,
+            scorer_response_baseline_score=args.scorer_response_baseline_score,
+            scorer_response_baseline_archive_bytes=(
+                args.scorer_response_baseline_archive_bytes
+            ),
+            include_local_component_retention_plan=(
+                args.include_local_component_retention_plan
+            ),
+            execute_local_component_retention=args.execute_local_component_retention,
+            local_component_retention_action=args.local_component_retention_action,
+            local_component_retention_min_bytes=(
+                args.local_component_retention_min_bytes
+            ),
+            local_component_retention_cold_store_roots=tuple(
+                args.local_component_retention_cold_store_root
+            ),
+            local_component_retention_cold_store_reserve_gb=(
+                args.local_component_retention_cold_store_reserve_gb
             ),
             chain_label=args.chain_label,
             codec_families=tuple(args.codec_family) if args.codec_family else (

@@ -52,6 +52,13 @@ DEFAULT_RETENTION_KINDS = frozenset(
         INVERSE_SCORER_INFLATE_PARITY_RAW_KIND,
     }
 )
+KNOWN_MLX_SCORER_INPUT_CACHE_DIR_NAMES = frozenset(
+    {
+        "mlx_delta_cache",
+        "mlx_scorer_input_cache",
+        "reference_mlx_scorer_input_cache",
+    }
+)
 AUTHORITY_FALSE_FIELDS = (
     "score_claim",
     "score_claim_valid",
@@ -406,10 +413,15 @@ def _certify_local_cpu_advisory(path: Path, repo_root: Path) -> RetentionCandida
 
 
 def _certify_mlx_cache(path: Path, repo_root: Path) -> RetentionCandidate | None:
-    if path.name != "mlx_delta_cache":
-        return None
     blockers: list[str] = []
     manifest_path = path / "manifest.json"
+    if path.name not in KNOWN_MLX_SCORER_INPUT_CACHE_DIR_NAMES:
+        try:
+            preview = load_json_object(manifest_path)
+        except (OSError, json.JSONDecodeError, ArtifactRetentionError):
+            return None
+        if preview.get("schema_version") != "mlx_scorer_input_cache.v1":
+            return None
     manifest = _load_optional_json(manifest_path, blockers)
     certificate = {
         "kind": "mlx_scorer_input_cache",
@@ -1318,7 +1330,11 @@ def _iter_candidate_dirs(root: Path) -> Iterable[Path]:
         for dirpath, dirnames, _filenames in os.walk(root):
             current = Path(dirpath)
             yield current
-            if current.name in {"inflated", "extracted", "mlx_delta_cache"}:
+            if current.name in {
+                "inflated",
+                "extracted",
+                *KNOWN_MLX_SCORER_INPUT_CACHE_DIR_NAMES,
+            }:
                 dirnames[:] = []
 
 

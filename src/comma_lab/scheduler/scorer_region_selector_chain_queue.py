@@ -48,6 +48,9 @@ SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA = "scorer_region_selector_chain_repor
 SCORER_REGION_SELECTOR_CHAIN_QUEUE_METADATA_SCHEMA = (
     "scorer_region_selector_chain_queue_metadata.v1"
 )
+DEFAULT_MLX_REFERENCE_CACHE_DIR = (
+    "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+)
 
 
 class ScorerRegionSelectorChainQueueError(ValueError):
@@ -412,6 +415,26 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_output_change_file_list_source: str | None = None,
     receiver_patch_output_change_parity_scope_kind: str = "contest_full_sample",
     receiver_patch_output_change_contest_full_sample_claim: bool = False,
+    include_local_component_loop: bool = False,
+    local_component_upstream_dir: str | Path = "upstream",
+    local_component_video_names_file: str | Path = "upstream/public_test_video_names.txt",
+    local_component_inflate_timeout_seconds: int = 1800,
+    local_component_evaluate_timeout_seconds: int = 1800,
+    include_mlx_component_response: bool = False,
+    mlx_reference_cache_dir: str | Path = DEFAULT_MLX_REFERENCE_CACHE_DIR,
+    mlx_device: str = "gpu",
+    mlx_cache_batch_pairs: int = 1,
+    mlx_batch_pairs: int = 1,
+    mlx_max_pairs: int | None = 12,
+    include_scorer_response_dataset: bool = False,
+    scorer_response_baseline_score: float | None = None,
+    scorer_response_baseline_archive_bytes: int | None = None,
+    include_local_component_retention_plan: bool = False,
+    execute_local_component_retention: bool = False,
+    local_component_retention_action: str = "move",
+    local_component_retention_min_bytes: str = "1",
+    local_component_retention_cold_store_roots: Sequence[str | Path] = (),
+    local_component_retention_cold_store_reserve_gb: float = 40.0,
     chain_label: str = "cascade_c_p19_p18_to_p11_selector_context_then_p15_repack",
     codec_families: Sequence[str] = (
         "fec10_adaptive_blend",
@@ -531,6 +554,32 @@ def build_scorer_region_selector_chain_queue(
             raise ScorerRegionSelectorChainQueueError(
                 "prove_receiver_patch_output_change requires: " + ", ".join(missing)
             )
+    if include_local_component_loop and not receiver_patch_inputs_available:
+        raise ScorerRegionSelectorChainQueueError(
+            "include_local_component_loop requires materialize_receiver_patch"
+        )
+    if include_mlx_component_response and not include_local_component_loop:
+        raise ScorerRegionSelectorChainQueueError(
+            "include_mlx_component_response requires include_local_component_loop"
+        )
+    if include_scorer_response_dataset and not include_mlx_component_response:
+        raise ScorerRegionSelectorChainQueueError(
+            "include_scorer_response_dataset requires include_mlx_component_response"
+        )
+    if include_scorer_response_dataset and scorer_response_baseline_score is None:
+        raise ScorerRegionSelectorChainQueueError(
+            "include_scorer_response_dataset requires scorer_response_baseline_score"
+        )
+    if include_local_component_retention_plan and not include_local_component_loop:
+        raise ScorerRegionSelectorChainQueueError(
+            "include_local_component_retention_plan requires include_local_component_loop"
+        )
+    if str(mlx_device) not in {"cpu", "gpu"}:
+        raise ScorerRegionSelectorChainQueueError("mlx_device must be 'cpu' or 'gpu'")
+    if local_component_retention_action not in {"move", "delete"}:
+        raise ScorerRegionSelectorChainQueueError(
+            "local_component_retention_action must be 'move' or 'delete'"
+        )
 
     context_cmd = [
         ".venv/bin/python",
@@ -648,6 +697,114 @@ def build_scorer_region_selector_chain_queue(
             ]
         )
 
+    local_component_dir = receiver_patch_dir / "local_component_spot_check"
+    local_component_advisory = local_component_dir / "local_cpu_advisory.json"
+    local_component_work_dir = local_component_dir / "local_cpu_advisory_work"
+    local_component_eureka = local_component_dir / "local_cpu_contest_drift_eureka.json"
+    mlx_cache_dir = local_component_dir / "mlx_scorer_input_cache"
+    mlx_cache_audit = local_component_dir / "mlx_scorer_input_cache_audit.json"
+    mlx_response = local_component_dir / "mlx_scorer_response.json"
+    mlx_components_dir = local_component_dir / "mlx_components"
+    scorer_response_dataset = local_component_dir / "scorer_response_dataset.json"
+    scorer_response_dataset_md = local_component_dir / "scorer_response_dataset.md"
+    scorer_response_consumer_routing = (
+        local_component_dir / "scorer_response_consumer_routing.json"
+    )
+    local_component_retention_plan = local_component_dir / "artifact_retention_plan.json"
+    local_component_retention_journal = (
+        local_component_dir / "artifact_retention_plan.journal.jsonl"
+    )
+
+    local_component_dir_ref = _repo_rel(local_component_dir, repo_root)
+    local_component_advisory_ref = _repo_rel(local_component_advisory, repo_root)
+    local_component_work_ref = _repo_rel(local_component_work_dir, repo_root)
+    local_component_eureka_ref = _repo_rel(local_component_eureka, repo_root)
+    mlx_cache_dir_ref = _repo_rel(mlx_cache_dir, repo_root)
+    mlx_cache_audit_ref = _repo_rel(mlx_cache_audit, repo_root)
+    mlx_response_ref = _repo_rel(mlx_response, repo_root)
+    mlx_components_dir_ref = _repo_rel(mlx_components_dir, repo_root)
+    scorer_response_dataset_ref = _repo_rel(scorer_response_dataset, repo_root)
+    scorer_response_dataset_md_ref = _repo_rel(scorer_response_dataset_md, repo_root)
+    scorer_response_consumer_routing_ref = _repo_rel(
+        scorer_response_consumer_routing,
+        repo_root,
+    )
+    local_component_retention_plan_ref = _repo_rel(
+        local_component_retention_plan,
+        repo_root,
+    )
+    local_component_retention_journal_ref = _repo_rel(
+        local_component_retention_journal,
+        repo_root,
+    )
+    local_component_upstream_ref = _repo_rel(
+        _resolve(local_component_upstream_dir, repo_root),
+        repo_root,
+    )
+    local_component_video_names_ref = _repo_rel(
+        _resolve(local_component_video_names_file, repo_root),
+        repo_root,
+    )
+    mlx_reference_cache_ref = _repo_rel(
+        _resolve(mlx_reference_cache_dir, repo_root),
+        repo_root,
+    )
+    scorer_response_baseline_bytes = int(
+        scorer_response_baseline_archive_bytes
+        if scorer_response_baseline_archive_bytes is not None
+        else source_archive.stat().st_size
+    )
+
+    local_component_anchor_step = (
+        "prove_receiver_patch_full_frame_output_change"
+        if prove_receiver_patch_output_change
+        else "materialize_frame1_region_waterfill_runtime_patch"
+    )
+    if include_scorer_response_dataset:
+        local_component_loop_terminal_step = "build_scorer_response_dataset"
+    elif include_mlx_component_response:
+        local_component_loop_terminal_step = "local_mlx_component_response"
+    elif include_local_component_loop:
+        local_component_loop_terminal_step = "local_cpu_contest_drift_eureka"
+    else:
+        local_component_loop_terminal_step = local_component_anchor_step
+
+    retention_include_kinds = [
+        "local_cpu_advisory_inflated_raw",
+        "local_cpu_advisory_extracted_scratch",
+    ]
+    if include_mlx_component_response:
+        retention_include_kinds.append("mlx_scorer_input_cache")
+
+    retention_cmd = [
+        ".venv/bin/python",
+        "tools/compact_experiment_artifacts.py",
+        local_component_dir_ref,
+        "--repo-root",
+        ".",
+        "--min-bytes",
+        str(local_component_retention_min_bytes),
+        "--json-output",
+        local_component_retention_plan_ref,
+        "--journal-output",
+        local_component_retention_journal_ref,
+        "--action",
+        local_component_retention_action,
+        "--cold-store-reserve-gb",
+        str(float(local_component_retention_cold_store_reserve_gb)),
+    ]
+    for include_kind in retention_include_kinds:
+        retention_cmd.extend(["--include-kind", include_kind])
+    for root_path in local_component_retention_cold_store_roots:
+        retention_cmd.extend(
+            [
+                "--cold-store-root",
+                _repo_rel(_resolve(root_path, repo_root), repo_root),
+            ]
+        )
+    if execute_local_component_retention:
+        retention_cmd.append("--execute")
+
     queue = {
         "schema": QUEUE_SCHEMA,
         "queue_id": queue_id,
@@ -731,6 +888,43 @@ def build_scorer_region_selector_chain_queue(
             "materialize_receiver_patch": bool(materialize_receiver_patch),
             "prove_receiver_patch_output_change": bool(
                 prove_receiver_patch_output_change
+            ),
+            "include_local_component_loop": bool(include_local_component_loop),
+            "local_component_advisory_path": (
+                local_component_advisory_ref if include_local_component_loop else None
+            ),
+            "local_component_eureka_path": (
+                local_component_eureka_ref if include_local_component_loop else None
+            ),
+            "include_mlx_component_response": bool(include_mlx_component_response),
+            "mlx_scorer_input_cache_dir": (
+                mlx_cache_dir_ref if include_mlx_component_response else None
+            ),
+            "mlx_scorer_input_cache_audit_path": (
+                mlx_cache_audit_ref if include_mlx_component_response else None
+            ),
+            "mlx_scorer_response_path": (
+                mlx_response_ref if include_mlx_component_response else None
+            ),
+            "include_scorer_response_dataset": bool(include_scorer_response_dataset),
+            "scorer_response_dataset_path": (
+                scorer_response_dataset_ref if include_scorer_response_dataset else None
+            ),
+            "scorer_response_consumer_routing_path": (
+                scorer_response_consumer_routing_ref
+                if include_scorer_response_dataset
+                else None
+            ),
+            "include_local_component_retention_plan": bool(
+                include_local_component_retention_plan
+            ),
+            "execute_local_component_retention": bool(
+                execute_local_component_retention
+            ),
+            "local_component_retention_plan_path": (
+                local_component_retention_plan_ref
+                if include_local_component_retention_plan
+                else None
             ),
             "local_mlx_or_cpu_first": True,
             "budget_spend_allowed": False,
@@ -1135,12 +1329,335 @@ def build_scorer_region_selector_chain_queue(
                     *(
                         [
                             {
+                                "id": "local_cpu_component_spot_check",
+                                "kind": "command",
+                                "requires": [local_component_anchor_step],
+                                "command": [
+                                    ".venv/bin/python",
+                                    "experiments/contest_auth_eval.py",
+                                    "--archive",
+                                    _repo_rel(
+                                        receiver_patch_submission_dir / "archive.zip",
+                                        repo_root,
+                                    ),
+                                    "--inflate-sh",
+                                    _repo_rel(
+                                        receiver_patch_submission_dir / "inflate.sh",
+                                        repo_root,
+                                    ),
+                                    "--upstream-dir",
+                                    local_component_upstream_ref,
+                                    "--video-names-file",
+                                    local_component_video_names_ref,
+                                    "--device",
+                                    "cpu",
+                                    "--work-dir",
+                                    local_component_work_ref,
+                                    "--json-out",
+                                    local_component_advisory_ref,
+                                    "--reuse-valid-json-out",
+                                    "--inflate-timeout",
+                                    str(int(local_component_inflate_timeout_seconds)),
+                                    "--evaluate-timeout",
+                                    str(int(local_component_evaluate_timeout_seconds)),
+                                    "--keep-work-dir",
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": max(
+                                    3600,
+                                    int(local_component_inflate_timeout_seconds)
+                                    + int(local_component_evaluate_timeout_seconds)
+                                    + 300,
+                                ),
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": local_component_advisory_ref,
+                                        "key": "score_axis",
+                                        "equals": "cpu_advisory",
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": local_component_advisory_ref,
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [
+                                        local_component_advisory_ref,
+                                        local_component_work_ref,
+                                    ],
+                                    "input_artifact_paths": [
+                                        receiver_patch_submission_ref,
+                                    ],
+                                    "include_postcondition_paths": True,
+                                    "recursive": True,
+                                    "max_recursive_entries": 64,
+                                },
+                            },
+                            {
+                                "id": "local_cpu_contest_drift_eureka",
+                                "kind": "command",
+                                "requires": ["local_cpu_component_spot_check"],
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/calibrate_local_cpu_contest_drift.py",
+                                    "--calibration-json",
+                                    ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+                                    "--candidate-id",
+                                    queue_id,
+                                    "--candidate-local-json",
+                                    local_component_advisory_ref,
+                                    "--auth-frontier-score-from-pointer",
+                                    "--eureka-out",
+                                    local_component_eureka_ref,
+                                    "--min-margin",
+                                    "0.0",
+                                    "--overwrite-ok",
+                                    "--overwrite-rationale",
+                                    "queue-owned scorer-region local component loop rerun",
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 180,
+                                "postconditions": [
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": local_component_eureka_ref,
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [local_component_eureka_ref],
+                                    "input_artifact_paths": [
+                                        local_component_advisory_ref,
+                                    ],
+                                    "include_postcondition_paths": True,
+                                },
+                            },
+                        ]
+                        if include_local_component_loop
+                        else []
+                    ),
+                    *(
+                        [
+                            {
+                                "id": "build_mlx_component_cache",
+                                "kind": "command",
+                                "requires": [
+                                    "local_cpu_component_spot_check",
+                                    "local_cpu_contest_drift_eureka",
+                                ],
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
+                                    "--local-cpu-advisory",
+                                    local_component_advisory_ref,
+                                    "--output-cache-dir",
+                                    mlx_cache_dir_ref,
+                                    "--audit-output",
+                                    mlx_cache_audit_ref,
+                                    "--expected-pair-count",
+                                    "600",
+                                    "--batch-pairs",
+                                    str(int(mlx_cache_batch_pairs)),
+                                    "--allow-large-tensor-cache",
+                                    "--stamp-cache-manifest-on-pass",
+                                    "--reuse-valid-cache",
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 1800,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": mlx_cache_audit_ref,
+                                        "key": "passed",
+                                        "equals": True,
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": mlx_cache_audit_ref,
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": f"{mlx_cache_dir_ref}/manifest.json",
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [mlx_cache_dir_ref, mlx_cache_audit_ref],
+                                    "input_artifact_paths": [
+                                        local_component_advisory_ref,
+                                    ],
+                                    "include_postcondition_paths": True,
+                                    "recursive": True,
+                                    "max_recursive_entries": 16,
+                                },
+                            },
+                            {
+                                "id": "local_mlx_component_response",
+                                "kind": "command",
+                                "requires": ["build_mlx_component_cache"],
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/run_mlx_scorer_response_from_local_advisory.py",
+                                    "--local-cpu-advisory",
+                                    local_component_advisory_ref,
+                                    "--reference-cache-dir",
+                                    mlx_reference_cache_ref,
+                                    "--candidate-cache-dir",
+                                    mlx_cache_dir_ref,
+                                    "--output",
+                                    mlx_response_ref,
+                                    "--repo-root",
+                                    ".",
+                                    "--batch-pairs",
+                                    str(int(mlx_batch_pairs)),
+                                    "--device",
+                                    str(mlx_device),
+                                    "--allow-local-cpu-advisory-cache-identity",
+                                    "--components-dir",
+                                    mlx_components_dir_ref,
+                                    "--response-family",
+                                    "scorer_region_frame1_waterfill_patch",
+                                    *(
+                                        ["--allow-gpu-research-signal"]
+                                        if str(mlx_device) == "gpu"
+                                        else []
+                                    ),
+                                    *(
+                                        ["--max-pairs", str(int(mlx_max_pairs))]
+                                        if mlx_max_pairs is not None
+                                        else []
+                                    ),
+                                ],
+                                "resources": {
+                                    "kind": (
+                                        "local_mlx"
+                                        if str(mlx_device) == "gpu"
+                                        else "local_cpu"
+                                    )
+                                },
+                                "timeout_seconds": 900,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": mlx_response_ref,
+                                        "key": "schema_version",
+                                        "equals": "mlx_scorer_response.v1",
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": mlx_response_ref,
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [
+                                        mlx_response_ref,
+                                        mlx_components_dir_ref,
+                                    ],
+                                    "input_artifact_paths": [
+                                        local_component_advisory_ref,
+                                        mlx_cache_dir_ref,
+                                    ],
+                                    "include_postcondition_paths": True,
+                                    "recursive": True,
+                                    "max_recursive_entries": 64,
+                                },
+                            },
+                        ]
+                        if include_mlx_component_response
+                        else []
+                    ),
+                    *(
+                        [
+                            {
+                                "id": "build_scorer_response_dataset",
+                                "kind": "command",
+                                "requires": ["local_mlx_component_response"],
+                                "command": [
+                                    ".venv/bin/python",
+                                    "tools/build_scorer_response_dataset.py",
+                                    "--input",
+                                    mlx_response_ref,
+                                    "--json-out",
+                                    scorer_response_dataset_ref,
+                                    "--md-out",
+                                    scorer_response_dataset_md_ref,
+                                    "--consumer-routing-json-out",
+                                    scorer_response_consumer_routing_ref,
+                                    "--baseline-score",
+                                    str(float(scorer_response_baseline_score or 0.0)),
+                                    "--baseline-archive-bytes",
+                                    str(int(scorer_response_baseline_bytes)),
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": 180,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": scorer_response_dataset_ref,
+                                        "key": "schema",
+                                        "equals": "scorer_response_dataset.v1",
+                                    },
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": scorer_response_dataset_ref,
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [
+                                        scorer_response_dataset_ref,
+                                        scorer_response_dataset_md_ref,
+                                        scorer_response_consumer_routing_ref,
+                                    ],
+                                    "input_artifact_paths": [mlx_response_ref],
+                                    "include_postcondition_paths": True,
+                                },
+                            },
+                        ]
+                        if include_scorer_response_dataset
+                        else []
+                    ),
+                    *(
+                        [
+                            {
+                                "id": "plan_local_component_artifact_retention",
+                                "kind": "command",
+                                "requires": [local_component_loop_terminal_step],
+                                "command": retention_cmd,
+                                "resources": {"kind": "local_io_heavy"},
+                                "timeout_seconds": 1200,
+                                "postconditions": [
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": local_component_retention_plan_ref,
+                                        "required_false": [
+                                            "plan.score_claim",
+                                            "plan.promotion_eligible",
+                                            "plan.ready_for_exact_eval_dispatch",
+                                        ],
+                                        "false_or_missing": [],
+                                    },
+                                ],
+                                "telemetry": {
+                                    "artifact_paths": [
+                                        local_component_retention_plan_ref,
+                                        local_component_retention_journal_ref,
+                                    ],
+                                    "input_artifact_paths": [local_component_dir_ref],
+                                    "include_postcondition_paths": True,
+                                },
+                            },
+                        ]
+                        if include_local_component_retention_plan
+                        else []
+                    ),
+                    *(
+                        [
+                            {
                                 "id": "emit_scorer_region_exact_ready_bridge_inputs",
                                 "kind": "command",
                                 "requires": (
-                                    ["prove_receiver_patch_full_frame_output_change"]
-                                    if prove_receiver_patch_output_change
-                                    else ["materialize_frame1_region_waterfill_runtime_patch"]
+                                    ["plan_local_component_artifact_retention"]
+                                    if include_local_component_retention_plan
+                                    else [local_component_loop_terminal_step]
                                 ),
                                 "command": exact_ready_bridge_cmd,
                                 "resources": {"kind": "local_cpu"},
@@ -1169,6 +1686,21 @@ def build_scorer_region_selector_chain_queue(
                                         *(
                                             [receiver_patch_output_change_proof_ref]
                                             if prove_receiver_patch_output_change
+                                            else []
+                                        ),
+                                        *(
+                                            [local_component_advisory_ref]
+                                            if include_local_component_loop
+                                            else []
+                                        ),
+                                        *(
+                                            [mlx_response_ref]
+                                            if include_mlx_component_response
+                                            else []
+                                        ),
+                                        *(
+                                            [scorer_response_dataset_ref]
+                                            if include_scorer_response_dataset
                                             else []
                                         ),
                                     ],

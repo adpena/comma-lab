@@ -202,7 +202,7 @@ PR95_MLX_LONG_TRAINING_EXACT_READINESS_BLOCKERS: tuple[str, ...] = (
     "requires_segnet_posenet_loss_or_exact_scorer_response_calibration_before_dispatch_authority",
 )
 PR95_MLX_LONG_TRAINING_PT_EXPORT_BLOCKERS: tuple[str, ...] = (
-    "package_tool_must_use_latents_from_pt_for_long_training_checkpoints",
+    "package_tool_must_use_checkpoint_latents_from_pt_or_latents_npy",
     "requires_pytorch_export_forward_parity_on_result_checkpoint",
     "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
     "requires_paired_contest_cpu_and_cuda_auth_eval_before_score_claim",

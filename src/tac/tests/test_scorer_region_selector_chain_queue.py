@@ -303,6 +303,95 @@ def test_chain_queue_can_prove_receiver_patch_output_change_before_bridge(
     assert queue["metadata"]["operator_contract"]["receiver_contract"]["enabled"] is True
 
 
+def test_chain_queue_can_close_local_component_learning_loop(
+    tmp_path: Path,
+) -> None:
+    submission = _source_submission(tmp_path)
+    p18 = tmp_path / "p18.json"
+    _write_json(
+        p18,
+        {
+            "schema": P18_SEGNET_REGION_WATERFILL_SCHEMA,
+            "rows": [
+                {
+                    "pair_id": 0,
+                    "regions256": [
+                        {
+                            "box": {"x0": 0.0, "y0": 0.0, "x1": 0.25, "y1": 0.25},
+                            "class_id": 0,
+                        }
+                    ],
+                }
+            ],
+            **FALSE_AUTHORITY,
+        },
+    )
+
+    queue = build_scorer_region_selector_chain_queue(
+        repo_root=tmp_path,
+        queue_id="chain_q",
+        source_submission_dir=submission,
+        output_root=tmp_path / "chain_out",
+        full_frame_inflate_parity_proof=tmp_path / "parity.json",
+        segnet_region_masks=p18,
+        materialize_receiver_patch=True,
+        prove_receiver_patch_output_change=True,
+        receiver_patch_output_change_file_list_entries=("0.raw",),
+        receiver_patch_output_change_expected_file_list_sha256="a" * 64,
+        receiver_patch_output_change_expected_entry_count=1,
+        receiver_patch_output_change_file_list_source="tests/full_frame_file_list.txt",
+        include_local_component_loop=True,
+        include_mlx_component_response=True,
+        include_scorer_response_dataset=True,
+        include_local_component_retention_plan=True,
+        scorer_response_baseline_score=0.1919853363,
+        scales=(64,),
+        alphas=(1,),
+        codec_families=("fec10_adaptive_blend",),
+    )
+
+    steps = queue["experiments"][0]["steps"]
+    step_ids = [step["id"] for step in steps]
+    assert step_ids[-7:] == [
+        "local_cpu_component_spot_check",
+        "local_cpu_contest_drift_eureka",
+        "build_mlx_component_cache",
+        "local_mlx_component_response",
+        "build_scorer_response_dataset",
+        "plan_local_component_artifact_retention",
+        "emit_scorer_region_exact_ready_bridge_inputs",
+    ]
+    by_id = {step["id"]: step for step in steps}
+    assert by_id["local_cpu_component_spot_check"]["requires"] == [
+        "prove_receiver_patch_full_frame_output_change"
+    ]
+    assert by_id["build_mlx_component_cache"]["requires"] == [
+        "local_cpu_component_spot_check",
+        "local_cpu_contest_drift_eureka",
+    ]
+    assert by_id["build_scorer_response_dataset"]["requires"] == [
+        "local_mlx_component_response"
+    ]
+    assert by_id["plan_local_component_artifact_retention"]["requires"] == [
+        "build_scorer_response_dataset"
+    ]
+    assert by_id["emit_scorer_region_exact_ready_bridge_inputs"]["requires"] == [
+        "plan_local_component_artifact_retention"
+    ]
+    assert "--reuse-valid-json-out" in by_id["local_cpu_component_spot_check"]["command"]
+    assert "--reuse-valid-cache" in by_id["build_mlx_component_cache"]["command"]
+    assert "--consumer-routing-json-out" in by_id["build_scorer_response_dataset"]["command"]
+    assert "tools/compact_experiment_artifacts.py" in by_id[
+        "plan_local_component_artifact_retention"
+    ]["command"]
+    retention_command = by_id["plan_local_component_artifact_retention"]["command"]
+    assert "mlx_scorer_input_cache" in retention_command
+    assert queue["metadata"]["include_local_component_loop"] is True
+    assert queue["metadata"]["include_mlx_component_response"] is True
+    assert queue["metadata"]["include_scorer_response_dataset"] is True
+    assert queue["metadata"]["include_local_component_retention_plan"] is True
+
+
 def test_chain_report_selects_repack_only_when_positive_and_receiver_closed(
     tmp_path: Path,
 ) -> None:
@@ -494,6 +583,10 @@ def test_frame1_region_waterfill_runtime_patch_materializes_submission(
     submission = tmp_path / "submission"
     (submission / "src").mkdir(parents=True)
     (submission / "archive.zip").write_bytes(b"fake")
+    (submission / "runtime_consumption_proof.json").write_text(
+        '{"schema":"stale_source_runtime_consumption_proof"}\n',
+        encoding="utf-8",
+    )
     (submission / "inflate.py").write_text(
         "from model import HNeRVDecoder  # type: ignore[import-not-found]\n"
         "def f():\n"
@@ -537,6 +630,8 @@ def test_frame1_region_waterfill_runtime_patch_materializes_submission(
     assert payload["schema"] == FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA
     assert payload["patched_pair_count"] == 1
     assert (tmp_path / "patched" / "src" / "region_waterfill_patch.py").is_file()
+    assert not (tmp_path / "patched" / "runtime_consumption_proof.json").exists()
+    assert payload["runtime_consumption_proof_present"] is False
     inflate = (tmp_path / "patched" / "inflate.py").read_text(encoding="utf-8")
     assert "from region_waterfill_patch import apply_region_waterfill" in inflate
     assert "apply_region_waterfill(rounded, pair_start=i)" in inflate

@@ -222,6 +222,32 @@ def test_compact_tool_allows_expected_sha_overwrite(tmp_path: Path) -> None:
     assert payload["artifact_catalog_metadata"]["score_claim"] is False
 
 
+def test_compact_tool_self_guards_existing_output_on_queue_rerun(
+    tmp_path: Path,
+) -> None:
+    cleanup_root = tmp_path / "empty_results"
+    cleanup_root.mkdir()
+    output = tmp_path / "cleanup.json"
+    output.write_text('{"prior":true}\n', encoding="utf-8")
+
+    assert (
+        compact_experiment_artifacts.main(
+            [
+                str(cleanup_root),
+                "--repo-root",
+                str(tmp_path),
+                "--min-bytes",
+                "1",
+                "--json-output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["artifact_catalog_metadata"]["score_claim"] is False
+
+
 def test_compact_tool_rejects_expected_sha_mismatch_without_clobber(
     tmp_path: Path,
 ) -> None:

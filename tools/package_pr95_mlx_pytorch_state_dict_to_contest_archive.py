@@ -120,14 +120,34 @@ def _resolve_latents_and_meta(
     *,
     source_archive_zip: Path,
     latents_from_pt: bool,
+    latents_npy: Path | None,
     pt_state_dict: dict[str, Any],
 ) -> tuple[Any, dict[str, Any], dict[str, Any]]:
     """Resolve (latents, meta, source_custody) from source archive (default) or .pt."""
 
     from tac.local_acceleration.pr95_hnerv_mlx import parse_pr95_public_archive_zip
 
+    if latents_from_pt and latents_npy is not None:
+        raise Pr95MlxPackageError(
+            "--latents-from-pt and --latents-npy are mutually exclusive"
+        )
     packet = parse_pr95_public_archive_zip(source_archive_zip)
     source_custody = packet.custody_manifest()
+    if latents_npy is not None:
+        import numpy as np
+
+        if not latents_npy.is_file():
+            raise FileNotFoundError(f"latents .npy not found: {latents_npy}")
+        raw = np.load(latents_npy)
+        latents = np.asarray(raw, dtype=np.float32)
+        source_custody = {
+            **source_custody,
+            "latents_source": "checkpoint_latents_npy",
+            "latents_npy_path": latents_npy.as_posix(),
+            "latents_npy_sha256": _sha256_file(latents_npy),
+            "latents_npy_bytes": latents_npy.stat().st_size,
+        }
+        return latents, dict(packet.meta), source_custody
     if latents_from_pt:
         if "latents" not in pt_state_dict:
             raise KeyError(
@@ -153,15 +173,14 @@ def _validate_latents_match_pr95_meta(
     *,
     latents: Any,
     meta: dict[str, Any],
-    latents_from_pt: bool,
+    latents_source_label: str,
 ) -> None:
     shape = _latent_shape(latents)
     expected_n_pairs = int(meta["n_pairs"]) if "n_pairs" in meta else None
     expected_latent_dim = int(meta["latent_dim"])
     if len(shape) != 2:
-        source = "checkpoint" if latents_from_pt else "source archive"
         raise Pr95MlxPackageError(
-            f"{source}_latents_rank_mismatch: expected rank-2 latents "
+            f"{latents_source_label}_latents_rank_mismatch: expected rank-2 latents "
             f"(n_pairs, latent_dim), got shape={shape}"
         )
     blockers: list[str] = []
@@ -170,12 +189,11 @@ def _validate_latents_match_pr95_meta(
     if shape[1] != expected_latent_dim:
         blockers.append("checkpoint_latent_dim_mismatch")
     if blockers:
-        source = "checkpoint" if latents_from_pt else "source archive"
         raise Pr95MlxPackageError(
-            f"{','.join(blockers)}: {source} latent shape={shape} does not "
+            f"{','.join(blockers)}: {latents_source_label} latent shape={shape} does not "
             f"match PR95 meta n_pairs={expected_n_pairs} "
             f"latent_dim={expected_latent_dim}; build a checkpoint with the "
-            "full source PR95 latent table before using --latents-from-pt"
+            "full source PR95 latent table before packaging trained latents"
         )
 
 
@@ -473,6 +491,7 @@ def package_pytorch_state_dict_to_contest_archive(
     output_submission_dir: Path,
     source_submission_root: Path = DEFAULT_SOURCE_MODEL,
     latents_from_pt: bool = False,
+    latents_npy: Path | None = None,
     overwrite: bool = True,
     report_out: Path | None = None,
 ) -> dict[str, Any]:
@@ -488,6 +507,7 @@ def package_pytorch_state_dict_to_contest_archive(
     source_archive_zip = Path(source_archive_zip)
     output_submission_dir = Path(output_submission_dir)
     source_submission_root = Path(source_submission_root)
+    latents_npy = None if latents_npy is None else Path(latents_npy)
 
     pt_state_dict = _load_pytorch_state_dict(input_pt)
     pt_sha256 = _sha256_file(input_pt)
@@ -496,12 +516,18 @@ def package_pytorch_state_dict_to_contest_archive(
     latents, meta, source_custody = _resolve_latents_and_meta(
         source_archive_zip=source_archive_zip,
         latents_from_pt=latents_from_pt,
+        latents_npy=latents_npy,
         pt_state_dict=pt_state_dict,
+    )
+    latents_source_label = (
+        "checkpoint"
+        if latents_from_pt or latents_npy is not None
+        else "source_archive"
     )
     _validate_latents_match_pr95_meta(
         latents=latents,
         meta=meta,
-        latents_from_pt=latents_from_pt,
+        latents_source_label=latents_source_label,
     )
     decoder_sd = _strip_pt_keys_not_in_decoder(
         pt_state_dict,
@@ -571,6 +597,11 @@ def package_pytorch_state_dict_to_contest_archive(
         "source_archive_zip_path": source_archive_zip.as_posix(),
         "source_archive_zip_sha256": source_custody["archive_zip_sha256"],
         "source_archive_member_sha256": source_custody["member_sha256"],
+        "latents_source": source_custody.get("latents_source")
+        or ("checkpoint_pt" if latents_from_pt else "source_archive"),
+        "latents_npy_path": source_custody.get("latents_npy_path"),
+        "latents_npy_sha256": source_custody.get("latents_npy_sha256"),
+        "latents_npy_bytes": source_custody.get("latents_npy_bytes"),
         "source_submission_root": source_submission_root.as_posix(),
         "output_submission_dir": output_submission_dir.as_posix(),
         "archive_zip_path": str(archive_zip_path),
@@ -660,6 +691,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "include trained latents).",
     )
     parser.add_argument(
+        "--latents-npy",
+        type=Path,
+        help=(
+            "Read trained latents from a separate .npy file emitted by the "
+            "MLX long-training lane. This is mutually exclusive with "
+            "--latents-from-pt and preserves the numpy-portable checkpoint "
+            "contract."
+        ),
+    )
+    parser.add_argument(
         "--report-out",
         type=Path,
         help="Optional path to write a canonical packaging report JSON.",
@@ -687,6 +728,7 @@ def main(argv: list[str] | None = None) -> int:
             output_submission_dir=args.output_submission_dir,
             source_submission_root=args.source_submission_root,
             latents_from_pt=args.latents_from_pt,
+            latents_npy=args.latents_npy,
             overwrite=not args.no_overwrite,
             report_out=args.report_out,
         )

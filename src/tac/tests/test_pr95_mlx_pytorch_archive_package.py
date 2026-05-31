@@ -179,3 +179,44 @@ def test_package_pr95_latents_from_pt_accepts_matching_trained_latents(
     assert report["parsed_latent_shape_after_roundtrip"] == [2, 28]
     assert report["ready_for_exact_eval_dispatch"] is False
     assert (submission_dir / "archive.zip").is_file()
+
+
+def test_package_pr95_latents_npy_accepts_mlx_long_training_contract(
+    tmp_path: Path,
+) -> None:
+    import torch
+
+    bundle = HNeRVSyntheticTrainingBundleMLX(
+        latent_count=2,
+        latent_dim=28,
+        base_channels=8,
+        seed=37,
+    )
+    source_archive_zip = tmp_path / "source_archive.zip"
+    write_pr95_public_archive_zip(
+        pytorch_state_dict_from_mlx(bundle.decoder),
+        bundle.latents,
+        meta={"latent_dim": 28, "base_channels": 8, "eval_size": [384, 512]},
+        output_zip_path=source_archive_zip,
+    )
+
+    input_pt = tmp_path / "decoder_state.pt"
+    torch.save(pytorch_state_dict_from_mlx(bundle.decoder, as_torch=True), input_pt)
+    latents_npy = tmp_path / "checkpoint.latents.npy"
+    np.save(latents_npy, np.asarray(bundle.latents).astype("float32", copy=True))
+
+    submission_dir = tmp_path / "submission"
+    report = package_pytorch_state_dict_to_contest_archive(
+        input_pt=input_pt,
+        source_archive_zip=source_archive_zip,
+        output_submission_dir=submission_dir,
+        latents_npy=latents_npy,
+    )
+
+    assert report["archive_zip_bytes"] > 0
+    assert report["latent_shape"] == [2, 28]
+    assert report["parsed_latent_shape_after_roundtrip"] == [2, 28]
+    assert report["latents_source"] == "checkpoint_latents_npy"
+    assert report["latents_npy_sha256"]
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert (submission_dir / "archive.zip").is_file()

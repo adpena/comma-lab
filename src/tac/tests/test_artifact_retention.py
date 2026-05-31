@@ -95,8 +95,13 @@ def _write_locality_candidate(
     return inflated
 
 
-def _write_mlx_delta_cache(root: Path, *, stamp: bool = True) -> Path:
-    cache = root / "candidate_mlx" / "mlx_delta_cache"
+def _write_mlx_delta_cache(
+    root: Path,
+    *,
+    stamp: bool = True,
+    dirname: str = "mlx_delta_cache",
+) -> Path:
+    cache = root / "candidate_mlx" / dirname
     _write(cache / "pair_indices.npy", b"pairs")
     _write(cache / "posenet_yuv6_pair.npy", b"pose")
     _write(cache / "segnet_last_rgb.npy", b"seg")
@@ -681,6 +686,25 @@ def test_retention_certifies_mlx_cache_with_external_identity_stamp(tmp_path: Pa
     assert identity["stamp_key"] == "local_cpu_advisory_cache_identity_audit"
     assert identity["source"]["key"] == "local_cpu_advisory_path"
     assert candidate.certificate["archive_sha256"] == "a" * 64
+
+
+def test_retention_certifies_canonical_mlx_scorer_input_cache_dir(
+    tmp_path: Path,
+) -> None:
+    cache = _write_mlx_delta_cache(tmp_path, dirname="mlx_scorer_input_cache")
+
+    plan = build_retention_plan(
+        [tmp_path],
+        repo_root=tmp_path,
+        include_kinds={"mlx_scorer_input_cache"},
+        min_bytes=1,
+    )
+
+    assert plan.blocked_candidates == []
+    assert len(plan.candidates) == 1
+    candidate = plan.candidates[0]
+    assert candidate.path == cache.relative_to(tmp_path).as_posix()
+    assert candidate.kind == "mlx_scorer_input_cache"
 
 
 def test_retention_blocks_mlx_cache_without_identity_stamp(tmp_path: Path) -> None:
