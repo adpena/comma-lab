@@ -65316,11 +65316,11 @@
       "id": "lane_uniward_optimal_form_detector_informed_direct_payload_20260531",
       "name": "UNIWARD optimal-form best-chance (detector-informed x direct-payload)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/substrates/uniward_per_pixel_distortion/detector_informed_direct_payload_cost_map.py + 18 NO-FAKE tests + experiments/uniward_optimal_form_detector_informed_smoke.py; detector-informed cost-map wired to UWD1 byte-closed direct-payload surface"
         },
         "real_archive_empirical": {
           "status": false,
@@ -65343,8 +65343,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/uniward_optimal_form_best_chance_landed_20260531.md (MIXED_PARTIAL verdict; prior negatives cargo-culted; detector lever real at adequate budgets; advisory only)"
         },
         "deploy_runbook": {
           "status": false,
@@ -65361,5 +65361,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T15:49:55Z"
+  "updated_at": "2026-05-31T15:55:27Z"
 }
