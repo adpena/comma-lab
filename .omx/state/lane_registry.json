@@ -64983,6 +64983,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z8_export_bridge_and_archive_wire_20260531",
+      "name": "Z8 MLX->PyTorch export bridge + export_archive_fn",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_boundary_tckd_seg_distill_smoke_20260531",
+      "name": "Boundary-weighted TCKD seg-distill MLX smoke",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_dreamer_v3_rssm.py --seg-distill-objective {kl_t2|boundary_tckd|boundary_decision_tckd|boundary_argmax_hinge} + --seg-tau-boundary + --seg-hinge-margin wired into _full_main RendererBundle; 16 NO-FAKE tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_boundary_tckd_seg_distill_smoke_landed_20260531.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -64992,5 +65074,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T12:03:57Z"
+  "updated_at": "2026-05-31T13:51:36Z"
 }

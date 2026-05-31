@@ -285,6 +285,46 @@ def _build_parser() -> argparse.ArgumentParser:
         "pose-axis the mock teacher leaves at 0; sister of Z7-Mamba-2).",
     )
     p.add_argument(
+        "--seg-distill-objective",
+        type=str,
+        default="kl_t2",
+        choices=("kl_t2", "boundary_tckd", "boundary_decision_tckd", "boundary_argmax_hinge"),
+        help=(
+            "SegNet scorer-teacher functional for the --full score-aware loss. "
+            "Default 'kl_t2' (Hinton-Vinyals-Dean 2014 KL T=2.0, the legacy "
+            "default-preserving baseline). The 'boundary_*' objectives are the "
+            "math-derived OPTIMAL seg teachers per the teacher design memo "
+            "20260531T103350Z + the real-SegNet A/B "
+            "(.omx/research/ab_boundary_four_arm_nearcorrect_20260531.json): "
+            "'boundary_argmax_hinge' (Crammer-Singer impostor-complete, the "
+            "d_seg-FAITHFUL surrogate) drove d_seg->0.0 vs the KL-T2 soft-loss "
+            "floor 0.0065 at the init_d_seg=0.30 operating point. All routes "
+            "through RendererBundle.segnet_distillation_objective -> adapter -> "
+            "tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss kernel. "
+            "[macOS-MLX research-signal] non-promotable per Catalog #192/#341."
+        ),
+    )
+    p.add_argument(
+        "--seg-tau-boundary",
+        type=float,
+        default=1.0,
+        help=(
+            "Boundary-band temperature tau_b for the boundary_* seg objectives "
+            "(w_i = exp(-top2_margin_i / tau_b); smaller = tighter band). The "
+            "A/B found tau_b=2.0 most robust in the near-correct regime. "
+            "Unused when --seg-distill-objective kl_t2."
+        ),
+    )
+    p.add_argument(
+        "--seg-hinge-margin",
+        type=float,
+        default=1.0,
+        help=(
+            "Crammer-Singer hinge margin (logit units) for "
+            "--seg-distill-objective boundary_argmax_hinge. Unused otherwise."
+        ),
+    )
+    p.add_argument(
         "--allow-mock-scorer-teacher",
         action="store_true",
         help=(
@@ -715,6 +755,14 @@ def _full_main(args: argparse.Namespace) -> int:
         distillation_weight=float(args.distillation_weight),
         scorer_teacher=scorer_teacher,
         learnable_student_head=learnable_student_head,
+        # Optimal seg-teacher selector (default kl_t2 preserves the legacy
+        # baseline byte-for-byte; the boundary_* objectives are the math-derived
+        # d_seg-faithful surrogates per the teacher design memo + real-SegNet
+        # A/B). Routes RendererBundle.segnet_distillation_objective -> adapter
+        # HintonMlxCustomLossFnConfig -> mlx_loss kernel.
+        segnet_distillation_objective=str(args.seg_distill_objective),
+        segnet_tau_boundary=float(args.seg_tau_boundary),
+        segnet_hinge_margin=float(args.seg_hinge_margin),
         pose_distillation_weight=pose_distillation_weight,
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
