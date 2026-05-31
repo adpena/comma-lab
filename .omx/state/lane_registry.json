@@ -64491,6 +64491,47 @@
       },
       "notes": "DEFER_PENDING_EVIDENCE per symposium 2026-05-17 section 6 (STC<brotli by >=5% NOT met; uniform-cost STC self-syndrome 2.4-2.6x LARGER than brotli mask-delta at rho<=0.10). research_only=true. STAND_DOWN on STC codec rebuild (convergent w/ tac.codec.syndrome_trellis_codec). Reactivation: CC#2 detector-informed cost map + CC#4 h/block sweep + real extract_mask_deltas_ternary + paired CUDA+CPU. Probe: tools/probe_stc_clean_source_mask_delta_syndrome_vs_brotli.py. Memo: .omx/research/lane_stc_clean_source_mask_delta_disambiguator_probe_landed_20260530.md",
       "research_only": true
+    },
+    {
+      "id": "lane_uniward_cost_map_to_bit_allocator_to_nscs06_v8_wire_in_20260530",
+      "name": "UNIWARD cost-map -> bit_allocator -> NSCS06 v8 chroma wire-in (HALT-CLEAN real blocker)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -64500,5 +64541,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T02:36:29Z"
+  "updated_at": "2026-05-31T02:38:02Z"
 }
