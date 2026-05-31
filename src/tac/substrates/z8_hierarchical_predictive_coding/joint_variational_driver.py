@@ -26,6 +26,9 @@ from tac.score_composition import (
     CANONICAL_RATE_DENOM_BYTES,
     CANONICAL_RATE_MULTIPLIER,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition import (
+    build_z8_full_video_vjp_acquisition_contract,
+)
 
 Z8_JOINT_VARIATIONAL_DRIVER_SCHEMA = "z8_joint_variational_driver.v1"
 Z8_JOINT_P18_P19_WATERFILL_CONTRACT_SCHEMA = "z8_joint_p18_p19_gradient_waterfill_contract.v1"
@@ -178,6 +181,7 @@ def build_z8_joint_p18_p19_gradient_waterfill_contract() -> dict[str, Any]:
             "fresh_surface_required": True,
             "full_video_surface_coverage_required": True,
         },
+        "full_video_vjp_acquisition": build_z8_full_video_vjp_acquisition_contract(),
         "forbidden_policy": "segnet_only_waterfill",
         "allowed_use": "local_mlx_joint_acquisition_routing_only",
         "forbidden_use": "score_claim_or_exact_axis_authority",

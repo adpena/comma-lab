@@ -57,6 +57,16 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
     assert joint["executable_materializer"]["full_video_surface_coverage_required"] is True
     assert joint["iterative_search"]["fresh_surface_required"] is True
     assert joint["iterative_search"]["full_video_surface_coverage_required"] is True
+    assert joint["full_video_vjp_acquisition"]["contest_budget_spend_requires"] == [
+        "full_video_pair_grid_coverage",
+        "linearization_archive_sha_equals_current_archive_sha",
+        "relinearize_after_each_accepted_archive_mutation",
+        "receiver_proof_plus_exact_cpu_cuda_before_score_authority",
+    ]
+    assert (
+        joint["full_video_vjp_acquisition"]["minibatch_window_gradients_role"]
+        == "ranking_probe_only_between_full_video_passes"
+    )
     assert "straight_through" in joint["iterative_search"]["ste_boundary"]
     assert joint["forbidden_policy"] == "segnet_only_waterfill"
     assert joint["segnet_surface"]["stage"] == "P18"
