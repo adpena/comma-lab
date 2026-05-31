@@ -354,7 +354,9 @@ def magnitude_deadzone_mask_for_pair(
     return _threshold_keep_top_fraction(np.abs(flat), keep_fraction)
 
 
-def _flatten_coeffs(details: list[WaveletDetail2D]) -> np.ndarray:
+def flatten_detail_coefficients(details: list[WaveletDetail2D]) -> np.ndarray:
+    """Return a flat ``(lh, hl, hh)`` coefficient vector for one frame pyramid."""
+
     parts: list[np.ndarray] = []
     for detail in details:
         for key in ("lh", "hl", "hh"):
@@ -362,6 +364,10 @@ def _flatten_coeffs(details: list[WaveletDetail2D]) -> np.ndarray:
     if not parts:
         return np.zeros((0,), dtype=np.float64)
     return np.concatenate(parts, axis=0)
+
+
+def _flatten_coeffs(details: list[WaveletDetail2D]) -> np.ndarray:
+    return flatten_detail_coefficients(details)
 
 
 def _threshold_keep_top_fraction(weights: np.ndarray, keep_fraction: float) -> np.ndarray:
@@ -496,6 +502,7 @@ __all__ = [
     "_resize_pixel_map_to_grid",
     "apply_deadzone_to_pair_details",
     "build_joint_surface_for_pair",
+    "flatten_detail_coefficients",
     "joint_deadzone_mask_for_pair",
     "joint_keep_priority_for_pair",
     "magnitude_deadzone_mask_for_pair",
