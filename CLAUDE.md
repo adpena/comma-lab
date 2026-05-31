@@ -360,6 +360,42 @@ For every NEW substrate / codec / composition design from this point forward:
 - `feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md` — the empirical anchor (18 shared assumptions matrix + 10 NSCS substrate-class shifts + top-stack composition matrix).
 - `feedback_knowledge_preservation_pr95_meta_level_lesson_landed_20260515.md` — this gate's landing memo (canonical structural protection).
 
+## 18-shared-assumption profile registration discipline — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** D4 of the canonical rename + apparatus hardening wave 2026-05-30 (D1+D2 inline landing memo `feedback_claude_md_canonical_rename_wave_d1_d2_inline_landing_20260530.md` D3-D12 queue + operator approval 2026-05-30 verbatim *"All are approved, land inline"*). Empirical anchor: `feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md` (the 18-shared-assumption matrix that empirically established 90%+ of substrates share 18 structural assumptions — EMA 100% / archive.zip 100% / eval_roundtrip 97% / canonical scorer-preprocess 97% / canonical auth_eval routing 97% / Tier-1 engineering 78-100% / etc.). The 0.196-0.199 cluster IS the local-minimum produced by the shared 90%: a flat plateau where every "new substrate" is structurally a variation of the SAME implementation under different names.
+
+This NUANCES (does NOT replace) the "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" non-negotiable above. That section operates at the **per-layer** surface (Catalog #290 `## Canonical-vs-unique decision per layer` design-memo section). This D4 section operates at the orthogonal **per-assumption** surface: the 18 specific shared assumptions a substrate inherits by default are NOT the same as the canonical helpers / META-layer fields it adopts per layer. A substrate can adopt only substrate-optimal canonical helpers per Catalog #290 AND STILL silently inherit all 18 shared assumptions (because the assumptions are pre-architectural reflexes — they are the BACKDROP per the META-ASSUMPTION ADVERSARIAL REVIEW non-negotiable, not per-layer engineering choices).
+
+### The rule
+
+Every NEW substrate design memo (`.omx/research/*_design_<YYYYMMDD>.md`) MUST declare a per-substrate **18-shared-assumption profile** that classifies each of the 18 shared assumptions per the canonical audit matrix. Each assumption gets exactly one classification from the canonical 4-value falling-rule list (the same falling-rule structure as Catalog #290's canonical-vs-unique decision):
+
+1. **ADOPT_CANONICAL** — the assumption is HARD-EARNED for THIS substrate (cite empirical or first-principles evidence that the assumption serves the substrate's optimal score). The default for most assumptions; but the classification MUST be explicit, not silent.
+2. **FORK_PRINCIPLED** — the assumption's design premise clearly does NOT fit the substrate's mathematical structure (e.g. `eval_roundtrip` uint8 simulation assumes a specific quantization path the substrate does not use). Document the principled mismatch.
+3. **FORK_EMPIRICAL** — a paired-comparison smoke (or post-training Tier-C measurement per Catalog #324) has empirically shown the substrate's score is measurably worse (ΔS ≥ 0.005) under the canonical assumption than under the forked alternative. Cite the empirical artifact.
+4. **UNCLEAR_NEEDS_EMPIRICAL** — the assumption's fit is unproven for this substrate; the burden of proof is on PROVING canonical-is-better, not assuming it. Queue the disambiguating probe per Catalog #313.
+
+The 18 assumptions are enumerated in the canonical audit matrix at `feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md`. A design memo that silently inherits an assumption without classifying it is the structural cause of the plateau cluster — the assumption-backdrop blindness the META-ASSUMPTION ADVERSARIAL REVIEW non-negotiable extincts at the session cadence surface; this D4 discipline extincts it at the per-substrate-design-memo surface.
+
+### Sister relationship to existing surfaces
+
+- Sister of **UNIQUE-AND-COMPLETE-PER-METHOD operating mode** (Catalog #290 per-LAYER canonical-vs-unique surface; D4 is the per-ASSUMPTION surface — orthogonal axes, both required).
+- Sister of **META-ASSUMPTION ADVERSARIAL REVIEW** (Catalog #291 per-SESSION cadence + Catalog #292 per-DELIBERATION assumption surfacing; D4 is the per-DESIGN-MEMO surface).
+- Sister of the **9-dimension success checklist evidence** (Catalog #294) + **cargo-cult audit per assumption** (Catalog #303) — both are per-design-memo discipline sections; D4 adds the per-assumption 18-profile dimension.
+
+### Concrete enforcement
+
+- The planned STRICT preflight gate **`check_substrate_design_memo_registers_18_assumption_profile`** (D5; still QUEUED per the cap=1-per-turn anti-pattern — NOT landed in this batch) will refuse repo-local `.omx/research/*_design_<YYYYMMDD>.md` substrate design memos dated after its strict-flip cutoff that lack the literal section header `## 18-shared-assumption profile` (case-insensitive) with all 18 assumptions classified per the 4-value falling-rule above. Until D5 lands, this discipline is enforced at council-review + adversarial-review time per the META-ASSUMPTION non-negotiable.
+- The classification table is the operator-facing audit surface: a reviewer can scan the per-assumption profile and immediately see whether the substrate is a genuine class-shift (multiple FORK_PRINCIPLED / FORK_EMPIRICAL classifications on score-relevant assumptions) or a plateau-adjacent variation (all ADOPT_CANONICAL).
+
+### Cross-references
+
+- `feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md` — the canonical 18-assumption matrix (the empirical anchor + the enumeration).
+- `feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md` — the share-vs-fork principle this discipline operationalizes per-assumption.
+- "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" (above) — the per-layer sister surface.
+- "META-ASSUMPTION ADVERSARIAL REVIEW" — the per-session + per-deliberation sister surfaces.
+- Catalog #290 (`check_substrate_design_memo_has_canonical_vs_unique_decision_section`) — the per-layer STRICT gate D5 is modeled on.
+
 ## Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** D1 R3 dispatch 2026-05-14 (`feedback_d1_dispatch_phase2_harvested_20260514.md`) — call_id `fc-01KRKABYAC9C6MA161NKSGH9PY`, $0.15 Modal T4 smoke. The D1 substrate landed as L1 SCAFFOLD with `impl_complete=true` and a 43 KB sidecar; predicted contest-CPU score band was `[0.181, 0.188]` from the deep-math memo §10 D1 polytope theorem. R3 produced score ~0.222 — outside the band by +0.040 — because the L1 SCAFFOLD wired the encoder + archive grammar + runtime custody check but DEFERRED the per-pixel polytope-interior noise overlay to "L2 INTEGRATION" via Verdict V3. The sidecar bytes structurally consumed for the no-op detector (Catalog #105 / #139) but produced NO frame changes, so the rate-axis cost (+0.029) landed without compensating Δseg savings. Net effect: the lane was a **research-substrate trap** per HNeRV parity discipline lesson 2 + the 8th forbidden pattern.
@@ -978,6 +1014,38 @@ preflight gate cannot reach (preflight runs BEFORE commit, not BEFORE
 the bare staging operation). The two together (preflight gate +
 optional pre-commit hook) close the staging-surface absorption pattern
 across both the canonical serializer and the slash-command paths.
+
+## Canonical helper 6-pillar landing discipline — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** D3 of the canonical rename + apparatus hardening wave 2026-05-30 (D1+D2 inline landing memo `feedback_claude_md_canonical_rename_wave_d1_d2_inline_landing_20260530.md` D3-D12 queue + operator approval 2026-05-30 verbatim *"All are approved, land inline"* + operator binding 2026-05-30 *"wired + integrated + tested + individually fractally optimized for extreme synergy and positive externalities"*). This consolidates the recurring landing checklist that every recent canonical helper landing has converged on into a single binding non-negotiable so no future canonical helper can ship as orphan work.
+
+This is the canonical articulation of the "Subagent coherence-by-default" Mandatory wire-in section (above) applied specifically to the **canonical-helper landing** surface. The "Mandatory wire-in" section enumerates the 6 unified-Lagrangian solver hooks (sensitivity-map / Pareto / bit-allocator / cathedral autopilot / continual-learning / probe-disambiguator); this D3 section enumerates the 6 PILLARS a canonical helper MUST satisfy to be considered LANDED (not merely written). Both are required; the wire-in hooks are pillar 4 of the 6 pillars below.
+
+### The 6 pillars
+
+Every NEW canonical helper (a reusable `tac.*` module, codec primitive, archive grammar, planner primitive, cathedral consumer, or canonical-equation/anti-pattern registry entry) MUST satisfy ALL 6 pillars before its landing memo may claim it is LANDED:
+
+1. **Wired + integrated** — at least 1 production caller imports + invokes the helper (NOT only tests). If the helper is a cathedral consumer, it is auto-discovered per Catalog #335 canonical contract. If the helper is a meta-Lagrangian / Pareto / master-gradient surface, it has an invoker callsite in `main()` per Catalog #355/#372/#336/#337/#379. A canonical helper that no production caller imports is the orphan-signal failure mode per CLAUDE.md "Results must become system intelligence" — explicitly tag `research_only=true` with a concrete integration blocker OR satisfy this pillar.
+2. **Tested** — at least 15 dedicated tests cover the helper's public API (positive / negative / edge / waiver-respect where applicable) AND the relevant sister regression suite passes. Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against": a fix-without-tests is incomplete.
+3. **Catalog-Provenance-routing** — canonical Provenance per Catalog #323 is threaded through every score-claim return value (axis_tag + hardware_substrate + evidence_grade triple). If the helper is observability-only (a router / annotator / validator that does NOT mutate score), it carries the canonical Tier A non-promotable markers per Catalog #341 (`predicted_delta_adjustment=0.0` / `promotable=False` / `axis_tag="[predicted]"`).
+4. **Memo-anchored** — a landing memo exists declaring all 6 unified-Lagrangian wire-in hooks per Catalog #125 (sensitivity-map / Pareto / bit-allocator / cathedral autopilot / continual-learning / probe-disambiguator; each ACTIVE or N/A-with-rationale) AND the `council_predicted_mission_contribution` per Catalog #300 (`frontier_breaking` / `frontier_protecting` / `rigor_overhead` / `apparatus_maintenance` / `mission_questioned`).
+5. **Lane-registered** — the work is registered in the lane registry per Catalog #90 + #126 (`lane_<NAME>_<YYYYMMDD>` pre-registered before work starts; gates marked as evidence is produced) AND a probe-outcome row per Catalog #313 records the verdict (PROCEED / DEFER / etc.) with its staleness window.
+6. **Retroactively-swept** — if the landing introduces a NEW STRICT preflight gate, a Catalog #348 retroactive-sweep memo (`.omx/research/retroactive_sweep_for_catalog_<N>_<utc>.md`) records the bug-class symptom signature + pre-fix window + historical-KILL/DEFER/FALSIFY search + per-finding RE-EVAL-priority. (Pillar 6 is N/A for canonical helpers that do NOT land a STRICT gate; declare N/A-with-rationale.)
+
+### Falling-rule per pillar
+
+A landing memo that claims LANDED but cannot satisfy a pillar MUST either (a) satisfy it before claiming LANDED, OR (b) explicitly tag the helper `research_only=true` with a concrete integration blocker per pillar 1, OR (c) declare the pillar N/A with substantive rationale (pillar 6 N/A for non-gate helpers; pillar 3 observability-only path). Silent omission of any pillar is the orphan-work failure mode.
+
+### Concrete enforcement
+
+- This discipline is enforced at landing-memo review time + adversarial-review time. The existing Catalog #125 (`check_subagent_landing_has_solver_wire_in`) STRICT gate covers pillar 4 (the 6-hook wire-in declaration). The existing Catalog #335 (canonical cathedral consumer contract) covers pillar 1 for cathedral consumers. The existing Catalog #348 (retroactive-sweep evidence) covers pillar 6. Pillars 2 / 3 / 5 are enforced by their respective sister gates (test-presence convention, Catalog #323 Provenance umbrella + Catalog #341 Tier A markers, Catalog #90 + #126 + #313 lane/probe discipline). D3 consolidates these into a single operator-facing 6-pillar contract so a reviewer can audit a landing against ONE checklist rather than reverse-engineering which sister gates apply.
+- A dedicated umbrella STRICT gate consolidating all 6 pillars into one consult-call is a candidate for a future cap-window landing per Catalog #299 gate-consolidation discipline (do NOT land it pure-additive; it must subsume >=3 sister cases or REPLACE them). The planned **D6** STRICT gate `check_canonical_helper_landing_satisfies_6_pillar_discipline` is the canonical landing surface (still QUEUED per the cap=1-per-turn anti-pattern — NOT landed in this batch).
+
+### Cross-references
+
+- "Subagent coherence-by-default" Mandatory wire-in section (above) — the canonical 6-hook source (pillar 4).
+- "Results must become system intelligence" — the orphan-work non-negotiable (pillar 1).
+- Catalog #125 (6-hook wire-in declaration; pillar 4) + Catalog #335 (cathedral consumer canonical contract; pillar 1 auto-discovery) + Catalog #323 (canonical Provenance umbrella; pillar 3) + Catalog #341 (Tier A canonical-routing markers; pillar 3 observability-only) + Catalog #300 (council deliberation v2 frontmatter + mission contribution; pillar 4) + Catalog #90 / #126 / #313 (lane registry + probe outcome; pillar 5) + Catalog #348 (retroactive sweep; pillar 6).
 
 ## Main branch source of truth — NON-NEGOTIABLE
 
