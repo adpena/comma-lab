@@ -223,10 +223,13 @@ def test_chain_queue_can_materialize_receiver_patch(
     )
 
     steps = [step["id"] for step in queue["experiments"][0]["steps"]]
+    patch_command = queue["experiments"][0]["steps"][-2]["command"]
     assert steps[-2:] == [
         "materialize_frame1_region_waterfill_runtime_patch",
         "emit_scorer_region_exact_ready_bridge_inputs",
     ]
+    assert "--selected-archive-chain-report" in patch_command
+    assert "--candidate-archive" not in patch_command
     assert queue["metadata"]["materialize_receiver_patch"] is True
     assert (
         queue["experiments"][0]["steps"][-2]["postconditions"][0]["equals"]
@@ -291,6 +294,8 @@ def test_chain_queue_can_prove_receiver_patch_output_change_before_bridge(
     bridge_step = steps[-1]
     assert proof_step["requires"] == ["materialize_frame1_region_waterfill_runtime_patch"]
     assert proof_step["postconditions"][0]["equals"] == "shell_inflate_output_change_proof_v1"
+    assert "--left-selected-archive-chain-report" in proof_step["command"]
+    assert "--left-archive" not in proof_step["command"]
     assert proof_step["command"].count("--file-list-entry") == 2
     assert "--require-output-change" in proof_step["command"]
     assert "--contest-full-sample-claim" in proof_step["command"]
@@ -378,6 +383,11 @@ def test_chain_queue_can_close_local_component_learning_loop(
     assert by_id["emit_scorer_region_exact_ready_bridge_inputs"]["requires"] == [
         "plan_local_component_artifact_retention"
     ]
+    bridge_command = by_id["emit_scorer_region_exact_ready_bridge_inputs"]["command"]
+    assert "--local-cpu-advisory" in bridge_command
+    assert "--local-cpu-eureka" in bridge_command
+    assert "--local-mlx-response" in bridge_command
+    assert "--scorer-response-dataset" in bridge_command
     assert "--reuse-valid-json-out" in by_id["local_cpu_component_spot_check"]["command"]
     assert "--reuse-valid-cache" in by_id["build_mlx_component_cache"]["command"]
     assert "--consumer-routing-json-out" in by_id["build_scorer_response_dataset"]["command"]
@@ -752,3 +762,41 @@ def test_scorer_region_exact_ready_bridge_blocks_without_runtime_content_tree(
     )
     assert row["full_frame_output_change_proven"] is True
     assert row["contest_full_sample_change_proven"] is True
+
+    local_cpu_advisory = tmp_path / "local_cpu_advisory.json"
+    _write_json(
+        local_cpu_advisory,
+        {
+            "score_axis": "cpu_advisory",
+            "canonical_score": 0.1920003362662307,
+            "score_recomputed_from_components": 0.1920003362662307,
+            **FALSE_AUTHORITY,
+        },
+    )
+    local_cpu_eureka = tmp_path / "local_cpu_eureka.json"
+    _write_json(
+        local_cpu_eureka,
+        {
+            "schema": "local_cpu_contest_drift_eureka.v1",
+            "local_score": 0.1920003362662307,
+            "auth_frontier_score": 0.19198533626623068,
+            "eureka_trigger": False,
+            "recommended_action": "observe_only",
+            **FALSE_AUTHORITY,
+        },
+    )
+    bridge_with_negative_cpu = build_scorer_region_exact_ready_bridge(
+        chain_report_path=chain_report_path,
+        receiver_patch_manifest_path=patch_manifest_path,
+        shell_inflate_output_change_proof_path=output_change_proof,
+        local_cpu_advisory_path=local_cpu_advisory,
+        local_cpu_eureka_path=local_cpu_eureka,
+        repo_root=tmp_path,
+    )
+    negative_report = bridge_with_negative_cpu["bridge_report"]
+    assert "local_cpu_eureka_trigger_false" in negative_report["blockers"]
+    assert "local_cpu_score_not_below_auth_frontier" in negative_report["blockers"]
+    assert (
+        negative_report["rows"][0]["local_cpu_gate"]["local_score"]
+        == 0.1920003362662307
+    )

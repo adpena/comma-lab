@@ -1,0 +1,146 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 0,
+  "max_experiments": 1,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "scorer_region_selector_cascade_campaign_20260531T023734Z",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_cpu": 2,
+    "local_io_heavy": 1,
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-31T03:01:25Z",
+  "started_experiment_ids": [
+    "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch"
+  ],
+  "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_campaign_20260531T023734Z.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_scorer_region_exact_ready_bridge.py",
+        "--chain-report",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+        "--receiver-patch-manifest",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json",
+        "--source-queue-out",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_exact_ready_source_queue.json",
+        "--blocked-exact-ready-queue-out",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_blocked_exact_ready_queue.json",
+        "--bridge-report-out",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_exact_ready_bridge_report.json",
+        "--overwrite",
+        "--shell-inflate-output-change-proof",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/full_frame_output_change_proof/shell_inflate_output_change.json",
+        "--local-cpu-advisory",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/local_cpu_advisory.json",
+        "--local-cpu-eureka",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/local_cpu_contest_drift_eureka.json",
+        "--local-mlx-response",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+        "--scorer-response-dataset",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/scorer_response_dataset.json"
+      ],
+      "elapsed_seconds": 0.7818775000050664,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/emit_scorer_region_exact_ready_bridge_inputs/20260531T030125Z_4e81a7c4d3377a26.log",
+      "pid": 40364,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_scorer_region_exact_ready_bridge.py",
+          "--chain-report",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+          "--receiver-patch-manifest",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json",
+          "--source-queue-out",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_exact_ready_source_queue.json",
+          "--blocked-exact-ready-queue-out",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_blocked_exact_ready_queue.json",
+          "--bridge-report-out",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_exact_ready_bridge_report.json",
+          "--overwrite",
+          "--shell-inflate-output-change-proof",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/full_frame_output_change_proof/shell_inflate_output_change.json",
+          "--local-cpu-advisory",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/local_cpu_advisory.json",
+          "--local-cpu-eureka",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/local_cpu_contest_drift_eureka.json",
+          "--local-mlx-response",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+          "--scorer-response-dataset",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/scorer_response_dataset.json"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T023734Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "7d7165f31e4017376d2938b45c58568113d8be91a13b78b4796408545b5ec9d1",
+          "definition_hash": "87fa1dcc3ce6ced0c4d642a70353d9ea50c6fdc1a8410f692d2eda9339484ce4",
+          "postcondition_hash": "a3537706ddc90ed694b8a47a7c82983f765085ba4620b102142432b1212bf89e"
+        },
+        "step_id": "emit_scorer_region_exact_ready_bridge_inputs"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 3,
+        "artifact_records": [
+          {
+            "bytes": 10028,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T03:01:25Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_exact_ready_source_queue.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 20129,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T03:01:25Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_blocked_exact_ready_queue.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 52804,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T03:01:25Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T023734Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_exact_ready_bridge_report.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 374,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "4e81a7c4d3377a26"
+    }
+  ],
+  "steps_started": 1,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 1
+}

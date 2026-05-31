@@ -639,8 +639,8 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_output_change_cmd = [
         ".venv/bin/python",
         "tools/prove_shell_inflate_output_change.py",
-        "--left-archive",
-        repack_archive_ref,
+        "--left-selected-archive-chain-report",
+        chain_report_ref,
         "--left-submission-dir",
         selector_submission_ref,
         "--right-archive",
@@ -754,6 +754,21 @@ def build_scorer_region_selector_chain_queue(
         if scorer_response_baseline_archive_bytes is not None
         else source_archive.stat().st_size
     )
+    if include_local_component_loop:
+        exact_ready_bridge_cmd.extend(
+            [
+                "--local-cpu-advisory",
+                local_component_advisory_ref,
+                "--local-cpu-eureka",
+                local_component_eureka_ref,
+            ]
+        )
+    if include_mlx_component_response:
+        exact_ready_bridge_cmd.extend(["--local-mlx-response", mlx_response_ref])
+    if include_scorer_response_dataset:
+        exact_ready_bridge_cmd.extend(
+            ["--scorer-response-dataset", scorer_response_dataset_ref]
+        )
 
     local_component_anchor_step = (
         "prove_receiver_patch_full_frame_output_change"
@@ -1241,10 +1256,8 @@ def build_scorer_region_selector_chain_queue(
                                     receiver_patch_submission_ref,
                                     "--output-manifest",
                                     receiver_patch_manifest_ref,
-                                    "--candidate-archive",
-                                    repack_archive_ref,
-                                    "--candidate-archive-source",
-                                    "P15_archive_zip_repack_after_P11_selector_context_recode",
+                                    "--selected-archive-chain-report",
+                                    chain_report_ref,
                                     "--max-pairs",
                                     str(int(receiver_patch_max_pairs)),
                                     "--regions-per-pair",
@@ -1314,7 +1327,7 @@ def build_scorer_region_selector_chain_queue(
                                     ],
                                     "input_artifact_paths": [
                                         selector_submission_ref,
-                                        repack_archive_ref,
+                                        chain_report_ref,
                                         receiver_patch_submission_ref,
                                     ],
                                     "include_postcondition_paths": True,

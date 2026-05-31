@@ -302,11 +302,136 @@ def _output_change_proof_custody(
     }, blockers
 
 
+def _optional_false_authority_json_custody(
+    *,
+    path: str | Path | None,
+    repo_root: str | Path,
+    label: str,
+) -> tuple[dict[str, Any], list[str], dict[str, Any] | None]:
+    text = str(path or "").strip()
+    if not text:
+        return {
+            "schema": "scorer_region_exact_ready_optional_json_custody.v1",
+            "label": label,
+            "path": None,
+            "present": False,
+            "sha256": None,
+            "bytes": None,
+            "custody_complete": False,
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }, [], None
+    resolved = _resolve(text, repo_root)
+    if not resolved.is_file():
+        blockers = [f"{label}_file_missing"]
+        return {
+            "schema": "scorer_region_exact_ready_optional_json_custody.v1",
+            "label": label,
+            "path": _repo_rel(resolved, repo_root),
+            "present": False,
+            "sha256": None,
+            "bytes": None,
+            "custody_complete": False,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }, blockers, None
+    payload = _read_json_object(resolved, repo_root=repo_root)
+    blockers: list[str] = []
+    try:
+        require_no_truthy_authority_fields(
+            payload,
+            context=f"scorer_region_bridge_{label}",
+        )
+    except ValueError as exc:
+        blockers.append(f"{label}_false_authority_violation:{exc}")
+    return {
+        "schema": "scorer_region_exact_ready_optional_json_custody.v1",
+        "label": label,
+        "path": _repo_rel(resolved, repo_root),
+        "present": True,
+        "sha256": sha256_file(resolved),
+        "bytes": resolved.stat().st_size,
+        "custody_complete": not blockers,
+        "blockers": ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }, blockers, payload
+
+
+def _numeric(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _local_cpu_gate_custody(
+    *,
+    advisory_path: str | Path | None,
+    eureka_path: str | Path | None,
+    repo_root: str | Path,
+) -> tuple[dict[str, Any], list[str]]:
+    advisory_custody, advisory_blockers, advisory = _optional_false_authority_json_custody(
+        path=advisory_path,
+        repo_root=repo_root,
+        label="local_cpu_advisory",
+    )
+    eureka_custody, eureka_blockers, eureka = _optional_false_authority_json_custody(
+        path=eureka_path,
+        repo_root=repo_root,
+        label="local_cpu_eureka",
+    )
+    blockers = [*advisory_blockers, *eureka_blockers]
+    if advisory is not None and advisory.get("score_axis") != "cpu_advisory":
+        blockers.append("local_cpu_advisory_score_axis_not_cpu_advisory")
+    local_score = (
+        _numeric(eureka.get("local_score")) if isinstance(eureka, Mapping) else None
+    )
+    if local_score is None and isinstance(advisory, Mapping):
+        local_score = _numeric(
+            advisory.get("canonical_score")
+            if advisory.get("canonical_score") is not None
+            else advisory.get("score_recomputed_from_components")
+        )
+    auth_frontier_score = (
+        _numeric(eureka.get("auth_frontier_score")) if isinstance(eureka, Mapping) else None
+    )
+    eureka_trigger = eureka.get("eureka_trigger") if isinstance(eureka, Mapping) else None
+    recommended_action = (
+        eureka.get("recommended_action") if isinstance(eureka, Mapping) else None
+    )
+    if eureka is not None and eureka_trigger is not True:
+        blockers.append("local_cpu_eureka_trigger_false")
+    if (
+        local_score is not None
+        and auth_frontier_score is not None
+        and local_score >= auth_frontier_score
+    ):
+        blockers.append("local_cpu_score_not_below_auth_frontier")
+    return {
+        "schema": "scorer_region_exact_ready_local_cpu_gate.v1",
+        "local_cpu_advisory": advisory_custody,
+        "local_cpu_eureka": eureka_custody,
+        "local_score": local_score,
+        "auth_frontier_score": auth_frontier_score,
+        "eureka_trigger": eureka_trigger,
+        "recommended_action": recommended_action,
+        "gate_complete": advisory is not None and eureka is not None,
+        "blockers": ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }, ordered_unique(blockers)
+
+
 def build_scorer_region_exact_ready_bridge(
     *,
     chain_report_path: str | Path,
     receiver_patch_manifest_path: str | Path,
     shell_inflate_output_change_proof_path: str | Path | None = None,
+    local_cpu_advisory_path: str | Path | None = None,
+    local_cpu_eureka_path: str | Path | None = None,
+    local_mlx_response_path: str | Path | None = None,
+    scorer_response_dataset_path: str | Path | None = None,
     repo_root: str | Path,
 ) -> dict[str, Any]:
     """Build blocked exact-ready queue inputs from a scorer-region receiver patch."""
@@ -360,6 +485,25 @@ def build_scorer_region_exact_ready_bridge(
         path=shell_inflate_output_change_proof_path,
         repo_root=repo_root,
     )
+    local_cpu_gate, local_cpu_gate_blockers = _local_cpu_gate_custody(
+        advisory_path=local_cpu_advisory_path,
+        eureka_path=local_cpu_eureka_path,
+        repo_root=repo_root,
+    )
+    local_mlx_custody, local_mlx_blockers, _local_mlx_payload = (
+        _optional_false_authority_json_custody(
+            path=local_mlx_response_path,
+            repo_root=repo_root,
+            label="local_mlx_response",
+        )
+    )
+    scorer_response_custody, scorer_response_blockers, _scorer_response_payload = (
+        _optional_false_authority_json_custody(
+            path=scorer_response_dataset_path,
+            repo_root=repo_root,
+            label="scorer_response_dataset",
+        )
+    )
     patch_manifest_blockers = _filtered_patch_blockers(
         _string_list(patch_manifest.get("blockers")),
         runtime_custody_complete=runtime_custody.get("custody_complete") is True,
@@ -385,6 +529,9 @@ def build_scorer_region_exact_ready_bridge(
             *inflate_blockers,
             *runtime_blockers,
             *output_change_blockers,
+            *local_cpu_gate_blockers,
+            *local_mlx_blockers,
+            *scorer_response_blockers,
             *_string_list(chain_report.get("readiness_blockers")),
             *patch_manifest_blockers,
             "contest_cpu_or_cuda_auth_axis_required_before_score_or_dispatch",
@@ -416,6 +563,10 @@ def build_scorer_region_exact_ready_bridge(
         "runtime_tree_sha256": runtime_custody.get("runtime_tree_sha256"),
         "runtime_content_tree_sha256": runtime_custody.get("runtime_content_tree_sha256"),
         "shell_inflate_output_change_proof": output_change_custody.get("path"),
+        "local_cpu_advisory": local_cpu_gate["local_cpu_advisory"].get("path"),
+        "local_cpu_eureka": local_cpu_gate["local_cpu_eureka"].get("path"),
+        "local_mlx_response": local_mlx_custody.get("path"),
+        "scorer_response_dataset": scorer_response_custody.get("path"),
         "full_frame_output_change_proven": output_change_custody.get(
             "full_frame_output_change_proven"
         )
@@ -502,6 +653,9 @@ def build_scorer_region_exact_ready_bridge(
                 "patched_inflate_custody": inflate_custody,
                 "submission_runtime_custody": runtime_custody,
                 "output_change_proof_custody": output_change_custody,
+                "local_cpu_gate": local_cpu_gate,
+                "local_mlx_response_custody": local_mlx_custody,
+                "scorer_response_dataset_custody": scorer_response_custody,
                 "bridge_source_queue_row": bridge_row,
                 "blockers": blockers,
                 "budget_spend_allowed": False,

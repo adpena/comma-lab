@@ -36,6 +36,7 @@ P19_POSENET_NULL_PAIRS_SCHEMA = "p19_posenet_null_pair_detection.v1"
 P18_SEGNET_REGION_WATERFILL_SCHEMA = "p18_segnet_region_waterfill.v1"
 DISTORTION_BUDGET_ATTACK_PLAN_SCHEMA = "receiver_closed_distortion_budget_attack_plan.v1"
 FRAME1_REGION_WATERFILL_RUNTIME_PATCH_SCHEMA = "frame1_region_waterfill_runtime_patch.v1"
+SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA = "scorer_region_selector_chain_report.v1"
 
 
 class ScorerRegionWaterfillError(ValueError):
@@ -75,6 +76,43 @@ def _read_json(path: str | Path, *, repo_root: str | Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ScorerRegionWaterfillError(f"JSON artifact must be an object: {path}")
     return payload
+
+
+def selected_archive_from_scorer_region_chain_report(
+    path: str | Path,
+    *,
+    repo_root: str | Path,
+    context: str = "scorer_region_selector_chain_report",
+) -> tuple[Path, str]:
+    """Resolve the selected local survivor archive from a chain report.
+
+    Receiver and proof steps must consume the same survivor selected by the
+    chain report. Using fixed intermediate paths here silently breaks chain
+    semantics when P15/repack is not rate-positive.
+    """
+
+    payload = _read_json(path, repo_root=repo_root)
+    if payload.get("schema") != SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA:
+        raise ScorerRegionWaterfillError(
+            "chain report schema mismatch: "
+            f"{payload.get('schema')!r} != {SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA!r}"
+        )
+    require_no_truthy_authority_fields(payload, context=context)
+    selected = payload.get("selected_local_survivor_archive")
+    if not isinstance(selected, Mapping):
+        raise ScorerRegionWaterfillError(
+            "chain report missing selected_local_survivor_archive"
+        )
+    selected_path = selected.get("path")
+    if not isinstance(selected_path, str) or not selected_path.strip():
+        raise ScorerRegionWaterfillError(
+            "chain report selected_local_survivor_archive.path missing"
+        )
+    source = str(
+        payload.get("selected_local_survivor_stage")
+        or "scorer_region_chain_selected_local_survivor"
+    )
+    return _resolve(selected_path, repo_root), source
 
 
 def _literal_tuple_from_python(path: Path, name: str) -> tuple[Any, ...]:
@@ -467,7 +505,12 @@ def _copy_submission_tree(source_dir: Path, output_dir: Path, *, overwrite: bool
     shutil.copytree(
         source_dir,
         output_dir,
-        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+        ignore=shutil.ignore_patterns(
+            "__pycache__",
+            "*.pyc",
+            ".DS_Store",
+            "runtime_consumption_proof.json",
+        ),
     )
 
 

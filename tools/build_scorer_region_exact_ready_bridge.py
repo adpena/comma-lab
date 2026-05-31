@@ -28,6 +28,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--chain-report", required=True, type=Path)
     parser.add_argument("--receiver-patch-manifest", required=True, type=Path)
     parser.add_argument("--shell-inflate-output-change-proof", type=Path)
+    parser.add_argument("--local-cpu-advisory", type=Path)
+    parser.add_argument("--local-cpu-eureka", type=Path)
+    parser.add_argument("--local-mlx-response", type=Path)
+    parser.add_argument("--scorer-response-dataset", type=Path)
     parser.add_argument("--source-queue-out", required=True, type=Path)
     parser.add_argument("--blocked-exact-ready-queue-out", required=True, type=Path)
     parser.add_argument("--bridge-report-out", required=True, type=Path)
@@ -59,6 +63,10 @@ def main(argv: list[str] | None = None) -> int:
             shell_inflate_output_change_proof_path=(
                 args.shell_inflate_output_change_proof
             ),
+            local_cpu_advisory_path=args.local_cpu_advisory,
+            local_cpu_eureka_path=args.local_cpu_eureka,
+            local_mlx_response_path=args.local_mlx_response,
+            scorer_response_dataset_path=args.scorer_response_dataset,
             repo_root=REPO_ROOT,
         )
         bytes_written = 0

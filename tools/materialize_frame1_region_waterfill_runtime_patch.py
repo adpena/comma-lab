@@ -19,6 +19,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.optimization.scorer_region_waterfill import (  # noqa: E402
     ScorerRegionWaterfillError,
     build_frame1_region_waterfill_runtime_patch,
+    selected_archive_from_scorer_region_chain_report,
 )
 from tac.repo_io import ArtifactWriteError, json_text, sha256_file, write_json_artifact  # noqa: E402
 
@@ -38,6 +39,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-manifest", required=True, type=Path)
     parser.add_argument("--candidate-archive", type=Path)
     parser.add_argument("--candidate-archive-source")
+    parser.add_argument(
+        "--selected-archive-chain-report",
+        type=Path,
+        help=(
+            "Use selected_local_survivor_archive.path from a scorer-region "
+            "chain report. This preserves the P15 selected-survivor rule "
+            "instead of blindly copying the repack artifact."
+        ),
+    )
     parser.add_argument("--max-pairs", type=int, default=12)
     parser.add_argument("--regions-per-pair", type=int, default=1)
     parser.add_argument("--rgb-delta", type=_rgb_delta, default=(-1, -1, -1))
@@ -52,13 +62,28 @@ def _resolve(path: Path) -> Path:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        candidate_archive = args.candidate_archive
+        candidate_archive_source = args.candidate_archive_source
+        if args.selected_archive_chain_report is not None:
+            if args.candidate_archive is not None:
+                raise ScorerRegionWaterfillError(
+                    "--candidate-archive and --selected-archive-chain-report "
+                    "are mutually exclusive"
+                )
+            candidate_archive, candidate_archive_source = (
+                selected_archive_from_scorer_region_chain_report(
+                    args.selected_archive_chain_report,
+                    repo_root=REPO_ROOT,
+                    context="frame1_region_waterfill_selected_archive_chain_report",
+                )
+            )
         payload = build_frame1_region_waterfill_runtime_patch(
             repo_root=REPO_ROOT,
             source_submission_dir=args.source_submission_dir,
             segnet_region_waterfill=args.segnet_region_waterfill,
             output_submission_dir=args.output_submission_dir,
-            candidate_archive=args.candidate_archive,
-            candidate_archive_source=args.candidate_archive_source,
+            candidate_archive=candidate_archive,
+            candidate_archive_source=candidate_archive_source,
             max_pairs=args.max_pairs,
             regions_per_pair=args.regions_per_pair,
             rgb_delta=args.rgb_delta,

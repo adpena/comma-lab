@@ -21,6 +21,18 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.optimization.scorer_region_waterfill import (  # noqa: E402
+    selected_archive_from_scorer_region_chain_report,
+)
+
+try:
     from tools.prove_shell_inflate_parity import (
         SHELL_PARITY_SCOPE_CONTEST_FULL_SAMPLE,
         SHELL_PARITY_SCOPE_DECLARED_FILE_LIST,
@@ -358,7 +370,17 @@ def render_markdown(proof: ShellInflateOutputChangeProof) -> str:
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--left-archive", type=Path, required=True)
+    left_archive_group = parser.add_mutually_exclusive_group(required=True)
+    left_archive_group.add_argument("--left-archive", type=Path)
+    left_archive_group.add_argument(
+        "--left-selected-archive-chain-report",
+        type=Path,
+        help=(
+            "Use selected_local_survivor_archive.path from a scorer-region "
+            "chain report as the left archive. This keeps output-change proofs "
+            "aligned with the selected survivor instead of a fixed intermediate."
+        ),
+    )
     parser.add_argument("--left-submission-dir", type=Path, required=True)
     parser.add_argument("--right-archive", type=Path, required=True)
     parser.add_argument("--right-submission-dir", type=Path, required=True)
@@ -388,6 +410,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    left_archive = args.left_archive
+    if args.left_selected_archive_chain_report is not None:
+        left_archive, _left_archive_source = selected_archive_from_scorer_region_chain_report(
+            args.left_selected_archive_chain_report,
+            repo_root=REPO_ROOT,
+            context="shell_inflate_output_change_left_selected_archive_chain_report",
+        )
     file_list_entries = (
         _load_file_list_entries(args.file_list)
         if args.file_list is not None
@@ -399,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         parity = build_proof(
-            left_archive=args.left_archive,
+            left_archive=left_archive,
             left_submission_dir=args.left_submission_dir,
             right_archive=args.right_archive,
             right_submission_dir=args.right_submission_dir,
