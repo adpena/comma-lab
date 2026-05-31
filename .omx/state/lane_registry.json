@@ -65111,6 +65111,47 @@
       "id": "lane_dreamer_v3_argmax_hinge_in_substrate_confirm_20260531",
       "name": "DreamerV3 boundary_argmax_hinge in-substrate seg confirmation",
       "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/dreamer_v3_argmax_hinge_in_substrate_seg_confirm.py (runner) + src/tac/substrates/dreamer_v3_rssm/tests/test_argmax_hinge_in_substrate_seg_confirm.py (7 NO-FAKE tests pass)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_dreamer_v3_argmax_hinge_in_substrate_confirm_landed_20260531.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z5_rao_ballard_paired_cuda_ratification_wave2a_20260531",
+      "name": "Z5 Rao-Ballard paired CUDA+CPU ratification (WAVE-2A funded)",
+      "phase": 2.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -65156,5 +65197,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T14:18:07Z"
+  "updated_at": "2026-05-31T14:30:36Z"
 }
