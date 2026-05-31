@@ -110,6 +110,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--inflate-runtime-benchmark-timeout-seconds", type=float, default=1800.0)
     parser.add_argument("--inflate-runtime-benchmark-auth-window-seconds", type=float, default=1800.0)
     parser.add_argument("--inflate-runtime-benchmark-device", default="cpu")
+    parser.add_argument(
+        "--print-full-manifest",
+        action="store_true",
+        help="Print the full manifest JSON to stdout instead of the compact operator summary.",
+    )
     return parser
 
 
@@ -157,7 +162,36 @@ def main() -> int:
         config=config,
         repo_root=args.repo_root,
     )
-    print(json.dumps(manifest, sort_keys=True))
+    if args.print_full_manifest:
+        print(json.dumps(manifest, sort_keys=True))
+    else:
+        rate_report = (manifest.get("waterfill_result") or {}).get("rate_report") or {}
+        print(
+            json.dumps(
+                {
+                    "schema": manifest.get("schema"),
+                    "manifest_path": manifest.get("manifest_path"),
+                    "candidate_bin_path": manifest.get("candidate_bin_path"),
+                    "candidate_bin_bytes": manifest.get("candidate_bin_bytes"),
+                    "archive_zip_path": manifest.get("archive_zip_path"),
+                    "archive_zip_bytes": manifest.get("archive_zip_bytes"),
+                    "archive_zip_sha256": manifest.get("archive_zip_sha256"),
+                    "archive_byte_delta": rate_report.get("archive_byte_delta"),
+                    "archive_rate_ratio": rate_report.get("archive_rate_ratio"),
+                    "wavelet_blob_byte_delta": rate_report.get("wavelet_blob_byte_delta"),
+                    "receiver_proof_executed": manifest.get("receiver_proof_executed"),
+                    "inflate_runtime_benchmark_executed": manifest.get(
+                        "inflate_runtime_benchmark_executed"
+                    ),
+                    "exact_axis_blocker": manifest.get("exact_axis_blocker"),
+                    "score_claim": manifest.get("score_claim"),
+                    "ready_for_exact_eval_dispatch": manifest.get(
+                        "ready_for_exact_eval_dispatch"
+                    ),
+                },
+                sort_keys=True,
+            )
+        )
     return 0
 
 

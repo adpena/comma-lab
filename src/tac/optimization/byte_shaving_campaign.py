@@ -396,6 +396,7 @@ UNIT_KINDS: frozenset[str] = frozenset(
         "scorer_response_row",
         "scorer_inverse_surface_cell",
         "correction_target",
+        "z8_hpc1_archive",
     }
 )
 
@@ -457,6 +458,9 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
         "apply_engineered_correction",
         "probe_correction_neighbor",
     ),
+    "z8_hpc1_archive": (
+        "z8_detail_entropy_delta",
+    ),
 }
 
 DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
@@ -494,6 +498,7 @@ DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
     "member_reorder": 50,
     "member_merge": 50,
     "native_renderer_payload": 50,
+    "z8_detail_entropy_delta": 35,
 }
 
 PACKET_IR_BYTE_CLOSED_UNIT_KINDS = frozenset(
@@ -504,6 +509,7 @@ PACKET_IR_BYTE_CLOSED_UNIT_KINDS = frozenset(
         "packet_member",
         "selector_stream",
         "tensor",
+        "z8_hpc1_archive",
     }
 )
 
@@ -526,6 +532,7 @@ PACKET_IR_OPERATION_PHASE_BY_FAMILY: dict[str, str] = {
     "section_proceduralize": "prediction",
     "section_reorder": "pack",
     "shared_codebook_tensor": "quantization",
+    "z8_detail_entropy_delta": "quantization",
     "zip_header_elide": "pack",
 }
 

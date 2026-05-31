@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 
 from tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule import (
+    build_entropy_delta_materializer_work_order,
     build_entropy_delta_schedule_from_headroom_report,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.per_subband_rd_waterfill_solver import (
@@ -64,6 +65,38 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--out-json", required=True, type=Path)
     parser.add_argument(
+        "--materializer-work-order-out",
+        type=Path,
+        default=None,
+        help="Optional JSON work order that executes this ready schedule through the Z8 materializer.",
+    )
+    parser.add_argument(
+        "--archive-bin",
+        type=Path,
+        default=None,
+        help=(
+            "Source Z8HPC1 0.bin for optional materializer work order. "
+            "Defaults to source_archive_path from the headroom report."
+        ),
+    )
+    parser.add_argument(
+        "--materializer-output-dir",
+        type=Path,
+        default=None,
+        help="Output directory for optional materializer work order.",
+    )
+    parser.add_argument("--repo-root", type=Path, default=None)
+    parser.add_argument(
+        "--materializer-emit-receiver-proof",
+        action="store_true",
+        help="Add --emit-receiver-proof to the optional materializer work order.",
+    )
+    parser.add_argument(
+        "--materializer-run-inflate-runtime-benchmark",
+        action="store_true",
+        help="Add --run-inflate-runtime-benchmark to the optional materializer work order.",
+    )
+    parser.add_argument(
         "--allow-partial-coverage",
         action="store_true",
         help=(
@@ -97,6 +130,27 @@ def main() -> int:
         )
     args.out_json.parent.mkdir(parents=True, exist_ok=True)
     args.out_json.write_text(json.dumps(schedule, indent=2, sort_keys=True))
+    work_order: dict[str, object] | None = None
+    if args.materializer_work_order_out is not None:
+        if args.materializer_output_dir is None:
+            raise SystemExit(
+                "--materializer-output-dir is required with --materializer-work-order-out"
+            )
+        work_order = build_entropy_delta_materializer_work_order(
+            schedule,
+            schedule_json_path=args.out_json,
+            output_dir=args.materializer_output_dir,
+            archive_bin=args.archive_bin,
+            repo_root=args.repo_root,
+            emit_receiver_proof=bool(args.materializer_emit_receiver_proof),
+            run_inflate_runtime_benchmark=bool(
+                args.materializer_run_inflate_runtime_benchmark
+            ),
+        )
+        args.materializer_work_order_out.parent.mkdir(parents=True, exist_ok=True)
+        args.materializer_work_order_out.write_text(
+            json.dumps(work_order, indent=2, sort_keys=True)
+        )
     print(
         json.dumps(
             {
@@ -107,6 +161,16 @@ def main() -> int:
                 "step_count": len(schedule["entropy_detail_quantization_steps"]),
                 "blockers": schedule["blockers"],
                 "out_json": args.out_json.as_posix(),
+                "materializer_work_order_out": (
+                    args.materializer_work_order_out.as_posix()
+                    if args.materializer_work_order_out is not None
+                    else None
+                ),
+                "materializer_ready": (
+                    work_order.get("ready_for_materializer_execution")
+                    if work_order is not None
+                    else None
+                ),
             },
             sort_keys=True,
         )

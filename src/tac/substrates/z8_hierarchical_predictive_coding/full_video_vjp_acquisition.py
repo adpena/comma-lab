@@ -59,6 +59,7 @@ FALSE_AUTHORITY: dict[str, bool] = {
 }
 SINGLE_UPDATE_AFTER_FULL_REDUCTION = "single_update_after_all_pair_shards_reduce"
 TRUE_P19_POSE_SURFACE_KIND = "per_axis_posenet_jacobian_mahalanobis_v1"
+TRUE_P19_POSE_AXIS_COUNT = 6
 SCALAR_POSE_LOSS_VJP_SURFACE_KIND = "scalar_first6_pose_mse_vjp_proxy_v1"
 P19_POSE_SURFACE_BLOCKER = "p19_pose_surface_not_true_per_axis_jacobian"
 
@@ -367,6 +368,14 @@ def build_z8_full_video_mlx_vjp_surface_shard(
     if pose_axis_count <= 0:
         raise ValueError("PoseNet output must expose at least one pose axis")
     pose_inverse_variance = tuple(float(value) for value in config.pose_inverse_variance[:pose_axis_count])
+    pose_surface_blockers: list[str] = []
+    if pose_axis_count != TRUE_P19_POSE_AXIS_COUNT:
+        pose_surface_blockers.append(f"p19_pose_axis_count_not_six:{pose_axis_count}")
+    if len(pose_inverse_variance) != TRUE_P19_POSE_AXIS_COUNT:
+        pose_surface_blockers.append(
+            f"p19_pose_inverse_variance_length_not_six:{len(pose_inverse_variance)}"
+        )
+    pose_surface_authority = not pose_surface_blockers
 
     def pose_axis_mean(pair_rgb_255: Any, *, axis: int) -> Any:
         _seg_input, pose_input = _mlx_pairs_to_scorer_inputs_nhwc(
@@ -403,7 +412,7 @@ def build_z8_full_video_mlx_vjp_surface_shard(
             pose_inverse_variance=pose_inverse_variance,
             target_mode=config.normalized_target_mode,
             pose_null_threshold=float(config.pose_null_threshold),
-            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE if pose_surface_authority else PROPOSAL_ONLY_SCOPE,
             full_video_atom_count=full_atom_count,
             linearization_archive_sha=archive_sha,
             gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
@@ -445,8 +454,8 @@ def build_z8_full_video_mlx_vjp_surface_shard(
         "pose_inverse_variance": list(pose_inverse_variance),
         "pose_inverse_variance_source": "config_pose_inverse_variance",
         "pose_jacobian_abs_is_true_jacobian": True,
-        "pose_surface_authority": True,
-        "pose_surface_blockers": [],
+        "pose_surface_authority": bool(pose_surface_authority),
+        "pose_surface_blockers": pose_surface_blockers,
         "full_video_d_pose": float(config.full_video_d_pose),
         "pose_null_threshold": float(config.pose_null_threshold),
         "scorer_hw": [int(config.scorer_hw[0]), int(config.scorer_hw[1])],
@@ -970,6 +979,7 @@ def assemble_z8_full_video_vjp_surface_bundle(
     full_video_d_pose: float | None = None
     pose_null_threshold: float = 1e-8
     pose_inverse_variance: tuple[float, ...] | None = None
+    proposal_pose_inverse_variance: tuple[float, ...] | None = None
     for shard_index, raw in enumerate(sorted(shard_surfaces, key=lambda row: int(row.get("pair_start", -1)))):
         if (
             raw.get("optimizer_update_applied")
@@ -1015,15 +1025,26 @@ def assemble_z8_full_video_vjp_surface_bundle(
                 "surface shard PoseNet Jacobian tensor must have joint_weight shape plus pose axis dimension"
             )
         shard_pose_inverse_variance = _pose_inverse_variance_from_raw(raw)
+        if proposal_pose_inverse_variance is None and shard_pose_inverse_variance:
+            proposal_pose_inverse_variance = shard_pose_inverse_variance
         pose_surface_kind = str(raw.get("pose_surface_kind") or "missing_pose_surface_kind")
         pose_surface_true = (
             pose_surface_kind == TRUE_P19_POSE_SURFACE_KIND
             and raw.get("pose_jacobian_abs_is_true_jacobian") is True
             and raw.get("pose_surface_authority") is True
             and len(shard_pose_inverse_variance) == int(pose_grad.shape[-1])
+            and int(pose_grad.shape[-1]) == TRUE_P19_POSE_AXIS_COUNT
+            and len(shard_pose_inverse_variance) == TRUE_P19_POSE_AXIS_COUNT
         )
         if not pose_surface_true:
             shard_pose_blockers = list(raw.get("pose_surface_blockers") or [])
+            if int(pose_grad.shape[-1]) != TRUE_P19_POSE_AXIS_COUNT:
+                shard_pose_blockers.append(f"p19_pose_axis_count_not_six:{int(pose_grad.shape[-1])}")
+            if len(shard_pose_inverse_variance) != TRUE_P19_POSE_AXIS_COUNT:
+                shard_pose_blockers.append(
+                    "p19_pose_inverse_variance_length_not_six:"
+                    f"{len(shard_pose_inverse_variance)}"
+                )
             pose_surface_blockers.extend(shard_pose_blockers or [P19_POSE_SURFACE_BLOCKER])
         elif pose_inverse_variance is None:
             pose_inverse_variance = shard_pose_inverse_variance
@@ -1072,12 +1093,17 @@ def assemble_z8_full_video_vjp_surface_bundle(
     if full_coverage:
         seg_grad_full = np.concatenate(seg_grad_chunks, axis=0)
         pose_grad_full = np.concatenate(pose_grad_chunks, axis=0)
+        pose_inverse_variance_for_surface = (
+            pose_inverse_variance
+            or proposal_pose_inverse_variance
+            or tuple(1.0 for _axis in range(int(pose_grad_full.shape[-1])))
+        )
         global_surface = build_joint_p18_p19_waterfill_surface(
             segnet_argmax_gradient=seg_grad_full,
             pose_jacobian=pose_grad_full,
             config=JointP18P19WaterfillConfig(
                 d_pose=float(full_video_d_pose if full_video_d_pose is not None else 0.0),
-                pose_inverse_variance=pose_inverse_variance or (1.0,),
+                pose_inverse_variance=pose_inverse_variance_for_surface,
                 target_mode=str(plan["target_mode"]),
                 pose_null_threshold=float(pose_null_threshold),
                 evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE if pose_surface_authority else PROPOSAL_ONLY_SCOPE,
@@ -1137,8 +1163,8 @@ def assemble_z8_full_video_vjp_surface_bundle(
         else SCALAR_POSE_LOSS_VJP_SURFACE_KIND,
         "pose_surface_authority": bool(pose_surface_authority),
         "pose_surface_blockers": authority_blockers,
-        "pose_axis_count": len(pose_inverse_variance or ()),
-        "pose_inverse_variance": list(pose_inverse_variance or ()),
+        "pose_axis_count": len(pose_inverse_variance or proposal_pose_inverse_variance or ()),
+        "pose_inverse_variance": list(pose_inverse_variance or proposal_pose_inverse_variance or ()),
         "implicit_allocator_authority": bool(
             budget_spend_authority and global_surface.get("implicit_allocator_authority", False)
         ),

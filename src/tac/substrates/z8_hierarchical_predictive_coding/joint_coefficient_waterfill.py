@@ -1259,7 +1259,9 @@ def materialize_joint_p18_p19_deadzone_candidate(
         "inflate_runtime_benchmark_report": inflate_runtime_benchmark_report,
         "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
         "exact_axis_blocker": (
-            None if cfg.emit_receiver_proof else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+            "contest_cpu_cuda_eval_not_executed"
+            if cfg.emit_receiver_proof
+            else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
         ),
         "waterfill_result": {key: value for key, value in result.items() if key != "mutated_archive_bytes"},
         **FALSE_AUTHORITY,
@@ -1585,7 +1587,9 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
             "inflate_runtime_benchmark_report": inflate_runtime_benchmark_report,
             "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
             "exact_axis_blocker": (
-                None if cfg.emit_receiver_proof else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+                "contest_cpu_cuda_eval_not_executed"
+                if cfg.emit_receiver_proof
+                else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
             ),
             **FALSE_AUTHORITY,
         }

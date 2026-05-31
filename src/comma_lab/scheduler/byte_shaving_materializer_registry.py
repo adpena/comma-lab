@@ -84,6 +84,10 @@ FECA_SELECTOR_REPARAMETERIZE_MATERIALIZER = "feca_selector_reparameterize_adapte
 FECA_SELECTOR_REPARAMETERIZE_TARGET_KIND = "selector_stream_context_recode_v1"
 FP11_SOURCE_BROTLI_RECODE_MATERIALIZER = "fp11_source_brotli_recode_adapter"
 FP11_SOURCE_BROTLI_RECODE_TARGET_KIND = "fp11_source_brotli_recode_v1"
+Z8_HPC1_DETAIL_ENTROPY_DELTA_MATERIALIZER = "z8_hpc1_detail_entropy_delta_adapter"
+Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND = "z8_hpc1_detail_entropy_delta_v1"
+Z8_HPC1_RECEIVER_CONTRACT_ID = "z8_hpc1_generated_inflate_sh_decode_only_receiver.v1"
+Z8_HPC1_RECEIVER_CONTRACT_KIND = "z8_hpc1_generated_inflate_sh_decode_only_receiver"
 
 
 @dataclass(frozen=True)
@@ -616,6 +620,34 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.packet_compiler.fp11_source_brotli_recode",
         materialize_function="build_fp11_source_brotli_recode_candidate",
+    ),
+    MaterializerAdapter(
+        materializer_id=Z8_HPC1_DETAIL_ENTROPY_DELTA_MATERIALIZER,
+        unit_kind="z8_hpc1_archive",
+        operation_family="z8_detail_entropy_delta",
+        target_kind=Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND,
+        executable=True,
+        description=(
+            "Z8HPC1 per-subband detail entropy-delta materializer. It consumes "
+            "a ready RD-waterfill schedule, rewrites the Z8 detail codec bytes, "
+            "emits a byte-closed archive/runtime package, and remains blocked "
+            "on receiver proof plus exact CPU/CUDA eval before promotion."
+        ),
+        receiver_contract_id=Z8_HPC1_RECEIVER_CONTRACT_ID,
+        receiver_contract_kind=Z8_HPC1_RECEIVER_CONTRACT_KIND,
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
+        required_context_fields=(
+            "archive_bin",
+            "entropy_delta_schedule_json",
+            "output_dir",
+        ),
+        implementation_module=(
+            "tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule"
+        ),
+        plan_function="build_entropy_delta_materializer_work_order",
+        materialize_function="tools/materialize_z8_joint_p18_p19_deadzone_candidate.py",
+        receiver_proof_function="export_z8hpc1_archive_bytes",
     ),
 )
 

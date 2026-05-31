@@ -15,7 +15,6 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
 )
 from tac.substrates.z8_hierarchical_predictive_coding.full_video_vjp_acquisition import (
     FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
-    P19_POSE_SURFACE_BLOCKER,
     SCALAR_POSE_LOSS_VJP_SURFACE_KIND,
     SINGLE_UPDATE_AFTER_FULL_REDUCTION,
     TRUE_P19_POSE_SURFACE_KIND,
@@ -334,7 +333,10 @@ def test_full_video_vjp_plan_and_shard_file_loader_are_queue_ready(tmp_path: Pat
     assert bundle["gradient_reduction_semantics"] == FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION
     assert bundle["gradient_reduction_authority"] is True
     assert bundle["budget_spend_authority"] is False
-    assert bundle["budget_spend_blockers"] == [P19_POSE_SURFACE_BLOCKER]
+    assert bundle["budget_spend_blockers"] == [
+        "p19_pose_axis_count_not_six:1",
+        "p19_pose_inverse_variance_length_not_six:0",
+    ]
     assert bundle["pose_surface_kind"] == SCALAR_POSE_LOSS_VJP_SURFACE_KIND
     assert bundle["pose_surface_authority"] is False
     assert bundle["optimizer_update_semantics"] == "no_update_pose_surface_not_true_p19_jacobian"
@@ -441,9 +443,12 @@ def test_mlx_surface_provider_reconstructs_archive_and_reduces_fresh_bundle(tmp_
     assert bundle["full_video_surface_coverage"] is True
     assert bundle["full_video_reduction_complete"] is True
     assert bundle["gradient_reduction_authority"] is True
-    assert bundle["budget_spend_authority"] is True
-    assert bundle["budget_spend_blockers"] == []
-    assert bundle["pose_surface_authority"] is True
+    assert bundle["budget_spend_authority"] is False
+    assert bundle["budget_spend_blockers"] == [
+        "p19_pose_axis_count_not_six:3",
+        "p19_pose_inverse_variance_length_not_six:3",
+    ]
+    assert bundle["pose_surface_authority"] is False
     assert bundle["pose_axis_count"] == 3
     assert bundle["pose_inverse_variance"] == [1.0, 2.0, 4.0]
     assert bundle["joint_weight"].shape == reference_pairs.shape

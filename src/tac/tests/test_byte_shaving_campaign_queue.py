@@ -89,6 +89,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     TENSOR_QUANTIZE_MATERIALIZER,
     TENSOR_QUANTIZE_TARGET_KIND,
     TENSOR_SHARED_CODEBOOK_TARGET_KIND,
+    Z8_HPC1_DETAIL_ENTROPY_DELTA_MATERIALIZER,
+    Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND,
     registry_manifest,
     resolve_materializer,
     suggest_materializer_adapters,
@@ -938,6 +940,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         TENSOR_PRUNE_TARGET_KIND,
         TENSOR_QUANTIZE_TARGET_KIND,
         TENSOR_SHARED_CODEBOOK_TARGET_KIND,
+        Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND,
     ]
     adapters = {row["materializer_id"]: row for row in manifest["adapters"]}
     assert adapters[DQS1_DROP_PAIR_MATERIALIZER] == {
@@ -1230,6 +1233,35 @@ def test_byte_shaving_materializer_registry_registers_inverse_scorer_exact_chain
     assert resolved.receiver_contract_kind == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND
     assert resolved.materialization_resource_kind == "local_mlx"
     assert resolved.blockers == ()
+
+
+def test_byte_shaving_materializer_registry_registers_z8_hpc1_entropy_delta() -> None:
+    resolved = resolve_materializer(
+        operation={
+            "unit_id": "z8_hpc1_archive_current",
+            "operation_id": "materialize_z8_rd_waterfill_entropy_delta",
+            "operation_family": "z8_detail_entropy_delta",
+            "target_kind": Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND,
+        },
+        unit={
+            "unit_id": "z8_hpc1_archive_current",
+            "unit_kind": "z8_hpc1_archive",
+        },
+    )
+
+    assert resolved.executable is True
+    assert resolved.materializer_id == Z8_HPC1_DETAIL_ENTROPY_DELTA_MATERIALIZER
+    assert resolved.cooperative_receiver_required is True
+    assert resolved.materialization_resource_kind == "local_cpu"
+    assert resolved.blockers == ()
+    assert resolved.adapter is not None
+    assert resolved.adapter.required_context_fields == (
+        "archive_bin",
+        "entropy_delta_schedule_json",
+        "output_dir",
+    )
+    assert resolved.adapter.plan_function == "build_entropy_delta_materializer_work_order"
+    assert resolved.adapter.receiver_contract_kind == "z8_hpc1_generated_inflate_sh_decode_only_receiver"
 
 
 def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None:

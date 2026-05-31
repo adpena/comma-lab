@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,9 @@ NON_PROMOTABLE_MARKERS: dict[str, Any] = {
     "ready_for_exact_eval_dispatch": False,
     "promotable": False,
 }
+Z8_ENTROPY_DELTA_MATERIALIZER_WORK_ORDER_SCHEMA = (
+    "z8_entropy_delta_materializer_work_order.v1"
+)
 
 
 def parse_aggregate_subband_key(key: str) -> tuple[int, str]:
@@ -209,8 +213,117 @@ def load_entropy_detail_quantization_steps_json(
     return coerce_entropy_detail_quantization_steps(payload, require_ready=require_ready)
 
 
+def _path_text(path: str | Path | None) -> str | None:
+    if path is None:
+        return None
+    text = Path(path).as_posix()
+    return text or None
+
+
+def _path_exists(path_text: str, *, repo_root: str | Path | None = None) -> bool:
+    path = Path(path_text)
+    if path.is_absolute():
+        return path.is_file()
+    if repo_root is not None:
+        return (Path(repo_root) / path).is_file()
+    return path.is_file()
+
+
+def build_entropy_delta_materializer_work_order(
+    schedule: Mapping[str, Any],
+    *,
+    schedule_json_path: str | Path,
+    output_dir: str | Path,
+    archive_bin: str | Path | None = None,
+    repo_root: str | Path | None = None,
+    require_existing_archive_bin: bool = True,
+    emit_receiver_proof: bool = False,
+    run_inflate_runtime_benchmark: bool = False,
+    extra_args: Sequence[str] = (),
+) -> dict[str, Any]:
+    """Build the smallest executable Z8 materializer row for a ready schedule.
+
+    The schedule itself is advisory. This work order is the bridge into the
+    byte-closed materializer: it keeps score authority false, consumes the same
+    schedule JSON the solver wrote, and runs the Z8 archive/runtime exporter
+    through ``tools/materialize_z8_joint_p18_p19_deadzone_candidate.py``.
+    """
+
+    blockers: list[str] = []
+    schedule_dict = dict(schedule)
+    try:
+        steps = coerce_entropy_detail_quantization_steps(schedule_dict)
+    except ValueError as exc:
+        steps = {}
+        blockers.append(f"schedule_not_materializer_ready:{exc}")
+    raw_archive_bin = archive_bin if archive_bin is not None else schedule_dict.get("source_archive_path")
+    archive_bin_text = _path_text(raw_archive_bin)
+    if not archive_bin_text:
+        blockers.append("source_archive_bin_missing")
+    elif require_existing_archive_bin and not _path_exists(archive_bin_text, repo_root=repo_root):
+        blockers.append(f"source_archive_bin_missing_on_disk:{archive_bin_text}")
+    output_dir_text = _path_text(output_dir)
+    schedule_json_text = _path_text(schedule_json_path)
+    if not output_dir_text:
+        blockers.append("materializer_output_dir_missing")
+    if not schedule_json_text:
+        blockers.append("schedule_json_path_missing")
+    command: list[str] | None = None
+    if not blockers:
+        command = [
+            ".venv/bin/python",
+            "tools/materialize_z8_joint_p18_p19_deadzone_candidate.py",
+            "--archive-bin",
+            str(archive_bin_text),
+            "--output-dir",
+            str(output_dir_text),
+            "--no-mutate-coefficients",
+            "--entropy-code-quantized-details",
+            "--entropy-detail-quantization-steps-json",
+            str(schedule_json_text),
+        ]
+        if repo_root is not None:
+            command.extend(["--repo-root", Path(repo_root).as_posix()])
+        if emit_receiver_proof:
+            command.append("--emit-receiver-proof")
+        if run_inflate_runtime_benchmark:
+            command.append("--run-inflate-runtime-benchmark")
+        command.extend(str(item) for item in extra_args)
+    work_order = {
+        "schema": Z8_ENTROPY_DELTA_MATERIALIZER_WORK_ORDER_SCHEMA,
+        "purpose": (
+            "Execute a ready Z8 entropy-detail quantization schedule through "
+            "the byte-closed Z8HPC1 materializer, then let receiver proof and "
+            "contest CPU/CUDA gates decide promotion."
+        ),
+        **NON_PROMOTABLE_MARKERS,
+        "schedule_schema": schedule_dict.get("schema"),
+        "schedule_sha256": schedule_dict.get("schedule_sha256"),
+        "source_report_sha256": schedule_dict.get("source_report_sha256"),
+        "source_archive_sha256": schedule_dict.get("source_archive_sha256"),
+        "source_archive_bin": archive_bin_text,
+        "require_existing_archive_bin": bool(require_existing_archive_bin),
+        "schedule_json_path": schedule_json_text,
+        "materializer_output_dir": output_dir_text,
+        "step_count": len(steps),
+        "emit_receiver_proof": bool(emit_receiver_proof),
+        "run_inflate_runtime_benchmark": bool(run_inflate_runtime_benchmark),
+        "materializer_command": command,
+        "blockers": blockers,
+        "ready_for_materializer_execution": bool(command and not blockers),
+        "exact_axis_blocker": (
+            "contest_cpu_cuda_eval_not_executed"
+            if emit_receiver_proof
+            else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+        ),
+    }
+    return work_order
+
+
 __all__ = [
     "NON_PROMOTABLE_MARKERS",
+    "Z8_ENTROPY_DELTA_MATERIALIZER_WORK_ORDER_SCHEMA",
+    "build_entropy_delta_materializer_work_order",
     "build_entropy_delta_schedule_from_headroom_report",
     "coerce_entropy_detail_quantization_steps",
     "load_entropy_detail_quantization_steps_json",
