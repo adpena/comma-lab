@@ -40,20 +40,24 @@ Grammar (per design memo Section 8):
 
 The multi-level decoder + cat_to_continuous projections state_dict is
 archive-bound custody in the current runtime. Pixel reconstruction is currently
-driven by ``wavelet_blob`` only. The per-pair per-level learned logits
+driven by ``wavelet_blob`` plus a decoded ``wyner_ziv_blob`` top-state
+projection into frame-1 top-LL. The per-pair per-level learned logits
 (training only) are REDUCED to argmax indices for archive serialization
 (canonical sister A DreamerV3 pattern; HNeRV parity L4 budget discipline).
 
 Per Catalog #139 + #105 + #272 distinguishing-feature contract, the CURRENT
-runtime has exactly one proven pixel-consuming distinguishing surface:
+runtime has two proven pixel-consuming distinguishing surfaces:
 - wavelet_blob bytes ARE frame-affecting at inflate (per-level Mallat inverse;
   DISTINGUISHING FEATURE #2 — Mallat wavelet codec)
-- decoder_blob, indices_blob, wyner_ziv_blob, and dreamer_state_blob are
+- wyner_ziv_blob bytes ARE frame-affecting at inflate through valid semantic
+  top-state payload mutation plus receiver projection into frame_1 top-LL
+  (DISTINGUISHING FEATURE #3 — Wyner-Ziv side-info coder)
+- decoder_blob, indices_blob, and dreamer_state_blob are
   archive-bound stack custody/provenance sections in the current runtime, but
   are NOT yet promoted as pixel-consuming distinguishing features until their
   byte-mutation proofs land. This fail-closed wording prevents full-stack
-  Mamba/Dreamer/Wyner-Ziv overclaim while preserving the bytes for the next
-  validated stack-runtime adapter.
+  Mamba/Dreamer overclaim while preserving the bytes for the next validated
+  stack-runtime adapter.
 - header + meta bytes are parse/config gates (control_or_metadata role)
 
 CLAUDE.md compliance:

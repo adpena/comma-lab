@@ -7,9 +7,10 @@ Per CLAUDE.md HNeRV parity L4 (≤200 LOC substrate-engineering waiver) + L9
 (canonical select_inflate_device) + Catalog #295 (PYTHONPATH self-containment).
 
 Per Catalog #369: inflate consumes real trained wavelet coefficients from the
-Z8HPC1 archive bytes (NOT synthetic frame base). The decoder, indices,
-Wyner-Ziv, and Dreamer sections are parsed/validated archive custody today, but
-they are not yet pixel-consuming until section mutation proofs land.
+Z8HPC1 archive bytes (NOT synthetic frame base). The Wyner-Ziv top-state
+payload is decoded and projected into frame-1 top-LL at receiver runtime. The
+decoder, indices, and Dreamer sections are parsed/validated archive custody
+today, but they are not yet pixel-consuming until section mutation proofs land.
 The canonical Mallat 1989 §7.5 perfect-reconstruction inverse chain
 reproduces per-pair RGB frames from the wavelet detail bands serialized at
 training time by ``build_z8hpc1_archive_bytes_from_canonical_quadruple``.
@@ -23,9 +24,9 @@ NOT random / synthetic generation).
 
 Z8 is ``lane_class=substrate_engineering`` per CLAUDE.md HNeRV parity
 discipline L7 (substrate engineering UNIQUE-IFIES); the canonical
-pixel-consuming distinguishing feature here is the M5 Mallat DWT payload. The
-broader M4 Mamba-2 + M6 Wyner-Ziv + Dreamer state stays custody-only pending
-byte-mutation receiver proofs.
+pixel-consuming distinguishing feature here is the M5 Mallat DWT payload plus
+the M6 Wyner-Ziv/Mamba top-state projection. The broader decoder/index/Dreamer
+state stays custody-only pending byte-mutation receiver proofs.
 
 ## Canonical PR98 L28 decode-side channel postprocess (2026-05-30)
 
@@ -111,8 +112,9 @@ def inflate_one_video_from_archive_bytes(
     archive's ``wavelet_coeffs_blob`` (NOT synthetic frame base). The
     Mallat 1989 §7.5 perfect-reconstruction inverse chain reproduces the
     per-pair RGB frames byte-deterministically from those wavelet bytes.
-    Mamba/Dreamer/Wyner-Ziv sections are validated custody, not pixel drivers,
-    until their own byte-mutation proofs produce output changes.
+    Wyner-Ziv sections are decoded and projected into frame-1 top-LL. Decoder,
+    categorical-index, and Dreamer sections are validated custody, not pixel
+    drivers, until their own byte-mutation proofs produce output changes.
 
     Writes ``CONTEST_NUM_FRAMES // 2`` pairs (600) at camera resolution
     (874×1164) per Catalog #367 contest raw-bytes contract.

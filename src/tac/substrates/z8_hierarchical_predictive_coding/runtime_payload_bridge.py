@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: MIT
 """Runtime payload bridge for Z8 Mamba/Wyner-Ziv archive sections.
 
-This module makes the non-wavelet Z8HPC1 payloads typed at receiver runtime
-without pretending they are pixel-consuming yet. The bridge decodes the
-per-pair Wyner-Ziv top states from archive bytes using the same top-LL side
-information model as the encoder. A later state-to-pixel adapter can consume
-these decoded states; until then the report remains false-authority custody
-and planning signal only.
+This module makes the non-wavelet Z8HPC1 payloads typed at receiver runtime.
+The bridge decodes per-pair Wyner-Ziv top states from archive bytes using the
+same top-LL side-information model as the encoder, then projects the decoded
+state into frame-1 top-LL. That is a real receiver pixel driver, but it remains
+false-authority for score, promotion, and exact dispatch until contest-axis
+evaluation signs the byte-closed archive/runtime pair.
 """
 
 from __future__ import annotations
@@ -21,11 +21,13 @@ import numpy as np
 
 from tac.substrates.z8_hierarchical_predictive_coding.archive import (
     Z8HierarchicalArchive,
+    pack_archive,
     parse_archive,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
     build_canonical_quadruple_binding_from_z8_config,
     parse_pair_blobs_from_wavelet_blob,
+    reconstruct_pair_rgb_from_pyramid,
 )
 
 Z8_RUNTIME_PAYLOAD_BRIDGE_REPORT_SCHEMA = "z8_hpc1_runtime_payload_bridge_report.v1"
@@ -69,6 +71,14 @@ def _length_prefixed_payloads(blob: bytes) -> list[bytes]:
             f"Z8 Wyner-Ziv blob trailing bytes (pos={pos} len={len(blob)})"
         )
     return payloads
+
+
+def _pack_length_prefixed_payloads(payloads: list[bytes]) -> bytes:
+    parts = [struct.pack("<I", len(payloads))]
+    for payload in payloads:
+        parts.append(struct.pack("<I", len(payload)))
+        parts.append(bytes(payload))
+    return b"".join(parts)
 
 
 def _binding_config_from_archive(arc: Z8HierarchicalArchive) -> SimpleNamespace:
@@ -206,9 +216,7 @@ def project_decoded_top_states_into_pair_pyramids(
             frame_1_top_ll,
             projection_gain=projection_gain,
         )
-        top_ll_projected = np.clip(frame_1_top_ll + delta, 0.0, 1.0).astype(
-            np.float32, copy=False
-        )
+        top_ll_projected = (frame_1_top_ll + delta).astype(np.float32, copy=False)
         actual_delta = top_ll_projected - frame_1_top_ll
         if np.any(actual_delta != 0.0):
             changed_pairs += 1
@@ -232,6 +240,202 @@ def project_decoded_top_states_into_pair_pyramids(
     return projected, stats
 
 
+def projected_pair_pyramids_from_archive_bytes(
+    archive_bytes: bytes,
+) -> tuple[Any, list[dict[str, Any]], dict[str, Any]]:
+    """Return the exact WZ-projected pair pyramids consumed by Z8 inflate."""
+
+    arc = parse_archive(archive_bytes)
+    payloads = _length_prefixed_payloads(arc.wyner_ziv_top_blob)
+    pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
+    if len(payloads) != len(pair_pyramids):
+        raise ValueError(
+            "Z8 Wyner-Ziv payload count does not match wavelet pair count: "
+            f"{len(payloads)} != {len(pair_pyramids)}"
+        )
+    binding = build_canonical_quadruple_binding_from_z8_config(
+        _binding_config_from_archive(arc)
+    )
+    side_shape = binding.contract.wyner_ziv_top_level_side_info_shape
+    decoded = [
+        np.asarray(
+            binding.m6.decode(payload, _top_ll_side_info(pyramid, side_shape)),
+            dtype=np.float32,
+        )
+        for payload, pyramid in zip(payloads, pair_pyramids, strict=True)
+    ]
+    projected, stats = project_decoded_top_states_into_pair_pyramids(
+        pair_pyramids,
+        decoded,
+    )
+    return binding, projected, stats
+
+
+def reconstruct_projected_pair_rgb_from_archive_bytes(
+    archive_bytes: bytes,
+    *,
+    pair_index: int = 0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Reconstruct one pair through the same WZ projection path inflate uses."""
+
+    binding, projected, _stats = projected_pair_pyramids_from_archive_bytes(
+        archive_bytes
+    )
+    if not projected:
+        raise ValueError("Z8 archive carries zero projected pair pyramids")
+    src_pair_idx = int(pair_index) % len(projected)
+    return reconstruct_pair_rgb_from_pyramid(binding, projected[src_pair_idx])
+
+
+def mutate_valid_wyner_ziv_payload_in_archive(
+    archive_bytes: bytes,
+    *,
+    pair_index: int = 0,
+    mutation_scale: float = 0.5,
+) -> tuple[bytes, dict[str, Any]]:
+    """Return a byte-closed archive whose WZ payload decodes to changed state."""
+
+    arc = parse_archive(archive_bytes)
+    payloads = _length_prefixed_payloads(arc.wyner_ziv_top_blob)
+    pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
+    if not payloads or not pair_pyramids:
+        raise ValueError("Z8 archive requires at least one WZ payload and pair")
+    if len(payloads) != len(pair_pyramids):
+        raise ValueError(
+            "Z8 Wyner-Ziv payload count does not match wavelet pair count: "
+            f"{len(payloads)} != {len(pair_pyramids)}"
+        )
+    binding = build_canonical_quadruple_binding_from_z8_config(
+        _binding_config_from_archive(arc)
+    )
+    side_shape = binding.contract.wyner_ziv_top_level_side_info_shape
+    target_idx = int(pair_index) % len(payloads)
+    side_info = _top_ll_side_info(pair_pyramids[target_idx], side_shape)
+    decoded = np.asarray(
+        binding.m6.decode(payloads[target_idx], side_info),
+        dtype=np.float32,
+    )
+    flat = decoded.reshape(-1)
+    if flat.size == 0:
+        raise ValueError("decoded WZ top state is empty")
+    pattern = np.linspace(-1.0, 1.0, int(flat.size), dtype=np.float32).reshape(
+        decoded.shape
+    )
+    state_scale = max(float(np.std(flat.astype(np.float64))), 1.0)
+    candidate_states = (
+        ("zero_top_state", np.zeros_like(decoded, dtype=np.float32)),
+        (
+            "unit_positive_top_state",
+            np.ones_like(decoded, dtype=np.float32) * state_scale,
+        ),
+        ("negated_top_state", -decoded),
+        (
+            "ramp_perturbed_top_state",
+            decoded + float(mutation_scale) * state_scale * pattern,
+        ),
+    )
+    selected_mode = ""
+    selected_state_delta = 0.0
+    selected_payload = b""
+    for mode, candidate_state in candidate_states:
+        candidate_payload = binding.m6.encode(candidate_state, side_info)
+        candidate_decoded = np.asarray(
+            binding.m6.decode(candidate_payload, side_info),
+            dtype=np.float32,
+        )
+        state_delta = float(np.max(np.abs(candidate_decoded - decoded)))
+        if state_delta > 0.0:
+            selected_mode = mode
+            selected_state_delta = state_delta
+            selected_payload = candidate_payload
+            break
+    if not selected_payload:
+        raise RuntimeError("could not produce a decoded-changing WZ payload mutation")
+    next_payloads = list(payloads)
+    next_payloads[target_idx] = selected_payload
+    mutated_wz_blob = _pack_length_prefixed_payloads(next_payloads)
+    mutated_archive = pack_archive(
+        arc.decoder_state_dict,
+        arc.per_level_category_indices,
+        arc.wavelet_coeffs_blob,
+        mutated_wz_blob,
+        arc.dreamer_state_blob,
+        arc.meta,
+        num_levels=arc.num_levels,
+        num_groups_per_level=arc.num_groups_per_level,
+        num_categories_per_level=arc.num_categories_per_level,
+        num_pairs=arc.num_pairs,
+        decoder_latent_dim=arc.decoder_latent_dim,
+        base_channels=arc.base_channels,
+        wavelet_basis_id=arc.wavelet_basis_id,
+        schema_version=arc.schema_version,
+    )
+    return mutated_archive, {
+        "mutated_pair_index": target_idx,
+        "original_payload_bytes": len(payloads[target_idx]),
+        "mutated_payload_bytes": len(next_payloads[target_idx]),
+        "original_archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "mutated_archive_sha256": hashlib.sha256(mutated_archive).hexdigest(),
+        "decoded_top_state_max_abs_delta": selected_state_delta,
+        "mutation_mode": selected_mode,
+        "mutation_scale": float(mutation_scale),
+    }
+
+
+def build_wyner_ziv_payload_mutation_receiver_proof(
+    archive_bytes: bytes,
+    *,
+    proof_out: str | Path | None = None,
+    pair_index: int = 0,
+    mutation_scale: float = 0.5,
+) -> dict[str, Any]:
+    """Prove a valid WZ payload mutation changes receiver-rendered pixels."""
+
+    base_rgb_0, base_rgb_1 = reconstruct_projected_pair_rgb_from_archive_bytes(
+        archive_bytes,
+        pair_index=pair_index,
+    )
+    mutated_archive, mutation = mutate_valid_wyner_ziv_payload_in_archive(
+        archive_bytes,
+        pair_index=pair_index,
+        mutation_scale=mutation_scale,
+    )
+    mutated_rgb_0, mutated_rgb_1 = reconstruct_projected_pair_rgb_from_archive_bytes(
+        mutated_archive,
+        pair_index=pair_index,
+    )
+    frame0_delta = float(np.max(np.abs(mutated_rgb_0 - base_rgb_0)))
+    frame1_delta = float(np.max(np.abs(mutated_rgb_1 - base_rgb_1)))
+    manifest = {
+        "schema": "z8_hpc1_wyner_ziv_payload_mutation_receiver_proof.v1",
+        "receiver_runtime_path": (
+            "inflate.decode_wyner_ziv_top_states_from_archive"
+            "->project_decoded_top_states_into_pair_pyramids"
+            "->reconstruct_pair_rgb_from_pyramid"
+        ),
+        "archive_member_byte_closed": True,
+        "valid_semantic_wyner_ziv_payload_mutation": True,
+        "wyner_ziv_top_state_pixel_consumption_proven": frame1_delta > 0.0,
+        "frame_0_max_abs_delta": frame0_delta,
+        "frame_1_max_abs_delta": frame1_delta,
+        "expected_changed_frame": "frame_1",
+        "mutation": mutation,
+        "axis_tag": "[macOS-CPU advisory]",
+        "evidence_grade": "receiver-runtime-local-proof",
+        **FALSE_AUTHORITY,
+    }
+    if proof_out is not None:
+        out = Path(proof_out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        manifest["proof_path"] = str(out)
+        from tac.repo_io import write_json
+
+        write_json(out, manifest)
+    else:
+        manifest["proof_path"] = None
+    return manifest
+
+
 def build_runtime_payload_bridge_report(
     archive_bytes: bytes,
     *,
@@ -240,10 +444,11 @@ def build_runtime_payload_bridge_report(
     """Return a false-authority report proving WZ top-state decode custody."""
 
     decoded = decode_wyner_ziv_top_states_from_archive(archive_bytes)
-    arc = parse_archive(archive_bytes)
-    pair_pyramids = parse_pair_blobs_from_wavelet_blob(arc.wavelet_coeffs_blob)
-    _projected, projection_stats = project_decoded_top_states_into_pair_pyramids(
-        pair_pyramids, decoded
+    _binding, _projected, projection_stats = projected_pair_pyramids_from_archive_bytes(
+        archive_bytes
+    )
+    pixel_consumption_proven = (
+        int(projection_stats.get("projected_pair_changed_count") or 0) > 0
     )
     state_shapes = [list(state.shape) for state in decoded]
     state_digest = hashlib.sha256(
@@ -259,8 +464,12 @@ def build_runtime_payload_bridge_report(
         "side_info_source": "frame_0_top_ll_per_channel_spatial_mean",
         "state_to_pixel_projection_ready": True,
         "state_to_pixel_projection": projection_stats,
-        "pixel_consumption_proven": False,
-        "next_required_task": "run_valid_wyner_ziv_payload_mutation_receiver_proof",
+        "pixel_consumption_proven": pixel_consumption_proven,
+        "next_required_task": (
+            "extend_decoder_indices_dreamer_runtime_pixel_bridge"
+            if pixel_consumption_proven
+            else "run_valid_wyner_ziv_payload_mutation_receiver_proof"
+        ),
         "allowed_use": "receiver_runtime_projection_candidate_and_materializer_planning_only",
         "forbidden_use": "score_claim_or_pixel_consumption_authority",
         **FALSE_AUTHORITY,
@@ -279,6 +488,10 @@ __all__ = [
     "Z8_RUNTIME_PAYLOAD_BRIDGE_REPORT_SCHEMA",
     "Z8_STATE_TO_TOP_LL_PROJECTION_GAIN",
     "build_runtime_payload_bridge_report",
+    "build_wyner_ziv_payload_mutation_receiver_proof",
     "decode_wyner_ziv_top_states_from_archive",
+    "mutate_valid_wyner_ziv_payload_in_archive",
     "project_decoded_top_states_into_pair_pyramids",
+    "projected_pair_pyramids_from_archive_bytes",
+    "reconstruct_projected_pair_rgb_from_archive_bytes",
 ]

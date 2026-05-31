@@ -154,7 +154,8 @@ def _z8_runtime_adapter_manifest_extra(
     manifest = {
         "schema": "z8_hpc1_runtime_adapter_manifest.v1",
         "predictive_coding_family": (
-            "z8_hpc1_mallat_wavelet_pixel_consumed_predictive_stack_custody"
+            "z8_hpc1_mallat_wavelet_plus_wyner_ziv_top_state_pixel_consumed"
+            "_predictive_stack_custody"
         ),
         "pixel_consumed_archive_sections": list(Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS),
         "stack_custody_not_yet_pixel_consumed_sections": list(
@@ -367,9 +368,17 @@ def export_z8hpc1_archive_bound_candidate_package(
     root, out_dir = _resolve_output_dir(output_dir, repo_root=repo_root)
     submission_dir = out_dir / "submission"
     byte_mutation_proof_path = out_dir / "z8_hpc1_byte_mutation_proof.json"
+    runtime_payload_bridge_report_path = (
+        out_dir / "z8_hpc1_runtime_payload_bridge_report.json"
+    )
     byte_mutation_proof = (
         json.loads(byte_mutation_proof_path.read_text(encoding="utf-8"))
         if byte_mutation_proof_path.is_file()
+        else None
+    )
+    runtime_payload_bridge_report = (
+        json.loads(runtime_payload_bridge_report_path.read_text(encoding="utf-8"))
+        if runtime_payload_bridge_report_path.is_file()
         else None
     )
     input_artifacts = [
@@ -378,6 +387,10 @@ def export_z8hpc1_archive_bound_candidate_package(
     ]
     if byte_mutation_proof_path.is_file():
         input_artifacts.append(_repo_relative(byte_mutation_proof_path, root))
+    if runtime_payload_bridge_report_path.is_file():
+        input_artifacts.append(
+            _repo_relative(runtime_payload_bridge_report_path, root)
+        )
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=Z8_HPC_ARCHIVE_BOUND_ADAPTER_ID,
         candidate_family=Z8_HPC_ARCHIVE_CANDIDATE_FAMILY,
@@ -397,6 +410,7 @@ def export_z8hpc1_archive_bound_candidate_package(
         retain_receiver_output=retain_receiver_proof_output,
         runtime_adapter_manifest_extra=_z8_runtime_adapter_manifest_extra(
             byte_mutation_proof=byte_mutation_proof,
+            runtime_payload_bridge_report=runtime_payload_bridge_report,
             repo_root=root,
         ),
         candidate_row_schema="z8_hpc1_archive_bound_candidate_row.v1",

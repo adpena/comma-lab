@@ -34,7 +34,9 @@ from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
     Z8HierarchicalConfig,
 )
 from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+    build_wyner_ziv_payload_mutation_receiver_proof,
     decode_wyner_ziv_top_states_from_archive,
+    mutate_valid_wyner_ziv_payload_in_archive,
     project_decoded_top_states_into_pair_pyramids,
 )
 
@@ -84,6 +86,25 @@ def test_z8_runtime_payload_projection_changes_frame1_pixels() -> None:
     assert float(np.max(np.abs(projected_f1 - base_f1))) > 0.0
 
 
+def test_z8_valid_wyner_ziv_payload_mutation_changes_frame1_pixels() -> None:
+    archive_bytes = _archive_bytes()
+    mutated_archive, mutation = mutate_valid_wyner_ziv_payload_in_archive(
+        archive_bytes
+    )
+    assert mutated_archive != archive_bytes
+    assert mutation["mutated_archive_sha256"] != mutation["original_archive_sha256"]
+
+    proof = build_wyner_ziv_payload_mutation_receiver_proof(archive_bytes)
+
+    assert proof["archive_member_byte_closed"] is True
+    assert proof["valid_semantic_wyner_ziv_payload_mutation"] is True
+    assert proof["wyner_ziv_top_state_pixel_consumption_proven"] is True
+    assert proof["frame_0_max_abs_delta"] == 0.0
+    assert proof["frame_1_max_abs_delta"] > 0.0
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
 def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path) -> None:
     archive_zip, archive_sha, archive_bytes = export_z8hpc1_archive_bytes(
         _archive_bytes(),
@@ -99,8 +120,11 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     proof = json.loads(byte_mutation_proof_path.read_text(encoding="utf-8"))
     assert proof["distinguishing_feature_consumed"] is True
     assert "wavelet_blob" in proof["pixel_consumed_sections"]
+    assert "wyner_ziv_blob" in proof["pixel_consumed_sections"]
     assert "dreamer_state_blob" in proof["custody_only_sections"]
-    assert proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"] is False
+    assert proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"] is True
+    semantic_wz = proof["wyner_ziv_semantic_payload_mutation_receiver_proof"]
+    assert semantic_wz["wyner_ziv_top_state_pixel_consumption_proven"] is True
     bridge_report_path = tmp_path / "z8_hpc1_runtime_payload_bridge_report.json"
     assert bridge_report_path.is_file()
     bridge_report = json.loads(bridge_report_path.read_text(encoding="utf-8"))
@@ -109,7 +133,7 @@ def test_z8_archive_export_emits_runtime_tree_without_mlx_import(tmp_path: Path)
     assert bridge_report["state_to_pixel_projection_ready"] is True
     assert bridge_report["state_to_pixel_projection"]["projected_pair_count"] == 1
     assert bridge_report["state_to_pixel_projection"]["projected_pair_changed_count"] == 1
-    assert bridge_report["pixel_consumption_proven"] is False
+    assert bridge_report["pixel_consumption_proven"] is True
     submission = tmp_path / "submission"
     assert (submission / "0.bin").is_file()
     assert (submission / "inflate.sh").is_file()
@@ -165,25 +189,24 @@ def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(
         )
         mutation_proof = manifest_extra["byte_mutation_consumption_proof"]
         assert mutation_proof["distinguishing_feature_consumed"] is True
-        assert mutation_proof["pixel_consumed_sections"] == ["wavelet_blob"]
+        assert mutation_proof["pixel_consumed_sections"] == [
+            "wavelet_blob",
+            "wyner_ziv_blob",
+        ]
         assert "dreamer_state_blob" in mutation_proof["custody_only_sections"]
         assert (
             mutation_proof["mamba_dreamer_wyner_ziv_pixel_consumption_proven"]
-            is False
+            is True
         )
         status = manifest_extra["mamba_dreamer_wyner_ziv_runtime_consumption_status"]
-        expected_status = (
-            "archive_bound_custody_only_distinguishing_feature_mutation"
-            "_proved_not_pixel_consumed"
-        )
-        assert status == expected_status
+        assert status == "pixel_consumed_proven"
         bridge_report = manifest_extra["runtime_payload_bridge_report"]
         assert bridge_report["wyner_ziv_top_state_decode_ready"] is True
         assert bridge_report["wyner_ziv_top_state_count"] == 1
         assert bridge_report["state_to_pixel_projection_ready"] is True
-        assert bridge_report["pixel_consumption_proven"] is False
+        assert bridge_report["pixel_consumption_proven"] is True
         assert bridge_report["next_required_task"] == (
-            "run_valid_wyner_ziv_payload_mutation_receiver_proof"
+            "extend_decoder_indices_dreamer_runtime_pixel_bridge"
         )
         assert "mamba_mallat_dreamer_wyner_ziv_stack" not in (
             manifest_extra["predictive_coding_family"]
