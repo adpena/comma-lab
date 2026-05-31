@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Plan or execute compaction of certified rebuildable experiment artifacts."""
+"""Plan or execute compaction of certified rebuildable experiment artifacts.
+
+Execution defaults to lossless move/cold-store. Destructive delete remains
+available only when the caller explicitly passes ``--action delete``.
+"""
 
 from __future__ import annotations
 
@@ -23,6 +27,7 @@ from comma_lab.artifact_retention import (  # noqa: E402
 from comma_lab.operator_storage_waterfall import (  # noqa: E402
     POLICY_ID,
     POLICY_SCHEMA,
+    operator_cold_store_roots,
     operator_storage_policy_payload,
     storage_preflight_artifact_catalog_metadata,
 )
@@ -82,7 +87,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         ),
     )
     parser.add_argument("--execute", action="store_true")
-    parser.add_argument("--action", choices=("delete", "move"), default="delete")
+    parser.add_argument("--action", choices=("delete", "move"), default="move")
     parser.add_argument(
         "--cold-store-root",
         type=Path,
@@ -107,6 +112,15 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="required SHA-256 of existing --json-output when replacing a prior plan",
     )
     return parser.parse_args(argv)
+
+
+def _effective_cold_store_roots(args: argparse.Namespace) -> tuple[Path, ...]:
+    """Return explicit cold-store roots, or policy defaults for move execution."""
+
+    explicit = tuple(Path(root) for root in args.cold_store_root)
+    if explicit or args.action != "move":
+        return explicit
+    return tuple(Path(root) for root in operator_cold_store_roots())
 
 
 def _default_execution_journal_path(args: argparse.Namespace) -> Path:
@@ -134,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     ):
         expected_output_sha256 = sha256_file(args.json_output)
     include_kinds = None if args.include_kinds is None else set(args.include_kinds)
+    cold_store_roots = _effective_cold_store_roots(args)
     plan = build_retention_plan(
         args.roots,
         repo_root=args.repo_root,
@@ -150,8 +165,16 @@ def main(argv: list[str] | None = None) -> int:
     payload = {
         "plan": plan.to_dict(),
         "execution": None,
+        "cleanup_safety_policy": {
+            "default_action": "move",
+            "delete_requires_explicit_action": True,
+            "certify_or_block": True,
+            "no_signal_loss_contract": "certified_rebuildable_or_skipped",
+            "cold_store_roots": [str(root) for root in cold_store_roots],
+            "deterministic_reproducibility_manifest_required": True,
+        },
         "operator_storage_policy": operator_storage_policy_payload(
-            cold_store_root_overrides=tuple(str(root) for root in args.cold_store_root),
+            cold_store_root_overrides=tuple(str(root) for root in cold_store_roots),
             policy_id=args.policy_id,
             policy_schema=args.policy_schema,
         ),
@@ -168,8 +191,8 @@ def main(argv: list[str] | None = None) -> int:
         payload["execution"] = execute_retention_plan(
             plan,
             action=args.action,
-            cold_store_root=args.cold_store_root[0] if len(args.cold_store_root) == 1 else None,
-            cold_store_roots=args.cold_store_root if len(args.cold_store_root) != 1 else None,
+            cold_store_root=cold_store_roots[0] if len(cold_store_roots) == 1 else None,
+            cold_store_roots=cold_store_roots if len(cold_store_roots) != 1 else None,
             cold_store_reserve_bytes=int(max(args.cold_store_reserve_gb, 0.0) * (1024**3)),
             journal_path=journal_path,
         )

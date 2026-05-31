@@ -1,5 +1,41 @@
 # Agent Onboarding - Comma Video Compression Challenge
 
+## Local Disk, SSD Spill, Auto-Cleanup, And Provenance — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+Local disk is for source, small manifests, and live metadata. Bulky rebuildable
+work belongs on the connected SSD tier first, in this priority order unless the
+operator explicitly overrides it: `/Volumes/VertigoDataTier/pact`, then
+`/Volumes/APDataStore/pact`, then local disk only by explicit opt-in.
+
+Every new tool, runner, trainer, materializer, replay harness, profiler, VJP
+producer, archive mutator, or eval wrapper that can create large artifacts MUST
+include an automatic disk-hygiene path in the same landing. Large artifacts
+include inflated videos/raw frames, scorer tensor caches, decoded PNG trees,
+NPZ/VJP shard bundles, checkpoints, candidate archive sweeps, profiler traces,
+temporary virtualenvs, build products, and copied public-PR worktrees.
+
+The cleanup rule is "certify or block." Never delete or move a large artifact
+unless a machine-readable record preserves deterministic reproducibility:
+original path, bytes, SHA-256 or tree hash, command/config/argv/env where
+available, source archive/runtime/content hashes where applicable, cold-store
+destination when moved, false-authority score flags, and the reason the artifact
+is rebuildable or safely externalized. If that proof is missing, emit a blocker
+and keep the bytes. No signal loss ever.
+
+Default cleanup should be lossless: use context-managed temp dirs for true
+scratch, delete success-only scratch automatically, move certified rebuildable
+bulk to SSD cold store before deleting local bytes, and leave a manifest or
+symlink when existing tools still need the original path. Destructive delete is
+allowed only for trivial caches/build products or explicitly certified
+rebuildable scratch; all other cleanup defaults to move/cold-store. Any
+operator-facing evidence path must be durable and must not cite `/tmp`.
+
+Before launching long MLX training, full-video VJP, exact replay, inflate,
+materializer, or archive-search jobs, run the storage waterfall/preflight path
+and fail closed if no SSD/local tier has enough free space. Before finishing any
+such landing, add or reuse the auto-clean hook so future runs do not leave
+orphaned bulk files behind.
+
 This repository is operated as a contest-grade research and engineering system.
 The objective is to drive toward the Shannon-floor frontier in the shortest
 wall-clock time while preserving exact reproducibility, contest compliance,

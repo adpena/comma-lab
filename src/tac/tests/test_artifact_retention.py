@@ -17,6 +17,7 @@ from comma_lab.artifact_retention import (
     load_json_object,
     sha256_file,
 )
+from comma_lab.operator_storage_waterfall import operator_cold_store_roots
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -44,6 +45,23 @@ def _load_compact_tool():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_compact_tool_defaults_to_lossless_move_policy() -> None:
+    module = _load_compact_tool()
+    args = module._parse_args(["experiments/results"])
+
+    assert args.action == "move"
+    assert tuple(str(root) for root in module._effective_cold_store_roots(args)) == (
+        operator_cold_store_roots()
+    )
+
+
+def test_compact_tool_delete_requires_explicit_action_for_no_default_cold_store() -> None:
+    module = _load_compact_tool()
+    args = module._parse_args(["experiments/results", "--action", "delete"])
+
+    assert module._effective_cold_store_roots(args) == ()
 
 
 def _write_locality_candidate(
@@ -466,6 +484,8 @@ def test_compact_cli_execute_stdout_writes_default_journal(
             "--min-bytes",
             "1",
             "--execute",
+            "--action",
+            "delete",
         ]
     )
 
