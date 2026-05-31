@@ -43,12 +43,17 @@ from tac.pr85_bundle import (
     parse_pr85_bundle,
 )
 from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv
+from tac.optimization.archive_bound_candidate_contract import (
+    archive_bound_candidate_contract_fields_for_row,
+)
 from tac.submission_archive import validate_archive_member_name
 
 
 SCHEMA = "public_replay_intake_preflight_v1"
 TOOL = "experiments/preflight_public_replay_intake.py"
 EVIDENCE_GRADE = "external/local_preflight_non_score_until_cuda"
+PUBLIC_REPLAY_ARCHIVE_BOUND_FAMILY = "public_frontier_replay_intake"
+PUBLIC_REPLAY_ARCHIVE_BOUND_TRANSFORM_KIND = "public_frontier_replay_archive_intake"
 SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE = re.compile(
     r"(?:b64decode|b85decode|a85decode|brotli\.decompress|lzma\.decompress|zlib\.decompress)"
     r"\s*\(\s*([rubfRUBF]*[\"'])(?P<payload>.{65536,}?)(?<!\\)\1",
@@ -78,6 +83,10 @@ def _repo_rel(path: Path) -> str:
 
 def _json_text(payload: Any) -> str:
     return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+
+
+def _blocker_codes(blockers: list[dict[str, str]]) -> list[str]:
+    return [str(row.get("code") or row) for row in blockers]
 
 
 def _magic_ascii(data: bytes, n: int = 8) -> str:
@@ -438,19 +447,71 @@ def build_preflight(
             for detail in runtime_report["source_payload_scan"]["violations"]:
                 blockers.append({"code": "runtime_source_or_sidecar_payload", "detail": detail})
 
-    ready = not blockers
+    public_replay_preclaim_ready = not blockers
+    archive_status_passed = archive_report.get("status") == "passed"
+    runtime_status_passed = runtime_report.get("status") == "passed"
+    archive_sha = archive_report.get("sha256")
+    candidate_id_suffix = archive_sha[:16] if isinstance(archive_sha, str) else "missing"
+    contract_row = {
+        "schema": "public_replay_intake_archive_bound_candidate_row.v1",
+        "candidate_id": f"public_replay_intake_{candidate_id_suffix}",
+        "candidate_family": PUBLIC_REPLAY_ARCHIVE_BOUND_FAMILY,
+        "archive_native_transform_kind": PUBLIC_REPLAY_ARCHIVE_BOUND_TRANSFORM_KIND,
+        "candidate_archive_path": archive_report.get("path"),
+        "candidate_archive_sha256": archive_sha,
+        "candidate_archive_bytes": archive_report.get("bytes"),
+        "byte_closed_candidate_materialized": archive_status_passed,
+        "candidate_archive_materialized": archive_status_passed,
+        "runtime_adapter_ready": runtime_status_passed,
+        "contest_runtime_decoder_adapter_ready": runtime_status_passed,
+        "runtime_adapter_manifest": {
+            "schema": "public_replay_intake_runtime_adapter_manifest.v1",
+            "inflate_sh": runtime_report.get("inflate_sh"),
+            "inflate_sh_sha256": runtime_report.get("inflate_sh_sha256"),
+            "runtime_root": runtime_report.get("runtime_root"),
+            "runtime_tree_sha256": runtime_report.get("runtime_tree_sha256"),
+            "runtime_adapter_ready": runtime_status_passed,
+            "contest_runtime_decoder_adapter_ready": runtime_status_passed,
+        },
+        "runtime_consumption_proof_ready": False,
+        "receiver_contract_satisfied": False,
+        "receiver_contract_kind": "public_replay_static_preflight_requires_runtime_consumption_proof",
+        "semantic_payload_changed": False,
+        "score_affecting_payload_changed": True,
+        "exact_axis_score_affecting_adjudication_required": True,
+        "charged_bits_changed": True,
+        "blockers": _blocker_codes(blockers),
+        "canonical_anti_pattern_ids": [
+            "proxy_or_advisory_signal_masquerades_as_score_authority",
+            "archive_static_preflight_without_receiver_consumption",
+        ],
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+    contract_fields = archive_bound_candidate_contract_fields_for_row(
+        contract_row,
+        repo_root=REPO_ROOT,
+        family_id=PUBLIC_REPLAY_ARCHIVE_BOUND_FAMILY,
+        candidate_chain_id=str(contract_row["candidate_id"]),
+    )
     return {
         "schema": SCHEMA,
         "tool": TOOL,
         "archive": archive_report,
         "runtime": runtime_report,
         "evidence_grade": EVIDENCE_GRADE,
+        "public_replay_preclaim_ready": public_replay_preclaim_ready,
+        "public_replay_preclaim_blockers": blockers,
         "score_claim": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "cuda_required_for_score": True,
         "dispatch_performed": False,
-        "ready_for_exact_eval_dispatch": ready,
+        "ready_for_exact_eval_dispatch": False,
         "blockers": blockers,
+        **contract_fields,
     }
 
 
@@ -482,7 +543,7 @@ def main(argv: list[str] | None = None) -> int:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(text, encoding="utf-8")
     print(text, end="")
-    return 2 if args.fail_if_not_ready and not payload["ready_for_exact_eval_dispatch"] else 0
+    return 2 if args.fail_if_not_ready and not payload["public_replay_preclaim_ready"] else 0
 
 
 if __name__ == "__main__":
