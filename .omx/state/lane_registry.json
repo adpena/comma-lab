@@ -65516,6 +65516,130 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_rnerv_full_video_variational_research_20260531",
+      "name": "Codex RNeRV full-video variational research",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_codex_mamba_dreamer_hpc_variational_20260531",
+      "name": "Codex Mamba Dreamer HPC variational research",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z8_joint_p18_p19_deadzone_rate_attack_20260531",
+      "name": "Z8 joint P18/P19 dead-zone rate attack (Mallat wavelet detail bands)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/z8_hierarchical_predictive_coding/joint_p18_p19_deadzone_rate_attack.py + tools/z8_joint_p18_p19_deadzone_rate_attack.py; real SegNet boundary saliency + real PoseNet pixel-Jacobian -> coeff domain via analysis DWT -> RD-aware keep priority -> deadzone -> repack -> re-measure"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "14 NO-FAKE tests pass src/tac/substrates/z8_hierarchical_predictive_coding/tests/test_joint_p18_p19_deadzone_rate_attack.py (real Z8 archive per Catalog #213; coeffs actually zeroed, rate actually drops, real scorer saliencies)"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z8_joint_p18_p19_deadzone_rate_attack_landed_20260531.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -65525,5 +65649,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T16:56:34Z"
+  "updated_at": "2026-05-31T17:46:19Z"
 }
