@@ -91,8 +91,10 @@ def test_real_frame_base_pairs_uses_canonical_catalog_213_helper():
     rng.integers / make_synthetic path (Slot EEE Class 1 + Class 3)."""
     src = _TRAINER_PATH.read_text()
     assert "decode_real_pairs" in src
-    # NO synthetic-fixture in the L1 real-frame path
-    assert "make_synthetic_pair_batch" not in src
+    # NO synthetic-fixture CALL in the L1 real-frame path. The forbidden-pattern
+    # NAME may appear in docstrings (citing the CLAUDE.md rule); what matters is
+    # there is no actual `make_synthetic_pair_batch(` invocation.
+    assert "make_synthetic_pair_batch(" not in src
 
 
 # --- _phase_c_validate behavior (not constants) ---
@@ -314,7 +316,10 @@ def test_l1_main_emits_non_promotable_provenance(tmp_path):
     prov = summary["canonical_provenance"]
     assert prov["score_claim_valid"] is False
     assert prov["promotion_eligible"] is False
-    assert prov["axis_tag"] == "[predicted]"
+    # canonical Provenance per Catalog #323 carries measurement_axis +
+    # evidence_grade (NOT axis_tag — that is the substrate Result object's field).
+    assert prov["measurement_axis"] == "[predicted]"
+    assert prov["evidence_grade"] == "predicted"
     # Catalog #324: post-training Tier-C density pending
     assert summary["predicted_band_validation_status"] == "pending_post_training"
     assert any(
