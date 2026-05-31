@@ -220,8 +220,8 @@ def _archive_path_values_differ(row_value: Any, contract_value: Any) -> bool:
     contract_text = str(contract_value).strip().replace("\\", "/")
     if not row_text or not contract_text:
         return False
-    row_norm = row_text.lstrip("./")
-    contract_norm = contract_text.lstrip("./")
+    row_norm = _strip_current_dir_prefix(row_text)
+    contract_norm = _strip_current_dir_prefix(contract_text)
     if row_norm == contract_norm:
         return False
     if row_text.startswith("/") and not contract_text.startswith("/"):
@@ -229,6 +229,13 @@ def _archive_path_values_differ(row_value: Any, contract_value: Any) -> bool:
     if contract_text.startswith("/") and not row_text.startswith("/"):
         return not contract_text.endswith(f"/{row_norm}")
     return True
+
+
+def _strip_current_dir_prefix(path_text: str) -> str:
+    value = path_text
+    while value.startswith("./"):
+        value = value[2:]
+    return value
 
 
 def archive_bound_candidate_contract_stale_field_blockers(

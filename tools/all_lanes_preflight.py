@@ -98,6 +98,9 @@ Currently runs:
   Gate #33: tools/audit_public_submission_pr.py --self-test --format json
            (public PR audit automation stays importable and no-network
             parser checks remain wired into operator flows)
+  Gate #34: tools/audit_archive_bound_candidate_contracts.py
+           (archive-like MLX/materializer/public-frontier artifacts cannot carry
+            invalid or stale shared runtime-bridge contracts)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -219,6 +222,7 @@ SHELL_HAZARDS = TOOLS / "check_dispatch_cli_shell_hazards.py"
 CANONICAL_TASK_STATUS_AUDIT = TOOLS / "check_canonical_task_status_no_dangling_transitions.py"
 TAC_TERMINOLOGY_AUDIT = TOOLS / "check_tac_terminology.py"
 PUBLIC_SUBMISSION_PR_AUDIT = TOOLS / "audit_public_submission_pr.py"
+ARCHIVE_BOUND_CONTRACT_AUDIT = TOOLS / "audit_archive_bound_candidate_contracts.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -3797,6 +3801,7 @@ def main(argv: list[str] | None = None) -> int:
         OPERATOR_BRIEFING,
         CANONICAL_TASK_STATUS_AUDIT,
         TAC_TERMINOLOGY_AUDIT,
+        ARCHIVE_BOUND_CONTRACT_AUDIT,
         *[lane["tool"] for lane in lanes],
     ]:
         if not tool.is_file():
@@ -4104,6 +4109,28 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "  ✓ Gate #33: public submission PR audit automation — PASSED",
             "  ✗ Gate #33: public submission PR audit automation — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            34,
+            "archive-bound shared contract hygiene",
+            lambda: _run_gate(
+                "archive-bound shared contract hygiene",
+                ARCHIVE_BOUND_CONTRACT_AUDIT,
+                [
+                    "--path",
+                    ".omx/research",
+                    "--path",
+                    "experiments/results",
+                    "--max-files",
+                    "3000",
+                    "--tracked-only",
+                    "--format",
+                    "json",
+                ],
+            ),
+            "  ✓ Gate #34: archive-bound shared contract hygiene — PASSED",
+            "  ✗ Gate #34: archive-bound shared contract hygiene — FAILED",
         ),
     ]
     lane_steps = [

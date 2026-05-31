@@ -11,7 +11,11 @@ from typing import Any
 
 from tac.hdm8_selector_cuda_gate import validate_hdm8_selector_cuda_gate_context
 from tac.optimization.archive_bound_candidate_contract import (
+    ArchiveBoundCandidateContractError,
+    has_archive_bound_candidate_contract_payload,
+    selected_archive_bound_candidate_contract_from_payload,
     source_archive_bound_contract_candidate_archive,
+    source_archive_bound_contract_snapshot_blockers,
 )
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_SCORE,
@@ -51,18 +55,28 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
-def _contract_candidate_archive(row: Mapping[str, Any]) -> Mapping[str, Any]:
+def _contract_candidate_archive(
+    row: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> Mapping[str, Any]:
+    if contract is not None:
+        return _mapping(contract.get("candidate_archive"))
     return source_archive_bound_contract_candidate_archive(row)
 
 
-def _row_archive_sha(row: Mapping[str, Any]) -> str | None:
-    for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
-        value = row.get(key)
-        if is_sha256(value):
-            return str(value).lower()
-    archive = _contract_candidate_archive(row)
+def _row_archive_sha(
+    row: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> str | None:
+    archive = _contract_candidate_archive(row, contract=contract)
     for key in ("sha256", "archive_sha256"):
         value = archive.get(key)
+        if is_sha256(value):
+            return str(value).lower()
+    for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
+        value = row.get(key)
         if is_sha256(value):
             return str(value).lower()
     return None
@@ -81,8 +95,12 @@ def _row_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
     return None
 
 
-def _row_exact_eval_duplicate_key(row: Mapping[str, Any]) -> str | None:
-    archive_sha = _row_archive_sha(row)
+def _row_exact_eval_duplicate_key(
+    row: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> str | None:
+    archive_sha = _row_archive_sha(row, contract=contract)
     runtime_sha = _row_runtime_content_sha(row)
     runtime_tree_sha = _row_runtime_tree_sha(row)
     score_axis, _ = _row_score_axis_with_blocker(row)
@@ -125,22 +143,32 @@ def _row_runtime_content_sha(row: Mapping[str, Any]) -> str | None:
     return None
 
 
-def _row_archive_path(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
-    for key in ("candidate_archive_path", "archive_path"):
-        path = resolve_path(row.get(key), repo_root=repo_root, queue_dir=queue_dir)
-        if path is not None:
-            return path
-    archive = _contract_candidate_archive(row)
+def _row_archive_path(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path,
+    contract: Mapping[str, Any] | None = None,
+) -> Path | None:
+    archive = _contract_candidate_archive(row, contract=contract)
     for key in ("path", "archive_path"):
         path = resolve_path(archive.get(key), repo_root=repo_root, queue_dir=queue_dir)
+        if path is not None:
+            return path
+    for key in ("candidate_archive_path", "archive_path"):
+        path = resolve_path(row.get(key), repo_root=repo_root, queue_dir=queue_dir)
         if path is not None:
             return path
     return None
 
 
-def _row_archive_byte_values(row: Mapping[str, Any]) -> dict[str, int]:
+def _row_archive_byte_values(
+    row: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> dict[str, int]:
     values = dict(candidate_archive_byte_values(row))
-    archive = _contract_candidate_archive(row)
+    archive = _contract_candidate_archive(row, contract=contract)
     for key in ("bytes", "archive_bytes"):
         parsed = candidate_archive_byte_values(
             {
@@ -152,6 +180,33 @@ def _row_archive_byte_values(row: Mapping[str, Any]) -> dict[str, int]:
                 parsed
             )
     return values
+
+
+def _direct_archive_bound_contract_for_ready_audit(
+    row: Mapping[str, Any],
+    *,
+    label: str,
+) -> tuple[Mapping[str, Any] | None, list[str], bool]:
+    """Return direct shared contract state for exact-ready rows.
+
+    ``source_archive_bound_candidate_contract`` is a provenance snapshot of the
+    materializer input and is handled separately.  A direct
+    ``archive_bound_candidate_contract`` on the exact-ready row is authority for
+    archive/readiness fields, so loose duplicate fields cannot outrank it.
+    """
+
+    raw_contract = _mapping(row.get("archive_bound_candidate_contract"))
+    ready_hint = raw_contract.get("ready_for_exact_eval_dispatch") is True
+    if not has_archive_bound_candidate_contract_payload(row):
+        return None, [], ready_hint
+    try:
+        contract = selected_archive_bound_candidate_contract_from_payload(
+            row,
+            label=label,
+        )
+    except ArchiveBoundCandidateContractError as exc:
+        return None, [f"archive_bound_candidate_contract_invalid:{exc}"], ready_hint
+    return contract, [], contract.get("ready_for_exact_eval_dispatch") is True
 
 
 def _row_submission_dir(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
@@ -401,11 +456,17 @@ def _ready_row_live_custody_blockers(
     archive_sha: str | None,
     runtime_tree_sha: str | None,
     runtime_content_sha: str | None,
+    contract: Mapping[str, Any] | None = None,
 ) -> tuple[list[str], dict[str, Any]]:
     blockers: list[str] = []
     facts: dict[str, Any] = {}
 
-    archive_path = _row_archive_path(row, repo_root=repo_root, queue_dir=queue_dir)
+    archive_path = _row_archive_path(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+        contract=contract,
+    )
     actual_archive_sha: str | None = None
     actual_archive_bytes: int | None = None
     zipwire: Mapping[str, Any] | None = None
@@ -425,7 +486,7 @@ def _ready_row_live_custody_blockers(
                     "ready_row_archive_sha_mismatch:"
                     f"{actual_archive_sha}!={archive_sha}"
                 )
-            byte_values = _row_archive_byte_values(row)
+            byte_values = _row_archive_byte_values(row, contract=contract)
             if not byte_values:
                 blockers.append("ready_row_archive_bytes_missing_or_invalid")
             elif len(set(byte_values.values())) > 1:
@@ -655,10 +716,22 @@ def audit_exact_ready_queue(
             candidate_id = row.get("candidate_id")
             if str(candidate_id) not in candidate_id_filter:
                 continue
-        if row.get("ready_for_exact_eval_dispatch") is not True:
+        raw_ready_for_exact_dispatch = (
+            row.get("ready_for_exact_eval_dispatch") is True
+        )
+        direct_contract, contract_blockers, contract_ready_for_exact_dispatch = (
+            _direct_archive_bound_contract_for_ready_audit(
+                row,
+                label=(
+                    f"exact_ready_audit:{repo_rel(queue_path, repo_root)}:"
+                    f"{row.get('candidate_id')}"
+                ),
+            )
+        )
+        if not raw_ready_for_exact_dispatch and not contract_ready_for_exact_dispatch:
             continue
         lane_id = row.get("lane_id")
-        archive_sha = _row_archive_sha(row)
+        archive_sha = _row_archive_sha(row, contract=direct_contract)
         runtime_tree_sha = _row_runtime_tree_sha(row)
         runtime_content_sha = _row_runtime_content_sha(row)
         score_axis, score_axis_blocker = _row_score_axis_with_blocker(row)
@@ -670,12 +743,22 @@ def audit_exact_ready_queue(
             archive_sha=archive_sha,
             runtime_tree_sha=runtime_tree_sha,
             runtime_content_sha=runtime_content_sha,
+            contract=direct_contract,
         )
+        blockers = list(contract_blockers)
+        if (
+            direct_contract is not None
+            and raw_ready_for_exact_dispatch
+            and not contract_ready_for_exact_dispatch
+        ):
+            blockers.append(
+                "archive_bound_candidate_contract_not_ready_for_exact_eval_dispatch"
+            )
+        blockers.extend(source_archive_bound_contract_snapshot_blockers(row))
         if not isinstance(lane_id, str) or not lane_id.strip():
-            blockers = ["lane_id_missing"]
+            blockers.append("lane_id_missing")
         else:
             lane_aliases = _claim_lane_aliases(lane_id.strip())
-            blockers = []
             if not ignore_active_claim_conflicts:
                 for claim_lane_id in lane_aliases:
                     blockers.extend(
@@ -698,7 +781,10 @@ def audit_exact_ready_queue(
                 closure_blockers, closure_evidence = _packetir_exact_closure_blockers(
                     archive_sha,
                     closure_records,
-                    exact_eval_duplicate_key=_row_exact_eval_duplicate_key(row),
+                    exact_eval_duplicate_key=_row_exact_eval_duplicate_key(
+                        row,
+                        contract=direct_contract,
+                    ),
                 )
                 if closure_evidence:
                     custody_facts["packetir_exact_closure_records"] = closure_evidence
@@ -749,8 +835,16 @@ def audit_exact_ready_queue(
                 "runtime_content_tree_sha256": runtime_content_sha,
                 "score_axis": score_axis,
                 "score_affecting_runtime_changed": runtime_changed,
+                "archive_bound_candidate_contract_key": (
+                    direct_contract.get("contract_key")
+                    if direct_contract is not None
+                    else None
+                ),
+                "archive_bound_candidate_contract_ready_for_exact_dispatch": (
+                    contract_ready_for_exact_dispatch
+                ),
                 "live_custody": custody_facts,
-                "ready_for_exact_eval_dispatch": True,
+                "ready_for_exact_eval_dispatch": raw_ready_for_exact_dispatch,
                 "blockers": blockers,
             }
         )

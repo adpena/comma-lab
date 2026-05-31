@@ -64696,6 +64696,47 @@
         }
       },
       "notes": "research_only=true; macOS-MLX research-signal non-promotable per Catalog #192/#341/#127/#323; closes the comment-only-contract (forward_training read static cfg.gumbel_temperature; docstring claimed Annealed 1.0->0.1); cosine tau anneal + cosine LR decay + extended 600ep + seg-rebalance distill=1.0; apples-to-apples @ep299 pose 93.46->93.53% small real gain; full-budget 99.21% confounded by 2x epochs; seg NOT meaningfully unfrozen; Catalog #307 PARADIGM_INTACT IMPLEMENTATION-LEVEL IMPROVEMENT; $0 MLX-LOCAL; lane_class=substrate_engineering"
+    },
+    {
+      "id": "lane_codex_archive_bound_contract_hygiene_gate_20260531",
+      "name": "Archive-bound contract hygiene gate",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/archive_bound_candidate_contract_audit.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "tools/all_lanes_preflight.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_archive_bound_contract_hygiene_gate_20260531T100956Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -64705,5 +64746,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-31T09:58:19Z"
+  "updated_at": "2026-05-31T10:10:23Z"
 }

@@ -8,6 +8,9 @@ import sys
 import zipfile
 from pathlib import Path
 
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 from tac.optimizer.exact_readiness import (
     runtime_dependency_manifest,
     terminal_claim_result_conflicts,
@@ -1172,6 +1175,45 @@ def test_audit_ignores_non_ready_rows_with_terminal_negative(tmp_path: Path) -> 
 
     assert payload["passed"] is True
     assert payload["queues"][0]["row_count"] == 1
+
+
+def test_audit_rejects_loose_ready_field_when_shared_contract_disagrees(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_contract_stale",  # FAKE_LANE_OK: synthetic contract fixture.
+        archive_sha="e" * 64,
+        ready=True,
+    )
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["dispatch_ready"][0]
+    row["archive_bound_candidate_contract"] = {
+        "schema": ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert payload["passed"] is False
+    blockers = payload["queues"][0]["stale_ready_rows"][0]["blockers"]
+    assert any(
+        blocker.startswith("archive_bound_candidate_contract_invalid:")
+        and "ready_for_exact_eval_dispatch" in blocker
+        for blocker in blockers
+    )
 
 
 def test_discover_exact_ready_queues_deduplicates_patterns(tmp_path: Path) -> None:

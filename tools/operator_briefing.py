@@ -41,6 +41,7 @@ RECONCILER = TOOLS / "predicted_vs_actual_reconciler.py"
 CLAIM_DISPATCH = TOOLS / "claim_lane_dispatch.py"
 CLOUD_PROVIDER_READINESS = TOOLS / "cloud_provider_readiness.py"
 PUBLIC_SUBMISSION_AUDIT = TOOLS / "audit_public_submission_pr.py"
+ARCHIVE_BOUND_CONTRACT_AUDIT = TOOLS / "audit_archive_bound_candidate_contracts.py"
 PROVIDER_READINESS_LATEST = REPO_ROOT / "experiments/results/cloud_provider_readiness_latest.json"
 PR91_HPM1_READINESS = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
@@ -130,6 +131,10 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
 )
 from comma_lab.scheduler.queue_fleet import queue_fleet_status  # noqa: E402
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
+from tac.optimization.archive_bound_candidate_contract_audit import (  # noqa: E402
+    audit_archive_bound_candidate_contracts,
+    format_archive_bound_candidate_contract_audit,
+)
 from tac.optimization.atw_v2_phase2_gate import (  # noqa: E402
     atw_v2_phase2_gate_status,
 )
@@ -6843,6 +6848,7 @@ def _dispatch_readiness() -> dict[str, object]:
     distortion_probe_signals = _distortion_axis_probe_summary()
     distortion_learned_sweep = _distortion_axis_learned_sweep_summary()
     dqs1_drop_many_greedy = _dqs1_drop_many_greedy_summary()
+    archive_contract_hygiene = _archive_bound_contract_hygiene_summary()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
         "phase_1_exact_eval_packets": phase1,
@@ -7041,6 +7047,25 @@ def _dispatch_readiness() -> dict[str, object]:
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
         },
+        "phase_6j_archive_bound_contract_hygiene": {
+            "status": archive_contract_hygiene["status"],
+            "reason": archive_contract_hygiene["reason"],
+            "paths_scanned": archive_contract_hygiene["paths_scanned"],
+            "contract_surface_count": archive_contract_hygiene[
+                "contract_surface_count"
+            ],
+            "valid_contract_surface_count": archive_contract_hygiene[
+                "valid_contract_surface_count"
+            ],
+            "blocking_finding_count": archive_contract_hygiene[
+                "blocking_finding_count"
+            ],
+            "migration_required_finding_count": archive_contract_hygiene[
+                "migration_required_finding_count"
+            ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
         "recommendation": (
             "prefer M5 Max parallel coarse-rank ($0) before paid GHA promotion; "
             "reference Phase 6 xray toolkit for diagnosis"
@@ -7112,6 +7137,11 @@ def _format_dispatch_readiness() -> str:
         "  Phase 6h (distortion learned-sweep bridge):  "
         f"{phase6h['status']} — {phase6h['reason']}"
     )
+    phase6j = readiness["phase_6j_archive_bound_contract_hygiene"]
+    lines.append(
+        "  Phase 6j (archive-bound contract hygiene):  "
+        f"{phase6j['status']} — {phase6j['reason']}"
+    )
     phase7 = readiness["phase_7_constrained_coord_search"]
     lines.append(
         "  Phase 7 (constrained-coord-search):         "
@@ -7120,6 +7150,66 @@ def _format_dispatch_readiness() -> str:
     lines.append("")
     lines.append(f"Recommendation: {readiness['recommendation']}.")
     return "\n".join(lines)
+
+
+def _archive_bound_contract_hygiene_result():
+    return audit_archive_bound_candidate_contracts(
+        [REPO_ROOT / ".omx" / "research", REPO_ROOT / "experiments" / "results"],
+        repo_root=REPO_ROOT,
+        include_markdown=False,
+        max_files=3000,
+        max_file_bytes=4_000_000,
+        tracked_only=True,
+    )
+
+
+def _archive_bound_contract_hygiene_summary() -> dict[str, object]:
+    result = _archive_bound_contract_hygiene_result()
+    payload = result.as_dict()
+    if payload["blocking_finding_count"]:
+        status = "BLOCKED"
+        reason = (
+            f"{payload['blocking_finding_count']} invalid/stale shared contract "
+            "finding(s)"
+        )
+    elif payload["migration_required_finding_count"]:
+        status = "MIGRATION_REQUIRED"
+        reason = (
+            f"{payload['migration_required_finding_count']} archive-like emitter "
+            "row(s) still lack the shared contract"
+        )
+    else:
+        status = "PASS"
+        reason = "no invalid shared contract surfaces found"
+    payload["status"] = status
+    payload["reason"] = reason
+    payload["ready_for_exact_eval_dispatch"] = False
+    payload["score_claim"] = False
+    return payload
+
+
+def _format_archive_bound_contract_hygiene() -> str:
+    result = _archive_bound_contract_hygiene_result()
+    payload = result.as_dict()
+    if payload["blocking_finding_count"]:
+        status = "BLOCKED"
+        reason = (
+            f"{payload['blocking_finding_count']} invalid/stale shared contract "
+            "finding(s)"
+        )
+    elif payload["migration_required_finding_count"]:
+        status = "MIGRATION_REQUIRED"
+        reason = (
+            f"{payload['migration_required_finding_count']} archive-like emitter "
+            "row(s) still lack the shared contract"
+        )
+    else:
+        status = "PASS"
+        reason = "no invalid shared contract surfaces found"
+    return (
+        f"status: {status} — {reason}\n"
+        + format_archive_bound_candidate_contract_audit(result, limit=8)
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -7161,7 +7251,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     # Verify delegated tools exist before building either text or JSON output.
-    for tool in (PARETO, DASHBOARD, RECONCILER, CLAIM_DISPATCH):
+    for tool in (PARETO, DASHBOARD, RECONCILER, CLAIM_DISPATCH, ARCHIVE_BOUND_CONTRACT_AUDIT):
         if not tool.is_file():
             print(f"FATAL: missing dependency tool {tool.relative_to(REPO_ROOT)}",
                   file=sys.stderr)
@@ -7192,6 +7282,9 @@ def main(argv: list[str] | None = None) -> int:
             "distortion_axis_probe_signals": _distortion_axis_probe_summary(),
             "distortion_axis_learned_sweep_bridge": (
                 _distortion_axis_learned_sweep_summary()
+            ),
+            "archive_bound_contract_hygiene": (
+                _archive_bound_contract_hygiene_summary()
             ),
             "dqs1_drop_many_greedy": _dqs1_drop_many_greedy_summary(),
             "queue_fleet": _queue_fleet_summary(),
@@ -7359,6 +7452,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6h — Distortion-axis learned-sweep bridge",
         _format_distortion_axis_learned_sweep_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6j — Archive-bound contract hygiene",
+        _format_archive_bound_contract_hygiene(),
     ))
     parts.append(_section(
         "Phase 6i — Experiment queue fleet supervisor",

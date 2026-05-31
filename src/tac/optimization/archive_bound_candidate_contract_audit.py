@@ -1,0 +1,576 @@
+# SPDX-License-Identifier: MIT
+"""Audit archive-like candidate payloads for shared contract custody.
+
+This scanner is intentionally contract-first.  It treats an invalid or stale
+``tac_archive_bound_candidate_contract.v1`` surface as a hard blocker, and
+it treats archive-like candidate rows without the shared contract as migration
+work that acquisition/briefing can route instead of losing as side reports.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
+
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contract_stale_field_blockers,
+    archive_bound_candidate_contracts_from_payload,
+    has_archive_bound_candidate_contract_payload,
+)
+
+ARCHIVE_BOUND_CONTRACT_AUDIT_SCHEMA = "tac_archive_bound_candidate_contract_audit.v1"
+
+_CONTRACT_SCHEMAS = frozenset(
+    {
+        ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SURFACE_SCHEMA,
+    }
+)
+
+_ARCHIVE_EVIDENCE_KEYS = frozenset(
+    {
+        "archive_bound_candidate_ready",
+        "archive_bound_candidate_ready_for_exact_handoff",
+        "archive_bytes",
+        "archive_file_custody",
+        "archive_path",
+        "archive_sha256",
+        "archive_zip_bytes",
+        "archive_zip_path",
+        "archive_zip_sha256",
+        "byte_closed_archive",
+        "byte_closed_candidate_emitted",
+        "candidate_archive",
+        "candidate_archive_bytes",
+        "candidate_archive_path",
+        "candidate_archive_sha256",
+        "charged_bits_changed",
+        "exact_ready_queue_path",
+        "inflate_sh_path",
+        "receiver_contract_satisfied",
+        "runtime_adapter_manifest",
+        "runtime_adapter_ready",
+        "runtime_consumption_proof_path",
+        "runtime_consumption_proof_status",
+        "runtime_tree_sha256",
+        "score_affecting_payload_changed",
+        "source_archive",
+        "source_archive_bytes",
+        "source_archive_path",
+        "source_archive_sha256",
+    }
+)
+
+_STRONG_ARCHIVE_CUSTODY_KEYS = frozenset(
+    {
+        "archive_file_custody",
+        "archive_path",
+        "archive_sha256",
+        "archive_zip_path",
+        "archive_zip_sha256",
+        "byte_closed_archive",
+        "byte_closed_candidate_emitted",
+        "byte_closed_candidate_materialized",
+        "candidate_archive",
+        "candidate_archive_materialized",
+        "candidate_archive_path",
+        "candidate_archive_sha256",
+        "exact_ready_queue_path",
+        "runtime_consumption_proof_path",
+    }
+)
+
+_CANDIDATE_INTENT_KEYS = frozenset(
+    {
+        "candidate_id",
+        "candidate_family",
+        "family_id",
+        "materializer_backlog_row_count",
+        "materializer_work_queue_executable_row_count",
+        "mlx_triage_argv",
+        "public_pr",
+        "replay_argv",
+        "selected_archive_transform_variant",
+        "target_kind",
+        "transform_kind",
+    }
+)
+
+_JSON_FENCE_RE = re.compile(r"```(?:json|JSON)\s*(.*?)```", re.DOTALL)
+
+
+@dataclass(frozen=True)
+class ArchiveBoundContractAuditFinding:
+    """One contract hygiene finding at a JSON pointer or markdown block."""
+
+    path: str
+    pointer: str
+    severity: str
+    code: str
+    message: str
+
+
+@dataclass(frozen=True)
+class ArchiveBoundContractAuditResult:
+    """Structured result consumed by operator briefing and preflight."""
+
+    paths_scanned: int
+    json_payload_count: int
+    contract_surface_count: int
+    valid_contract_surface_count: int
+    blocking_findings: tuple[ArchiveBoundContractAuditFinding, ...]
+    migration_required_findings: tuple[ArchiveBoundContractAuditFinding, ...]
+    advisory_findings: tuple[ArchiveBoundContractAuditFinding, ...]
+    skipped_paths: tuple[str, ...] = ()
+
+    @property
+    def finding_count(self) -> int:
+        return (
+            len(self.blocking_findings)
+            + len(self.migration_required_findings)
+            + len(self.advisory_findings)
+        )
+
+    @property
+    def passed(self) -> bool:
+        return not self.blocking_findings
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema": ARCHIVE_BOUND_CONTRACT_AUDIT_SCHEMA,
+            "passed": self.passed,
+            "paths_scanned": self.paths_scanned,
+            "json_payload_count": self.json_payload_count,
+            "contract_surface_count": self.contract_surface_count,
+            "valid_contract_surface_count": self.valid_contract_surface_count,
+            "blocking_finding_count": len(self.blocking_findings),
+            "migration_required_finding_count": len(
+                self.migration_required_findings
+            ),
+            "advisory_finding_count": len(self.advisory_findings),
+            "finding_count": self.finding_count,
+            "skipped_path_count": len(self.skipped_paths),
+            "skipped_paths": list(self.skipped_paths),
+            "blocking_findings": [
+                asdict(finding) for finding in self.blocking_findings
+            ],
+            "migration_required_findings": [
+                asdict(finding) for finding in self.migration_required_findings
+            ],
+            "advisory_findings": [
+                asdict(finding) for finding in self.advisory_findings
+            ],
+        }
+
+
+def _repo_rel(path: Path, repo_root: Path) -> str:
+    try:
+        return path.resolve(strict=False).relative_to(
+            repo_root.resolve(strict=False)
+        ).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _is_sequence(value: Any) -> bool:
+    return isinstance(value, Sequence) and not isinstance(
+        value, str | bytes | bytearray
+    )
+
+
+def _walk_json_files(
+    roots: Iterable[Path],
+    *,
+    include_markdown: bool,
+) -> list[Path]:
+    paths: list[Path] = []
+    suffixes = {".json"}
+    if include_markdown:
+        suffixes.update({".md", ".markdown"})
+    for root in roots:
+        if root.is_file():
+            if root.suffix.lower() in suffixes:
+                paths.append(root)
+            continue
+        if not root.exists():
+            continue
+        for path in root.rglob("*"):
+            if path.is_file() and path.suffix.lower() in suffixes:
+                paths.append(path)
+    return sorted(dict.fromkeys(paths), key=lambda item: item.as_posix())
+
+
+def _tracked_paths_under_roots(repo_root: Path, roots: Sequence[Path]) -> set[str]:
+    pathspecs: list[str] = []
+    for root in roots:
+        try:
+            pathspecs.append(
+                root.resolve(strict=False)
+                .relative_to(repo_root.resolve(strict=False))
+                .as_posix()
+            )
+        except ValueError:
+            continue
+    if not pathspecs:
+        return set()
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "ls-files", "-z", "--", *pathspecs],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if proc.returncode != 0:
+        return set()
+    return {
+        item.decode("utf-8")
+        for item in proc.stdout.split(b"\0")
+        if item
+    }
+
+
+def _has_contract_surface(payload: Mapping[str, Any]) -> bool:
+    return (
+        has_archive_bound_candidate_contract_payload(payload)
+        or payload.get("schema") in _CONTRACT_SCHEMAS
+    )
+
+
+def _archive_like_candidate_payload(
+    payload: Mapping[str, Any],
+    *,
+    path_label: str,
+) -> bool:
+    keys = set(payload)
+    if not keys.intersection(_ARCHIVE_EVIDENCE_KEYS):
+        return False
+    if not keys.intersection(_STRONG_ARCHIVE_CUSTODY_KEYS):
+        return False
+    if keys.intersection(_CANDIDATE_INTENT_KEYS):
+        return True
+    return "candidate_archive" in payload or "source_archive" in payload
+
+
+def _candidate_archive_digest(payload: Mapping[str, Any]) -> str:
+    archive = payload.get("candidate_archive")
+    if isinstance(archive, Mapping):
+        archive_path = archive.get("path") or archive.get("archive_path")
+        archive_sha = archive.get("sha256") or archive.get("archive_sha256")
+        archive_bytes = archive.get("bytes") or archive.get("archive_bytes")
+        return f"path={archive_path!r} sha256={archive_sha!r} bytes={archive_bytes!r}"
+    return (
+        f"path={payload.get('candidate_archive_path') or payload.get('archive_path')!r} "
+        f"sha256={payload.get('candidate_archive_sha256') or payload.get('archive_sha256')!r} "
+        f"bytes={payload.get('candidate_archive_bytes') or payload.get('archive_bytes')!r}"
+    )
+
+
+def _scan_mapping(
+    payload: Mapping[str, Any],
+    *,
+    path_label: str,
+    pointer: str,
+    ancestor_contract_surface: bool,
+) -> tuple[list[ArchiveBoundContractAuditFinding], int, int, int]:
+    findings: list[ArchiveBoundContractAuditFinding] = []
+    contract_surfaces = 0
+    valid_contract_surfaces = 0
+    json_payloads = 1
+
+    has_contract = _has_contract_surface(payload)
+    if has_contract:
+        contract_surfaces += 1
+        try:
+            archive_bound_candidate_contracts_from_payload(
+                payload,
+                label=f"{path_label}{pointer}",
+            )
+        except ArchiveBoundCandidateContractError as exc:
+            findings.append(
+                ArchiveBoundContractAuditFinding(
+                    path=path_label,
+                    pointer=pointer,
+                    severity="blocking",
+                    code="archive_bound_candidate_contract_invalid",
+                    message=str(exc),
+                )
+            )
+        else:
+            valid_contract_surfaces += 1
+            stale = archive_bound_candidate_contract_stale_field_blockers(payload)
+            if stale:
+                findings.append(
+                    ArchiveBoundContractAuditFinding(
+                        path=path_label,
+                        pointer=pointer,
+                        severity="blocking",
+                        code="archive_bound_candidate_contract_stale_duplicate_fields",
+                        message=", ".join(stale),
+                    )
+                )
+
+    if (
+        not has_contract
+        and not ancestor_contract_surface
+        and _archive_like_candidate_payload(payload, path_label=path_label)
+    ):
+        findings.append(
+            ArchiveBoundContractAuditFinding(
+                path=path_label,
+                pointer=pointer,
+                severity="migration_required",
+                code="archive_like_candidate_payload_missing_shared_contract",
+                message=_candidate_archive_digest(payload),
+            )
+        )
+
+    if has_contract:
+        return findings, json_payloads, contract_surfaces, valid_contract_surfaces
+
+    child_ancestor_contract = ancestor_contract_surface or has_contract
+    for key, value in payload.items():
+        child_pointer = f"{pointer}/{key}" if pointer else f"/{key}"
+        child_findings, child_payloads, child_surfaces, child_valid = _scan_value(
+            value,
+            path_label=path_label,
+            pointer=child_pointer,
+            ancestor_contract_surface=child_ancestor_contract,
+        )
+        findings.extend(child_findings)
+        json_payloads += child_payloads
+        contract_surfaces += child_surfaces
+        valid_contract_surfaces += child_valid
+
+    return findings, json_payloads, contract_surfaces, valid_contract_surfaces
+
+
+def _scan_value(
+    value: Any,
+    *,
+    path_label: str,
+    pointer: str,
+    ancestor_contract_surface: bool,
+) -> tuple[list[ArchiveBoundContractAuditFinding], int, int, int]:
+    if isinstance(value, Mapping):
+        return _scan_mapping(
+            value,
+            path_label=path_label,
+            pointer=pointer,
+            ancestor_contract_surface=ancestor_contract_surface,
+        )
+    if _is_sequence(value):
+        findings: list[ArchiveBoundContractAuditFinding] = []
+        json_payloads = 0
+        contract_surfaces = 0
+        valid_contract_surfaces = 0
+        for index, item in enumerate(value):
+            child_findings, child_payloads, child_surfaces, child_valid = _scan_value(
+                item,
+                path_label=path_label,
+                pointer=f"{pointer}/{index}" if pointer else f"/{index}",
+                ancestor_contract_surface=ancestor_contract_surface,
+            )
+            findings.extend(child_findings)
+            json_payloads += child_payloads
+            contract_surfaces += child_surfaces
+            valid_contract_surfaces += child_valid
+        return findings, json_payloads, contract_surfaces, valid_contract_surfaces
+    return [], 0, 0, 0
+
+
+def _markdown_payloads(text: str) -> list[Any]:
+    payloads: list[Any] = []
+    for match in _JSON_FENCE_RE.finditer(text):
+        raw = match.group(1).strip()
+        if not raw:
+            continue
+        try:
+            payloads.append(json.loads(raw))
+        except json.JSONDecodeError:
+            continue
+    return payloads
+
+
+def audit_archive_bound_candidate_contracts(
+    roots: Iterable[str | Path],
+    *,
+    repo_root: str | Path,
+    include_markdown: bool = False,
+    max_files: int | None = None,
+    max_file_bytes: int = 4_000_000,
+    tracked_only: bool = False,
+) -> ArchiveBoundContractAuditResult:
+    """Scan JSON/optional Markdown artifacts for shared contract hygiene."""
+
+    repo = Path(repo_root)
+    root_paths = [
+        path if isinstance(path, Path) else Path(path)
+        for path in roots
+    ]
+    resolved_roots = [
+        path if path.is_absolute() else repo / path
+        for path in root_paths
+    ]
+    candidate_paths = _walk_json_files(
+        resolved_roots,
+        include_markdown=include_markdown,
+    )
+    if tracked_only:
+        tracked = _tracked_paths_under_roots(repo, resolved_roots)
+        candidate_paths = [
+            path for path in candidate_paths if _repo_rel(path, repo) in tracked
+        ]
+    if max_files is not None:
+        candidate_paths = candidate_paths[: max(0, max_files)]
+
+    blocking: list[ArchiveBoundContractAuditFinding] = []
+    migration_required: list[ArchiveBoundContractAuditFinding] = []
+    advisory: list[ArchiveBoundContractAuditFinding] = []
+    skipped: list[str] = []
+    paths_scanned = 0
+    json_payload_count = 0
+    contract_surface_count = 0
+    valid_contract_surface_count = 0
+
+    for path in candidate_paths:
+        path_label = _repo_rel(path, repo)
+        try:
+            size = path.stat().st_size
+        except OSError as exc:
+            advisory.append(
+                ArchiveBoundContractAuditFinding(
+                    path=path_label,
+                    pointer="",
+                    severity="advisory",
+                    code="archive_bound_contract_audit_stat_failed",
+                    message=str(exc),
+                )
+            )
+            continue
+        if size > max_file_bytes:
+            skipped.append(path_label)
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            skipped.append(path_label)
+            continue
+        except OSError as exc:
+            advisory.append(
+                ArchiveBoundContractAuditFinding(
+                    path=path_label,
+                    pointer="",
+                    severity="advisory",
+                    code="archive_bound_contract_audit_read_failed",
+                    message=str(exc),
+                )
+            )
+            continue
+
+        payloads: list[tuple[str, Any]] = []
+        if path.suffix.lower() == ".json":
+            try:
+                payloads.append(("", json.loads(text)))
+            except json.JSONDecodeError as exc:
+                advisory.append(
+                    ArchiveBoundContractAuditFinding(
+                        path=path_label,
+                        pointer="",
+                        severity="advisory",
+                        code="archive_bound_contract_audit_json_parse_failed",
+                        message=str(exc),
+                    )
+                )
+                continue
+        else:
+            for index, payload in enumerate(_markdown_payloads(text)):
+                payloads.append((f"/markdown_json_fence/{index}", payload))
+            if not payloads and (
+                "archive_bound_candidate_contract" in text
+                or "candidate_archive_sha256" in text
+                or "candidate_archive_path" in text
+            ):
+                advisory.append(
+                    ArchiveBoundContractAuditFinding(
+                        path=path_label,
+                        pointer="",
+                        severity="advisory",
+                        code="archive_contract_signal_in_markdown_prose",
+                        message="markdown prose mentions archive contract/custody; no JSON block audited",
+                    )
+                )
+        paths_scanned += 1
+
+        for root_pointer, payload in payloads:
+            findings, payloads_seen, surfaces, valid_surfaces = _scan_value(
+                payload,
+                path_label=path_label,
+                pointer=root_pointer,
+                ancestor_contract_surface=False,
+            )
+            json_payload_count += payloads_seen
+            contract_surface_count += surfaces
+            valid_contract_surface_count += valid_surfaces
+            for finding in findings:
+                if finding.severity == "blocking":
+                    blocking.append(finding)
+                elif finding.severity == "migration_required":
+                    migration_required.append(finding)
+                else:
+                    advisory.append(finding)
+
+    return ArchiveBoundContractAuditResult(
+        paths_scanned=paths_scanned,
+        json_payload_count=json_payload_count,
+        contract_surface_count=contract_surface_count,
+        valid_contract_surface_count=valid_contract_surface_count,
+        blocking_findings=tuple(blocking),
+        migration_required_findings=tuple(migration_required),
+        advisory_findings=tuple(advisory),
+        skipped_paths=tuple(skipped),
+    )
+
+
+def format_archive_bound_candidate_contract_audit(
+    result: ArchiveBoundContractAuditResult,
+    *,
+    limit: int = 12,
+) -> str:
+    """Human-readable rollup for operator briefing and direct CLI use."""
+
+    lines = [
+        f"passed: {result.passed}",
+        f"paths_scanned: {result.paths_scanned}",
+        f"json_payloads: {result.json_payload_count}",
+        (
+            "contract_surfaces: "
+            f"{result.valid_contract_surface_count}/{result.contract_surface_count} valid"
+        ),
+        f"blocking_findings: {len(result.blocking_findings)}",
+        f"migration_required_findings: {len(result.migration_required_findings)}",
+        f"advisory_findings: {len(result.advisory_findings)}",
+        f"skipped_paths: {len(result.skipped_paths)}",
+    ]
+    ranked = (
+        list(result.blocking_findings)
+        + list(result.migration_required_findings)
+        + list(result.advisory_findings)
+    )
+    if ranked:
+        lines.append("top findings:")
+        for finding in ranked[: max(0, limit)]:
+            lines.append(
+                "  - "
+                f"{finding.severity} {finding.code} "
+                f"{finding.path}{finding.pointer}: {finding.message}"
+            )
+    return "\n".join(lines)
