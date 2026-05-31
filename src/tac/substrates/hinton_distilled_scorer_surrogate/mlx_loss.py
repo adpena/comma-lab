@@ -222,6 +222,182 @@ def pose_distillation_mse_loss(
 
 
 # ---------------------------------------------------------------------------
+# OPTIMAL seg/pose teachers (math-derived from the contest score structure).
+# Teacher design memo §1.4 / §2 (.omx/research/optimal_scorer_teacher_design_
+# 20260531T103350Z.md). The MLX sisters of the torch analysis kernels in
+# tac.multi_granularity_sensitivity (those lazy-import torch for offline use;
+# these run INSIDE the MLX training loop).
+# ---------------------------------------------------------------------------
+
+
+def segnet_boundary_band_weights_mlx(
+    teacher_logits: Any,
+    *,
+    tau_boundary: float = 1.0,
+) -> Any:
+    """MLX sister of ``tac.multi_granularity_sensitivity.segnet_boundary_band_weights``.
+
+    Per-pixel boundary-band weight ``w_i = exp(-m_i / tau_b)`` where ``m_i`` is the
+    top-2 teacher-logit margin along the LAST (class) axis. ``w_i`` is ~1 on the
+    decision boundary (small margin) and ->0 in confident interiors — exactly where
+    ``d_seg`` (per-pixel argmax-disagreement RATE) can change. Returns the spatial
+    weight map with the class axis removed.
+
+    The torch sister is for offline analysis; this runs inside the MLX training
+    loop (the loss kernel below distils gradient ONLY where ``∂d_seg/∂rendered != 0``).
+
+    Args:
+        teacher_logits: MLX ``(..., num_classes)`` real-SegNet per-pixel logits.
+        tau_boundary: soft-band temperature ``tau_b`` (smaller = tighter band).
+
+    Returns:
+        MLX array of shape ``teacher_logits.shape[:-1]`` in ``(0, 1]``.
+    """
+    _require_mlx()
+    if tau_boundary <= 0.0:
+        raise ValueError(f"tau_boundary must be > 0; got {tau_boundary}")
+    # top-2 margin along the class axis (mx.sort ascending -> [-1] is max).
+    sorted_logits = mx.sort(teacher_logits, axis=-1)
+    margin = sorted_logits[..., -1] - sorted_logits[..., -2]
+    margin = mx.maximum(margin, 0.0)
+    return mx.exp(-margin / tau_boundary)
+
+
+def boundary_weighted_tckd_loss(
+    student_logits: Any,
+    teacher_logits: Any,
+    *,
+    temperature: float = DEFAULT_DISTILLATION_TEMPERATURE,
+    tau_boundary: float = 1.0,
+) -> Any:
+    """Boundary-weighted Target-Class-KD seg-distillation loss (the OPTIMAL seg teacher).
+
+    Math-derived from the contest score (teacher design memo §1.4): ``d_seg`` is
+    the per-pixel argmax-disagreement RATE, so only the teacher's DECISION (argmax)
+    and the boundary band matter — NOT the full per-pixel logit shape that KL T=2.0
+    distils. Via Decoupled-KD (Zhao 2022 CVPR ``2203.08679``, Eq.6/7): the contest
+    is the rare TCKD-dominant regime — set ``beta(NCKD)->0`` and concentrate
+    ``alpha(TCKD)`` on the boundary band::
+
+        m_i        = top-2 teacher-logit margin at pixel i
+        w_i        = exp(-m_i / tau_b)                      (boundary-band weight)
+        p_t^teach  = softmax(teacher/T)[teacher's argmax]   (teacher target-class mass)
+        p_t^stud   = softmax(student/T)[teacher's argmax]   (student mass at the teacher's decision)
+        TCKD_i     = KL( [p_t^stud, 1-p_t^stud] || [p_t^teach, 1-p_t^teach] )
+                       (binary, ``student || teacher`` direction matching
+                        :func:`kl_divergence_between_softmax`)
+        L_seg*     = T^2 * sum_i w_i * TCKD_i / sum_i w_i
+
+    Reduces toward the current full-KL objective as ``w_i == 1`` and binary->full
+    class (auditable superset). The gradient budget re-allocates from ``O(H*W)``
+    score-flat interior pixels onto the ~5-15% boundary band -> higher effective seg
+    signal at the same step count. Falsifiable prediction: >=8% relative d_seg
+    reduction vs KL T=2.0 at matched steps.
+
+    Args:
+        student_logits: MLX ``(..., num_classes)`` student per-pixel logits.
+        teacher_logits: MLX ``(..., num_classes)`` real-SegNet teacher logits
+            (caller passes ``mx.stop_gradient(...)`` if the teacher is frozen).
+        temperature: distillation ``T`` (default 2.0).
+        tau_boundary: boundary-band temperature ``tau_b`` (smaller = tighter band).
+
+    Returns:
+        Scalar MLX array (the boundary-weighted TCKD loss).
+    """
+    _require_mlx()
+    if temperature <= 0.0:
+        raise ValueError(
+            f"temperature must be > 0 (Hinton 2014 canonical T=2.0); got {temperature}"
+        )
+    if tau_boundary <= 0.0:
+        raise ValueError(f"tau_boundary must be > 0; got {tau_boundary}")
+    teacher_soft = softmax_with_temperature(teacher_logits, temperature)
+    student_soft = softmax_with_temperature(student_logits, temperature)
+    # target class = teacher's argmax decision; gather student mass at that index.
+    target_idx = mx.argmax(teacher_logits, axis=-1, keepdims=True)  # (..., 1)
+    teacher_p_target = mx.squeeze(
+        mx.take_along_axis(teacher_soft, target_idx, axis=-1), axis=-1
+    )  # (...)
+    student_p_target = mx.squeeze(
+        mx.take_along_axis(student_soft, target_idx, axis=-1), axis=-1
+    )  # (...)
+    # binary target-vs-rest distributions, clamped for stable log.
+    eps = _NUMERIC_FLOOR
+    p_s = mx.clip(student_p_target, eps, 1.0 - eps)
+    p_t = mx.clip(teacher_p_target, eps, 1.0 - eps)
+    # binary KL(student || teacher) per pixel (matches kl_divergence_between_softmax).
+    tckd = p_s * (mx.log(p_s) - mx.log(p_t)) + (1.0 - p_s) * (
+        mx.log(1.0 - p_s) - mx.log(1.0 - p_t)
+    )  # (...)
+    # boundary-band weight (a fixed reweighting, not a target -> stop gradient).
+    w = mx.stop_gradient(
+        segnet_boundary_band_weights_mlx(teacher_logits, tau_boundary=tau_boundary)
+    )  # (...)
+    denom = mx.sum(w) + _NUMERIC_FLOOR
+    return (temperature * temperature) * mx.sum(w * tckd) / denom
+
+
+def pose_sensitivity_weighted_mse_loss(
+    student_pose: Any,
+    teacher_pose: Any,
+    *,
+    per_dim_scale: Any = None,
+    num_scored_dims: int | None = None,
+    sensitivity_reweight: bool = True,
+    d_pose_floor: float = 1.0e-6,
+) -> Any:
+    """Sensitivity-weighted pose-distillation loss (the OPTIMAL pose teacher).
+
+    Refines :func:`pose_distillation_mse_loss` with the two contest-derived
+    corrections (teacher design memo §2):
+
+    (a) **Zero dims ``k >= K = out//2``** — the scorer's ``compute_distortion``
+        only reads ``[:out//2]`` so capacity spent on ``k >= K`` is wasted.
+    (b) **Per-pair Attentive-Imitation-Loss reweight** by the contest marginal
+        ``∂S/∂d_pose = 5/sqrt(10·d_pose)`` (Saputra 2019 ``1908.00858``,
+        reliability-weighted regression imitation) so pairs near the pose floor
+        (large marginal) get more gradient — the operating-point-aware reweighting
+        CLAUDE.md "SegNet vs PoseNet importance" flags (pose ~2.71x seg by marginal
+        at the 0.192 frontier). Keeps the per-dim-std Mahalanobis scale (hard-earned).
+
+    The AIL reweight is elegant: ``marginal * per_pair = 5*d_pose/sqrt(10*d_pose) =
+    0.5*sqrt(10*d_pose)`` — i.e. the loss tracks the actual pose CONTRIBUTION to the
+    contest score ``sqrt(10*d_pose)``, which is exactly what we minimize.
+
+    Args:
+        student_pose / teacher_pose: MLX ``(B, pose_dims)``.
+        per_dim_scale: optional ``(pose_dims,)`` per-dim std divisor (Mahalanobis).
+        num_scored_dims: ``K = out//2``; dims ``k >= K`` are zeroed. ``None`` scores
+            all dims.
+        sensitivity_reweight: apply the per-pair ``5/sqrt(10·d_pose)`` AIL weight.
+        d_pose_floor: floor on per-pair d_pose for the marginal (avoids div-by-0).
+
+    Returns:
+        Scalar MLX array.
+    """
+    _require_mlx()
+    diff = student_pose - teacher_pose
+    if per_dim_scale is not None:
+        diff = diff / mx.maximum(per_dim_scale, _NUMERIC_FLOOR)
+    sq = diff * diff  # (B, pose_dims)
+    pose_dims = sq.shape[-1]
+    if num_scored_dims is not None:
+        if num_scored_dims <= 0 or num_scored_dims > pose_dims:
+            raise ValueError(
+                f"num_scored_dims must be in [1, {pose_dims}]; got {num_scored_dims}"
+            )
+        mask = (mx.arange(pose_dims) < num_scored_dims).astype(sq.dtype)  # (pose_dims,)
+        per_pair = mx.sum(sq * mask, axis=-1) / float(num_scored_dims)  # (B,)
+    else:
+        per_pair = mx.mean(sq, axis=-1)  # (B,)
+    if not sensitivity_reweight:
+        return mx.mean(per_pair)
+    d_pose = mx.maximum(per_pair, d_pose_floor)
+    marginal = mx.stop_gradient(5.0 / mx.sqrt(10.0 * d_pose))  # (B,) AIL/contest weight
+    return mx.sum(marginal * per_pair) / (mx.sum(marginal) + _NUMERIC_FLOOR)
+
+
+# ---------------------------------------------------------------------------
 # Canonical real-PoseNet teacher cache (the POSE axis sister of
 # RealSegNetTeacherLogitsCache). Holds the REAL contest PoseNet's pose for every
 # pair, pre-computed gradient-free pre-training, indexed by PAIR index.
