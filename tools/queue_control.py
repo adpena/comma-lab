@@ -147,6 +147,7 @@ def build_supervise_command(
     max_steps_per_tick: int = 16,
     max_parallel: str = "auto",
     execute: bool = True,
+    auto_resume_paused: bool = False,
 ) -> list[str]:
     command = [
         ".venv/bin/python",
@@ -166,6 +167,8 @@ def build_supervise_command(
     ]
     if execute:
         command.append("--execute")
+    if auto_resume_paused:
+        command.append("--auto-resume-paused")
     return command
 
 
@@ -439,6 +442,10 @@ def summarize_observation(
             Path(".omx") / "research" / f"queue_supervisor_{observation.get('queue_id')}",
             max_steps_per_tick=max_steps,
             max_parallel=str(max_parallel) if max_parallel is not None else "auto",
+            auto_resume_paused=(
+                str(observation.get("mode") or "") == "paused"
+                and _count(observation, "queued") > 0
+            ),
         ),
         "pause_command": build_control_command(
             queue_path,

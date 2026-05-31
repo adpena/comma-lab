@@ -4,6 +4,8 @@ import json
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from comma_lab.scheduler.scorer_region_exact_ready_bridge import (
     SCORER_REGION_EXACT_READY_BRIDGE_REPORT_SCHEMA,
     build_scorer_region_exact_ready_bridge,
@@ -11,6 +13,7 @@ from comma_lab.scheduler.scorer_region_exact_ready_bridge import (
 from comma_lab.scheduler.scorer_region_selector_chain_queue import (
     SCORER_REGION_SELECTOR_CHAIN_CONTEXT_SCHEMA,
     SCORER_REGION_SELECTOR_CHAIN_REPORT_SCHEMA,
+    ScorerRegionSelectorChainQueueError,
     build_scorer_region_selector_chain_context,
     build_scorer_region_selector_chain_queue,
     build_scorer_region_selector_chain_report,
@@ -297,6 +300,7 @@ def test_chain_queue_can_prove_receiver_patch_output_change_before_bridge(
         receiver_patch_output_change_expected_entry_count=2,
         receiver_patch_output_change_file_list_source="tests/full_frame_file_list.txt",
         receiver_patch_output_change_contest_full_sample_claim=True,
+        receiver_patch_output_change_left_cache_dir=tmp_path / "inflate_cache",
         scales=(64,),
         alphas=(1,),
         codec_families=("fec10_adaptive_blend",),
@@ -315,6 +319,8 @@ def test_chain_queue_can_prove_receiver_patch_output_change_before_bridge(
     assert "--left-selected-archive-chain-report" in proof_step["command"]
     assert "--left-archive" not in proof_step["command"]
     assert proof_step["command"].count("--file-list-entry") == 2
+    assert "--left-cache-dir" in proof_step["command"]
+    assert "inflate_cache" in proof_step["command"]
     assert "--require-output-change" in proof_step["command"]
     assert "--contest-full-sample-claim" in proof_step["command"]
     assert bridge_step["requires"] == ["prove_receiver_patch_full_frame_output_change"]
@@ -498,6 +504,41 @@ def test_chain_queue_can_gate_local_cpu_from_mlx_first_acquisition(
     ]
     assert queue["metadata"]["mlx_first_acquisition"] is True
     assert queue["metadata"]["local_cpu_gate_policy"].startswith("full local CPU")
+
+
+def test_chain_queue_rejects_non_singleton_production_mlx_response_batch(
+    tmp_path: Path,
+) -> None:
+    submission = _source_submission(tmp_path)
+    p18 = tmp_path / "p18.json"
+    _write_json(
+        p18,
+        {
+            "schema": P18_SEGNET_REGION_WATERFILL_SCHEMA,
+            "rows": [],
+            **FALSE_AUTHORITY,
+        },
+    )
+    with pytest.raises(
+        ScorerRegionSelectorChainQueueError,
+        match="mlx_batch_pairs must be 1",
+    ):
+        build_scorer_region_selector_chain_queue(
+            repo_root=tmp_path,
+            queue_id="chain_q",
+            source_submission_dir=submission,
+            output_root=tmp_path / "chain_out",
+            full_frame_inflate_parity_proof=tmp_path / "parity.json",
+            segnet_region_masks=p18,
+            materialize_receiver_patch=True,
+            include_local_component_loop=True,
+            include_mlx_component_response=True,
+            scorer_response_baseline_score=0.1919853363,
+            mlx_batch_pairs=2,
+            scales=(64,),
+            alphas=(1,),
+            codec_families=("fec10_adaptive_blend",),
+        )
 
 
 def test_chain_report_selects_repack_only_when_positive_and_receiver_closed(

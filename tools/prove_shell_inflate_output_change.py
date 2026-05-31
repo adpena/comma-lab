@@ -401,6 +401,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--require-output-change", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument(
+        "--left-cache-dir",
+        type=Path,
+        help="Optional content-addressed cache for the left shell-inflate output.",
+    )
+    parser.add_argument(
+        "--right-cache-dir",
+        type=Path,
+        help="Optional content-addressed cache for the right shell-inflate output.",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("experiments/results") / "shell_inflate_output_change",
@@ -445,6 +455,8 @@ def main(argv: list[str] | None = None) -> int:
             parity_scope_kind=args.parity_scope_kind,
             contest_full_sample_claim=args.contest_full_sample_claim,
             overwrite=False,
+            left_cache_dir=args.left_cache_dir,
+            right_cache_dir=args.right_cache_dir,
         )
         scratch = args.output_dir / "scratch"
         output_diffs = _diff_outputs(parity=parity, scratch_dir=scratch)

@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -30,6 +32,7 @@ from src.comma_lab.scheduler.experiment_queue import (
     queue_resource_kinds,
     queue_summary,
     ready_steps,
+    reconcile_skipped_dependency_steps,
     reconcile_satisfied_queued_steps,
     reconcile_stale_running_steps,
     resolve_worker_max_parallel,
@@ -977,6 +980,159 @@ def test_experiment_queue_blocks_ready_step_when_dependency_artifact_goes_stale(
         assert summary["ready_steps"] == []
 
 
+def test_experiment_queue_soft_gate_skips_downstream_without_failure(
+    tmp_path: Path,
+) -> None:
+    gate = tmp_path / "gate.json"
+    cpu = tmp_path / "cpu.json"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "soft_gate_queue",
+            "controls": {"mode": "running", "max_concurrency": {"local_cpu": 2}},
+            "experiments": [
+                {
+                    "id": "candidate_a",
+                    "steps": [
+                        {
+                            "id": "mlx_cpu_spend_gate",
+                            "on_postcondition_failure": "skipped",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import json, pathlib; "
+                                    f"pathlib.Path({str(gate)!r}).write_text("
+                                    "json.dumps({'cpu_gate_allowed': False, "
+                                    "'score_claim': False, 'promotion_eligible': False, "
+                                    "'rank_or_kill_eligible': False}))"
+                                ),
+                            ],
+                            "postconditions": [
+                                {
+                                    "type": "json_equals",
+                                    "path": gate.name,
+                                    "key": "cpu_gate_allowed",
+                                    "equals": True,
+                                },
+                                {"type": "json_false_authority", "path": gate.name},
+                            ],
+                        },
+                        {
+                            "id": "local_cpu_component_spot_check",
+                            "requires": ["mlx_cpu_spend_gate"],
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(cpu)!r}).write_text('ran')",
+                            ],
+                            "postconditions": [{"type": "path_exists", "path": cpu.name}],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue, repo_root=tmp_path)
+        result = run_ready_step(
+            conn,
+            queue,
+            ready[0],
+            repo_root=tmp_path,
+            execute=True,
+            log_root=tmp_path / "logs",
+        )
+        assert result["succeeded"] is False
+        assert result["skipped"] is True
+        assert queue_summary(conn, queue, repo_root=tmp_path)["status_counts"] == {
+            "queued": 1,
+            "skipped": 1,
+        }
+
+        skipped = reconcile_skipped_dependency_steps(conn, queue)
+        assert skipped["skipped_step_count"] == 1
+        assert not cpu.exists()
+        assert queue_summary(conn, queue, repo_root=tmp_path)["status_counts"] == {
+            "skipped": 2
+        }
+
+
+def test_reconcile_soft_gate_negative_artifact_skips_branch(
+    tmp_path: Path,
+) -> None:
+    gate = tmp_path / "gate.json"
+    downstream = tmp_path / "downstream.txt"
+    gate.write_text(
+        json.dumps(
+            {
+                "cpu_gate_allowed": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "soft_gate_reconcile_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "candidate",
+                    "steps": [
+                        {
+                            "id": "mlx_cpu_spend_gate",
+                            "on_postcondition_failure": "skipped",
+                            "command": [sys.executable, "-c", "print('already wrote gate')"],
+                            "postconditions": [
+                                {
+                                    "type": "json_equals",
+                                    "path": gate.name,
+                                    "key": "cpu_gate_allowed",
+                                    "equals": True,
+                                },
+                                {"type": "json_false_authority", "path": gate.name},
+                            ],
+                        },
+                        {
+                            "id": "local_cpu_component_spot_check",
+                            "requires": ["mlx_cpu_spend_gate"],
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(downstream)!r}).write_text('ran')",
+                            ],
+                            "postconditions": [
+                                {"type": "path_exists", "path": downstream.name}
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = reconcile_satisfied_queued_steps(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            include_failed=True,
+        )
+        summary = queue_summary(conn, queue, repo_root=tmp_path)
+
+    assert result["reconciled_step_count"] == 0
+    assert result["skipped_step_count"] == 1
+    assert result["dependency_skipped_reconciliation"]["skipped_step_count"] == 1
+    assert summary["status_counts"] == {"skipped": 2}
+    assert not downstream.exists()
+
+
 def test_experiment_queue_timeout_marks_failed_not_running(tmp_path: Path) -> None:
     queue = normalize_queue_definition(
         {
@@ -1016,6 +1172,69 @@ def test_experiment_queue_timeout_marks_failed_not_running(tmp_path: Path) -> No
         assert result["returncode"] == 124
         assert result["timed_out"] is True
         assert queue_summary(conn, queue)["status_counts"] == {"failed": 1}
+
+
+def _process_live_non_zombie(pid: int) -> bool:
+    proc = subprocess.run(
+        ["ps", "-p", str(pid), "-o", "stat="],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    status = proc.stdout.strip()
+    return proc.returncode == 0 and bool(status) and not status.startswith("Z")
+
+
+def test_experiment_queue_timeout_kills_child_process_group(tmp_path: Path) -> None:
+    child_pid_file = tmp_path / "child.pid"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "timeout_child_group_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "candidate_timeout_child",
+                    "steps": [
+                        {
+                            "id": "slow_with_child",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib, subprocess, sys, time; "
+                                    "p = subprocess.Popen([sys.executable, '-c', "
+                                    "'import time; time.sleep(30)']); "
+                                    f"pathlib.Path({str(child_pid_file)!r}).write_text(str(p.pid)); "
+                                    "time.sleep(30)"
+                                ),
+                            ],
+                            "timeout_seconds": 1,
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue)
+        result = run_ready_step(
+            conn,
+            queue,
+            ready[0],
+            repo_root=tmp_path,
+            execute=True,
+            log_root=tmp_path / "logs",
+        )
+        assert result["returncode"] == 124
+        assert result["timed_out"] is True
+
+    child_pid = int(child_pid_file.read_text())
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline and _process_live_non_zombie(child_pid):
+        time.sleep(0.05)
+    assert not _process_live_non_zombie(child_pid)
 
 
 def test_experiment_queue_rejects_shell_string_commands() -> None:

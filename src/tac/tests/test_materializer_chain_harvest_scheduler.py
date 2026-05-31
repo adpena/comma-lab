@@ -1686,6 +1686,95 @@ def test_shell_inflate_parity_proof_supports_full_frame_multi_entry_scope(
     assert proof["promotable"] is False
 
 
+def test_shell_inflate_parity_left_cache_is_process_safe(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = repo / "runtime"
+    runtime.mkdir()
+    inflate = runtime / "inflate.sh"
+    inflate.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        '"${PACT_PYTHON_BIN:-python}" - "$1" "$2" "$3" <<\'PY\'\n'
+        "import sys, time\n"
+        "from pathlib import Path\n"
+        "archive_dir = Path(sys.argv[1])\n"
+        "output_dir = Path(sys.argv[2])\n"
+        "file_list = Path(sys.argv[3])\n"
+        "output_dir.mkdir(parents=True, exist_ok=True)\n"
+        "payload = (archive_dir / 'data.bin').read_bytes()\n"
+        "time.sleep(0.4)\n"
+        "for entry in file_list.read_text(encoding='utf-8').splitlines():\n"
+        "    entry = entry.strip()\n"
+        "    if entry:\n"
+        "        (output_dir / (Path(entry).stem + '.raw')).write_bytes(payload)\n"
+        "PY\n",
+        encoding="utf-8",
+    )
+    inflate.chmod(inflate.stat().st_mode | 0o100)
+    file_list = repo / "file_list.txt"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+
+    cache_dir = repo / "left_cache"
+    base_cmd = [
+        sys.executable,
+        str(SHELL_PARITY_TOOL),
+        "--left-archive",
+        str(source),
+        "--left-submission-dir",
+        str(runtime),
+        "--right-archive",
+        str(candidate),
+        "--right-submission-dir",
+        str(runtime),
+        "--file-list",
+        str(file_list),
+        "--full-frame-file-list-claim",
+        "--expected-full-frame-file-list-sha256",
+        hashlib.sha256(file_list.read_bytes()).hexdigest(),
+        "--expected-full-frame-entry-count",
+        "1",
+        "--full-frame-file-list-source",
+        "fixture_full_file_list",
+        "--left-cache-dir",
+        str(cache_dir),
+    ]
+    processes = [
+        subprocess.Popen(
+            [*base_cmd, "--output-dir", str(repo / f"parity_{index}")],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        for index in range(2)
+    ]
+    results = [process.communicate(timeout=20) for process in processes]
+    for process, (stdout, stderr) in zip(processes, results, strict=True):
+        assert process.returncode == 0, stdout + stderr
+
+    cache_entries = [
+        path
+        for path in cache_dir.iterdir()
+        if path.is_dir() and not path.name.startswith(".")
+    ]
+    assert len(cache_entries) == 1
+    assert (cache_entries[0] / "side.json").is_file()
+    assert (cache_entries[0] / "outputs" / "0.raw").is_file()
+    for index in range(2):
+        proof = json.loads(
+            (repo / f"parity_{index}" / "shell_inflate_parity.json").read_text()
+        )
+        assert proof["cmp_equal"] is True
+        assert proof["left"]["output_raw_sha256"] == proof["right"]["output_raw_sha256"]
+
+
 def test_shell_inflate_output_change_proof_is_shape_preserving_and_fail_closed(
     tmp_path: Path,
 ) -> None:

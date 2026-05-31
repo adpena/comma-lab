@@ -417,6 +417,7 @@ def build_scorer_region_selector_chain_queue(
     receiver_patch_output_change_file_list_source: str | None = None,
     receiver_patch_output_change_parity_scope_kind: str = "contest_full_sample",
     receiver_patch_output_change_contest_full_sample_claim: bool = False,
+    receiver_patch_output_change_left_cache_dir: str | Path | None = None,
     include_local_component_loop: bool = False,
     local_component_upstream_dir: str | Path = "upstream",
     local_component_video_names_file: str | Path = "upstream/public_test_video_names.txt",
@@ -571,6 +572,13 @@ def build_scorer_region_selector_chain_queue(
         raise ScorerRegionSelectorChainQueueError(
             "include_mlx_component_response requires include_local_component_loop"
         )
+    if include_mlx_component_response and int(mlx_batch_pairs) != 1:
+        raise ScorerRegionSelectorChainQueueError(
+            "mlx_batch_pairs must be 1 for production MLX scorer response; "
+            "use mlx_cache_batch_pairs for cache materialization throughput, "
+            "and add an explicit batch-shape research allowance before using "
+            "non-singleton MLX response batches"
+        )
     if mlx_first_acquisition and not include_mlx_component_response:
         raise ScorerRegionSelectorChainQueueError(
             "mlx_first_acquisition requires include_mlx_component_response"
@@ -686,6 +694,16 @@ def build_scorer_region_selector_chain_queue(
         "--require-output-change",
         "--overwrite",
     ]
+    if receiver_patch_output_change_left_cache_dir is not None:
+        receiver_patch_output_change_cmd.extend(
+            [
+                "--left-cache-dir",
+                _repo_rel(
+                    _resolve(receiver_patch_output_change_left_cache_dir, repo_root),
+                    repo_root,
+                ),
+            ]
+        )
     for entry in output_change_entries:
         receiver_patch_output_change_cmd.extend(["--file-list-entry", entry])
     if receiver_patch_output_change_contest_full_sample_claim:
@@ -1755,6 +1773,7 @@ def build_scorer_region_selector_chain_queue(
                                         "id": "mlx_cpu_spend_gate",
                                         "kind": "command",
                                         "requires": ["local_mlx_component_response"],
+                                        "on_postcondition_failure": "skipped",
                                         "command": [
                                             ".venv/bin/python",
                                             "tools/gate_mlx_scorer_response_for_cpu_spend.py",

@@ -251,6 +251,27 @@ def _recover(
     return _run_command(command, label="recover")
 
 
+def _resume_paused_queue(
+    args: argparse.Namespace,
+    *,
+    state_path: Path,
+    tick_index: int,
+) -> dict[str, Any]:
+    command = [
+        sys.executable,
+        "tools/experiment_queue.py",
+        "--queue",
+        _repo_rel(args.queue),
+        "--state",
+        _repo_rel(state_path),
+        "control",
+        "running",
+        "--reason",
+        f"queue_supervisor_tick_{tick_index}_auto_resume_paused_with_queued_work",
+    ]
+    return _run_command(command, label="auto_resume_paused")
+
+
 def _write_heartbeat(path: Path, payload: Mapping[str, Any]) -> None:
     heartbeat = {
         "schema": SUPERVISOR_HEARTBEAT_SCHEMA,
@@ -329,6 +350,7 @@ def supervise_queue(args: argparse.Namespace) -> dict[str, Any]:
             )
             action = "observe"
             recovery_result: dict[str, Any] | None = None
+            resume_result: dict[str, Any] | None = None
             worker_result: dict[str, Any] | None = None
             blockers = [str(item) for item in summary.get("automation_blockers") or [] if str(item)]
             if blockers and args.recover:
@@ -341,21 +363,47 @@ def supervise_queue(args: argparse.Namespace) -> dict[str, Any]:
             elif _terminal(summary):
                 final_reason = "terminal_queue_state"
             elif _status_count(summary, "queued") > 0:
-                action = "run_worker"
-                command = _worker_command(
-                    args.queue,
-                    state_path,
-                    max_steps=args.max_steps_per_tick,
-                    max_parallel=max_parallel,
-                    allow_cloud=args.allow_cloud,
-                    execute=args.execute,
-                    log_root=args.log_root,
-                    explicit_state_path=args.state is not None,
-                )
-                worker_result = _run_command(command, label="run_worker")
-                summary = _observe_summary(args, state_path=state_path)
-                if worker_result.get("returncode"):
-                    final_reason = "worker_command_failed"
+                mode = str(summary.get("mode") or "")
+                if mode == "paused":
+                    if not args.auto_resume_paused:
+                        action = "observe"
+                        final_reason = "paused_with_queued_work"
+                    else:
+                        action = "auto_resume_then_run_worker"
+                        resume_result = _resume_paused_queue(args, state_path=state_path, tick_index=tick_index)
+                        summary = _observe_summary(args, state_path=state_path)
+                        blockers = [
+                            str(item) for item in summary.get("automation_blockers") or [] if str(item)
+                        ]
+                        if resume_result.get("returncode"):
+                            final_reason = "auto_resume_failed"
+                        elif blockers and args.stop_on_unsafe:
+                            final_reason = "unsafe_state_after_auto_resume"
+                elif mode != "running":
+                    action = "observe"
+                    final_reason = f"control_mode_{mode or 'unknown'}_with_queued_work"
+                if final_reason in {
+                    "paused_with_queued_work",
+                    "auto_resume_failed",
+                    "unsafe_state_after_auto_resume",
+                } or final_reason.startswith("control_mode_"):
+                    worker_result = None
+                else:
+                    action = "run_worker" if action == "observe" else action
+                    command = _worker_command(
+                        args.queue,
+                        state_path,
+                        max_steps=args.max_steps_per_tick,
+                        max_parallel=max_parallel,
+                        allow_cloud=args.allow_cloud,
+                        execute=args.execute,
+                        log_root=args.log_root,
+                        explicit_state_path=args.state is not None,
+                    )
+                    worker_result = _run_command(command, label="run_worker")
+                    summary = _observe_summary(args, state_path=state_path)
+                    if worker_result.get("returncode"):
+                        final_reason = "worker_command_failed"
             else:
                 final_reason = "no_actionable_work"
             tick_payload = {
@@ -365,10 +413,12 @@ def supervise_queue(args: argparse.Namespace) -> dict[str, Any]:
                 "generated_at_utc": _utc_now(),
                 "action": action,
                 "execute": args.execute,
+                "auto_resume_paused": args.auto_resume_paused,
                 "max_parallel": max_parallel,
                 "summary": summary,
                 "automation_blockers": blockers,
                 "recovery_result": recovery_result,
+                "resume_result": resume_result,
                 "worker_result": worker_result,
                 "final_reason_if_stopping": final_reason,
                 "allowed_use": "queue_supervisor_local_execution_telemetry_only",
@@ -424,6 +474,7 @@ def supervise_queue(args: argparse.Namespace) -> dict[str, Any]:
         "started_at_utc": started_at,
         "finished_at_utc": _utc_now(),
         "execute": args.execute,
+        "auto_resume_paused": args.auto_resume_paused,
         "final_reason": final_reason,
         "tick_count": len(ticks),
         "ticks_jsonl": _repo_rel(tick_log),
@@ -466,6 +517,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-parallel-cap", type=int, default=None)
     parser.add_argument("--allow-cloud", action="store_true")
     parser.add_argument("--recover", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--auto-resume-paused",
+        action="store_true",
+        help=(
+            "when a healthy paused queue still has queued work, set control mode "
+            "back to running before starting the bounded worker"
+        ),
+    )
     parser.add_argument("--resume-after-recovery", action="store_true")
     parser.add_argument("--stop-on-unsafe", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--stale-after-seconds", type=float, default=300.0)
@@ -490,6 +549,8 @@ def main(argv: list[str] | None = None) -> int:
         "unsafe_state",
         "unsafe_state_after_recovery",
         "worker_command_failed",
+        "auto_resume_failed",
+        "unsafe_state_after_auto_resume",
     }
     return 3 if args.strict and bad_final else 0
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import signal
 import sqlite3
 import subprocess
 import time
@@ -22,6 +23,7 @@ SCHEDULER_RUNTIME_POLICY_SCHEMA = "scheduler_runtime_policy.v1"
 
 CONTROL_MODES = {"running", "paused", "frozen"}
 STEP_STATUSES = {"queued", "running", "succeeded", "failed", "blocked", "skipped"}
+POSTCONDITION_FAILURE_STATUSES = {"failed", "skipped"}
 BLOCKING_ORPHAN_STATUSES = {"queued", "running", "blocked"}
 LOCAL_RESOURCE_KINDS = {
     "local_cpu",
@@ -281,6 +283,17 @@ def _normalize_rerunnable_command_items(command_items: list[str]) -> list[str]:
     return normalized
 
 
+def _postcondition_failure_status(step: Mapping[str, Any]) -> str:
+    raw = step.get("on_postcondition_failure", "failed")
+    status = _require_text(raw, "on_postcondition_failure")
+    if status not in POSTCONDITION_FAILURE_STATUSES:
+        raise ExperimentQueueError(
+            "on_postcondition_failure must be one of "
+            f"{sorted(POSTCONDITION_FAILURE_STATUSES)}"
+        )
+    return status
+
+
 def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -> dict[str, Any]:
     step_id = _require_text(raw.get("id"), f"experiments[{experiment_id}].steps[{index}].id")
     kind = _require_text(raw.get("kind", "command"), f"{step_id}.kind")
@@ -337,6 +350,7 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
         "requires": requires,
         "resources": {**resources, "kind": resource_kind},
         "postconditions": normalized_postconditions,
+        "on_postcondition_failure": _postcondition_failure_status(raw),
         "timeout_seconds": _non_negative_int(raw.get("timeout_seconds"), f"{step_id}.timeout_seconds"),
         "telemetry": {
             **telemetry,
@@ -634,6 +648,7 @@ def _step_hashes(
         "requires": [str(item) for item in step.get("requires", [])],
         "resources": dict(step.get("resources") or {}),
         "postconditions": postconditions,
+        "on_postcondition_failure": _postcondition_failure_status(step),
         "timeout_seconds": int(step.get("timeout_seconds") or 0),
         "telemetry": dict(step.get("telemetry") or {}),
         "artifact_mobility": dict(step.get("artifact_mobility") or {}),
@@ -2081,7 +2096,17 @@ def reconcile_stale_running_steps(
             continue
 
         failed_conditions, postcondition_errors = _evaluate_postconditions(step, repo=repo)
-        succeeded = not failed_conditions and not postcondition_errors and bool(step.get("postconditions"))
+        terminal_status = _terminal_status_after_execution(
+            step,
+            returncode=0,
+            timed_out=False,
+            execution_error=None,
+            failed_conditions=failed_conditions,
+            postcondition_errors=postcondition_errors,
+        )
+        if terminal_status == "succeeded" and not bool(step.get("postconditions")):
+            terminal_status = "failed"
+        succeeded = terminal_status == "succeeded"
         recovery_event = {
             **event,
             "stale_running_reconciled": True,
@@ -2091,16 +2116,26 @@ def reconcile_stale_running_steps(
             "resource_kind": resource_kind,
             "age_seconds": age_seconds,
             "timed_out": timed_out,
-            "execution_error": None if succeeded else "stale_running_process_missing",
+            "execution_error": (
+                None
+                if terminal_status in {"succeeded", "skipped"}
+                else "stale_running_process_missing"
+            ),
             "failed_postconditions": failed_conditions,
             "postcondition_errors": postcondition_errors,
+            "skipped": terminal_status == "skipped",
+            "skip_reason": (
+                "postcondition_failure_policy"
+                if terminal_status == "skipped"
+                else None
+            ),
         }
         _set_step_status(
             conn,
             queue_id=queue_id,
             experiment_id=experiment_id,
             step_id=step_id,
-            status="succeeded" if succeeded else "failed",
+            status=terminal_status,
             event=recovery_event,
         )
         append_event(
@@ -2115,13 +2150,14 @@ def reconcile_stale_running_steps(
             {
                 "experiment_id": experiment_id,
                 "step_id": step_id,
-                "status": "succeeded" if succeeded else "failed",
+                "status": terminal_status,
                 "resource_kind": resource_kind,
                 "pid": pid,
                 "parent_pid": parent_pid,
                 "timed_out": timed_out,
             }
         )
+    dependency_skipped = reconcile_skipped_dependency_steps(conn, queue)
     conn.commit()
     return {
         "schema": "experiment_queue_stale_running_reconciliation.v1",
@@ -2131,6 +2167,7 @@ def reconcile_stale_running_steps(
         "reconciled_steps": recovered,
         "skipped_step_count": len(skipped),
         "skipped_steps": skipped,
+        "dependency_skipped_reconciliation": dependency_skipped,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -2410,20 +2447,28 @@ def run_ready_step(
     returncode = 0
     timed_out = False
     execution_error: str | None = None
+    pid: int | None = None
     with log_path.open("wb") as handle:
+        proc: subprocess.Popen[bytes] | None = None
         try:
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 list(ready.command),
                 cwd=repo,
                 stdout=handle,
                 stderr=subprocess.STDOUT,
-                timeout=int(step.get("timeout_seconds") or 0) or None,
-                check=False,
                 env=os.environ.copy(),
+                start_new_session=True,
             )
-            returncode = proc.returncode
+            pid = proc.pid
+            timeout_seconds = int(step.get("timeout_seconds") or 0) or None
+            returncode = proc.wait(timeout=timeout_seconds)
         except subprocess.TimeoutExpired as exc:
             timed_out = True
+            if proc is not None:
+                _signal_process_group(proc, sig=signal.SIGKILL)
+                returncode = proc.wait()
+            else:
+                returncode = 124
             returncode = 124
             execution_error = f"TimeoutExpired: {exc}"
             handle.write(f"\n[experiment-queue] timeout: {exc}\n".encode())
@@ -2442,11 +2487,21 @@ def run_ready_step(
         except (ExperimentQueueError, OSError, json.JSONDecodeError) as exc:
             failed_conditions.append(condition)
             postcondition_errors.append({"condition": _json_text(condition), "error": f"{type(exc).__name__}: {exc}"})
-    succeeded = returncode == 0 and not timed_out and not execution_error and not failed_conditions
+    terminal_status = _terminal_status_after_execution(
+        step,
+        returncode=returncode,
+        timed_out=timed_out,
+        execution_error=execution_error,
+        failed_conditions=failed_conditions,
+        postcondition_errors=postcondition_errors,
+    )
+    succeeded = terminal_status == "succeeded"
     telemetry = _step_telemetry_event(step, repo=repo, log_path=log_path)
     event = {
         "command": list(ready.command),
         "resource_kind": ready.resource_kind,
+        "pid": pid,
+        "process_group_isolation": "start_new_session",
         "returncode": returncode,
         "timed_out": timed_out,
         "execution_error": execution_error,
@@ -2455,13 +2510,19 @@ def run_ready_step(
         "telemetry": telemetry,
         "failed_postconditions": failed_conditions,
         "postcondition_errors": postcondition_errors,
+        "skipped": terminal_status == "skipped",
+        "skip_reason": (
+            "postcondition_failure_policy"
+            if terminal_status == "skipped"
+            else None
+        ),
     }
     _set_step_status(
         conn,
         queue_id=ready.queue_id,
         experiment_id=ready.experiment_id,
         step_id=ready.step_id,
-        status="succeeded" if succeeded else "failed",
+        status=terminal_status,
         event=event,
     )
     conn.commit()
@@ -2563,13 +2624,15 @@ def finalize_claimed_step_execution(
         step,
         repo=Path(repo_root),
     )
-    succeeded = (
-        int(returncode) == 0
-        and not timed_out
-        and execution_error is None
-        and not failed_conditions
-        and not postcondition_errors
+    terminal_status = _terminal_status_after_execution(
+        step,
+        returncode=int(returncode),
+        timed_out=timed_out,
+        execution_error=execution_error,
+        failed_conditions=failed_conditions,
+        postcondition_errors=postcondition_errors,
     )
+    succeeded = terminal_status == "succeeded"
     terminal_event = {
         **dict(event),
         "returncode": int(returncode),
@@ -2583,13 +2646,19 @@ def finalize_claimed_step_execution(
         ),
         "failed_postconditions": failed_conditions,
         "postcondition_errors": postcondition_errors,
+        "skipped": terminal_status == "skipped",
+        "skip_reason": (
+            "postcondition_failure_policy"
+            if terminal_status == "skipped"
+            else None
+        ),
     }
     _set_step_status(
         conn,
         queue_id=ready.queue_id,
         experiment_id=ready.experiment_id,
         step_id=ready.step_id,
-        status="succeeded" if succeeded else "failed",
+        status=terminal_status,
         event=terminal_event,
     )
     conn.commit()
@@ -2688,6 +2757,106 @@ def _evaluate_postconditions(
             failed_conditions.append(condition)
             postcondition_errors.append({"condition": _json_text(condition), "error": f"{type(exc).__name__}: {exc}"})
     return failed_conditions, postcondition_errors
+
+
+def _terminal_status_after_execution(
+    step: Mapping[str, Any],
+    *,
+    returncode: int,
+    timed_out: bool,
+    execution_error: str | None,
+    failed_conditions: Sequence[Mapping[str, Any]],
+    postcondition_errors: Sequence[Mapping[str, Any]],
+) -> str:
+    if returncode == 0 and not timed_out and execution_error is None and not failed_conditions:
+        return "succeeded"
+    if (
+        returncode == 0
+        and not timed_out
+        and execution_error is None
+        and failed_conditions
+        and not postcondition_errors
+        and _postcondition_failure_status(step) == "skipped"
+    ):
+        return "skipped"
+    return "failed"
+
+
+def reconcile_skipped_dependency_steps(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Mark queued downstream steps skipped once an upstream gate skipped.
+
+    This lets acquisition gates terminate expected-negative branches without
+    leaving manual recovery debt or falsely failing a queue.
+    """
+
+    queue_id = str(queue["queue_id"])
+    state = _state_rows(conn, queue_id)
+    skipped: list[dict[str, Any]] = []
+    changed = True
+    while changed:
+        changed = False
+        for experiment in queue["experiments"]:
+            experiment_id = str(experiment["id"])
+            for step in experiment["steps"]:
+                step_id = str(step["id"])
+                key = (experiment_id, step_id)
+                row = state.get(key)
+                if row is None or row["status"] != "queued":
+                    continue
+                skipped_dependency: tuple[str, str] | None = None
+                for required in step.get("requires") or []:
+                    required_key = _resolve_step_ref(
+                        str(required),
+                        default_experiment_id=experiment_id,
+                    )
+                    required_row = state.get(required_key)
+                    if required_row is not None and required_row["status"] == "skipped":
+                        skipped_dependency = required_key
+                        break
+                if skipped_dependency is None:
+                    continue
+                event = {
+                    "skip_reason": "upstream_dependency_skipped",
+                    "skipped_dependency": {
+                        "experiment_id": skipped_dependency[0],
+                        "step_id": skipped_dependency[1],
+                    },
+                }
+                _set_step_status(
+                    conn,
+                    queue_id=queue_id,
+                    experiment_id=experiment_id,
+                    step_id=step_id,
+                    status="skipped",
+                    event=event,
+                )
+                state[key] = {
+                    **dict(row),
+                    "status": "skipped",
+                    "last_event_json": _json_text(event),
+                }
+                skipped.append(
+                    {
+                        "experiment_id": experiment_id,
+                        "step_id": step_id,
+                        **event,
+                    }
+                )
+                changed = True
+    conn.commit()
+    return {
+        "schema": "experiment_queue_skipped_dependency_reconciliation.v1",
+        "queue_id": queue_id,
+        "skipped_step_count": len(skipped),
+        "skipped_steps": skipped,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _repo_rel_path(path: Path, repo: Path) -> str:
@@ -2852,6 +3021,7 @@ def _start_ready_step_process(
         "worker_run_id": worker_run_id,
         "timeout_seconds": timeout_seconds,
         "parent_pid": os.getpid(),
+        "process_group_isolation": "start_new_session",
     }
     claim_refused_reason = claim_ready_step_for_execution(
         conn,
@@ -2877,6 +3047,7 @@ def _start_ready_step_process(
             stdout=log_handle,
             stderr=subprocess.STDOUT,
             env=os.environ.copy(),
+            start_new_session=True,
         )
     except OSError as exc:
         execution_error = f"{type(exc).__name__}: {exc}"
@@ -2925,6 +3096,31 @@ def _start_ready_step_process(
     )
 
 
+def _signal_process_group(
+    process: subprocess.Popen[Any],
+    *,
+    sig: signal.Signals,
+) -> None:
+    try:
+        process_group_id = os.getpgid(process.pid)
+        os.killpg(process_group_id, sig)
+    except ProcessLookupError:
+        return
+    except OSError:
+        if sig == signal.SIGTERM:
+            process.terminate()
+        else:
+            process.kill()
+
+
+def _signal_running_process_group(
+    running: RunningStepProcess,
+    *,
+    sig: signal.Signals,
+) -> None:
+    _signal_process_group(running.process, sig=sig)
+
+
 def _finalize_running_step_process(
     conn: sqlite3.Connection,
     running: RunningStepProcess,
@@ -2943,7 +3139,7 @@ def _finalize_running_step_process(
         and now - running.started_monotonic >= running.timeout_seconds
     ):
         timed_out = True
-        running.process.kill()
+        _signal_running_process_group(running, sig=signal.SIGKILL)
         returncode = running.process.wait()
         running.log_handle.write(f"\n[experiment-queue] timeout after {running.timeout_seconds}s\n".encode())
     if (
@@ -2967,7 +3163,15 @@ def _finalize_running_step_process(
         running.step,
         repo=Path(repo_root),
     )
-    succeeded = returncode == 0 and not timed_out and not execution_error and not failed_conditions
+    terminal_status = _terminal_status_after_execution(
+        running.step,
+        returncode=int(returncode),
+        timed_out=timed_out,
+        execution_error=execution_error,
+        failed_conditions=failed_conditions,
+        postcondition_errors=postcondition_errors,
+    )
+    succeeded = terminal_status == "succeeded"
     telemetry = _step_telemetry_event(
         running.step,
         repo=Path(repo_root),
@@ -2986,13 +3190,19 @@ def _finalize_running_step_process(
         "telemetry": telemetry,
         "failed_postconditions": failed_conditions,
         "postcondition_errors": postcondition_errors,
+        "skipped": terminal_status == "skipped",
+        "skip_reason": (
+            "postcondition_failure_policy"
+            if terminal_status == "skipped"
+            else None
+        ),
     }
     _set_step_status(
         conn,
         queue_id=ready.queue_id,
         experiment_id=ready.experiment_id,
         step_id=ready.step_id,
-        status="succeeded" if succeeded else "failed",
+        status=terminal_status,
         event=event,
     )
     conn.commit()
@@ -3015,7 +3225,7 @@ def _request_running_process_termination(
     except OSError:
         pass
     try:
-        running.process.terminate()
+        _signal_running_process_group(running, sig=signal.SIGTERM)
     except OSError:
         return
 
@@ -3307,6 +3517,7 @@ def run_queue_worker(
     steps_started = 0
     success_count = 0
     failure_count = 0
+    skip_count = 0
     claim_refused_count = 0
     idle_cycles = 0
     stop_reason = "max_steps_reached"
@@ -3341,6 +3552,18 @@ def run_queue_worker(
 
     while steps_started < max_steps or running_processes:
         _notice_stop_requested()
+        if execute:
+            skipped_reconciliation = reconcile_skipped_dependency_steps(conn, _active_queue())
+            if skipped_reconciliation["skipped_step_count"]:
+                append_event(
+                    conn,
+                    queue_id=queue_id,
+                    experiment_id=None,
+                    step_id=None,
+                    event_type="worker_reconciled_skipped_dependencies",
+                    payload=skipped_reconciliation,
+                )
+                conn.commit()
 
         for running in list(running_processes):
             result = _finalize_running_step_process(
@@ -3357,6 +3580,9 @@ def run_queue_worker(
             step_results.append(step_result)
             if result.get("succeeded"):
                 success_count += 1
+                continue
+            if result.get("skipped"):
+                skip_count += 1
                 continue
 
             failure_count += 1
@@ -3410,6 +3636,9 @@ def run_queue_worker(
                 worker_experiment_ids.add(ready_step.experiment_id)
                 steps_started += 1
                 launched_this_cycle += 1
+                if immediate_result.get("skipped"):
+                    skip_count += 1
+                    continue
                 failure_count += 1
                 append_event(
                     conn,
@@ -3465,6 +3694,7 @@ def run_queue_worker(
             "started_experiment_ids": sorted(worker_experiment_ids),
             "success_count": success_count,
             "failure_count": failure_count,
+            "skip_count": skip_count,
             "claim_refused_count": claim_refused_count,
             "stale_running_reconciliations": stale_running_reconciliations,
             "idle_cycles": idle_cycles,
@@ -3488,6 +3718,7 @@ def run_queue_worker(
         "steps_started": steps_started,
         "success_count": success_count,
         "failure_count": failure_count,
+        "skip_count": skip_count,
         "claim_refused_count": claim_refused_count,
         "stale_running_reconciliations": stale_running_reconciliations,
         "idle_cycles": idle_cycles,
@@ -3644,6 +3875,7 @@ def reconcile_satisfied_queued_steps(
     queue_id = str(queue["queue_id"])
     now = _utc_now()
     reconciled: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
     inspected = 0
     dependency_blocked: list[dict[str, Any]] = []
     for experiment in queue["experiments"]:
@@ -3686,6 +3918,60 @@ def reconcile_satisfied_queued_steps(
                 step,
                 repo=repo,
             )
+            if (
+                failed_conditions
+                and not postcondition_errors
+                and _postcondition_failure_status(step) == "skipped"
+            ):
+                hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
+                event = {
+                    "previous_status": str(row["status"]),
+                    "reconcile_reason": "queued_step_postcondition_failure_policy_skipped",
+                    "postcondition_count": len(postconditions),
+                    "attempts": int(row["attempts"] or 0),
+                    "failed_postconditions": failed_conditions,
+                    "postcondition_errors": postcondition_errors,
+                    "skipped": True,
+                    "skip_reason": "postcondition_failure_policy",
+                    "hashes": hashes,
+                }
+                conn.execute(
+                    """
+                    UPDATE step_state
+                    SET status = 'skipped', updated_at_utc = ?, last_event_json = ?,
+                        definition_hash = ?, command_hash = ?, postcondition_hash = ?,
+                        resource_kind = ?
+                    WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                    """,
+                    (
+                        now,
+                        _json_text(event),
+                        hashes["definition_hash"],
+                        hashes["command_hash"],
+                        hashes["postcondition_hash"],
+                        _resource_kind(step),
+                        queue_id,
+                        experiment["id"],
+                        step["id"],
+                    ),
+                )
+                append_event(
+                    conn,
+                    queue_id=queue_id,
+                    experiment_id=str(experiment["id"]),
+                    step_id=str(step["id"]),
+                    event_type="step_reconciled_skipped_from_postconditions",
+                    payload=event,
+                )
+                skipped.append(
+                    {
+                        "experiment_id": str(experiment["id"]),
+                        "step_id": str(step["id"]),
+                        "postcondition_count": len(postconditions),
+                        "previous_status": str(row["status"]),
+                    }
+                )
+                continue
             if failed_conditions or postcondition_errors:
                 continue
             hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
@@ -3732,6 +4018,7 @@ def reconcile_satisfied_queued_steps(
                     "previous_status": str(row["status"]),
                 }
             )
+    dependency_skipped = reconcile_skipped_dependency_steps(conn, queue)
     conn.commit()
     return {
         "schema": "experiment_queue_postcondition_reconciliation.v1",
@@ -3739,6 +4026,9 @@ def reconcile_satisfied_queued_steps(
         "inspected_queued_postcondition_steps": inspected,
         "reconciled_step_count": len(reconciled),
         "reconciled_steps": reconciled,
+        "skipped_step_count": len(skipped),
+        "skipped_steps": skipped,
+        "dependency_skipped_reconciliation": dependency_skipped,
         "dependency_blocked_step_count": len(dependency_blocked),
         "dependency_blocked_steps": dependency_blocked,
         "score_claim": False,
@@ -4555,6 +4845,7 @@ __all__ = [
     "queue_resource_kinds",
     "queue_summary",
     "ready_steps",
+    "reconcile_skipped_dependency_steps",
     "reconcile_satisfied_queued_steps",
     "reconcile_stale_running_steps",
     "resolve_worker_max_parallel",

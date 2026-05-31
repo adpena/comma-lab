@@ -472,7 +472,14 @@ def cmd_reconcile_satisfied(args: argparse.Namespace) -> int:
             include_failed=args.include_failed,
         )
         after = queue_summary(conn, queue, repo_root=REPO_ROOT)
-    _json_print({"state": str(state), "before": before, "after": after, **reconciled})
+    _json_print(
+        {
+            "state": str(state),
+            "before": before,
+            "after": after,
+            **reconciled,
+        }
+    )
     return 0
 
 

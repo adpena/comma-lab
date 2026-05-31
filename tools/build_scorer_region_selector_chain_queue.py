@@ -75,6 +75,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--local-component-evaluate-timeout-seconds", type=int, default=1800)
     parser.add_argument("--include-mlx-component-response", action="store_true")
     parser.add_argument(
+        "--mlx-first-acquisition",
+        action="store_true",
+        help="Materialize MLX cache from inflate first and run local CPU only after MLX spend gate passes.",
+    )
+    parser.add_argument("--mlx-cpu-gate-max-score-delta", type=float, default=0.0)
+    parser.add_argument(
         "--mlx-reference-cache-dir",
         type=Path,
         default=Path(
@@ -183,6 +189,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.local_component_evaluate_timeout_seconds
             ),
             include_mlx_component_response=args.include_mlx_component_response,
+            mlx_first_acquisition=args.mlx_first_acquisition,
+            mlx_cpu_gate_max_score_delta=args.mlx_cpu_gate_max_score_delta,
             mlx_reference_cache_dir=args.mlx_reference_cache_dir,
             mlx_device=args.mlx_device,
             mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,

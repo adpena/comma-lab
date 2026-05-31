@@ -674,6 +674,7 @@ def queue_fleet_row(
             "--output-dir",
             supervise_dir,
             "--execute",
+            "--auto-resume-paused",
         ),
         "resume_command": _queue_command(
             repo,

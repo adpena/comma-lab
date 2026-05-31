@@ -598,6 +598,7 @@ def build_scorer_region_selector_cascade_campaign_queue(
     receiver_patch_output_change_file_list_source: str | None = None,
     receiver_patch_output_change_parity_scope_kind: str = "contest_full_sample",
     receiver_patch_output_change_contest_full_sample_claim: bool = False,
+    receiver_patch_output_change_left_cache_dir: str | Path | None = None,
     include_local_component_loop: bool = False,
     local_component_upstream_dir: str | Path = "upstream",
     local_component_video_names_file: str | Path = "upstream/public_test_video_names.txt",
@@ -741,6 +742,11 @@ def build_scorer_region_selector_cascade_campaign_queue(
     )
     for index, variant in enumerate(variants):
         variant_root = root / variant.variant_id
+        output_change_left_cache_dir = (
+            _resolve(receiver_patch_output_change_left_cache_dir, repo_root)
+            if receiver_patch_output_change_left_cache_dir is not None
+            else root / "_shell_inflate_left_cache"
+        )
         chain_label = f"cascade_c_grouped_{variant.variant_id}"
         child = build_scorer_region_selector_chain_queue(
             repo_root=repo_root,
@@ -780,6 +786,11 @@ def build_scorer_region_selector_cascade_campaign_queue(
             ),
             receiver_patch_output_change_contest_full_sample_claim=(
                 receiver_patch_output_change_contest_full_sample_claim
+            ),
+            receiver_patch_output_change_left_cache_dir=(
+                output_change_left_cache_dir
+                if prove_receiver_patch_output_change
+                else None
             ),
             include_local_component_loop=include_local_component_loop,
             local_component_upstream_dir=local_component_upstream_dir,

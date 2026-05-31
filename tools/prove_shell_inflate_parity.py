@@ -11,6 +11,7 @@ and raw outputs are deleted by default after hashing.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -290,6 +291,84 @@ def _output_manifest_sha256(outputs: tuple[ShellInflateOutput, ...]) -> str:
     return _canonical_json_sha256([asdict(output) for output in outputs])
 
 
+def _side_from_dict(payload: dict[str, Any]) -> ShellInflateSide:
+    rows = tuple(ShellInflateOutput(**dict(row)) for row in payload["outputs"])
+    return ShellInflateSide(
+        label=str(payload["label"]),
+        archive=str(payload["archive"]),
+        archive_bytes=int(payload["archive_bytes"]),
+        archive_sha256=str(payload["archive_sha256"]),
+        submission_dir=str(payload["submission_dir"]),
+        submission_tree_file_count=int(payload["submission_tree_file_count"]),
+        submission_tree_sha256=str(payload["submission_tree_sha256"]),
+        inflate_sh=str(payload["inflate_sh"]),
+        inflate_sh_sha256=str(payload["inflate_sh_sha256"]),
+        output_count=int(payload["output_count"]),
+        output_manifest_sha256=str(payload["output_manifest_sha256"]),
+        output_raw_bytes=int(payload["output_raw_bytes"]),
+        output_raw_sha256=str(payload["output_raw_sha256"]),
+        outputs=rows,
+        inflate_seconds=float(payload["inflate_seconds"]),
+    )
+
+
+def _inflate_cache_key(
+    *,
+    archive: Path,
+    submission_dir: Path,
+    file_list_sha256: str,
+    file_list_entries: tuple[str, ...],
+    python_bin: str,
+) -> tuple[str, int, str]:
+    tree_count, tree_sha256 = _submission_tree_record(submission_dir)
+    key = _canonical_json_sha256(
+        {
+            "schema": "shell_inflate_side_cache_key.v1",
+            "archive_sha256": _sha256_file(archive),
+            "file_list_entries": list(file_list_entries),
+            "file_list_sha256": file_list_sha256,
+            "python_bin": str(python_bin),
+            "submission_tree_file_count": tree_count,
+            "submission_tree_sha256": tree_sha256,
+        }
+    )
+    return key, tree_count, tree_sha256
+
+
+def _link_cached_outputs(cache_outputs: Path, output_dir: Path) -> None:
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists() or output_dir.is_symlink():
+        if output_dir.is_symlink() or output_dir.is_file():
+            output_dir.unlink()
+        else:
+            shutil.rmtree(output_dir)
+    os.symlink(cache_outputs.resolve(), output_dir, target_is_directory=True)
+
+
+def _unlink_cache_entry(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+def _complete_cached_side(cache_entry: Path, output_dir: Path) -> ShellInflateSide | None:
+    cache_side = cache_entry / "side.json"
+    cache_outputs = cache_entry / "outputs"
+    if not (cache_side.is_file() and cache_outputs.is_dir()):
+        return None
+    cached = _side_from_dict(json.loads(cache_side.read_text(encoding="utf-8")))
+    missing = [
+        row.output_basename
+        for row in cached.outputs
+        if not (cache_outputs / row.output_basename).is_file()
+    ]
+    if missing:
+        return None
+    _link_cached_outputs(cache_outputs, output_dir)
+    return cached
+
+
 def _run_inflate(
     *,
     label: str,
@@ -300,79 +379,122 @@ def _run_inflate(
     data_dir: Path,
     python_bin: str,
     file_list_entries: tuple[str, ...],
+    file_list_sha256: str,
+    cache_dir: Path | None = None,
 ) -> ShellInflateSide:
-    _safe_extract_zip(archive, data_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    inflate_sh = submission_dir / "inflate.sh"
-    if not inflate_sh.is_file():
-        raise FileNotFoundError(f"missing inflate.sh: {inflate_sh}")
-    env = os.environ.copy()
-    env["PACT_PYTHON_BIN"] = python_bin
-    python_path = Path(python_bin)
-    if python_path.is_absolute() or python_path.parent != Path("."):
-        if not python_path.is_absolute():
-            python_path = Path.cwd() / python_path
-        # Preserve venv shims/symlinks: resolving the executable can jump out of
-        # the environment that owns the installed packages.
-        python_dir = str(python_path.parent.resolve())
-        env["PATH"] = f"{python_dir}{os.pathsep}{env.get('PATH', '')}"
-    start = time.perf_counter()
-    data_arg = str(data_dir.resolve())
-    output_arg = str(output_dir.resolve())
-    file_list_arg = str(file_list.resolve())
-    inflate_arg = str(inflate_sh.resolve())
-    command = (
-        [inflate_arg, data_arg, output_arg, file_list_arg]
-        if os.access(inflate_sh, os.X_OK)
-        else ["bash", inflate_arg, data_arg, output_arg, file_list_arg]
-    )
-    subprocess.run(
-        command,
-        check=True,
-        env=env,
-    )
-    elapsed = time.perf_counter() - start
-    outputs: list[ShellInflateOutput] = []
-    for entry in file_list_entries:
-        output_basename = _expected_output_basename(entry)
-        raw_path = output_dir / output_basename
-        if not raw_path.is_file():
-            raise FileNotFoundError(
-                f"inflate did not write expected raw output: {raw_path}"
+    cache_entry: Path | None = None
+    cache_lock: Any | None = None
+    tree_count: int | None = None
+    tree_sha256: str | None = None
+    try:
+        if cache_dir is not None:
+            key, tree_count, tree_sha256 = _inflate_cache_key(
+                archive=archive,
+                submission_dir=submission_dir,
+                file_list_sha256=file_list_sha256,
+                file_list_entries=file_list_entries,
+                python_bin=python_bin,
             )
-        outputs.append(
-            ShellInflateOutput(
-                file_list_entry=entry,
-                output_basename=output_basename,
-                output_raw_bytes=raw_path.stat().st_size,
-                output_raw_sha256=_sha256_file(raw_path),
-            )
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_lock = (cache_dir / f".{key}.lock").open("a+b")
+            fcntl.flock(cache_lock.fileno(), fcntl.LOCK_EX)
+            cache_entry = cache_dir / key
+            cached = _complete_cached_side(cache_entry, output_dir)
+            if cached is not None:
+                return cached
+            _unlink_cache_entry(cache_entry)
+        _safe_extract_zip(archive, data_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        inflate_sh = submission_dir / "inflate.sh"
+        if not inflate_sh.is_file():
+            raise FileNotFoundError(f"missing inflate.sh: {inflate_sh}")
+        env = os.environ.copy()
+        env["PACT_PYTHON_BIN"] = python_bin
+        python_path = Path(python_bin)
+        if python_path.is_absolute() or python_path.parent != Path("."):
+            if not python_path.is_absolute():
+                python_path = Path.cwd() / python_path
+            # Preserve venv shims/symlinks: resolving the executable can jump out of
+            # the environment that owns the installed packages.
+            python_dir = str(python_path.parent.resolve())
+            env["PATH"] = f"{python_dir}{os.pathsep}{env.get('PATH', '')}"
+        start = time.perf_counter()
+        data_arg = str(data_dir.resolve())
+        output_arg = str(output_dir.resolve())
+        file_list_arg = str(file_list.resolve())
+        inflate_arg = str(inflate_sh.resolve())
+        command = (
+            [inflate_arg, data_arg, output_arg, file_list_arg]
+            if os.access(inflate_sh, os.X_OK)
+            else ["bash", inflate_arg, data_arg, output_arg, file_list_arg]
         )
-    output_rows = tuple(outputs)
-    output_raw_bytes = sum(row.output_raw_bytes for row in output_rows)
-    output_raw_sha256 = (
-        output_rows[0].output_raw_sha256
-        if len(output_rows) == 1
-        else _output_manifest_sha256(output_rows)
-    )
-    tree_file_count, tree_sha256 = _submission_tree_record(submission_dir)
-    return ShellInflateSide(
-        label=label,
-        archive=_repo_rel(archive),
-        archive_bytes=archive.stat().st_size,
-        archive_sha256=_sha256_file(archive),
-        submission_dir=_repo_rel(submission_dir),
-        submission_tree_file_count=tree_file_count,
-        submission_tree_sha256=tree_sha256,
-        inflate_sh=_repo_rel(inflate_sh),
-        inflate_sh_sha256=_sha256_file(inflate_sh),
-        output_count=len(output_rows),
-        output_manifest_sha256=_output_manifest_sha256(output_rows),
-        output_raw_bytes=output_raw_bytes,
-        output_raw_sha256=output_raw_sha256,
-        outputs=output_rows,
-        inflate_seconds=elapsed,
-    )
+        subprocess.run(
+            command,
+            check=True,
+            env=env,
+        )
+        elapsed = time.perf_counter() - start
+        outputs: list[ShellInflateOutput] = []
+        for entry in file_list_entries:
+            output_basename = _expected_output_basename(entry)
+            raw_path = output_dir / output_basename
+            if not raw_path.is_file():
+                raise FileNotFoundError(
+                    f"inflate did not write expected raw output: {raw_path}"
+                )
+            outputs.append(
+                ShellInflateOutput(
+                    file_list_entry=entry,
+                    output_basename=output_basename,
+                    output_raw_bytes=raw_path.stat().st_size,
+                    output_raw_sha256=_sha256_file(raw_path),
+                )
+            )
+        output_rows = tuple(outputs)
+        output_raw_bytes = sum(row.output_raw_bytes for row in output_rows)
+        output_raw_sha256 = (
+            output_rows[0].output_raw_sha256
+            if len(output_rows) == 1
+            else _output_manifest_sha256(output_rows)
+        )
+        if tree_count is None or tree_sha256 is None:
+            tree_count, tree_sha256 = _submission_tree_record(submission_dir)
+        side = ShellInflateSide(
+            label=label,
+            archive=_repo_rel(archive),
+            archive_bytes=archive.stat().st_size,
+            archive_sha256=_sha256_file(archive),
+            submission_dir=_repo_rel(submission_dir),
+            submission_tree_file_count=tree_count,
+            submission_tree_sha256=tree_sha256,
+            inflate_sh=_repo_rel(inflate_sh),
+            inflate_sh_sha256=_sha256_file(inflate_sh),
+            output_count=len(output_rows),
+            output_manifest_sha256=_output_manifest_sha256(output_rows),
+            output_raw_bytes=output_raw_bytes,
+            output_raw_sha256=output_raw_sha256,
+            outputs=output_rows,
+            inflate_seconds=elapsed,
+        )
+        if cache_entry is not None:
+            temp_entry = cache_entry.with_name(f".{cache_entry.name}.tmp-{os.getpid()}")
+            if temp_entry.exists():
+                shutil.rmtree(temp_entry)
+            temp_entry.mkdir(parents=True)
+            shutil.move(str(output_dir), str(temp_entry / "outputs"))
+            (temp_entry / "side.json").write_text(
+                json.dumps(asdict(side), indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            temp_entry.rename(cache_entry)
+            _link_cached_outputs(cache_entry / "outputs", output_dir)
+        return side
+    finally:
+        if cache_lock is not None:
+            try:
+                fcntl.flock(cache_lock.fileno(), fcntl.LOCK_UN)
+            finally:
+                cache_lock.close()
 
 
 def build_proof(
@@ -393,6 +515,8 @@ def build_proof(
     parity_scope_kind: str = SHELL_PARITY_SCOPE_DECLARED_FILE_LIST,
     contest_full_sample_claim: bool = False,
     overwrite: bool = False,
+    left_cache_dir: Path | None = None,
+    right_cache_dir: Path | None = None,
 ) -> ShellInflateParityProof:
     _prepare_output_dir(output_dir, overwrite=overwrite)
     if not file_list_entries:
@@ -439,6 +563,8 @@ def build_proof(
             data_dir=left_data,
             python_bin=python_bin,
             file_list_entries=file_list_entries,
+            file_list_sha256=file_list_sha256,
+            cache_dir=left_cache_dir,
         )
         right = _run_inflate(
             label="right",
@@ -449,6 +575,8 @@ def build_proof(
             data_dir=right_data,
             python_bin=python_bin,
             file_list_entries=file_list_entries,
+            file_list_sha256=file_list_sha256,
+            cache_dir=right_cache_dir,
         )
         cmp_results = [
             _files_equal(
@@ -613,6 +741,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--keep-scratch", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument(
+        "--left-cache-dir",
+        type=Path,
+        help="Optional content-addressed cache for the left shell-inflate output.",
+    )
+    parser.add_argument(
+        "--right-cache-dir",
+        type=Path,
+        help="Optional content-addressed cache for the right shell-inflate output.",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("experiments/results") / f"shell_inflate_parity_{_utc_stamp()}",
@@ -649,6 +787,8 @@ def main(argv: list[str] | None = None) -> int:
             parity_scope_kind=args.parity_scope_kind,
             contest_full_sample_claim=args.contest_full_sample_claim,
             overwrite=False,
+            left_cache_dir=args.left_cache_dir,
+            right_cache_dir=args.right_cache_dir,
         )
         payload = json.dumps(proof.to_dict(), indent=2, sort_keys=True) + "\n"
         (args.output_dir / "shell_inflate_parity.json").write_text(
