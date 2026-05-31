@@ -46,10 +46,10 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis import hnerv_packet_sections  # noqa: E402
 from tac.codec.frame_conditional_bit_budget import (  # noqa: E402
+    FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
     FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
     FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3,
     FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
-    FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
     allocate_per_frame_bits,
     build_frame_conditional_channel_wire_contract,
     build_frame_conditional_wire_contract,
@@ -57,6 +57,9 @@ from tac.codec.frame_conditional_bit_budget import (  # noqa: E402
     pack_frame_conditional_channel_q_bits,
     pack_frame_conditional_latent_codes,
     pack_frame_conditional_q_bits_by_encoding,
+)
+from tac.optimization.archive_bound_candidate_contract import (  # noqa: E402
+    archive_bound_candidate_contract_fields_for_row,
 )
 from tac.repo_io import (  # noqa: E402
     json_text,
@@ -377,6 +380,8 @@ def build_frame_conditional_runtime_packet(
         runtime_tree_sha256=runtime_tree_sha256,
         runtime_files=runtime_files_after_patch,
     )
+    patch_manifest_path = output_dir / "packet_runtime_patch_manifest.json"
+    proof_manifest_path = output_dir / "runtime_consumption_proof.json"
     proof_manifest = _build_runtime_consumption_proof(
         candidate_id=candidate_id,
         candidate_archive_record=candidate_archive_record,
@@ -386,10 +391,8 @@ def build_frame_conditional_runtime_packet(
         source_parse_smoke=source_parse_smoke,
         candidate_parse_smoke=candidate_parse_smoke,
         runtime_consumes_changed_archive_bytes=runtime_consumes_changed_archive_bytes,
+        runtime_consumption_proof_path=proof_manifest_path,
     )
-
-    patch_manifest_path = output_dir / "packet_runtime_patch_manifest.json"
-    proof_manifest_path = output_dir / "runtime_consumption_proof.json"
     write_json(patch_manifest_path, patch_manifest)
     write_json(proof_manifest_path, proof_manifest)
 
@@ -487,6 +490,44 @@ def build_frame_conditional_runtime_packet(
             "run exact CUDA auth eval before any score or promotion claim",
         ],
     }
+    manifest.update(
+        archive_bound_candidate_contract_fields_for_row(
+            {
+                "archive_native_transform_kind": SCHEMA_VERSION,
+                "target_kind": SCHEMA_VERSION,
+                "candidate_id": candidate_id,
+                "candidate_archive": candidate_archive_record,
+                "source_archive": source_archive_record,
+                "byte_closed_candidate_emitted": True,
+                "byte_closed_candidate_materialized": True,
+                "candidate_archive_materialized": True,
+                "runtime_consumption_proof_ready": proof_manifest[
+                    "runtime_consumption_proven"
+                ],
+                "runtime_consumption_proof_path": _repo_rel(proof_manifest_path),
+                "receiver_contract_kind": RUNTIME_PROOF_SCHEMA,
+                "receiver_contract_satisfied": proof_manifest[
+                    "runtime_consumption_proven"
+                ],
+                "runtime_adapter_ready": True,
+                "runtime_adapter_manifest": {
+                    "runtime_adapter_ready": True,
+                    "runtime_tree_sha256": runtime_tree_sha256,
+                    "packet_runtime_patch_manifest": _repo_rel(patch_manifest_path),
+                },
+                "semantic_payload_changed": True,
+                "score_affecting_payload_changed": True,
+                "charged_bits_changed": True,
+                "readiness_blockers": proof_manifest["blockers"],
+                "dispatch_blockers": dispatch_blockers,
+                **FALSE_AUTHORITY_FIELDS,
+            },
+            repo_root=REPO_ROOT,
+            selected_transform_kind=SCHEMA_VERSION,
+            family_id="pr101_frame_conditional_runtime_packet",
+            candidate_chain_id=candidate_id,
+        )
+    )
     manifest["manifest_sha256_excluding_self"] = _canonical_json_sha256(manifest)
     manifest_path = output_dir / "candidate_archive_manifest.json"
     write_json(manifest_path, manifest)
@@ -1400,6 +1441,7 @@ def _build_runtime_consumption_proof(
     source_parse_smoke: Mapping[str, Any],
     candidate_parse_smoke: Mapping[str, Any],
     runtime_consumes_changed_archive_bytes: bool,
+    runtime_consumption_proof_path: Path,
 ) -> dict[str, Any]:
     blockers: list[str] = []
     expected_sideinfo_sha = sha256_bytes(q_bits_sideinfo)
@@ -1414,7 +1456,8 @@ def _build_runtime_consumption_proof(
         blockers.append("latent_wire_mutation_did_not_change_latents")
     if not runtime_consumes_changed_archive_bytes:
         blockers.append("runtime_consumes_changed_archive_bytes_not_proven")
-    return {
+    ready = not blockers
+    payload = {
         "schema": RUNTIME_PROOF_SCHEMA,
         "candidate_id": candidate_id,
         "candidate_archive": dict(candidate_archive_record),
@@ -1424,8 +1467,8 @@ def _build_runtime_consumption_proof(
         "candidate_member_sha256": sha256_bytes(candidate_member_payload),
         "consumed_q_bits_sideinfo_sha256": expected_sideinfo_sha,
         "consumed_latent_wire_payload_sha256": expected_latent_sha,
-        "ready_for_exact_eval_runtime": not blockers,
-        "runtime_consumption_proven": not blockers,
+        "ready_for_exact_eval_runtime": ready,
+        "runtime_consumption_proven": ready,
         "runtime_consumes_changed_archive_bytes": runtime_consumes_changed_archive_bytes,
         "source_packet_local_parse_smoke": dict(source_parse_smoke),
         "candidate_packet_local_parse_smoke": dict(candidate_parse_smoke),
@@ -1434,6 +1477,36 @@ def _build_runtime_consumption_proof(
         "dispatch_attempted": False,
         "score_claim": False,
     }
+    payload.update(
+        archive_bound_candidate_contract_fields_for_row(
+            {
+                "archive_native_transform_kind": SCHEMA_VERSION,
+                "target_kind": SCHEMA_VERSION,
+                "candidate_id": candidate_id,
+                "candidate_archive": dict(candidate_archive_record),
+                "byte_closed_candidate_emitted": ready,
+                "byte_closed_candidate_materialized": ready,
+                "candidate_archive_materialized": ready,
+                "runtime_consumption_proof_ready": ready,
+                "runtime_consumption_proof_path": _repo_rel(
+                    runtime_consumption_proof_path
+                ),
+                "receiver_contract_kind": RUNTIME_PROOF_SCHEMA,
+                "receiver_contract_satisfied": ready,
+                "runtime_adapter_ready": ready,
+                "semantic_payload_changed": True,
+                "score_affecting_payload_changed": True,
+                "charged_bits_changed": True,
+                "readiness_blockers": blockers,
+                **FALSE_AUTHORITY_FIELDS,
+            },
+            repo_root=REPO_ROOT,
+            selected_transform_kind=SCHEMA_VERSION,
+            family_id="pr101_frame_conditional_runtime_packet",
+            candidate_chain_id=candidate_id,
+        )
+    )
+    return payload
 
 
 def _archive_member_manifest(

@@ -14,6 +14,9 @@ import numpy as np
 import pytest
 
 from tac.codec.frame_conditional_bit_budget import build_frame_conditional_wire_contract
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 from tac.repo_io import json_text, sha256_bytes
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -253,6 +256,28 @@ def test_builds_a5_runtime_packet_and_consumption_proof(
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     assert proof["ready_for_exact_eval_runtime"] is True
     assert proof["blockers"] == []
+    assert proof["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    proof_contract = proof["archive_bound_candidate_contract"]
+    assert proof_contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert proof_contract["candidate_archive"]["sha256"] == (
+        manifest["candidate_archive"]["sha256"]
+    )
+    assert proof_contract["archive_bound_candidate_ready"] is True
+    assert proof_contract["ready_for_exact_eval_dispatch"] is False
+    assert proof_contract["score_claim"] is False
+    assert manifest["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    manifest_contract = manifest["archive_bound_candidate_contract"]
+    assert manifest_contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert manifest_contract["candidate_archive"]["sha256"] == (
+        manifest["candidate_archive"]["sha256"]
+    )
+    assert manifest_contract["archive_bound_candidate_ready"] is True
+    assert manifest_contract["ready_for_exact_eval_dispatch"] is False
+    assert manifest_contract["score_claim"] is False
     candidate_smoke = proof["candidate_packet_local_parse_smoke"]
     assert candidate_smoke["zero_sideinfo_negative_control_rejected"] is True
     assert candidate_smoke["latent_wire_mutation_changed_latents"] is True

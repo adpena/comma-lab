@@ -16,6 +16,9 @@ from tac.master_gradient_pr101_operator_candidate import (
     build_pr101_pose_axis_decoder_recompression_candidate,
 )
 from tac.monolithic_packet_closure_gate import build_monolithic_packet_closure_gate
+from tac.optimization.archive_bound_candidate_contract import (
+    ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PROOF_TOOL = REPO_ROOT / "tools" / "prove_monolithic_runtime_consumption.py"
@@ -171,6 +174,15 @@ def test_pr106_runtime_probe_emits_gate_compatible_log(tmp_path: Path) -> None:
     assert manifest["replacements"][0]["new_sha256"] in log_text
     assert canonical["ready_for_exact_eval_runtime"] is True
     assert canonical["blockers"] == []
+    assert canonical["archive_bound_candidate_contract_schema"] == (
+        ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    )
+    contract = canonical["archive_bound_candidate_contract"]
+    assert contract["schema"] == ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA
+    assert contract["candidate_archive"]["sha256"] == manifest["candidate_archive"]["sha256"]
+    assert contract["archive_bound_candidate_ready"] is True
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["score_claim"] is False
     assert gate["runtime_blockers"] == []
     assert gate["closure_gate_passed"] is True
     assert gate["ready_for_exact_eval_dispatch"] is False

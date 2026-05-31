@@ -25,6 +25,10 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.optimization.archive_bound_candidate_contract import (  # noqa: E402
+    archive_bound_candidate_contract_fields_for_row,
+)
+
 SCHEMA = "tac_runtime_consumption_proof_v1"
 MONOLITHIC_MANIFEST_SCHEMA = "tac_monolithic_packet_candidate_v1"
 
@@ -90,6 +94,7 @@ def build_runtime_consumption_proof(
     if not log_text.strip():
         blockers.append("runtime_log_empty")
 
+    ready = not blockers
     payload = {
         "schema": SCHEMA,
         "candidate_id": manifest.get("candidate_id", ""),
@@ -105,12 +110,39 @@ def build_runtime_consumption_proof(
         "command_source": str(command_file) if command_file is not None else "inline",
         "log_path": str(runtime_log),
         "log_sha256": _sha256_file(runtime_log),
-        "ready_for_exact_eval_runtime": not blockers,
+        "ready_for_exact_eval_runtime": ready,
         "blockers": blockers,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
     }
+    payload.update(
+        archive_bound_candidate_contract_fields_for_row(
+            {
+                "archive_native_transform_kind": MONOLITHIC_MANIFEST_SCHEMA,
+                "target_kind": MONOLITHIC_MANIFEST_SCHEMA,
+                "candidate_id": manifest.get("candidate_id", ""),
+                "candidate_archive": dict(candidate_archive),
+                "byte_closed_candidate_emitted": ready,
+                "byte_closed_candidate_materialized": ready,
+                "candidate_archive_materialized": ready,
+                "runtime_consumption_proof_ready": ready,
+                "runtime_consumption_proof_path": str(runtime_log),
+                "receiver_contract_kind": SCHEMA,
+                "receiver_contract_satisfied": ready,
+                "runtime_adapter_ready": ready,
+                "readiness_blockers": blockers,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            repo_root=REPO_ROOT,
+            selected_transform_kind=MONOLITHIC_MANIFEST_SCHEMA,
+            family_id="monolithic_runtime_consumption_proof",
+            candidate_chain_id=str(manifest.get("candidate_id") or ""),
+        )
+    )
     return payload
 
 
