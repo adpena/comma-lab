@@ -1,0 +1,36 @@
+{
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "overlay_bytes": 89230,
+  "overlay_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/materialized_boundary_repair_k512/archive_dir/boundary_repair_overlay.json",
+  "overlay_payload_sha256": "19e3a1c1ad73c9fe7408f5f004eece827d849e0c050d976d233b1e52ff6e2bbe",
+  "overlay_sha256": "19e3a1c1ad73c9fe7408f5f004eece827d849e0c050d976d233b1e52ff6e2bbe",
+  "point_summary": {
+    "first_frame_index": 1,
+    "last_frame_index": 1199,
+    "selected_frame_count": 275,
+    "selected_raw_points": 4096
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "segnet_boundary_repair_overlay_manifest.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selection_summary": {
+    "eligible_wrong_boundary_pixels": 66030,
+    "max_selected_hinge": 11.933577537536621,
+    "min_selected_hinge": 1.3308305740356445,
+    "selected_grid_pixels": 512,
+    "selected_hinge_sum": 865.5676481723785,
+    "surface_path": "/Users/adpena/Projects/pact/.omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.semantic_surfaces.npz"
+  },
+  "strategy": "source_pixel_patch"
+}

@@ -1,0 +1,12 @@
+Materializer submission runtime closure
+
+candidate_id: fp11_source_brotli_recode_b7106c9bdbb8
+archive_sha256: b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c
+archive_bytes: 178493
+score_claim: false
+promotion_eligible: false
+rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false
+
+This packet is a local exact-readiness closure artifact. It is not a score,
+rank, promotion, or dispatch authority until the canonical exact-eval gates pass.

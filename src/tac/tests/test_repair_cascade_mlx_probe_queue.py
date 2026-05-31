@@ -193,6 +193,12 @@ def test_repair_cascade_probe_spec_names_deterministic_bridge_materializers(
 ) -> None:
     surface_path = tmp_path / "semantic_surfaces.npz"
     surface_path.write_bytes(b"surface")
+    repair_manifest = tmp_path / "boundary_repair_materializer_manifest.json"
+    repair_manifest.write_text("{}", encoding="utf-8")
+    postfilter_manifest = tmp_path / "boundary_postfilter_materializer_manifest.json"
+    postfilter_manifest.write_text("{}", encoding="utf-8")
+    receiver_proof = tmp_path / "receiver_proof.json"
+    receiver_proof.write_text("{}", encoding="utf-8")
     semantic_bridge = {
         "schema": "segnet_semantic_bridge.v1",
         "candidate_id": "bridge_unit",
@@ -224,6 +230,16 @@ def test_repair_cascade_probe_spec_names_deterministic_bridge_materializers(
                 "score_authority": False,
             },
         ],
+        "archive_bound_materializer_artifacts": {
+            "deterministic_boundary_repair": {
+                "manifest_path": str(repair_manifest),
+                "receiver_proof_path": str(receiver_proof),
+            },
+            "deterministic_boundary_postfilter": {
+                "manifest_path": str(postfilter_manifest),
+                "receiver_proof_path": str(receiver_proof),
+            },
+        },
         **_false_authority(),
     }
     bridge_path = _write_json(tmp_path / "segnet_semantic_bridge.json", semantic_bridge)
@@ -251,6 +267,18 @@ def test_repair_cascade_probe_spec_names_deterministic_bridge_materializers(
         repair_spec["missing_local_mlx_artifacts"]
     )
     assert "boundary_argmax_hinge_marginal_surface_path:missing_or_unverified" not in (
+        repair_spec["missing_local_mlx_artifacts"]
+    )
+    assert "byte_closed_boundary_repair_materializer_path:missing_or_unverified" not in (
+        repair_spec["missing_local_mlx_artifacts"]
+    )
+    assert "byte_closed_runtime_postfilter_materializer_path:missing_or_unverified" not in (
+        postfilter_spec["missing_local_mlx_artifacts"]
+    )
+    assert "runtime_consumption_proof_path:missing_or_unverified" not in (
+        repair_spec["missing_local_mlx_artifacts"]
+    )
+    assert "byte_closed_contest_fixed_repair_materializer_path:missing_or_unverified" not in (
         repair_spec["missing_local_mlx_artifacts"]
     )
     assert repair_spec["score_claim"] is False

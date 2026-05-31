@@ -1,0 +1,579 @@
+{
+  "allowed_use": "cascade_mlx_local_probe_readiness_result_for_learning_only",
+  "blockers": [
+    "local_mlx_response_path:missing_or_unverified",
+    "reference_local_mlx_response_path:missing_or_unverified",
+    "posenet_null_bottom_decile_pair_ids_path:missing_or_unverified",
+    "segnet_class_region_mask_ids_path:missing_or_unverified",
+    "selector_payload_bits_per_region_path:missing_or_unverified",
+    "repair_dynamics_palette_probe_matrix_path:missing_or_unverified",
+    "entropy_boundary_probe_manifest_path:missing_or_unverified",
+    "local_mlx_boundary_argmax_hinge_probe_path:missing_or_unverified",
+    "pose_axis_guard_measurement_path:missing_or_unverified",
+    "byte_closed_archive_materializer_required_before_score_claim",
+    "receiver_runtime_proof_required_before_exact_dispatch",
+    "exact_cpu_cuda_eval_required_before_promotion",
+    "exact_axis_component_response_required_before_budget_spend",
+    "receiver_runtime_materialization_required_before_exact_dispatch",
+    "local_mlx_probe_artifacts_missing"
+  ],
+  "budget_spend_allowed": false,
+  "campaign_execution_mode": "local_mlx_advisory_only",
+  "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+  "cascade_label": "deterministic_boundary_repair",
+  "charged_bits_changed": false,
+  "component_response_axis": "[macOS-MLX research-signal]",
+  "component_response_row_emitted": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+  "gpu_launched": false,
+  "learning_signal_kind": "blocked_repair_cascade_mlx_probe",
+  "local_mlx_artifact_status": [
+    {
+      "exists": false,
+      "key": "local_mlx_response_path",
+      "path": null
+    },
+    {
+      "exists": false,
+      "key": "reference_local_mlx_response_path",
+      "path": null
+    },
+    {
+      "exists": false,
+      "key": "posenet_null_bottom_decile_pair_ids_path",
+      "path": null
+    },
+    {
+      "exists": false,
+      "key": "segnet_class_region_mask_ids_path",
+      "path": null
+    },
+    {
+      "exists": false,
+      "key": "selector_payload_bits_per_region_path",
+      "path": null
+    },
+    {
+      "exists": true,
+      "key": "runtime_consumption_proof_path",
+      "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/materialized_boundary_repair_k512/receiver_proof/boundary_repair_receiver_proof.json"
+    },
+    {
+      "exists": false,
+      "key": "repair_dynamics_palette_probe_matrix_path",
+      "path": null
+    },
+    {
+      "exists": false,
+      "key": "entropy_boundary_probe_manifest_path",
+      "path": null
+    },
+    {
+      "exists": true,
+      "key": "segnet_semantic_bridge_artifact_path",
+      "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json"
+    },
+    {
+      "exists": true,
+      "key": "boundary_argmax_hinge_marginal_surface_path",
+      "path": "/Users/adpena/Projects/pact/.omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.semantic_surfaces.npz"
+    },
+    {
+      "exists": false,
+      "key": "local_mlx_boundary_argmax_hinge_probe_path",
+      "path": null
+    },
+    {
+      "exists": false,
+      "key": "pose_axis_guard_measurement_path",
+      "path": null
+    },
+    {
+      "exists": true,
+      "key": "byte_closed_boundary_repair_materializer_path",
+      "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/materialized_boundary_repair_k512/boundary_repair_materializer_manifest.json"
+    },
+    {
+      "exists": true,
+      "key": "byte_closed_contest_fixed_repair_materializer_path",
+      "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/materialized_boundary_repair_k512/boundary_repair_materializer_manifest.json"
+    }
+  ],
+  "local_mlx_probe_executed": false,
+  "local_mlx_probe_execution_ready": false,
+  "local_mlx_rows_are_advisory_only": true,
+  "missing_local_mlx_artifacts": [
+    "local_mlx_response_path:missing_or_unverified",
+    "reference_local_mlx_response_path:missing_or_unverified",
+    "posenet_null_bottom_decile_pair_ids_path:missing_or_unverified",
+    "segnet_class_region_mask_ids_path:missing_or_unverified",
+    "selector_payload_bits_per_region_path:missing_or_unverified",
+    "repair_dynamics_palette_probe_matrix_path:missing_or_unverified",
+    "entropy_boundary_probe_manifest_path:missing_or_unverified",
+    "local_mlx_boundary_argmax_hinge_probe_path:missing_or_unverified",
+    "pose_axis_guard_measurement_path:missing_or_unverified"
+  ],
+  "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+  "probe_measurement_plan": [
+    {
+      "authority": "local_repair_planning_only",
+      "axis": "[macOS-MLX research-signal]",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "measurement": "segnet_semantic_bridge_artifact",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    },
+    {
+      "authority": "local_repair_planning_only",
+      "axis": "[macOS-MLX research-signal]",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "measurement": "boundary_argmax_hinge_marginal_surface",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    },
+    {
+      "authority": "local_repair_planning_only",
+      "axis": "[macOS-MLX research-signal]",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "measurement": "local_mlx_boundary_argmax_hinge_probe",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    },
+    {
+      "authority": "local_repair_planning_only",
+      "axis": "[macOS-MLX research-signal]",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "measurement": "pose_axis_guard_measurement",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    },
+    {
+      "authority": "local_repair_planning_only",
+      "axis": "[macOS-MLX research-signal]",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "measurement": "byte_closed_boundary_repair_materializer",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    },
+    {
+      "authority": "local_repair_planning_only",
+      "axis": "[macOS-MLX research-signal]",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "measurement": "byte_closed_contest_fixed_repair_materializer",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    }
+  ],
+  "probe_spec_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json",
+  "probe_spec_schema": "repair_cascade_mlx_probe_spec.v1",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_budget_spend": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_action": "materialize_missing_cascade_mlx_probe_artifacts",
+  "repair_candidate_family_id": "deterministic_boundary_repair",
+  "repair_candidate_generalization_mode": "contest_fixed_dataset",
+  "repair_family_campaign_count": 5,
+  "repair_family_campaign_rows": [
+    {
+      "allowed_use": "repair_family_mlx_advisory_campaign_row_only",
+      "artifact_status": [
+        {
+          "exists": false,
+          "key": "posenet_null_bottom_decile_pair_ids_path",
+          "path": null
+        }
+      ],
+      "budget_spend_allowed": false,
+      "byte_closed_materializer_required": true,
+      "campaign_execution_mode": "local_mlx_advisory_only",
+      "campaign_order": 1,
+      "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+      "charged_bits_changed": false,
+      "component_response_axis": "[macOS-MLX research-signal]",
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "entropy_position_class": "scorer_entropy_before_selector_codec",
+      "entropy_position_label": "scorer_entropy_repair_before_selector_codec",
+      "exact_axis_replay_required_before_score_or_budget": true,
+      "exact_cuda_auth_eval": false,
+      "family_id": "posenet_null_bottom_decile",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "label": "PoseNet-null bottom-decile repair",
+      "materializer_family_id": "posenet_null_bottom_decile",
+      "missing_artifacts": [
+        "posenet_null_bottom_decile_pair_ids_path:missing_or_unverified"
+      ],
+      "operator_stage": "P19",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_local_mlx_advisory_execution": false,
+      "receiver_decode_only_proof_required": true,
+      "required_artifact_keys": [
+        "posenet_null_bottom_decile_pair_ids_path"
+      ],
+      "required_measurements": [
+        "posenet_null_bottom_decile_pair_ids"
+      ],
+      "schema": "repair_cascade_mlx_repair_family_campaign.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "targeted_position_ids": [
+        "segnet_semantic_bridge:deterministic_boundary_repair"
+      ]
+    },
+    {
+      "allowed_use": "repair_family_mlx_advisory_campaign_row_only",
+      "artifact_status": [
+        {
+          "exists": false,
+          "key": "segnet_class_region_mask_ids_path",
+          "path": null
+        }
+      ],
+      "budget_spend_allowed": false,
+      "byte_closed_materializer_required": true,
+      "campaign_execution_mode": "local_mlx_advisory_only",
+      "campaign_order": 2,
+      "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+      "charged_bits_changed": false,
+      "component_response_axis": "[macOS-MLX research-signal]",
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "entropy_position_class": "scorer_entropy_before_selector_codec",
+      "entropy_position_label": "scorer_entropy_repair_before_selector_codec",
+      "exact_axis_replay_required_before_score_or_budget": true,
+      "exact_cuda_auth_eval": false,
+      "family_id": "segnet_class_region_waterfill",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "label": "SegNet class-region waterfill",
+      "materializer_family_id": "segnet_class_region_waterfill",
+      "missing_artifacts": [
+        "segnet_class_region_mask_ids_path:missing_or_unverified"
+      ],
+      "operator_stage": "P18",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_local_mlx_advisory_execution": false,
+      "receiver_decode_only_proof_required": true,
+      "required_artifact_keys": [
+        "segnet_class_region_mask_ids_path"
+      ],
+      "required_measurements": [
+        "segnet_class_region_mask_ids"
+      ],
+      "schema": "repair_cascade_mlx_repair_family_campaign.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "targeted_position_ids": [
+        "segnet_semantic_bridge:deterministic_boundary_repair"
+      ]
+    },
+    {
+      "allowed_use": "repair_family_mlx_advisory_campaign_row_only",
+      "artifact_status": [
+        {
+          "exists": false,
+          "key": "selector_payload_bits_per_region_path",
+          "path": null
+        },
+        {
+          "exists": true,
+          "key": "runtime_consumption_proof_path",
+          "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/materialized_boundary_repair_k512/receiver_proof/boundary_repair_receiver_proof.json"
+        }
+      ],
+      "budget_spend_allowed": false,
+      "byte_closed_materializer_required": true,
+      "campaign_execution_mode": "local_mlx_advisory_only",
+      "campaign_order": 3,
+      "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+      "charged_bits_changed": false,
+      "component_response_axis": "[macOS-MLX research-signal]",
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "entropy_position_class": "selector_codec_entropy",
+      "entropy_position_label": "selector_codec_entropy",
+      "exact_axis_replay_required_before_score_or_budget": true,
+      "exact_cuda_auth_eval": false,
+      "family_id": "per_region_selector_codec",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "label": "per-region selector codec",
+      "materializer_family_id": "per_region_selector_codec",
+      "missing_artifacts": [
+        "selector_payload_bits_per_region_path:missing_or_unverified"
+      ],
+      "operator_stage": "P11",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_local_mlx_advisory_execution": false,
+      "receiver_decode_only_proof_required": true,
+      "required_artifact_keys": [
+        "selector_payload_bits_per_region_path",
+        "runtime_consumption_proof_path"
+      ],
+      "required_measurements": [
+        "selector_payload_bits_per_region"
+      ],
+      "schema": "repair_cascade_mlx_repair_family_campaign.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "targeted_position_ids": [
+        "segnet_semantic_bridge:deterministic_boundary_repair"
+      ]
+    },
+    {
+      "allowed_use": "repair_family_mlx_advisory_campaign_row_only",
+      "artifact_status": [
+        {
+          "exists": false,
+          "key": "repair_dynamics_palette_probe_matrix_path",
+          "path": null
+        }
+      ],
+      "budget_spend_allowed": false,
+      "byte_closed_materializer_required": true,
+      "campaign_execution_mode": "local_mlx_advisory_only",
+      "campaign_order": 4,
+      "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+      "charged_bits_changed": false,
+      "component_response_axis": "[macOS-MLX research-signal]",
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "entropy_position_class": "pre_entropy_distribution_shaping",
+      "entropy_position_label": "before_entropy_coder_distribution_shaping",
+      "exact_axis_replay_required_before_score_or_budget": true,
+      "exact_cuda_auth_eval": false,
+      "family_id": "frame0_k16_palette_asymmetry",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "label": "frame0 K16 palette asymmetry",
+      "materializer_family_id": "palette_frame_asymmetry_prior",
+      "missing_artifacts": [
+        "repair_dynamics_palette_probe_matrix_path:missing_or_unverified"
+      ],
+      "operator_stage": "K16",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_local_mlx_advisory_execution": false,
+      "receiver_decode_only_proof_required": true,
+      "required_artifact_keys": [
+        "repair_dynamics_palette_probe_matrix_path"
+      ],
+      "required_measurements": [
+        "frame0_k16_palette_response_curve"
+      ],
+      "schema": "repair_cascade_mlx_repair_family_campaign.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "targeted_position_ids": [
+        "segnet_semantic_bridge:deterministic_boundary_repair"
+      ]
+    },
+    {
+      "allowed_use": "repair_family_mlx_advisory_campaign_row_only",
+      "artifact_status": [
+        {
+          "exists": false,
+          "key": "entropy_boundary_probe_manifest_path",
+          "path": null
+        }
+      ],
+      "budget_spend_allowed": false,
+      "byte_closed_materializer_required": true,
+      "campaign_execution_mode": "local_mlx_advisory_only",
+      "campaign_order": 5,
+      "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+      "charged_bits_changed": false,
+      "component_response_axis": "[macOS-MLX research-signal]",
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "entropy_position_class": "entropy_coder_boundary",
+      "entropy_position_label": "at_entropy_coder_integer_codeword_boundary",
+      "exact_axis_replay_required_before_score_or_budget": true,
+      "exact_cuda_auth_eval": false,
+      "family_id": "entropy_boundary_probe",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+      "gpu_launched": false,
+      "label": "pre-coder and coder-boundary entropy probe",
+      "materializer_family_id": "entropy_boundary_probe",
+      "missing_artifacts": [
+        "entropy_boundary_probe_manifest_path:missing_or_unverified"
+      ],
+      "operator_stage": "entropy_boundary",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_budget_spend": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_local_mlx_advisory_execution": false,
+      "receiver_decode_only_proof_required": true,
+      "required_artifact_keys": [
+        "entropy_boundary_probe_manifest_path"
+      ],
+      "required_measurements": [
+        "entropy_boundary_probe_manifest"
+      ],
+      "schema": "repair_cascade_mlx_repair_family_campaign.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "targeted_position_ids": [
+        "segnet_semantic_bridge:deterministic_boundary_repair"
+      ]
+    }
+  ],
+  "repair_family_campaign_schema": "repair_cascade_mlx_repair_family_campaign.v1",
+  "required_probe_measurements": [
+    "segnet_semantic_bridge_artifact",
+    "boundary_argmax_hinge_marginal_surface",
+    "local_mlx_boundary_argmax_hinge_probe",
+    "pose_axis_guard_measurement",
+    "byte_closed_boundary_repair_materializer",
+    "byte_closed_contest_fixed_repair_materializer"
+  ],
+  "schema": "repair_cascade_mlx_probe_result.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_payload_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+  "source_payload_schema": "segnet_semantic_bridge.v1",
+  "targeted_positions": [
+    {
+      "argmax_disagreement_rate": 0.0005598704020182292,
+      "boundary_error_share": 0.9997728821258233,
+      "entropy_surface": "scorer_entropy",
+      "generalization_mode": "contest_fixed_dataset",
+      "hinge_loss_sum": 45698.96158483863,
+      "low_source_margin_error_share": null,
+      "operation_levels": [
+        "pixel",
+        "boundary",
+        "region",
+        "frame",
+        "batch",
+        "full_video"
+      ],
+      "out_of_pair_spread_fraction": 0.005496252555076084,
+      "position_id": "segnet_semantic_bridge:deterministic_boundary_repair",
+      "top_source_classes": [
+        {
+          "class_id": 1,
+          "class_name": "lane_markings",
+          "error_rate": 0.027882873686542464
+        },
+        {
+          "class_id": 3,
+          "class_name": "movable",
+          "error_rate": 0.00560560149281838
+        },
+        {
+          "class_id": 0,
+          "class_name": "road",
+          "error_rate": 0.0010006186730681353
+        }
+      ]
+    }
+  ]
+}

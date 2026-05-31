@@ -218,6 +218,7 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
     surface = _mapping(payload.get("semantic_surface_artifacts"))
     surface_npz = _mapping(surface.get("argmax_margin_boundary_npz"))
     surface_path = str(surface_npz.get("path") or "").strip()
+    materialized_artifacts = _mapping(payload.get("archive_bound_materializer_artifacts"))
     class_rows = [
         dict(row)
         for row in payload.get("class_rows") or []
@@ -238,6 +239,18 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
         if backlog.get("enqueueable_under_requested_generalization_mode") is False:
             continue
         family_id = _slug(backlog.get("family_id") or f"semantic_bridge_family_{index}")
+        family_materializer = _mapping(
+            materialized_artifacts.get(family_id)
+            or materialized_artifacts.get(str(backlog.get("family_id") or ""))
+        )
+        materializer_manifest_path = str(
+            family_materializer.get("materializer_manifest_path")
+            or family_materializer.get("manifest_path")
+            or ""
+        ).strip()
+        receiver_proof_path = str(
+            family_materializer.get("receiver_proof_path") or ""
+        ).strip()
         mode = str(backlog.get("generalization_mode") or payload.get("generalization_mode") or "")
         acquisition_features = _mapping(backlog.get("acquisition_features"))
         required_measurements = [
@@ -306,6 +319,23 @@ def _cascade_rows_from_segnet_semantic_bridge(payload: Mapping[str, Any]) -> lis
                 "repair_candidate_generalization_mode": mode,
                 "segnet_semantic_bridge_artifact_path": None,
                 "boundary_argmax_hinge_marginal_surface_path": surface_path or None,
+                "byte_closed_boundary_repair_materializer_path": (
+                    materializer_manifest_path
+                    if "deterministic_boundary_repair" in family_id
+                    else None
+                ),
+                "byte_closed_runtime_postfilter_materializer_path": (
+                    materializer_manifest_path if "postfilter" in family_id else None
+                ),
+                "byte_closed_contest_fixed_repair_materializer_path": (
+                    materializer_manifest_path
+                    if mode == "contest_fixed_dataset" and materializer_manifest_path
+                    else None
+                ),
+                "runtime_consumption_proof_path": receiver_proof_path or None,
+                "archive_bound_materializer_artifact": (
+                    dict(family_materializer) if family_materializer else None
+                ),
                 "next_queue_action": backlog.get("next_materializer_task"),
                 "blockers": [
                     *row_blockers,

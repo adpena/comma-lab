@@ -1,0 +1,1284 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "repair_cascade_mlx_probe_fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "queue_owned_cascade_mlx_probe_metadata",
+        "budget_spend_allowed": false,
+        "campaign_execution_mode": "local_mlx_advisory_only",
+        "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+        "cascade_label": "deterministic_boundary_repair",
+        "charged_bits_changed": false,
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "learning_signal_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_learning_signal.json",
+        "learning_signal_schema": "repair_campaign_learning_signal.v1",
+        "local_mlx_advisory_custody_required": true,
+        "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+        "posterior_append_report_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_posterior_append_report.json",
+        "posterior_append_report_schema": "repair_campaign_stackability_posterior_append_report.v1",
+        "posterior_lock_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+        "posterior_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+        "probe_result_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_result.json",
+        "probe_result_schema": "repair_cascade_mlx_probe_result.v1",
+        "probe_spec_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json",
+        "probe_spec_schema": "repair_cascade_mlx_probe_spec.v1",
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "repair_family_campaign_count": 5,
+        "repair_family_campaign_family_ids": [
+          "posenet_null_bottom_decile",
+          "segnet_class_region_waterfill",
+          "per_region_selector_codec",
+          "frame0_k16_palette_asymmetry",
+          "entropy_boundary_probe"
+        ],
+        "repair_family_campaign_schema": "repair_cascade_mlx_repair_family_campaign.v1",
+        "required_probe_measurements": [
+          "segnet_semantic_bridge_artifact",
+          "boundary_argmax_hinge_marginal_surface",
+          "local_mlx_boundary_argmax_hinge_probe",
+          "pose_axis_guard_measurement",
+          "byte_closed_boundary_repair_materializer",
+          "byte_closed_contest_fixed_repair_materializer"
+        ],
+        "schema": "repair_cascade_mlx_probe_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_payload_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+        "source_payload_schema": "segnet_semantic_bridge.v1",
+        "source_relation": "segnet_semantic_bridge_executable_backlog"
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_probe_spec.py",
+            "--source-payload",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+            "--cascade-id",
+            "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair",
+            "--probe-spec-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_cascade_mlx_probe_spec",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_probe_spec.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json"
+          ],
+          "id": "inspect_repair_cascade_mlx_probe_missing_artifacts",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_repair_cascade_mlx_probe_spec"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 60
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_repair_cascade_mlx_probe.py",
+            "--probe-spec",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json",
+            "--output",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_result.json",
+            "--overwrite"
+          ],
+          "id": "record_repair_cascade_mlx_probe_result",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_probe_result.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_result.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_result.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_repair_cascade_mlx_probe_spec"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_spec.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_learning_signal.py",
+            "--probe-result",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_result.json",
+            "--learning-signal-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_learning_signal.json",
+            "--overwrite"
+          ],
+          "id": "build_repair_cascade_mlx_learning_signal",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_campaign_learning_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_learning_signal.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_learning_signal.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_learning_signal.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "record_repair_cascade_mlx_probe_result"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_learning_signal.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_probe_result.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/append_repair_campaign_stackability_posterior.py",
+            "--learning-signal",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_learning_signal.json",
+            "--posterior-path",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+            "--lock-path",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+            "--report-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_posterior_append_report.json",
+            "--overwrite"
+          ],
+          "id": "append_repair_cascade_mlx_learning_posterior",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_campaign_stackability_posterior_append_report.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+              "type": "jsonl_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "build_repair_cascade_mlx_learning_signal"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_posterior_append_report.json",
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_repair/repair_cascade_mlx_learning_signal.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "repair-cascade",
+        "local-mlx-advisory-custody",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "repair_cascade_mlx_probe_fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "queue_owned_cascade_mlx_probe_metadata",
+        "budget_spend_allowed": false,
+        "campaign_execution_mode": "local_mlx_advisory_only",
+        "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter",
+        "cascade_label": "deterministic_boundary_postfilter",
+        "charged_bits_changed": false,
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "learning_signal_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_learning_signal.json",
+        "learning_signal_schema": "repair_campaign_learning_signal.v1",
+        "local_mlx_advisory_custody_required": true,
+        "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+        "posterior_append_report_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_posterior_append_report.json",
+        "posterior_append_report_schema": "repair_campaign_stackability_posterior_append_report.v1",
+        "posterior_lock_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+        "posterior_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+        "probe_result_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_result.json",
+        "probe_result_schema": "repair_cascade_mlx_probe_result.v1",
+        "probe_spec_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json",
+        "probe_spec_schema": "repair_cascade_mlx_probe_spec.v1",
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "repair_family_campaign_count": 5,
+        "repair_family_campaign_family_ids": [
+          "posenet_null_bottom_decile",
+          "segnet_class_region_waterfill",
+          "per_region_selector_codec",
+          "frame0_k16_palette_asymmetry",
+          "entropy_boundary_probe"
+        ],
+        "repair_family_campaign_schema": "repair_cascade_mlx_repair_family_campaign.v1",
+        "required_probe_measurements": [
+          "segnet_semantic_bridge_artifact",
+          "boundary_argmax_hinge_marginal_surface",
+          "local_mlx_boundary_argmax_hinge_probe",
+          "pose_axis_guard_measurement",
+          "byte_closed_runtime_postfilter_materializer",
+          "byte_closed_contest_fixed_repair_materializer"
+        ],
+        "schema": "repair_cascade_mlx_probe_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_payload_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+        "source_payload_schema": "segnet_semantic_bridge.v1",
+        "source_relation": "segnet_semantic_bridge_executable_backlog"
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_probe_spec.py",
+            "--source-payload",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+            "--cascade-id",
+            "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter",
+            "--probe-spec-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_cascade_mlx_probe_spec",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_probe_spec.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json"
+          ],
+          "id": "inspect_repair_cascade_mlx_probe_missing_artifacts",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_repair_cascade_mlx_probe_spec"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 60
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_repair_cascade_mlx_probe.py",
+            "--probe-spec",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json",
+            "--output",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_result.json",
+            "--overwrite"
+          ],
+          "id": "record_repair_cascade_mlx_probe_result",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_probe_result.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_result.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_result.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_repair_cascade_mlx_probe_spec"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_spec.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_learning_signal.py",
+            "--probe-result",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_result.json",
+            "--learning-signal-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_learning_signal.json",
+            "--overwrite"
+          ],
+          "id": "build_repair_cascade_mlx_learning_signal",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_campaign_learning_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_learning_signal.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_learning_signal.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_learning_signal.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "record_repair_cascade_mlx_probe_result"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_learning_signal.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_probe_result.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/append_repair_campaign_stackability_posterior.py",
+            "--learning-signal",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_learning_signal.json",
+            "--posterior-path",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+            "--lock-path",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+            "--report-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_posterior_append_report.json",
+            "--overwrite"
+          ],
+          "id": "append_repair_cascade_mlx_learning_posterior",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_campaign_stackability_posterior_append_report.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+              "type": "jsonl_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "build_repair_cascade_mlx_learning_signal"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_posterior_append_report.json",
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_deterministic_boundary_postfilter/repair_cascade_mlx_learning_signal.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "repair-cascade",
+        "local-mlx-advisory-custody",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "repair_cascade_mlx_probe_fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "queue_owned_cascade_mlx_probe_metadata",
+        "budget_spend_allowed": false,
+        "campaign_execution_mode": "local_mlx_advisory_only",
+        "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter",
+        "cascade_label": "mlx_lora_or_dora_boundary_adapter",
+        "charged_bits_changed": false,
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "learning_signal_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json",
+        "learning_signal_schema": "repair_campaign_learning_signal.v1",
+        "local_mlx_advisory_custody_required": true,
+        "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+        "posterior_append_report_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_posterior_append_report.json",
+        "posterior_append_report_schema": "repair_campaign_stackability_posterior_append_report.v1",
+        "posterior_lock_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+        "posterior_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+        "probe_result_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_result.json",
+        "probe_result_schema": "repair_cascade_mlx_probe_result.v1",
+        "probe_spec_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json",
+        "probe_spec_schema": "repair_cascade_mlx_probe_spec.v1",
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "repair_family_campaign_count": 5,
+        "repair_family_campaign_family_ids": [
+          "posenet_null_bottom_decile",
+          "segnet_class_region_waterfill",
+          "per_region_selector_codec",
+          "frame0_k16_palette_asymmetry",
+          "entropy_boundary_probe"
+        ],
+        "repair_family_campaign_schema": "repair_cascade_mlx_repair_family_campaign.v1",
+        "required_probe_measurements": [
+          "segnet_semantic_bridge_artifact",
+          "boundary_argmax_hinge_marginal_surface",
+          "local_mlx_boundary_argmax_hinge_probe",
+          "pose_axis_guard_measurement",
+          "mlx_lora_boundary_adapter_smoke"
+        ],
+        "schema": "repair_cascade_mlx_probe_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_payload_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+        "source_payload_schema": "segnet_semantic_bridge.v1",
+        "source_relation": "segnet_semantic_bridge_executable_backlog"
+      },
+      "priority": 3,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_probe_spec.py",
+            "--source-payload",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+            "--cascade-id",
+            "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter",
+            "--probe-spec-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_cascade_mlx_probe_spec",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_probe_spec.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json"
+          ],
+          "id": "inspect_repair_cascade_mlx_probe_missing_artifacts",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_repair_cascade_mlx_probe_spec"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 60
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_repair_cascade_mlx_probe.py",
+            "--probe-spec",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json",
+            "--output",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_result.json",
+            "--overwrite"
+          ],
+          "id": "record_repair_cascade_mlx_probe_result",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_probe_result.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_result.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_result.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_repair_cascade_mlx_probe_spec"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_spec.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_learning_signal.py",
+            "--probe-result",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_result.json",
+            "--learning-signal-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json",
+            "--overwrite"
+          ],
+          "id": "build_repair_cascade_mlx_learning_signal",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_campaign_learning_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "record_repair_cascade_mlx_probe_result"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_probe_result.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/append_repair_campaign_stackability_posterior.py",
+            "--learning-signal",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json",
+            "--posterior-path",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+            "--lock-path",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+            "--report-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_posterior_append_report.json",
+            "--overwrite"
+          ],
+          "id": "append_repair_cascade_mlx_learning_posterior",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_campaign_stackability_posterior_append_report.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+              "type": "jsonl_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "build_repair_cascade_mlx_learning_signal"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_posterior_append_report.json",
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_mlx_lora_or_dora_boundary_adapter/repair_cascade_mlx_learning_signal.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "repair-cascade",
+        "local-mlx-advisory-custody",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "repair_cascade_mlx_probe_fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "queue_owned_cascade_mlx_probe_metadata",
+        "budget_spend_allowed": false,
+        "campaign_execution_mode": "local_mlx_advisory_only",
+        "cascade_id": "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction",
+        "cascade_label": "fleet_adaptable_boundary_rule_induction",
+        "charged_bits_changed": false,
+        "component_response_axis": "[macOS-MLX research-signal]",
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "learning_signal_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_learning_signal.json",
+        "learning_signal_schema": "repair_campaign_learning_signal.v1",
+        "local_mlx_advisory_custody_required": true,
+        "pipeline_position": "scorer_entropy_repair_before_selector_codec",
+        "posterior_append_report_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_posterior_append_report.json",
+        "posterior_append_report_schema": "repair_campaign_stackability_posterior_append_report.v1",
+        "posterior_lock_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+        "posterior_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+        "probe_result_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_result.json",
+        "probe_result_schema": "repair_cascade_mlx_probe_result.v1",
+        "probe_spec_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json",
+        "probe_spec_schema": "repair_cascade_mlx_probe_spec.v1",
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "repair_family_campaign_count": 5,
+        "repair_family_campaign_family_ids": [
+          "posenet_null_bottom_decile",
+          "segnet_class_region_waterfill",
+          "per_region_selector_codec",
+          "frame0_k16_palette_asymmetry",
+          "entropy_boundary_probe"
+        ],
+        "repair_family_campaign_schema": "repair_cascade_mlx_repair_family_campaign.v1",
+        "required_probe_measurements": [
+          "segnet_semantic_bridge_artifact",
+          "boundary_argmax_hinge_marginal_surface",
+          "local_mlx_boundary_argmax_hinge_probe",
+          "pose_axis_guard_measurement",
+          "fleet_holdout_or_online_calibration_split"
+        ],
+        "schema": "repair_cascade_mlx_probe_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_payload_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+        "source_payload_schema": "segnet_semantic_bridge.v1",
+        "source_relation": "segnet_semantic_bridge_executable_backlog"
+      },
+      "priority": 4,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_probe_spec.py",
+            "--source-payload",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+            "--cascade-id",
+            "fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction",
+            "--probe-spec-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_cascade_mlx_probe_spec",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_probe_spec.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json"
+          ],
+          "id": "inspect_repair_cascade_mlx_probe_missing_artifacts",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "emit_repair_cascade_mlx_probe_spec"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 60
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_repair_cascade_mlx_probe.py",
+            "--probe-spec",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json",
+            "--output",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_result.json",
+            "--overwrite"
+          ],
+          "id": "record_repair_cascade_mlx_probe_result",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_cascade_mlx_probe_result.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_result.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_result.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_repair_cascade_mlx_probe_spec"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_spec.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_cascade_mlx_learning_signal.py",
+            "--probe-result",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_result.json",
+            "--learning-signal-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_learning_signal.json",
+            "--overwrite"
+          ],
+          "id": "build_repair_cascade_mlx_learning_signal",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_campaign_learning_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_learning_signal.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_learning_signal.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_learning_signal.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "record_repair_cascade_mlx_probe_result"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_learning_signal.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_probe_result.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/append_repair_campaign_stackability_posterior.py",
+            "--learning-signal",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_learning_signal.json",
+            "--posterior-path",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+            "--lock-path",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+            "--report-out",
+            ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_posterior_append_report.json",
+            "--overwrite"
+          ],
+          "id": "append_repair_cascade_mlx_learning_posterior",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "repair_campaign_stackability_posterior_append_report.v1",
+              "key": "schema",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+              "type": "jsonl_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_posterior_append_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "build_repair_cascade_mlx_learning_signal"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_posterior_append_report.json",
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2/fp11_source_brotli_recode_b7106c9bdbb8_live_cpu_best_fleet_adaptable_boundary_rule_induction/repair_cascade_mlx_learning_signal.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "repair-cascade",
+        "local-mlx-advisory-custody",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "metadata": {
+    "allowed_use": "repair_cascade_mlx_probe_queue_for_local_planning",
+    "blocked_experiment_count": 0,
+    "budget_spend_allowed": false,
+    "charged_bits_changed": false,
+    "component_response_axis": "[macOS-MLX research-signal]",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "experiment_count": 4,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+    "gpu_launched": false,
+    "local_mlx_advisory_custody_required": true,
+    "posterior_append_report_schema": "repair_campaign_stackability_posterior_append_report.v1",
+    "posterior_lock_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/.repair_campaign_stackability_posterior.lock",
+    "posterior_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_campaign_stackability_posterior.jsonl",
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_actuation_blockers": [],
+    "queue_id": "live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2",
+    "rank_or_kill_eligible": false,
+    "ready_experiment_count": 4,
+    "ready_for_budget_spend": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repair_family_campaign_count_per_cascade": 5,
+    "repair_family_campaign_schema": "repair_cascade_mlx_repair_family_campaign.v1",
+    "results_root": ".omx/research/live_best_bridge_b7106_20260531Tlocal/queue/results_with_materializers_v2/repair_cascade_mlx_probe_queue/live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2",
+    "schema": "repair_cascade_mlx_probe_queue_metadata.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_payload_path": ".omx/research/live_best_bridge_b7106_20260531Tlocal/segnet_semantic_bridge_b7106_live_cpu_full.with_materializers.json",
+    "source_payload_schema": "segnet_semantic_bridge.v1",
+    "structural_repair_cascade_count": 4
+  },
+  "queue_id": "live_b7106_segnet_bridge_repair_probe_queue_with_materializers_v2",
+  "schema": "experiment_queue.v1"
+}

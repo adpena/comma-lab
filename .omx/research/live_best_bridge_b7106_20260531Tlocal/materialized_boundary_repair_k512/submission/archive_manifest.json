@@ -1,0 +1,79 @@
+{
+  "allowed_use": "archive_manifest_for_exact_readiness_static_custody_only",
+  "archive_bytes": 178493,
+  "archive_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+  "archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+  "candidate_archive": {
+    "bytes": 178493,
+    "path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+    "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+  },
+  "candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-30T21:47:24Z",
+  "gpu_launched": false,
+  "materializer_id": "fp11_source_brotli_recode_adapter",
+  "members": [
+    {
+      "bytes": 178393,
+      "compress_type": 0,
+      "compressed_bytes": 178393,
+      "member_name": "x",
+      "name": "x",
+      "sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "uncompressed_bytes": 178393,
+      "zip_compressed_bytes": 178393,
+      "zip_compression_method": 0,
+      "zip_uncompressed_bytes": 178393
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "realized_saved_bytes": 37,
+  "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+  "schema": "materializer_submission_runtime_closure_archive_manifest.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "serialized_archive_delta": {
+    "archive_delta_bytes": -37,
+    "blockers": [],
+    "candidate_archive_bytes": 178493,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": null,
+    "modeled_saved_bytes": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": 37,
+    "require_realized_saving": false,
+    "savings_realized": true,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 178530,
+    "status": "realized_saving"
+  },
+  "source_archive": {
+    "bytes": 178530,
+    "path": "/Volumes/VertigoDataTier/experiments/results/feca_selector_reparameterized_runtime_stable_20260527Tlocal/submission_dir/archive.zip",
+    "sha256": "18e3155fbbbe9ab23e1c21bc0d99ba8d18657a71c3129fc5ff9e0405b67d1669"
+  },
+  "source_queue_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/source_queue.json",
+  "target_kind": "fp11_source_brotli_recode_v1",
+  "zipwire": {
+    "blockers": [],
+    "duplicate_member_names": [],
+    "member_count": 1,
+    "zip_strict": true
+  }
+}
