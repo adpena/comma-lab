@@ -1156,14 +1156,14 @@ def build_canonical_quadruple_binding_from_z8_config(
     )
 
 
-def load_real_video_targets_numpy(
+def load_real_video_pair_targets_numpy(
     video_path: str | Path,
     *,
     num_pairs: int,
     output_height: int,
     output_width: int,
-) -> np.ndarray:
-    """Load real contest video frames per Catalog #213 + #114; numpy out.
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load real contest video frame pairs per Catalog #213 + #114; numpy out.
 
     Per CLAUDE.md "Forbidden make_synthetic_pair_batch in any non-smoke
     training path" non-negotiable: the canonical M9 path MUST decode real
@@ -1171,13 +1171,9 @@ def load_real_video_targets_numpy(
 
     This canonical helper wraps :func:`tac.data.decode_video` (the same
     canonical loader the MLX harness uses) and returns NHWC numpy float32
-    in [0, 1] range; the canonical numpy intermediate per Catalog #317.
-
-    Returns the frame_0 stream only (shape (num_pairs, H, W, C)); the M9
-    forward pass operates per-pair so the canonical per-pair target slice
-    is what the loop consumes. Sister callers wanting both frame_0 + frame_1
-    can call :func:`tac.substrates._shared.mlx_score_aware.targets.decode_mlx_targets`
-    which returns both as MLX tensors.
+    in [0, 1] range; the canonical numpy intermediate per Catalog #317. The
+    two returned streams share one decode call so archive exporters consume
+    the exact same adjacent-pair ordering as the trainer.
 
     Args:
         video_path: path to the contest video (e.g. ``upstream/videos/0.mkv``).
@@ -1185,7 +1181,8 @@ def load_real_video_targets_numpy(
         output_height / output_width: target spatial resolution.
 
     Returns:
-        NHWC numpy float32 array of shape ``(num_pairs, H, W, 3)`` in [0, 1].
+        ``(frame_0, frame_1)`` NHWC numpy float32 arrays of shape
+        ``(num_pairs, H, W, 3)`` in [0, 1].
 
     Raises:
         FileNotFoundError: video_path does not exist.
@@ -1212,13 +1209,42 @@ def load_real_video_targets_numpy(
             f"{2 * num_pairs} for {num_pairs} pairs at "
             f"({output_height}, {output_width})"
         )
-    # decode_video returns torch tensors; convert to numpy stack frame_0 only.
+    # decode_video returns torch tensors; convert to adjacent-pair streams.
     frame_0_stack = np.stack(
         [frames[2 * i].numpy() for i in range(num_pairs)], axis=0
     )
+    frame_1_stack = np.stack(
+        [frames[2 * i + 1].numpy() for i in range(num_pairs)], axis=0
+    )
     # Normalize to [0, 1] range (decode_video returns uint8-equivalent
     # float; canonical decode_mlx_targets divides by 255.0).
-    return (frame_0_stack.astype(np.float32) / 255.0).astype(np.float32)
+    frame_0 = (frame_0_stack.astype(np.float32) / 255.0).astype(np.float32)
+    frame_1 = (frame_1_stack.astype(np.float32) / 255.0).astype(np.float32)
+    return frame_0, frame_1
+
+
+def load_real_video_targets_numpy(
+    video_path: str | Path,
+    *,
+    num_pairs: int,
+    output_height: int,
+    output_width: int,
+) -> np.ndarray:
+    """Load real contest video frame-0 targets per Catalog #213 + #114.
+
+    Backward-compatible wrapper around
+    :func:`load_real_video_pair_targets_numpy` for the M9 training loop, which
+    optimizes against the frame-0 target stream while the archive exporter
+    consumes both adjacent frames.
+    """
+
+    frame_0, _frame_1 = load_real_video_pair_targets_numpy(
+        video_path,
+        num_pairs=num_pairs,
+        output_height=output_height,
+        output_width=output_width,
+    )
+    return frame_0
 
 
 # ---------------------------------------------------------------------------
@@ -1683,6 +1709,7 @@ __all__ = [
     "build_z8hpc1_archive_bytes_from_canonical_quadruple",
     "canonical_quadruple_forward_step",
     "compute_pose_side_info_canonical_equation_150",
+    "load_real_video_pair_targets_numpy",
     "load_real_video_targets_numpy",
     "parse_pair_blobs_from_wavelet_blob",
     "reconstruct_pair_rgb_from_pyramid",

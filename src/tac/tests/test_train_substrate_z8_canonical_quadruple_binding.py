@@ -42,7 +42,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -377,6 +376,27 @@ def test_load_real_video_targets_numpy_returns_canonical_nhwc_float32() -> None:
     assert float(targets.max()) <= 1.0
 
 
+@pytest.mark.skipif(not VIDEO_PATH.exists(), reason="Contest video not available")
+def test_load_real_video_pair_targets_numpy_returns_adjacent_streams() -> None:
+    """Pair loader exposes both adjacent frame streams for archive export."""
+    from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+        load_real_video_pair_targets_numpy,
+    )
+
+    frame_0, frame_1 = load_real_video_pair_targets_numpy(
+        VIDEO_PATH,
+        num_pairs=2,
+        output_height=32,
+        output_width=32,
+    )
+    assert frame_0.shape == (2, 32, 32, 3)
+    assert frame_1.shape == (2, 32, 32, 3)
+    assert frame_0.dtype == np.float32
+    assert frame_1.dtype == np.float32
+    assert float(frame_0.min()) >= 0.0
+    assert float(frame_1.max()) <= 1.0
+
+
 def test_load_real_video_targets_numpy_refuses_missing_video() -> None:
     """Missing video raises FileNotFoundError per Catalog #213 fail-closed contract."""
     from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
@@ -393,14 +413,64 @@ def test_load_real_video_targets_numpy_refuses_missing_video() -> None:
 
 
 @pytest.mark.skipif(not VIDEO_PATH.exists(), reason="Contest video not available")
-def test_canonical_quadruple_main_runs_on_real_video(tmp_path) -> None:
-    """End-to-end smoke: --canonical-quadruple-binding on real video succeeds."""
+def test_canonical_quadruple_main_emits_archive_bound_export_by_default(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Default M9 path emits an archive-bound export surface, not JSON only."""
+    trainer = _load_trainer()
     out_dir = tmp_path / "m9_e2e_smoke"
     out_dir.mkdir()
-    result = subprocess.run(
+
+    export_calls: list[dict[str, object]] = []
+
+    def fake_export(
+        binding,
+        real_pair_rgb_frame_0,
+        real_pair_rgb_frame_1,
+        output_dir,
+        *,
+        emit_archive_bound_candidate_package,
+        mlx_triage_argv,
+        **_kwargs,
+    ):
+        export_dir = Path(output_dir)
+        export_dir.mkdir(parents=True, exist_ok=True)
+        archive_zip = export_dir / "archive.zip"
+        archive_zip.write_bytes(b"fake-z8-archive")
+        (export_dir / "archive_bound_candidate_adapter_package.json").write_text(
+            json.dumps(
+                {
+                    "schema": "fake_archive_bound_package.v1",
+                    "archive_bound_candidate_adapter_package": {"candidate_rows": []},
+                }
+            ),
+            encoding="utf-8",
+        )
+        proof_dir = export_dir / "receiver_proof"
+        proof_dir.mkdir()
+        (proof_dir / "z8_hpc1_receiver_proof.json").write_text(
+            json.dumps({"runtime_consumption_proof_ready": True}),
+            encoding="utf-8",
+        )
+        export_calls.append(
+            {
+                "binding": binding,
+                "frame_0_shape": tuple(real_pair_rgb_frame_0.shape),
+                "frame_1_shape": tuple(real_pair_rgb_frame_1.shape),
+                "emit_package": bool(emit_archive_bound_candidate_package),
+                "mlx_triage_argv": list(mlx_triage_argv),
+            }
+        )
+        return archive_zip, "a" * 64, archive_zip.stat().st_size
+
+    monkeypatch.setattr(
+        "tac.substrates.z8_hierarchical_predictive_coding.archive_candidate."
+        "export_z8hpc1_archive_from_canonical_quadruple",
+        fake_export,
+    )
+    rc = trainer.main(
         [
-            sys.executable,
-            str(TRAINER_PATH),
             "--canonical-quadruple-binding",
             "--canonical-quadruple-output-dir",
             str(out_dir),
@@ -409,20 +479,25 @@ def test_canonical_quadruple_main_runs_on_real_video(tmp_path) -> None:
             "--num-pairs",
             "2",
         ],
-        capture_output=True,
-        text=True,
-        timeout=120,
     )
-    assert result.returncode == 0, (
-        f"trainer returned rc={result.returncode}; stdout={result.stdout!r}; "
-        f"stderr={result.stderr!r}"
-    )
+    assert rc == 0
+    assert len(export_calls) == 1
+    assert export_calls[0]["frame_0_shape"] == (2, 32, 32, 3)
+    assert export_calls[0]["frame_1_shape"] == (2, 32, 32, 3)
+    assert export_calls[0]["emit_package"] is True
+    assert "--canonical-quadruple-binding" in export_calls[0]["mlx_triage_argv"]
     artifact_path = out_dir / "m9_canonical_quadruple_artifact.json"
     assert artifact_path.exists()
     artifact = json.loads(artifact_path.read_text())
     assert artifact["schema"] == "z8_canonical_quadruple_training_artifact_v1"
     assert artifact["score_claim"] is False
     assert artifact["promotable"] is False
+    export = artifact["archive_bound_export"]
+    assert export["schema"] == "z8_canonical_quadruple_archive_bound_export.v1"
+    assert export["archive_bound_candidate_package_emitted"] is True
+    assert export["candidate_archive_sha256"] == "a" * 64
+    assert export["score_claim"] is False
+    assert export["ready_for_exact_eval_dispatch"] is False
 
 
 # ---------------------------------------------------------------------------

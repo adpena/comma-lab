@@ -357,6 +357,30 @@ def _validate_full_schedule_args(args: argparse.Namespace, *, tau_start: float) 
     return True
 
 
+def _canonical_quadruple_replay_argv(args: argparse.Namespace) -> list[str]:
+    """Deterministic replay argv for the Z8 canonical-quadruple export path."""
+
+    return [
+        "python",
+        "experiments/train_substrate_z8_hierarchical_predictive_coding_mlx.py",
+        "--canonical-quadruple-binding",
+        "--canonical-quadruple-output-dir",
+        str(args.canonical_quadruple_output_dir),
+        "--video-path",
+        str(args.video_path),
+        "--epochs",
+        str(int(args.epochs)),
+        "--num-pairs",
+        str(int(args.num_pairs)),
+        "--seed",
+        str(int(args.seed)),
+        "--canonical-quadruple-eval-h",
+        str(int(args.canonical_quadruple_eval_h)),
+        "--canonical-quadruple-eval-w",
+        str(int(args.canonical_quadruple_eval_w)),
+    ]
+
+
 def _smoke_main(args: argparse.Namespace) -> int:
     """L0 smoke convergence: minimal MLX training loop on synthetic targets.
 
@@ -820,9 +844,14 @@ def _canonical_quadruple_main(args: argparse.Namespace) -> int:
         )
         return 2
 
+    from tac.substrates.z8_hierarchical_predictive_coding.archive_candidate import (
+        Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS,
+        Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS,
+        export_z8hpc1_archive_from_canonical_quadruple,
+    )
     from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
         build_canonical_quadruple_binding_from_z8_config,
-        load_real_video_targets_numpy,
+        load_real_video_pair_targets_numpy,
         run_canonical_quadruple_training_loop,
     )
     from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
@@ -852,7 +881,7 @@ def _canonical_quadruple_main(args: argparse.Namespace) -> int:
         f"{args.video_path!s} at ({eval_h}, {eval_w}) per Catalog #213.",
     )
     try:
-        pair_rgb_targets = load_real_video_targets_numpy(
+        real_pair_rgb_frame_0, real_pair_rgb_frame_1 = load_real_video_pair_targets_numpy(
             args.video_path,
             num_pairs=num_pairs,
             output_height=eval_h,
@@ -868,7 +897,7 @@ def _canonical_quadruple_main(args: argparse.Namespace) -> int:
     )
     artifact = run_canonical_quadruple_training_loop(
         binding,
-        pair_rgb_targets,
+        real_pair_rgb_frame_0,
         epochs=epochs,
         notes=(
             f"Z8 M9 canonical quadruple binding-integration smoke "
@@ -895,15 +924,82 @@ def _canonical_quadruple_main(args: argparse.Namespace) -> int:
         )
         return 4
     output_dir.mkdir(parents=True, exist_ok=True)
+    archive_bound_output_dir = output_dir / "archive_bound_candidate"
+    replay_argv = _canonical_quadruple_replay_argv(args)
+    try:
+        archive_zip_path, archive_sha256, archive_bytes_count = (
+            export_z8hpc1_archive_from_canonical_quadruple(
+                binding,
+                real_pair_rgb_frame_0,
+                real_pair_rgb_frame_1,
+                archive_bound_output_dir,
+                emit_archive_bound_candidate_package=True,
+                mlx_triage_argv=replay_argv,
+            )
+        )
+        archive_bound_export = {
+            "schema": "z8_canonical_quadruple_archive_bound_export.v1",
+            "archive_bound_candidate_package_emitted": True,
+            "archive_bound_candidate_package_path": str(
+                archive_bound_output_dir / "archive_bound_candidate_adapter_package.json"
+            ),
+            "candidate_archive_path": str(archive_zip_path),
+            "candidate_archive_sha256": str(archive_sha256),
+            "candidate_archive_bytes": int(archive_bytes_count),
+            "receiver_proof_path": str(
+                archive_bound_output_dir
+                / "receiver_proof"
+                / "z8_hpc1_receiver_proof.json"
+            ),
+            "receiver_proof_required_by_default": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "pixel_consumed_archive_sections": list(
+                Z8_HPC_PIXEL_CONSUMED_ARCHIVE_SECTIONS
+            ),
+            "stack_custody_not_yet_pixel_consumed_sections": list(
+                Z8_HPC_STACK_CUSTODY_NOT_YET_PIXEL_CONSUMED_SECTIONS
+            ),
+            "replay_argv": replay_argv,
+        }
+    except Exception as exc:
+        blocker_path = output_dir / "archive_bound_export_blocker.json"
+        blocker = {
+            "schema": "z8_canonical_quadruple_archive_bound_export_blocker.v1",
+            "archive_bound_candidate_package_emitted": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "blocker": "z8_canonical_quadruple_archive_bound_export_failed",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "replay_argv": replay_argv,
+        }
+        blocker_path.write_text(
+            json.dumps(blocker, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            "[Z8 M9 canonical quadruple] FATAL: archive-bound export failed; "
+            f"blocker={blocker_path}: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return 66
+
+    artifact_payload = artifact.as_dict()
+    artifact_payload["training_replay_argv"] = replay_argv
+    artifact_payload["archive_bound_export"] = archive_bound_export
     out_path = output_dir / "m9_canonical_quadruple_artifact.json"
     out_path.write_text(
-        json.dumps(artifact.as_dict(), indent=2, sort_keys=True) + "\n",
+        json.dumps(artifact_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     print(
         f"[Z8 M9 canonical quadruple] DONE epochs={artifact.total_epochs_completed} "
         f"convergence={artifact.convergence_verdict} "
         f"final_payload_bytes={artifact.final_wyner_ziv_payload_bytes} "
+        f"archive_bytes={archive_bytes_count} "
         f"wall_clock={artifact.total_wall_clock_seconds:.2f}s "
         f"artifact={out_path}",
     )
