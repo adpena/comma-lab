@@ -47,10 +47,7 @@ def normalize_target_optimization_mode(
 
     normalized = str(mode or "").strip()
     if normalized not in TARGET_OPTIMIZATION_MODES:
-        raise ValueError(
-            f"{field_name} must be one of {sorted(TARGET_OPTIMIZATION_MODES)}; "
-            f"got {mode!r}"
-        )
+        raise ValueError(f"{field_name} must be one of {sorted(TARGET_OPTIMIZATION_MODES)}; got {mode!r}")
     return normalized
 
 

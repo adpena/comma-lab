@@ -48,9 +48,7 @@ from tac.optimization.target_modes import (
 )
 
 JOINT_P18_P19_WATERFILL_SCHEMA = "joint_p18_p19_waterfill_surface.v1"
-JOINT_P18_P19_WEIGHT_FORMULA = (
-    "w_i = 100*abs(dL_seg/dx_i) + 5/sqrt(10*d_pose)*||J_pose_i||_{Sigma^-1}"
-)
+JOINT_P18_P19_WEIGHT_FORMULA = "w_i = 100*abs(dL_seg/dx_i) + 5/sqrt(10*d_pose)*||J_pose_i||_{Sigma^-1}"
 JOINT_P18_P19_RATE_ATTACK_ROLE = (
     "dead_zone_low_joint_weight_wavelet_detail_atoms_to_reduce_rate_while_"
     "protecting_seg_boundary_and_pose_sensitive_atoms"
@@ -94,17 +92,11 @@ class JointP18P19WaterfillConfig:
             raise ValueError("pose_inverse_variance entries must be > 0")
         normalize_target_optimization_mode(self.target_mode)
         if self.evidence_scope not in {PROPOSAL_ONLY_SCOPE, FULL_VIDEO_AUTHORITY_SCOPE}:
-            raise ValueError(
-                f"evidence_scope must be {PROPOSAL_ONLY_SCOPE!r} or {FULL_VIDEO_AUTHORITY_SCOPE!r}"
-            )
+            raise ValueError(f"evidence_scope must be {PROPOSAL_ONLY_SCOPE!r} or {FULL_VIDEO_AUTHORITY_SCOPE!r}")
         if self.full_video_atom_count is not None and self.full_video_atom_count <= 0:
             raise ValueError("full_video_atom_count must be positive when provided")
-        if self.linearization_archive_sha is not None and not _looks_like_sha256(
-            self.linearization_archive_sha
-        ):
-            raise ValueError(
-                "linearization_archive_sha must be a 64-character hex sha256 when provided"
-            )
+        if self.linearization_archive_sha is not None and not _looks_like_sha256(self.linearization_archive_sha):
+            raise ValueError("linearization_archive_sha must be a 64-character hex sha256 when provided")
 
     @property
     def pose_ail_gain(self) -> float:
@@ -126,9 +118,7 @@ def mahalanobis_pose_jacobian_norm(
     if jac.ndim < 1:
         raise ValueError("pose_jacobian must have a pose dimension")
     if jac.shape[-1] != inv_var.shape[0]:
-        raise ValueError(
-            "pose_jacobian last dimension must match pose_inverse_variance length"
-        )
+        raise ValueError("pose_jacobian last dimension must match pose_inverse_variance length")
     return np.sqrt(np.sum((jac * jac) * inv_var, axis=-1))
 
 
@@ -212,9 +202,7 @@ def require_fresh_joint_surface(
     """
     pinned = surface.get("linearization_archive_sha")
     if not _looks_like_sha256(pinned):
-        raise JointP18P19WaterfillAuthorityError(
-            f"{context}: joint_p18_p19_surface_linearization_archive_sha_missing"
-        )
+        raise JointP18P19WaterfillAuthorityError(f"{context}: joint_p18_p19_surface_linearization_archive_sha_missing")
     if surface_is_stale_for_archive(surface, current_archive_sha):
         raise JointP18P19WaterfillAuthorityError(
             f"{context}: joint_p18_p19_surface_stale_tangent_plane:"
@@ -242,9 +230,7 @@ def build_joint_p18_p19_waterfill_surface(
         np.asarray(config.pose_inverse_variance, dtype=np.float64),
     )
     if seg.shape != pose_norm.shape:
-        raise ValueError(
-            "segnet_argmax_gradient shape must match pose_jacobian leading shape"
-        )
+        raise ValueError("segnet_argmax_gradient shape must match pose_jacobian leading shape")
     seg_term = 100.0 * seg
     pose_term = config.pose_ail_gain * pose_norm
     joint = seg_term + pose_term
@@ -273,9 +259,7 @@ def build_joint_p18_p19_waterfill_surface(
         "objective_mode_contract": {
             "schema": "joint_p18_p19_objective_mode_contract.v1",
             "target_mode": target_mode,
-            "contest_mode_uses_declared_video_as_optimization_target": (
-                target_mode == CONTEST_VIDEO_OVERFIT_MODE
-            ),
+            "contest_mode_uses_declared_video_as_optimization_target": (target_mode == CONTEST_VIDEO_OVERFIT_MODE),
             "production_modes_use_same_surface_contract_with_declared_corpus": (
                 target_mode_requires_corpus_manifest(target_mode)
             ),

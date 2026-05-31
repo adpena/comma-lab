@@ -131,9 +131,7 @@ def test_joint_p18_p19_requires_full_video_authority_for_budget_spend() -> None:
     assert authoritative["full_video_authority"] is True
     assert authoritative["full_video_authority_blockers"] == []
     assert authoritative["ready_for_budget_spend"] is False
-    assert "joint_p18_p19_linearization_archive_sha_missing" in authoritative[
-        "fresh_surface_blockers"
-    ]
+    assert "joint_p18_p19_linearization_archive_sha_missing" in authoritative["fresh_surface_blockers"]
 
 
 def test_joint_p18_p19_rejects_partial_full_video_coverage() -> None:
