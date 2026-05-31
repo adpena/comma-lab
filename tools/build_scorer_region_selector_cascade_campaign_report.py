@@ -19,6 +19,7 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.scheduler.scorer_region_selector_cascade_campaign_queue import (  # noqa: E402
     ScorerRegionSelectorCascadeCampaignQueueError,
     build_scorer_region_selector_cascade_campaign_report,
+    discover_scorer_region_selector_cascade_variant_roots,
 )
 from tac.repo_io import ArtifactWriteError, json_text, sha256_file, write_json_artifact  # noqa: E402
 
@@ -36,20 +37,57 @@ def _variant_root(value: str) -> tuple[str, Path]:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--variant-root", action="append", type=_variant_root, required=True)
+    parser.add_argument(
+        "--variant-root",
+        action="append",
+        type=_variant_root,
+        default=[],
+        help="Explicit variant root as variant_id=path; may repeat.",
+    )
+    parser.add_argument(
+        "--variant-root-dir",
+        action="append",
+        type=Path,
+        default=[],
+        help="Directory whose immediate child directories are variant roots; may repeat.",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--overwrite", action="store_true")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if not args.variant_root and not args.variant_root_dir:
+        parser.error("at least one --variant-root or --variant-root-dir is required")
+    return args
 
 
 def _resolve(path: Path) -> Path:
     return path if path.is_absolute() else REPO_ROOT / path
 
 
+def _merge_variant_roots(
+    base: dict[str, Path | str],
+    extra: dict[str, Path | str],
+) -> dict[str, Path | str]:
+    merged = dict(base)
+    duplicates = sorted(set(merged).intersection(extra))
+    if duplicates:
+        raise ValueError(f"duplicate variant root id(s): {', '.join(duplicates)}")
+    merged.update(extra)
+    return merged
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        variant_roots = dict(args.variant_root)
+        variant_roots: dict[str, Path | str] = {}
+        for variant_root_dir in args.variant_root_dir:
+            variant_roots = _merge_variant_roots(
+                variant_roots,
+                discover_scorer_region_selector_cascade_variant_roots(
+                    repo_root=REPO_ROOT,
+                    variant_root_dir=variant_root_dir,
+                ),
+            )
+        variant_roots = _merge_variant_roots(variant_roots, dict(args.variant_root))
         payload = build_scorer_region_selector_cascade_campaign_report(
             repo_root=REPO_ROOT,
             variant_roots=variant_roots,

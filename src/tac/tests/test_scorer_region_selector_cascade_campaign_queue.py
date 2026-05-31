@@ -5,10 +5,13 @@ import zipfile
 from pathlib import Path
 
 from comma_lab.scheduler.scorer_region_selector_cascade_campaign_queue import (
+    SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA,
     SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_QUEUE_METADATA_SCHEMA,
     SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_REPORT_SCHEMA,
+    build_scorer_region_selector_cascade_acquisition_policy,
     build_scorer_region_selector_cascade_campaign_queue,
     build_scorer_region_selector_cascade_campaign_report,
+    discover_scorer_region_selector_cascade_variant_roots,
     enumerate_cascade_variants,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
@@ -106,7 +109,11 @@ def test_campaign_queue_builds_independent_variants_and_harvest_dependency(
     assert queue["metadata"]["variant_count"] == 2
     assert queue["controls"]["max_concurrency"]["local_cpu"] == 2
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 1
-    variant_experiments = [exp for exp in queue["experiments"] if exp["id"] != "campaign_harvest"]
+    variant_experiments = [
+        exp
+        for exp in queue["experiments"]
+        if exp["id"] not in {"campaign_harvest", "campaign_acquisition_policy"}
+    ]
     assert len(variant_experiments) == 2
     for experiment in variant_experiments:
         assert experiment["metadata"]["schema"] == "scorer_region_selector_cascade_variant.v1"
@@ -120,10 +127,19 @@ def test_campaign_queue_builds_independent_variants_and_harvest_dependency(
             if step["id"] == "materialize_frame1_region_waterfill_runtime_patch"
         )
         assert "--selected-archive-chain-report" in patch_step["command"]
-    harvest = queue["experiments"][-1]["steps"][0]
+    harvest_experiment = next(exp for exp in queue["experiments"] if exp["id"] == "campaign_harvest")
+    harvest = harvest_experiment["steps"][0]
     assert harvest["id"] == "harvest_campaign_learning_surface"
     assert len(harvest["requires"]) == 2
     assert all(requirement.endswith(".plan_local_component_artifact_retention") for requirement in harvest["requires"])
+    policy_experiment = next(
+        exp for exp in queue["experiments"] if exp["id"] == "campaign_acquisition_policy"
+    )
+    policy_step = policy_experiment["steps"][0]
+    assert policy_step["id"] == "build_campaign_acquisition_policy"
+    assert policy_step["requires"] == ["campaign_harvest.harvest_campaign_learning_surface"]
+    assert "--master-gradient-tensor" in policy_step["command"]
+    assert "--pixel-gradient-cache" in policy_step["command"]
 
 
 def test_campaign_report_harvests_variant_learning_rows(tmp_path: Path) -> None:
@@ -239,6 +255,15 @@ def test_campaign_report_harvests_variant_learning_rows(tmp_path: Path) -> None:
     assert "local_cpu_score_not_below_auth_frontier" in report["blockers"]
     assert report["rows"][0]["output_change_observed"] is True
     assert report["mlx_positive_full_cpu_negative_split_count"] == 1
+    assert report["aggregate_learning"]["local_cpu_observed_count"] == 1
+    assert report["aggregate_learning"]["local_cpu_passed_gate_count"] == 0
+    assert report["aggregate_learning"]["local_cpu_all_observed_failed_gate"] is True
+    assert report["aggregate_learning"]["recommended_next_queue_policy"] == (
+        "acquisition_first_or_cpu_gate_only_no_post_cpu_mlx"
+    )
+    assert report["aggregate_learning"]["posterior_routing_decision"] == (
+        "demote_post_cpu_mlx_for_current_operator_family_until_acquisition_model_changes"
+    )
     update = report["posterior_acquisition_updates"][0]
     assert update["operator_position_group"] == ["P19", "P18", "P11", "P15"]
     assert update["mlx_acquisition_positive"] is True
@@ -252,3 +277,88 @@ def test_campaign_report_harvests_variant_learning_rows(tmp_path: Path) -> None:
     assert update["budget_spend_allowed"] is False
     assert update["ready_for_exact_eval_dispatch"] is False
     assert report["score_claim"] is False
+
+
+def test_campaign_variant_root_discovery_uses_immediate_child_directories(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "campaign"
+    (root / "variant_b").mkdir(parents=True)
+    (root / "variant_a").mkdir(parents=True)
+    (root / ".scratch").mkdir(parents=True)
+    (root / "campaign_report.json").write_text("{}", encoding="utf-8")
+
+    discovered = discover_scorer_region_selector_cascade_variant_roots(
+        repo_root=tmp_path,
+        variant_root_dir=root,
+    )
+
+    assert list(discovered) == ["variant_a", "variant_b"]
+    assert discovered == {
+        "variant_a": "campaign/variant_a",
+        "variant_b": "campaign/variant_b",
+    }
+
+
+def test_acquisition_policy_consumes_cpu_negative_and_gradient_priors(tmp_path: Path) -> None:
+    import numpy as np
+
+    tensor = tmp_path / "mg.npy"
+    arr = np.zeros((4, 3, 3), dtype=np.float64)
+    arr[:, 0, 1] = 0.01
+    arr[:, 1, 1] = 0.001
+    arr[:, 2, 0] = 0.02
+    np.save(tensor, arr)
+
+    pixel_cache = tmp_path / "pixel.npz"
+    seg = np.ones((2, 4, 4), dtype=np.float32)
+    pose = np.ones((2, 4, 4), dtype=np.float32)
+    seg[0, :2, :2] = 0.0
+    pose[0, :2, :2] = 0.0
+    np.savez(pixel_cache, seg_grads=seg, pose_grads=pose)
+
+    report = {
+        "schema": SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_REPORT_SCHEMA,
+        "variant_count": 1,
+        "completed_learning_variant_count": 1,
+        "best_variant_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "best_variant_selection_basis": "local_cpu_gate_failed",
+        "aggregate_learning": {
+            "mlx_positive_full_cpu_negative_split_count": 1,
+            "local_cpu_observed_count": 1,
+            "local_cpu_passed_gate_count": 0,
+            **FALSE_AUTHORITY,
+        },
+        "rows": [
+            {
+                "variant_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+                "local_cpu_present": True,
+                "local_cpu_delta_vs_auth_frontier": 0.000015,
+                "candidate_passed_local_cpu_gate": False,
+                "cumulative_rate_saved_bytes_vs_source": 10,
+                "best_dataset_delta_vs_baseline_score": -0.00002,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+    policy = build_scorer_region_selector_cascade_acquisition_policy(
+        repo_root=tmp_path,
+        campaign_report=report,
+        master_gradient_tensor_path=tensor,
+        pixel_gradient_cache_path=pixel_cache,
+    )
+
+    assert policy["schema"] == SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA
+    assert policy["next_queue_policy"]["mode"] == "vectorized_mlx_acquisition_then_cpu_gate_only"
+    assert policy["master_gradient_prior"]["available"] is True
+    assert policy["master_gradient_prior"]["shape"] == [4, 3, 3]
+    assert policy["pixel_gradient_prior"]["available"] is True
+    assert policy["pixel_gradient_prior"]["shape"] == [2, 4, 4]
+    assert policy["rate_credit_rows"][0]["estimated_distortion_spend_after_rate_credit"] > 0.0
+    assert policy["score_claim"] is False
+    assert "current_operator_family_all_observed_local_cpu_rows_failed" in policy["blockers"]

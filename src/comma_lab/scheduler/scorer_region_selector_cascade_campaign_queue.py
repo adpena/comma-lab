@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -25,6 +26,10 @@ from tac.optimization.scorer_region_operator_contract import (
     build_scorer_region_operator_contract,
 )
 from tac.repo_io import sha256_file
+from tac.master_gradient import CONTEST_RATE_DENOM_BYTES
+from tac.substrates.uniward_per_pixel_distortion.weight_map import (
+    compute_per_pixel_uniward_weight_map_numpy,
+)
 
 SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_QUEUE_METADATA_SCHEMA = (
     "scorer_region_selector_cascade_campaign_queue_metadata.v1"
@@ -32,8 +37,25 @@ SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_QUEUE_METADATA_SCHEMA = (
 SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_REPORT_SCHEMA = (
     "scorer_region_selector_cascade_campaign_report.v1"
 )
+SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA = (
+    "scorer_region_selector_cascade_acquisition_policy.v1"
+)
 
 SUPPORTED_REPACK_ORDERS = frozenset({"p11_then_p15_then_receiver_patch"})
+DEFAULT_MASTER_GRADIENT_TENSOR_PATH = Path(
+    ".omx/state/master_gradient_fec6_frontier_mlx_per_pair_full600_20260527.npy"
+)
+DEFAULT_PIXEL_GRADIENT_CACHE_PATH = Path(
+    ".omx/research/uniward_per_pixel_n_plus_1_artifacts_20260526/"
+    "real_scorer_gradients_cache.npz"
+)
+RATE_SCORE_PER_BYTE = 25.0 / CONTEST_RATE_DENOM_BYTES
+FULL600_MLX_OPERATING_POINT = {
+    "d_seg": 0.0012223561610638473,
+    "d_pose": 0.0017157510650319333,
+    "rate": 0.004754685709380427,
+    "score": 0.37208944003527994,
+}
 
 
 class ScorerRegionSelectorCascadeCampaignQueueError(ValueError):
@@ -302,6 +324,58 @@ def _campaign_report_command(
     return command
 
 
+def _campaign_acquisition_policy_command(
+    *,
+    repo_root: str | Path,
+    output_root: Path,
+    master_gradient_tensor_path: str | Path | None,
+    pixel_gradient_cache_path: str | Path | None,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/build_scorer_region_selector_cascade_acquisition_policy.py",
+        "--campaign-report",
+        _repo_rel(output_root / "campaign_report.json", repo_root),
+        "--output",
+        _repo_rel(output_root / "acquisition_policy.json", repo_root),
+        "--overwrite",
+    ]
+    if master_gradient_tensor_path is not None:
+        command.extend(["--master-gradient-tensor", _repo_rel(_resolve(master_gradient_tensor_path, repo_root), repo_root)])
+    if pixel_gradient_cache_path is not None:
+        command.extend(["--pixel-gradient-cache", _repo_rel(_resolve(pixel_gradient_cache_path, repo_root), repo_root)])
+    return command
+
+
+def discover_scorer_region_selector_cascade_variant_roots(
+    *,
+    repo_root: str | Path,
+    variant_root_dir: str | Path,
+) -> dict[str, str]:
+    """Return immediate child directories as campaign variant roots.
+
+    This keeps report harvest queue-owned and directory-owned instead of
+    requiring an operator or agent to manually enumerate variant ids after a
+    fanout run.
+    """
+
+    root = _resolve(variant_root_dir, repo_root)
+    if not root.is_dir():
+        raise ScorerRegionSelectorCascadeCampaignQueueError(
+            f"variant root directory missing: {root}"
+        )
+    roots: dict[str, str] = {}
+    for child in sorted(root.iterdir(), key=lambda path: path.name):
+        if not child.is_dir() or child.name.startswith("."):
+            continue
+        roots[child.name] = _repo_rel(child, repo_root)
+    if not roots:
+        raise ScorerRegionSelectorCascadeCampaignQueueError(
+            f"variant root directory contains no child variant directories: {root}"
+        )
+    return roots
+
+
 def build_scorer_region_selector_cascade_campaign_queue(
     *,
     repo_root: str | Path,
@@ -365,6 +439,9 @@ def build_scorer_region_selector_cascade_campaign_queue(
     max_concurrency_local_mlx: int = 1,
     max_concurrency_local_io_heavy: int = 1,
     append_campaign_harvest: bool = True,
+    append_campaign_acquisition_policy: bool = True,
+    master_gradient_tensor_path: str | Path | None = DEFAULT_MASTER_GRADIENT_TENSOR_PATH,
+    pixel_gradient_cache_path: str | Path | None = DEFAULT_PIXEL_GRADIENT_CACHE_PATH,
 ) -> dict[str, Any]:
     """Return a queue-owned grouped cascade search over scorer-null budget spends."""
 
@@ -487,6 +564,7 @@ def build_scorer_region_selector_cascade_campaign_queue(
         variant_metadata.append(variant.to_metadata(output_root=_repo_rel(variant_root, repo_root)))
 
     harvest_path = root / "campaign_report.json"
+    acquisition_policy_path = root / "acquisition_policy.json"
     if append_campaign_harvest:
         experiments.append(
             {
@@ -546,6 +624,73 @@ def build_scorer_region_selector_cascade_campaign_queue(
                 ],
             }
         )
+    if append_campaign_harvest and append_campaign_acquisition_policy:
+        experiments.append(
+            {
+                "id": "campaign_acquisition_policy",
+                "priority": len(experiments) + 1,
+                "status": "queued",
+                "tags": [
+                    "frontier-rate-attack",
+                    "cascade-c",
+                    "grouped-campaign-acquisition-policy",
+                    "master-gradient-prior",
+                    "uniward-pixel-prior",
+                    "no-score-authority",
+                ],
+                "metadata": {
+                    "schema": "scorer_region_selector_cascade_acquisition_policy_step_metadata.v1",
+                    "campaign_report_path": _repo_rel(harvest_path, repo_root),
+                    "acquisition_policy_path": _repo_rel(acquisition_policy_path, repo_root),
+                    "master_gradient_tensor_path": (
+                        _repo_rel(_resolve(master_gradient_tensor_path, repo_root), repo_root)
+                        if master_gradient_tensor_path is not None
+                        else None
+                    ),
+                    "pixel_gradient_cache_path": (
+                        _repo_rel(_resolve(pixel_gradient_cache_path, repo_root), repo_root)
+                        if pixel_gradient_cache_path is not None
+                        else None
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "steps": [
+                    {
+                        "id": "build_campaign_acquisition_policy",
+                        "kind": "command",
+                        "requires": ["campaign_harvest.harvest_campaign_learning_surface"],
+                        "command": _campaign_acquisition_policy_command(
+                            repo_root=repo_root,
+                            output_root=root,
+                            master_gradient_tensor_path=master_gradient_tensor_path,
+                            pixel_gradient_cache_path=pixel_gradient_cache_path,
+                        ),
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 900,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(acquisition_policy_path, repo_root),
+                                "key": "schema",
+                                "equals": SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(acquisition_policy_path, repo_root),
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [_repo_rel(acquisition_policy_path, repo_root)],
+                            "input_artifact_paths": [_repo_rel(harvest_path, repo_root)],
+                            "include_postcondition_paths": True,
+                        },
+                    }
+                ],
+            }
+        )
 
     controls = {
         "mode": "running",
@@ -572,6 +717,7 @@ def build_scorer_region_selector_cascade_campaign_queue(
             "source_archive": _archive_record(source_archive, repo_root=repo_root),
             "output_root": _repo_rel(root, repo_root),
             "campaign_report_path": _repo_rel(harvest_path, repo_root),
+            "acquisition_policy_path": _repo_rel(acquisition_policy_path, repo_root),
             "variant_count": len(variants),
             "variant_grid_truncated": max_variants is not None,
             "variant_grid_max_variants": max_variants,
@@ -590,6 +736,25 @@ def build_scorer_region_selector_cascade_campaign_queue(
                 "requires_local_cpu_before_exact_auth": bool(include_local_component_loop),
                 "mlx_is_acquisition_signal_only": bool(include_mlx_component_response),
                 "dispatch_source": "per_variant_scorer_region_exact_ready_bridge",
+            },
+            "acquisition_policy": {
+                "enabled": bool(append_campaign_harvest and append_campaign_acquisition_policy),
+                "schema": SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA,
+                "mathematical_action": (
+                    "S = 100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/"
+                    f"{CONTEST_RATE_DENOM_BYTES}"
+                ),
+                "rate_score_per_byte": RATE_SCORE_PER_BYTE,
+                "master_gradient_tensor_path": (
+                    _repo_rel(_resolve(master_gradient_tensor_path, repo_root), repo_root)
+                    if master_gradient_tensor_path is not None
+                    else None
+                ),
+                "pixel_gradient_cache_path": (
+                    _repo_rel(_resolve(pixel_gradient_cache_path, repo_root), repo_root)
+                    if pixel_gradient_cache_path is not None
+                    else None
+                ),
             },
             "budget_spend_allowed": False,
             "ready_for_budget_spend": False,
@@ -899,6 +1064,62 @@ def build_scorer_region_selector_cascade_campaign_report(
     posterior_acquisition_updates = [
         _posterior_acquisition_update(row) for row in rows
     ]
+    local_cpu_rows = [row for row in rows if row.get("local_cpu_present") is True]
+    local_cpu_deltas = [
+        float(row["local_cpu_delta_vs_auth_frontier"])
+        for row in local_cpu_rows
+        if isinstance(row.get("local_cpu_delta_vs_auth_frontier"), (int, float))
+        and not isinstance(row.get("local_cpu_delta_vs_auth_frontier"), bool)
+    ]
+    local_cpu_passed_count = sum(
+        1 for row in local_cpu_rows if row.get("candidate_passed_local_cpu_gate") is True
+    )
+    mlx_positive_full_cpu_negative_split_count = sum(
+        1
+        for update in posterior_acquisition_updates
+        if update["mlx_positive_full_cpu_negative_split"] is True
+    )
+    output_change_without_cpu_win_count = sum(
+        1
+        for row in rows
+        if row.get("output_change_observed") is True
+        and row.get("candidate_passed_local_cpu_gate") is not True
+    )
+    aggregate_learning = {
+        "schema": "scorer_region_selector_cascade_campaign_aggregate_learning.v1",
+        "local_cpu_observed_count": len(local_cpu_rows),
+        "local_cpu_passed_gate_count": local_cpu_passed_count,
+        "local_cpu_all_observed_failed_gate": bool(local_cpu_rows)
+        and local_cpu_passed_count == 0,
+        "best_local_cpu_delta_vs_auth_frontier": (
+            min(local_cpu_deltas) if local_cpu_deltas else None
+        ),
+        "worst_local_cpu_delta_vs_auth_frontier": (
+            max(local_cpu_deltas) if local_cpu_deltas else None
+        ),
+        "mlx_positive_full_cpu_negative_split_count": (
+            mlx_positive_full_cpu_negative_split_count
+        ),
+        "output_change_without_cpu_win_count": output_change_without_cpu_win_count,
+        "recommended_next_queue_policy": (
+            "acquisition_first_or_cpu_gate_only_no_post_cpu_mlx"
+            if local_cpu_rows
+            and local_cpu_passed_count == 0
+            and mlx_positive_full_cpu_negative_split_count > 0
+            else "continue_exact_ready_eureka_gate"
+        ),
+        "posterior_routing_decision": (
+            "demote_post_cpu_mlx_for_current_operator_family_until_acquisition_model_changes"
+            if local_cpu_rows
+            and local_cpu_passed_count == 0
+            and mlx_positive_full_cpu_negative_split_count > 0
+            else "keep_current_queue_policy"
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
     best_selection_basis = None
     if rows:
         best_key = ranking_key(rows[0])
@@ -936,10 +1157,9 @@ def build_scorer_region_selector_cascade_campaign_report(
         "mlx_variant_count": sum(1 for row in rows if row["mlx_response_present"]),
         "rows": rows,
         "posterior_acquisition_updates": posterior_acquisition_updates,
-        "mlx_positive_full_cpu_negative_split_count": sum(
-            1
-            for update in posterior_acquisition_updates
-            if update["mlx_positive_full_cpu_negative_split"] is True
+        "aggregate_learning": aggregate_learning,
+        "mlx_positive_full_cpu_negative_split_count": (
+            mlx_positive_full_cpu_negative_split_count
         ),
         "best_variant_id": rows[0]["variant_id"] if rows else None,
         "best_variant_selection_basis": best_selection_basis,
@@ -958,11 +1178,441 @@ def build_scorer_region_selector_cascade_campaign_report(
     return payload
 
 
+def _local_delta(row: Mapping[str, Any]) -> float | None:
+    return _safe_number(row.get("local_cpu_delta_vs_auth_frontier"))
+
+
+def _parse_variant_dimensions(variant_id: object) -> dict[str, Any]:
+    text = str(variant_id or "")
+    match = re.search(r"^nf(?P<nf>[0-9_]+)_r(?P<regions>\d+)_p(?P<pairs>\d+)_rp(?P<rp>\d+)_", text)
+    delta_space = None
+    if "_yuv601_proxy_as_rgb_" in text:
+        delta_space = "yuv601_proxy_as_rgb"
+    elif "_rgb_" in text:
+        delta_space = "rgb"
+    codec = None
+    codec_match = re.search(r"_cf(?P<codec>.+?)_p11_then_p15_then_receiver_patch$", text)
+    if codec_match:
+        codec = codec_match.group("codec")
+    return {
+        "variant_id": text,
+        "null_fraction": (
+            float("0." + match.group("nf").split("_", 1)[1])
+            if match and "_" in match.group("nf")
+            else None
+        ),
+        "top_regions_per_pair": int(match.group("regions")) if match else None,
+        "receiver_patch_max_pairs": int(match.group("pairs")) if match else None,
+        "receiver_patch_regions_per_pair": int(match.group("rp")) if match else None,
+        "receiver_patch_delta_space": delta_space,
+        "selector_codec_family": codec,
+    }
+
+
+def _dimension_effects(rows: Sequence[Mapping[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    dimensions = {
+        "receiver_patch_delta_space": {},
+        "top_regions_per_pair": {},
+        "receiver_patch_max_pairs": {},
+        "receiver_patch_regions_per_pair": {},
+        "selector_codec_family": {},
+    }
+    for row in rows:
+        delta = _local_delta(row)
+        if delta is None:
+            continue
+        parsed = _parse_variant_dimensions(row.get("variant_id"))
+        for key, buckets in dimensions.items():
+            value = parsed.get(key)
+            if value is None:
+                continue
+            bucket = buckets.setdefault(str(value), [])
+            bucket.append(delta)
+    result: dict[str, list[dict[str, Any]]] = {}
+    for key, buckets in dimensions.items():
+        rows_out = []
+        for value, values in sorted(buckets.items(), key=lambda item: item[0]):
+            rows_out.append(
+                {
+                    "value": value,
+                    "count": len(values),
+                    "best_local_cpu_delta_vs_auth_frontier": min(values),
+                    "worst_local_cpu_delta_vs_auth_frontier": max(values),
+                    "mean_local_cpu_delta_vs_auth_frontier": sum(values) / len(values),
+                }
+            )
+        result[key] = rows_out
+    return result
+
+
+def _score_pose_marginal(d_pose: float) -> float:
+    if d_pose <= 0.0 or not math.isfinite(d_pose):
+        raise ScorerRegionSelectorCascadeCampaignQueueError(
+            f"d_pose must be positive finite for score marginal, got {d_pose!r}"
+        )
+    return 5.0 / math.sqrt(10.0 * d_pose)
+
+
+def _summarize_master_gradient_tensor(
+    *,
+    repo_root: str | Path,
+    tensor_path: str | Path | None,
+    max_chunk_byte_rows: int = 4096,
+) -> dict[str, Any]:
+    if tensor_path is None:
+        return {
+            "schema": "scorer_region_master_gradient_prior_summary.v1",
+            "available": False,
+            "blockers": ["master_gradient_tensor_not_configured"],
+            **FALSE_AUTHORITY,
+        }
+    resolved = _resolve(tensor_path, repo_root)
+    if not resolved.is_file():
+        return {
+            "schema": "scorer_region_master_gradient_prior_summary.v1",
+            "available": False,
+            "path": _repo_rel(resolved, repo_root),
+            "blockers": ["master_gradient_tensor_missing"],
+            **FALSE_AUTHORITY,
+        }
+    try:
+        import numpy as np
+    except ImportError:
+        return {
+            "schema": "scorer_region_master_gradient_prior_summary.v1",
+            "available": False,
+            "path": _repo_rel(resolved, repo_root),
+            "blockers": ["numpy_unavailable_for_master_gradient_prior"],
+            **FALSE_AUTHORITY,
+        }
+    arr = np.load(resolved, mmap_mode="r")
+    if arr.ndim != 3 or int(arr.shape[2]) != 3:
+        return {
+            "schema": "scorer_region_master_gradient_prior_summary.v1",
+            "available": False,
+            "path": _repo_rel(resolved, repo_root),
+            "shape": [int(dim) for dim in arr.shape],
+            "blockers": ["master_gradient_tensor_not_per_pair_per_byte_axes3"],
+            **FALSE_AUTHORITY,
+        }
+    n_bytes, n_pairs, _ = (int(arr.shape[0]), int(arr.shape[1]), int(arr.shape[2]))
+    pair_axis_l1 = np.zeros((n_pairs, 3), dtype=np.float64)
+    nonzero_byte_rows = 0
+    chunk_rows = max(1, int(max_chunk_byte_rows))
+    for start in range(0, n_bytes, chunk_rows):
+        chunk = np.asarray(arr[start : start + chunk_rows], dtype=np.float64)
+        abs_chunk = np.abs(chunk)
+        pair_axis_l1 += abs_chunk.sum(axis=0)
+        nonzero_byte_rows += int(np.any(abs_chunk > 0.0, axis=(1, 2)).sum())
+    pose_l1 = pair_axis_l1[:, 1]
+    op = FULL600_MLX_OPERATING_POINT
+    coeffs = np.asarray(
+        [100.0, _score_pose_marginal(float(op["d_pose"])), RATE_SCORE_PER_BYTE],
+        dtype=np.float64,
+    )
+    pair_score_l1 = pair_axis_l1 @ coeffs
+    bottom_k = max(1, min(n_pairs, n_pairs // 10))
+    preview_k = min(32, bottom_k)
+    pose_null_order = np.argsort(pose_l1, kind="stable")
+    score_null_order = np.argsort(pair_score_l1, kind="stable")
+    pose_vulnerable_order = np.argsort(-pose_l1, kind="stable")
+    return {
+        "schema": "scorer_region_master_gradient_prior_summary.v1",
+        "available": True,
+        "path": _repo_rel(resolved, repo_root),
+        "bytes": resolved.stat().st_size,
+        "sha256": None,
+        "sha256_status": "skipped_large_tensor_speed_guard",
+        "shape": [n_bytes, n_pairs, 3],
+        "dtype": str(arr.dtype),
+        "source_axis": "[macOS-MLX research-signal]",
+        "authority_boundary": (
+            "reference prior only; no archive-specific score or dispatch authority"
+        ),
+        "operating_point": dict(op),
+        "score_marginal_coefficients": {
+            "seg": float(coeffs[0]),
+            "pose": float(coeffs[1]),
+            "rate_per_byte": float(coeffs[2]),
+        },
+        "nonzero_byte_rows": nonzero_byte_rows,
+        "pose_l1_quantiles": {
+            str(q): float(np.quantile(pose_l1, q))
+            for q in (0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+        },
+        "pair_score_l1_quantiles": {
+            str(q): float(np.quantile(pair_score_l1, q))
+            for q in (0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+        },
+        "pose_null_bottom_decile_pair_indices_preview": [
+            int(idx) for idx in pose_null_order[:preview_k]
+        ],
+        "score_null_bottom_decile_pair_indices_preview": [
+            int(idx) for idx in score_null_order[:preview_k]
+        ],
+        "pose_vulnerable_top_decile_pair_indices_preview": [
+            int(idx) for idx in pose_vulnerable_order[:preview_k]
+        ],
+        "blockers": ["archive_specific_master_gradient_anchor_missing_for_current_campaign"],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _summarize_pixel_gradient_cache(
+    *,
+    repo_root: str | Path,
+    cache_path: str | Path | None,
+) -> dict[str, Any]:
+    if cache_path is None:
+        return {
+            "schema": "scorer_region_pixel_gradient_prior_summary.v1",
+            "available": False,
+            "blockers": ["pixel_gradient_cache_not_configured"],
+            **FALSE_AUTHORITY,
+        }
+    resolved = _resolve(cache_path, repo_root)
+    if not resolved.is_file():
+        return {
+            "schema": "scorer_region_pixel_gradient_prior_summary.v1",
+            "available": False,
+            "path": _repo_rel(resolved, repo_root),
+            "blockers": ["pixel_gradient_cache_missing"],
+            **FALSE_AUTHORITY,
+        }
+    try:
+        import numpy as np
+    except ImportError:
+        return {
+            "schema": "scorer_region_pixel_gradient_prior_summary.v1",
+            "available": False,
+            "path": _repo_rel(resolved, repo_root),
+            "blockers": ["numpy_unavailable_for_pixel_gradient_prior"],
+            **FALSE_AUTHORITY,
+        }
+    cache = np.load(resolved)
+    if "seg_grads" not in cache or "pose_grads" not in cache:
+        return {
+            "schema": "scorer_region_pixel_gradient_prior_summary.v1",
+            "available": False,
+            "path": _repo_rel(resolved, repo_root),
+            "blockers": ["pixel_gradient_cache_missing_seg_or_pose_grads"],
+            **FALSE_AUTHORITY,
+        }
+    seg = np.asarray(cache["seg_grads"], dtype=np.float32)
+    pose = np.asarray(cache["pose_grads"], dtype=np.float32)
+    if seg.shape != pose.shape:
+        return {
+            "schema": "scorer_region_pixel_gradient_prior_summary.v1",
+            "available": False,
+            "path": _repo_rel(resolved, repo_root),
+            "seg_shape": [int(dim) for dim in seg.shape],
+            "pose_shape": [int(dim) for dim in pose.shape],
+            "blockers": ["pixel_gradient_cache_shape_mismatch"],
+            **FALSE_AUTHORITY,
+        }
+    weight = compute_per_pixel_uniward_weight_map_numpy(seg, pose)
+    flat_weight = weight.reshape(-1)
+    if weight.ndim >= 3:
+        frame_weight = weight.reshape(weight.shape[0], -1).mean(axis=1)
+        safe_frame_order = np.argsort(-frame_weight, kind="stable")[: min(16, weight.shape[0])]
+    else:
+        frame_weight = np.asarray([float(weight.mean())], dtype=np.float32)
+        safe_frame_order = np.asarray([0], dtype=np.int64)
+    return {
+        "schema": "scorer_region_pixel_gradient_prior_summary.v1",
+        "available": True,
+        "path": _repo_rel(resolved, repo_root),
+        "bytes": resolved.stat().st_size,
+        "shape": [int(dim) for dim in weight.shape],
+        "source_axis": "[macOS-MLX research-signal]",
+        "authority_boundary": (
+            "per-pixel acquisition prior only; candidate still needs receiver proof, "
+            "local CPU gate, and exact auth"
+        ),
+        "uniward_weight_quantiles": {
+            str(q): float(np.quantile(flat_weight, q))
+            for q in (0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+        },
+        "safest_frame_indices_preview": [int(idx) for idx in safe_frame_order],
+        "safest_frame_weight_mean_preview": [
+            float(frame_weight[int(idx)]) for idx in safe_frame_order
+        ],
+        "blockers": ["pixel_gradient_cache_is_partial_sample_not_full_contest_video"],
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_scorer_region_selector_cascade_acquisition_policy(
+    *,
+    repo_root: str | Path,
+    campaign_report: Mapping[str, Any],
+    master_gradient_tensor_path: str | Path | None = DEFAULT_MASTER_GRADIENT_TENSOR_PATH,
+    pixel_gradient_cache_path: str | Path | None = DEFAULT_PIXEL_GRADIENT_CACHE_PATH,
+) -> dict[str, Any]:
+    """Compile campaign learning into the next scorer-region acquisition policy."""
+
+    require_no_truthy_authority_fields(
+        campaign_report,
+        context="scorer_region_selector_cascade_acquisition_policy:campaign_report",
+    )
+    rows_raw = campaign_report.get("rows")
+    rows = [row for row in rows_raw if isinstance(row, Mapping)] if isinstance(rows_raw, list) else []
+    aggregate = (
+        campaign_report.get("aggregate_learning")
+        if isinstance(campaign_report.get("aggregate_learning"), Mapping)
+        else {}
+    )
+    local_cpu_rows = [row for row in rows if row.get("local_cpu_present") is True]
+    passed_rows = [row for row in rows if row.get("candidate_passed_local_cpu_gate") is True]
+    deltas = [delta for row in local_cpu_rows if (delta := _local_delta(row)) is not None]
+    split_count = int(aggregate.get("mlx_positive_full_cpu_negative_split_count") or 0)
+    observed_count = len(local_cpu_rows)
+    split_rate = split_count / observed_count if observed_count else 0.0
+    best_delta = min(deltas) if deltas else None
+    rate_credit_by_row = []
+    for row in local_cpu_rows:
+        saved = _saved_bytes(row)
+        delta = _local_delta(row)
+        if delta is None:
+            continue
+        rate_credit = saved * RATE_SCORE_PER_BYTE
+        rate_credit_by_row.append(
+            {
+                "variant_id": row.get("variant_id"),
+                "saved_bytes": saved,
+                "rate_score_credit": rate_credit,
+                "observed_net_delta_vs_auth_frontier": delta,
+                "estimated_distortion_spend_after_rate_credit": delta + rate_credit,
+            }
+        )
+    master_gradient = _summarize_master_gradient_tensor(
+        repo_root=repo_root,
+        tensor_path=master_gradient_tensor_path,
+    )
+    pixel_gradient = _summarize_pixel_gradient_cache(
+        repo_root=repo_root,
+        cache_path=pixel_gradient_cache_path,
+    )
+    all_cpu_observed_failed = bool(local_cpu_rows) and not passed_rows
+    if passed_rows:
+        next_mode = "promote_gate_passed_rows_to_exact_readiness_bridge"
+        family_status = "has_local_cpu_gate_survivor"
+    elif all_cpu_observed_failed and split_count:
+        next_mode = "vectorized_mlx_acquisition_then_cpu_gate_only"
+        family_status = "current_sample_negative_with_mlx_cpu_split"
+    elif all_cpu_observed_failed:
+        next_mode = "new_basis_required_before_more_budget_spend"
+        family_status = "current_sample_negative"
+    else:
+        next_mode = "complete_missing_local_cpu_gates"
+        family_status = "incomplete_evidence"
+    blockers = ordered_unique(
+        [
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+            *(
+                ["current_operator_family_all_observed_local_cpu_rows_failed"]
+                if all_cpu_observed_failed
+                else []
+            ),
+            *(
+                ["mlx_positive_full_cpu_negative_split_requires_calibration_or_demotion"]
+                if split_count
+                else []
+            ),
+            *(
+                master_gradient.get("blockers", [])
+                if isinstance(master_gradient.get("blockers"), list)
+                else []
+            ),
+            *(
+                pixel_gradient.get("blockers", [])
+                if isinstance(pixel_gradient.get("blockers"), list)
+                else []
+            ),
+        ]
+    )
+    payload = {
+        "schema": SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA,
+        "mathematical_action": {
+            "formula": (
+                "S = 100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/"
+                f"{CONTEST_RATE_DENOM_BYTES}"
+            ),
+            "rate_score_per_byte": RATE_SCORE_PER_BYTE,
+            "empirical_budget_accounting": "observed_net_delta + saved_bytes*rate_score_per_byte",
+            "optimization_direction": "minimize_expected_delta_s_under_receiver_proof_constraints",
+        },
+        "campaign_summary": {
+            "variant_count": campaign_report.get("variant_count"),
+            "completed_learning_variant_count": campaign_report.get(
+                "completed_learning_variant_count"
+            ),
+            "local_cpu_observed_count": observed_count,
+            "local_cpu_passed_gate_count": len(passed_rows),
+            "mlx_positive_full_cpu_negative_split_count": split_count,
+            "mlx_positive_full_cpu_negative_split_rate": split_rate,
+            "best_local_cpu_delta_vs_auth_frontier": best_delta,
+            "best_variant_id": campaign_report.get("best_variant_id"),
+            "best_variant_selection_basis": campaign_report.get(
+                "best_variant_selection_basis"
+            ),
+        },
+        "empirical_dimension_effects": _dimension_effects(rows),
+        "rate_credit_rows": rate_credit_by_row,
+        "master_gradient_prior": master_gradient,
+        "pixel_gradient_prior": pixel_gradient,
+        "next_queue_policy": {
+            "mode": next_mode,
+            "operator_family_status": family_status,
+            "local_cpu_gate_required": True,
+            "post_cpu_mlx_authority_weight": 0.0 if split_count else None,
+            "mlx_role": "broad_vectorized_acquisition_only",
+            "queue_compilation": (
+                "compile grouped PoseNet-null, SegNet-region, selector-codec, "
+                "RGB/YUV-delta, and repack-order chains; do not rank isolated leaves"
+            ),
+            "preferred_next_grid": {
+                "pose_pair_source": "master_gradient_pose_null_bottom_decile",
+                "region_source": "uniward_pixel_gradient_safe_regions",
+                "receiver_patch_delta_space": ["rgb"],
+                "receiver_patch_max_pairs": [4, 8, 12],
+                "receiver_patch_regions_per_pair": [1],
+                "selector_codec_family_groups": [
+                    ["fec10_adaptive_blend"],
+                    ["fec8_markov_static_order1"],
+                    ["fec10_adaptive_blend", "fec8_markov_static_order1"],
+                ],
+                "repack_order": ["p11_then_p15_then_receiver_patch"],
+            },
+            "parallel_execution": {
+                "mlx": "single Metal device, vectorized candidate batches before CPU gate",
+                "local_cpu": "full-sample spot checks only after acquisition filter",
+                "exact_auth": "CPU only after local_cpu_delta<0 and eureka trigger; CUDA only after CPU clears",
+            },
+        },
+        "blockers": blockers,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "next_campaign_acquisition_and_queue_compilation_policy",
+        "forbidden_use": "score_claim_rank_kill_or_exact_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context="scorer_region_selector_cascade_acquisition_policy",
+    )
+    return payload
+
+
 __all__ = [
     "SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_QUEUE_METADATA_SCHEMA",
     "SCORER_REGION_SELECTOR_CASCADE_CAMPAIGN_REPORT_SCHEMA",
+    "SCORER_REGION_SELECTOR_CASCADE_ACQUISITION_POLICY_SCHEMA",
     "ScorerRegionSelectorCascadeCampaignQueueError",
+    "build_scorer_region_selector_cascade_acquisition_policy",
     "build_scorer_region_selector_cascade_campaign_queue",
     "build_scorer_region_selector_cascade_campaign_report",
+    "discover_scorer_region_selector_cascade_variant_roots",
     "enumerate_cascade_variants",
 ]
