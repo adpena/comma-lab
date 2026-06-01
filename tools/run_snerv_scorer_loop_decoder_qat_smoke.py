@@ -39,6 +39,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--step-map-bins", type=int, default=16)
     parser.add_argument("--qat-bits", type=int, default=8)
     parser.add_argument("--max-trials", type=int, default=2)
+    parser.add_argument(
+        "--search-mode",
+        choices=("random_signed", "top_weight_coordinate"),
+        default="random_signed",
+    )
     parser.add_argument("--perturb-scale", type=float, default=0.02)
     parser.add_argument("--pose-slack", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=1337)
@@ -57,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
         step_map_bins=args.step_map_bins,
         qat_bits=args.qat_bits,
         max_trials=args.max_trials,
+        search_mode=args.search_mode,
         perturb_scale=args.perturb_scale,
         pose_slack=args.pose_slack,
         seed=args.seed,

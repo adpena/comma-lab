@@ -11,6 +11,7 @@ from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     QuantizedDecoderStats,
     SnervDecoderEval,
     SnervScorerLoopDecoderQatError,
+    decoder_search_direction_labels,
     decoder_trial_passes_pose_guard,
     quantize_decoder_for_qat,
 )
@@ -68,6 +69,25 @@ def test_decoder_trial_pose_guard_requires_receiver_replay() -> None:
 def test_quantize_decoder_rejects_invalid_bit_width() -> None:
     with pytest.raises(SnervScorerLoopDecoderQatError, match="bits"):
         quantize_decoder_for_qat(_decoder(), bits=1)
+
+
+def test_top_weight_coordinate_direction_labels_are_deterministic() -> None:
+    labels = decoder_search_direction_labels(
+        np.array([0.1, -4.0, 3.0, 0.2]),
+        max_trials=2,
+        search_mode="top_weight_coordinate",
+    )
+
+    assert labels == ("coord_001", "coord_002")
+
+
+def test_decoder_search_direction_labels_rejects_unknown_mode() -> None:
+    with pytest.raises(SnervScorerLoopDecoderQatError, match="search_mode"):
+        decoder_search_direction_labels(
+            np.array([1.0, 2.0]),
+            max_trials=1,
+            search_mode="not_a_mode",
+        )
 
 
 def _decoder() -> HfGenerationDecoder:

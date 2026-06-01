@@ -108,6 +108,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     target_bits_per_coeff: float
     qat_bits: int
     max_trials: int
+    search_mode: str
     perturb_scale: float
     pose_slack: float
     baseline: SnervDecoderEval
@@ -174,6 +175,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     step_map_bins: int = 16,
     qat_bits: int = 8,
     max_trials: int = 2,
+    search_mode: str = "random_signed",
     perturb_scale: float = 0.02,
     pose_slack: float = 0.0,
     seed: int = 1337,
@@ -181,9 +183,11 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     """Run a tiny real-frame scorer-loop decoder/QAT smoke.
 
     The loop is deliberately bounded: it evaluates the least-squares decoder and
-    up to ``2 * max_trials`` random signed decoder perturbations after fake
-    quantization. A candidate is accepted only if it improves advisory score and
-    keeps PoseNet no worse than the current best plus ``pose_slack``.
+    up to ``2 * max_trials`` signed decoder perturbations after fake
+    quantization. ``random_signed`` probes global random signs; ``top_weight_
+    coordinate`` probes the largest-magnitude decoder atoms one at a time. A
+    candidate is accepted only if it improves advisory score and keeps both
+    PoseNet and SegNet within the hard continuation guard.
     """
 
     if n_pairs < 1:
@@ -194,6 +198,10 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         raise SnervScorerLoopDecoderQatError("perturb_scale must be >= 0")
     if pose_slack < 0:
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
+    if search_mode not in {"random_signed", "top_weight_coordinate"}:
+        raise SnervScorerLoopDecoderQatError(
+            "search_mode must be 'random_signed' or 'top_weight_coordinate'"
+        )
 
     t0 = time.perf_counter()
     posenet, segnet = load_score_exact_scorers(upstream_dir=upstream_dir, device=device)
@@ -230,8 +238,13 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         raise SnervScorerLoopDecoderQatError("decoder has no weights")
     scale = _perturbation_scale(base_vec, perturb_scale)
 
-    for trial in range(1, max_trials + 1):
-        direction = rng.choice(np.array([-1.0, 1.0], dtype=np.float64), size=base_vec.shape)
+    directions = _decoder_search_directions(
+        base_vec,
+        max_trials=max_trials,
+        search_mode=search_mode,
+        rng=rng,
+    )
+    for trial, (direction_label, direction) in enumerate(directions, start=1):
         for sign in (1.0, -1.0):
             candidate_vec = _decoder_to_vector(best_decoder)[0] + sign * scale * direction
             candidate = _vector_to_decoder(candidate_vec, layout)
@@ -241,7 +254,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 posenet=posenet,
                 segnet=segnet,
                 qat_bits=qat_bits,
-                label=f"trial_{trial}_{'plus' if sign > 0 else 'minus'}",
+                label=f"{direction_label}_{'plus' if sign > 0 else 'minus'}",
                 iteration=trial,
                 accepted=False,
             )
@@ -285,6 +298,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         target_bits_per_coeff=float(target_bits_per_coeff),
         qat_bits=int(qat_bits),
         max_trials=int(max_trials),
+        search_mode=search_mode,
         perturb_scale=float(perturb_scale),
         pose_slack=float(pose_slack),
         baseline=baseline,
@@ -377,6 +391,27 @@ def decoder_trial_passes_pose_guard(
     )
 
 
+def decoder_search_direction_labels(
+    vector: np.ndarray,
+    *,
+    max_trials: int,
+    search_mode: str,
+    seed: int = 0,
+) -> tuple[str, ...]:
+    """Return deterministic labels for bounded decoder perturbation directions."""
+
+    rng = np.random.default_rng(seed)
+    return tuple(
+        label
+        for label, _direction in _decoder_search_directions(
+            np.asarray(vector, dtype=np.float64).reshape(-1),
+            max_trials=max_trials,
+            search_mode=search_mode,
+            rng=rng,
+        )
+    )
+
+
 def _trial_blockers(
     candidate: SnervDecoderEval,
     current_best: SnervDecoderEval,
@@ -393,6 +428,37 @@ def _trial_blockers(
     if candidate.score_linf >= current_best.score_linf:
         blockers.append("score_gate_failed")
     return tuple(dict.fromkeys(blockers))
+
+
+def _decoder_search_directions(
+    vector: np.ndarray,
+    *,
+    max_trials: int,
+    search_mode: str,
+    rng: np.random.Generator,
+) -> tuple[tuple[str, np.ndarray], ...]:
+    vec = np.asarray(vector, dtype=np.float64).reshape(-1)
+    if max_trials < 0:
+        raise SnervScorerLoopDecoderQatError("max_trials must be >= 0")
+    if vec.size == 0:
+        return ()
+    if search_mode == "random_signed":
+        signs = np.array([-1.0, 1.0], dtype=np.float64)
+        return tuple(
+            (f"random_{idx}", rng.choice(signs, size=vec.shape))
+            for idx in range(1, int(max_trials) + 1)
+        )
+    if search_mode == "top_weight_coordinate":
+        order = np.argsort(-np.abs(vec), kind="stable")[: int(max_trials)]
+        rows = []
+        for idx in order:
+            direction = np.zeros_like(vec)
+            direction[int(idx)] = 1.0
+            rows.append((f"coord_{int(idx):03d}", direction))
+        return tuple(rows)
+    raise SnervScorerLoopDecoderQatError(
+        "search_mode must be 'random_signed' or 'top_weight_coordinate'"
+    )
 
 
 def _prepare_state(
@@ -669,6 +735,7 @@ __all__ = [
     "SnervDecoderEval",
     "SnervScorerLoopDecoderQatError",
     "SnervScorerLoopDecoderQatSmokeResult",
+    "decoder_search_direction_labels",
     "decoder_trial_passes_pose_guard",
     "quantize_decoder_for_qat",
     "run_snerv_scorer_loop_decoder_qat_smoke",
