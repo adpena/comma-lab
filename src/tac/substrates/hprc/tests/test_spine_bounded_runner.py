@@ -455,6 +455,8 @@ def test_sampled_section_value_profile_opens_full_video_work_order(
     assert "sampled_mlx_section_value_replay_not_budget_authority" in sections[
         "decoder_qw"
     ]["blockers"]
+    assert "full_video_mlx_scorer_replay_not_attached" in plan["blockers"]
+    assert "sampled_mlx_prefilter_requires_full_video_rerun" in plan["blockers"]
     work_orders = plan["section_value_profile_work_orders"]
     assert len(work_orders) == 1
     assert work_orders[0]["profile_sections"] == [

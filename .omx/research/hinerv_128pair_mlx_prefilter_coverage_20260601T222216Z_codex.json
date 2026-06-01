@@ -1,0 +1,33 @@
+{
+  "blockers": [
+    "full_video_mlx_scorer_replay_not_attached",
+    "sampled_mlx_prefilter_requires_full_video_rerun",
+    "mlx_profile_not_full_video_executed",
+    "mlx_profile_pair_count_below_full_video"
+  ],
+  "full_video_profile_paths": [],
+  "has_full_video_mlx_prefilter": false,
+  "profile_count": 1,
+  "profile_records": [
+    {
+      "blockers": [
+        "mlx_profile_not_full_video_executed",
+        "mlx_profile_pair_count_below_full_video"
+      ],
+      "bytes": 19967,
+      "exists": true,
+      "full_video_prefilter": false,
+      "full_video_scope": "sampled_prefix_requires_full_video_rerun",
+      "pair_count": 128,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/codex_hi_nerv_128pair_direct_mlx_prefilter_20260601T2200Z/hprc_mlx_component_neutralization_profile.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_pairs": 600,
+      "schema_name": "hprc_mlx_component_neutralization_profile.v1",
+      "score_claim": false,
+      "sha256": "978b48bcc6caeb455a625e6ae9d6d026ce00cd4990d81d8f247357e5a7595825"
+    }
+  ],
+  "required_pairs": 600,
+  "schema": "hprc_mlx_prefilter_coverage.v1"
+}

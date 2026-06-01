@@ -41,10 +41,14 @@ from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (  # no
     build_score_aware_carrier_training_plan,
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
+from tac.substrates.hprc.mlx_prefilter_coverage import (  # noqa: E402
+    summarize_mlx_prefilter_coverage,
+)
 from tac.substrates.hprc.representation_spine import (  # noqa: E402
     build_pr95_hnerv_spine_from_archive,
     write_representation_spine_projection,
 )
+from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT  # noqa: E402
 from tac.substrates.hprc.spine_acquisition import (  # noqa: E402
     DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
     build_spine_acquisition_report,
@@ -376,7 +380,7 @@ def _local_cpu_replay_enabled_by_default(
 ) -> bool:
     """Return whether local replay should run without an explicit CLI override."""
 
-    return int(num_pairs) >= 600 and bool(has_full_video_mlx_prefilter)
+    return int(num_pairs) >= CONTEST_PAIR_COUNT and bool(has_full_video_mlx_prefilter)
 
 
 def _run_compact_local_cpu_replay_gate(
@@ -396,8 +400,8 @@ def _run_compact_local_cpu_replay_gate(
 
     The gate is deliberately coverage-aware. A partial 1/32/128-pair smoke can
     prove archive/runtime consumption, but it cannot be a local score authority
-    because upstream evaluate expects the contest-shaped full-video output. Full
-    600-pair candidates run the gate by default unless the operator opts out.
+    because upstream evaluate expects the contest-shaped full-video output.
+    Full-video candidates run the gate by default unless the operator opts out.
     """
 
     root = Path(repo_root).expanduser().resolve(strict=False)
@@ -410,7 +414,7 @@ def _run_compact_local_cpu_replay_gate(
             has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
         )
     )
-    if pairs < 600:
+    if pairs < CONTEST_PAIR_COUNT:
         return None, [], ["local_cpu_replay_not_run_partial_pair_coverage"]
     if requested is None and not has_full_video_mlx_prefilter:
         return None, [], ["local_cpu_replay_waiting_for_full_video_mlx_prefilter"]
@@ -2111,6 +2115,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     )
     projection_paths = [spine_manifest] if spine_manifest.is_file() else []
     receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
+    mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
+        mlx_profile_paths,
+        root=root,
+    )
+    has_full_video_mlx_prefilter = bool(
+        mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
+    )
     local_cpu_replay_summary: dict[str, Any] | None = None
     local_cpu_replay_paths: list[Path] = []
     local_cpu_replay_blockers: list[str] = []
@@ -2126,7 +2137,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             upstream_dir=scorer_upstream,
             num_pairs=int(num_pairs),
             requested=run_local_cpu_replay,
-            has_full_video_mlx_prefilter=bool(mlx_profile_paths),
+            has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
             keep_inflated=keep_local_replay_inflated,
             cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
             repo_root=root,
@@ -2143,8 +2154,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         blockers.append("hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs")
     if segnet_distillation_weight <= 0.0 or pose_distillation_weight <= 0.0:
         blockers.append("hi_nerv_real_segnet_posenet_teachers_not_both_attached")
-    if not mlx_profile_paths:
-        blockers.append("full_video_mlx_scorer_replay_not_attached")
+    blockers.extend(mlx_prefilter_coverage.get("blockers") or [])
     if projection_paths:
         acquisition = build_spine_acquisition_report(
             projection_manifest_paths=projection_paths,
@@ -2218,17 +2228,18 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "default_enabled_for_full_coverage": (
                     _local_cpu_replay_enabled_by_default(
                         int(num_pairs),
-                        has_full_video_mlx_prefilter=bool(mlx_profile_paths),
+                        has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
                     )
                 ),
-                "has_full_video_mlx_prefilter": bool(mlx_profile_paths),
-                "coverage_valid_for_replay": int(num_pairs) >= 600,
+                "has_full_video_mlx_prefilter": has_full_video_mlx_prefilter,
+                "coverage_valid_for_replay": int(num_pairs) >= CONTEST_PAIR_COUNT,
                 "executed": local_cpu_replay_summary is not None,
                 "axis_tag": "[macOS-CPU advisory]",
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
             },
+            "mlx_prefilter_coverage": mlx_prefilter_coverage,
             "mlx_profile_paths": [
                 _resolve(path, base=root).as_posix() for path in mlx_profile_paths
             ],

@@ -12,6 +12,11 @@ from typing import Any
 from tac.archive_byte_profile import contest_rate_term
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
+from tac.substrates.hprc.mlx_prefilter_coverage import (
+    HPRC_MLX_COMPONENT_PROFILE_SCHEMA,
+    mlx_profile_full_video_scope,
+    mlx_profile_has_full_video_coverage,
+)
 from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
 from tac.substrates.hprc.spine_acquisition import HPRC_SPINE_ACQUISITION_REPORT_SCHEMA
 
@@ -24,7 +29,6 @@ HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA = (
 HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA = (
     "hprc_spine_section_cut_materializer_work_order.v1"
 )
-HPRC_MLX_COMPONENT_PROFILE_SCHEMA = "hprc_mlx_component_neutralization_profile.v1"
 _SECTION_VALUE_PROFILERS: dict[str, dict[str, Any]] = {
     "pact_nerv_vq_pvq": {
         "tool": "tools/profile_pact_nerv_vq_mlx_section_value.py",
@@ -333,8 +337,7 @@ def _section_value_row(
     ]
     best_evidence = _best_section_evidence(evidence_rows)
     full_video_evidence_present = any(
-        int(row.get("profile_max_pairs") or 0) >= CONTEST_PAIR_COUNT
-        for row in evidence_rows
+        _section_evidence_has_full_video_scope(row) for row in evidence_rows
     )
     coverage = (
         acquisition_row.get("coverage")
@@ -1373,6 +1376,19 @@ def _plan_blockers(
     blockers = ["contest_cpu_cuda_exact_eval_not_executed"]
     if not mlx_profiles:
         blockers.append("full_video_mlx_scorer_replay_not_attached")
+    elif not any(
+        mlx_profile_has_full_video_coverage(profile["payload"])
+        for profile in mlx_profiles
+    ):
+        blockers.append("full_video_mlx_scorer_replay_not_attached")
+        if any(
+            mlx_profile_full_video_scope(profile["payload"])
+            == "sampled_prefix_requires_full_video_rerun"
+            for profile in mlx_profiles
+        ):
+            blockers.append("sampled_mlx_prefilter_requires_full_video_rerun")
+        else:
+            blockers.append("mlx_prefilter_not_full_video")
     if not any(row["coverage_valid_for_base_comparison"] for row in compact_base_rows):
         blockers.append("no_full_coverage_compact_base_candidate")
     if not any(row["fits_ceiling"] and row["coverage_valid_for_base_comparison"] for row in compact_base_rows):
@@ -1393,6 +1409,18 @@ def _load_profile(path: str | Path, *, root: Path) -> dict[str, Any]:
     if payload.get("schema") != HPRC_MLX_COMPONENT_PROFILE_SCHEMA:
         raise ValueError(f"MLX profile has unexpected schema: {resolved}")
     return {"path": resolved.as_posix(), "sha256": _sha256_file(resolved), "payload": payload}
+
+
+def _section_evidence_has_full_video_scope(row: dict[str, Any]) -> bool:
+    return (
+        mlx_profile_full_video_scope(
+            {
+                "scope_status": row.get("profile_scope_status"),
+            }
+        )
+        == "executed"
+        and int(row.get("profile_max_pairs") or 0) >= CONTEST_PAIR_COUNT
+    )
 
 
 def _load_receiver_proof(path: str | Path, *, root: Path) -> dict[str, Any]:
