@@ -219,6 +219,59 @@ def test_hprc_queue_followup_report_blocks_partial_and_missing_z8(tmp_path: Path
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_hprc_queue_followup_report_recomputes_byte_intelligence_from_archive(
+    tmp_path: Path,
+) -> None:
+    archive_dir = tmp_path / "candidate"
+    archive_dir.mkdir()
+    packet = build_compact_receiver_packet_from_lowres_frames(
+        np.zeros((4, 8, 10, 3), dtype=np.uint8),
+        basis_count=2,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+    (archive_dir / "0.bin").write_bytes(packet)
+    archive_path = archive_dir / "archive.zip"
+    archive_path.write_bytes(b"PK-test")
+    result_path = tmp_path / "hprc_compact_receiver_training_run_result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_compact_receiver_training_run_result.v1",
+                "artifact": {
+                    "archive_path": archive_path.as_posix(),
+                    "archive_sha256": "b" * 64,
+                    "archive_bytes": archive_path.stat().st_size,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_hprc_queue_followup_report(
+        training_result_path=result_path,
+        decode_pairs=600,
+        repo_root=tmp_path,
+    )
+
+    intelligence = report["archive"]["byte_intelligence"]
+    assert intelligence["computed_from_archive_bytes"] is True
+    assert intelligence["compact_receiver_section_byte_profile"]["decoder_grid_height"] == 8
+    assert intelligence["resolution_rate_feasibility"]["status"] == (
+        "rate_feasible_but_distortion_bound_resolution_risk"
+    )
+    assert any(
+        row["signal_id"] == "hprc_rate_feasible_but_resolution_distortion_bound"
+        for row in report["planner_learning_signals"]
+    )
+
+
 def test_hprc_queue_followup_report_accepts_local_replay_but_keeps_false_authority(
     tmp_path: Path,
 ) -> None:

@@ -17,14 +17,16 @@ from pathlib import Path
 from typing import Any
 
 from tac.repo_io import sha256_file, write_json_artifact
-from tac.substrates.hprc.archive import HprcPacketConfig
+from tac.substrates.hprc.archive import HprcPacketConfig, parse_hprc_packet
 from tac.substrates.hprc.archive_candidate import (
     FALSE_AUTHORITY,
     HPRC_ARCHIVE_CANDIDATE_FAMILY,
     HPRC_ARCHIVE_TRANSFORM_KIND,
+    build_hprc_resolution_rate_feasibility,
     build_minimal_hprc_v0_packet,
     export_hprc_archive_bytes,
 )
+from tac.substrates.hprc.learned_receiver import compact_receiver_section_byte_profile
 from tac.substrates.hprc.lineage import (
     hprc_campaign_manifest,
     primary_rate_collapse_candidates,
@@ -270,6 +272,17 @@ def build_hprc_queue_followup_report(
     archive_zip_path = artifact.get("archive_path")
     archive_zip_sha256 = artifact.get("archive_sha256")
     archive_zip_bytes = artifact.get("archive_bytes")
+    archive_dir = (
+        None
+        if not isinstance(archive_zip_path, str) or not archive_zip_path
+        else _resolve(archive_zip_path, base=root).parent
+    )
+    byte_intelligence = _hprc_archive_byte_intelligence(
+        archive_dir=archive_dir,
+        archive_zip_bytes=archive_zip_bytes,
+        base=root,
+    )
+    resolution_feasibility = byte_intelligence.get("resolution_rate_feasibility")
     export_manifest_path = _artifact_or_default_path(
         artifact,
         "export_manifest_path",
@@ -392,6 +405,57 @@ def build_hprc_queue_followup_report(
                 ],
             }
         )
+    if isinstance(resolution_feasibility, dict):
+        status = str(resolution_feasibility.get("status") or "")
+        if status == "rate_feasible_but_distortion_bound_resolution_risk":
+            planner_learning_signals.append(
+                {
+                    "schema": "hprc_planner_learning_signal.v1",
+                    "signal_id": "hprc_rate_feasible_but_resolution_distortion_bound",
+                    "status": "route_to_pose_geometry_or_predictive_redesign",
+                    "metric_name": "decoder_pixels_per_scorer_pixel",
+                    "metric_value": resolution_feasibility.get(
+                        "decoder_pixels_per_scorer_pixel"
+                    ),
+                    "archive_zip_bytes": resolution_feasibility.get("archive_zip_bytes"),
+                    "bytes_to_zero_distortion_ceiling": resolution_feasibility.get(
+                        "bytes_to_zero_distortion_ceiling"
+                    ),
+                    "next_architecture_priorities": [
+                        "native_scorer_aware_training_at_compress_time",
+                        "sparse_procedural_pose_geometry_tokens",
+                        "temporal_predictive_pose_pathway_before_dense_rgb_residuals",
+                        "higher_decoder_grid_only_if_byte_model_still_clears_ceiling",
+                    ],
+                    "reactivation_criteria": [
+                        "decoder_or_protected_pose_pathway_preserves_full600_mlx_pose",
+                        "archive_zip_bytes_stays_under_sub019_zero_distortion_ceiling",
+                        "local_cpu_replay_gate_recommended",
+                    ],
+                }
+            )
+        elif status == "rate_bound_before_distortion_gate":
+            planner_learning_signals.append(
+                {
+                    "schema": "hprc_planner_learning_signal.v1",
+                    "signal_id": "hprc_rate_bound_before_distortion_gate",
+                    "status": "route_to_payload_collapse_before_replay",
+                    "metric_name": "archive_zip_bytes",
+                    "metric_value": resolution_feasibility.get("archive_zip_bytes"),
+                    "threshold": resolution_feasibility.get(
+                        "sub019_zero_distortion_byte_ceiling"
+                    ),
+                    "next_architecture_priorities": [
+                        "section_entropy_coding",
+                        "residual_token_grammar_collapse",
+                        "receiver_state_quantization",
+                    ],
+                    "reactivation_criteria": [
+                        "archive_zip_bytes_under_sub019_zero_distortion_ceiling",
+                        "receiver_proof_present",
+                    ],
+                }
+            )
     return {
         "schema": HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA,
         "generated_at_utc": _utc_stamp(),
@@ -406,6 +470,7 @@ def build_hprc_queue_followup_report(
             "archive_bound_package_path": _repo_relative(archive_bound_package_path, root),
             "receiver_proof_path": _repo_relative(receiver_proof_path, root),
             "receiver_proof_present": receiver_proof_path.is_file(),
+            "byte_intelligence": byte_intelligence,
         },
         "local_replay_gate": {
             "required": local_replay_required,
@@ -504,6 +569,87 @@ def write_hprc_queue_followup_report(
         expected_existing_sha256=expected_sha,
     )
     return path
+
+
+def _hprc_archive_byte_intelligence(
+    *,
+    archive_dir: Path | None,
+    archive_zip_bytes: Any,
+    base: Path,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "schema": "hprc_archive_byte_intelligence.v1",
+        "observed": False,
+        "computed_from_archive_bytes": False,
+        "byte_ledger_path": None,
+        "compact_receiver_section_byte_profile": None,
+        "resolution_rate_feasibility": None,
+        "blockers": [],
+    }
+    if archive_dir is None:
+        payload["blockers"].append("archive_directory_missing")
+        return payload
+
+    byte_ledger_path = archive_dir / "hprc_archive_byte_ledger.json"
+    if byte_ledger_path.is_file():
+        ledger = _load_json_object(byte_ledger_path)
+        payload["observed"] = True
+        payload["byte_ledger_path"] = _repo_relative(byte_ledger_path, base)
+        payload["byte_ledger_sha256"] = sha256_file(byte_ledger_path)
+        payload["compact_receiver_section_byte_profile"] = ledger.get(
+            "compact_receiver_section_byte_profile"
+        )
+        payload["resolution_rate_feasibility"] = ledger.get("resolution_rate_feasibility")
+    else:
+        payload["blockers"].append("hprc_archive_byte_ledger_missing")
+
+    if (
+        payload["compact_receiver_section_byte_profile"] is not None
+        and payload["resolution_rate_feasibility"] is not None
+    ):
+        return payload
+
+    hprc_bin = archive_dir / "0.bin"
+    if not hprc_bin.is_file():
+        payload["blockers"].append("hprc_0bin_missing_for_byte_intelligence_recompute")
+        return payload
+    archive_bytes_count = _safe_int(archive_zip_bytes)
+    if archive_bytes_count is None:
+        archive_zip = archive_dir / "archive.zip"
+        if archive_zip.is_file():
+            archive_bytes_count = int(archive_zip.stat().st_size)
+    if archive_bytes_count is None:
+        payload["blockers"].append("archive_zip_bytes_missing_for_resolution_feasibility")
+        return payload
+
+    packet = parse_hprc_packet(hprc_bin.read_bytes())
+    payload["computed_from_archive_bytes"] = True
+    payload["hprc_0bin_path"] = _repo_relative(hprc_bin, base)
+    payload["hprc_0bin_sha256"] = sha256_file(hprc_bin)
+    if payload["compact_receiver_section_byte_profile"] is None:
+        try:
+            payload["compact_receiver_section_byte_profile"] = (
+                compact_receiver_section_byte_profile(packet)
+            )
+        except ValueError as exc:
+            payload["blockers"].append(
+                f"compact_receiver_section_byte_profile_unavailable:{type(exc).__name__}"
+            )
+    if payload["resolution_rate_feasibility"] is None:
+        payload["resolution_rate_feasibility"] = build_hprc_resolution_rate_feasibility(
+            packet=packet,
+            archive_bytes_count=int(archive_bytes_count),
+        )
+    return payload
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _write_json_maybe_overwrite(path: Path, payload: Any) -> None:

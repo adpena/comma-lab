@@ -332,7 +332,7 @@ def _write_hprc_runtime(
     (submission_dir / "0.bin").write_bytes(bin_bytes)
 
 
-def _resolution_rate_feasibility(
+def build_hprc_resolution_rate_feasibility(
     *,
     packet: HprcPacket,
     archive_bytes_count: int,
@@ -380,6 +380,17 @@ def _resolution_rate_feasibility(
         "score_claim": False,
         "promotion_eligible": False,
     }
+
+
+def _resolution_rate_feasibility(
+    *,
+    packet: HprcPacket,
+    archive_bytes_count: int,
+) -> dict[str, Any]:
+    return build_hprc_resolution_rate_feasibility(
+        packet=packet,
+        archive_bytes_count=archive_bytes_count,
+    )
 
 
 def export_hprc_archive_bytes(
@@ -530,6 +541,7 @@ __all__ = [
     "HPRC_RECEIVER_PROOF_SCRATCH_BYTES",
     "HPRC_RUNTIME_MODULE_FILES",
     "HPRC_SUB019_ZERO_DISTORTION_BYTE_CEILING",
+    "build_hprc_resolution_rate_feasibility",
     "build_hprc_section_mutation_proof",
     "build_minimal_hprc_v0_packet",
     "export_hprc_archive_bytes",
