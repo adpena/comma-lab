@@ -17,6 +17,13 @@ from typing import Any, Literal
 import numpy as np
 
 from tac.archive_byte_profile import contest_rate_term
+from tac.packet_compiler.int_payload_bit_layouts import (
+    DEFAULT_INT_PAYLOAD_LAYOUTS,
+    VALID_INT_PAYLOAD_LAYOUTS,
+    IntPayloadLayout,
+    decode_int_payload_layout,
+    encode_int_payload_layout,
+)
 from tac.packet_compiler.pr101_decoder_byte_maps import (
     VALID_BYTE_MAP_STRATEGIES,
     decode_byte_map,
@@ -39,7 +46,6 @@ TENSOR_PAYLOAD_SOURCE_MANIFEST_SCHEMA = "tensor_payload_source_manifest.v1"
 QuantizationMode = Literal["symmetric_int8_fp16_scale", "already_quantized_int8"]
 ScaleDType = Literal["fp16", "fp32"]
 StoragePermMode = Literal["identity", "identity-plus-exhaustive4"]
-
 
 def quantize_tensor_symmetric_int8(
     values: Any,
@@ -79,6 +85,7 @@ def measure_tensor_payload_candidates(
     scale_dtypes: Sequence[ScaleDType] = ("fp16",),
     storage_perm_mode: StoragePermMode = "identity-plus-exhaustive4",
     byte_maps: Sequence[str] = tuple(sorted(VALID_BYTE_MAP_STRATEGIES)),
+    payload_layouts: Sequence[IntPayloadLayout] = DEFAULT_INT_PAYLOAD_LAYOUTS,
     coders: Sequence[CoderName] = DEFAULT_CODERS,
     brotli_quality: int = 11,
 ) -> list[dict[str, Any]]:
@@ -86,6 +93,7 @@ def measure_tensor_payload_candidates(
 
     q = _validate_q_i8(q_i8)
     scale_dtype_values = _normalize_scale_dtypes(scale_dtypes)
+    layout_values = _normalize_payload_layouts(payload_layouts)
     name = _tensor_name(tensor_name or f"tensor_{tensor_index}")
     perms = _candidate_storage_perms(q.shape, storage_perm_mode)
     candidate_rows: list[dict[str, Any]] = []
@@ -108,56 +116,77 @@ def measure_tensor_payload_candidates(
             for scale_dtype in scale_dtype_values:
                 scale_tail = _scale_tail_bytes(scale, scale_dtype=scale_dtype)
                 payload = payload_without_scale + scale_tail
-                floor = empirical_shannon_floor_bytes(payload)
-                for coder in coders:
-                    measured = measure_payload_coder_candidate(
-                        payload,
-                        coder=coder,
-                        brotli_quality=brotli_quality,
-                        brotli_lgwin_sweep=False,
+                for layout in layout_values:
+                    layout_payload = encode_int_payload_layout(payload, layout)
+                    layout_ok = (
+                        decode_int_payload_layout(
+                            layout_payload,
+                            layout=layout,
+                            raw_len=len(payload),
+                        )
+                        == payload
                     )
-                    status = str(measured["status"])
-                    roundtrip_exact = bool(transform_ok and measured["roundtrip_exact"])
-                    if not transform_ok:
-                        status = "transform_roundtrip_failed"
-                    charged = int(measured["charged_bytes"])
-                    candidate_rows.append(
-                        {
-                            "schema": TENSOR_PAYLOAD_GRAMMAR_CANDIDATE_SCHEMA,
-                            "tensor_index": int(tensor_index),
-                            "tensor_name": name,
-                            "tensor_shape": [int(v) for v in q.shape],
-                            "n_elements": int(q.size),
-                            "byte_map": byte_map,
-                            "storage_perm": _perm_label(perm),
-                            "scale_dtype": scale_dtype,
-                            "scale": float(scale),
-                            "scale_tail_bytes": len(scale_tail),
-                            "coder": coder,
-                            "coder_params": measured["coder_params"],
-                            "charged_bytes": charged,
-                            "codec_payload_bytes": int(measured["codec_payload_bytes"]),
-                            "side_info_bytes": int(measured["side_info_bytes"]),
-                            "raw_payload_bytes": len(payload),
-                            "empirical_shannon_floor_bytes": floor,
-                            "coded_over_floor_ratio": None
-                            if floor <= 0.0
-                            else charged / floor,
-                            "transform_roundtrip_exact": bool(transform_ok),
-                            "codec_roundtrip_exact": bool(measured["roundtrip_exact"]),
-                            "roundtrip_exact": roundtrip_exact,
-                            "status": status,
-                            "runtime_consumption_status": (
-                                "generic_tensor_payload_receiver_required"
-                            ),
-                            "byte_accounting_scope": (
-                                "isolated_tensor_payload_not_archive_authority"
-                            ),
-                            "axis_tag": "[planning-only byte-profile]",
-                            "blockers": _candidate_blockers(status=status),
-                            **FALSE_AUTHORITY_FIELDS,
-                        }
-                    )
+                    floor = empirical_shannon_floor_bytes(layout_payload)
+                    for coder in coders:
+                        measured = measure_payload_coder_candidate(
+                            layout_payload,
+                            coder=coder,
+                            brotli_quality=brotli_quality,
+                            brotli_lgwin_sweep=False,
+                        )
+                        status = str(measured["status"])
+                        roundtrip_exact = bool(
+                            transform_ok and layout_ok and measured["roundtrip_exact"]
+                        )
+                        if not transform_ok:
+                            status = "transform_roundtrip_failed"
+                        elif not layout_ok:
+                            status = "layout_roundtrip_failed"
+                        charged = int(measured["charged_bytes"])
+                        candidate_rows.append(
+                            {
+                                "schema": TENSOR_PAYLOAD_GRAMMAR_CANDIDATE_SCHEMA,
+                                "tensor_index": int(tensor_index),
+                                "tensor_name": name,
+                                "tensor_shape": [int(v) for v in q.shape],
+                                "n_elements": int(q.size),
+                                "byte_map": byte_map,
+                                "storage_perm": _perm_label(perm),
+                                "int_payload_layout": layout,
+                                "scale_dtype": scale_dtype,
+                                "scale": float(scale),
+                                "scale_tail_bytes": len(scale_tail),
+                                "coder": coder,
+                                "coder_params": measured["coder_params"],
+                                "charged_bytes": charged,
+                                "codec_payload_bytes": int(
+                                    measured["codec_payload_bytes"]
+                                ),
+                                "side_info_bytes": int(measured["side_info_bytes"]),
+                                "raw_payload_bytes": len(payload),
+                                "layout_payload_bytes": len(layout_payload),
+                                "empirical_shannon_floor_bytes": floor,
+                                "coded_over_floor_ratio": None
+                                if floor <= 0.0
+                                else charged / floor,
+                                "transform_roundtrip_exact": bool(transform_ok),
+                                "layout_roundtrip_exact": bool(layout_ok),
+                                "codec_roundtrip_exact": bool(
+                                    measured["roundtrip_exact"]
+                                ),
+                                "roundtrip_exact": roundtrip_exact,
+                                "status": status,
+                                "runtime_consumption_status": (
+                                    "generic_tensor_payload_receiver_required"
+                                ),
+                                "byte_accounting_scope": (
+                                    "isolated_tensor_payload_not_archive_authority"
+                                ),
+                                "axis_tag": "[planning-only byte-profile]",
+                                "blockers": _candidate_blockers(status=status),
+                                **FALSE_AUTHORITY_FIELDS,
+                            }
+                        )
     candidate_rows.sort(
         key=lambda row: (
             row["status"] != "ok",
@@ -166,6 +195,7 @@ def measure_tensor_payload_candidates(
             str(row["coder"]),
             str(row["byte_map"]),
             str(row["storage_perm"]),
+            str(row["int_payload_layout"]),
             str(row["scale_dtype"]),
         )
     )
@@ -190,6 +220,7 @@ def select_best_tensor_payload_candidate(
             str(row["coder"]),
             str(row["byte_map"]),
             str(row["storage_perm"]),
+            str(row["int_payload_layout"]),
             str(row["scale_dtype"]),
         )
     )
@@ -205,6 +236,7 @@ def solve_tensor_payload_grammar(
     scale_dtypes: Sequence[ScaleDType] = ("fp16",),
     storage_perm_mode: StoragePermMode = "identity-plus-exhaustive4",
     byte_maps: Sequence[str] = tuple(sorted(VALID_BYTE_MAP_STRATEGIES)),
+    payload_layouts: Sequence[IntPayloadLayout] = DEFAULT_INT_PAYLOAD_LAYOUTS,
     coders: Sequence[CoderName] = DEFAULT_CODERS,
     brotli_quality: int = 11,
     baseline_coder: CoderName = "brotli",
@@ -221,6 +253,7 @@ def solve_tensor_payload_grammar(
 
     scale_dtype_values = _normalize_scale_dtypes(scale_dtypes)
     normalized = _normalize_tensor_rows(tensors, n_quant=n_quant)
+    layout_values = _normalize_payload_layouts(payload_layouts)
     rows: list[dict[str, Any]] = []
     selected_total = 0
     baseline_total = 0
@@ -236,6 +269,7 @@ def solve_tensor_payload_grammar(
             scale_dtypes=scale_dtype_values,
             storage_perm_mode=storage_perm_mode,
             byte_maps=byte_maps,
+            payload_layouts=layout_values,
             coders=coders,
             brotli_quality=brotli_quality,
         )
@@ -245,6 +279,7 @@ def solve_tensor_payload_grammar(
             baseline_coder=baseline_coder,
             baseline_byte_map="zig",
             baseline_storage_perm="identity",
+            baseline_int_payload_layout="flat",
             baseline_scale_dtype=scale_dtype_values[0],
         )
         selected_total += int(selected["charged_bytes"])
@@ -313,6 +348,7 @@ def solve_tensor_payload_grammar(
         "scale_dtypes": list(scale_dtype_values),
         "storage_perm_mode": storage_perm_mode,
         "byte_maps": list(byte_maps),
+        "int_payload_layouts": list(layout_values),
         "coders": list(coders),
         "baseline_coder": baseline_coder,
         "brotli_quality": int(brotli_quality),
@@ -584,6 +620,7 @@ def _baseline_candidate(
     baseline_coder: CoderName,
     baseline_byte_map: str,
     baseline_storage_perm: str,
+    baseline_int_payload_layout: str,
     baseline_scale_dtype: ScaleDType,
 ) -> dict[str, Any]:
     matches = [
@@ -592,6 +629,7 @@ def _baseline_candidate(
         if row.get("coder") == baseline_coder
         and row.get("byte_map") == baseline_byte_map
         and row.get("storage_perm") == baseline_storage_perm
+        and row.get("int_payload_layout") == baseline_int_payload_layout
         and row.get("scale_dtype") == baseline_scale_dtype
         and row.get("status") == "ok"
         and bool(row.get("roundtrip_exact"))
@@ -632,12 +670,14 @@ def _planner_feedback(
                 "operation_id": (
                     f"tensor_{int(selected['tensor_index']):04d}_"
                     f"{selected['coder']}_{selected['byte_map']}_"
-                    f"{selected['storage_perm']}_{selected['scale_dtype']}"
+                    f"{selected['storage_perm']}_"
+                    f"{selected['int_payload_layout']}_{selected['scale_dtype']}"
                 ).replace(",", "_"),
                 "tensor_index": int(selected["tensor_index"]),
                 "tensor_name": str(selected["tensor_name"]),
                 "byte_map": str(selected["byte_map"]),
                 "storage_perm": str(selected["storage_perm"]),
+                "int_payload_layout": str(selected["int_payload_layout"]),
                 "scale_dtype": str(selected["scale_dtype"]),
                 "coder": str(selected["coder"]),
                 "coder_params": dict(selected.get("coder_params") or {}),
@@ -726,13 +766,17 @@ def _payload_from_selected_tensor_candidate(
     if scale_dtype not in {"fp16", "fp32"}:
         raise ValueError(f"selected candidate has unknown scale_dtype: {scale_dtype!r}")
     transformed = _apply_storage_perm(q_i8, perm).reshape(-1)
-    return encode_byte_map(
+    flat_payload = encode_byte_map(
         transformed.astype(np.int8, copy=False),
         byte_map,
     ) + _scale_tail_bytes(
         float(selected.get("scale", 1.0)),
         scale_dtype=scale_dtype,  # type: ignore[arg-type]
     )
+    layout = str(selected.get("int_payload_layout") or "flat")
+    if layout not in VALID_INT_PAYLOAD_LAYOUTS:
+        raise ValueError(f"selected candidate has unknown int_payload_layout: {layout!r}")
+    return encode_int_payload_layout(flat_payload, layout)  # type: ignore[arg-type]
 
 
 def _grouped_brotli_order_diagnostic(
@@ -862,6 +906,20 @@ def _normalize_scale_dtypes(values: Sequence[ScaleDType]) -> tuple[ScaleDType, .
         value = str(raw)
         if value not in {"fp16", "fp32"}:
             raise ValueError(f"unknown scale_dtype: {value!r}")
+        out.append(value)  # type: ignore[arg-type]
+    return tuple(dict.fromkeys(out))
+
+
+def _normalize_payload_layouts(
+    values: Sequence[IntPayloadLayout],
+) -> tuple[IntPayloadLayout, ...]:
+    if not values:
+        raise ValueError("payload_layouts must not be empty")
+    out: list[IntPayloadLayout] = []
+    for raw in values:
+        value = str(raw)
+        if value not in VALID_INT_PAYLOAD_LAYOUTS:
+            raise ValueError(f"unknown int_payload_layout: {value!r}")
         out.append(value)  # type: ignore[arg-type]
     return tuple(dict.fromkeys(out))
 

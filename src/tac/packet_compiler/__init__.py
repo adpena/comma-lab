@@ -78,6 +78,13 @@ from tac.packet_compiler.pr100_schema_driven_decoder import (
     decode_schema_driven,
     encode_schema_driven,
 )
+from tac.packet_compiler.int_payload_bit_layouts import (
+    DEFAULT_INT_PAYLOAD_LAYOUTS,
+    IntPayloadLayout,
+    VALID_INT_PAYLOAD_LAYOUTS,
+    decode_int_payload_layout,
+    encode_int_payload_layout,
+)
 from tac.packet_compiler.pr101_fec6_candidate_queue import (
     PR101FEC6CandidateQueueError,
     PR101_FEC6_BYTE_ACCOUNTING_SCHEMA,
@@ -463,6 +470,12 @@ __all__ = [
     "pack_hi_lo_split",
     "parse_qmqh_header",
     "unpack_hi_lo_split",
+    # Lossless integer payload bit layouts
+    "DEFAULT_INT_PAYLOAD_LAYOUTS",
+    "IntPayloadLayout",
+    "VALID_INT_PAYLOAD_LAYOUTS",
+    "decode_int_payload_layout",
+    "encode_int_payload_layout",
     # PR92 — RMC1 / RSA1 / RSB1 joint-stream grammar
     "MAGIC_RMC1",
     "MAGIC_RSA1",
