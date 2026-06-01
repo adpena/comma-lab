@@ -7,12 +7,15 @@ import torch
 
 from tac.optimization.byte_shaving_campaign import build_signal_surface_from_candidate_queue
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
+    PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA,
     PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA,
     PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA,
+    build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     empirical_shannon_floor_bytes,
     measure_tensor_grammar_candidates,
     select_best_tensor_candidate,
+    solve_grouped_brotli_packet_grammar,
     solve_state_dict_per_tensor_grammar,
 )
 from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA
@@ -181,6 +184,53 @@ def test_solver_report_converts_to_planning_only_optimizer_queue() -> None:
     assert surface["score_claim"] is False
     assert surface["ready_for_exact_eval_dispatch"] is False
     assert len(surface["units"]) == 1
+
+
+def test_grouped_brotli_packet_solver_prices_split_context_not_isolated_bytes() -> None:
+    report = solve_grouped_brotli_packet_grammar(
+        _tiny_state_dict(seed=3),
+        selected_transform_mode="best_brotli_per_tensor",
+        storage_perm_mode="identity",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=4,
+    )
+
+    assert report["schema"] == PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["parser_roundtrip"]["stream_roundtrip_exact"] is True
+    assert report["byte_accounting"]["selected_grouped_brotli_bytes"] > 0
+    assert report["partition"]["stream_count"] == 2
+    assert report["partition"]["stream_ends"][-1] == 4
+    assert "partial_schema_sample_not_archive_authority" in report["blockers"]
+    assert "byte_closed_archive_not_materialized" in report["blockers"]
+
+
+def test_grouped_brotli_queue_is_consumable_only_for_positive_packet_savings() -> None:
+    report = solve_grouped_brotli_packet_grammar(
+        _tiny_state_dict(seed=0),
+        selected_transform_mode="best_brotli_per_tensor",
+        storage_perm_mode="identity",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=4,
+    )
+    queue = build_grouped_optimizer_candidate_queue_from_report(report)
+
+    assert queue["schema"] == PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA
+    assert queue["score_claim"] is False
+    assert queue["ready_for_exact_eval_dispatch"] is False
+    assert queue["candidate_count"] == 1
+    saved = report["byte_accounting"]["grouped_saved_bytes_vs_current_stock"]
+    assert queue["candidates"][0]["candidate_saved_bytes"] == saved
+    assert len(queue["top_k"]) == (1 if saved > 0 else 0)
+    if saved > 0:
+        surface = build_signal_surface_from_candidate_queue(queue)
+        assert surface["score_claim"] is False
+        assert surface["units"][0]["candidate_saved_bytes"] == saved
 
 
 def test_negzig_rejects_int8_min_roundtrip_instead_of_faking_exactness() -> None:

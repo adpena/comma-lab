@@ -36,16 +36,21 @@ from tac.packet_compiler.pr101_decoder_byte_maps import (
 from tac.pr101_split_brotli_codec import (
     CONV4_STORAGE_PERMS,
     DECODER_BYTE_MAPS,
+    DECODER_STORAGE_ORDER,
+    DECODER_STREAM_ENDS,
     FIXED_STATE_SCHEMA,
     LATENT_LZMA_FILTERS,
     N_QUANT,
     _quantize_tensor,
+    decode_decoder_compact,
+    decompress_brotli_streams,
     encode_decoder_compact,
     pack_brotli_stream,
 )
 
 PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA = "pr101_per_tensor_grammar_solver.v1"
 PR101_TENSOR_GRAMMAR_CANDIDATE_SCHEMA = "pr101_tensor_grammar_candidate.v1"
+PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA = "pr101_grouped_brotli_packet_grammar.v1"
 PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 FALSE_AUTHORITY_FIELDS = {
     "score_claim": False,
@@ -96,13 +101,15 @@ def measure_tensor_grammar_candidates(
     )
     candidates: list[dict[str, Any]] = []
     for perm in perms:
-        flat = _apply_storage_perm(q, perm).reshape(-1)
         for raw_byte_map in byte_maps:
             byte_map = str(raw_byte_map)
             if byte_map not in VALID_BYTE_MAP_STRATEGIES:
                 raise ValueError(f"unknown byte_map strategy: {byte_map!r}")
-            mapped = encode_byte_map(flat.astype(np.int8, copy=False), byte_map) + (
-                np.array([float(scale)], dtype=np.float16).tobytes()
+            mapped = _build_transformed_tensor_payload(
+                q,
+                scale=scale,
+                byte_map=byte_map,
+                perm=perm,
             )
             transform_ok = _byte_map_storage_roundtrip_ok(
                 mapped[:-2], original=q, byte_map=byte_map, perm=perm
@@ -419,6 +426,306 @@ def build_optimizer_candidate_queue_from_solver_report(
     }
 
 
+def solve_grouped_brotli_packet_grammar(
+    state_dict: Mapping[str, Any],
+    *,
+    n_quant: int = N_QUANT,
+    selected_transform_mode: Literal["stock_pr101", "best_brotli_per_tensor"] = "best_brotli_per_tensor",
+    storage_perm_mode: StoragePermMode = "pr101-plus-identity",
+    storage_order: Sequence[int] | None = None,
+    exact_stream_count: int | None = len(DECODER_STREAM_ENDS),
+    max_streams: int = len(DECODER_STREAM_ENDS),
+    brotli_quality: int = 11,
+    brotli_lgwin_sweep: bool = False,
+    max_tensors: int | None = None,
+) -> dict[str, Any]:
+    """Solve the grouped split-Brotli packet layer for PR101 decoder weights.
+
+    ``measure_tensor_grammar_candidates`` is intentionally isolated.  This
+    function prices the next layer that actually matters for PR101-style
+    packets: concatenate transformed tensor payloads in storage order, split
+    them into Brotli windows, and solve the split-point DP on the real
+    concatenated bytes.  The output is still not a submission packet; non-stock
+    transform/order/split choices need a receiver adapter and full
+    inflate/eval replay before dispatch.
+    """
+
+    if selected_transform_mode not in {"stock_pr101", "best_brotli_per_tensor"}:
+        raise ValueError(f"unknown selected_transform_mode: {selected_transform_mode!r}")
+    schema = FIXED_STATE_SCHEMA if max_tensors is None else FIXED_STATE_SCHEMA[:max_tensors]
+    n_tensors = len(schema)
+    if n_tensors <= 0:
+        raise ValueError("schema must contain at least one tensor")
+    order = _default_storage_order_for_n(n_tensors) if storage_order is None else tuple(int(v) for v in storage_order)
+    _validate_storage_order(order, n_tensors=n_tensors)
+    if exact_stream_count is not None:
+        exact_stream_count = int(exact_stream_count)
+        if not 1 <= exact_stream_count <= n_tensors:
+            raise ValueError("exact_stream_count must be in [1, n_tensors]")
+    if max_streams < 1:
+        raise ValueError("max_streams must be >= 1")
+    max_streams = min(int(max_streams), n_tensors)
+
+    rows: list[dict[str, Any]] = []
+    payloads_by_tensor: dict[int, bytes] = {}
+    byte_maps: dict[int, str] = {}
+    conv4_perms: dict[int, tuple[int, int, int, int]] = {}
+    for idx, (name, expected_shape) in enumerate(schema):
+        if name not in state_dict:
+            raise ValueError(f"state_dict missing tensor {name!r}")
+        qt = _quantize_tensor(name, state_dict[name], n_quant=n_quant)
+        if tuple(qt.shape) != tuple(expected_shape):
+            raise ValueError(
+                f"shape mismatch for {name!r}: expected {expected_shape}, got {qt.shape}"
+            )
+        if selected_transform_mode == "stock_pr101":
+            byte_map = DECODER_BYTE_MAPS.get(idx, "zig")
+            perm = CONV4_STORAGE_PERMS.get(idx)
+            selected = None
+        else:
+            candidates = measure_tensor_grammar_candidates(
+                qt.q_i8,
+                tensor_index=idx,
+                tensor_name=name,
+                scale=qt.scale,
+                storage_perm_mode=storage_perm_mode,
+                coders=("brotli",),
+                brotli_quality=brotli_quality,
+                brotli_lgwin_sweep=brotli_lgwin_sweep,
+            )
+            selected = select_best_tensor_candidate(candidates)
+            byte_map = str(selected["byte_map"])
+            perm = _parse_perm_label(str(selected["storage_perm"]))
+        payload = _build_transformed_tensor_payload(
+            qt.q_i8,
+            scale=qt.scale,
+            byte_map=byte_map,
+            perm=perm,
+        )
+        payloads_by_tensor[idx] = payload
+        byte_maps[idx] = byte_map
+        if perm is not None:
+            if len(perm) != 4:
+                raise ValueError(f"conv4 storage perm for tensor {idx} must be 4D")
+            conv4_perms[idx] = tuple(int(v) for v in perm)  # type: ignore[assignment]
+        rows.append(
+            {
+                "schema": "pr101_grouped_brotli_tensor_transform_row.v1",
+                "tensor_index": idx,
+                "tensor_name": name,
+                "byte_map": byte_map,
+                "storage_perm": _perm_label(perm),
+                "payload_bytes": len(payload),
+                "selected_isolated_charged_bytes": (
+                    None if selected is None else int(selected["charged_bytes"])
+                ),
+            }
+        )
+
+    parts_by_storage = [payloads_by_tensor[idx] for idx in order]
+    selected_partition = _solve_brotli_stream_partition(
+        parts_by_storage,
+        max_streams=max_streams,
+        exact_stream_count=exact_stream_count,
+        brotli_quality=brotli_quality,
+        brotli_lgwin_sweep=brotli_lgwin_sweep,
+    )
+    selected_blob = _pack_parts_for_stream_ends(
+        parts_by_storage,
+        stream_ends=tuple(selected_partition["stream_ends"]),
+        brotli_quality=brotli_quality,
+        brotli_lgwin_sweep=brotli_lgwin_sweep,
+    )
+    raw_concat = b"".join(parts_by_storage)
+    stream_roundtrip_exact = (
+        decompress_brotli_streams(selected_blob, len(selected_partition["stream_ends"]))
+        == raw_concat
+    )
+
+    current_stock_bytes = None
+    current_stock_scope = "full_pr101_schema"
+    if max_tensors is None and n_tensors == len(FIXED_STATE_SCHEMA):
+        current_stock_bytes = len(
+            encode_decoder_compact(
+                dict(state_dict),
+                brotli_quality=brotli_quality,
+            )
+        )
+    else:
+        current_stock_scope = "partial_schema_same_order_and_stream_count_not_pr101_authority"
+        current_parts = _stock_payloads_in_order(dict(state_dict), order, n_quant=n_quant)
+        current_blob = _pack_parts_for_stream_ends(
+            current_parts,
+            stream_ends=tuple(selected_partition["stream_ends"]),
+            brotli_quality=brotli_quality,
+            brotli_lgwin_sweep=brotli_lgwin_sweep,
+        )
+        current_stock_bytes = len(current_blob)
+
+    delta = int(selected_partition["compressed_bytes"]) - int(current_stock_bytes)
+    stock_runtime_compatible = (
+        max_tensors is None
+        and tuple(order) == tuple(DECODER_STORAGE_ORDER)
+        and tuple(selected_partition["stream_ends"]) == tuple(DECODER_STREAM_ENDS)
+        and _selected_maps_are_pr101_defaults(byte_maps)
+        and _selected_conv4_perms_are_pr101_defaults(conv4_perms)
+    )
+    parser_roundtrip_status = "not_run_partial_schema"
+    parser_roundtrip_exact = False
+    if max_tensors is None and n_tensors == len(FIXED_STATE_SCHEMA):
+        try:
+            decoded = decode_decoder_compact(
+                selected_blob,
+                effective_byte_maps=byte_maps,
+                derived_storage_order=tuple(order),
+                derived_stream_ends=tuple(selected_partition["stream_ends"]),
+                derived_conv4_perms=conv4_perms,
+            )
+            parser_roundtrip_exact = set(decoded) == {name for name, _ in FIXED_STATE_SCHEMA}
+            parser_roundtrip_status = "passed" if parser_roundtrip_exact else "schema_name_mismatch"
+        except Exception as exc:  # pragma: no cover - exercised by failure artifacts
+            parser_roundtrip_status = f"failed:{type(exc).__name__}"
+
+    blockers = [
+        "byte_closed_archive_not_materialized",
+        "full_frame_inflate_parity_missing",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    if not stock_runtime_compatible:
+        blockers.extend(
+            [
+                "receiver_adapter_not_emitted",
+                "runtime_consumption_proof_missing",
+            ]
+        )
+    if not stream_roundtrip_exact:
+        blockers.append("grouped_brotli_stream_roundtrip_failed")
+    if max_tensors is not None:
+        blockers.append("partial_schema_sample_not_archive_authority")
+
+    return {
+        "schema": PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA,
+        "n_tensors": n_tensors,
+        "n_quant": int(n_quant),
+        "selected_transform_mode": selected_transform_mode,
+        "storage_perm_mode": storage_perm_mode,
+        "storage_order": list(order),
+        "exact_stream_count": exact_stream_count,
+        "max_streams": max_streams,
+        "brotli_quality": int(brotli_quality),
+        "brotli_lgwin_sweep": bool(brotli_lgwin_sweep),
+        "byte_accounting": {
+            "selected_grouped_brotli_bytes": int(selected_partition["compressed_bytes"]),
+            "current_stock_pr101_grouped_bytes": int(current_stock_bytes),
+            "current_stock_pr101_grouped_scope": current_stock_scope,
+            "grouped_delta_bytes_vs_current_stock": delta,
+            "grouped_saved_bytes_vs_current_stock": max(0, -delta),
+            "grouped_rate_term_not_archive_authority": contest_rate_term(
+                int(selected_partition["compressed_bytes"])
+            ),
+        },
+        "partition": selected_partition,
+        "adapter_params": {
+            "effective_byte_maps": {str(k): v for k, v in sorted(byte_maps.items())},
+            "derived_storage_order": list(order),
+            "derived_stream_ends": list(selected_partition["stream_ends"]),
+            "derived_conv4_perms": {
+                str(k): list(v) for k, v in sorted(conv4_perms.items())
+            },
+        },
+        "parser_roundtrip": {
+            "stream_roundtrip_exact": bool(stream_roundtrip_exact),
+            "state_dict_parser_roundtrip_status": parser_roundtrip_status,
+            "state_dict_parser_roundtrip_exact": bool(parser_roundtrip_exact),
+        },
+        "runtime_consumption_status": (
+            "stock_pr101_runtime" if stock_runtime_compatible else "tac_decode_decoder_compact_with_overrides_required"
+        ),
+        "stock_runtime_compatible": bool(stock_runtime_compatible),
+        "rows": rows,
+        "blockers": blockers,
+        "authority": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "contest_rate_bytes_authority": False,
+            "ready_for_exact_eval_dispatch": False,
+            "reason": (
+                "grouped Brotli bytes are packet-compiler measurements until "
+                "a byte-closed archive and receiver proof consume the adapter params"
+            ),
+        },
+        "axis_tag": "[planning-only byte-profile]",
+        **FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def build_grouped_optimizer_candidate_queue_from_report(
+    report: Mapping[str, Any],
+    *,
+    campaign_id: str = "pr101_grouped_brotli_packet_grammar",
+) -> dict[str, Any]:
+    """Convert a grouped packet report into a fail-closed optimizer queue."""
+
+    if report.get("schema") != PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA:
+        raise ValueError("expected pr101_grouped_brotli_packet_grammar.v1 report")
+    byte_accounting = report.get("byte_accounting")
+    if not isinstance(byte_accounting, Mapping):
+        raise ValueError("grouped report missing byte_accounting")
+    saved = int(byte_accounting.get("grouped_saved_bytes_vs_current_stock") or 0)
+    blockers = list(report.get("blockers") or [])
+    candidate = {
+        "schema": "optimizer_candidate_queue_row_v1",
+        "candidate_id": f"{campaign_id}:grouped_brotli_packet",
+        "candidate_kind": "planning_only_pr101_grouped_brotli_packet",
+        "status": "blocked_planning_signal_only",
+        "target_kind": "decoder_weight_grouped_packet_grammar",
+        "operation_family": "pr101_grouped_brotli_packet_selection",
+        "operation_families": ["pr101_grouped_brotli_packet_selection"],
+        "operation_id": "pr101_grouped_brotli_packet_selection",
+        "operation_params": {
+            "storage_order": report.get("storage_order"),
+            "partition": report.get("partition"),
+            "adapter_params": report.get("adapter_params"),
+            "selected_transform_mode": report.get("selected_transform_mode"),
+        },
+        "selected_operations": [
+            {
+                "operation_family": "pr101_grouped_brotli_packet_selection",
+                "candidate_saved_bytes": saved,
+                "adapter_params": report.get("adapter_params"),
+            }
+        ],
+        "candidate_saved_bytes": saved,
+        "saved_bytes_scope": "grouped_decoder_blob_payload_not_archive_authority",
+        "predicted_delta_bytes": byte_accounting.get("grouped_delta_bytes_vs_current_stock"),
+        "predicted_delta_bytes_scope": "grouped_decoder_blob_payload_only_not_archive_authority",
+        "runtime_consumption_status": report.get("runtime_consumption_status"),
+        "consumer_payload": {
+            "adapter_params": report.get("adapter_params"),
+            "byte_accounting_scope": "grouped_decoder_blob_payload_not_archive_authority",
+        },
+        "blockers": blockers,
+        "axis_tag": "[planning-only byte-profile]",
+        **FALSE_AUTHORITY_FIELDS,
+    }
+    return {
+        "schema": PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA,
+        "campaign_id": campaign_id,
+        "source_schema": report.get("schema"),
+        "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
+        "proof_scope": "planning_only_grouped_packet_grammar_no_dispatch",
+        "candidate_count": 1,
+        "candidates": [candidate],
+        "top_k": [candidate] if saved > 0 else [],
+        "blockers": blockers,
+        "consumer_surfaces": [
+            "tac.optimization.byte_shaving_campaign.build_signal_surface_from_candidate_queue",
+        ],
+        "axis_tag": "[planning-only byte-profile]",
+        **FALSE_AUTHORITY_FIELDS,
+    }
+
+
 def empirical_shannon_floor_bytes(payload: bytes | bytearray | memoryview) -> float:
     """Return the order-0 Shannon lower bound for a byte payload."""
 
@@ -513,6 +820,172 @@ def _measure_brotli(
         "roundtrip_exact": ok,
         "status": status,
     }
+
+
+def _build_transformed_tensor_payload(
+    q_i8: np.ndarray,
+    *,
+    scale: float,
+    byte_map: str,
+    perm: tuple[int, ...] | None,
+) -> bytes:
+    flat = _apply_storage_perm(q_i8, perm).reshape(-1)
+    return encode_byte_map(flat.astype(np.int8, copy=False), byte_map) + (
+        np.array([float(scale)], dtype=np.float16).tobytes()
+    )
+
+
+def _solve_brotli_stream_partition(
+    parts_by_storage: Sequence[bytes],
+    *,
+    max_streams: int,
+    exact_stream_count: int | None,
+    brotli_quality: int,
+    brotli_lgwin_sweep: bool,
+) -> dict[str, Any]:
+    n = len(parts_by_storage)
+    if n == 0:
+        raise ValueError("parts_by_storage must not be empty")
+    if exact_stream_count is not None and not 1 <= exact_stream_count <= n:
+        raise ValueError("exact_stream_count must be in [1, len(parts_by_storage)]")
+    s_max = min(int(max_streams), n)
+    if s_max <= 0:
+        raise ValueError("max_streams must be >= 1")
+
+    inf = float("inf")
+    cost = np.full((n + 1, n + 1), inf, dtype=np.float64)
+    raw_bytes = np.zeros((n + 1, n + 1), dtype=np.int64)
+    for i in range(n):
+        running = bytearray()
+        for j in range(i + 1, n + 1):
+            running.extend(parts_by_storage[j - 1])
+            measured = _measure_brotli(
+                bytes(running),
+                quality=brotli_quality,
+                lgwin_sweep=brotli_lgwin_sweep,
+            )
+            if measured["status"] != "ok":
+                raise ValueError(f"brotli interval roundtrip failed for [{i},{j})")
+            cost[i, j] = float(measured["charged_bytes"])
+            raw_bytes[i, j] = len(running)
+
+    dp = np.full((n + 1, s_max + 1), inf, dtype=np.float64)
+    parent = np.full((n + 1, s_max + 1), -1, dtype=np.int32)
+    dp[0, 0] = 0.0
+    for s in range(1, s_max + 1):
+        for i in range(1, n + 1):
+            for j in range(0, i):
+                if not np.isfinite(dp[j, s - 1]):
+                    continue
+                candidate = dp[j, s - 1] + cost[j, i]
+                if candidate < dp[i, s] or (
+                    candidate == dp[i, s] and (parent[i, s] < 0 or j < parent[i, s])
+                ):
+                    dp[i, s] = candidate
+                    parent[i, s] = j
+
+    if exact_stream_count is None:
+        candidates = [
+            (float(dp[n, s]), s) for s in range(1, s_max + 1) if np.isfinite(dp[n, s])
+        ]
+        if not candidates:
+            raise ValueError("no feasible brotli stream partition")
+        _best_cost, best_s = min(candidates, key=lambda item: (item[0], item[1]))
+    else:
+        best_s = exact_stream_count
+        if not np.isfinite(dp[n, best_s]):
+            raise ValueError("no feasible exact brotli stream partition")
+
+    starts: list[int] = []
+    ends: list[int] = []
+    i = n
+    s = best_s
+    while s > 0:
+        j = int(parent[i, s])
+        if j < 0:
+            raise ValueError("failed to backtrack brotli stream partition")
+        starts.append(j)
+        ends.append(i)
+        i = j
+        s -= 1
+    starts.reverse()
+    ends.reverse()
+    stream_rows = [
+        {
+            "stream_index": idx,
+            "start": int(start),
+            "end": int(end),
+            "raw_bytes": int(raw_bytes[start, end]),
+            "compressed_bytes": int(cost[start, end]),
+        }
+        for idx, (start, end) in enumerate(zip(starts, ends, strict=True))
+    ]
+    return {
+        "schema": "pr101_grouped_brotli_stream_partition.v1",
+        "stream_count": int(best_s),
+        "stream_ends": [int(v) for v in ends],
+        "compressed_bytes": int(sum(row["compressed_bytes"] for row in stream_rows)),
+        "raw_bytes": int(sum(row["raw_bytes"] for row in stream_rows)),
+        "streams": stream_rows,
+    }
+
+
+def _pack_parts_for_stream_ends(
+    parts_by_storage: Sequence[bytes],
+    *,
+    stream_ends: Sequence[int],
+    brotli_quality: int,
+    brotli_lgwin_sweep: bool,
+) -> bytes:
+    streams: list[bytes] = []
+    start = 0
+    for raw_end in stream_ends:
+        end = int(raw_end)
+        if not start < end <= len(parts_by_storage):
+            raise ValueError("stream_ends must be strictly increasing and in range")
+        window = b"".join(parts_by_storage[start:end])
+        if brotli_lgwin_sweep:
+            best: bytes | None = None
+            for lgwin in range(10, 25):
+                try:
+                    comp = brotli.compress(window, quality=brotli_quality, lgwin=lgwin)
+                except brotli.error:
+                    continue
+                if best is None or len(comp) < len(best):
+                    best = comp
+            if best is None:
+                best = pack_brotli_stream(window, quality=brotli_quality)
+            streams.append(best)
+        else:
+            streams.append(pack_brotli_stream(window, quality=brotli_quality))
+        start = end
+    if start != len(parts_by_storage):
+        raise ValueError("stream_ends must end at len(parts_by_storage)")
+    return b"".join(streams)
+
+
+def _stock_payloads_in_order(
+    state_dict: dict[str, Any],
+    storage_order: Sequence[int],
+    *,
+    n_quant: int,
+) -> list[bytes]:
+    quantized = [
+        _quantize_tensor(name, state_dict[name], n_quant=n_quant)
+        for name, _shape in FIXED_STATE_SCHEMA[: max(storage_order) + 1]
+    ]
+    out: list[bytes] = []
+    for idx in storage_order:
+        qt = quantized[int(idx)]
+        out.append(
+            _build_transformed_tensor_payload(
+                qt.q_i8,
+                scale=qt.scale,
+                byte_map=DECODER_BYTE_MAPS.get(int(idx), "zig"),
+                perm=CONV4_STORAGE_PERMS.get(int(idx)),
+            )
+        )
+    return out
 
 
 def _measure_lzma_raw(payload: bytes) -> dict[str, Any]:
@@ -698,6 +1171,20 @@ def _candidate_storage_perms(
             ),
         )
     raise ValueError(f"unknown storage_perm_mode: {mode!r}")
+
+
+def _default_storage_order_for_n(n_tensors: int) -> tuple[int, ...]:
+    if n_tensors == len(FIXED_STATE_SCHEMA):
+        return tuple(DECODER_STORAGE_ORDER)
+    return tuple(idx for idx in DECODER_STORAGE_ORDER if idx < n_tensors)
+
+
+def _validate_storage_order(order: Sequence[int], *, n_tensors: int) -> None:
+    values = [int(v) for v in order]
+    if sorted(values) != list(range(n_tensors)):
+        raise ValueError(
+            f"storage_order must be a permutation of range({n_tensors}); got {tuple(values)!r}"
+        )
 
 
 def _apply_storage_perm(
@@ -895,6 +1382,35 @@ def _perm_label(perm: tuple[int, ...] | None) -> str:
     return ",".join(str(int(v)) for v in perm)
 
 
+def _parse_perm_label(label: str) -> tuple[int, ...] | None:
+    if label == "identity":
+        return None
+    try:
+        values = tuple(int(item) for item in label.split(","))
+    except ValueError as exc:
+        raise ValueError(f"bad storage_perm label: {label!r}") from exc
+    if sorted(values) != list(range(len(values))):
+        raise ValueError(f"bad storage_perm label: {label!r}")
+    return values
+
+
+def _selected_maps_are_pr101_defaults(byte_maps: Mapping[int, str]) -> bool:
+    for idx in range(len(FIXED_STATE_SCHEMA)):
+        if byte_maps.get(idx, DECODER_BYTE_MAPS.get(idx, "zig")) != DECODER_BYTE_MAPS.get(idx, "zig"):
+            return False
+    return True
+
+
+def _selected_conv4_perms_are_pr101_defaults(
+    conv4_perms: Mapping[int, tuple[int, int, int, int]],
+) -> bool:
+    for idx, perm in CONV4_STORAGE_PERMS.items():
+        if tuple(conv4_perms.get(idx, tuple(range(4)))) != tuple(perm):
+            return False
+    extra = set(conv4_perms) - set(CONV4_STORAGE_PERMS)
+    return not extra
+
+
 def default_state_dict_output_path_hint() -> str:
     """Return the preferred bulky-output root for operator CLIs."""
 
@@ -902,15 +1418,18 @@ def default_state_dict_output_path_hint() -> str:
 
 
 __all__ = [
+    "PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA",
     "PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA",
     "PR101_TENSOR_GRAMMAR_CANDIDATE_SCHEMA",
     "PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA",
     "CoderName",
     "StoragePermMode",
+    "build_grouped_optimizer_candidate_queue_from_report",
     "build_optimizer_candidate_queue_from_solver_report",
     "default_state_dict_output_path_hint",
     "empirical_shannon_floor_bytes",
     "measure_tensor_grammar_candidates",
     "select_best_tensor_candidate",
+    "solve_grouped_brotli_packet_grammar",
     "solve_state_dict_per_tensor_grammar",
 ]

@@ -19,8 +19,10 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
     CoderName,
+    build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     default_state_dict_output_path_hint,
+    solve_grouped_brotli_packet_grammar,
     solve_state_dict_per_tensor_grammar,
 )
 
@@ -85,6 +87,33 @@ def main(argv: list[str] | None = None) -> int:
             "receiver proof exist."
         ),
     )
+    parser.add_argument(
+        "--grouped-output",
+        type=Path,
+        default=None,
+        help=(
+            "Optional grouped split-Brotli packet report. This prices stream "
+            "partition/context effects after per-tensor transforms."
+        ),
+    )
+    parser.add_argument(
+        "--grouped-queue-output",
+        type=Path,
+        default=None,
+        help="Optional planning-only optimizer queue for the grouped packet report.",
+    )
+    parser.add_argument(
+        "--grouped-transform-mode",
+        choices=("stock_pr101", "best_brotli_per_tensor"),
+        default="best_brotli_per_tensor",
+    )
+    parser.add_argument(
+        "--grouped-exact-stream-count",
+        type=int,
+        default=7,
+        help="Exact split-Brotli stream count for grouped solving; use -1 for best up to max.",
+    )
+    parser.add_argument("--grouped-max-streams", type=int, default=7)
     parser.add_argument("--n-quant", type=int, default=127)
     parser.add_argument("--brotli-quality", type=int, default=11)
     parser.add_argument(
@@ -163,10 +192,45 @@ def main(argv: list[str] | None = None) -> int:
             json.dumps(queue, indent=2, sort_keys=True, default=_json_default),
             encoding="utf-8",
         )
+    grouped_report = None
+    if args.grouped_output is not None or args.grouped_queue_output is not None:
+        exact_stream_count = (
+            None
+            if args.grouped_exact_stream_count < 0
+            else args.grouped_exact_stream_count
+        )
+        grouped_report = solve_grouped_brotli_packet_grammar(
+            state_dict,
+            n_quant=args.n_quant,
+            selected_transform_mode=args.grouped_transform_mode,
+            storage_perm_mode=args.storage_perm_mode,
+            exact_stream_count=exact_stream_count,
+            max_streams=args.grouped_max_streams,
+            brotli_quality=args.brotli_quality,
+            brotli_lgwin_sweep=args.brotli_lgwin_sweep,
+            max_tensors=args.max_tensors,
+        )
+        if args.grouped_output is not None:
+            args.grouped_output.parent.mkdir(parents=True, exist_ok=True)
+            args.grouped_output.write_text(
+                json.dumps(grouped_report, indent=2, sort_keys=True, default=_json_default),
+                encoding="utf-8",
+            )
+        if args.grouped_queue_output is not None:
+            grouped_queue = build_grouped_optimizer_candidate_queue_from_report(grouped_report)
+            args.grouped_queue_output.parent.mkdir(parents=True, exist_ok=True)
+            args.grouped_queue_output.write_text(
+                json.dumps(grouped_queue, indent=2, sort_keys=True, default=_json_default),
+                encoding="utf-8",
+            )
     bytes_ = report["byte_accounting"]
     print(f"Wrote PR101 per-tensor grammar report to {args.output}")
     if args.queue_output is not None:
         print(f"Wrote planning-only optimizer queue to {args.queue_output}")
+    if args.grouped_output is not None:
+        print(f"Wrote grouped split-Brotli packet report to {args.grouped_output}")
+    if args.grouped_queue_output is not None:
+        print(f"Wrote grouped planning-only optimizer queue to {args.grouped_queue_output}")
     print(
         "selected isolated bytes="
         f"{bytes_['selected_isolated_tensor_bytes']}; "
@@ -181,6 +245,17 @@ def main(argv: list[str] | None = None) -> int:
         f"{default_state_dict_output_path_hint()} "
         "(this run only wrote the requested JSON manifest)"
     )
+    if grouped_report is not None:
+        gbytes = grouped_report["byte_accounting"]
+        print(
+            "grouped selected bytes="
+            f"{gbytes['selected_grouped_brotli_bytes']}; "
+            "current grouped bytes="
+            f"{gbytes['current_stock_pr101_grouped_bytes']}; "
+            "saved="
+            f"{gbytes['grouped_saved_bytes_vs_current_stock']}; "
+            f"runtime={grouped_report['runtime_consumption_status']}"
+        )
     return 0
 
 
