@@ -26,6 +26,10 @@ HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA = (
 )
 HPRC_MLX_COMPONENT_PROFILE_SCHEMA = "hprc_mlx_component_neutralization_profile.v1"
 _SECTION_VALUE_PROFILERS: dict[str, dict[str, Any]] = {
+    "pact_nerv_vq_pvq": {
+        "tool": "tools/profile_pact_nerv_vq_mlx_section_value.py",
+        "sections": ("decoder_qw", "codebooks_q", "selectors_rc", "residual_rc"),
+    },
     "pact_nerv_selector_v3_psv3": {
         "tool": "tools/profile_pact_nerv_selector_v3_mlx_section_value.py",
         "sections": ("decoder_qw", "latents_rc", "selectors_rc", "residual_rc"),
@@ -500,15 +504,21 @@ def _section_value_profile_work_order(
     missing_rows: list[dict[str, Any]],
     repo_root: Path,
 ) -> dict[str, Any] | None:
-    payload_kind = str(acquisition_row.get("representation_source_payload_kind") or "")
-    profiler = _SECTION_VALUE_PROFILERS.get(payload_kind)
-    if profiler is None:
-        return None
     source = (
         acquisition_row.get("source_archive")
         if isinstance(acquisition_row.get("source_archive"), dict)
         else {}
     )
+    payload_kind = str(
+        acquisition_row.get("representation_source_payload_kind")
+        or acquisition_row.get("source_payload_kind")
+        or source.get("source_payload_kind")
+        or source.get("kind")
+        or ""
+    )
+    profiler = _SECTION_VALUE_PROFILERS.get(payload_kind)
+    if profiler is None:
+        return None
     archive_path = _source_archive_path(source)
     archive_sha256 = source.get("archive_zip_sha256") or source.get("sha256")
     archive_bytes = source.get("archive_zip_bytes") or source.get("bytes")
@@ -567,7 +577,9 @@ def _section_value_profile_work_order(
         "archive_zip_path": archive_path,
         "archive_zip_sha256": archive_sha256,
         "archive_zip_bytes": archive_bytes,
+        "tool": profiler["tool"],
         "profile_tool": profiler["tool"],
+        "sections": sections,
         "profile_sections": sections,
         "missing_section_names": [
             str(row.get("section_name") or "") for row in missing_rows
