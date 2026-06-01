@@ -1,0 +1,90 @@
+{
+  "archive_packet": {
+    "header_bytes": 856,
+    "metadata": {
+      "levels": 2,
+      "lf_plane_count": 1,
+      "orig_hw": [
+        32,
+        48
+      ],
+      "receiver_proof_seed": 7,
+      "step_map_bins": 4,
+      "wavelet": "db2"
+    },
+    "packet": {
+      "bytes": 2100,
+      "sha256": "ac9b21eb9a2d4e01f1b9f245faad1eb4be87c58b9fea015e0c3a4c04c25f88b2"
+    },
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "snerv_inverse_steg_archive.v1",
+    "score_claim": false,
+    "section_bytes": {
+      "decoder_payload": 522,
+      "lf_payload": 419,
+      "metadata_payload": 4,
+      "step_map_packet": 299
+    },
+    "section_order": [
+      "metadata_payload",
+      "lf_payload",
+      "decoder_payload",
+      "step_map_packet"
+    ],
+    "section_sha256": {
+      "decoder_payload": "12eab31dc1468193d557c1e2b89d3518caf116560449dd99ce2c2878c7871498",
+      "lf_payload": "09e631a608c2071e71dfb111a13291ad91d7f72a55a7c130e18071dd6fbac556",
+      "metadata_payload": "9469d6f52137552970b31d9688d7db61419ab7be207c8ac791de4951d1adad25",
+      "step_map_packet": "2d2ce8c21a32e0c3638ede70fc4db8ebd39d273ab7eb2e0d213ddbcaa63a95db"
+    },
+    "total_bytes": 2100
+  },
+  "archive_packet_bytes": 2100,
+  "archive_packet_sha256": "ac9b21eb9a2d4e01f1b9f245faad1eb4be87c58b9fea015e0c3a4c04c25f88b2",
+  "axis_tag": "[receiver-proof:false-authority]",
+  "blockers": [
+    "toy_receiver_proof_not_full_600_pair_replay",
+    "not_packaged_as_contest_archive_zip",
+    "paired_contest_cpu_cuda_auth_eval_missing"
+  ],
+  "direct_output_sha256": "c4f58856d8adde00c4523a9c2b9fd22c3304a20f4e2aadb4c48588ca615c2aa6",
+  "frontier_score_claim": false,
+  "levels": 2,
+  "lf_plane_count": 1,
+  "max_abs_diff": 0.0,
+  "orig_hw": [
+    32,
+    48
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_matches_direct": true,
+  "receiver_output_bytes": 6144,
+  "receiver_output_sha256": "c4f58856d8adde00c4523a9c2b9fd22c3304a20f4e2aadb4c48588ca615c2aa6",
+  "receiver_output_shape": [
+    32,
+    48
+  ],
+  "runtime_consumption_proof_ready": true,
+  "schema": "snerv_receiver_archive_proof.v1",
+  "score_claim": false,
+  "section_bytes": {
+    "decoder_payload": 522,
+    "lf_payload": 419,
+    "metadata_payload": 4,
+    "step_map_packet": 299
+  },
+  "section_sha256": {
+    "decoder_payload": "12eab31dc1468193d557c1e2b89d3518caf116560449dd99ce2c2878c7871498",
+    "lf_payload": "09e631a608c2071e71dfb111a13291ad91d7f72a55a7c130e18071dd6fbac556",
+    "metadata_payload": "9469d6f52137552970b31d9688d7db61419ab7be207c8ac791de4951d1adad25",
+    "step_map_packet": "2d2ce8c21a32e0c3638ede70fc4db8ebd39d273ab7eb2e0d213ddbcaa63a95db"
+  },
+  "step_map_bins": 4,
+  "step_map_codec": "snerv_step_map_coder.v1",
+  "step_map_packet_bytes": 299,
+  "wavelet": "db2"
+}

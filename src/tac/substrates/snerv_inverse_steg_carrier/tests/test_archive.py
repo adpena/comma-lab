@@ -1,0 +1,353 @@
+# SPDX-License-Identifier: MIT
+"""NO-FAKE tests for SNeRV receiver archive packet bundling."""
+
+from __future__ import annotations
+
+import json
+import struct
+
+import numpy as np
+import pytest
+
+from tac.analysis.snerv_step_map_coder import decode_step_maps, encode_step_maps
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    HEADER_LEN_FMT,
+    SECTION_ORDER,
+    SNERV_ARCHIVE_MAGIC,
+    SnervArchiveError,
+    decode_decoder_payload,
+    decode_lf_metadata_payload,
+    decode_lf_quant_payload,
+    decode_snerv_archive_frame_planes,
+    decode_snerv_archive_frames,
+    decode_snerv_archive_step_maps,
+    encode_decoder_payload,
+    encode_lf_metadata_payload,
+    encode_lf_quant_payload,
+    pack_snerv_archive,
+    unpack_snerv_archive,
+)
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    HfGenerationDecoder,
+    SnervFrameCode,
+    decode_frame,
+    encode_frame_lf,
+    fit_hf_decoder_least_squares,
+    quantize_lf,
+)
+
+
+def _step_maps() -> list[np.ndarray]:
+    yy, xx = np.mgrid[0:8, 0:12].astype(np.float32)
+    return [
+        np.exp2(0.5 + 0.05 * np.sin(xx / 3.0) + i * 0.01).astype(np.float32)
+        for i in range(3)
+    ]
+
+
+def test_archive_bundles_sections_and_decodes_receiver_step_maps() -> None:
+    step_packet = encode_step_maps(_step_maps(), bins=16)
+    metadata_payload = encode_lf_metadata_payload(lf_zero_points=[0.25, 0.5, 0.75])
+    lf_planes = [
+        np.arange(12, dtype=np.int64).reshape(3, 4),
+        -np.arange(12, dtype=np.int64).reshape(3, 4),
+        np.ones((3, 4), dtype=np.int64) * 7,
+    ]
+    decoder = HfGenerationDecoder.zeros(levels=2)
+    lf_payload = encode_lf_quant_payload(lf_planes)
+    decoder_payload = encode_decoder_payload(decoder)
+    archive = pack_snerv_archive(
+        metadata_payload=metadata_payload,
+        lf_payload=lf_payload,
+        decoder_payload=decoder_payload,
+        step_map_packet=step_packet.packet,
+        metadata={"lf_plane_count": 3, "levels": 4, "wavelet": "db2"},
+    )
+    decoded = unpack_snerv_archive(archive.packet)
+
+    assert archive.packet.startswith(SNERV_ARCHIVE_MAGIC)
+    assert archive.section_order == SECTION_ORDER
+    assert decoded.section_order == SECTION_ORDER
+    for ref, got in zip(lf_planes, decoded.decode_lf_quant_planes(), strict=True):
+        np.testing.assert_array_equal(got, ref)
+    decoded_decoder = decoded.decode_decoder()
+    assert decoded_decoder.levels == decoder.levels
+    for lvl in range(decoder.levels):
+        for subband in ("LH", "HL", "HH"):
+            np.testing.assert_allclose(
+                decoded_decoder.kernels[lvl][subband],
+                decoder.kernels[lvl][subband],
+            )
+    np.testing.assert_allclose(decoded.decode_lf_zero_points(), [0.25, 0.5, 0.75])
+    assert len(decoded.decode_step_maps()) == 3
+    assert len(decode_snerv_archive_step_maps(archive.packet)) == 3
+    assert archive.score_claim is False
+    assert archive.ready_for_exact_eval_dispatch is False
+
+
+def test_archive_is_deterministic_and_hash_checked() -> None:
+    step_packet = encode_step_maps(_step_maps(), bins=4).packet
+    metadata_payload = encode_lf_metadata_payload(lf_zero_points=[1.0, 2.0, 3.0])
+    kwargs = {
+        "metadata_payload": metadata_payload,
+        "lf_payload": b"lf",
+        "decoder_payload": b"decoder",
+        "step_map_packet": step_packet,
+        "metadata": {"lf_plane_count": 3},
+    }
+    a = pack_snerv_archive(**kwargs)
+    b = pack_snerv_archive(**kwargs)
+
+    assert a.packet == b.packet
+    mutated = bytearray(a.packet)
+    mutated[-1] ^= 0x01
+    with pytest.raises(SnervArchiveError, match="sha256 mismatch"):
+        unpack_snerv_archive(bytes(mutated))
+
+
+def test_archive_rejects_trailing_payload_and_noncontiguous_offsets() -> None:
+    step_packet = encode_step_maps(_step_maps(), bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[1.0, 2.0, 3.0]),
+        lf_payload=b"lf",
+        decoder_payload=b"decoder",
+        step_map_packet=step_packet,
+        metadata={"lf_plane_count": 3},
+    )
+
+    with pytest.raises(SnervArchiveError, match="trailing payload"):
+        unpack_snerv_archive(archive.packet + b"x")
+
+    broken = _rewrite_header(
+        archive.packet,
+        lambda header: header["sections"][1].update({"offset": 999}),
+    )
+    with pytest.raises(SnervArchiveError, match="expected"):
+        unpack_snerv_archive(broken)
+
+
+def test_lf_metadata_payload_rejects_bad_counts_and_alignment() -> None:
+    payload = encode_lf_metadata_payload(lf_zero_points=[1.0, 2.0])
+
+    with pytest.raises(SnervArchiveError, match="expected 3"):
+        decode_lf_metadata_payload(payload, expected_count=3)
+    with pytest.raises(SnervArchiveError, match="float32-aligned"):
+        decode_lf_metadata_payload(payload + b"x")
+    with pytest.raises(SnervArchiveError, match="non-empty"):
+        encode_lf_metadata_payload(lf_zero_points=[])
+
+
+def test_lf_quant_and_decoder_payloads_roundtrip_independently() -> None:
+    planes = [np.array([[1, -2], [3, -4]], dtype=np.int32)]
+    decoded_planes = decode_lf_quant_payload(encode_lf_quant_payload(planes))
+    np.testing.assert_array_equal(decoded_planes[0], planes[0])
+
+    decoder = HfGenerationDecoder.zeros(levels=1)
+    decoder.kernels[0]["LH"][0, 0] = 0.125
+    decoded_decoder = decode_decoder_payload(encode_decoder_payload(decoder))
+    assert decoded_decoder.levels == 1
+    assert decoded_decoder.kernels[0]["LH"][0, 0] == pytest.approx(0.125)
+
+    with pytest.raises(SnervArchiveError, match="integers"):
+        encode_lf_quant_payload([np.array([1.25], dtype=np.float32)])
+
+
+def test_archive_decoded_sections_reconstruct_receiver_frame() -> None:
+    rng = np.random.default_rng(7)
+    yy, xx = np.mgrid[0:32, 0:48].astype(np.float64)
+    frames = [
+        np.clip(
+            120.0
+            + 25.0 * np.sin(xx / 7.0 + i * 0.15)
+            + 15.0 * np.cos(yy / 5.0)
+            + rng.standard_normal(xx.shape) * 0.5,
+            0.0,
+            255.0,
+        )
+        for i in range(4)
+    ]
+    pyrs = [encode_frame_lf(frame, levels=2) for frame in frames]
+    decoder = fit_hf_decoder_least_squares(pyrs, levels=2)
+    lf = pyrs[0].lf
+    steps = np.full(lf.shape, 2.0, dtype=np.float32)
+    steps[0, 0] = 8.0
+    q, scale, zero = quantize_lf(lf, per_element_steps=steps)
+    step_packet = encode_step_maps([steps], bins=16)
+    decoder_payload = encode_decoder_payload(decoder)
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[zero]),
+        lf_payload=encode_lf_quant_payload([q]),
+        decoder_payload=decoder_payload,
+        step_map_packet=step_packet.packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 2,
+            "wavelet": pyrs[0].wavelet,
+            "orig_hw": list(frames[0].shape),
+        },
+    )
+    decoded = unpack_snerv_archive(archive.packet)
+
+    receiver_q = decoded.decode_lf_quant_planes()[0]
+    receiver_steps = decoded.decode_step_maps()[0]
+    receiver_zero = float(decoded.decode_lf_zero_points()[0])
+    receiver_code = SnervFrameCode(
+        lf_quant=receiver_q,
+        lf_scale=scale,
+        lf_zero=receiver_zero,
+        lf_shape=receiver_q.shape,
+        levels=2,
+        wavelet=pyrs[0].wavelet,
+        orig_hw=frames[0].shape,
+        per_element_steps=receiver_steps,
+    )
+    direct_code = SnervFrameCode(
+        lf_quant=q,
+        lf_scale=scale,
+        lf_zero=zero,
+        lf_shape=q.shape,
+        levels=2,
+        wavelet=pyrs[0].wavelet,
+        orig_hw=frames[0].shape,
+        per_element_steps=decode_snerv_archive_step_maps(archive.packet)[0],
+    )
+
+    np.testing.assert_array_equal(receiver_q, q)
+    np.testing.assert_allclose(
+        decode_frame(receiver_code, decoded.decode_decoder()),
+        decode_frame(direct_code, decode_decoder_payload(decoder_payload)),
+    )
+
+
+def test_archive_full_frame_replay_reconstructs_ordered_pair_tensor() -> None:
+    rng = np.random.default_rng(11)
+    h, w = 32, 48
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float64)
+    frames = []
+    for frame_index in range(2):
+        channels = []
+        for channel_index in range(3):
+            channels.append(
+                np.clip(
+                    110.0
+                    + 18.0 * np.sin(xx / (5.0 + channel_index))
+                    + 12.0 * np.cos(yy / (4.0 + frame_index))
+                    + 4.0 * channel_index
+                    + rng.standard_normal(xx.shape) * 0.2,
+                    0.0,
+                    255.0,
+                )
+            )
+        frames.append(channels)
+    pyrs = [
+        encode_frame_lf(channel, levels=2)
+        for frame in frames
+        for channel in frame
+    ]
+    decoder = fit_hf_decoder_least_squares(pyrs, levels=2)
+    decoder_payload = encode_decoder_payload(decoder)
+    q_planes = []
+    zero_points = []
+    step_maps = []
+    for idx, pyr in enumerate(pyrs):
+        steps = np.full(pyr.lf.shape, 1.5 + 0.1 * idx, dtype=np.float32)
+        steps[0, 0] = 4.0 + idx
+        step_maps.append(steps)
+    step_packet = encode_step_maps(step_maps, bins=16)
+    receiver_step_maps = decode_step_maps(step_packet.packet)
+    for pyr, receiver_steps in zip(pyrs, receiver_step_maps, strict=True):
+        q, _, zero = quantize_lf(pyr.lf, per_element_steps=receiver_steps)
+        q_planes.append(q)
+        zero_points.append(zero)
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=zero_points),
+        lf_payload=encode_lf_quant_payload(q_planes),
+        decoder_payload=decoder_payload,
+        step_map_packet=step_packet.packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+            "lf_plane_count": 6,
+            "levels": 2,
+            "wavelet": pyrs[0].wavelet,
+            "carrier_hw": [h, w],
+        },
+    )
+
+    decoded = unpack_snerv_archive(archive.packet)
+    receiver_decoder = decoded.decode_decoder()
+    expected_planes = []
+    for q, zero, receiver_steps in zip(
+        decoded.decode_lf_quant_planes(),
+        decoded.decode_lf_zero_points(),
+        decoded.decode_step_maps(),
+        strict=True,
+    ):
+        code = SnervFrameCode(
+            lf_quant=q,
+            lf_scale=1.0,
+            lf_zero=float(zero),
+            lf_shape=q.shape,
+            levels=2,
+            wavelet=pyrs[0].wavelet,
+            orig_hw=(h, w),
+            per_element_steps=receiver_steps,
+        )
+        expected_planes.append(
+            np.clip(decode_frame(code, receiver_decoder), 0.0, 255.0).astype(np.float32)
+        )
+    flat = decode_snerv_archive_frame_planes(archive.packet)
+    replayed = decode_snerv_archive_frames(archive.packet)
+
+    assert replayed.shape == (1, 2, 3, h, w)
+    assert len(flat) == 6
+    for expected, got in zip(expected_planes, flat, strict=True):
+        np.testing.assert_array_equal(got, expected)
+    np.testing.assert_array_equal(replayed.reshape(6, h, w), np.stack(expected_planes))
+
+
+def test_archive_full_frame_replay_requires_pair_grouping_metadata() -> None:
+    step_packet = encode_step_maps(_step_maps()[:1], bins=4)
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((8, 12), dtype=np.int64)]),
+        decoder_payload=encode_decoder_payload(HfGenerationDecoder.zeros(levels=2)),
+        step_map_packet=step_packet.packet,
+        metadata={"lf_plane_count": 1, "levels": 2, "wavelet": "db2", "orig_hw": [32, 48]},
+    )
+
+    with pytest.raises(SnervArchiveError, match="metadata missing 'n_pairs'"):
+        decode_snerv_archive_frames(archive.packet)
+
+
+def test_archive_receiver_module_imports_no_torch_or_scorer() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.archive as archive_mod
+
+    with open(archive_mod.__file__) as f:
+        src = f.read()
+    assert "import torch" not in src
+    assert "load_score_exact_scorers" not in src
+
+
+def _rewrite_header(packet: bytes, mutator) -> bytes:
+    offset = len(SNERV_ARCHIVE_MAGIC)
+    (header_len,) = struct.unpack(
+        HEADER_LEN_FMT,
+        packet[offset : offset + struct.calcsize(HEADER_LEN_FMT)],
+    )
+    offset += struct.calcsize(HEADER_LEN_FMT)
+    header_end = offset + header_len
+    header = json.loads(packet[offset:header_end].decode("utf-8"))
+    mutator(header)
+    header_bytes = json.dumps(
+        header,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return (
+        SNERV_ARCHIVE_MAGIC
+        + struct.pack(HEADER_LEN_FMT, len(header_bytes))
+        + header_bytes
+        + packet[header_end:]
+    )

@@ -1,0 +1,529 @@
+{
+  "axis_tag": "[macOS-CPU advisory]",
+  "fixed_config": {
+    "bits_per_coeff": 5.0,
+    "hf_decoder_fit_mode": "score_weighted",
+    "hf_decoder_saliency_gain": 0.25,
+    "levels": 4,
+    "n_pairs": 1,
+    "step_map_coder_mode": "waterfill",
+    "step_map_waterfill_bits_per_coeff": 6.0
+  },
+  "rows": [
+    {
+      "adjoint_rel_residual": 8.310941434048053e-15,
+      "archive_byte_closure_blockers": [
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip"
+      ],
+      "archive_bytes_total": 33754,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate": true,
+      "carrier_hw": [
+        874,
+        1164
+      ],
+      "d_pose_mean_l2": 2.202545166015625,
+      "d_pose_mean_linf": 2.1390697956085205,
+      "d_seg_mean_l2": 0.02254740335047245,
+      "d_seg_mean_linf": 0.02264404296875,
+      "decoder_bytes": 738,
+      "levels": 4,
+      "lf_coeff_count_total": 24090,
+      "lf_payload_bytes": 24577,
+      "lf_pose_mass_mean": 0.04913355406524714,
+      "lf_seg_mass_mean": 0.0427025240152309,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_max_relative_error": 0.2307640165090561,
+      "linf_steps_mean_relative_error": 0.044646356254816055,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "metadata_bytes": 24,
+      "n_pairs": 1,
+      "notes": "NON-PROMOTABLE advisory per Catalog #341/#192/#127/#323. n_pairs subset of 600; full-video + paired CPU+CUDA reserved for operator auth. The score numbers are advisory-only; L-inf step maps are charged and consumed through the compact packet in this advisory and bundled into a receiver archive packet, but contest archive packaging and paired CPU/CUDA eval remain missing.",
+      "pr101_frontier_bytes": 178493,
+      "pr101_frontier_rate": 0.11885116211963574,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rate_term": 0.022475403103685773,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1233,
+      "receiver_archive_packet_bytes": 33754,
+      "receiver_archive_replay_error": "",
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "e69b773bb5e232ce9e36615145f07fd1fb9d788004c4bf2a388d24a0b999cc37",
+      "score_claim": false,
+      "score_l2": 6.970343869808562,
+      "score_linf": 6.911887587116307,
+      "source_artifact": ".omx/research/snerv_inverse_steg_advisory_waterfill_20260601T221200Z.json",
+      "sweep_label": "least_squares_baseline_existing",
+      "wall_seconds": 23.592882871627808,
+      "wavelet": "db2",
+      "z8_disease_detail_store_frac": 0.9916717123940335,
+      "z8_falsification_verdict": "PASS: SNeRV archive < frontier AND generated (not stored) detail would have been 99.2% of a stored archive (Z8 disease cured)"
+    },
+    {
+      "adjoint_rel_residual": 8.310941434048053e-15,
+      "archive_byte_closure_blockers": [
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip"
+      ],
+      "archive_bytes_total": 33868,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate": true,
+      "carrier_hw": [
+        874,
+        1164
+      ],
+      "d_pose_mean_l2": 5.70268440246582,
+      "d_pose_mean_linf": 5.7368927001953125,
+      "d_seg_mean_l2": 0.02125040628015995,
+      "d_seg_mean_linf": 0.02226766012609005,
+      "decoder_bytes": 738,
+      "hf_decoder_fit_mode": "score_weighted",
+      "hf_decoder_saliency_component": "combined",
+      "hf_decoder_saliency_gain": 0.25,
+      "levels": 4,
+      "lf_coeff_count_total": 24090,
+      "lf_payload_bytes": 24577,
+      "lf_pose_mass_mean": 0.04913355406524714,
+      "lf_seg_mass_mean": 0.0427025240152309,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_max_relative_error": 0.2307640165090561,
+      "linf_steps_mean_relative_error": 0.044646356254816055,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "metadata_bytes": 24,
+      "n_pairs": 1,
+      "notes": "NON-PROMOTABLE advisory per Catalog #341/#192/#127/#323. n_pairs subset of 600; full-video + paired CPU+CUDA reserved for operator auth. The score numbers are advisory-only; L-inf step maps are charged and consumed through the compact packet in this advisory and bundled into a receiver archive packet, but contest archive packaging and paired CPU/CUDA eval remain missing.",
+      "pr101_frontier_bytes": 178493,
+      "pr101_frontier_rate": 0.11885116211963574,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rate_term": 0.0225513110243417,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1347,
+      "receiver_archive_packet_bytes": 33868,
+      "receiver_archive_replay_error": "",
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "fc1db6d61c48b3540b6265f249885ff4ee42970ecd907e1e2eb64f8315583e2c",
+      "score_claim": false,
+      "score_l2": 9.699203954011592,
+      "score_linf": 9.823545139190069,
+      "source_artifact": ".omx/research/snerv_hf_decoder_component_combined_gain0p25_advisory_20260601T223741Z.json",
+      "sweep_label": "combined_gain_0.25",
+      "wall_seconds": 23.367374897003174,
+      "wavelet": "db2",
+      "z8_disease_detail_store_frac": 0.991643819663621,
+      "z8_falsification_verdict": "PASS: SNeRV archive < frontier AND generated (not stored) detail would have been 99.2% of a stored archive (Z8 disease cured)"
+    },
+    {
+      "adjoint_rel_residual": 8.310941434048053e-15,
+      "archive_byte_closure_blockers": [
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip"
+      ],
+      "archive_bytes_total": 33863,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate": true,
+      "carrier_hw": [
+        874,
+        1164
+      ],
+      "d_pose_mean_l2": 5.70268440246582,
+      "d_pose_mean_linf": 5.7368927001953125,
+      "d_seg_mean_l2": 0.02125040628015995,
+      "d_seg_mean_linf": 0.02226766012609005,
+      "decoder_bytes": 738,
+      "hf_decoder_fit_mode": "score_weighted",
+      "hf_decoder_saliency_component": "seg",
+      "hf_decoder_saliency_gain": 0.25,
+      "levels": 4,
+      "lf_coeff_count_total": 24090,
+      "lf_payload_bytes": 24577,
+      "lf_pose_mass_mean": 0.04913355406524714,
+      "lf_seg_mass_mean": 0.0427025240152309,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_max_relative_error": 0.2307640165090561,
+      "linf_steps_mean_relative_error": 0.044646356254816055,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "metadata_bytes": 24,
+      "n_pairs": 1,
+      "notes": "NON-PROMOTABLE advisory per Catalog #341/#192/#127/#323. n_pairs subset of 600; full-video + paired CPU+CUDA reserved for operator auth. The score numbers are advisory-only; L-inf step maps are charged and consumed through the compact packet in this advisory and bundled into a receiver archive packet, but contest archive packaging and paired CPU/CUDA eval remain missing.",
+      "pr101_frontier_bytes": 178493,
+      "pr101_frontier_rate": 0.11885116211963574,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rate_term": 0.02254798172957609,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1342,
+      "receiver_archive_packet_bytes": 33863,
+      "receiver_archive_replay_error": "",
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "266e11a2cc2d75bde53a28a9f312b5784616c08b6a83a70631e77bc3cb7c76e2",
+      "score_claim": false,
+      "score_l2": 9.699200624716825,
+      "score_linf": 9.823541809895302,
+      "source_artifact": ".omx/research/snerv_hf_decoder_component_seg_gain0p25_advisory_20260601T223741Z.json",
+      "sweep_label": "seg_gain_0.25",
+      "wall_seconds": 22.980127096176147,
+      "wavelet": "db2",
+      "z8_disease_detail_store_frac": 0.9916450429960896,
+      "z8_falsification_verdict": "PASS: SNeRV archive < frontier AND generated (not stored) detail would have been 99.2% of a stored archive (Z8 disease cured)"
+    },
+    {
+      "adjoint_rel_residual": 8.310941434048053e-15,
+      "archive_byte_closure_blockers": [
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip"
+      ],
+      "archive_bytes_total": 33864,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate": true,
+      "carrier_hw": [
+        874,
+        1164
+      ],
+      "d_pose_mean_l2": 3.757039785385132,
+      "d_pose_mean_linf": 3.579928159713745,
+      "d_seg_mean_l2": 0.02087911032140255,
+      "d_seg_mean_linf": 0.01981608010828495,
+      "decoder_bytes": 738,
+      "hf_decoder_fit_mode": "score_weighted",
+      "hf_decoder_saliency_component": "pose",
+      "hf_decoder_saliency_gain": 0.25,
+      "levels": 4,
+      "lf_coeff_count_total": 24090,
+      "lf_payload_bytes": 24577,
+      "lf_pose_mass_mean": 0.04913355406524714,
+      "lf_seg_mass_mean": 0.0427025240152309,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_max_relative_error": 0.2307640165090561,
+      "linf_steps_mean_relative_error": 0.044646356254816055,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "metadata_bytes": 24,
+      "n_pairs": 1,
+      "notes": "NON-PROMOTABLE advisory per Catalog #341/#192/#127/#323. n_pairs subset of 600; full-video + paired CPU+CUDA reserved for operator auth. The score numbers are advisory-only; L-inf step maps are charged and consumed through the compact packet in this advisory and bundled into a receiver archive packet, but contest archive packaging and paired CPU/CUDA eval remain missing.",
+      "pr101_frontier_bytes": 178493,
+      "pr101_frontier_rate": 0.11885116211963574,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rate_term": 0.022548647588529213,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1343,
+      "receiver_archive_packet_bytes": 33864,
+      "receiver_archive_replay_error": "",
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "31406e92f416c591458d950115005269376e0f12e44a0e3c12bce6d693ecbda1",
+      "score_claim": false,
+      "score_l2": 8.239929302285969,
+      "score_linf": 7.987406744878181,
+      "source_artifact": ".omx/research/snerv_hf_decoder_component_pose_gain0p25_advisory_20260601T223741Z.json",
+      "sweep_label": "pose_gain_0.25",
+      "wall_seconds": 23.26149868965149,
+      "wavelet": "db2",
+      "z8_disease_detail_store_frac": 0.9916447983293545,
+      "z8_falsification_verdict": "PASS: SNeRV archive < frontier AND generated (not stored) detail would have been 99.2% of a stored archive (Z8 disease cured)"
+    }
+  ],
+  "schema": "snerv_hf_decoder_saliency_component_sweep.v1",
+  "stamp_utc": "20260601T223741Z",
+  "summary": {
+    "any_component_improves_pose_vs_baseline": false,
+    "any_component_improves_score_vs_baseline": false,
+    "artifact_hashes": {
+      ".omx/research/snerv_hf_decoder_component_combined_gain0p25_advisory_20260601T223741Z.json": "b45e9dc0318526b5e68f6096cfd02923426b6e978ec589ae99a4f8b3a83e949e",
+      ".omx/research/snerv_hf_decoder_component_pose_gain0p25_advisory_20260601T223741Z.json": "96214ed005644a2450853e373d30e173a9f5d5b36ca58ee659bc22165467d910",
+      ".omx/research/snerv_hf_decoder_component_seg_gain0p25_advisory_20260601T223741Z.json": "ba72fb41ad7ba37b84aec2d4dfd7531e3756da3388e4dd4afaff8b2a02319e0f",
+      ".omx/research/snerv_inverse_steg_advisory_waterfill_20260601T221200Z.json": "bca8424b18f5153e0a7c3b0746938219846ac21f740fcdd853c7dec14e6b5d32"
+    },
+    "best_pose_d_pose": 2.1390697956085205,
+    "best_pose_label": "least_squares_baseline_existing",
+    "best_score_label": "least_squares_baseline_existing",
+    "best_score_linf": 6.911887587116307,
+    "false_authority": true,
+    "gain": 0.25,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "row_count": 4,
+    "score_claim": false
+  }
+}

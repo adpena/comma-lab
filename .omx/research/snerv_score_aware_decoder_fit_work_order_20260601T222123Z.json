@@ -1,0 +1,114 @@
+{
+  "axis_tag": "[macOS-CPU advisory]",
+  "blockers": [],
+  "current_archive_bytes": 33754,
+  "current_d_pose_linf": 2.1390697956085205,
+  "current_d_seg_linf": 0.02264404296875,
+  "current_receiver_archive_sha256": "e69b773bb5e232ce9e36615145f07fd1fb9d788004c4bf2a388d24a0b999cc37",
+  "current_score_l2_advisory": 6.970343869808562,
+  "current_score_linf_advisory": 6.911887587116307,
+  "current_step_map_groups": [
+    {
+      "bins": 16,
+      "bits_per_code": 4,
+      "code_count": 12045,
+      "code_storage": "packed_bits_lsb",
+      "kind": "log2_quantized_codes",
+      "log_min": -1.0,
+      "log_step": 0.6,
+      "map_indices": [
+        1,
+        2,
+        5
+      ],
+      "packed_code_bytes": 6023,
+      "payload_bytes": 3076,
+      "payload_offset": 0,
+      "precision_label": "int4_bins16",
+      "shapes": [
+        [
+          55,
+          73
+        ],
+        [
+          55,
+          73
+        ],
+        [
+          55,
+          73
+        ]
+      ]
+    },
+    {
+      "bins": 256,
+      "bits_per_code": 8,
+      "code_count": 12045,
+      "code_storage": "uint8",
+      "kind": "log2_quantized_codes",
+      "log_min": -1.0,
+      "log_step": 0.03529411764705882,
+      "map_indices": [
+        0,
+        3,
+        4
+      ],
+      "packed_code_bytes": 12045,
+      "payload_bytes": 3264,
+      "payload_offset": 3076,
+      "precision_label": "int8_bins256",
+      "shapes": [
+        [
+          55,
+          73
+        ],
+        [
+          55,
+          73
+        ],
+        [
+          55,
+          73
+        ]
+      ]
+    }
+  ],
+  "current_step_map_mode": "waterfill",
+  "current_step_map_payload_bytes": 7182,
+  "escalation_after_smoke": [
+    "if_pose_and_seg_within_ceilings_build_full600_receiver_replay_packet",
+    "if_rate_grows_above_frontier_tune_waterfill_budget_before_packaging",
+    "if_distortion_remains_destroyed_move_allocator_into_decoder_weight_training"
+  ],
+  "lane_id": "lane_snerv_score_aware_decoder_fit_20260601",
+  "next_action": "run_local_score_aware_decoder_fit_smoke_with_waterfill_packet_in_loop",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_local_decoder_fit_smoke": true,
+  "recommended_smoke_commands": [
+    ".venv/bin/python tools/run_snerv_inverse_steg_advisory.py --n-pairs 1 --levels 4 --bits-per-coeff 5 --step-map-coder-mode waterfill --step-map-waterfill-bits-per-coeff 6.0 --out .omx/research/snerv_score_aware_decoder_fit_after_smoke_<UTC>.json",
+    ".venv/bin/python tools/adjudicate_snerv_rate_sweep.py .omx/research/snerv_score_aware_decoder_fit_after_smoke_<UTC>.json --out .omx/research/snerv_score_aware_decoder_fit_after_adjudication_<UTC>.json"
+  ],
+  "required_preconditions": [
+    "charged_receiver_visible_step_map_payload",
+    "receiver_archive_replay_verified",
+    "rate_below_frontier_but_distortion_destroyed",
+    "waterfill_or_adaptive_step_map_groups_present",
+    "adjudication_routes_to_decoder_fit"
+  ],
+  "satisfied_preconditions": [
+    "charged_receiver_visible_step_map_payload",
+    "receiver_archive_replay_verified",
+    "rate_below_frontier_but_distortion_destroyed",
+    "waterfill_or_adaptive_step_map_groups_present",
+    "adjudication_routes_to_decoder_fit"
+  ],
+  "schema": "snerv_score_aware_decoder_fit_work_order.v1",
+  "score_claim": false,
+  "selected_classification": "rate_below_frontier_pose_or_seg_destroyed",
+  "selected_source_index": 0,
+  "source_path": "/Users/adpena/Projects/pact/.omx/research/snerv_inverse_steg_advisory_waterfill_adjudication_20260601T221200Z.json",
+  "source_sha256": "eeccd2225b4ad75fd8bc70f34c909683b723b489daee57151d85c48e5ada3993",
+  "target_pose_ceiling": 0.1,
+  "target_seg_ceiling": 0.02
+}

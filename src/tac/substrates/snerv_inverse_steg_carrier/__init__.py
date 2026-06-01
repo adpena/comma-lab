@@ -37,6 +37,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     dequantize_lf,
     encode_frame_lf,
     fit_hf_decoder_least_squares,
+    fit_hf_decoder_weighted_least_squares,
     generate_hf_from_lf,
     quantize_lf,
 )
@@ -69,6 +70,7 @@ __all__ = [
     "dwt2_native_synthesis_adjoint",
     "encode_frame_lf",
     "fit_hf_decoder_least_squares",
+    "fit_hf_decoder_weighted_least_squares",
     "generate_hf_from_lf",
     "idwt2_multilevel",
     "lf_coeff_count",

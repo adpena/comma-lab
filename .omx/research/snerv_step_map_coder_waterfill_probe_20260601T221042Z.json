@@ -1,0 +1,860 @@
+{
+  "adaptive_bundle_packets": [
+    {
+      "fp32_lzma_baseline_bytes": 200876,
+      "groups": [
+        {
+          "bins": 128,
+          "bits_per_code": 7,
+          "code_count": 18432,
+          "code_storage": "packed_bits_lsb",
+          "log_min": 0.5601879733563581,
+          "log_step": 0.005510208284547428,
+          "map_indices": [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "packed_code_bytes": 16128,
+          "payload_bytes": 5992,
+          "payload_offset": 0,
+          "shapes": [
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ]
+          ]
+        },
+        {
+          "bins": 64,
+          "bits_per_code": 6,
+          "code_count": 36864,
+          "code_storage": "packed_bits_lsb",
+          "log_min": 0.3201879572914906,
+          "log_step": 0.013012641649195066,
+          "map_indices": [
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17
+          ],
+          "packed_code_bytes": 27648,
+          "payload_bytes": 5212,
+          "payload_offset": 5992,
+          "shapes": [
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ]
+          ]
+        },
+        {
+          "bins": 4,
+          "bits_per_code": 2,
+          "code_count": 18432,
+          "code_storage": "packed_bits_lsb",
+          "log_min": 0.20018785437082065,
+          "log_step": 0.23326549155006251,
+          "map_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "packed_code_bytes": 4608,
+          "payload_bytes": 492,
+          "payload_offset": 11204,
+          "shapes": [
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ]
+          ]
+        }
+      ],
+      "header_bytes": 1047,
+      "map_count": 24,
+      "max_relative_error": 0.08419616520404816,
+      "mean_relative_error": 0.011500338092446327,
+      "packet": {
+        "bytes": 12743,
+        "sha256_uncomputed": true
+      },
+      "payload_bytes": 11696,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_step_map_coder.adaptive.v1",
+      "score_claim": false,
+      "total_bytes": 12743
+    },
+    {
+      "fp32_lzma_baseline_bytes": 200876,
+      "groups": [
+        {
+          "bins": 64,
+          "bits_per_code": 6,
+          "code_count": 18432,
+          "code_storage": "packed_bits_lsb",
+          "log_min": 0.5601879733563581,
+          "log_step": 0.011107880192659101,
+          "map_indices": [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "packed_code_bytes": 13824,
+          "payload_bytes": 3768,
+          "payload_offset": 0,
+          "shapes": [
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ]
+          ]
+        },
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 36864,
+          "code_storage": "packed_bits_lsb",
+          "log_min": 0.3201879572914906,
+          "log_step": 0.05465309492661928,
+          "map_indices": [
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17
+          ],
+          "packed_code_bytes": 18432,
+          "payload_bytes": 1936,
+          "payload_offset": 3768,
+          "shapes": [
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ]
+          ]
+        },
+        {
+          "bins": 4,
+          "bits_per_code": 2,
+          "code_count": 18432,
+          "code_storage": "packed_bits_lsb",
+          "log_min": 0.20018785437082065,
+          "log_step": 0.23326549155006251,
+          "map_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "packed_code_bytes": 4608,
+          "payload_bytes": 492,
+          "payload_offset": 5704,
+          "shapes": [
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ]
+          ]
+        }
+      ],
+      "header_bytes": 1044,
+      "map_count": 24,
+      "max_relative_error": 0.08419616520404816,
+      "mean_relative_error": 0.015354294329881668,
+      "packet": {
+        "bytes": 7240,
+        "sha256_uncomputed": true
+      },
+      "payload_bytes": 6196,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_step_map_coder.adaptive.v1",
+      "score_claim": false,
+      "total_bytes": 7240
+    },
+    {
+      "fp32_lzma_baseline_bytes": 200876,
+      "groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 18432,
+          "code_storage": "packed_bits_lsb",
+          "log_min": 0.5601879733563581,
+          "log_step": 0.046653096809168224,
+          "map_indices": [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "packed_code_bytes": 9216,
+          "payload_bytes": 1276,
+          "payload_offset": 0,
+          "shapes": [
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ]
+          ]
+        },
+        {
+          "bins": 4,
+          "bits_per_code": 2,
+          "code_count": 55296,
+          "code_storage": "packed_bits_lsb",
+          "log_min": 0.20018785437082065,
+          "log_step": 0.31326550893998634,
+          "map_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17
+          ],
+          "packed_code_bytes": 13824,
+          "payload_bytes": 900,
+          "payload_offset": 1276,
+          "shapes": [
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ],
+            [
+              48,
+              64
+            ]
+          ]
+        }
+      ],
+      "header_bytes": 806,
+      "map_count": 24,
+      "max_relative_error": 0.11467713117599487,
+      "mean_relative_error": 0.04317647963762283,
+      "packet": {
+        "bytes": 2982,
+        "sha256_uncomputed": true
+      },
+      "payload_bytes": 2176,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_step_map_coder.adaptive.v1",
+      "score_claim": false,
+      "total_bytes": 2982
+    }
+  ],
+  "axis_tag": "[codec-unit:false-authority]",
+  "bundling_note": "adaptive bundle groups maps by assigned precision, sharing one group subpacket per bins value instead of one packet per map; optional constant groups are header-only run-length fills; waterfill extends the same grammar with fp16-protected groups",
+  "constant_importance_quantile": null,
+  "map_count": 24,
+  "next_action": "use score saliency to protect sensitive maps with fp16/int8 while collapsing insensitive maps to int4/int2/constant before decoder-fit work",
+  "packets": [
+    {
+      "bins": 128,
+      "bits_per_code": 7,
+      "bundle_savings_bytes": 51166,
+      "bundle_savings_ratio": 0.8032591290150397,
+      "code_count": 73728,
+      "code_entropy_bits_per_symbol": 6.68418006714029,
+      "code_entropy_ideal_bytes": 61602,
+      "code_storage": "packed_bits_lsb",
+      "fp32_lzma_baseline_bytes": 200876,
+      "header_bytes": 424,
+      "map_count": 24,
+      "max_relative_error": 0.002896221587434411,
+      "mean_relative_error": 0.0014463362749665976,
+      "packed_code_bytes": 64512,
+      "packet": {
+        "bytes": 12532,
+        "sha256_uncomputed": true
+      },
+      "payload_bytes": 12108,
+      "per_map_packet_baseline_bytes": 63698,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_step_map_coder.v1",
+      "score_claim": false,
+      "total_bytes": 12532,
+      "unique_code_count": 128
+    },
+    {
+      "bins": 64,
+      "bits_per_code": 6,
+      "bundle_savings_bytes": 40438,
+      "bundle_savings_ratio": 0.84379434103998,
+      "code_count": 73728,
+      "code_entropy_bits_per_symbol": 5.67397170435256,
+      "code_entropy_ideal_bytes": 52292,
+      "code_storage": "packed_bits_lsb",
+      "fp32_lzma_baseline_bytes": 200876,
+      "header_bytes": 422,
+      "map_count": 24,
+      "max_relative_error": 0.0058471099473536015,
+      "mean_relative_error": 0.0029138363897800446,
+      "packed_code_bytes": 55296,
+      "packet": {
+        "bytes": 7486,
+        "sha256_uncomputed": true
+      },
+      "payload_bytes": 7064,
+      "per_map_packet_baseline_bytes": 47924,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_step_map_coder.v1",
+      "score_claim": false,
+      "total_bytes": 7486,
+      "unique_code_count": 64
+    },
+    {
+      "bins": 16,
+      "bits_per_code": 4,
+      "bundle_savings_bytes": 16014,
+      "bundle_savings_ratio": 0.8337151187005415,
+      "code_count": 73728,
+      "code_entropy_bits_per_symbol": 3.6135699629574343,
+      "code_entropy_ideal_bytes": 33303,
+      "code_storage": "packed_bits_lsb",
+      "fp32_lzma_baseline_bytes": 200876,
+      "header_bytes": 422,
+      "map_count": 24,
+      "max_relative_error": 0.024786921218037605,
+      "mean_relative_error": 0.012245060876011848,
+      "packed_code_bytes": 36864,
+      "packet": {
+        "bytes": 3194,
+        "sha256_uncomputed": true
+      },
+      "payload_bytes": 2772,
+      "per_map_packet_baseline_bytes": 19208,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_step_map_coder.v1",
+      "score_claim": false,
+      "total_bytes": 3194,
+      "unique_code_count": 16
+    },
+    {
+      "bins": 4,
+      "bits_per_code": 2,
+      "bundle_savings_bytes": 9551,
+      "bundle_savings_ratio": 0.8673265528514348,
+      "code_count": 73728,
+      "code_entropy_bits_per_symbol": 1.461884954010434,
+      "code_entropy_ideal_bytes": 13473,
+      "code_storage": "packed_bits_lsb",
+      "fp32_lzma_baseline_bytes": 200876,
+      "header_bytes": 421,
+      "map_count": 24,
+      "max_relative_error": 0.1302374303340912,
+      "mean_relative_error": 0.06284478306770325,
+      "packed_code_bytes": 18432,
+      "packet": {
+        "bytes": 1461,
+        "sha256_uncomputed": true
+      },
+      "payload_bytes": 1040,
+      "per_map_packet_baseline_bytes": 11012,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_step_map_coder.v1",
+      "score_claim": false,
+      "total_bytes": 1461,
+      "unique_code_count": 4
+    }
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_step_map_coder_probe.v3",
+  "score_claim": false,
+  "shape": [
+    48,
+    64
+  ],
+  "waterfill_packet": {
+    "fp32_lzma_baseline_bytes": 200876,
+    "groups": [
+      {
+        "bins": 0,
+        "bits_per_code": 0,
+        "code_count": 0,
+        "code_storage": "run_length_constant_log2_f32",
+        "kind": "constant_log2_fill",
+        "log2_values": [
+          0.5021455086779295
+        ],
+        "map_indices": [
+          0
+        ],
+        "packed_code_bytes": 0,
+        "payload_bytes": 0,
+        "payload_offset": 0,
+        "precision_label": "constant",
+        "shapes": [
+          [
+            48,
+            64
+          ]
+        ]
+      },
+      {
+        "bins": 16,
+        "bits_per_code": 4,
+        "code_count": 30720,
+        "code_storage": "packed_bits_lsb",
+        "kind": "log2_quantized_codes",
+        "log_min": 0.2201878857863225,
+        "log_step": 0.05198643091383734,
+        "map_indices": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "packed_code_bytes": 15360,
+        "payload_bytes": 1716,
+        "payload_offset": 0,
+        "precision_label": "int4_bins16",
+        "shapes": [
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ]
+        ]
+      },
+      {
+        "bins": 256,
+        "bits_per_code": 8,
+        "code_count": 39936,
+        "code_storage": "uint8",
+        "kind": "log2_quantized_codes",
+        "log_min": 0.4201879462435258,
+        "log_step": 0.0032933195264719826,
+        "map_indices": [
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "packed_code_bytes": 39936,
+        "payload_bytes": 9980,
+        "payload_offset": 1716,
+        "precision_label": "int8_bins256",
+        "shapes": [
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ],
+          [
+            48,
+            64
+          ]
+        ]
+      }
+    ],
+    "header_bytes": 1352,
+    "map_count": 24,
+    "max_relative_error": 0.2328161597251892,
+    "mean_relative_error": 0.00807521864771843,
+    "packet": {
+      "bytes": 13048,
+      "sha256_uncomputed": true
+    },
+    "payload_bytes": 11696,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "snerv_step_map_coder.adaptive.v1",
+    "score_claim": false,
+    "total_bytes": 13048
+  },
+  "waterfill_target_bits_per_coeff": 6.0
+}

@@ -1,0 +1,664 @@
+{
+  "axis_tag": "[macOS-CPU advisory]",
+  "exact_readiness_refusal": {
+    "blockers": [
+      "frontier_comparison_is_rate_only_not_score_authority",
+      "full_600_pair_receiver_replay_missing",
+      "not_packaged_as_contest_archive_zip",
+      "paired_contest_cpu_cuda_auth_eval_missing",
+      "score_axis_is_macos_cpu_advisory"
+    ],
+    "promotion_eligible": false,
+    "ready": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reason": "SNeRV rows are advisory-only and need contest archive.zip packaging, full-600 replay where absent, and paired contest CPU/CUDA eval before any score, rank, or promotion use.",
+    "score_claim": false
+  },
+  "frontier_score_claim": false,
+  "pose_preservation_ceiling": 0.1,
+  "pr101_frontier_bytes": 178493,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "archive_bytes_charged": 33754,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate_only": true,
+      "bits_per_coeff": null,
+      "blockers": [
+        "not_packaged_as_contest_archive_zip",
+        "frontier_comparison_is_rate_only_not_score_authority",
+        "score_axis_is_macos_cpu_advisory",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "classification": "rate_below_frontier_pose_or_seg_destroyed",
+      "d_pose_linf": 2.1390697956085205,
+      "d_seg_linf": 0.02264404296875,
+      "frontier_score_claim": false,
+      "levels": 4,
+      "lf_payload_bytes": 24577,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "linf_steps_payload_vs_fp32_baseline_ratio": 0.5988992661774516,
+      "pr101_frontier_bytes": 178493,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1233,
+      "receiver_archive_packet_bytes": 33754,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "e69b773bb5e232ce9e36615145f07fd1fb9d788004c4bf2a388d24a0b999cc37",
+      "score_claim": false,
+      "score_l2_advisory": 6.970343869808562,
+      "score_linf_advisory": 6.911887587116307,
+      "source_index": 0,
+      "step_map_accounting": "charged_receiver_visible_payload",
+      "step_map_overhead_bytes": 7182
+    },
+    {
+      "archive_bytes_charged": 33864,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate_only": true,
+      "bits_per_coeff": null,
+      "blockers": [
+        "not_packaged_as_contest_archive_zip",
+        "frontier_comparison_is_rate_only_not_score_authority",
+        "score_axis_is_macos_cpu_advisory",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "classification": "rate_below_frontier_pose_or_seg_destroyed",
+      "d_pose_linf": 3.394784927368164,
+      "d_seg_linf": 0.01947530172765255,
+      "frontier_score_claim": false,
+      "levels": 4,
+      "lf_payload_bytes": 24577,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "linf_steps_payload_vs_fp32_baseline_ratio": 0.5988992661774516,
+      "pr101_frontier_bytes": 178493,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1343,
+      "receiver_archive_packet_bytes": 33864,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "2f2d217d65b63485599d82227147aabd1057b0cc82e900a7053572ceff0bac28",
+      "score_claim": false,
+      "score_l2_advisory": 7.971146587895979,
+      "score_linf_advisory": 7.796557111198232,
+      "source_index": 1,
+      "step_map_accounting": "charged_receiver_visible_payload",
+      "step_map_overhead_bytes": 7182
+    },
+    {
+      "archive_bytes_charged": 33864,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate_only": true,
+      "bits_per_coeff": null,
+      "blockers": [
+        "not_packaged_as_contest_archive_zip",
+        "frontier_comparison_is_rate_only_not_score_authority",
+        "score_axis_is_macos_cpu_advisory",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "classification": "rate_below_frontier_pose_or_seg_destroyed",
+      "d_pose_linf": 3.546154737472534,
+      "d_seg_linf": 0.019683837890625,
+      "frontier_score_claim": false,
+      "levels": 4,
+      "lf_payload_bytes": 24577,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "linf_steps_payload_vs_fp32_baseline_ratio": 0.5988992661774516,
+      "pr101_frontier_bytes": 178493,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1343,
+      "receiver_archive_packet_bytes": 33864,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "d7335fd451b64a9634bd7963346829295abb99c369b7df514d7720bd8957779b",
+      "score_claim": false,
+      "score_l2_advisory": 8.188719890185872,
+      "score_linf_advisory": 7.945892333638191,
+      "source_index": 2,
+      "step_map_accounting": "charged_receiver_visible_payload",
+      "step_map_overhead_bytes": 7182
+    },
+    {
+      "archive_bytes_charged": 33863,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate_only": true,
+      "bits_per_coeff": null,
+      "blockers": [
+        "not_packaged_as_contest_archive_zip",
+        "frontier_comparison_is_rate_only_not_score_authority",
+        "score_axis_is_macos_cpu_advisory",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "classification": "rate_below_frontier_pose_or_seg_destroyed",
+      "d_pose_linf": 3.5670182704925537,
+      "d_seg_linf": 0.019775390625,
+      "frontier_score_claim": false,
+      "levels": 4,
+      "lf_payload_bytes": 24577,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "linf_steps_payload_vs_fp32_baseline_ratio": 0.5988992661774516,
+      "pr101_frontier_bytes": 178493,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1342,
+      "receiver_archive_packet_bytes": 33863,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "32e00b02a061421e9e3725c0bb589e04795412a7878784082877f47a754df9fa",
+      "score_claim": false,
+      "score_l2_advisory": 8.21979748829441,
+      "score_linf_advisory": 7.9725390285426805,
+      "source_index": 3,
+      "step_map_accounting": "charged_receiver_visible_payload",
+      "step_map_overhead_bytes": 7182
+    },
+    {
+      "archive_bytes_charged": 33863,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate_only": true,
+      "bits_per_coeff": null,
+      "blockers": [
+        "not_packaged_as_contest_archive_zip",
+        "frontier_comparison_is_rate_only_not_score_authority",
+        "score_axis_is_macos_cpu_advisory",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "classification": "rate_below_frontier_pose_or_seg_destroyed",
+      "d_pose_linf": 3.577770948410034,
+      "d_seg_linf": 0.01979573629796505,
+      "frontier_score_claim": false,
+      "levels": 4,
+      "lf_payload_bytes": 24577,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "linf_steps_payload_vs_fp32_baseline_ratio": 0.5988992661774516,
+      "pr101_frontier_bytes": 178493,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1342,
+      "receiver_archive_packet_bytes": 33863,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "b2c768968aa0c7c7a3a5620cf52cbe8394293247bb8ad11ec845d49cf3d1c447",
+      "score_claim": false,
+      "score_l2_advisory": 8.236715614193075,
+      "score_linf_advisory": 7.9835687177120365,
+      "source_index": 4,
+      "step_map_accounting": "charged_receiver_visible_payload",
+      "step_map_overhead_bytes": 7182
+    },
+    {
+      "archive_bytes_charged": 33864,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate_only": true,
+      "bits_per_coeff": null,
+      "blockers": [
+        "not_packaged_as_contest_archive_zip",
+        "frontier_comparison_is_rate_only_not_score_authority",
+        "score_axis_is_macos_cpu_advisory",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "classification": "rate_below_frontier_pose_or_seg_destroyed",
+      "d_pose_linf": 3.579928159713745,
+      "d_seg_linf": 0.01981608010828495,
+      "frontier_score_claim": false,
+      "levels": 4,
+      "lf_payload_bytes": 24577,
+      "linf_steps_coder_bins": 0,
+      "linf_steps_coder_groups": [
+        {
+          "bins": 16,
+          "bits_per_code": 4,
+          "code_count": 12045,
+          "code_storage": "packed_bits_lsb",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.6,
+          "map_indices": [
+            1,
+            2,
+            5
+          ],
+          "packed_code_bytes": 6023,
+          "payload_bytes": 3076,
+          "payload_offset": 0,
+          "precision_label": "int4_bins16",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        },
+        {
+          "bins": 256,
+          "bits_per_code": 8,
+          "code_count": 12045,
+          "code_storage": "uint8",
+          "kind": "log2_quantized_codes",
+          "log_min": -1.0,
+          "log_step": 0.03529411764705882,
+          "map_indices": [
+            0,
+            3,
+            4
+          ],
+          "packed_code_bytes": 12045,
+          "payload_bytes": 3264,
+          "payload_offset": 3076,
+          "precision_label": "int8_bins256",
+          "shapes": [
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ],
+            [
+              55,
+              73
+            ]
+          ]
+        }
+      ],
+      "linf_steps_coder_mode": "waterfill",
+      "linf_steps_fp32_lzma_baseline_bytes": 11992,
+      "linf_steps_payload_bytes": 7182,
+      "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
+      "linf_steps_payload_vs_fp32_baseline_ratio": 0.5988992661774516,
+      "pr101_frontier_bytes": 178493,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_header_bytes": 1343,
+      "receiver_archive_packet_bytes": 33864,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "31406e92f416c591458d950115005269376e0f12e44a0e3c12bce6d693ecbda1",
+      "score_claim": false,
+      "score_l2_advisory": 8.239929302285969,
+      "score_linf_advisory": 7.987406744878181,
+      "source_index": 5,
+      "step_map_accounting": "charged_receiver_visible_payload",
+      "step_map_overhead_bytes": 7182
+    }
+  ],
+  "schema": "snerv_rate_adjudication.v1",
+  "score_claim": false,
+  "seg_preservation_ceiling": 0.02,
+  "source_path": "/Users/adpena/Projects/pact/.omx/research/snerv_hf_decoder_pose_saliency_gain_sweep_20260601T223927Z.json",
+  "summary": {
+    "actionable_next_code_move": "score_aware_stepmap_waterfill_and_decoder_fit_before_packaging",
+    "any_frontier_score_claim": false,
+    "best_distortion_classification": "rate_below_frontier_pose_or_seg_destroyed",
+    "best_distortion_source_index": 0,
+    "best_rate_classification": "rate_below_frontier_pose_or_seg_destroyed",
+    "best_rate_source_index": 0,
+    "classification_counts": {
+      "rate_below_frontier_pose_or_seg_destroyed": 6
+    },
+    "row_count": 6
+  }
+}

@@ -20,9 +20,11 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     dequantize_lf,
     encode_frame_lf,
     fit_hf_decoder_least_squares,
+    fit_hf_decoder_weighted_least_squares,
     generate_hf_from_lf,
     quantize_lf,
 )
+from tac.substrates.snerv_inverse_steg_carrier.dwt import WaveletPyramid
 
 
 def _smooth_frame(rng, hw=(64, 96)):
@@ -89,6 +91,31 @@ def test_fitted_decoder_beats_zero_decoder():
     assert mse_fit < mse_zero  # fitting HF helps
 
 
+def test_weighted_decoder_fit_reduces_weighted_hf_residual():
+    """NO-FAKE: saliency weights change the fitted decoder objective."""
+
+    rng = np.random.default_rng(20)
+    frames = [_smooth_frame(rng) for _ in range(6)]
+    pyrs = [encode_frame_lf(f, levels=3) for f in frames]
+    weight_pyrs = [_hot_detail_weight_pyramid(pyr) for pyr in pyrs]
+    unweighted = fit_hf_decoder_least_squares(pyrs, levels=3)
+    weighted = fit_hf_decoder_weighted_least_squares(
+        pyrs,
+        levels=3,
+        detail_weight_pyramids=weight_pyrs,
+        saliency_gain=8.0,
+    )
+
+    assert _weighted_hf_residual(pyrs, weighted, weight_pyrs) <= (
+        _weighted_hf_residual(pyrs, unweighted, weight_pyrs) * 1.0001
+    )
+    assert any(
+        not np.allclose(unweighted.kernels[lvl][sb], weighted.kernels[lvl][sb])
+        for lvl in range(3)
+        for sb in ("LH", "HL", "HH")
+    )
+
+
 def test_decoder_byte_cost_is_tiny_and_real():
     """The decoder is byte-cheap (shared across all frames) and cost scales w/ levels."""
     rng = np.random.default_rng(3)
@@ -149,3 +176,48 @@ def test_decode_shape_mismatch_raises():
     )
     with pytest.raises(SnervCarrierError):
         decode_frame(bad, dec)
+
+
+def _hot_detail_weight_pyramid(pyr: WaveletPyramid) -> WaveletPyramid:
+    weighted_details = []
+    for lh, hl, hh in pyr.details:
+        detail_tuple = []
+        for detail in (lh, hl, hh):
+            weights = np.ones_like(detail, dtype=np.float64)
+            h, w = weights.shape
+            weights[: max(1, h // 3), : max(1, w // 3)] = 50.0
+            detail_tuple.append(weights)
+        weighted_details.append(tuple(detail_tuple))
+    return WaveletPyramid(
+        coeffs=[np.ones_like(pyr.lf), *weighted_details],
+        levels=pyr.levels,
+        wavelet=pyr.wavelet,
+        orig_hw=pyr.orig_hw,
+        padded_hw=pyr.padded_hw,
+    )
+
+
+def _weighted_hf_residual(
+    pyrs: list[WaveletPyramid],
+    decoder: HfGenerationDecoder,
+    weight_pyrs: list[WaveletPyramid],
+) -> float:
+    total = 0.0
+    denom = 0.0
+    for pyr, weight_pyr in zip(pyrs, weight_pyrs, strict=True):
+        generated = generate_hf_from_lf(pyr.lf, decoder, pyr)
+        for generated_details, target_details, weight_details in zip(
+            generated[1:],
+            pyr.details,
+            weight_pyr.details,
+            strict=True,
+        ):
+            for got, target, weights in zip(
+                generated_details,
+                target_details,
+                weight_details,
+                strict=True,
+            ):
+                total += float(np.sum(np.asarray(weights) * (got - target) ** 2))
+                denom += float(np.sum(weights))
+    return total / denom

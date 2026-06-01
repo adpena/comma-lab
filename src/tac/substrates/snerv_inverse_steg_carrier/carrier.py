@@ -62,6 +62,7 @@ __all__ = [
     "dequantize_lf",
     "encode_frame_lf",
     "fit_hf_decoder_least_squares",
+    "fit_hf_decoder_weighted_least_squares",
     "generate_hf_from_lf",
     "quantize_lf",
 ]
@@ -216,14 +217,44 @@ def fit_hf_decoder_least_squares(
     faithful (not toy) training: it learns to predict real HF detail from real LF
     on real video frames. Ridge is the canonical least-squares regularizer.
     """
+    return fit_hf_decoder_weighted_least_squares(
+        pyramids,
+        levels=levels,
+        detail_weight_pyramids=None,
+    )
+
+
+def fit_hf_decoder_weighted_least_squares(
+    pyramids: list[WaveletPyramid],
+    levels: int,
+    *,
+    detail_weight_pyramids: list[WaveletPyramid] | None = None,
+    weight_floor: float = 1e-3,
+    saliency_gain: float = 1.0,
+) -> HfGenerationDecoder:
+    """Fit the HF decoder with optional score/saliency weights.
+
+    ``detail_weight_pyramids`` carries one DWT-domain cotangent pyramid per
+    training pyramid. Its detail subbands weight the HF prediction residuals, so
+    detector-sensitive coefficients pull harder on the shared decoder weights.
+    With ``detail_weight_pyramids=None`` this exactly reduces to ordinary ridge
+    least squares.
+    """
+
     if not pyramids:
         raise SnervCarrierError("need >=1 training pyramid")
+    if detail_weight_pyramids is not None and len(detail_weight_pyramids) != len(pyramids):
+        raise SnervCarrierError("detail_weight_pyramids length must match pyramids")
+    if weight_floor <= 0:
+        raise SnervCarrierError("weight_floor must be positive")
+    if saliency_gain < 0:
+        raise SnervCarrierError("saliency_gain must be non-negative")
     # Accumulate normal equations per (level, subband).
     accum: dict = {
         lvl: {sb: (np.zeros((_PREDICTOR_TAPS, _PREDICTOR_TAPS)), np.zeros(_PREDICTOR_TAPS)) for sb in _DETAIL_KEYS}
         for lvl in range(levels)
     }
-    for pyr in pyramids:
+    for pyr_idx, pyr in enumerate(pyramids):
         approx = pyr.lf
         for lvl, (lh, hl, hh) in enumerate(pyr.details):
             target_hw = (int(lh.shape[0]), int(lh.shape[1]))
@@ -231,8 +262,18 @@ def fit_hf_decoder_least_squares(
             feats = _patch_features(up).reshape(-1, _PREDICTOR_TAPS)
             for sb, d in (("LH", lh), ("HL", hl), ("HH", hh)):
                 ata, atb = accum[lvl][sb]
-                ata += feats.T @ feats
-                atb += feats.T @ d.reshape(-1)
+                weights = _detail_weights_for_subband(
+                    detail_weight_pyramids,
+                    pyramid_index=pyr_idx,
+                    level=lvl,
+                    subband=sb,
+                    expected_shape=d.shape,
+                    floor=weight_floor,
+                    saliency_gain=saliency_gain,
+                ).reshape(-1)
+                weighted_feats = feats * weights[:, None]
+                ata += feats.T @ weighted_feats
+                atb += feats.T @ (weights * d.reshape(-1))
             # Lift approx for next level (TRUE detail, the encoder path).
             approx = idwt2_multilevel(
                 WaveletPyramid(
@@ -251,6 +292,43 @@ def fit_hf_decoder_least_squares(
             k = np.linalg.solve(ata + ridge * np.eye(_PREDICTOR_TAPS), atb)
             kernels[lvl][sb] = k.reshape(3, 3)
     return HfGenerationDecoder(kernels=kernels, levels=int(levels))
+
+
+def _detail_weights_for_subband(
+    detail_weight_pyramids: list[WaveletPyramid] | None,
+    *,
+    pyramid_index: int,
+    level: int,
+    subband: str,
+    expected_shape: tuple[int, ...],
+    floor: float,
+    saliency_gain: float,
+) -> np.ndarray:
+    if detail_weight_pyramids is None:
+        return np.ones(expected_shape, dtype=np.float64)
+    subband_idx = _DETAIL_KEYS.index(subband)
+    try:
+        raw = np.asarray(
+            detail_weight_pyramids[pyramid_index].details[level][subband_idx],
+            dtype=np.float64,
+        )
+    except IndexError as exc:
+        raise SnervCarrierError("detail weight pyramid shape/level mismatch") from exc
+    if raw.shape != expected_shape:
+        raise SnervCarrierError(
+            f"detail weight shape {raw.shape} != expected {expected_shape}"
+        )
+    raw = np.abs(raw)
+    finite = np.isfinite(raw)
+    if not np.all(finite):
+        raise SnervCarrierError("detail weights must be finite")
+    positive = raw[raw > 0]
+    if positive.size == 0 or saliency_gain == 0:
+        return np.ones(expected_shape, dtype=np.float64)
+    scale = float(np.mean(positive))
+    if scale <= 0:
+        return np.ones(expected_shape, dtype=np.float64)
+    return floor + saliency_gain * (raw / scale)
 
 
 def encode_frame_lf(
