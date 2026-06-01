@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
+    DEFAULT_CODERS,
     CoderName,
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
@@ -246,10 +247,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--coders",
         type=_parse_coders,
-        default=_parse_coders("brotli,lzma_raw,canonical_huffman"),
+        default=DEFAULT_CODERS,
         help=(
-            "Comma-separated coder set. Add range_ac_empirical_hist_u16 to "
-            "price the constriction path with conservative histogram overhead."
+            "Comma-separated coder set. Defaults to the full optimal-grammar "
+            "search universe: brotli,lzma_raw,canonical_huffman,"
+            "range_ac_empirical_hist_u16."
         ),
     )
     parser.add_argument(

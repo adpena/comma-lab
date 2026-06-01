@@ -11,6 +11,7 @@ import torch
 
 from tac.optimization.byte_shaving_campaign import build_signal_surface_from_candidate_queue
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
+    DEFAULT_CODERS,
     PR101_GRAMMAR_CAMPAIGN_SUMMARY_SCHEMA,
     PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
     PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA,
@@ -82,6 +83,35 @@ def test_tensor_candidates_are_real_roundtrip_codecs() -> None:
     assert "isolated_tensor_measurement_not_grouped_archive_authority" in selected["blockers"]
 
 
+def test_default_coder_universe_includes_range_ac_with_visible_status() -> None:
+    q = np.array([0, 0, 1, 1, 2, -2, 7, -7], dtype=np.int8)
+
+    candidates = measure_tensor_grammar_candidates(
+        q,
+        tensor_index=1,
+        tensor_name="synthetic.bias",
+        byte_maps=("zig",),
+        brotli_quality=4,
+    )
+
+    coders = {row["coder"] for row in candidates}
+    assert tuple(DEFAULT_CODERS) == (
+        "brotli",
+        "lzma_raw",
+        "canonical_huffman",
+        "range_ac_empirical_hist_u16",
+    )
+    assert coders == set(DEFAULT_CODERS)
+    range_rows = [
+        row for row in candidates if row["coder"] == "range_ac_empirical_hist_u16"
+    ]
+    assert range_rows
+    assert range_rows[0]["status"] in {"ok", "codec_dependency_unavailable"}
+    if range_rows[0]["status"] == "ok":
+        assert range_rows[0]["roundtrip_exact"] is True
+        assert range_rows[0]["side_info_bytes"] == 512
+
+
 def test_brotli_quality_sweep_prices_compress_time_exhaustively() -> None:
     q = np.arange(32, dtype=np.int8) - 16
 
@@ -147,14 +177,20 @@ def test_state_dict_solver_report_is_false_authority_and_saturation_typed() -> N
     report = solve_state_dict_per_tensor_grammar(
         _tiny_state_dict(seed=1),
         storage_perm_mode="identity",
-        coders=("brotli",),
         brotli_quality=4,
         max_tensors=2,
         include_current_grouped_pr101=False,
     )
 
     assert report["schema"] == PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA
+    assert report["coders"] == list(DEFAULT_CODERS)
     assert report["partial_schema_sample"] is True
+    assert report["candidate_status_counts"]
+    assert report["coder_status_counts"]
+    assert any(
+        key.startswith("range_ac_empirical_hist_u16:")
+        for key in report["coder_status_counts"]
+    )
     assert report["authority"]["score_claim"] is False
     assert report["authority"]["promotion_eligible"] is False
     assert report["authority"]["ready_for_exact_eval_dispatch"] is False
@@ -174,6 +210,8 @@ def test_state_dict_solver_report_is_false_authority_and_saturation_typed() -> N
         "floor_unavailable",
     }
     assert len(report["rows"]) == 2
+    assert all(row["candidate_status_counts"] for row in report["rows"])
+    assert all(row["coder_status_counts"] for row in report["rows"])
 
 
 def test_solver_report_converts_to_planning_only_optimizer_queue() -> None:

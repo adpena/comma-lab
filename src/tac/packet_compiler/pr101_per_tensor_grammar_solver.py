@@ -86,6 +86,12 @@ CoderName = Literal[
     "canonical_huffman",
     "range_ac_empirical_hist_u16",
 ]
+DEFAULT_CODERS: tuple[CoderName, ...] = (
+    "brotli",
+    "lzma_raw",
+    "canonical_huffman",
+    "range_ac_empirical_hist_u16",
+)
 
 
 def measure_tensor_grammar_candidates(
@@ -96,7 +102,7 @@ def measure_tensor_grammar_candidates(
     scale: float = 1.0,
     storage_perm_mode: StoragePermMode = "pr101-plus-identity",
     byte_maps: Sequence[str] = tuple(sorted(VALID_BYTE_MAP_STRATEGIES)),
-    coders: Sequence[CoderName] = ("brotli", "lzma_raw", "canonical_huffman"),
+    coders: Sequence[CoderName] = DEFAULT_CODERS,
     brotli_quality: int = 11,
     brotli_quality_values: Sequence[int] | None = None,
     brotli_lgwin_sweep: bool = False,
@@ -226,7 +232,7 @@ def solve_state_dict_per_tensor_grammar(
     *,
     n_quant: int = N_QUANT,
     storage_perm_mode: StoragePermMode = "pr101-plus-identity",
-    coders: Sequence[CoderName] = ("brotli", "lzma_raw", "canonical_huffman"),
+    coders: Sequence[CoderName] = DEFAULT_CODERS,
     brotli_quality: int = 11,
     brotli_quality_values: Sequence[int] | None = None,
     brotli_lgwin_sweep: bool = False,
@@ -242,6 +248,8 @@ def solve_state_dict_per_tensor_grammar(
 
     schema = FIXED_STATE_SCHEMA if max_tensors is None else FIXED_STATE_SCHEMA[:max_tensors]
     rows: list[dict[str, Any]] = []
+    total_candidate_status_counts: Counter[str] = Counter()
+    total_coder_status_counts: Counter[str] = Counter()
     for idx, (name, expected_shape) in enumerate(schema):
         if name not in state_dict:
             raise ValueError(f"state_dict missing tensor {name!r}")
@@ -261,6 +269,12 @@ def solve_state_dict_per_tensor_grammar(
             brotli_quality_values=brotli_quality_values,
             brotli_lgwin_sweep=brotli_lgwin_sweep,
         )
+        row_status_counts = Counter(str(candidate["status"]) for candidate in candidates)
+        row_coder_status_counts = Counter(
+            f"{candidate['coder']}:{candidate['status']}" for candidate in candidates
+        )
+        total_candidate_status_counts.update(row_status_counts)
+        total_coder_status_counts.update(row_coder_status_counts)
         selected = select_best_tensor_candidate(candidates)
         current = _find_current_pr101_isolated_candidate(candidates, tensor_index=idx)
         rows.append(
@@ -271,6 +285,8 @@ def solve_state_dict_per_tensor_grammar(
                 "tensor_shape": list(expected_shape),
                 "selected": selected,
                 "current_pr101_isolated": current,
+                "candidate_status_counts": dict(sorted(row_status_counts.items())),
+                "coder_status_counts": dict(sorted(row_coder_status_counts.items())),
                 "top_candidates": candidates[:8],
             }
         )
@@ -308,6 +324,8 @@ def solve_state_dict_per_tensor_grammar(
         ),
         "brotli_lgwin_sweep": bool(brotli_lgwin_sweep),
         "partial_schema_sample": max_tensors is not None,
+        "candidate_status_counts": dict(sorted(total_candidate_status_counts.items())),
+        "coder_status_counts": dict(sorted(total_coder_status_counts.items())),
         "byte_accounting": {
             "selected_isolated_tensor_bytes": int(total_selected),
             "current_pr101_isolated_tensor_bytes": int(current_isolated),
@@ -2433,6 +2451,7 @@ def default_state_dict_output_path_hint() -> str:
 
 
 __all__ = [
+    "DEFAULT_CODERS",
     "PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA",
     "PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA",
     "PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA",
