@@ -1,0 +1,9 @@
+{
+  "next_action": "execute runner_rows with baseline reuse, receiver-proof best survivor, then exact-gate",
+  "plan_path": ".omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc_pair_scoped_residual_bounded_runner_plan.json",
+  "plan_sha256": "7359f4658a4fef49c5e43eb8593af51908c9ed9b209a01438f79cff36d49b209",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "hprc_pair_scoped_bounded_runner_plan_artifact_manifest.v1",
+  "score_claim": false
+}

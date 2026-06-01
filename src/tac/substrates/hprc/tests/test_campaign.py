@@ -2,18 +2,28 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-import tac.substrates.hprc.archive_candidate as hprc_candidate
-from tac.optimization.archive_bound_candidate_runtime_bridge import (
+REPO = Path(__file__).resolve().parents[5]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+import tac.substrates.hprc.archive_candidate as hprc_candidate  # noqa: E402
+from tac.optimization.archive_bound_candidate_runtime_bridge import (  # noqa: E402
     build_archive_bound_candidate_runtime_package,
 )
-from tac.substrates.hprc.campaign import (
+from tac.substrates.hprc.campaign import (  # noqa: E402
     HPRC_CAMPAIGN_MANIFEST_SCHEMA,
     HPRC_EXACT_READINESS_REFUSAL_SCHEMA,
     materialize_minimal_hprc_campaign,
 )
-from tools import package_hprc_minimal_candidate as hprc_tool
+from tac.substrates.hprc.pair_scoped_residual_runner import (  # noqa: E402
+    HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_PLAN_SCHEMA,
+    build_pair_scoped_residual_bounded_runner_plan,
+)
+from tools import build_hprc_pair_scoped_residual_bounded_runner as pair_runner_tool  # noqa: E402
+from tools import package_hprc_minimal_candidate as hprc_tool  # noqa: E402
 
 
 def _fake_emit_runtime_package(**kwargs):
@@ -168,3 +178,99 @@ def test_hprc_packaging_cli_uses_storage_waterfall(
     assert storage_plan["score_claim"] is False
     manifest = json.loads(Path(payload["campaign_manifest_path"]).read_text())
     assert manifest["storage_plan_path"] == (output_dir / "hprc_storage_plan.json").as_posix()
+
+
+def test_hprc_pair_scoped_residual_runner_plan_emits_executable_rows(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    candidate_dir = repo / "candidate"
+    candidate_dir.mkdir()
+    pair_plan = repo / "pair_plan.json"
+    pair_plan.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_scorer_ranked_residual_shrink_backlog.v1",
+                "pair_scoped_residual_candidate_rows": [
+                    {
+                        "source_variant_id": "residual_transform_threshold_abs_le_3",
+                        "residual_transform": "threshold_abs_le_pairs=3@0,2-4",
+                        "threshold_abs_le": 3,
+                        "selected_pair_count": 4,
+                        "protected_pair_count": 596,
+                        "estimated_archive_bytes_removed_vs_baseline": 4000,
+                        "estimated_delta_nonrate_pair_local_sum": -1.25,
+                        "estimated_delta_rate_score": -0.01,
+                        "pair_ranges": [[0, 0], [2, 4]],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    baseline_profile = repo / "baseline_profile.json"
+    baseline_profile.write_text("{}\n", encoding="utf-8")
+
+    plan = build_pair_scoped_residual_bounded_runner_plan(
+        pair_plan_path=pair_plan,
+        reuse_baseline_profile_path=baseline_profile,
+        candidate_dir=candidate_dir,
+        output_dir=repo / "runner",
+        repo_root=repo,
+        max_candidates=1,
+        max_pairs=600,
+    )
+
+    assert plan["schema"] == HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_PLAN_SCHEMA
+    assert plan["baseline_reuse_required"] is True
+    assert plan["score_claim"] is False
+    row = plan["runner_rows"][0]
+    assert row["residual_transform"] == "threshold_abs_le_pairs=3@0,2-4"
+    assert row["candidate_id"].startswith("hprc-threshold-abs-le-pairs-")
+    assert "--reuse-baseline-profile" in row["profile_command_argv"]
+    assert "--residual-transforms" in row["profile_command_argv"]
+    assert row["receiver_proof_followup"]["required"] is True
+
+
+def test_hprc_pair_scoped_residual_runner_cli_writes_plan(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    candidate_dir = repo / "candidate"
+    candidate_dir.mkdir()
+    pair_plan = repo / "pair_plan.json"
+    pair_plan.write_text(
+        json.dumps(
+            {
+                "pair_scoped_residual_candidate_rows": [
+                    {
+                        "residual_transform": "threshold_abs_le_pairs=2@1",
+                        "estimated_archive_bytes_removed_vs_baseline": 100,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    baseline_profile = repo / "baseline_profile.json"
+    baseline_profile.write_text("{}\n", encoding="utf-8")
+
+    exit_code = pair_runner_tool.main(
+        [
+            "--repo-root",
+            repo.as_posix(),
+            "--pair-plan",
+            pair_plan.as_posix(),
+            "--reuse-baseline-profile",
+            baseline_profile.as_posix(),
+            "--candidate-dir",
+            candidate_dir.as_posix(),
+            "--output-dir",
+            (repo / "runner").as_posix(),
+        ]
+    )
+
+    assert exit_code == 0
+    plan = json.loads(
+        (repo / "runner" / "hprc_pair_scoped_residual_bounded_runner_plan.json").read_text()
+    )
+    assert len(plan["runner_rows"]) == 1
+    assert plan["runner_rows"][0]["baseline_reuse_required"] is True
