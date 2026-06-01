@@ -1,0 +1,95 @@
+{
+  "accepted_rows": [],
+  "axis_tag": "[macOS-CPU advisory]",
+  "baseline_archive_bytes": 335801,
+  "baseline_d_pose_linf": 0.002065342850983143,
+  "baseline_d_seg_linf": 0.002471923828125,
+  "baseline_label": "least_squares_baseline_existing",
+  "baseline_score_linf": 0.6145014925781653,
+  "blockers": [
+    "no_candidate_passes_pose_guarded_local_continuation_gate"
+  ],
+  "closed_form_scalar_weighting_no_go": false,
+  "max_archive_bytes": 337849,
+  "next_action": "implement_scorer_loop_or_nonlinear_qat_decoder_before_more_sweeps",
+  "pose_slack": 0.0,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_implementation": [
+    "train_decoder_weights_on_reconstructed_frame_scorer_loop",
+    "try_nonlinear_or_learned_hf_decoder_qat_with_same_snar1_receiver_contract",
+    "treat_posenet_d_pose_linf_as_hard_constraint_before_segnet_gain",
+    "keep_least_squares_waterfill_as_control_until_candidate_passes_gate"
+  ],
+  "rows": [
+    {
+      "accepted_for_local_continuation": false,
+      "archive_bytes": 335801,
+      "axis_tag": "[macOS-CPU advisory]",
+      "blockers": [
+        "seg_gate_failed"
+      ],
+      "d_pose_linf": 0.0019145157421007752,
+      "d_seg_linf": 0.0024770100135356188,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "hf_decoder_saliency_component": null,
+      "hf_decoder_saliency_gain": null,
+      "label": "trial_1_plus",
+      "passes_pose_guard": true,
+      "passes_rate_gate": true,
+      "passes_score_gate": true,
+      "passes_seg_gate": false,
+      "pose_delta_vs_control": -0.0001508271088823676,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "cd74f3eee143fcb8b9c9d914f12386f6b406f98e6bf991043759d409260cc6a7",
+      "score_claim": false,
+      "score_delta_vs_control": -0.004838361931642221,
+      "score_linf": 0.6096631306465231,
+      "seg_delta_vs_control": 5.086185410618782e-06,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "source_index": 1
+    },
+    {
+      "accepted_for_local_continuation": false,
+      "archive_bytes": 335801,
+      "axis_tag": "[macOS-CPU advisory]",
+      "blockers": [
+        "pose_guard_failed",
+        "score_gate_failed"
+      ],
+      "d_pose_linf": 0.0063820164650678635,
+      "d_seg_linf": 0.0024058024864643812,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "hf_decoder_saliency_component": null,
+      "hf_decoder_saliency_gain": null,
+      "label": "trial_1_minus",
+      "passes_pose_guard": false,
+      "passes_rate_gate": true,
+      "passes_score_gate": false,
+      "passes_seg_gate": true,
+      "pose_delta_vs_control": 0.004316673614084721,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "40c168c77d4f36548967fdff09d44c776c24efd942b29e74fe2d2ff5f83b1457",
+      "score_claim": false,
+      "score_delta_vs_control": 0.10230139034672325,
+      "score_linf": 0.7168028829248886,
+      "seg_delta_vs_control": -6.612134166061878e-05,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "source_index": 2
+    }
+  ],
+  "schema": "snerv_pose_guarded_decoder_gate.v1",
+  "score_claim": false,
+  "seg_ceiling": 0.02,
+  "source_paths": [
+    "/Volumes/VertigoDataTier/pact/worktrees/pact-main-codec-20260601/.omx/research/snerv_scorer_loop_decoder_qat_smoke_20260601T2338Z.json"
+  ],
+  "source_sha256": {
+    "/Volumes/VertigoDataTier/pact/worktrees/pact-main-codec-20260601/.omx/research/snerv_scorer_loop_decoder_qat_smoke_20260601T2338Z.json": "78c6d2b05b22b2998fb56bea217b8e1ab1f737a7df40f8f2bfe08a5d4dcb6592"
+  },
+  "verdict": "NO_GO_FOR_PROMOTION_OR_EXACT_EVAL"
+}
