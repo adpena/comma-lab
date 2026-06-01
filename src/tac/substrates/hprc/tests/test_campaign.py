@@ -228,6 +228,8 @@ def test_hprc_pair_scoped_residual_runner_plan_emits_executable_rows(tmp_path: P
     assert row["candidate_id"].startswith("hprc-threshold-abs-le-pairs-")
     assert "--reuse-baseline-profile" in row["profile_command_argv"]
     assert "--residual-transforms" in row["profile_command_argv"]
+    assert "--scorer-batch-pairs" in row["profile_command_argv"]
+    assert row["scorer_batch_pairs"] == 1
     assert row["receiver_proof_followup"]["required"] is True
 
 
@@ -274,3 +276,43 @@ def test_hprc_pair_scoped_residual_runner_cli_writes_plan(tmp_path: Path) -> Non
     )
     assert len(plan["runner_rows"]) == 1
     assert plan["runner_rows"][0]["baseline_reuse_required"] is True
+
+
+def test_hprc_pair_scoped_residual_runner_allows_batched_research_rows(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    candidate_dir = repo / "candidate"
+    candidate_dir.mkdir()
+    pair_plan = repo / "pair_plan.json"
+    pair_plan.write_text(
+        json.dumps(
+            {
+                "pair_scoped_residual_candidate_rows": [
+                    {
+                        "residual_transform": "threshold_abs_le_pairs=2@1",
+                        "estimated_archive_bytes_removed_vs_baseline": 100,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    baseline_profile = repo / "baseline_profile.json"
+    baseline_profile.write_text("{}\n", encoding="utf-8")
+
+    plan = build_pair_scoped_residual_bounded_runner_plan(
+        pair_plan_path=pair_plan,
+        reuse_baseline_profile_path=baseline_profile,
+        candidate_dir=candidate_dir,
+        output_dir=repo / "runner",
+        repo_root=repo,
+        scorer_batch_pairs=8,
+        allow_batch_shape_research_signal=True,
+    )
+
+    row = plan["runner_rows"][0]
+    assert row["scorer_batch_pairs"] == 8
+    assert row["batch_shape_research_signal"] is True
+    assert "--allow-batch-shape-research-signal" in row["profile_command_argv"]

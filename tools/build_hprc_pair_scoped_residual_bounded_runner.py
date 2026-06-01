@@ -33,6 +33,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-candidates", type=int, default=3)
     parser.add_argument("--max-pairs", type=int, default=600)
     parser.add_argument("--window-pairs", type=int, default=50)
+    parser.add_argument("--scorer-batch-pairs", type=int, default=1)
+    parser.add_argument(
+        "--allow-batch-shape-research-signal",
+        action="store_true",
+        help="Permit batched MLX scorer research rows; still false-authority.",
+    )
     parser.add_argument("--device", choices=("cpu", "gpu"), default="cpu")
     parser.add_argument(
         "--no-allow-large-tensor-cache",
@@ -61,6 +67,8 @@ def main(argv: list[str] | None = None) -> int:
         max_candidates=int(args.max_candidates),
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
+        scorer_batch_pairs=int(args.scorer_batch_pairs),
+        allow_batch_shape_research_signal=bool(args.allow_batch_shape_research_signal),
         device=str(args.device),
         allow_large_tensor_cache=not bool(args.no_allow_large_tensor_cache),
     )

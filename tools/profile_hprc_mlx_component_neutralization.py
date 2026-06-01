@@ -125,6 +125,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--max-pairs", type=int, default=2)
     parser.add_argument("--window-pairs", type=int, default=1)
+    parser.add_argument(
+        "--scorer-batch-pairs",
+        type=int,
+        default=1,
+        help=(
+            "MLX scorer-response batch width. Values above 1 are faster but remain "
+            "batch-shape research signal and require --allow-batch-shape-research-signal."
+        ),
+    )
+    parser.add_argument(
+        "--allow-batch-shape-research-signal",
+        action="store_true",
+        help=(
+            "Permit --scorer-batch-pairs > 1. Batched rows are never promotion "
+            "authority without singleton/full exact replay."
+        ),
+    )
     parser.add_argument("--device", choices=("cpu", "gpu"), default="cpu")
     parser.add_argument("--progress-every", type=int, default=0)
     parser.add_argument("--inflate-timeout", type=int, default=1800)
@@ -178,6 +195,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--max-pairs must be >= 1")
     if args.window_pairs < 1:
         raise SystemExit("--window-pairs must be >= 1")
+    if args.scorer_batch_pairs < 1:
+        raise SystemExit("--scorer-batch-pairs must be >= 1")
+    if args.scorer_batch_pairs != 1 and not args.allow_batch_shape_research_signal:
+        raise SystemExit(
+            "--scorer-batch-pairs > 1 requires --allow-batch-shape-research-signal"
+        )
     _prepare_owned_dir(
         output_dir,
         force=bool(args.force),
@@ -210,6 +233,7 @@ def main(argv: list[str] | None = None) -> int:
         baseline_variant=variants[0],
         reference_cache_dir=reference_cache_dir,
         max_pairs=int(args.max_pairs),
+        scorer_batch_pairs=int(args.scorer_batch_pairs),
     )
     cache_rows = _materialize_mlx_caches(
         variants=variants,
@@ -228,9 +252,11 @@ def main(argv: list[str] | None = None) -> int:
         reference_cache_dir=reference_cache_dir,
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
+        scorer_batch_pairs=int(args.scorer_batch_pairs),
         device=str(args.device),
         progress_every=int(args.progress_every),
         baseline_reuse=baseline_reuse,
+        allow_batch_shape_research_signal=bool(args.allow_batch_shape_research_signal),
     )
     report = _build_report(
         variants=variants,
@@ -242,6 +268,7 @@ def main(argv: list[str] | None = None) -> int:
         reference_cache_dir=reference_cache_dir,
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
+        scorer_batch_pairs=int(args.scorer_batch_pairs),
         started=started,
         baseline_reuse=baseline_reuse,
     )
@@ -402,6 +429,7 @@ def _prepare_baseline_reuse(
     baseline_variant: VariantSpec,
     reference_cache_dir: Path,
     max_pairs: int,
+    scorer_batch_pairs: int,
 ) -> BaselineReuse | None:
     if profile_path is None:
         return None
@@ -449,6 +477,13 @@ def _prepare_baseline_reuse(
         raise SystemExit(
             "baseline reuse response n_samples mismatch: "
             f"source={source_payload.get('n_samples')} requested={max_pairs}"
+        )
+    source_batch_pairs = int(source_payload.get("batch_pairs") or 1)
+    if source_batch_pairs != int(scorer_batch_pairs):
+        raise SystemExit(
+            "baseline reuse response batch_pairs mismatch: "
+            f"source={source_batch_pairs} requested={scorer_batch_pairs}. "
+            "Run a matching baseline profile instead of mixing batch-shape evidence."
         )
     components = source_payload.get("components", {})
     artifacts = components.get("artifacts") if isinstance(components, dict) else None
@@ -594,9 +629,11 @@ def _run_mlx_responses(
     reference_cache_dir: Path,
     max_pairs: int,
     window_pairs: int,
+    scorer_batch_pairs: int,
     device: str,
     progress_every: int,
     baseline_reuse: BaselineReuse | None,
+    allow_batch_shape_research_signal: bool,
 ) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     job_variants: list[VariantSpec] = []
@@ -625,11 +662,12 @@ def _run_mlx_responses(
             reference_cache_dir=reference_cache_dir,
             jobs=jobs,
             repo_root=repo_root,
-            batch_pairs=1,
+            batch_pairs=int(scorer_batch_pairs),
             device_type=device,
             progress_every=progress_every,
             max_pairs=max_pairs,
             allow_gpu_research_signal=device == "gpu",
+            allow_batch_shape_research_signal=allow_batch_shape_research_signal,
             allow_unaudited_candidate_cache_debug=True,
             cache_integrity_mode=MANIFEST_CACHE_INTEGRITY_MODE,
         )
@@ -639,7 +677,7 @@ def _run_mlx_responses(
     for variant, payload in zip(job_variants, payloads, strict=True):
         path = output_dir / "mlx_responses" / f"{variant.variant_id}.json"
         write_mlx_scorer_response_payload(payload, path)
-        if payload.get("components", {}).get("artifacts"):
+        if int(scorer_batch_pairs) == 1 and payload.get("components", {}).get("artifacts"):
             _write_window_splits(
                 payload=payload,
                 output_dir=output_dir,
@@ -738,6 +776,7 @@ def _build_report(
     reference_cache_dir: Path,
     max_pairs: int,
     window_pairs: int,
+    scorer_batch_pairs: int,
     started: float,
     baseline_reuse: BaselineReuse | None,
 ) -> dict[str, Any]:
@@ -781,6 +820,8 @@ def _build_report(
         "receiver_mode": COMPACT_RECEIVER_MODE,
         "max_pairs": int(max_pairs),
         "window_pairs": int(window_pairs),
+        "scorer_batch_pairs": int(scorer_batch_pairs),
+        "batch_shape_research_signal": int(scorer_batch_pairs) != 1,
         "archive_byte_ceiling": {
             "sub019_zero_distortion_archive_bytes": int(
                 HPRC_SUB019_ZERO_DISTORTION_BYTE_CEILING
@@ -807,7 +848,16 @@ def _build_report(
             "section": "executed",
             "pair": "executed_from_mlx_component_arrays",
             "frame": "pair rows include frame indices; per-frame split awaits framewise scorer arrays",
-            "batch": "window JSON emitted from MLX component arrays",
+            "batch": (
+                "window JSON emitted from MLX component arrays"
+                if int(scorer_batch_pairs) == 1
+                else "batched scorer response executed as research signal only"
+            ),
+            "batch_windows": (
+                "emitted_from_singleton_batch_pairs"
+                if int(scorer_batch_pairs) == 1
+                else "blocked_for_batched_research_signal_requires_singleton_rerun"
+            ),
             "full_video": (
                 "executed" if full_video_executed else
                 "sampled_prefix_requires_full_video_rerun"
@@ -825,6 +875,11 @@ def _build_report(
             *(
                 ["local_acquisition_partial_raw_not_full_video"]
                 if local_acquisition_partial_raw
+                else []
+            ),
+            *(
+                ["batch_shape_research_signal_requires_singleton_rerun_before_promotion"]
+                if int(scorer_batch_pairs) != 1
                 else []
             ),
             "class_region_boundary_scopes_require_logits_or_boundary_cache_extension",

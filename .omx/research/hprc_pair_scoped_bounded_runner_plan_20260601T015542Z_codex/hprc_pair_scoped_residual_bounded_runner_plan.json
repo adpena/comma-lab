@@ -1,4 +1,5 @@
 {
+  "allow_batch_shape_research_signal": false,
   "baseline_reuse_required": true,
   "blockers": [
     "runner_plan_not_executed",
@@ -8,7 +9,7 @@
   "candidate_dir": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z",
   "device": "cpu",
   "dispatch_attempted": false,
-  "generated_at_utc": "20260601T015643Z",
+  "generated_at_utc": "20260601T020405Z",
   "gpu_launched": false,
   "max_candidates": 3,
   "max_pairs": 600,
@@ -35,6 +36,7 @@
   "runner_rows": [
     {
       "baseline_reuse_required": true,
+      "batch_shape_research_signal": false,
       "candidate_id": "hprc-threshold-abs-le-pairs-984a5d110c0f3a66",
       "estimated_archive_bytes_removed_vs_baseline": 335775,
       "estimated_delta_nonrate_pair_local_sum": -1569.645120586238,
@@ -568,6 +570,8 @@
         "600",
         "--window-pairs",
         "50",
+        "--scorer-batch-pairs",
+        "1",
         "--device",
         "cpu",
         "--force",
@@ -589,6 +593,7 @@
       "schema": "hprc_pair_scoped_residual_bounded_runner_row.v1",
       "scope": "pair",
       "score_claim": false,
+      "scorer_batch_pairs": 1,
       "selected_pair_count": 284,
       "source_variant_id": "residual_transform_threshold_abs_le_3",
       "stage": "pre_entropy_residual_tokens",
@@ -596,6 +601,7 @@
     },
     {
       "baseline_reuse_required": true,
+      "batch_shape_research_signal": false,
       "candidate_id": "hprc-threshold-abs-le-pairs-3317d5db885b6839",
       "estimated_archive_bytes_removed_vs_baseline": 239877,
       "estimated_delta_nonrate_pair_local_sum": -1093.8912684836098,
@@ -1097,6 +1103,8 @@
         "600",
         "--window-pairs",
         "50",
+        "--scorer-batch-pairs",
+        "1",
         "--device",
         "cpu",
         "--force",
@@ -1118,6 +1126,7 @@
       "schema": "hprc_pair_scoped_residual_bounded_runner_row.v1",
       "scope": "pair",
       "score_claim": false,
+      "scorer_batch_pairs": 1,
       "selected_pair_count": 270,
       "source_variant_id": "residual_transform_threshold_abs_le_2",
       "stage": "pre_entropy_residual_tokens",
@@ -1125,6 +1134,7 @@
     },
     {
       "baseline_reuse_required": true,
+      "batch_shape_research_signal": false,
       "candidate_id": "hprc-threshold-abs-le-pairs-58b03d146e87e401",
       "estimated_archive_bytes_removed_vs_baseline": 116618,
       "estimated_delta_nonrate_pair_local_sum": -465.8770538466478,
@@ -1682,6 +1692,8 @@
         "600",
         "--window-pairs",
         "50",
+        "--scorer-batch-pairs",
+        "1",
         "--device",
         "cpu",
         "--force",
@@ -1703,6 +1715,7 @@
       "schema": "hprc_pair_scoped_residual_bounded_runner_row.v1",
       "scope": "pair",
       "score_claim": false,
+      "scorer_batch_pairs": 1,
       "selected_pair_count": 262,
       "source_variant_id": "residual_transform_threshold_abs_le_1",
       "stage": "pre_entropy_residual_tokens",
@@ -1712,5 +1725,6 @@
   "schema": "hprc_pair_scoped_residual_bounded_runner_plan.v1",
   "score_claim": false,
   "score_claim_valid": false,
+  "scorer_batch_pairs": 1,
   "window_pairs": 50
 }

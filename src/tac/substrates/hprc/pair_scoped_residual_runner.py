@@ -30,6 +30,8 @@ def build_pair_scoped_residual_bounded_runner_plan(
     max_candidates: int = 3,
     max_pairs: int = 600,
     window_pairs: int = 50,
+    scorer_batch_pairs: int = 1,
+    allow_batch_shape_research_signal: bool = False,
     device: str = "cpu",
     allow_large_tensor_cache: bool = True,
     profile_tool_path: str | Path = "tools/profile_hprc_mlx_component_neutralization.py",
@@ -57,6 +59,12 @@ def build_pair_scoped_residual_bounded_runner_plan(
         raise ValueError("max_pairs must be >= 1")
     if window_pairs < 1:
         raise ValueError("window_pairs must be >= 1")
+    if scorer_batch_pairs < 1:
+        raise ValueError("scorer_batch_pairs must be >= 1")
+    if int(scorer_batch_pairs) != 1 and not allow_batch_shape_research_signal:
+        raise ValueError(
+            "scorer_batch_pairs > 1 requires allow_batch_shape_research_signal=True"
+        )
     if device not in {"cpu", "gpu"}:
         raise ValueError("device must be 'cpu' or 'gpu'")
 
@@ -72,6 +80,8 @@ def build_pair_scoped_residual_bounded_runner_plan(
             profile_tool_path=Path(profile_tool_path),
             max_pairs=int(max_pairs),
             window_pairs=int(window_pairs),
+            scorer_batch_pairs=int(scorer_batch_pairs),
+            allow_batch_shape_research_signal=bool(allow_batch_shape_research_signal),
             device=device,
             allow_large_tensor_cache=bool(allow_large_tensor_cache),
         )
@@ -90,6 +100,8 @@ def build_pair_scoped_residual_bounded_runner_plan(
         "max_candidates": int(max_candidates),
         "max_pairs": int(max_pairs),
         "window_pairs": int(window_pairs),
+        "scorer_batch_pairs": int(scorer_batch_pairs),
+        "allow_batch_shape_research_signal": bool(allow_batch_shape_research_signal),
         "device": device,
         "baseline_reuse_required": True,
         "runner_rows": runner_rows,
@@ -145,6 +157,8 @@ def _runner_row(
     profile_tool_path: Path,
     max_pairs: int,
     window_pairs: int,
+    scorer_batch_pairs: int,
+    allow_batch_shape_research_signal: bool,
     device: str,
     allow_large_tensor_cache: bool,
 ) -> dict[str, Any]:
@@ -168,12 +182,16 @@ def _runner_row(
         str(max_pairs),
         "--window-pairs",
         str(window_pairs),
+        "--scorer-batch-pairs",
+        str(scorer_batch_pairs),
         "--device",
         device,
         "--force",
     ]
     if allow_large_tensor_cache:
         argv.append("--allow-large-tensor-cache")
+    if allow_batch_shape_research_signal:
+        argv.append("--allow-batch-shape-research-signal")
     return {
         "schema": HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_ROW_SCHEMA,
         "rank": int(rank),
@@ -202,6 +220,8 @@ def _runner_row(
         "expected_profile_backlog": (
             candidate_output_dir / "hprc_scorer_ranked_residual_shrink_backlog.json"
         ).as_posix(),
+        "scorer_batch_pairs": int(scorer_batch_pairs),
+        "batch_shape_research_signal": int(scorer_batch_pairs) != 1,
         "receiver_proof_followup": {
             "schema": "hprc_pair_scoped_receiver_proof_followup.v1",
             "required": True,

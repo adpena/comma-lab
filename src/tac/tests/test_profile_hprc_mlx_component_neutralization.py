@@ -254,6 +254,7 @@ def test_baseline_reuse_validates_identity_and_retargets_rate(tmp_path: Path) ->
         baseline_variant=variant,
         reference_cache_dir=ref_cache,
         max_pairs=2,
+        scorer_batch_pairs=1,
     )
     payload = module._copy_reused_baseline_response(  # pyright: ignore[reportPrivateUsage]
         baseline_reuse=reuse,
@@ -266,3 +267,67 @@ def test_baseline_reuse_validates_identity_and_retargets_rate(tmp_path: Path) ->
     assert payload["baseline_reuse"]["current_archive_sha256"] == "zip-sha"
     copied_pose = payload["components"]["artifacts"]["posenet_distortion"]["path"]
     assert Path(copied_pose).is_file()
+
+
+def test_baseline_reuse_rejects_batch_shape_mismatch(tmp_path: Path) -> None:
+    module = _load_tool_module()
+    ref_cache = tmp_path / "reference_cache"
+    ref_cache.mkdir()
+    response = tmp_path / "baseline_response.json"
+    response.write_text(
+        json.dumps(
+            {
+                "archive_size_bytes": 100,
+                "avg_posenet_dist": 0.25,
+                "avg_segnet_dist": 0.01,
+                "n_samples": 2,
+                "batch_pairs": 8,
+            }
+        ),
+        encoding="utf-8",
+    )
+    cache_report = tmp_path / "baseline_cache_report.json"
+    cache_report.write_text('{"raw_pair_count": 2, "cached_pair_count": 2}\n', encoding="utf-8")
+    profile = tmp_path / "profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "max_pairs": 2,
+                "reference_cache_dir": ref_cache.as_posix(),
+                "variant_rows": [
+                    {
+                        "variant_id": "baseline",
+                        "hprc_0bin_sha256": "abc",
+                        "mlx_response": response.as_posix(),
+                        "cache_report": cache_report.as_posix(),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    variant = module.VariantSpec(  # pyright: ignore[reportPrivateUsage]
+        variant_id="baseline",
+        neutralized_section=None,
+        archive_zip_path=tmp_path / "archive.zip",
+        submission_dir=tmp_path / "submission",
+        hprc_bin_path=tmp_path / "0.bin",
+        archive_bytes=200,
+        archive_sha256="zip-sha",
+        hprc_0bin_sha256="abc",
+        variant_dir=tmp_path,
+    )
+
+    try:
+        module._prepare_baseline_reuse(  # pyright: ignore[reportPrivateUsage]
+            profile_path=profile,
+            baseline_variant=variant,
+            reference_cache_dir=ref_cache,
+            max_pairs=2,
+            scorer_batch_pairs=1,
+        )
+    except SystemExit as exc:
+        assert "batch_pairs mismatch" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected batch-pair mismatch to fail closed")
