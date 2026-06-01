@@ -1,0 +1,288 @@
+{
+  "archive_sha256": "9031be411ccea25bc6532855a36c2e33b534fe543250e365631a5752783a9f59",
+  "archive_size_bytes": 1161670,
+  "avg_posenet_dist": 154.0151398026943,
+  "avg_segnet_dist": 0.046052788592254125,
+  "batch_pairs": 1,
+  "batch_process": {
+    "job_count": 2,
+    "job_index": 0,
+    "output": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_full600_20260531T235713Z/mlx_responses_gpu/baseline.json",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "mlx_scorer_response_batch_process_member.v1",
+    "score_claim": false
+  },
+  "batch_process_summary": {
+    "batch_process_wall_seconds": 65.17372584342957,
+    "job_count": 2,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "mlx_scorer_response_batch_process_summary.v1",
+    "score_claim": false
+  },
+  "batch_shape_research_signal_allowed": false,
+  "cache_identity": {
+    "candidate": {
+      "archive_sha256": "9031be411ccea25bc6532855a36c2e33b534fe543250e365631a5752783a9f59",
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "cddf53cc662c3db2e2a29c9c2d11e28a81bab9f74260d71dd206ab147b11dc13",
+        "segnet_last_rgb": "4bdcc383c1e108a0dfb9c8cef973106a2ab649468cf2d939a54e68c6992cc835"
+      },
+      "auth_eval_identity_audit": null,
+      "cache_integrity": {
+        "array_sha256": {
+          "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+          "posenet_yuv6_pair": "cddf53cc662c3db2e2a29c9c2d11e28a81bab9f74260d71dd206ab147b11dc13",
+          "segnet_last_rgb": "4bdcc383c1e108a0dfb9c8cef973106a2ab649468cf2d939a54e68c6992cc835"
+        },
+        "artifact_bytes": {
+          "pair_indices": 9728,
+          "posenet_yuv6_pair": 1415577728,
+          "segnet_last_rgb": 1415577728
+        },
+        "artifact_sha256": {
+          "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+          "posenet_yuv6_pair": "83671cead57cf65bacec42b09888f1dd91e05aa523027f5de3150c1d08c66fa2",
+          "segnet_last_rgb": "268c3bc4cc1b872f484c8dda6347c19dd3c3ff1c492464abf5392acce4d07006"
+        },
+        "blockers": [],
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "integrity_mode": "manifest",
+        "manifest_hashes_reused": true,
+        "passed": true,
+        "strict_rehash_performed": false
+      },
+      "candidate_cache_identity_mode": "unaudited_debug_override",
+      "eligible_for_local_mlx_local_advisory_debug": false,
+      "eligible_for_local_mlx_transfer_calibration": false,
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "inflated_outputs_aggregate_sha256": "28796ca87832bddd34de09cf9ce95f3893eed7d0ae4c471bae09f96214d667f5",
+      "local_cpu_advisory_cache_identity_audit": null,
+      "pair_count": 600,
+      "pair_indices_shape": [
+        600,
+        2
+      ],
+      "path": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_full600_20260531T235713Z/mlx_caches/baseline",
+      "posenet_yuv6_pair_shape": [
+        600,
+        12,
+        192,
+        256
+      ],
+      "raw_sha256": "47757cfc76db6871e0ef794d3ca39820204ade46fab3ae2fe48eb57c4a21d5ea",
+      "segnet_last_rgb_shape": [
+        600,
+        3,
+        384,
+        512
+      ]
+    },
+    "pair_index_alignment_mode": "exact_row_match",
+    "pair_indices_equal": true,
+    "reference": {
+      "archive_sha256": null,
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+        "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+      },
+      "auth_eval_identity_audit": null,
+      "cache_integrity": {
+        "array_sha256": {
+          "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+          "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+          "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+        },
+        "artifact_bytes": {
+          "pair_indices": 9728,
+          "posenet_yuv6_pair": 1415577728,
+          "segnet_last_rgb": 1415577728
+        },
+        "artifact_sha256": {
+          "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+          "posenet_yuv6_pair": "65fba1abb0de07a6b1af4170d65c54e5eaec78a54928b6005913736885e56f8f",
+          "segnet_last_rgb": "604ed34ba21a4c8201227ac52472a5dc6120ac5d7c78a8292f983f914b1b1886"
+        },
+        "blockers": [],
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "integrity_mode": "manifest",
+        "manifest_hashes_reused": true,
+        "passed": true,
+        "strict_rehash_performed": false
+      },
+      "eligible_for_local_mlx_local_advisory_debug": false,
+      "eligible_for_local_mlx_transfer_calibration": false,
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "inflated_outputs_aggregate_sha256": null,
+      "local_cpu_advisory_cache_identity_audit": null,
+      "pair_count": 600,
+      "pair_indices_shape": [
+        600,
+        2
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+      "posenet_yuv6_pair_shape": [
+        600,
+        12,
+        192,
+        256
+      ],
+      "raw_sha256": null,
+      "segnet_last_rgb_shape": [
+        600,
+        3,
+        384,
+        512
+      ]
+    },
+    "reference_row_indices_sha256": "cc9a30cb8f087da45cd87f6f03a2fd8724fe0d9daf238e39e471e30f89d72705",
+    "reference_row_window": [
+      0,
+      599
+    ]
+  },
+  "cache_integrity": {
+    "candidate": {
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "cddf53cc662c3db2e2a29c9c2d11e28a81bab9f74260d71dd206ab147b11dc13",
+        "segnet_last_rgb": "4bdcc383c1e108a0dfb9c8cef973106a2ab649468cf2d939a54e68c6992cc835"
+      },
+      "artifact_bytes": {
+        "pair_indices": 9728,
+        "posenet_yuv6_pair": 1415577728,
+        "segnet_last_rgb": 1415577728
+      },
+      "artifact_sha256": {
+        "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+        "posenet_yuv6_pair": "83671cead57cf65bacec42b09888f1dd91e05aa523027f5de3150c1d08c66fa2",
+        "segnet_last_rgb": "268c3bc4cc1b872f484c8dda6347c19dd3c3ff1c492464abf5392acce4d07006"
+      },
+      "blockers": [],
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "integrity_mode": "manifest",
+      "manifest_hashes_reused": true,
+      "passed": true,
+      "strict_rehash_performed": false
+    },
+    "reference": {
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+        "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+      },
+      "artifact_bytes": {
+        "pair_indices": 9728,
+        "posenet_yuv6_pair": 1415577728,
+        "segnet_last_rgb": 1415577728
+      },
+      "artifact_sha256": {
+        "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+        "posenet_yuv6_pair": "65fba1abb0de07a6b1af4170d65c54e5eaec78a54928b6005913736885e56f8f",
+        "segnet_last_rgb": "604ed34ba21a4c8201227ac52472a5dc6120ac5d7c78a8292f983f914b1b1886"
+      },
+      "blockers": [],
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "integrity_mode": "manifest",
+      "manifest_hashes_reused": true,
+      "passed": true,
+      "strict_rehash_performed": false
+    }
+  },
+  "candidate_cache_pairs": 600,
+  "candidate_generation_only": true,
+  "canonical_score": 44.623549912068924,
+  "canonical_score_source": "score_recomputed_from_components",
+  "components": {
+    "artifacts": {
+      "posenet_distortion": {
+        "bytes": 2528,
+        "path": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_full600_20260531T235713Z/mlx_components_gpu/baseline/posenet_distortion.npy",
+        "sha256": "9eaf520b7c00d0ba8da9349a7f174cf1db5d93b32b5a18304ed6760f5d982b7a"
+      },
+      "segnet_distortion": {
+        "bytes": 2528,
+        "path": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_full600_20260531T235713Z/mlx_components_gpu/baseline/segnet_distortion.npy",
+        "sha256": "20446e5ad6f7eeeab32db0b77ff8b418b786f96c326dcd460585695e471cef7a"
+      }
+    },
+    "posenet_sha256": "becb54bc80f907f2941fee5b1623d9890ba466545094876508ca75c17a91b890",
+    "posenet_shape": [
+      600
+    ],
+    "segnet_sha256": "580c56fc9904221b7b9460e29397340ddba522d0040274fd3e869e8c78c5753e",
+    "segnet_shape": [
+      600
+    ]
+  },
+  "device_contract": {
+    "allowed_uses": [
+      "local_tensor_ingestion_debug_only",
+      "non_authoritative_component_smoke"
+    ],
+    "batch_pairs_allowed_without_invariance_override": 1,
+    "batch_shape_research_signal_blocker": "mlx_scorer_response_non_singleton_batches_require_explicit_batch_shape_research_signal_allowance",
+    "batch_shape_research_signal_required": false,
+    "candidate_cache_identity_mode": "unaudited_debug_override",
+    "candidate_cache_transfer_blocker": "mlx_scorer_response_candidate_cache_requires_passing_auth_identity_audit",
+    "forbidden_uses": [
+      "auth_eval",
+      "score_claim",
+      "promotion",
+      "rank_or_kill",
+      "leaderboard_claim",
+      "replacement_for_cuda_t4_or_linux_x86_64_eval"
+    ],
+    "gpu_batch_pairs_allowed_without_invariance_override": 1,
+    "gpu_batch_shape_blocker": "mlx_gpu_scorer_response_requires_singleton_batches_until_invariance_passes",
+    "gpu_research_signal_blocker": "mlx_gpu_scorer_response_requires_explicit_research_signal_allowance",
+    "gpu_research_signal_required": true,
+    "local_advisory_cache_identity_blocker": "mlx_scorer_response_local_advisory_cache_identity_requires_explicit_allowance",
+    "local_cpu_advisory_cache_identity_allowed": false,
+    "unaudited_candidate_cache_debug_allowed": true
+  },
+  "elapsed_seconds": 32.31496000289917,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "gpu_research_signal_allowed": true,
+  "hardware_substrate": "MLX gpu",
+  "inflated_outputs_aggregate_sha256": "28796ca87832bddd34de09cf9ce95f3893eed7d0ae4c471bae09f96214d667f5",
+  "max_pairs": 600,
+  "n_samples": 600,
+  "pair_window": [
+    0,
+    600
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_unscaled": 0.03094033480293731,
+  "raw_sha256": "47757cfc76db6871e0ef794d3ca39820204ade46fab3ae2fe48eb57c4a21d5ea",
+  "ready_for_exact_eval_dispatch": false,
+  "reference_cache_pairs": 600,
+  "requires_exact_eval_before_promotion": true,
+  "response_family": "hprc_component_neutralization_baseline_gpu_full600",
+  "schema_version": "mlx_scorer_response.v1",
+  "score_axis": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "score_rate_contribution": 0.7735083700734328,
+  "score_recomputed_from_components": 44.623549912068924,
+  "source_pair_window": [
+    [
+      0,
+      1
+    ],
+    [
+      1198,
+      1199
+    ]
+  ],
+  "start_pair": 0,
+  "total_cache_pairs": 600
+}

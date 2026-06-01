@@ -49,6 +49,7 @@ from tac.substrates.hprc.learned_receiver import (  # noqa: E402
     COMPACT_RECEIVER_MODE,
     decode_compact_receiver_packet,
     neutralize_compact_receiver_section,
+    transform_compact_receiver_residual,
 )
 
 SCHEMA = "hprc_mlx_component_neutralization_profile.v1"
@@ -99,6 +100,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--reference-cache-dir", type=Path, default=DEFAULT_REFERENCE_CACHE)
     parser.add_argument("--sections", nargs="*", default=list(DEFAULT_SECTIONS))
+    parser.add_argument(
+        "--residual-transforms",
+        nargs="*",
+        default=[],
+        help=(
+            "Additional residual-token shrink transforms to materialize and score, "
+            "for example threshold_abs_le=1 quant_step=2 keep_top_fraction=0.2."
+        ),
+    )
     parser.add_argument("--max-pairs", type=int, default=2)
     parser.add_argument("--window-pairs", type=int, default=1)
     parser.add_argument("--device", choices=("cpu", "gpu"), default="cpu")
@@ -154,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=output_dir,
         repo_root=repo_root,
         section_kinds=section_kinds,
+        residual_transforms=list(args.residual_transforms),
         skip_receiver_proof=(not bool(args.receiver_proof)) or bool(args.skip_receiver_proof),
         retain_receiver_proof_output=bool(args.retain_receiver_proof_output),
     )
@@ -253,6 +264,7 @@ def _materialize_variants(
     output_dir: Path,
     repo_root: Path,
     section_kinds: list[HprcSectionKind],
+    residual_transforms: list[str],
     skip_receiver_proof: bool,
     retain_receiver_proof_output: bool,
 ) -> list[VariantSpec]:
@@ -302,7 +314,35 @@ def _materialize_variants(
                 variant_dir=variant_dir,
             )
         )
+    for transform in residual_transforms:
+        variant_id = f"residual_transform_{_variant_slug(transform)}"
+        variant_dir = output_dir / "variants" / variant_id
+        variant_packet = transform_compact_receiver_residual(packet, transform=transform)
+        archive_zip, archive_sha, archive_bytes = export_hprc_archive_bytes(
+            variant_packet,
+            variant_dir,
+            repo_root=repo_root,
+            emit_archive_bound_candidate_package=not skip_receiver_proof,
+            retain_receiver_proof_output=retain_receiver_proof_output,
+        )
+        variants.append(
+            VariantSpec(
+                variant_id=variant_id,
+                neutralized_section="residual_rc",
+                archive_zip_path=archive_zip,
+                submission_dir=variant_dir / "submission",
+                hprc_bin_path=variant_dir / "0.bin",
+                archive_bytes=int(archive_bytes),
+                archive_sha256=archive_sha,
+                hprc_0bin_sha256=sha256_file(variant_dir / "0.bin"),
+                variant_dir=variant_dir,
+            )
+        )
     return variants
+
+
+def _variant_slug(value: str) -> str:
+    return "".join(ch.lower() if ch.isalnum() else "_" for ch in value).strip("_")
 
 
 def _materialize_mlx_caches(
@@ -446,10 +486,12 @@ def _build_report(
     baseline = payloads["baseline"]
     baseline_variant = variants[0]
     baseline_cache_report = _load_cache_report(cache_rows["baseline"]["report_output"])
-    full_video_executed = (
-        not bool(baseline_cache_report.get("local_acquisition_partial_raw"))
-        and int(baseline_cache_report.get("raw_pair_count") or 0) >= 600
-        and int(max_pairs) >= int(baseline_cache_report.get("raw_pair_count") or 0)
+    full_video_executed = _full_video_mlx_response_executed(
+        cache_report=baseline_cache_report,
+        max_pairs=max_pairs,
+    )
+    local_acquisition_partial_raw = _local_acquisition_partial_raw_blocker(
+        baseline_cache_report
     )
     section_rows = []
     for variant in variants:
@@ -523,7 +565,7 @@ def _build_report(
             ),
             *(
                 ["local_acquisition_partial_raw_not_full_video"]
-                if bool(baseline_cache_report.get("local_acquisition_partial_raw"))
+                if local_acquisition_partial_raw
                 else []
             ),
             "class_region_boundary_scopes_require_logits_or_boundary_cache_extension",
@@ -539,6 +581,21 @@ def _load_cache_report(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise SystemExit(f"cache report must be a JSON object: {path}")
     return payload
+
+
+def _full_video_mlx_response_executed(*, cache_report: dict[str, Any], max_pairs: int) -> bool:
+    return (
+        int(cache_report.get("raw_pair_count") or 0) >= 600
+        and int(cache_report.get("cached_pair_count") or 0) >= 600
+        and int(max_pairs) >= 600
+    )
+
+
+def _local_acquisition_partial_raw_blocker(cache_report: dict[str, Any]) -> bool:
+    return (
+        bool(cache_report.get("local_acquisition_partial_raw"))
+        and int(cache_report.get("raw_pair_count") or 0) < 600
+    )
 
 
 def _section_value_row(
@@ -682,7 +739,7 @@ def _build_shrink_backlog(report: dict[str, Any]) -> dict[str, Any]:
         )
     rows.sort(
         key=lambda item: (
-            str(item["marginal_status"]) != "cut_candidate_value_below_rate_price",
+            _marginal_priority(str(item["marginal_status"])),
             str(item["section"]) != "residual_rc",
             -int(item.get("archive_bytes_removed_vs_baseline") or 0),
         )
@@ -703,6 +760,16 @@ def _build_shrink_backlog(report: dict[str, Any]) -> dict[str, Any]:
         ),
         **FALSE_AUTHORITY,
     }
+
+
+def _marginal_priority(status: str) -> int:
+    order = {
+        "cut_candidate_distortion_nonworse": 0,
+        "cut_candidate_value_below_rate_price": 1,
+        "protect_candidate_value_exceeds_rate_price": 2,
+        "no_archive_byte_savings": 3,
+    }
+    return order.get(status, 4)
 
 
 def _next_materializer_task(row: dict[str, Any]) -> str:

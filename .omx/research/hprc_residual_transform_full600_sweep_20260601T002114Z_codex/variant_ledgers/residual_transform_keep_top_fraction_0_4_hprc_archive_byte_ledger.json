@@ -1,0 +1,15 @@
+{
+  "archive_zip_bytes": 895512,
+  "archive_zip_sha256": "f6b15399b2d707aff7bd4fe9bdd234cc4946f8b1074834bc98ef22db05fccaea",
+  "below_sub019_zero_distortion_byte_ceiling": false,
+  "contest_rate_term": 0.5962846828283419,
+  "hprc_0bin_bytes": 3008376,
+  "promotion_eligible": false,
+  "receiver_proof_raw_output_retained_by_default": false,
+  "receiver_proof_scratch_free_bytes_at_preflight": 1437868240896,
+  "receiver_proof_scratch_required_bytes": 4736151424,
+  "runtime_and_zip_counted": true,
+  "schema": "hprc_archive_byte_ledger.v1",
+  "score_claim": false,
+  "sub019_zero_distortion_byte_ceiling": 285345
+}

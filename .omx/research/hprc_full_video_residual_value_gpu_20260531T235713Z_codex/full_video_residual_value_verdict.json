@@ -1,0 +1,50 @@
+{
+  "schema": "hprc_full_video_residual_value_verdict.v1",
+  "created_by": "codex",
+  "source_ssd_artifact_dir": "/Volumes/VertigoDataTier/pact/hprc_mlx_component_neutralization_full600_20260531T235713Z",
+  "evidence_axis": "[macOS-MLX research-signal]",
+  "hardware_substrate": "MLX gpu",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "promotion_eligible": false,
+  "promotable": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "full_video_pair_count": 600,
+  "baseline": {
+    "archive_zip_bytes": 1161670,
+    "canonical_score_advisory": 44.623549912068924,
+    "avg_posenet_dist": 154.0151398026943,
+    "avg_segnet_dist": 0.046052788592254125,
+    "score_rate_contribution": 0.7735083700734328,
+    "response_json_sha256": "4e239dc67ed611a4c0248416e4998692a9e3b02dbfac607dbdd833c0b089eb89"
+  },
+  "neutralize_residual_rc": {
+    "archive_zip_bytes": 43328,
+    "canonical_score_advisory": 44.88988410825207,
+    "avg_posenet_dist": 163.1264383951823,
+    "avg_segnet_dist": 0.04472119649561743,
+    "score_rate_contribution": 0.028850336720877442,
+    "response_json_sha256": "47d24d0cc8dac4749c085d9f98ca49f71538faf26c502ad602186f9ad41f7245"
+  },
+  "deltas_neutralize_residual_rc_minus_baseline": {
+    "archive_zip_bytes": -1118342,
+    "canonical_score_advisory": 0.2663341961831449,
+    "avg_posenet_dist": 9.111298592487998,
+    "avg_segnet_dist": -0.0013315920966366981,
+    "score_rate_contribution": -0.7446580333525553
+  },
+  "verdict": "full_video_mlx_gpu_negative_for_residual_zero",
+  "decision": "do_not_promote_residual_zero_to_exact; replace with scorer-ranked residual compression and lambda allocation",
+  "next_materializer_tasks": [
+    "compress residual_rc rather than delete it",
+    "sweep residual sparsity/bitplane/significance coders against full-video P18/P19 value",
+    "allocate residual bytes with hard rate price 25/original_video_bytes",
+    "keep decoder_qw and latent semantics protected until their own full-video value curves say otherwise"
+  ],
+  "blockers": [
+    "mlx_gpu_research_signal_is_not_contest_cpu_or_cuda_authority",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "full_video_cpu_mlx_singleton_path_superseded_due_runtime_not_score_authority"
+  ]
+}

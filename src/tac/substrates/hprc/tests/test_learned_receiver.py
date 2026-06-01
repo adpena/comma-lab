@@ -20,6 +20,7 @@ from tac.substrates.hprc.learned_receiver import (
     mutate_compact_receiver_section,
     neutralize_compact_receiver_section,
     render_compact_receiver_frame,
+    transform_compact_receiver_residual,
 )
 
 
@@ -126,6 +127,27 @@ def test_compact_receiver_inflate_writes_contest_resolution_raw(tmp_path: Path) 
     assert hprc_preview_digest(packet_bytes)
 
 
+def test_compact_receiver_vectorized_raw_writer_matches_frame_renderer(tmp_path: Path) -> None:
+    packet_bytes = build_compact_receiver_packet_from_lowres_frames(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+    compact = decode_compact_receiver_packet(parse_hprc_packet(packet_bytes))
+    out = tmp_path / "0.raw"
+
+    from tac.substrates.hprc.learned_receiver import write_compact_receiver_raw
+
+    write_compact_receiver_raw(parse_hprc_packet(packet_bytes), out, height=16, width=20)
+
+    expected = b"".join(
+        render_compact_receiver_frame(compact, idx, height=16, width=20).tobytes()
+        for idx in range(4)
+    )
+    assert out.read_bytes() == expected
+
+
 def test_compact_receiver_manifest_mutation_is_metadata_only() -> None:
     packet_bytes = build_compact_receiver_packet_from_lowres_frames(
         _frames(),
@@ -163,6 +185,31 @@ def test_compact_receiver_neutralization_returns_valid_packet() -> None:
     assert compact.residual.q.shape == (4, 2, 3, 3)
     assert np.count_nonzero(compact.residual.q) == 0
     assert hprc_preview_digest(neutralized) != hprc_preview_digest(packet_bytes)
+
+
+def test_compact_receiver_residual_transform_is_valid_and_charged() -> None:
+    packet_bytes = build_compact_receiver_packet_from_lowres_frames(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+    packet = parse_hprc_packet(packet_bytes)
+
+    transformed = transform_compact_receiver_residual(
+        packet,
+        transform="threshold_abs_le=64",
+    )
+    compact = decode_compact_receiver_packet(parse_hprc_packet(transformed))
+    rdo_payload = parse_hprc_packet(transformed).section_map()[HprcSectionKind.RDO_PLAN]
+    rdo = json.loads(rdo_payload)
+
+    assert compact.residual.q.shape == (4, 2, 3, 3)
+    assert np.count_nonzero(compact.residual.q) < np.count_nonzero(
+        decode_compact_receiver_packet(packet).residual.q
+    )
+    assert rdo["residual_token_transform"]["kind"] == "threshold_abs_le"
+    assert hprc_preview_digest(transformed) != hprc_preview_digest(packet_bytes)
 
 
 def test_compact_receiver_local_acquisition_frame_cap(tmp_path: Path, monkeypatch) -> None:

@@ -1,0 +1,44 @@
+{
+  "schema": "hprc_residual_transform_full_video_rd_verdict.v1",
+  "created_by": "codex",
+  "source_ssd_artifact_dir": "/Volumes/VertigoDataTier/pact/hprc_residual_transform_full600_sweep_20260601T002114Z",
+  "evidence_axis": "[macOS-MLX research-signal]",
+  "hardware_substrate": "MLX gpu",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "promotion_eligible": false,
+  "promotable": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "full_video_pair_count": 600,
+  "baseline_archive_zip_bytes": 1162554,
+  "best_total_score_variant": {
+    "variant_id": "residual_transform_threshold_abs_le_3",
+    "archive_zip_bytes": 453171,
+    "archive_bytes_removed_vs_baseline": 709383,
+    "delta_total_mlx_score_advisory": -1.3152033838421247,
+    "delta_nonrate_score": -0.8428543620994589,
+    "delta_rate_score": -0.47234902174266524,
+    "delta_avg_posenet_dist": -9.316994195307274,
+    "delta_avg_segnet_dist": 0.003626988641917704,
+    "receiver_proof_artifact": ".omx/research/hprc_threshold_abs_le_3_receiver_proof_20260601T004446Z_codex/receiver_proof/hprc_receiver_proof.json",
+    "receiver_contract_satisfied": true,
+    "archive_zip_sha256": "bfd2c7a604134ead151ff7e784fb06a7f76ffd66c817610ef997d9dd23814188"
+  },
+  "best_nonrate_variant": {
+    "variant_id": "residual_transform_quant_step_2",
+    "archive_zip_bytes": 704018,
+    "archive_bytes_removed_vs_baseline": 458536,
+    "delta_total_mlx_score_advisory": -1.296610014884351,
+    "delta_nonrate_score": -0.9912897139555241,
+    "delta_rate_score": -0.3053203009288279,
+    "delta_avg_posenet_dist": -7.51042821254444,
+    "delta_avg_segnet_dist": -0.00022460930980742339
+  },
+  "decision": "promote threshold_abs_le_3 as the current HPRC residual shrink candidate for exact CPU/CUDA gating; keep quant_step_2 as the next scorer-value-preserving refinement candidate",
+  "blockers": [
+    "macOS-MLX research-signal is not contest CPU/CUDA authority",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "class_region_boundary_scopes_require_logits_or_boundary_cache_extension"
+  ]
+}

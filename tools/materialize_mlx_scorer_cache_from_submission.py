@@ -15,6 +15,7 @@ import json
 import shutil
 import sys
 import time
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,7 @@ from experiments.contest_auth_eval import (  # noqa: E402  # pyright: ignore[rep
     _run_inflate,
     _sha256,
     _validate_archive_members,
+    _validate_zip_container_integrity,
 )
 from tac.local_acceleration.mlx_preprocess import (  # noqa: E402
     load_raw_video_memmap,
@@ -63,6 +65,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-cache-dir", required=True, type=Path)
     parser.add_argument("--work-dir", required=True, type=Path)
     parser.add_argument("--report-output", required=True, type=Path)
+    parser.add_argument(
+        "--preinflated-output-dir",
+        type=Path,
+        help=(
+            "Use an already proven shell-inflate output directory instead of "
+            "running inflate.sh again. The directory must contain raw files "
+            "matching --video-names-file and must not live inside --work-dir."
+        ),
+    )
     parser.add_argument("--inflate-timeout", type=int, default=1800)
     parser.add_argument("--batch-pairs", type=int, default=1)
     parser.add_argument("--max-pairs", type=int)
@@ -111,6 +122,21 @@ def main(argv: list[str] | None = None) -> int:
     work_dir = args.work_dir.resolve()
     output_cache = args.output_cache_dir.resolve()
     report_output = args.report_output.resolve()
+    preinflated_output_dir = (
+        args.preinflated_output_dir.resolve()
+        if args.preinflated_output_dir is not None
+        else None
+    )
+    if preinflated_output_dir is not None:
+        if not preinflated_output_dir.is_dir():
+            raise SystemExit(
+                f"--preinflated-output-dir is not a directory: {preinflated_output_dir}"
+            )
+        if _is_relative_to(preinflated_output_dir, work_dir):
+            raise SystemExit(
+                "--preinflated-output-dir must not be inside --work-dir; "
+                f"work-dir cleanup would destroy the source: {preinflated_output_dir}"
+            )
     _prepare_owned_dir(work_dir, force=args.force, label="work_dir")
     _prepare_owned_dir(output_cache, force=args.force, label="output_cache_dir")
     if report_output.exists() and not args.force:
@@ -121,8 +147,7 @@ def main(argv: list[str] | None = None) -> int:
     started = time.time()
     extracted_dir = work_dir / "archive"
     inflated_dir = work_dir / "inflated"
-    members = _extract_archive(archive, extracted_dir)
-    _validate_archive_members(members)
+    inflate_executed = preinflated_output_dir is None
     local_acquisition_env = (
         {"PACT_LOCAL_ACQUISITION_MAX_PAIRS": str(int(args.local_acquisition_max_pairs))}
         if args.local_acquisition_max_pairs is not None
@@ -133,15 +158,22 @@ def main(argv: list[str] | None = None) -> int:
         if args.local_acquisition_max_pairs is not None
         else 1200
     )
-    inflate_elapsed = _run_inflate(
-        inflate_sh,
-        extracted_dir,
-        inflated_dir,
-        video_names_file,
-        timeout=int(args.inflate_timeout),
-        extra_env=local_acquisition_env,
-        expected_num_frames=inflate_expected_frames,
-    )
+    if inflate_executed:
+        members = _extract_archive(archive, extracted_dir)
+        _validate_archive_members(members)
+        inflate_elapsed = _run_inflate(
+            inflate_sh,
+            extracted_dir,
+            inflated_dir,
+            video_names_file,
+            timeout=int(args.inflate_timeout),
+            extra_env=local_acquisition_env,
+            expected_num_frames=inflate_expected_frames,
+        )
+    else:
+        _validate_archive_without_extracting(archive)
+        inflated_dir = preinflated_output_dir
+        inflate_elapsed = 0.0
     provenance: dict[str, Any] = {
         "archive_sha256": _sha256(archive, prefix=0),
         "archive_size_bytes": archive.stat().st_size,
@@ -149,6 +181,10 @@ def main(argv: list[str] | None = None) -> int:
         "submission_dir": str(submission_dir),
         "inflate_sh": str(inflate_sh),
         "video_names_file": str(video_names_file),
+        "inflate_executed": inflate_executed,
+        "preinflated_output_dir": (
+            str(preinflated_output_dir) if preinflated_output_dir is not None else None
+        ),
         **FALSE_AUTHORITY,
     }
     inflated_manifest = _record_inflated_output_artifacts(
@@ -160,6 +196,11 @@ def main(argv: list[str] | None = None) -> int:
     raw_path = _single_raw_path(inflated_dir, video_names_file)
     raw = load_raw_video_memmap(raw_path)
     raw_pair_count = len(non_overlapping_pair_indices(raw.shape[0]))
+    local_acquisition_partial_raw = _local_acquisition_is_partial_raw(
+        raw_pair_count=raw_pair_count,
+        local_acquisition_max_pairs=args.local_acquisition_max_pairs,
+        inflate_executed=inflate_executed,
+    )
     cached_pair_count = (
         raw_pair_count
         if args.max_pairs is None
@@ -210,7 +251,12 @@ def main(argv: list[str] | None = None) -> int:
         "pair_count": int(manifest["pair_count"]),
         "max_pairs": args.max_pairs,
         "local_acquisition_max_pairs": args.local_acquisition_max_pairs,
-        "local_acquisition_partial_raw": args.local_acquisition_max_pairs is not None,
+        "local_acquisition_partial_raw": local_acquisition_partial_raw,
+        "local_acquisition_full_raw_pair_floor": 600,
+        "inflate_executed": inflate_executed,
+        "preinflated_output_dir": (
+            str(preinflated_output_dir) if preinflated_output_dir is not None else None
+        ),
         "inflate_elapsed_seconds": float(inflate_elapsed),
         "elapsed_seconds": time.time() - started,
         "candidate_cache_identity_mode": "unaudited_candidate_generation_prior",
@@ -220,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         **FALSE_AUTHORITY,
     }
     write_json(report_output, report)
-    if not args.keep_raw:
+    if not args.keep_raw and inflate_executed:
         shutil.rmtree(inflated_dir, ignore_errors=True)
     print(
         json.dumps(
@@ -233,6 +279,17 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0
+
+
+def _local_acquisition_is_partial_raw(
+    *,
+    raw_pair_count: int,
+    local_acquisition_max_pairs: int | None,
+    inflate_executed: bool,
+) -> bool:
+    if local_acquisition_max_pairs is None or not inflate_executed:
+        return False
+    return int(raw_pair_count) < 600
 
 
 def _prepare_owned_dir(path: Path, *, force: bool, label: str) -> None:
@@ -248,6 +305,21 @@ def _prepare_owned_dir(path: Path, *, force: bool, label: str) -> None:
         json.dumps({"schema": "owned_directory_marker.v1", "tool": __file__}) + "\n",
         encoding="utf-8",
     )
+
+
+def _is_relative_to(child: Path, parent: Path) -> bool:
+    try:
+        child.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _validate_archive_without_extracting(archive: Path) -> None:
+    with zipfile.ZipFile(archive, "r") as zf:
+        infos = zf.infolist()
+        _validate_zip_container_integrity(archive, infos)
+        _validate_archive_members([info.filename for info in infos])
 
 
 def _require_file(path: Path, label: str) -> None:
