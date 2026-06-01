@@ -47,12 +47,15 @@ class HprcRepresentationFamily(StrEnum):
     PR95_HNERV = "pr95_hnerv"
     HNERV_PACKED = "hnerv_packed"
     RNERV = "rnerv"
+    BOOST_NERV = "boostnerv"
     PACT_NERV = "pact_nerv"
     PACT_NERV_VQ = "pact_nerv_vq"
     TREE_NERV = "tree_nerv"
     HI_NERV = "hi_nerv"
     SR_NERV = "sr_nerv"
     VQ_NERV = "vq_nerv"
+    PVQ_NERV = "pvq_nerv"
+    RT_VQ_NERV = "rt_vq_nerv"
     SIREN_IMPLICIT = "siren_implicit"
     FINER_IMPLICIT = "finer_implicit"
     C3_COOL_CHIC = "c3_cool_chic"
@@ -63,12 +66,15 @@ REPRESENTATION_FAMILY_IDS: dict[HprcRepresentationFamily, int] = {
     HprcRepresentationFamily.PR95_HNERV: 95,
     HprcRepresentationFamily.HNERV_PACKED: 101,
     HprcRepresentationFamily.RNERV: 130,
+    HprcRepresentationFamily.BOOST_NERV: 131,
     HprcRepresentationFamily.PACT_NERV: 140,
     HprcRepresentationFamily.PACT_NERV_VQ: 141,
     HprcRepresentationFamily.TREE_NERV: 142,
     HprcRepresentationFamily.HI_NERV: 143,
     HprcRepresentationFamily.SR_NERV: 144,
     HprcRepresentationFamily.VQ_NERV: 145,
+    HprcRepresentationFamily.PVQ_NERV: 146,
+    HprcRepresentationFamily.RT_VQ_NERV: 147,
     HprcRepresentationFamily.SIREN_IMPLICIT: 160,
     HprcRepresentationFamily.FINER_IMPLICIT: 161,
     HprcRepresentationFamily.C3_COOL_CHIC: 170,

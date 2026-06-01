@@ -22,6 +22,7 @@ from tools.run_pr95_stage8_from_public_archive import (  # noqa: E402
     PR95_STAGE8_COMPARISON_SCHEMA,
     PR95_STAGE8_LANE_SCHEMA,
     PR95_STAGE8_SEED_SCHEMA,
+    _load_or_build_target_shared_state,
     build_compact_byte_grammar_reference,
     prepare_stage8_seed_from_archive,
     run_pr95_stage8_from_public_archive,
@@ -152,6 +153,58 @@ def test_execute_zero_epochs_packages_source_seed_without_public_scheduler(
         "exact_gate"
     ]["blockers"]
     assert report["score_claim"] is False
+
+
+def test_target_cache_build_and_hit_preserve_video_hash(tmp_path: Path) -> None:
+    import torch
+
+    video = tmp_path / "0.mkv"
+    video.write_bytes(b"video")
+    cache_path = tmp_path / "targets.pt"
+
+    class FakeDataModule:
+        precompute_calls = 0
+        load_calls = 0
+
+        @classmethod
+        def precompute_targets(cls, video_path: Path, device: torch.device):
+            cls.precompute_calls += 1
+            return (
+                "distortion-net",
+                torch.zeros((2, 4, 5), dtype=torch.int64, device=device),
+                torch.ones((2, 6), dtype=torch.float32, device=device),
+                None,
+                2,
+            )
+
+        @classmethod
+        def load_distortion_net(cls, device: torch.device):
+            cls.load_calls += 1
+            return f"distortion-net-{device.type}"
+
+    state, report = _load_or_build_target_shared_state(
+        data_module=FakeDataModule,
+        video_path=video,
+        device=torch.device("cpu"),
+        cache_path=cache_path,
+        build_if_missing=True,
+    )
+    assert report["cache_written"] is True
+    assert report["cache_hit"] is False
+    assert cache_path.is_file()
+    assert state["distortion_net"] == "distortion-net"
+
+    hit_state, hit_report = _load_or_build_target_shared_state(
+        data_module=FakeDataModule,
+        video_path=video,
+        device=torch.device("cpu"),
+        cache_path=cache_path,
+        build_if_missing=False,
+    )
+    assert hit_report["cache_hit"] is True
+    assert FakeDataModule.precompute_calls == 1
+    assert FakeDataModule.load_calls == 1
+    assert hit_state["n_pairs"] == 2
 
 
 def test_compact_byte_grammar_reference_requires_runtime_custody() -> None:

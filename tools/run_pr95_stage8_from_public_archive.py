@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import sys
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,6 +42,7 @@ DEFAULT_PUBLIC_SUBMISSION_ROOT = (
 DEFAULT_CHALLENGE_ROOT = REPO_ROOT / "upstream"
 DEFAULT_SOURCE_VIDEO_PATH = DEFAULT_CHALLENGE_ROOT / "videos/0.mkv"
 DEFAULT_SSD_ROOT = Path("/Volumes/VertigoDataTier/pact")
+DEFAULT_TARGET_CACHE_DIR = DEFAULT_SSD_ROOT / "pr95_stage8_target_cache"
 
 PR95_STAGE8_LANE_SCHEMA = "pr95_stage8_from_public_archive_lane.v1"
 PR95_STAGE8_SEED_SCHEMA = "pr95_stage8_public_archive_seed.v1"
@@ -140,6 +142,136 @@ def _byte_ceiling_report(archive_bytes: int | None) -> dict[str, Any]:
             for ceiling in BYTE_CEILINGS
         ],
     }
+
+
+def _default_target_cache_path(source_video_path: Path, device: str) -> Path:
+    source = Path(source_video_path)
+    digest = hashlib.sha256(
+        f"{source.resolve(strict=False).as_posix()}:{_sha256_file(source)}:{device}".encode()
+    ).hexdigest()[:16]
+    return DEFAULT_TARGET_CACHE_DIR / f"pr95_stage8_targets_{digest}.pt"
+
+
+def _target_cache_manifest_path(cache_path: Path) -> Path:
+    return cache_path.with_suffix(cache_path.suffix + ".manifest.json")
+
+
+def _tensor_to_cpu(value: Any) -> Any:
+    if hasattr(value, "detach"):
+        return value.detach().cpu()
+    return value
+
+
+def _load_or_build_target_shared_state(
+    *,
+    data_module: Any,
+    video_path: Path,
+    device: Any,
+    cache_path: Path | None,
+    build_if_missing: bool,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load or build public PR95 full-video scorer targets for Stage 8."""
+
+    import torch
+
+    video_path = Path(video_path)
+    video_sha256 = _sha256_file(video_path)
+    cache_report: dict[str, Any] = {
+        "schema": "pr95_stage8_target_cache_report.v1",
+        "video_path": video_path.as_posix(),
+        "video_sha256": video_sha256,
+        "cache_path": None if cache_path is None else Path(cache_path).as_posix(),
+        "cache_hit": False,
+        "cache_written": False,
+        "elapsed_seconds": None,
+    }
+    t0 = time.time()
+    if cache_path is not None and Path(cache_path).is_file():
+        payload = torch.load(Path(cache_path), map_location="cpu", weights_only=True)
+        if payload.get("video_sha256") != video_sha256:
+            raise Pr95Stage8LaneError(
+                "target_cache_video_sha256_mismatch: "
+                f"{cache_path} does not match {video_path}"
+            )
+        seg_targets_hard = payload["seg_targets_hard"].to(device)
+        pose_targets = payload["pose_targets"].to(device)
+        n_pairs = int(payload["n_pairs"])
+        cache_report.update(
+            {
+                "cache_hit": True,
+                "n_pairs": n_pairs,
+                "seg_targets_shape": list(seg_targets_hard.shape),
+                "pose_targets_shape": list(pose_targets.shape),
+            }
+        )
+    else:
+        if cache_path is not None and not build_if_missing:
+            raise Pr95Stage8LaneError(
+                f"target_cache_missing_and_build_disabled: {cache_path}"
+            )
+        distortion_net, seg_targets_hard, pose_targets, _, n_pairs = (
+            data_module.precompute_targets(video_path, device)
+        )
+        if cache_path is not None:
+            Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "schema": "pr95_stage8_target_cache.v1",
+                "generated_utc": datetime.now(UTC).isoformat(),
+                "video_path": video_path.as_posix(),
+                "video_sha256": video_sha256,
+                "n_pairs": int(n_pairs),
+                "seg_targets_hard": _tensor_to_cpu(seg_targets_hard),
+                "pose_targets": _tensor_to_cpu(pose_targets),
+                "score_axis": "[macOS-CPU advisory]",
+                **FALSE_AUTHORITY,
+            }
+            torch.save(payload, Path(cache_path))
+            manifest = {
+                **{
+                    k: v
+                    for k, v in payload.items()
+                    if k not in {"seg_targets_hard", "pose_targets"}
+                },
+                "cache_path": Path(cache_path).as_posix(),
+                "cache_sha256": _sha256_file(Path(cache_path)),
+                "cache_bytes": Path(cache_path).stat().st_size,
+                "rebuildable_from": {
+                    "source_video_path": video_path.as_posix(),
+                    "source_video_sha256": video_sha256,
+                    "public_pr95_data_module": "source/submissions/hnerv_muon/src/data.py",
+                },
+            }
+            _write_json(_target_cache_manifest_path(Path(cache_path)), manifest)
+            cache_report.update(
+                {
+                    "cache_written": True,
+                    "cache_sha256": manifest["cache_sha256"],
+                    "cache_bytes": manifest["cache_bytes"],
+                    "cache_manifest_path": _target_cache_manifest_path(
+                        Path(cache_path)
+                    ).as_posix(),
+                }
+            )
+    if "distortion_net" not in locals():
+        distortion_net = data_module.load_distortion_net(device)
+    cache_report.update(
+        {
+            "elapsed_seconds": time.time() - t0,
+            "n_pairs": int(n_pairs),
+            "seg_targets_shape": list(seg_targets_hard.shape),
+            "pose_targets_shape": list(pose_targets.shape),
+        }
+    )
+    return (
+        {
+            "distortion_net": distortion_net,
+            "seg_targets_hard": seg_targets_hard,
+            "pose_targets": pose_targets,
+            "n_pairs": int(n_pairs),
+            "video_path": video_path,
+        },
+        cache_report,
+    )
 
 
 def prepare_stage8_seed_from_archive(
@@ -356,6 +488,8 @@ def run_pr95_stage8_from_public_archive(
     muon_weight_decay: float,
     device: str,
     execute: bool,
+    target_cache_path: Path | None = None,
+    build_target_cache_if_missing: bool = True,
     overwrite: bool,
 ) -> dict[str, Any]:
     output_dir = Path(output_dir)
@@ -370,6 +504,7 @@ def run_pr95_stage8_from_public_archive(
     package_report: dict[str, Any] | None = None
     local_training_result: dict[str, Any] | None = None
     stage_best_meta: dict[str, Any] | None = None
+    target_cache_report: dict[str, Any] | None = None
     blockers: list[str] = []
     archive_bytes: int | None = Path(source_archive_zip).stat().st_size
 
@@ -422,9 +557,22 @@ def run_pr95_stage8_from_public_archive(
             try:
                 stage8 = importlib.import_module("stages.stage8_muon_finetune")
                 common = importlib.import_module("stages.common")
+                data_module = importlib.import_module("data")
                 selected_device = _select_torch_device(device)
                 import torch
 
+                selected_target_cache = (
+                    _default_target_cache_path(Path(source_video_path), selected_device)
+                    if target_cache_path is None
+                    else Path(target_cache_path)
+                )
+                shared_state, target_cache_report = _load_or_build_target_shared_state(
+                    data_module=data_module,
+                    video_path=Path(source_video_path),
+                    device=torch.device(selected_device),
+                    cache_path=selected_target_cache,
+                    build_if_missing=build_target_cache_if_missing,
+                )
                 cfg = stage8.make_config(
                     seed.seed_dir,
                     stage_dir,
@@ -433,12 +581,14 @@ def run_pr95_stage8_from_public_archive(
                 )
                 cfg.eval_every = int(eval_every)
                 cfg.batch_size = int(batch_size)
+                train_t0 = time.time()
                 result = common.train_stage(
                     cfg,
                     torch.device(selected_device),
-                    video_path=str(source_video_path),
-                    shared_state={},
+                    video_path=Path(source_video_path),
+                    shared_state=shared_state,
                 )
+                train_elapsed = time.time() - train_t0
             finally:
                 try:
                     sys.path.remove(str(src_dir))
@@ -455,6 +605,8 @@ def run_pr95_stage8_from_public_archive(
                 "batch_size": int(batch_size),
                 "raw_result": result,
                 "best_meta": stage_best_meta,
+                "target_cache": target_cache_report,
+                "train_stage_elapsed_seconds": train_elapsed,
                 "score_axis": "[macOS-CPU advisory]",
                 **FALSE_AUTHORITY,
             }
@@ -529,6 +681,12 @@ def run_pr95_stage8_from_public_archive(
                 device,
             ]
             + (["--execute"] if execute else [])
+            + (
+                ["--target-cache-path", Path(target_cache_path).as_posix()]
+                if target_cache_path is not None
+                else []
+            )
+            + ([] if build_target_cache_if_missing else ["--no-build-target-cache"])
             + (["--overwrite"] if overwrite else []),
             "env": {
                 "COMMA_CHALLENGE_ROOT": Path(challenge_root).as_posix()
@@ -550,6 +708,7 @@ def run_pr95_stage8_from_public_archive(
             "device": device,
         },
         "local_training_result": local_training_result,
+        "target_cache_report": target_cache_report,
         "package_report": package_report,
         "candidate_archive_zip_path": None
         if package_report is None
@@ -609,6 +768,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--muon-weight-decay", type=float, default=5e-4)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument(
+        "--target-cache-path",
+        type=Path,
+        help="Optional SSD target-cache .pt path for public PR95 SegNet/PoseNet targets.",
+    )
+    parser.add_argument(
+        "--no-build-target-cache",
+        action="store_true",
+        help="Fail if --target-cache-path/default cache is missing instead of building it.",
+    )
+    parser.add_argument(
         "--execute",
         action="store_true",
         help="Actually run public PR95 Stage 8. Default only prepares custody.",
@@ -632,6 +801,8 @@ def main(argv: list[str] | None = None) -> int:
         muon_weight_decay=args.muon_weight_decay,
         device=args.device,
         execute=bool(args.execute),
+        target_cache_path=args.target_cache_path,
+        build_target_cache_if_missing=not bool(args.no_build_target_cache),
         overwrite=bool(args.overwrite),
     )
     print(
