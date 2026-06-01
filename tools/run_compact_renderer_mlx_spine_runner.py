@@ -67,6 +67,8 @@ DEFAULT_PR95_RECEIVER_RUNTIME_DIR = (
 )
 TARGET_FAMILIES = (
     "pr95_hnerv",
+    "hi_nerv",
+    "snerv",
     "rnerv",
     "sr_nerv",
     "boostnerv",
@@ -140,6 +142,71 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
             "false-authority until full replay plus exact CPU/CUDA gates close"
         ),
     },
+    "hi_nerv": {
+        "canonical_family": "hi_nerv",
+        "backend_status": "archive_projection_available_trainer_actuator_pending",
+        "trainer_kind": "pytorch_l0_sketch_present_mlx_exporter_missing",
+        "trainer_entrypoint": None,
+        "archive_exporter": (
+            "tac.substrates.hprc.representation_spine."
+            "build_hi_nerv_spine_from_archive"
+        ),
+        "receiver_proof": "missing_until_mlx_or_portable_runtime_adapter_implemented",
+        "next_action": (
+            "port_hi_nerv_hierarchical_latent_pyramid_to_mlx_packet_spine_"
+            "with_score_faithful_full_video_training"
+        ),
+        "execution_scope": (
+            "primary compact carrier candidate; existing PyTorch sketch is not "
+            "promotion-ready until trained MLX/portable artifacts, archive bytes, "
+            "receiver proof, and exact gate exist"
+        ),
+        "stack_role": "primary_carrier",
+        "carrier_priority": 10,
+        "architecture_priors": [
+            "hierarchical_multi_scale_latent_pyramid",
+            "protect_low_frequency_structure_before_scorer_priced_residuals",
+            "section_value_pricing_required_for_decoder_latent_scale_splits",
+        ],
+        "allowed_enhancers": [
+            "sr_nerv_lowres_encode_superresolve_resolution_deadzone",
+            "rnerv_component_search_and_recurrence",
+            "ffnerv_flow_pose_channel",
+            "boostnerv_temporal_affine_bolt_on",
+            "p18_p19_scorer_priced_residual_tokens",
+        ],
+    },
+    "snerv": {
+        "canonical_family": "snerv",
+        "backend_status": "migration_required",
+        "trainer_kind": "missing_mlx_spectra_preserving_carrier_trainer",
+        "trainer_entrypoint": None,
+        "archive_exporter": None,
+        "receiver_proof": "missing_until_adapter_implemented",
+        "next_action": (
+            "implement_snerv_wavelet_lf_hf_mlx_carrier_under_packet_spine_"
+            "with_charged_wavelet_features_no_hidden_sidecars"
+        ),
+        "execution_scope": (
+            "primary compact carrier candidate; SNeRV wavelet/frequency split "
+            "must be charged as decoder/latent/selector/codebook bytes and "
+            "validated by receiver proof before promotion"
+        ),
+        "stack_role": "primary_carrier",
+        "carrier_priority": 9,
+        "architecture_priors": [
+            "spectra_preserving_wavelet_low_frequency_encoding",
+            "implicit_high_frequency_restoration_only_when_score_priced",
+            "aligns_with_z8_wavelet_findings_without_bulk_float_coeff_storage",
+        ],
+        "allowed_enhancers": [
+            "sr_nerv_lowres_encode_superresolve_resolution_deadzone",
+            "rnerv_component_search_and_recurrence",
+            "ffnerv_flow_pose_channel",
+            "boostnerv_temporal_affine_bolt_on",
+            "p18_p19_scorer_priced_residual_tokens",
+        ],
+    },
     "rnerv": {
         "canonical_family": "rnerv",
         "backend_status": "migration_required",
@@ -148,7 +215,22 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "archive_exporter": None,
         "receiver_proof": "missing_until_adapter_implemented",
         "next_action": "implement_rnerv_mlx_renderer_exporter_under_spine_contract",
-        "execution_scope": "not executable until MLX trainer/exporter lands",
+        "execution_scope": (
+            "enhancer/search prior over the winning compact carrier; not a "
+            "separate top-priority carrier unless it reduces charged "
+            "decoder+latent entropy under the same packet spine"
+        ),
+        "stack_role": "enhancer_or_search_prior",
+        "carrier_priority": 6,
+        "architecture_priors": [
+            "component_search_recipe_for_nerv_family",
+            "recurrent_or_hypernetwork_latent_generator_only_if_bytes_are_charged",
+        ],
+        "allowed_enhancers": [
+            "hi_nerv_carrier",
+            "snerv_carrier",
+            "p18_p19_scorer_priced_residual_tokens",
+        ],
     },
     "sr_nerv": {
         "canonical_family": "sr_nerv",
@@ -157,8 +239,33 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "trainer_entrypoint": None,
         "archive_exporter": None,
         "receiver_proof": "missing_until_adapter_implemented",
-        "next_action": "implement_lowres_base_plus_charged_upsampler_mlx_adapter",
-        "execution_scope": "not executable until protected-resolution MLX adapter lands",
+        "next_action": (
+            "run_lowres_to_contest_resolution_scorer_mirror_check_then_"
+            "implement_charged_sr_upsampler_mlx_adapter"
+        ),
+        "execution_scope": (
+            "high-priority resolution-axis enhancer/design knob for the "
+            "winning carrier; low-res encode plus charged super-resolve may "
+            "exploit the scorer downsample dead-zone, but must pass a "
+            "low-res->SR->contest-output->scorer-downsample mirror check"
+        ),
+        "stack_role": "resolution_axis_enhancer_or_design_knob",
+        "carrier_priority": 8,
+        "enhancer_priority": 9,
+        "architecture_priors": [
+            "encode_at_or_below_512x384_internal_resolution",
+            "charged_super_resolution_to_1164x874_output",
+            "verify_lowres_sr_roundtrip_preserves_posenet_segnet",
+            "rank_above_flow_and_boost_because_rate_axis_deadzone_is_structural",
+        ],
+        "allowed_enhancers": [
+            "hi_nerv_carrier",
+            "snerv_carrier",
+            "pr95_hnerv_control_carrier",
+            "rnerv_component_search_and_recurrence",
+            "boostnerv_temporal_affine_bolt_on",
+            "p18_p19_scorer_priced_residual_tokens",
+        ],
     },
     "boostnerv": {
         "canonical_family": "boostnerv",
@@ -168,7 +275,18 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "archive_exporter": None,
         "receiver_proof": "missing_until_mlx_or_portable_runtime_adapter_implemented",
         "next_action": "migrate_boost_residual_to_mlx_or_mark_as_non_primary_sidecar",
-        "execution_scope": "not executable in the MLX-first runner yet",
+        "execution_scope": (
+            "bolt-on enhancer for the winning compact carrier; not a standalone "
+            "carrier in this runner until it proves charged byte-value"
+        ),
+        "stack_role": "enhancer_bolt_on",
+        "carrier_priority": 4,
+        "architecture_priors": [
+            "conditional_decoder_boost",
+            "temporal_affine_modulation",
+            "apply_only_when_section_value_per_byte_is_positive",
+        ],
+        "allowed_enhancers": ["hi_nerv_carrier", "snerv_carrier", "sr_nerv_carrier"],
     },
     "rt_vq_nerv": {
         "canonical_family": "rt_vq_nerv",
@@ -1807,6 +1925,11 @@ def _target_family_rows() -> list[dict[str, Any]]:
                     "exact_axis_blocker_or_dispatch_packet",
                 ],
                 "section_value_profiler": backend.get("section_value_profiler"),
+                "stack_role": backend.get("stack_role", "primary_or_control_candidate"),
+                "carrier_priority": backend.get("carrier_priority", 0),
+                "enhancer_priority": backend.get("enhancer_priority", 0),
+                "architecture_priors": backend.get("architecture_priors", []),
+                "allowed_enhancers": backend.get("allowed_enhancers", []),
                 **FALSE_AUTHORITY,
             }
         )
@@ -1830,7 +1953,10 @@ def _compact_base_campaign_rows(
                 route_status = "queued_for_mlx_training_archive_export_receiver_proof"
             elif status == "checkpoint_adapter_available":
                 route_status = "queued_for_checkpoint_import_or_long_continuation"
-            elif status == "archive_exporter_available_trainer_actuator_pending":
+            elif status in {
+                "archive_exporter_available_trainer_actuator_pending",
+                "archive_projection_available_trainer_actuator_pending",
+            }:
                 route_status = "trainer_actuator_migration_required"
             else:
                 route_status = "migration_required_before_runner_execution"
@@ -1847,6 +1973,11 @@ def _compact_base_campaign_rows(
                     "archive_exporter": backend["archive_exporter"],
                     "receiver_proof": backend["receiver_proof"],
                     "section_value_profiler": backend.get("section_value_profiler"),
+                    "stack_role": backend.get("stack_role", "primary_or_control_candidate"),
+                    "carrier_priority": backend.get("carrier_priority", 0),
+                    "enhancer_priority": backend.get("enhancer_priority", 0),
+                    "architecture_priors": backend.get("architecture_priors", []),
+                    "allowed_enhancers": backend.get("allowed_enhancers", []),
                     "execution_scope": backend["execution_scope"],
                     "byte_policy": (
                         "train/export only charged weights, latents, selectors, "

@@ -22,6 +22,7 @@ from tac.substrates.hprc.representation_spine import (  # noqa: E402
     HPRC_REPRESENTATION_SPINE_PROJECTION_SCHEMA,
     HprcRepresentationFamily,
     build_generic_neural_spine_packet,
+    build_hi_nerv_spine_from_archive,
     build_packed_hnerv_spine_from_archive,
     build_pact_nerv_len_prefixed_spine_from_archive,
     build_pact_nerv_vq_spine_from_archive,
@@ -69,6 +70,10 @@ def main(argv: list[str] | None = None) -> int:
         if archive is None:
             raise ValueError("--archive is required for hnerv_packed")
         spine = build_packed_hnerv_spine_from_archive(archive)
+    elif family == HprcRepresentationFamily.HI_NERV:
+        if archive is None:
+            raise ValueError("--archive is required for hi_nerv")
+        spine = build_hi_nerv_spine_from_archive(archive)
     elif family == HprcRepresentationFamily.PACT_NERV_VQ:
         if archive is None:
             raise ValueError("--archive is required for pact_nerv_vq")

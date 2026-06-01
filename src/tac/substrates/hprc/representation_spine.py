@@ -39,6 +39,9 @@ PVQ_HEADER_FMT = "<4sBHHHIIII"
 PVQ_HEADER_SIZE = struct.calcsize(PVQ_HEADER_FMT)
 PACT_NERV_LEN_PREFIXED_HEADER_FMT = "<4sBHHBIIII"
 PACT_NERV_LEN_PREFIXED_HEADER_SIZE = struct.calcsize(PACT_NERV_LEN_PREFIXED_HEADER_FMT)
+HINERV_MAGIC = b"HIV1"
+HINERV_HEADER_FMT = "<4sBHHHHIIIII"
+HINERV_HEADER_SIZE = struct.calcsize(HINERV_HEADER_FMT)
 
 
 class HprcRepresentationFamily(StrEnum):
@@ -52,6 +55,7 @@ class HprcRepresentationFamily(StrEnum):
     PACT_NERV_VQ = "pact_nerv_vq"
     TREE_NERV = "tree_nerv"
     HI_NERV = "hi_nerv"
+    S_NERV = "snerv"
     SR_NERV = "sr_nerv"
     VQ_NERV = "vq_nerv"
     PVQ_NERV = "pvq_nerv"
@@ -75,6 +79,7 @@ REPRESENTATION_FAMILY_IDS: dict[HprcRepresentationFamily, int] = {
     HprcRepresentationFamily.VQ_NERV: 145,
     HprcRepresentationFamily.PVQ_NERV: 146,
     HprcRepresentationFamily.RT_VQ_NERV: 147,
+    HprcRepresentationFamily.S_NERV: 148,
     HprcRepresentationFamily.SIREN_IMPLICIT: 160,
     HprcRepresentationFamily.FINER_IMPLICIT: 161,
     HprcRepresentationFamily.C3_COOL_CHIC: 170,
@@ -368,6 +373,84 @@ def build_pact_nerv_len_prefixed_spine_from_archive(
     )
 
 
+def build_hi_nerv_spine_from_archive_payload(
+    archive_payload: bytes | bytearray | memoryview,
+    *,
+    source: dict[str, Any] | None = None,
+    manifest_extra: dict[str, Any] | None = None,
+) -> HprcRepresentationSpinePacket:
+    """Project HiNeRV HIV1 bytes into charged decoder/latent/state sections."""
+
+    payload = bytes(archive_payload)
+    parts = _split_hinerv_payload(payload)
+    latent_blob = (
+        parts["latent_coarse_blob"]
+        + parts["latent_mid_blob"]
+        + parts["latent_fine_blob"]
+    )
+    state = _json_bytes(
+        {
+            "schema": "hprc_hi_nerv_receiver_state.v1",
+            "payload_kind": "hi_nerv_hiv1",
+            "header": parts["header"],
+            "header_sha256": hashlib.sha256(payload[:HINERV_HEADER_SIZE]).hexdigest(),
+            "meta_sha256": hashlib.sha256(parts["meta_blob"]).hexdigest(),
+            "meta_bytes": len(parts["meta_blob"]),
+            "latent_sections": {
+                "coarse": {
+                    "bytes": len(parts["latent_coarse_blob"]),
+                    "sha256": hashlib.sha256(parts["latent_coarse_blob"]).hexdigest(),
+                },
+                "mid": {
+                    "bytes": len(parts["latent_mid_blob"]),
+                    "sha256": hashlib.sha256(parts["latent_mid_blob"]).hexdigest(),
+                },
+                "fine": {
+                    "bytes": len(parts["latent_fine_blob"]),
+                    "sha256": hashlib.sha256(parts["latent_fine_blob"]).hexdigest(),
+                },
+            },
+        }
+    )
+    return build_representation_spine_packet(
+        family=HprcRepresentationFamily.HI_NERV,
+        decoder_blob=parts["decoder_blob"],
+        latents_blob=latent_blob,
+        receiver_state_blob=state,
+        source=source or {},
+        manifest_extra={
+            "source_payload_kind": "hi_nerv_hiv1",
+            "role": "hierarchical_multiscale_latent_carrier",
+            "latent_dim_coarse": parts["header"]["latent_dim_coarse"],
+            "latent_dim_mid": parts["header"]["latent_dim_mid"],
+            "latent_dim_fine": parts["header"]["latent_dim_fine"],
+            "num_pairs": parts["header"]["num_pairs"],
+            "latent_section_order": ["coarse", "mid", "fine"],
+            **(manifest_extra or {}),
+        },
+    )
+
+
+def build_hi_nerv_spine_from_archive(
+    archive_zip: str | Path,
+) -> HprcRepresentationSpinePacket:
+    """Read a HiNeRV archive.zip and project its charged ``0.bin``."""
+
+    archive = Path(archive_zip).expanduser().resolve(strict=False)
+    payload, member_name, member_bytes = _read_archive_member(
+        archive,
+        preferred_member="0.bin",
+    )
+    return build_hi_nerv_spine_from_archive_payload(
+        payload,
+        source=_source_archive_row(
+            archive,
+            member_name=member_name,
+            member_bytes=member_bytes,
+        ),
+    )
+
+
 def build_generic_neural_spine_packet(
     *,
     family: HprcRepresentationFamily | str,
@@ -472,6 +555,65 @@ def _split_pact_nerv_vq_payload(payload: bytes) -> dict[str, Any]:
         "codebook_blob": payload[end_decoder:end_codebook],
         "indices_blob": payload[end_codebook:end_indices],
         "meta_blob": payload[end_indices:end_meta],
+    }
+
+
+def _split_hinerv_payload(payload: bytes) -> dict[str, Any]:
+    if len(payload) < HINERV_HEADER_SIZE:
+        raise HprcRepresentationSpineError("HiNeRV HIV1 payload shorter than header")
+    (
+        magic,
+        version,
+        dim_c,
+        dim_m,
+        dim_f,
+        num_pairs,
+        decoder_len,
+        lat_c_len,
+        lat_m_len,
+        lat_f_len,
+        meta_len,
+    ) = struct.unpack(HINERV_HEADER_FMT, payload[:HINERV_HEADER_SIZE])
+    if magic != HINERV_MAGIC:
+        raise HprcRepresentationSpineError(
+            f"bad HiNeRV magic: {magic!r}; expected {HINERV_MAGIC!r}"
+        )
+    for name, given, expected in (
+        ("lat_c_len", lat_c_len, int(num_pairs) * int(dim_c) * 2),
+        ("lat_m_len", lat_m_len, int(num_pairs) * int(dim_m) * 2),
+        ("lat_f_len", lat_f_len, int(num_pairs) * int(dim_f) * 2),
+    ):
+        if int(given) != int(expected):
+            raise HprcRepresentationSpineError(
+                f"HiNeRV {name} {given} != num_pairs*latent_dim*2 = {expected}"
+            )
+    end_decoder = HINERV_HEADER_SIZE + int(decoder_len)
+    end_lat_c = end_decoder + int(lat_c_len)
+    end_lat_m = end_lat_c + int(lat_m_len)
+    end_lat_f = end_lat_m + int(lat_f_len)
+    end_meta = end_lat_f + int(meta_len)
+    if end_meta != len(payload):
+        raise HprcRepresentationSpineError(
+            f"HiNeRV payload bytes {len(payload)} != header-declared {end_meta}"
+        )
+    return {
+        "header": {
+            "version": int(version),
+            "latent_dim_coarse": int(dim_c),
+            "latent_dim_mid": int(dim_m),
+            "latent_dim_fine": int(dim_f),
+            "num_pairs": int(num_pairs),
+            "decoder_len": int(decoder_len),
+            "latent_coarse_len": int(lat_c_len),
+            "latent_mid_len": int(lat_m_len),
+            "latent_fine_len": int(lat_f_len),
+            "meta_len": int(meta_len),
+        },
+        "decoder_blob": payload[HINERV_HEADER_SIZE:end_decoder],
+        "latent_coarse_blob": payload[end_decoder:end_lat_c],
+        "latent_mid_blob": payload[end_lat_c:end_lat_m],
+        "latent_fine_blob": payload[end_lat_m:end_lat_f],
+        "meta_blob": payload[end_lat_f:end_meta],
     }
 
 
@@ -682,6 +824,8 @@ def _expect_bytes(value: Any, label: str) -> bytes:
 
 
 __all__ = [
+    "HINERV_HEADER_FMT",
+    "HINERV_HEADER_SIZE",
     "HPRC_REPRESENTATION_SPINE_MANIFEST_SCHEMA",
     "HPRC_REPRESENTATION_SPINE_PROJECTION_SCHEMA",
     "HPRC_REPRESENTATION_SPINE_SCHEMA",
@@ -692,6 +836,8 @@ __all__ = [
     "HprcRepresentationSpineError",
     "HprcRepresentationSpinePacket",
     "build_generic_neural_spine_packet",
+    "build_hi_nerv_spine_from_archive",
+    "build_hi_nerv_spine_from_archive_payload",
     "build_packed_hnerv_spine_from_archive",
     "build_pact_nerv_len_prefixed_spine_from_archive",
     "build_pact_nerv_len_prefixed_spine_from_archive_payload",

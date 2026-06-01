@@ -136,6 +136,8 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
 
     families = {row["family"]: row for row in report["target_family_rows"]}
     assert "pr95_hnerv" in families
+    assert "hi_nerv" in families
+    assert "snerv" in families
     assert "rnerv" in families
     assert "sr_nerv" in families
     assert "boostnerv" in families
@@ -159,7 +161,25 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         "trainer_entrypoint"
     ]
     assert families["pvq_nerv"]["status"] == "executable_via_pact_nerv_vq_adapter"
+    assert families["hi_nerv"]["status"] == (
+        "archive_projection_available_trainer_actuator_pending"
+    )
+    assert families["hi_nerv"]["stack_role"] == "primary_carrier"
+    assert families["snerv"]["status"] == "migration_required"
+    assert families["snerv"]["stack_role"] == "primary_carrier"
+    assert (
+        "sr_nerv_lowres_encode_superresolve_resolution_deadzone"
+        in families["snerv"]["allowed_enhancers"]
+    )
+    assert "ffnerv_flow_pose_channel" in families["snerv"]["allowed_enhancers"]
+    assert families["sr_nerv"]["stack_role"] == (
+        "resolution_axis_enhancer_or_design_knob"
+    )
+    assert families["sr_nerv"]["enhancer_priority"] > families["boostnerv"][
+        "carrier_priority"
+    ]
     assert families["rnerv"]["status"] == "migration_required"
+    assert families["rnerv"]["stack_role"] == "enhancer_or_search_prior"
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
@@ -193,10 +213,30 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     assert rows[("pact_nerv_selector_v4", 178_000)]["section_value_profiler"] == (
         "tools/profile_pact_nerv_selector_v4_mlx_section_value.py"
     )
+    assert rows[("hi_nerv", 178_000)]["route_status"] == (
+        "trainer_actuator_migration_required"
+    )
+    assert rows[("hi_nerv", 178_000)]["stack_role"] == "primary_carrier"
+    assert "build_hi_nerv_spine_from_archive" in rows[("hi_nerv", 178_000)][
+        "archive_exporter"
+    ]
+    assert rows[("snerv", 178_000)]["route_status"] == (
+        "migration_required_before_runner_execution"
+    )
+    assert rows[("snerv", 178_000)]["stack_role"] == "primary_carrier"
+    assert rows[("sr_nerv", 178_000)]["route_status"] == (
+        "migration_required_before_runner_execution"
+    )
+    assert rows[("sr_nerv", 178_000)]["stack_role"] == (
+        "resolution_axis_enhancer_or_design_knob"
+    )
+    assert "scorer_mirror_check" in rows[("sr_nerv", 178_000)]["next_action"]
     assert rows[("boostnerv", 178_000)]["route_status"] == (
         "migration_required_before_runner_execution"
     )
+    assert rows[("boostnerv", 178_000)]["stack_role"] == "enhancer_bolt_on"
     assert rows[("rnerv", 178_000)]["trainer_entrypoint"] is None
+    assert rows[("rnerv", 178_000)]["stack_role"] == "enhancer_or_search_prior"
     assert rows[("pact_nerv_vq", 178_000)]["score_claim"] is False
     assert rows[("pact_nerv_vq", 178_000)]["ready_for_exact_eval_dispatch"] is False
     assert rows[("pact_nerv_selector_v4", 178_000)]["score_claim"] is False

@@ -8,12 +8,17 @@ import sys
 import zipfile
 from pathlib import Path
 
+from tac.substrates.hi_nerv.archive import pack_archive as pack_hinerv_archive
 from tac.substrates.hprc.archive import HprcSectionKind, parse_hprc_packet
 from tac.substrates.hprc.representation_spine import (
+    HINERV_HEADER_SIZE,
     HPRC_REPRESENTATION_SPINE_PROJECTION_SCHEMA,
     PACT_NERV_LEN_PREFIXED_HEADER_FMT,
+    REPRESENTATION_FAMILY_IDS,
     HprcRepresentationFamily,
     build_generic_neural_spine_packet,
+    build_hi_nerv_spine_from_archive,
+    build_hi_nerv_spine_from_archive_payload,
     build_packed_hnerv_spine_from_archive,
     build_pact_nerv_len_prefixed_spine_from_archive,
     build_pact_nerv_len_prefixed_spine_from_archive_payload,
@@ -82,6 +87,26 @@ def _pact_len_prefixed_payload(*, magic: bytes = b"PSV2") -> bytes:
         len(meta),
     )
     return header + decoder + latents + side + meta
+
+
+def _hinerv_payload() -> bytes:
+    import torch
+
+    decoder = {"layer.weight": torch.arange(6, dtype=torch.float32).reshape(2, 3)}
+    latents_c = torch.linspace(-0.1, 0.1, 8, dtype=torch.float32).reshape(2, 4)
+    latents_m = torch.linspace(-0.2, 0.2, 12, dtype=torch.float32).reshape(2, 6)
+    latents_f = torch.linspace(-0.3, 0.3, 16, dtype=torch.float32).reshape(2, 8)
+    return pack_hinerv_archive(
+        decoder,
+        latents_c,
+        latents_m,
+        latents_f,
+        {
+            "output_height": 24,
+            "output_width": 32,
+            "decoder_channels": [20, 16, 12],
+        },
+    )
 
 
 def test_pr95_hnerv_projects_to_common_spine(tmp_path: Path) -> None:
@@ -208,6 +233,79 @@ def test_pact_nerv_len_prefixed_archive_projects_by_magic(tmp_path: Path) -> Non
     assert embedded["source"]["member_name"] == "0.bin"
 
 
+def test_hi_nerv_hiv1_payload_projects_decoder_latents_and_state() -> None:
+    spine = build_hi_nerv_spine_from_archive_payload(_hinerv_payload())
+    packet = parse_hprc_packet(spine.hprc_bin)
+    sections = packet.section_map()
+    embedded = json.loads(sections[HprcSectionKind.MANIFEST_JSON])
+    state = json.loads(sections[HprcSectionKind.RECEIVER_STATE])
+
+    assert spine.family == HprcRepresentationFamily.HI_NERV
+    assert packet.config.decoder_family_id == 143
+    assert len(sections[HprcSectionKind.DECODER_QW]) > 0
+    assert len(sections[HprcSectionKind.LATENTS_RC]) == (2 * (4 + 6 + 8) * 2)
+    assert state["header"]["latent_dim_coarse"] == 4
+    assert state["header"]["latent_dim_mid"] == 6
+    assert state["header"]["latent_dim_fine"] == 8
+    assert state["header_sha256"]
+    assert embedded["manifest_extra"]["source_payload_kind"] == "hi_nerv_hiv1"
+    assert embedded["manifest_extra"]["latent_section_order"] == [
+        "coarse",
+        "mid",
+        "fine",
+    ]
+
+
+def test_hi_nerv_hiv1_archive_projects_from_zero_bin(tmp_path: Path) -> None:
+    archive = _single_member_zip(tmp_path / "hinerv.zip", _hinerv_payload())
+
+    spine = build_hi_nerv_spine_from_archive(archive)
+    sections = parse_hprc_packet(spine.hprc_bin).section_map()
+    embedded = json.loads(sections[HprcSectionKind.MANIFEST_JSON])
+
+    assert spine.family == HprcRepresentationFamily.HI_NERV
+    assert embedded["source"]["member_name"] == "0.bin"
+
+
+def test_projection_cli_accepts_hi_nerv_archive(tmp_path: Path) -> None:
+    tool = _load_projection_tool()
+    archive = _single_member_zip(tmp_path / "hinerv.zip", _hinerv_payload())
+    out = tmp_path / "out"
+
+    rc = tool.main(
+        [
+            "--family",
+            "hi_nerv",
+            "--archive",
+            archive.as_posix(),
+            "--output-dir",
+            out.as_posix(),
+            "--repo-root",
+            REPO.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    manifest = json.loads((out / "hprc_representation_spine_manifest.json").read_text())
+    assert manifest["family"] == "hi_nerv"
+    assert manifest["manifest"]["representation_spine"]["manifest_extra"][
+        "source_payload_kind"
+    ] == "hi_nerv_hiv1"
+
+
+def test_hi_nerv_hiv1_rejects_bad_length() -> None:
+    payload = bytearray(_hinerv_payload())
+    assert len(payload) > HINERV_HEADER_SIZE
+    del payload[-1]
+
+    try:
+        build_hi_nerv_spine_from_archive_payload(payload)
+    except ValueError as exc:
+        assert "header-declared" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected bad HiNeRV payload length rejection")
+
+
 def test_generic_rnerv_projection_writes_false_authority_manifest(tmp_path: Path) -> None:
     spine = build_generic_neural_spine_packet(
         family=HprcRepresentationFamily.RNERV,
@@ -225,6 +323,44 @@ def test_generic_rnerv_projection_writes_false_authority_manifest(tmp_path: Path
     manifest = json.loads(Path(projection["manifest_path"]).read_text(encoding="utf-8"))
     assert manifest["family"] == "rnerv"
     assert manifest["manifest"]["representation_spine"]["family"] == "rnerv"
+
+
+def test_generic_snerv_projection_is_first_class_charged_carrier(
+    tmp_path: Path,
+) -> None:
+    spine = build_generic_neural_spine_packet(
+        family=HprcRepresentationFamily.S_NERV,
+        decoder_blob=b"snerv-decoder",
+        latents_blob=b"snerv-wavelet-lf-latents",
+        selectors_blob=b"snerv-frequency-band-policy",
+        receiver_state_blob=b'{"carrier":"spectra_preserving"}',
+        manifest_extra={
+            "mode": "snerv_primary_carrier",
+            "enhancers_allowed": ["rnerv", "ffnerv_flow", "boostnerv"],
+        },
+    )
+
+    projection = write_representation_spine_projection(
+        output_dir=tmp_path,
+        spine=spine,
+        basename="snerv",
+    )
+    manifest = json.loads(Path(projection["manifest_path"]).read_text(encoding="utf-8"))
+
+    assert projection["score_claim"] is False
+    assert manifest["family"] == "snerv"
+    assert manifest["manifest"]["representation_spine"]["family"] == "snerv"
+    assert manifest["manifest"]["representation_spine"]["manifest_extra"][
+        "mode"
+    ] == "snerv_primary_carrier"
+
+
+def test_snerv_family_id_does_not_shift_existing_compact_family_ids() -> None:
+    assert REPRESENTATION_FAMILY_IDS[HprcRepresentationFamily.SR_NERV] == 144
+    assert REPRESENTATION_FAMILY_IDS[HprcRepresentationFamily.VQ_NERV] == 145
+    assert REPRESENTATION_FAMILY_IDS[HprcRepresentationFamily.PVQ_NERV] == 146
+    assert REPRESENTATION_FAMILY_IDS[HprcRepresentationFamily.RT_VQ_NERV] == 147
+    assert REPRESENTATION_FAMILY_IDS[HprcRepresentationFamily.S_NERV] == 148
 
 
 def test_projection_cli_accepts_generic_pact_neural_blobs(tmp_path: Path) -> None:
