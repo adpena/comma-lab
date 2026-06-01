@@ -49,7 +49,7 @@ from tac.substrates.pact_nerv_selector_v3.section_value import (  # noqa: E402
 
 OWNED_MARKER = ".pact_nerv_selector_v3_mlx_section_value_owned.json"
 DEFAULT_REFERENCE_CACHE = (
-    REPO_ROOT / "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+    Path("experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600")
 )
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
 DEFAULT_SECTIONS = ("decoder_qw", "latents_rc", "selectors_rc", "residual_rc")
@@ -159,6 +159,7 @@ def main(argv: list[str] | None = None) -> int:
         variants=variants,
         output_dir=output_dir,
         repo_root=repo_root,
+        upstream_dir=upstream_dir,
         reference_cache_dir=reference_cache_dir,
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
@@ -384,6 +385,7 @@ def _run_mlx_responses(
     variants: list[VariantSpec],
     output_dir: Path,
     repo_root: Path,
+    upstream_dir: Path,
     reference_cache_dir: Path,
     max_pairs: int,
     window_pairs: int,
@@ -407,6 +409,7 @@ def _run_mlx_responses(
         reference_cache_dir=reference_cache_dir,
         jobs=jobs,
         repo_root=repo_root,
+        upstream_dir=upstream_dir,
         batch_pairs=int(scorer_batch_pairs),
         device_type=device,
         progress_every=progress_every,

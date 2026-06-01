@@ -140,6 +140,7 @@ def main(argv: list[str] | None = None) -> int:
         variants=variants,
         output_dir=output_dir,
         repo_root=repo_root,
+        upstream_dir=upstream_dir,
         reference_cache_dir=reference_cache_dir,
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),

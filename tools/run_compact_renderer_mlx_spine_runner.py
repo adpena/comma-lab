@@ -557,10 +557,12 @@ def adapt_pr95_mlx_report_to_spine(
     hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
+    upstream_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """Adapt the latest exported PR95 MLX checkpoint into the shared spine."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise CompactRendererMlxSpineRunnerError(
@@ -606,6 +608,7 @@ def adapt_pr95_mlx_report_to_spine(
         mlx_profile_paths=mlx_profile_paths,
         hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
         repo_root=root,
+        upstream_dir=scorer_upstream,
     )
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
     write_spine_bounded_runner_plan(
@@ -666,10 +669,12 @@ def adapt_pr95_stage8_report_to_spine(
     receiver_proof_timeout_seconds: int = 1800,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
+    upstream_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """Adapt a source-faithful PR95 Stage-8 report into the compact spine."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise CompactRendererMlxSpineRunnerError(
@@ -736,6 +741,7 @@ def adapt_pr95_stage8_report_to_spine(
         receiver_proof_report_paths=receiver_proof_paths,
         hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
         repo_root=root,
+        upstream_dir=scorer_upstream,
     )
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
     write_spine_bounded_runner_plan(
@@ -855,6 +861,7 @@ def execute_pr95_stage8_source_and_adapt(
     receiver_proof_timeout_seconds: int = 1800,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
+    upstream_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """Execute the public PR95 Stage-8 source lane, then adapt it to the spine."""
 
@@ -901,6 +908,7 @@ def execute_pr95_stage8_source_and_adapt(
         receiver_proof_timeout_seconds=receiver_proof_timeout_seconds,
         allow_overwrite=True,
         repo_root=root,
+        upstream_dir=upstream_dir,
     )
 
 
@@ -1513,6 +1521,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                 receiver_proof_report_paths=receiver_proof_paths,
                 hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
                 repo_root=root,
+                upstream_dir=scorer_upstream,
             )
             write_spine_bounded_runner_plan(
                 output_path=runner_plan_path,
@@ -1940,6 +1949,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             receiver_proof_report_paths=receiver_proof_paths,
             hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
             repo_root=root,
+            upstream_dir=scorer_upstream,
         )
         write_spine_bounded_runner_plan(
             output_path=runner_plan_path,
@@ -2167,6 +2177,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             receiver_proof_report_paths=receiver_proof_paths,
             hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
             repo_root=root,
+            upstream_dir=scorer_upstream,
         )
         write_spine_bounded_runner_plan(
             output_path=runner_plan_path,
@@ -2394,6 +2405,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             receiver_proof_report_paths=receiver_proof_paths,
             hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
             repo_root=root,
+            upstream_dir=scorer_upstream,
         )
         write_spine_bounded_runner_plan(
             output_path=runner_plan_path,
@@ -3737,6 +3749,7 @@ def main(argv: list[str] | None = None) -> int:
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
+            upstream_dir=args.upstream_dir,
         )
     elif args.from_pr95_stage8_report is not None:
         report = adapt_pr95_stage8_report_to_spine(
@@ -3751,6 +3764,7 @@ def main(argv: list[str] | None = None) -> int:
             receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
+            upstream_dir=args.upstream_dir,
         )
     elif args.execute_pr95_stage8_source:
         report = execute_pr95_stage8_source_and_adapt(
@@ -3773,6 +3787,7 @@ def main(argv: list[str] | None = None) -> int:
             receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
+            upstream_dir=args.upstream_dir,
         )
     elif args.execute_family == "pr95_hnerv":
         report = execute_pr95_hnerv_mlx_scoreaware_and_adapt(

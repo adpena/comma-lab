@@ -59,6 +59,7 @@ def build_spine_bounded_runner_plan(
     *,
     acquisition_report_path: str | Path,
     repo_root: str | Path = ".",
+    upstream_dir: str | Path | None = None,
     mlx_profile_paths: list[str | Path] | tuple[str | Path, ...] = (),
     receiver_proof_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
     exact_gate_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
@@ -72,6 +73,7 @@ def build_spine_bounded_runner_plan(
     """
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    upstream_root = _resolve(upstream_dir or "upstream", base=root)
     acquisition_path = _resolve(acquisition_report_path, base=root)
     acquisition_report = _load_json_object(acquisition_path)
     if acquisition_report.get("schema") != HPRC_SPINE_ACQUISITION_REPORT_SCHEMA:
@@ -117,6 +119,7 @@ def build_spine_bounded_runner_plan(
         acquisition_rows=_rows(acquisition_report, "rows"),
         section_value_rows=section_value_rows,
         repo_root=root,
+        upstream_dir=upstream_root,
     )
     section_cut_materializer_work_orders = _section_cut_materializer_work_orders(
         acquisition_rows=_rows(acquisition_report, "rows"),
@@ -140,6 +143,7 @@ def build_spine_bounded_runner_plan(
         "schema": HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA,
         "generated_at_utc": _utc_stamp(),
         "repo_root": root.as_posix(),
+        "upstream_dir": upstream_root.as_posix(),
         "acquisition_report_path": acquisition_path.as_posix(),
         "acquisition_report_sha256": _sha256_file(acquisition_path),
         "hard_byte_ceilings": acquisition_report.get("hard_byte_ceilings", []),
@@ -468,6 +472,7 @@ def _section_value_profile_work_orders(
     acquisition_rows: list[dict[str, Any]],
     section_value_rows: list[dict[str, Any]],
     repo_root: Path,
+    upstream_dir: Path,
 ) -> list[dict[str, Any]]:
     rows_by_projection: dict[str, list[dict[str, Any]]] = {}
     for row in section_value_rows:
@@ -488,6 +493,7 @@ def _section_value_profile_work_orders(
             acquisition_row=acquisition_row,
             missing_rows=missing_rows,
             repo_root=repo_root,
+            upstream_dir=upstream_dir,
         )
         if work_order is not None:
             work_orders.append(work_order)
@@ -506,6 +512,7 @@ def _section_value_profile_work_order(
     acquisition_row: dict[str, Any],
     missing_rows: list[dict[str, Any]],
     repo_root: Path,
+    upstream_dir: Path,
 ) -> dict[str, Any] | None:
     source = (
         acquisition_row.get("source_archive")
@@ -555,6 +562,8 @@ def _section_value_profile_work_order(
         output_dir,
         "--repo-root",
         repo_root.as_posix(),
+        "--upstream-dir",
+        upstream_dir.as_posix(),
         "--sections",
         *sections,
         "--max-pairs",
@@ -584,6 +593,7 @@ def _section_value_profile_work_order(
         "profile_tool": profiler["tool"],
         "sections": sections,
         "profile_sections": sections,
+        "upstream_dir": upstream_dir.as_posix(),
         "missing_section_names": [
             str(row.get("section_name") or "") for row in missing_rows
         ],
@@ -606,6 +616,7 @@ def _section_value_profile_work_order(
             "projection_manifest_path_sha256",
             "tool_argv",
             "repo_root",
+            "upstream_dir",
             "reference_cache_manifest",
             "false_authority_flags",
         ],

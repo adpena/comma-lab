@@ -57,6 +57,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
+    parser.add_argument(
+        "--upstream-dir",
+        default=REPO_ROOT / "upstream",
+        type=Path,
+        help=(
+            "Pinned contest upstream snapshot for generated section-value "
+            "work orders. Separate from --repo-root for SSD code worktrees."
+        ),
+    )
     parser.add_argument("--force", action="store_true")
     return parser
 
@@ -66,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
     plan = build_spine_bounded_runner_plan(
         acquisition_report_path=args.acquisition_report,
         repo_root=args.repo_root,
+        upstream_dir=args.upstream_dir,
         mlx_profile_paths=args.mlx_profile,
         receiver_proof_report_paths=args.receiver_proof,
         exact_gate_report_paths=args.exact_gate_report,

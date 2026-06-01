@@ -207,6 +207,8 @@ def test_bounded_runner_opens_pvq_full_video_section_value_work_order(
     assert order["status"] == "queued_for_full_video_mlx_section_value_profile"
     assert order["tool"] == "tools/profile_pact_nerv_vq_mlx_section_value.py"
     assert "codebooks_q" in order["sections"]
+    assert "--upstream-dir" in order["argv"]
+    assert (REPO / "upstream").as_posix() in order["argv"]
     assert "--max-pairs" in order["argv"]
     assert "600" in order["argv"]
 
