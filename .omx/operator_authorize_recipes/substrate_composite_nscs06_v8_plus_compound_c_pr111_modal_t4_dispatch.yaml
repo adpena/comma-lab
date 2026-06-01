@@ -31,16 +31,20 @@ platform: modal
 gpu: T4
 recipe_id: substrate_composite_nscs06_v8_plus_compound_c_pr111_modal_t4_dispatch
 dispatch_kind: substrate
-dispatch_enabled: false  # RE-DISABLED 2026-05-28T17:57Z per Catalog #240 + #325
-                         # transparency. 2026-05-28T17:52Z paired-CUDA RATIFICATION
-                         # attempt DEFERRED per probe outcome
-                         # `pr111_composite_paired_cuda_ratification_infrastructure_deferred_20260528`
-                         # (BLOCKING verdict per Catalog #313). 4 dispatches failed
-                         # rc=1 BOTH axes via inflate runtime tree hash mismatch
-                         # between LOCAL projector and Modal worker. INFRASTRUCTURE-LEVEL
-                         # not paradigm-level per Catalog #307. Re-enable AFTER
-                         # `tools/dispatch_modal_paired_auth_eval.py` runtime tree
-                         # divergence is fixed.
+dispatch_enabled: true   # RE-ENABLED 2026-05-28T18:30Z per Wave N+9 Slot 4 fix wave.
+                         # ROOT CAUSE: macOS case-insensitive Path.exists() in
+                         # experiments/contest_auth_eval.py::_module_exists picked up
+                         # phantom tac.dykstra_pareto_solver.Polytope (capital P)
+                         # via polytope.py case-fold; Linux Modal worker correctly
+                         # returned False -> module_count divergence 37 vs 36 ->
+                         # runtime_tree_sha256 mismatch.
+                         # CANONICAL FIX: _path_exists_case_sensitive helper +
+                         # case-sensitive iterdir() walk applied to _module_exists
+                         # and _module_paths (commit pending).
+                         # Empirical proof: LOCAL projector now produces
+                         # 1e9bf123e8eac353... (CUDA) and 60256159c7d65405... (CPU)
+                         # = EXACT MATCH with Modal worker actual hashes.
+                         # NOTE: Will be reset to false post-dispatch per Catalog #240/#370.
 research_only: true       # NON-PROMOTABLE [composite-predicted-pending-paired-anchor]
                           # pending paired-CUDA RATIFICATION per Catalog #246;
                           # PR-creation HARD GATE per just-saved standing directive

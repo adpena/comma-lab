@@ -1,0 +1,242 @@
+# SPDX-License-Identifier: MIT
+schema_version: 1
+name: substrate_synthesize_frame_emission_pr110_modal_t4_paired_cpu_dispatch
+lane_id: lane_synthesize_frame_emission_pr110_x_super_additive_cell_20260529
+summary: |
+  PR110 × SYNTHESIZE_FRAME α=1.10 SUPER_ADDITIVE cell paired-CUDA + paired-CPU
+  empirical anchor dispatch (DISPATCH ORDERING anchor 1 of 3 per Slot L
+  Contrarian binding revision: PR110 FIRST, then DQS1, then PR101). Slot L
+  8-step cascade Step 5; consumes Slot R SHARED helper
+  tac.substrates._shared.synthesize_frame_emission_atick_redlich +
+  per-substrate adapter at tac.substrates._shared.synthesize_frame_emission_atick_redlich_adapters.pr110
+  (op-routable #2; pending impl). horizon_class=frontier_pursuit per Catalog #309.
+
+# Catalog #240 substrate_contest_cuda_chain coherence: dispatch_enabled: false
+# until operator routes paired-CUDA Step 5 paired anchor (op-routable #1 per
+# Slot R landing). Recipe-vs-trainer-state consistency declared per Catalog #325
+# 6-step contract; trainer + driver scripts pending per op-routable #2 + #3 of
+# Slot R landing.
+dispatch_enabled: false
+research_only: false
+
+# Catalog #246 paired CPU + CUDA 1:1 contest-compliant hardware. Modal T4 CUDA
+# arm + Linux x86_64 CPU arm (separate dispatch per CLAUDE.md "Submission auth
+# eval — BOTH CPU AND CUDA"). $0.06 envelope per cell per Catalog #246.
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+# Catalog #215 smoke-vs-full GPU compatibility: T4 smoke + T4 full both
+# consistent at 100ep + 3000ep epoch ranges per SYNTHESIZE_FRAME emission
+# observed wall-clock (~30-60 min/anchor envelope).
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 3000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.06
+  platform_key: modal
+  gpu_key: T4
+
+# Catalog #325 per-substrate symposium anchor reference per 6-step contract
+symposium_memo_path: .omx/research/council_per_substrate_symposium_pr110_x_synthesize_frame_super_additive_20260529.md
+symposium_council_verdict: PROCEED_WITH_REVISIONS
+symposium_council_anchor_id: council_per_substrate_symposium_pr110_x_synthesize_frame_super_additive_20260529
+symposium_window_opened_utc: 2026-05-29T06:00:00Z
+symposium_window_closes_utc: 2026-06-12T06:00:00Z
+
+# Catalog #324 post-training Tier-C validation discipline
+predicted_score_target: 0.190
+predicted_delta: "[predicted] α=1.10 SUPER_ADDITIVE per Slot H Phase B 84-cell composition_alpha matrix; PR110 V14 substitution cascade × SYNTHESIZE_FRAME Atick-Redlich cooperative-receiver per Slot L SYMPOSIUM 1 verdict PROCEED_WITH_REVISIONS"
+predicted_delta_basis: ".omx/research/council_per_substrate_symposium_pr110_x_synthesize_frame_super_additive_20260529.md#dykstra-feasibility-predicted-band-per-catalog-296"
+literature_anchor: "Atick & Redlich 1990 - 'Towards a Theory of Early Visual Processing' Neural Computation 2(3):308-320 + 'Convergent algorithm for sensory receptive field development' Neural Computation 5(1):45-60"
+
+predicted_band: [-0.0025, 0.0015]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Catalog #324 + Slot L SYMPOSIUM 1 reactivation: BEFORE promotion or full-run
+  score-band authority, (a) execute $0 macOS-CPU-advisory sister probe per
+  Catalog #192 non-promotable (Contrarian binding revision) measuring actual
+  SYNTHESIZE_FRAME emission delta on PR110 baseline; (b) post paired-CUDA
+  empirical anchor landing, measure Tier-C density on the post-training
+  SYNTHESIZE_FRAME archive via tools/mdl_scorer_conditional_ablation.py
+  --tier c and replace this pending status with validated_post_training plus
+  artifact path; (c) IF empirical α deviates from predicted [0.80, 1.40] band
+  → DEFER paid dispatch + revise canonical equation per Catalog #344
+  auto-recalibration via Catalog #371; (d) IF empirical α matches predicted
+  band → ratify canonical equation `synthesize_frame_via_atick_redlich_cooperative_receiver_v1`
+  via tac.canonical_equations.update_equation_with_empirical_anchor per
+  Catalog #344; (e) IF >2x deviation → IMPLEMENTATION-LEVEL falsification per
+  Catalog #307 (paradigm INTACT; reactivation paths per Catalog #308: Rao-Ballard
+  predictive-coding alternative framing per RaoBallard verdict OR sister
+  PR110/PR101/DQS1 cross-archive variable isolation analysis); until then the
+  band is planning-only, not dispatch/promotion authority.
+
+# Catalog #368 substitution-stacking baseline canonical frontier pointer
+# discipline: PR110 V14 substitution cascade IS sister to canonical CPU
+# frontier (sha b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c
+# fp11_source_brotli_recode @ 0.19198533626623068 per .omx/state/canonical_frontier_pointer.json
+# 2026-05-29T06:25:54.047038+00:00 last_refreshed_utc). Per CLAUDE.md
+# "Frontier scores are pointer-only" non-negotiable.
+baseline_archive_sha: stacking_on_pr110_v14_substitution_cascade_paired_with_canonical_cpu_frontier_pointer
+baseline_canonical_frontier_pointer_path: .omx/state/canonical_frontier_pointer.json
+stacked_archive_built_on: pr110_v14_substitution_cascade_per_slot_h_phase_b_composition_alpha_matrix
+
+# Catalog #244 NVML 3-export block per canonical Modal/CUDA env hygiene
+# per OVERNIGHT-J STC v2 5th silent-no-spawn anchor + D1 NVML 999 6×24h
+# anchor + Catalog #245 canonical Modal call_id ledger 4-layer pattern
+remote_driver: scripts/remote_lane_substrate_synthesize_frame_emission_pr110.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --pr110-baseline-archive
+    default_path: experiments/results/pr110_v14_substitution_cascade_baseline/archive.zip
+  - flag: --synthesize-frame-emission-config
+    default_path: src/tac/substrates/_shared/synthesize_frame_emission_atick_redlich.py
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_synthesize_frame_emission_pr110.sh
+  cost_band_trainer: experiments/train_substrate_synthesize_frame_emission_pr110.py
+  cost_band_epochs: 3000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_synthesize_frame_emission_pr110.py
+
+# Catalog #244 canonical NVML/CUDA env hygiene 3-export block per
+# tac.deploy.modal.runtime canonical constants + Catalog #163 sentinel
+env_overrides:
+  PR110_SYNTHESIZE_FRAME_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PR110_SYNTHESIZE_FRAME_BASELINE_ARCHIVE: /workspace/pact/experiments/results/pr110_v14_substitution_cascade_baseline/archive.zip
+  PR110_SYNTHESIZE_FRAME_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  # Catalog #358 + Catalog #204 Modal-aware OUTPUT_DIR 3-branch override:
+  # driver script implements /modal_results/${INSTANCE_JOB_ID}/output/ on
+  # Modal worker per OVERNIGHT-J + canonical pattern per commit 75d39f32e.
+  PR110_SYNTHESIZE_FRAME_OUTPUT_DIR: /modal_results/${INSTANCE_JOB_ID}/output
+  PR110_SYNTHESIZE_FRAME_EPOCHS: "3000"
+  PR110_SYNTHESIZE_FRAME_UPSTREAM_DIR: /workspace/pact/upstream
+  PR110_SYNTHESIZE_FRAME_DEVICE: cuda
+  PR110_SYNTHESIZE_FRAME_SUBSTRATE_ID: pr110
+  PR110_SYNTHESIZE_FRAME_FRAMEWORK_BACKEND: pytorch
+  PR110_SYNTHESIZE_FRAME_PER_PAIR_METADATA_BUDGET_BYTES: "80"
+  PR110_SYNTHESIZE_FRAME_RANDOM_SEED: "42"
+  PR110_SYNTHESIZE_FRAME_TRAINER_MODE: "full"
+  SMOKE_ONLY: "0"
+  # Catalog #244 canonical NVML 3-export block
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_synthesize_frame_emission_pr110.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_synthesize_frame_emission_pr110.py
+  - experiments/results/pr110_v14_substitution_cascade_baseline/archive.zip
+  - src/tac/substrates/_shared/synthesize_frame_emission_atick_redlich.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+  - tools/operator_authorize.py
+
+# Catalog #201 mount-set parity + Catalog #166 worker source-parity ledger
+sentinel_files:
+  - experiments/train_substrate_synthesize_frame_emission_pr110.py
+  - src/tac/substrates/_shared/synthesize_frame_emission_atick_redlich.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
+  - scripts/remote_lane_substrate_synthesize_frame_emission_pr110.sh
+
+# Catalog #270 dispatch optimization protocol Tier 1+2+3 declarations
+dispatch_optimization_protocol_tier_1_signals:
+  - autocast_fp16
+  - tf32
+  - torch_compile
+  - no_grad_at_eval
+  - canonical_scorer_loss_helper_routing
+dispatch_optimization_protocol_tier_2_signals:
+  - min_vram_gb
+  - min_smoke_gpu
+  - video_input_strategy
+  - pyav_decode_strategy
+  - target_modes
+  - canonical_nvml_env_block
+dispatch_optimization_protocol_tier_3_signals:
+  - canonical_auth_eval_helper_routing
+  - canonical_inflate_device
+  - scorer_loader_assignment_order_pose_first
+  - recipe_vs_trainer_state_consistency
+  - no_phantom_device_named_output_directories
+
+notes: |
+  Slot L 8-step cascade Step 5 paired-CUDA + paired-CPU empirical anchor
+  dispatch (DISPATCH ORDERING anchor 1 of 3). Substrate-engineering lane per
+  CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L7
+  (bolt-on vs substrate-engineering split). horizon_class=frontier_pursuit
+  per Catalog #309.
+
+  ## Slot L SYMPOSIUM 1 binding revisions (Contrarian + Assumption-Adversary)
+
+  1. **Contrarian binding revision**: $0 macOS-CPU-advisory sister probe per
+     Catalog #192 non-promotable measures actual SYNTHESIZE_FRAME emission
+     delta on PR110 baseline BEFORE paid CUDA dispatch (apples-to-apples
+     evidence that V14 substitution cascade did NOT preempt SYNTHESIZE_FRAME
+     signal).
+  2. **Assumption-Adversary binding revision**: predicted_band_validation_status:
+     pending_post_training per Catalog #324; canonical equation
+     `synthesize_frame_via_atick_redlich_cooperative_receiver_v1`
+     (FORMALIZATION_PENDING per Catalog #344) auto-recalibrates per Catalog
+     #371 `when_3+_new_empirical_anchors_in_domain` upon the 3 paired-CUDA
+     empirical anchors landing.
+
+  ## Canonical CROSS-archive variable-isolation chain
+
+  Per Slot L SYMPOSIUM 3 DQS1 Contrarian DISPATCH ORDERING binding revision:
+
+  - PR110 - DQS1 = V14 substitution cascade variable (THIS anchor first)
+  - PR110 - PR101 = frame-exploit-selector variable
+  - DQS1 - PR101 = PR95-family-vs-selective-decoder variable
+
+  Sequential ordering enables canonical V14 substitution variable isolation
+  per Catalog #246 apples-to-apples evidence discipline.
+
+  ## Canonical SHARED helper consumption
+
+  Per Slot R landing (canonical SHARED helper SubstrateGrammarAdapter Protocol):
+  this recipe consumes `tac.substrates._shared.synthesize_frame_emission_atick_redlich.synthesize_frame_emission_per_pair`
+  via per-substrate adapter `tac.substrates._shared.synthesize_frame_emission_atick_redlich_adapters.pr110`
+  (op-routable #2; pending impl). Per UNIQUE-AND-COMPLETE-PER-METHOD operating
+  mode: SHARED helper canonical across 3 sister cells (PR110/PR101/DQS1);
+  per-substrate trainer + recipe UNIQUE per substrate.
+
+  ## Smoke-before-full pattern (Catalog #167)
+
+  Operator-authorize wrapper routes through tools/run_modal_smoke_before_full.py
+  which fires a 100-epoch ~$0.30 Modal T4 smoke FIRST, validates rc=0 + auth-eval
+  JSON present + score in plausible band per predicted_band, then fires the
+  full 3000-epoch T4 dispatch only on smoke-green.
+
+  ## Cost band: tac.cost_band_calibration
+
+  hand_calibrated_fallback_p50 = $0.06 per Catalog #246 envelope (paired-CUDA
+  + paired-CPU; $0.18 total for 3 sister cells). Bootstraps calibration for
+  the synthesize_frame_emission family.
+
+  ## Cross-references
+
+  - Slot L landing memo: feedback_slot_l_slot_h_top_3_super_additive_per_substrate_symposium_prep_landed_20260529.md
+  - Slot R landing memo: feedback_slot_r_slot_l_step_3_shared_substrate_module_synthesize_frame_emission_atick_redlich_landed_20260529.md
+  - SYMPOSIUM 1: .omx/research/council_per_substrate_symposium_pr110_x_synthesize_frame_super_additive_20260529.md
+  - SHARED helper design memo: .omx/research/synthesize_frame_emission_atick_redlich_shared_substrate_module_design_20260529.md
+  - Canonical equation FORMALIZATION_PENDING: synthesize_frame_via_atick_redlich_cooperative_receiver_v1
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py + Catalog #245
+  canonical Modal call_id ledger. Recurring harvest cron per Catalog #380:
+  tools/schedule_canonical_modal_harvest_cron.sh.

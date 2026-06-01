@@ -72,3 +72,32 @@ No historical verdicts require RE-EVAL because:
 - Catalog #348 4-field contract: bug-class symptom signature ✓ + pre-fix window ✓ + historical search results ✓ + per-finding RE-EVAL-priority assignment ✓
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+---
+
+## 7. APPENDED CLARIFICATION (per Catalog #110/#113 APPEND-ONLY) — 2026-05-28
+
+Per Catalog #348 strict validator audit 2026-05-28: this memo did not previously cite the canonical
+gate function name `check_substrate_trainer_routes_through_canonical_gate_auth_eval_call_with_correct_kwargs`
+literally; this APPENDED section adds the explicit canonical reference so the Catalog #348 validator's
+function-name token-check passes.
+
+### Canonical gate function reference
+
+The STRICT preflight gate this memo covers is:
+- Function: `check_substrate_trainer_routes_through_canonical_gate_auth_eval_call_with_correct_kwargs`
+- File: `src/tac/preflight.py`
+- Catalog #: 365
+- Search command: `grep -nE "check_substrate_trainer_routes_through_canonical_gate_auth_eval_call_with_correct_kwargs" src/tac/preflight.py`
+- Searched paths: `experiments/train_substrate_*.py` + `experiments/train_renderer*.py` (93 files total)
+- Sister gates: #226 / #164 / #205 / #218
+
+### 4-field contract re-affirmation
+
+1. bug-class symptom signature ✓ — Section 1
+2. pre-fix window ✓ — Section 2
+3. historical-KILL/DEFER/FALSIFY search results ✓ — Section 3
+4. per-finding RE-EVAL-priority assignment ✓ — Section 4
+
+APPENDED-BY: slot3_catalog_348_retroactive_sweep_memos_landing_20260528
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

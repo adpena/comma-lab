@@ -30,7 +30,7 @@
     "upsample_blocks": 6
   },
   "archive_bytes": 230349,
-  "archive_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
   "archive_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
   "batch_size": 1,
   "byte_closed_smoke_archive": {
@@ -41,8 +41,8 @@
     "gpu_launched": false,
     "member": "0.bin",
     "member_bytes": 5707,
-    "member_sha256": "72fd2462dcd8ced4159e5c96ed099d0d656073310dfcf2df348f1b588ed5404f",
-    "path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/archive.zip",
+    "member_sha256": "54d52e99a4829fd31c60d32c62f94ba65e89243e471185698c01be4de2e1b372",
+    "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/archive.zip",
     "pr95_1to1_reproduction_claim": false,
     "promotable": false,
     "promotion_eligible": false,
@@ -56,11 +56,11 @@
     "score_claim": false,
     "score_claim_eligible": false,
     "score_claim_valid": false,
-    "sha256": "5fe08121199a909b2b98bc0d8fb0a630cb0e862761b9084c11e0754705f92bb6"
+    "sha256": "63872aa9d3dbf06204443cc7a6a830c72b11b1899f1bbf7c461456541ee7fd97"
   },
   "candidate_archive": {
     "bytes": 230349,
-    "path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+    "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
     "sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046"
   },
   "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps1_c36",
@@ -87,8 +87,24 @@
     "ready": false,
     "schema": "exact_readiness_refusal.v1"
   },
+  "full_frame_parity_chunk_pairs": 16,
+  "full_frame_parity_conv2d_accumulation_mode": "optimized",
+  "full_frame_parity_conv2d_accumulation_overrides": {
+    "blocks.0.conv": "kahan_fp32",
+    "blocks.0.skip_conv": "kahan_fp32",
+    "blocks.1.conv": "kahan_fp32",
+    "blocks.1.skip_conv": "kahan_fp32",
+    "blocks.2.conv": "kahan_fp32",
+    "blocks.2.skip_conv": "kahan_fp32"
+  },
+  "full_frame_parity_conv2d_override_items": [],
+  "full_frame_parity_conv2d_override_preset": "blocks02_kahan_fp32",
+  "full_frame_parity_max_mismatch_samples": 32,
+  "full_frame_parity_max_output_bytes": 67108864,
+  "full_frame_parity_mlx_device": "gpu",
+  "full_frame_parity_timeout_seconds": 900.0,
   "full_pr95_source_faithful_training": false,
-  "generated_utc": "2026-05-28T13:15:25.805248+00:00",
+  "generated_utc": "2026-05-28T20:19:49.323886+00:00",
   "gpu_launched": false,
   "lane_id": "lane_pr95_hnerv_mlx_reproduction",
   "last_loss": 0.08335880190134048,
@@ -97,7 +113,7 @@
   },
   "mlx_gpu_decoder_trace": {
     "archive_packet": {
-      "archive_zip_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+      "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
       "archive_zip_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
       "dispatch_attempted": false,
       "dispatch_packet_ready": false,
@@ -148,7 +164,7 @@
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
     "drift_cliff": null,
-    "elapsed_seconds": 0.08930820800014772,
+    "elapsed_seconds": 0.09556437500577886,
     "evidence_grade": "[macOS-MLX research-signal]",
     "exact_readiness_refusal": {
       "blockers": [
@@ -159,7 +175,7 @@
       "ready": false,
       "schema": "exact_readiness_refusal.v1"
     },
-    "generated_utc": "2026-05-28T13:15:26.218461+00:00",
+    "generated_utc": "2026-05-28T20:19:49.767415+00:00",
     "gpu_launched": false,
     "lane_id": "lane_pr95_hnerv_mlx_reproduction",
     "mlx_device": "gpu",
@@ -1002,7 +1018,7 @@
   "mlx_gpu_drift_conv2d_override_preset": "blocks02_kahan_fp32",
   "mlx_gpu_forward_drift_attestation": {
     "archive_packet": {
-      "archive_zip_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+      "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
       "archive_zip_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
       "dispatch_attempted": false,
       "dispatch_packet_ready": false,
@@ -1050,7 +1066,7 @@
     },
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
-    "elapsed_seconds": 0.06161791700287722,
+    "elapsed_seconds": 0.07528629199077841,
     "evidence_grade": "[macOS-MLX research-signal]",
     "exact_readiness_refusal": {
       "blockers": [
@@ -1061,7 +1077,7 @@
       "ready": false,
       "schema": "exact_readiness_refusal.v1"
     },
-    "generated_utc": "2026-05-28T13:15:25.949831+00:00",
+    "generated_utc": "2026-05-28T20:19:49.491163+00:00",
     "gpu_launched": false,
     "lane_id": "lane_pr95_hnerv_mlx_reproduction",
     "mlx_device": "gpu",
@@ -1749,15 +1765,15 @@
   "pr95_1to1_reproduction_claim": false,
   "pr95_public_archive_export": {
     "archive_bytes": 230349,
-    "archive_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+    "archive_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
     "archive_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
     "archive_zip_bytes": 230349,
-    "archive_zip_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+    "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
     "archive_zip_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
     "bytes": 230349,
     "candidate_archive": {
       "bytes": 230349,
-      "path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+      "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
       "sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046"
     },
     "dispatch_attempted": false,
@@ -1790,7 +1806,7 @@
       "n_pairs": 1
     },
     "parsed_state_dict_tensor_count": 28,
-    "path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+    "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
     "pr95_1to1_reproduction_claim": false,
     "promotable": false,
     "promotion_eligible": false,
@@ -1800,10 +1816,10 @@
     "receiver_proof_present": true,
     "reproduction_claim": false,
     "reproduction_equivalence": false,
-    "runtime_consumption_proof_bytes": 5044,
+    "runtime_consumption_proof_bytes": 4576,
     "runtime_consumption_proof_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/runtime_consumption_proof.json",
     "runtime_consumption_proof_present": true,
-    "runtime_consumption_proof_sha256": "f1ea67ad05bd9d1a3581825554117170375b5e901b4ddb979204ba47cf17ea24",
+    "runtime_consumption_proof_sha256": "d7962304e2a9600c4274f22a630b114cbb00953c5daeb6a2181a45785e1f0ef3",
     "runtime_consumption_proven": true,
     "schema": "pr95_hnerv_archive_export.v1",
     "score_claim": false,
@@ -1838,9 +1854,10 @@
   "representation_family": "hnerv",
   "reproduction_claim": false,
   "reproduction_equivalence": false,
+  "require_pr95_full_frame_inflate_parity": false,
   "runtime_consumption_proof": {
     "archive_packet": {
-      "archive_zip_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+      "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
       "archive_zip_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
       "dispatch_attempted": false,
       "dispatch_packet_ready": false,
@@ -1889,18 +1906,18 @@
       "schema": "exact_readiness_refusal.v1"
     },
     "expected_raw_bytes": 6104016,
-    "file_list": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/runtime_consumption_work/file_list.txt",
+    "file_list": null,
     "full_frame_inflate_parity": false,
-    "generated_utc": "2026-05-28T13:15:26.802125+00:00",
+    "generated_utc": "2026-05-28T20:19:50.395516+00:00",
     "gpu_launched": false,
-    "inflate_sh": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+    "inflate_sh": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
     "lane_id": "lane_pr95_hnerv_mlx_reproduction",
     "pr95_1to1_reproduction_claim": false,
     "promotable": false,
     "promotion_eligible": false,
     "rank_or_kill_eligible": false,
     "raw_output_bytes": 6104016,
-    "raw_output_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/runtime_consumption_work/raw/0.raw",
+    "raw_output_path": null,
     "raw_output_sha256": "d7f6455974f85d17f9d6780a0ec00e570d7ccd04970d16a322fd16dc9cc4d543",
     "ready_for_exact_eval_dispatch": false,
     "reproduction_claim": false,
@@ -1911,22 +1928,22 @@
     "runtime_files": [
       {
         "bytes": 811,
-        "path": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
         "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
       },
       {
         "bytes": 2158,
-        "path": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.py",
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.py",
         "sha256": "fdc1e9af70a8f6b47f84c3978a29cb872dbc3dbdc6c123bda72ea494221a0e26"
       },
       {
         "bytes": 2197,
-        "path": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
         "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
       },
       {
         "bytes": 7455,
-        "path": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/codec.py",
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/codec.py",
         "sha256": "63d3ffd03c514fa5841fbf75a3eac87cc76ed40f68e0d68db50cd7cda517266f"
       }
     ],
@@ -1935,22 +1952,25 @@
     "score_claim_eligible": false,
     "score_claim_valid": false,
     "source_pr": 95,
-    "staged_member": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/runtime_consumption_work/data/0.bin",
-    "started_utc": "2026-05-28T13:15:26.298352+00:00",
+    "staged_member": null,
+    "started_utc": "2026-05-28T20:19:49.855257+00:00",
     "stderr_tail": "",
     "stdout_tail": "Inflating 0.mkv ... saved 2 frames\n",
     "submission": "hnerv_muon",
-    "work_dir": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/runtime_consumption_work"
+    "work_dir": null,
+    "work_dir_preserved": false
   },
-  "runtime_consumption_proof_bytes": 5044,
+  "runtime_consumption_proof_bytes": 4576,
   "runtime_consumption_proof_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/runtime_consumption_proof.json",
-  "runtime_consumption_proof_sha256": "f1ea67ad05bd9d1a3581825554117170375b5e901b4ddb979204ba47cf17ea24",
+  "runtime_consumption_proof_present": true,
+  "runtime_consumption_proof_sha256": "d7962304e2a9600c4274f22a630b114cbb00953c5daeb6a2181a45785e1f0ef3",
+  "runtime_consumption_proven": true,
   "runtime_profile": {
     "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed23_steps1_c36",
     "device": "mlx",
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
-    "examples_per_second": 25.317310709643653,
+    "examples_per_second": 22.727057339802183,
     "full_pr95_source_faithful_training": false,
     "gpu_launched": false,
     "hardware_substrate": "Darwin_arm64_mlx",
@@ -1976,7 +1996,7 @@
       "archive_export_schema": "pr95_hnerv_archive_export.v1",
       "archive_export_tool": "tools/run_pr95_mlx_timing_smoke.py",
       "blockers": [],
-      "byte_closed_contest_archive_export_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+      "byte_closed_contest_archive_export_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
       "byte_closed_contest_archive_export_present": true,
       "byte_closed_contest_archive_export_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
       "packet_compiler_target_declared": true,
@@ -2000,7 +2020,7 @@
     "score_claim": false,
     "score_claim_eligible": false,
     "score_claim_valid": false,
-    "seconds_per_step": 0.03949866601033136,
+    "seconds_per_step": 0.04400041699409485,
     "seed": 23,
     "source_faithful_training": false,
     "source_faithful_training_scope": "synthetic_timing_only",
@@ -2147,15 +2167,16 @@
   "target_source_kind": "synthetic_rgb_pairs",
   "target_yuv6_shape": null,
   "timing": {
-    "elapsed_seconds": 0.03949866601033136,
-    "examples_per_second": 25.317310709643653,
-    "seconds_per_step": 0.03949866601033136
+    "elapsed_seconds": 0.04400041699409485,
+    "examples_per_second": 22.727057339802183,
+    "seconds_per_step": 0.04400041699409485
   },
   "training_backend": "mlx",
   "training_fidelity": "synthetic_timing_only",
   "training_loss_surface": "rgb_mse",
   "training_pair_count": 1,
   "write_mlx_gpu_drift_attestation": true,
+  "write_pr95_full_frame_inflate_parity": false,
   "write_pytorch_export_parity": false,
   "yuv6_preprocess_kind": null
 }

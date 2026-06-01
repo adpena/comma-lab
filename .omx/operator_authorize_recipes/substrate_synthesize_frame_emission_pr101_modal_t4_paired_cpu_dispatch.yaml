@@ -1,0 +1,254 @@
+# SPDX-License-Identifier: MIT
+schema_version: 1
+name: substrate_synthesize_frame_emission_pr101_modal_t4_paired_cpu_dispatch
+lane_id: lane_synthesize_frame_emission_pr101_x_super_additive_cell_20260529
+summary: |
+  PR101 × SYNTHESIZE_FRAME α=1.10 SUPER_ADDITIVE cell paired-CUDA + paired-CPU
+  empirical anchor dispatch (DISPATCH ORDERING anchor 3 of 3 per Slot L
+  Contrarian binding revision: PR110 FIRST, then DQS1, then PR101 AFTER
+  PR95-family grammar audit). Slot L 8-step cascade Step 7; consumes Slot R
+  SHARED helper + per-substrate adapter at
+  tac.substrates._shared.synthesize_frame_emission_atick_redlich_adapters.pr101
+  (op-routable #2; pending impl). horizon_class=frontier_pursuit per Catalog #309.
+
+# Catalog #240 substrate_contest_cuda_chain coherence: dispatch_enabled: false
+# until operator routes paired-CUDA Step 7 paired anchor (op-routable #1 per
+# Slot R landing) AND Contrarian binding revision $0 PR95-family grammar audit
+# per HNeRV parity L3 successfully verifies SYNTHESIZE_FRAME bytes fit canonical
+# PR101 4-section monolithic 0.bin grammar without structural restructuring.
+dispatch_enabled: false
+research_only: false
+
+# Catalog #246 paired CPU + CUDA 1:1 contest-compliant hardware. Modal T4 CUDA
+# arm + Linux x86_64 CPU arm.
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 3000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.06
+  platform_key: modal
+  gpu_key: T4
+
+# Catalog #325 per-substrate symposium anchor reference per 6-step contract
+symposium_memo_path: .omx/research/council_per_substrate_symposium_pr101_x_synthesize_frame_super_additive_20260529.md
+symposium_council_verdict: PROCEED_WITH_REVISIONS
+symposium_council_anchor_id: council_per_substrate_symposium_pr101_x_synthesize_frame_super_additive_20260529
+symposium_window_opened_utc: 2026-05-29T06:10:00Z
+symposium_window_closes_utc: 2026-06-12T06:10:00Z
+
+# Catalog #324 post-training Tier-C validation discipline
+# PR101 IS canonical PR95-family GOLD per HNeRV parity discipline. Per Slot L
+# SYMPOSIUM 2 Assumption-Adversary binding revision: predicted_band upper bound
+# EXPANDED to +0.0040 (vs SYMPOSIUM 1 PR110 +0.0015) accounting for potential
+# ~80 bytes HNeRV parity L3 grammar overhead if new archive section is required.
+predicted_score_target: 0.190
+predicted_delta: "[predicted] α=1.10 SUPER_ADDITIVE per Slot H Phase B 84-cell composition_alpha matrix; PR101 PR95-family canonical 4-section monolithic 0.bin × SYNTHESIZE_FRAME Atick-Redlich cooperative-receiver per Slot L SYMPOSIUM 2 verdict PROCEED_WITH_REVISIONS"
+predicted_delta_basis: ".omx/research/council_per_substrate_symposium_pr101_x_synthesize_frame_super_additive_20260529.md#dykstra-feasibility-predicted-band-per-catalog-296"
+literature_anchor: "Atick & Redlich 1990 + PR95-family canonical monolithic single-file 0.bin with 4 length-prefixed sections per HNeRV parity discipline L3 (PR100 hnerv_lc_v2 268 LOC substrate + PR101 337 LOC bolt-on canonical GOLD)"
+
+predicted_band: [-0.0025, 0.0040]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Catalog #324 + Slot L SYMPOSIUM 2 reactivation: BEFORE promotion or full-run
+  score-band authority, (a) execute $0 PR95-family grammar audit per HNeRV
+  parity L3 (Contrarian binding revision) verifying SYNTHESIZE_FRAME bytes
+  fit in canonical PR101 4-section monolithic 0.bin grammar (extend `wrp_brotli`
+  tail-section per L27+L31 OR `lat_blob` brotli stream with synthetic-frame
+  metadata) WITHOUT structural restructuring; (b) IF grammar slack is
+  exhausted, DEFER paid dispatch + revise canonical equation per Catalog #344
+  auto-recalibration; (c) IF grammar audit succeeds → PROCEED to paired-CUDA
+  dispatch per Catalog #246; (d) post paired-CUDA empirical anchor landing,
+  measure Tier-C density on the post-training SYNTHESIZE_FRAME archive via
+  tools/mdl_scorer_conditional_ablation.py --tier c and replace this pending
+  status with validated_post_training plus artifact path; (e) IF empirical
+  α deviates from predicted [0.80, 1.40] band → DEFER + Catalog #344
+  auto-recalibration; (f) IF empirical α matches predicted band → ratify
+  canonical equation `synthesize_frame_via_atick_redlich_cooperative_receiver_v1`
+  via tac.canonical_equations.update_equation_with_empirical_anchor per
+  Catalog #344; (g) IF PR101 cell falsifies while sister PR110 + DQS1 cells
+  succeed → indicates PR95-family grammar incompatibility per HNeRV parity L3
+  (reactivation = author SYNTHESIZE_FRAME-compatible grammar extension per
+  Catalog #308 alternative reactivation methodology enumeration); until then
+  the band is planning-only, not dispatch/promotion authority.
+
+# Catalog #368 substitution-stacking baseline canonical frontier pointer
+# discipline: PR101 IS canonical PR95-family GOLD per HNeRV parity discipline
+# sister to canonical CPU frontier per .omx/state/canonical_frontier_pointer.json
+baseline_archive_sha: stacking_on_pr101_pr95_family_canonical_paired_with_canonical_cpu_frontier_pointer
+baseline_canonical_frontier_pointer_path: .omx/state/canonical_frontier_pointer.json
+stacked_archive_built_on: pr101_pr95_family_canonical_4_section_monolithic_0_bin_per_hnerv_parity_l3
+
+remote_driver: scripts/remote_lane_substrate_synthesize_frame_emission_pr101.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --pr101-baseline-archive
+    default_path: experiments/results/pr101_pr95_family_canonical_baseline/archive.zip
+  - flag: --synthesize-frame-emission-config
+    default_path: src/tac/substrates/_shared/synthesize_frame_emission_atick_redlich.py
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_synthesize_frame_emission_pr101.sh
+  cost_band_trainer: experiments/train_substrate_synthesize_frame_emission_pr101.py
+  cost_band_epochs: 3000
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_synthesize_frame_emission_pr101.py
+
+# Catalog #244 canonical NVML/CUDA env hygiene 3-export block per
+# tac.deploy.modal.runtime canonical constants + Catalog #163 sentinel
+env_overrides:
+  PR101_SYNTHESIZE_FRAME_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PR101_SYNTHESIZE_FRAME_BASELINE_ARCHIVE: /workspace/pact/experiments/results/pr101_pr95_family_canonical_baseline/archive.zip
+  PR101_SYNTHESIZE_FRAME_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  # Catalog #358 + Catalog #204 Modal-aware OUTPUT_DIR 3-branch override
+  PR101_SYNTHESIZE_FRAME_OUTPUT_DIR: /modal_results/${INSTANCE_JOB_ID}/output
+  PR101_SYNTHESIZE_FRAME_EPOCHS: "3000"
+  PR101_SYNTHESIZE_FRAME_UPSTREAM_DIR: /workspace/pact/upstream
+  PR101_SYNTHESIZE_FRAME_DEVICE: cuda
+  PR101_SYNTHESIZE_FRAME_SUBSTRATE_ID: pr101
+  PR101_SYNTHESIZE_FRAME_FRAMEWORK_BACKEND: pytorch
+  # PR101-specific budget allowance per Slot L SYMPOSIUM 2 grammar overhead
+  # for potential HNeRV parity L3 wrp_brotli tail-section extension
+  PR101_SYNTHESIZE_FRAME_PER_PAIR_METADATA_BUDGET_BYTES: "120"
+  PR101_SYNTHESIZE_FRAME_RANDOM_SEED: "42"
+  PR101_SYNTHESIZE_FRAME_TRAINER_MODE: "full"
+  SMOKE_ONLY: "0"
+  # Catalog #244 canonical NVML 3-export block
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_synthesize_frame_emission_pr101.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_synthesize_frame_emission_pr101.py
+  - experiments/results/pr101_pr95_family_canonical_baseline/archive.zip
+  - src/tac/substrates/_shared/synthesize_frame_emission_atick_redlich.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+  - tools/operator_authorize.py
+
+sentinel_files:
+  - experiments/train_substrate_synthesize_frame_emission_pr101.py
+  - src/tac/substrates/_shared/synthesize_frame_emission_atick_redlich.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
+  - scripts/remote_lane_substrate_synthesize_frame_emission_pr101.sh
+
+# Catalog #270 dispatch optimization protocol Tier 1+2+3 declarations
+dispatch_optimization_protocol_tier_1_signals:
+  - autocast_fp16
+  - tf32
+  - torch_compile
+  - no_grad_at_eval
+  - canonical_scorer_loss_helper_routing
+dispatch_optimization_protocol_tier_2_signals:
+  - min_vram_gb
+  - min_smoke_gpu
+  - video_input_strategy
+  - pyav_decode_strategy
+  - target_modes
+  - canonical_nvml_env_block
+dispatch_optimization_protocol_tier_3_signals:
+  - canonical_auth_eval_helper_routing
+  - canonical_inflate_device
+  - scorer_loader_assignment_order_pose_first
+  - recipe_vs_trainer_state_consistency
+  - no_phantom_device_named_output_directories
+  - pr95_family_grammar_audit_per_hnerv_parity_l3
+
+notes: |
+  Slot L 8-step cascade Step 7 paired-CUDA + paired-CPU empirical anchor
+  dispatch (DISPATCH ORDERING anchor 3 of 3). Substrate-engineering lane per
+  CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L7.
+  horizon_class=frontier_pursuit per Catalog #309.
+
+  ## Slot L SYMPOSIUM 2 binding revisions (Contrarian + Assumption-Adversary)
+
+  1. **Contrarian binding revision**: $0 PR95-family grammar audit per HNeRV
+     parity L3 verifies SYNTHESIZE_FRAME bytes fit in canonical PR101
+     4-section monolithic 0.bin grammar WITHOUT structural restructuring.
+     PR95-family L20+L27+L31 canonical extension surface = `wrp_brotli`
+     tail-section per Slot Q PR101 grammar audit empirical finding.
+  2. **Assumption-Adversary binding revision**: predicted_band EXPANDED to
+     [-0.0025, +0.0040] (vs SYMPOSIUM 1 PR110 +0.0015) accounting for
+     potential ~80 bytes HNeRV parity L3 grammar overhead; canonical equation
+     `synthesize_frame_via_atick_redlich_cooperative_receiver_v1`
+     (FORMALIZATION_PENDING per Catalog #344) auto-recalibrates per Catalog
+     #371 on empirical anchor landing.
+
+  ## PR95-family context
+
+  PR101 IS canonical PR95-family GOLD per HNeRV parity discipline. PR95Author
+  canonical inner-council seat per CLAUDE.md 2026-05-19 inner council
+  expansion provides domain expertise verdict on grammar slack
+  accommodation. Per HNeRV parity L20: PR101 archive grammar is monolithic
+  single-file 0.bin with 4 length-prefixed sections (dec/sca/lat/wrp).
+  Per L27+L31: per-pair single-dim latent correction sidecar (255-sentinel
+  no-op) + combinatorial colex rank encoding canonical SLIM-flavor
+  Wang-Rudin canonical extension surface.
+
+  ## DISPATCH ORDERING per Catalog #246 apples-to-apples
+
+  PR101 paired-CUDA dispatches AFTER PR110 + DQS1 per Slot L SYMPOSIUM 2
+  Contrarian binding revision: PR95-family grammar audit must succeed
+  BEFORE paired-CUDA dispatch fires. If grammar audit reveals grammar slack
+  exhaustion, the lane is DEFERRED per CLAUDE.md "Forbidden premature KILL"
+  + reactivation = author SYNTHESIZE_FRAME-compatible grammar extension per
+  Catalog #308.
+
+  ## Canonical CROSS-archive variable-isolation chain
+
+  - PR110 - DQS1 = V14 substitution cascade variable (anchor 1+2 sequence)
+  - PR110 - PR101 = frame-exploit-selector variable (THIS anchor isolates)
+  - DQS1 - PR101 = PR95-family-vs-selective-decoder variable
+
+  ## Canonical SHARED helper consumption
+
+  Per Slot R landing (canonical SHARED helper SubstrateGrammarAdapter Protocol):
+  this recipe consumes `tac.substrates._shared.synthesize_frame_emission_atick_redlich.synthesize_frame_emission_per_pair`
+  via per-substrate adapter `tac.substrates._shared.synthesize_frame_emission_atick_redlich_adapters.pr101`
+  (op-routable #2; pending impl).
+
+  ## Smoke-before-full pattern (Catalog #167)
+
+  Operator-authorize wrapper routes through tools/run_modal_smoke_before_full.py
+  which fires a 100-epoch ~$0.30 Modal T4 smoke FIRST, validates rc=0 +
+  auth-eval JSON present + score in plausible band per predicted_band, then
+  fires the full 3000-epoch T4 dispatch only on smoke-green.
+
+  ## Cost band: tac.cost_band_calibration
+
+  hand_calibrated_fallback_p50 = $0.06 per Catalog #246 envelope; PR101
+  paired-CUDA + paired-CPU bootstraps PR95-family canonical extension
+  calibration.
+
+  ## Cross-references
+
+  - Slot L landing memo: feedback_slot_l_slot_h_top_3_super_additive_per_substrate_symposium_prep_landed_20260529.md
+  - Slot R landing memo: feedback_slot_r_slot_l_step_3_shared_substrate_module_synthesize_frame_emission_atick_redlich_landed_20260529.md
+  - Slot Q landing memo: feedback_slot_q_slot_l_contrarian_binding_revisions_steps_1_plus_2_landed_20260529.md
+  - SYMPOSIUM 2: .omx/research/council_per_substrate_symposium_pr101_x_synthesize_frame_super_additive_20260529.md
+  - HNeRV parity discipline L3+L20+L27+L31 (PR95-family canonical 4-section monolithic 0.bin grammar)
+  - PR95Author canonical inner-council seat per CLAUDE.md 2026-05-19 inner council expansion
+  - Canonical equation FORMALIZATION_PENDING: synthesize_frame_via_atick_redlich_cooperative_receiver_v1
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py + Catalog #245
+  canonical Modal call_id ledger. Recurring harvest cron per Catalog #380:
+  tools/schedule_canonical_modal_harvest_cron.sh.

@@ -1,5 +1,10 @@
 {
-  "blockers": [],
+  "blockers": [
+    "unknown_uncleared_source_dispatch_blocker:candidate_requires_full_frame_inflate_output_parity_before_score_claim",
+    "same_lane_terminal_score_not_below_active_floor_for_same_archive:0.226147822852>=0.206316386616:materializer_harvest::fp11_source_brotli_recode_manifest.v1:fp11_brotli_recode_b7106_cuda_t4_20260528T203810Z:completed_contest_cuda_modal_auth_eval_recovered",
+    "runtime_consumption_proof_not_proven",
+    "runtime_consumption_proof_runtime_probe_missing"
+  ],
   "candidate_id": "fp11_source_brotli_recode_b7106c9bdbb8",
   "facts": {
     "archive_bytes": 178493,
@@ -19,10 +24,10 @@
     "runtime_consumption_proof_required": true,
     "runtime_consumption_proof_runtime_tree_sha256": "a114b4f665713353c01a2a09467c5ac766d77d394945f6e951cbc8b0eaa4d1f3",
     "runtime_consumption_proof_schema": "fp11_source_brotli_recode_runtime_consumption_proof.v1",
-    "runtime_consumption_proof_sha256": "f26a2cd06ae758a0a821a66fc56bde29475440960783a4625eda5f1ca9827d22",
+    "runtime_consumption_proof_sha256": "ba792b232730f83d7b40175000670d5dcd9f587821d0f0a3bca7a87418ffb65c",
     "runtime_consumption_proof_status": "present",
-    "runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
-    "runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd",
+    "runtime_content_tree_sha256": "5196f8aa00fe3f936a0e27bbf00546f81a60bc553d1f24c5a20a9e624764e971",
+    "runtime_tree_sha256": "fdbf973dcf6382d6bbd90359bcb00131a7900dd5e4b49447f0a225d7a0a4fa61",
     "score_affecting_change_proofs": [
       "archive_changed=true",
       "byte_different=true",
@@ -58,11 +63,11 @@
     "source_archive_bytes": 178530,
     "source_score_fields_stripped": [],
     "submission_dir": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
-    "submission_runtime_content_tree_sha256": "286d0bc2f0973f0f4e885e96d6b80f07f2134ca48b3c4ec037b24aef1e6aaeb8",
-    "submission_runtime_tree_sha256": "16301f7e1925e3c5c3432b877d0cb68841392798989f245f0c2baf36f867a2cd"
+    "submission_runtime_content_tree_sha256": "5196f8aa00fe3f936a0e27bbf00546f81a60bc553d1f24c5a20a9e624764e971",
+    "submission_runtime_tree_sha256": "fdbf973dcf6382d6bbd90359bcb00131a7900dd5e4b49447f0a225d7a0a4fa61"
   },
-  "generated_at_utc": "2026-05-28T17:46:02Z",
-  "ready_for_exact_eval_dispatch": true,
+  "generated_at_utc": "2026-05-30T21:47:24Z",
+  "ready_for_exact_eval_dispatch": false,
   "schema": "optimizer_candidate_exact_eval_readiness_report_v1",
   "source_queue_path": ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/closed_source_queue.json",
   "tool": "tools/promote_optimizer_candidate_for_exact_eval.py"

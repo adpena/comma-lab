@@ -1,6 +1,6 @@
 {
   "archive_packet": {
-    "archive_zip_path": ".omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
+    "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_runtime_consumption_queue_20260528T131513Z/pr95_public_archive.zip",
     "archive_zip_sha256": "bf5922b27c8f1c350df728b7131f9b99dd83d83819152638a6ce156a493fb046",
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
@@ -48,7 +48,7 @@
   },
   "dispatch_attempted": false,
   "dispatch_packet_ready": false,
-  "elapsed_seconds": 0.06161791700287722,
+  "elapsed_seconds": 0.07528629199077841,
   "evidence_grade": "[macOS-MLX research-signal]",
   "exact_readiness_refusal": {
     "blockers": [
@@ -59,7 +59,7 @@
     "ready": false,
     "schema": "exact_readiness_refusal.v1"
   },
-  "generated_utc": "2026-05-28T13:15:25.949831+00:00",
+  "generated_utc": "2026-05-28T20:19:49.491163+00:00",
   "gpu_launched": false,
   "lane_id": "lane_pr95_hnerv_mlx_reproduction",
   "mlx_device": "gpu",
