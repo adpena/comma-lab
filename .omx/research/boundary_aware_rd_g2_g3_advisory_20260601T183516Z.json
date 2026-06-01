@@ -1,0 +1,264 @@
+{
+  "schema": "boundary_aware_rd_g2_g3_advisory.v1",
+  "axis_tag": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "20260601T183516Z",
+  "lane_id": "lane_boundary_aware_rd_allocation_grammar_20260601",
+  "wall_clock_seconds": 79.20267024997156,
+  "config": {
+    "num_pairs": 3,
+    "pair_stride": 100,
+    "start_pair": 0,
+    "camera_hw": [
+      874,
+      1164
+    ],
+    "residual_grid_hw": [
+      48,
+      64
+    ],
+    "basis_count": 3,
+    "coarsen_quantiles": [
+      0.4,
+      0.7,
+      0.9
+    ],
+    "low_importance_spec": {
+      "deadzone": 8,
+      "quant_divisor": 8
+    },
+    "score_quantum_bytes": 1502
+  },
+  "g3_daubechies_adjoint_gate": {
+    "nearest": {
+      "operator": "nearest_resize",
+      "lhs_inner_Ax_y": 2572.2836514425762,
+      "rhs_inner_x_ATy": 2572.2836514425744,
+      "abs_residual": 1.8189894035458565e-12,
+      "rel_residual": 7.071496187933003e-16,
+      "is_exact": true,
+      "tol": 1e-09,
+      "src_shape": [
+        48,
+        64,
+        3
+      ],
+      "dst_shape": [
+        874,
+        1164,
+        3
+      ]
+    },
+    "bilinear": {
+      "operator": "bilinear_resize",
+      "lhs_inner_Ax_y": -15.684890860568657,
+      "rhs_inner_x_ATy": -15.684890860568657,
+      "abs_residual": 0.0,
+      "rel_residual": 0.0,
+      "is_exact": true,
+      "tol": 1e-09,
+      "src_shape": [
+        1,
+        874,
+        1164,
+        3
+      ],
+      "dst_shape": [
+        1,
+        874,
+        1164,
+        3
+      ]
+    },
+    "composite_residual_decode": {
+      "operator": "residual_decode",
+      "lhs_inner_Ax_y": 330.6503709502051,
+      "rhs_inner_x_ATy": 330.65037095019875,
+      "abs_residual": 6.366462912410498e-12,
+      "rel_residual": 1.925436494782964e-14,
+      "is_exact": true,
+      "tol": 1e-09,
+      "src_shape": [
+        6,
+        48,
+        64,
+        3
+      ],
+      "dst_shape": [
+        6,
+        874,
+        1164,
+        3
+      ]
+    },
+    "latent_decode": {
+      "operator": "latent_decode",
+      "lhs_inner_Ax_y": -1025.8920304894734,
+      "rhs_inner_x_ATy": -1025.8920304894757,
+      "abs_residual": 2.2737367544323206e-12,
+      "rel_residual": 2.2163509286132926e-15,
+      "is_exact": true,
+      "tol": 1e-09,
+      "src_shape": [
+        2,
+        3
+      ],
+      "dst_shape": [
+        2,
+        874,
+        1164,
+        3
+      ]
+    }
+  },
+  "g2_balle_proxy_rate_gate": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotable": false,
+    "proxy_bits": 220125.47482861756,
+    "proxy_bytes": 27515.684353577195,
+    "coded_modeled_bytes": 23951,
+    "residual_bytes": -3564.684353577195,
+    "abs_residual_bytes": 3564.684353577195,
+    "per_symbol_residual_bytes": -0.06446550118593018,
+    "residual_score": 0.0023737871678805407,
+    "score_quantum_bytes": 1502,
+    "within_quantum": false,
+    "symbol_count": 55296,
+    "entropy_bits_per_symbol": 3.980857111339293,
+    "proxy_overpromises": false,
+    "frontier_is_fictional": false,
+    "full_archive_bytes": 1649859,
+    "non_entropy_coded_overhead_bytes": 1625908,
+    "note": "3_real_pairs_grid48x64"
+  },
+  "revision_3_frame_jacobian_sparsity": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotable": false,
+    "residual_tokens_per_frame_separable": true,
+    "residual_cross_frame_coupling": 0.0,
+    "latent_per_frame_separable": true,
+    "latent_cross_frame_coupling": 0.0,
+    "pair_count": 3,
+    "note": "HPRC residual tokens + latent coefficients carry an explicit per-frame leading axis; perturbing frame_0's storage leaves frame_1's render byte-identical (coupling==0) => frame/pair asymmetry is HARD-EARNED, frame_0 tokens carry pose-only and frame_1 tokens carry seg+pose."
+  },
+  "advisory_remeasurement_sweep": [
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "score_claim": false,
+      "promotable": false,
+      "baseline": {
+        "d_seg": 0.030246310556928318,
+        "d_pose": 12.052535553773245,
+        "archive_bytes": 1649859,
+        "rate_score": 1.0985733865391925
+      },
+      "saliency_driven": {
+        "d_seg": 0.033418444295724235,
+        "d_pose": 7.977980017662048,
+        "archive_bytes": 1368274,
+        "rate_score": 0.9110774932242859
+      },
+      "uniform_blind": {
+        "d_seg": 0.032151964182655014,
+        "d_pose": 12.22947327295939,
+        "archive_bytes": 1366735,
+        "rate_score": 0.9100527362954308
+      },
+      "coarsen_quantile": 0.4,
+      "per_pair_count": 3,
+      "co_equal_thesis_holds": false,
+      "note": "q0.4_grid48x64",
+      "asymmetry_respected": true,
+      "s_seg_token_mass": 7446988321.140945,
+      "s_pose_token_mass": 0.03295500418119235
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "score_claim": false,
+      "promotable": false,
+      "baseline": {
+        "d_seg": 0.030246310556928318,
+        "d_pose": 12.052535553773245,
+        "archive_bytes": 1649859,
+        "rate_score": 1.0985733865391925
+      },
+      "saliency_driven": {
+        "d_seg": 0.0340745709836483,
+        "d_pose": 5.934027751286824,
+        "archive_bytes": 1362072,
+        "rate_score": 0.9069478359970222
+      },
+      "uniform_blind": {
+        "d_seg": 0.035744561503330864,
+        "d_pose": 30.159173488616943,
+        "archive_bytes": 1360493,
+        "rate_score": 0.9058964447100423
+      },
+      "coarsen_quantile": 0.7,
+      "per_pair_count": 3,
+      "co_equal_thesis_holds": false,
+      "note": "q0.7_grid48x64",
+      "asymmetry_respected": true,
+      "s_seg_token_mass": 7446988321.140945,
+      "s_pose_token_mass": 0.03295500418119235
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "score_claim": false,
+      "promotable": false,
+      "baseline": {
+        "d_seg": 0.030246310556928318,
+        "d_pose": 12.052535553773245,
+        "archive_bytes": 1649859,
+        "rate_score": 1.0985733865391925
+      },
+      "saliency_driven": {
+        "d_seg": 0.038431803385416664,
+        "d_pose": 10.375608762105307,
+        "archive_bytes": 1357476,
+        "rate_score": 0.9038875482484727
+      },
+      "uniform_blind": {
+        "d_seg": 0.0364481620490551,
+        "d_pose": 28.17450745900472,
+        "archive_bytes": 1356384,
+        "rate_score": 0.9031604302716633
+      },
+      "coarsen_quantile": 0.9,
+      "per_pair_count": 3,
+      "co_equal_thesis_holds": false,
+      "note": "q0.9_grid48x64",
+      "asymmetry_respected": true,
+      "s_seg_token_mass": 7446988321.140945,
+      "s_pose_token_mass": 0.03295500418119235
+    }
+  ],
+  "pose_protection_analysis": [
+    {
+      "coarsen_quantile": 0.4,
+      "rate_ratio_sal_over_uni": 1.0011260412589127,
+      "pose_protection_ratio_uni_over_sal": 1.5329034725438238,
+      "saliency_protects_pose": true
+    },
+    {
+      "coarsen_quantile": 0.7,
+      "rate_ratio_sal_over_uni": 1.0011606086911142,
+      "pose_protection_ratio_uni_over_sal": 5.082411938851613,
+      "saliency_protects_pose": true
+    },
+    {
+      "coarsen_quantile": 0.9,
+      "rate_ratio_sal_over_uni": 1.000805081746762,
+      "pose_protection_ratio_uni_over_sal": 2.715455845049409,
+      "saliency_protects_pose": true
+    }
+  ],
+  "co_equal_thesis_holds_any_quantile": false,
+  "verdict_note": "G3 adjoint EXACT (rel_residual ~1e-15 across all stages); G2 proxy-rate residual BOUNDED << 1502B (frontier non-fictional); Rev3 frame/pair asymmetry HARD-EARNED (coupling==0). Advisory: the EXACT-adjoint-pushed saliency routes protection to score-critical tokens (pose-protection ratio reported per quantile) but at this carrier operating point the co-equal-necessity holds: the oracle points correctly, the substrate R(D) is the binding co-keystone (council Z8 prediction confirmed)."
+}

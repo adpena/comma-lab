@@ -65874,7 +65874,7 @@
         },
         "three_clean_review": {
           "status": true,
-          "evidence": "adversarial self-review Q1/Q2/Q3 resolved + 12 NO-FAKE tests pass; .omx/research/feedback_score_exact_saliency_producer_plus_dead_zone_anchor_landed_20260601.md"
+          "evidence": "31 NO-FAKE tests + adversarial G2 direction-aware refinement + NO-FAKE adjoint guards (meanpool/forward-as-adjoint FAIL); .omx/research/boundary_aware_rd_g2_g3_landed_20260601.md"
         },
         "memory_entry": {
           "status": true,
@@ -65937,5 +65937,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-01T18:09:52Z"
+  "updated_at": "2026-06-01T18:39:36Z"
 }
