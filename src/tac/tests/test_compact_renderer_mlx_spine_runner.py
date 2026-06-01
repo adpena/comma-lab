@@ -427,13 +427,117 @@ def test_pr95_hnerv_execute_parser_exposes_public_archive_seed() -> None:
 
 
 def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
-    hi = _parse_args(["--execute-family", "hi_nerv", "--num-pairs", "32"])
+    hi = _parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--num-pairs",
+            "32",
+            "--run-local-cpu-replay",
+            "--keep-local-replay-inflated",
+            "--retain-failed-local-replay-scratch",
+        ]
+    )
     sn = _parse_args(["--execute-family", "snerv", "--num-pairs", "128"])
 
     assert hi.execute_family == "hi_nerv"
     assert hi.num_pairs == 32
+    assert hi.run_local_cpu_replay is True
+    assert hi.keep_local_replay_inflated is True
+    assert hi.retain_failed_local_replay_scratch is True
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
+
+
+def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=600)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    staged_calls: list[dict[str, object]] = []
+
+    def fake_stage_local_replay_submission(**kwargs):
+        staged_calls.append(kwargs)
+        staged = Path(kwargs["output_dir"]) / "submission"
+        staged.mkdir(parents=True)
+        (staged / "archive.zip").write_bytes(b"archive")
+        (staged / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return staged
+
+    class FakeReplaySummary:
+        def to_json(self) -> str:
+            return json.dumps(
+                {
+                    "schema": "local_submission_replay.v1",
+                    "evaluation_passed": True,
+                    "device": "cpu",
+                    "axis_tag": "[macOS-CPU advisory]",
+                    "local_score_estimate": 1.234,
+                    "blockers": [],
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            )
+
+    replay_calls: list[dict[str, object]] = []
+
+    def fake_run_local_submission_replay(**kwargs):
+        replay_calls.append(kwargs)
+        return FakeReplaySummary()
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+    monkeypatch.setattr(
+        runner_mod,
+        "stage_local_replay_submission",
+        fake_stage_local_replay_submission,
+    )
+    monkeypatch.setattr(
+        runner_mod,
+        "run_local_submission_replay",
+        fake_run_local_submission_replay,
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_gate",
+        num_pairs=600,
+        epochs=8,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        repo_root=REPO_ROOT,
+    )
+
+    assert staged_calls
+    assert replay_calls
+    assert out["local_cpu_replay_gate"]["executed"] is True
+    assert out["local_cpu_replay_gate"]["default_enabled_for_full_coverage"] is True
+    assert out["local_cpu_replay_summary"]["axis_tag"] == "[macOS-CPU advisory]"
+    assert out["local_cpu_replay_summary"]["score_claim"] is False
+    assert out["local_cpu_replay_summary_paths"]
+    assert Path(out["local_cpu_replay_summary_paths"][0]).is_file()
+    assert "local_cpu_replay_not_executed" not in out["blockers"]
+    assert "local_cpu_replay_not_run_partial_pair_coverage" not in out["blockers"]
+    assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
 
 
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for HiNeRV adapter smoke")
@@ -474,7 +578,7 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     assert "hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs" in out[
         "blockers"
     ]
-    assert "local_cpu_replay_not_executed" in out["blockers"]
+    assert "local_cpu_replay_not_run_partial_pair_coverage" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
     assert Path(out["report_path"]).is_file()
 

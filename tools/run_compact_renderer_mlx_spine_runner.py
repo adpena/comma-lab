@@ -30,6 +30,10 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from comma_lab.local_submission_replay import (  # noqa: E402
+    run_local_submission_replay,
+    stage_local_replay_submission,
+)
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
 )
@@ -363,6 +367,81 @@ PR95_HNERV_CONTROL_ARM_EXACT_BLOCKERS: tuple[str, ...] = (
 
 class CompactRendererMlxSpineRunnerError(ValueError):
     """Raised when an MLX compact renderer row cannot enter the spine."""
+
+
+def _local_cpu_replay_enabled_by_default(num_pairs: int) -> bool:
+    """Return whether local replay should run without an explicit CLI override."""
+
+    return int(num_pairs) >= 600
+
+
+def _run_compact_local_cpu_replay_gate(
+    *,
+    archive_zip_path: str | Path | None,
+    runtime_submission_dir: str | Path,
+    output_dir: str | Path,
+    upstream_dir: str | Path,
+    num_pairs: int,
+    requested: bool | None,
+    keep_inflated: bool = False,
+    cleanup_failed_scratch: bool = True,
+    repo_root: str | Path = REPO_ROOT,
+) -> tuple[dict[str, Any] | None, list[Path], list[str]]:
+    """Run the reusable local CPU replay gate for full-coverage candidates.
+
+    The gate is deliberately coverage-aware. A partial 1/32/128-pair smoke can
+    prove archive/runtime consumption, but it cannot be a local score authority
+    because upstream evaluate expects the contest-shaped full-video output. Full
+    600-pair candidates run the gate by default unless the operator opts out.
+    """
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    pairs = int(num_pairs)
+    should_run = (
+        bool(requested)
+        if requested is not None
+        else _local_cpu_replay_enabled_by_default(pairs)
+    )
+    if pairs < 600:
+        return None, [], ["local_cpu_replay_not_run_partial_pair_coverage"]
+    if not should_run:
+        return None, [], ["local_cpu_replay_not_executed"]
+    if archive_zip_path is None:
+        return None, [], ["local_cpu_replay_archive_zip_missing"]
+
+    archive = _optional_existing(archive_zip_path, base=root)
+    if archive is None:
+        return None, [], ["local_cpu_replay_archive_zip_missing_or_unreadable"]
+    runtime_dir = _resolve(runtime_submission_dir, base=root)
+    if not runtime_dir.is_dir():
+        return None, [], ["local_cpu_replay_runtime_submission_dir_missing"]
+
+    replay_dir = _resolve(output_dir, base=root)
+    replay_dir.mkdir(parents=True, exist_ok=True)
+    staged_submission = stage_local_replay_submission(
+        runtime_submission_dir=runtime_dir,
+        archive_zip_path=archive,
+        output_dir=replay_dir,
+        force=True,
+    )
+    summary = run_local_submission_replay(
+        submission_dir=staged_submission,
+        source_runtime_submission_dir=runtime_dir,
+        archive_zip_path=archive,
+        device="cpu",
+        upstream_root=_resolve(upstream_dir, base=root),
+        keep_inflated=bool(keep_inflated),
+        cleanup_failed_scratch=bool(cleanup_failed_scratch),
+        certify_failed_scratch_rebuildable=bool(cleanup_failed_scratch),
+    )
+    summary_dict = json.loads(summary.to_json())
+    summary_path = replay_dir / "local_submission_replay_summary.json"
+    _write_json(summary_path, summary_dict)
+    blockers: list[str] = []
+    if not bool(summary_dict.get("evaluation_passed")):
+        blockers.append("local_cpu_replay_failed")
+        blockers.extend(str(item) for item in summary_dict.get("blockers") or [])
+    return summary_dict, [summary_path], _dedupe(blockers)
 
 
 def _scorer_coupled_rd_metadata() -> dict[str, Any]:
@@ -1950,6 +2029,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     distillation_device: str = "cpu",
     allow_segnet_only_research: bool = False,
     random_seed: int = 0,
+    run_local_cpu_replay: bool | None = None,
+    keep_local_replay_inflated: bool = False,
+    cleanup_failed_local_replay_scratch: bool = True,
+    upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
 ) -> dict[str, Any]:
@@ -2013,13 +2096,32 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     )
     projection_paths = [spine_manifest] if spine_manifest.is_file() else []
     receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
+    local_cpu_replay_summary: dict[str, Any] | None = None
+    local_cpu_replay_paths: list[Path] = []
+    local_cpu_replay_blockers: list[str] = []
+    if archive_path:
+        (
+            local_cpu_replay_summary,
+            local_cpu_replay_paths,
+            local_cpu_replay_blockers,
+        ) = _run_compact_local_cpu_replay_gate(
+            archive_zip_path=archive_path,
+            runtime_submission_dir=training_dir / "submission",
+            output_dir=out / "local_cpu_replay",
+            upstream_dir=upstream_dir,
+            num_pairs=int(num_pairs),
+            requested=run_local_cpu_replay,
+            keep_inflated=keep_local_replay_inflated,
+            cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
+            repo_root=root,
+        )
     acquisition_path = out / "hprc_spine_acquisition_report.json"
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
     selected_runner_rows: list[dict[str, Any]] = []
     blockers: list[Any] = [
-        "local_cpu_replay_not_executed",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    blockers.extend(local_cpu_replay_blockers)
     pr95_curriculum_enabled = int(epochs) >= 8
     if not pr95_curriculum_enabled:
         blockers.append("hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs")
@@ -2087,6 +2189,23 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "receiver_proof_report_paths": [
                 path.as_posix() for path in receiver_proof_paths
             ],
+            "local_cpu_replay_summary_paths": [
+                path.as_posix() for path in local_cpu_replay_paths
+            ],
+            "local_cpu_replay_summary": local_cpu_replay_summary,
+            "local_cpu_replay_gate": {
+                "schema": "compact_runner_local_cpu_replay_gate.v1",
+                "requested": run_local_cpu_replay,
+                "default_enabled_for_full_coverage": (
+                    _local_cpu_replay_enabled_by_default(int(num_pairs))
+                ),
+                "coverage_valid_for_replay": int(num_pairs) >= 600,
+                "executed": local_cpu_replay_summary is not None,
+                "axis_tag": "[macOS-CPU advisory]",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "mlx_profile_paths": [
                 _resolve(path, base=root).as_posix() for path in mlx_profile_paths
             ],
@@ -3432,6 +3551,41 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--run-local-cpu-replay",
+        dest="run_local_cpu_replay",
+        action="store_true",
+        default=None,
+        help=(
+            "Force the local macOS CPU replay gate after byte-closed archive "
+            "export. Full 600-pair coverage runs this gate by default."
+        ),
+    )
+    parser.add_argument(
+        "--skip-local-cpu-replay",
+        dest="run_local_cpu_replay",
+        action="store_false",
+        help=(
+            "Skip the local macOS CPU replay gate even for full-coverage "
+            "campaigns. The report remains false-authority and blocked."
+        ),
+    )
+    parser.add_argument(
+        "--keep-local-replay-inflated",
+        action="store_true",
+        help=(
+            "Retain local replay inflated raw outputs. Default is certify-and-"
+            "delete scratch through local_submission_replay cleanup manifests."
+        ),
+    )
+    parser.add_argument(
+        "--retain-failed-local-replay-scratch",
+        action="store_true",
+        help=(
+            "Keep failed local replay scratch for debugging. Default deletes "
+            "certified rebuildable failed scratch to protect disk."
+        ),
+    )
+    parser.add_argument(
         "--coder-aware-qat",
         action="store_true",
         help=(
@@ -3702,6 +3856,10 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            run_local_cpu_replay=args.run_local_cpu_replay,
+            keep_local_replay_inflated=args.keep_local_replay_inflated,
+            cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
+            upstream_dir=args.upstream_dir,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
