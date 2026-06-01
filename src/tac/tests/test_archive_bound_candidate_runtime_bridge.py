@@ -10,7 +10,7 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
 from tac.repo_io import sha256_file
 
 
-def test_generated_receiver_proof_accepts_raw_output_directory(tmp_path: Path) -> None:
+def test_generated_receiver_proof_rejects_raw_output_directory(tmp_path: Path) -> None:
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"archive")
     submission = tmp_path / "submission"
@@ -37,9 +37,45 @@ def test_generated_receiver_proof_accepts_raw_output_directory(tmp_path: Path) -
         retain_receiver_output=False,
     )
 
-    assert proof["runtime_consumption_proof_passed"] is True
-    assert proof["receiver_contract_satisfied"] is True
+    assert proof["runtime_consumption_proof_passed"] is False
+    assert proof["receiver_contract_satisfied"] is False
     assert proof["receiver_output_kind"] == "directory"
     assert proof["receiver_output_bytes"] == len(b"frame0")
-    assert proof["blockers"] == []
+    assert "directory_receiver_generated_inflate_sh_output_not_raw_file" in proof[
+        "blockers"
+    ]
     assert not (tmp_path / "proof" / "receiver_proof" / "runtime_out" / "0.raw").exists()
+
+
+def test_generated_receiver_proof_accepts_raw_output_file(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "0.bin").write_bytes(b"payload")
+    inflate = submission / "inflate.sh"
+    inflate.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf rawbytes > \"$2/0.raw\"\n",
+        encoding="utf-8",
+    )
+    os.chmod(inflate, 0o755)
+
+    proof = run_generated_inflate_receiver_proof(
+        archive_zip_path=archive,
+        archive_sha256=sha256_file(archive),
+        archive_bytes=archive.stat().st_size,
+        submission_dir=submission,
+        output_dir=tmp_path / "proof_file",
+        repo_root=tmp_path,
+        candidate_label="file_receiver",
+        expected_receiver_output_bytes=len(b"rawbytes"),
+        retain_receiver_output=False,
+    )
+
+    assert proof["runtime_consumption_proof_passed"] is True
+    assert proof["receiver_contract_satisfied"] is True
+    assert proof["receiver_output_kind"] == "file"
+    assert proof["receiver_output_bytes"] == len(b"rawbytes")
+    assert proof["blockers"] == []

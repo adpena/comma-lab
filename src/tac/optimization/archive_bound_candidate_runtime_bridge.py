@@ -82,7 +82,7 @@ def run_generated_inflate_receiver_proof(
     file_list.write_text(f"{video_name}\n", encoding="utf-8")
     receiver_out_dir = proof_dir / "runtime_out"
     receiver_out_dir.mkdir(parents=True, exist_ok=True)
-    output_name = expected_receiver_output_name or Path(video_name).stem
+    output_name = expected_receiver_output_name or Path(video_name).with_suffix(".raw").name
     receiver_raw = receiver_out_dir / output_name
     archive_arg_dir = archive_dir_for_inflate or submission_dir
     inflate_argv = [
@@ -115,13 +115,6 @@ def run_generated_inflate_receiver_proof(
         stderr = _safe_text(exc.stderr)
     wall_seconds = round(time.monotonic() - started, 6)
 
-    if (
-        expected_receiver_output_name is None
-        and not receiver_raw.exists()
-    ):
-        raw_dir_candidate = receiver_out_dir / Path(video_name).with_suffix(".raw").name
-        if raw_dir_candidate.exists():
-            receiver_raw = raw_dir_candidate
     output_kind = "file" if receiver_raw.is_file() else "directory" if receiver_raw.is_dir() else "missing"
     output_present = output_kind in {"file", "directory"}
     if output_kind == "file":
@@ -153,6 +146,8 @@ def run_generated_inflate_receiver_proof(
         blockers.append(f"{candidate_label}_generated_inflate_sh_not_executed")
     if not output_present:
         blockers.append(f"{candidate_label}_generated_inflate_sh_output_missing")
+    if output_present and output_kind != "file":
+        blockers.append(f"{candidate_label}_generated_inflate_sh_output_not_raw_file")
     if output_present and not output_bytes:
         blockers.append(f"{candidate_label}_generated_inflate_sh_output_empty")
     if (

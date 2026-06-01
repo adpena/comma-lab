@@ -8,13 +8,19 @@ from pathlib import Path
 
 import torch
 
+from tac.substrates._shared.inflate_runtime import (
+    raw_output_path,
+    select_inflate_device,
+    write_rgb_pair_to_raw,
+)
+
 from .architecture import PactNervVqConfig, PactNervVqSubstrate
 from .archive import parse_archive
 
 
 def inflate_one_video(
     archive_bytes: bytes,
-    output_dir: Path,
+    output_path: Path,
     *,
     device: str = "cpu",
 ) -> None:
@@ -52,18 +58,13 @@ def inflate_one_video(
             arc.codebook.to(device=device, dtype=model.quantizer.codebook.dtype)
         )
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    from PIL import Image  # type: ignore[import-not-found]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with torch.no_grad():
+    with torch.no_grad(), output_path.open("wb") as fh:
         for pair_idx in range(cfg.num_pairs):
             idx_tensor = torch.tensor([pair_idx], device=device, dtype=torch.long)
             rgb_0, rgb_1 = model(idx_tensor)
-            for off, rgb in ((0, rgb_0), (1, rgb_1)):
-                frame_idx = 2 * pair_idx + off
-                arr = (rgb[0].clamp(0.0, 1.0).permute(1, 2, 0).cpu().numpy() * 255.0)
-                arr = arr.round().clip(0, 255).astype("uint8")
-                Image.fromarray(arr).save(output_dir / f"{frame_idx}.png")
+            write_rgb_pair_to_raw(fh, rgb_0, rgb_1, input_range="unit")
 
 
 def main_cli() -> int:
@@ -75,10 +76,10 @@ def main_cli() -> int:
     file_list_path = Path(sys.argv[3])
 
     file_list = file_list_path.read_text(encoding="utf-8").strip().splitlines()
+    device = select_inflate_device()
     for fname in file_list:
-        base = Path(fname).stem
         archive_bytes = (archive_dir / "0.bin").read_bytes()
-        inflate_one_video(archive_bytes, output_dir / base, device="cpu")
+        inflate_one_video(archive_bytes, raw_output_path(output_dir, fname), device=device)
     return 0
 
 

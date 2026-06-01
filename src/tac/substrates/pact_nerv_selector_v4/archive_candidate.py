@@ -37,6 +37,7 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
     emit_archive_bound_candidate_runtime_package,
 )
 from tac.repo_io import sha256_file
+from tac.substrates._shared.inflate_runtime import CAMERA_HW
 from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
@@ -64,6 +65,10 @@ PACT_NERV_SELECTOR_V4_MLX_ARCHIVE_CANDIDATE_FAMILY = "pact_nerv_selector_v4_mlx"
 PACT_NERV_SELECTOR_V4_MLX_ARCHIVE_TRANSFORM_KIND = (
     "pact_nerv_selector_v4_mlx_archive"
 )
+
+
+def _expected_receiver_output_bytes(cfg: PactNervSelectorV4Config) -> int:
+    return int(cfg.num_pairs) * 2 * int(CAMERA_HW[0]) * int(CAMERA_HW[1]) * 3
 
 
 def selector_v4_meta_from_config(cfg: PactNervSelectorV4Config) -> dict[str, object]:
@@ -157,6 +162,7 @@ def export_pact_nerv_selector_v4_mlx_archive(
         submission_dir,
         substrate_pkg_name="pact_nerv_selector_v4",
         repo_root=root,
+        vendor_shared_inflate_runtime=True,
     )
     (submission_dir / "0.bin").write_bytes(bin_bytes)
     archive_zip_path = out_dir / "archive.zip"
@@ -212,6 +218,8 @@ def export_pact_nerv_selector_v4_mlx_archive(
             proof_schema=PACT_NERV_SELECTOR_V4_MLX_RECEIVER_PROOF_SCHEMA,
             proof_filename="pact_nerv_selector_v4_mlx_receiver_proof.json",
             candidate_label="pact_nerv_selector_v4",
+            expected_receiver_output_name="0.raw",
+            expected_receiver_output_bytes=_expected_receiver_output_bytes(cfg),
             retain_receiver_output=retain_receiver_proof_output,
             runtime_adapter_manifest_extra={
                 "schema": "pact_nerv_selector_v4_mlx_runtime_adapter_manifest.v1",
@@ -270,6 +278,8 @@ def export_pact_nerv_selector_v4_mlx_archive_bound_candidate_package(
         proof_schema=PACT_NERV_SELECTOR_V4_MLX_RECEIVER_PROOF_SCHEMA,
         proof_filename="pact_nerv_selector_v4_mlx_receiver_proof.json",
         candidate_label="pact_nerv_selector_v4",
+        expected_receiver_output_name="0.raw",
+        expected_receiver_output_bytes=_expected_receiver_output_bytes(cfg),
         retain_receiver_output=retain_receiver_proof_output,
         runtime_adapter_manifest_extra={
             "schema": "pact_nerv_selector_v4_mlx_runtime_adapter_manifest.v1",
