@@ -25,6 +25,7 @@ def build_spine_bounded_runner_plan(
     acquisition_report_path: str | Path,
     repo_root: str | Path = ".",
     mlx_profile_paths: list[str | Path] | tuple[str | Path, ...] = (),
+    receiver_proof_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
     exact_gate_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
 ) -> dict[str, Any]:
     """Build the one-contract runner plan for compact-base and residual work.
@@ -44,13 +45,18 @@ def build_spine_bounded_runner_plan(
         )
 
     mlx_profiles = [_load_profile(path, root=root) for path in mlx_profile_paths]
+    receiver_proofs = [
+        _load_receiver_proof(path, root=root) for path in receiver_proof_report_paths
+    ]
     exact_reports = [_load_exact_report(path, root=root) for path in exact_gate_report_paths]
     section_evidence = _index_section_evidence(mlx_profiles)
+    receiver_proof_index = _index_receiver_proofs(receiver_proofs)
     exact_index = _index_exact_reports(exact_reports)
     compact_base_rows = [
         _compact_base_sweep_row(
             acquisition_row=row,
             ceiling_result=ceiling_result,
+            receiver_proof_index=receiver_proof_index,
             exact_index=exact_index,
         )
         for row in _rows(acquisition_report, "rows")
@@ -86,6 +92,7 @@ def build_spine_bounded_runner_plan(
         "acquisition_report_sha256": _sha256_file(acquisition_path),
         "hard_byte_ceilings": acquisition_report.get("hard_byte_ceilings", []),
         "mlx_profile_paths": [item["path"] for item in mlx_profiles],
+        "receiver_proof_report_paths": [item["path"] for item in receiver_proofs],
         "exact_gate_report_paths": [item["path"] for item in exact_reports],
         "compact_base_sweep_rows": compact_base_rows,
         "section_value_rows": section_value_rows,
@@ -147,6 +154,7 @@ def _compact_base_sweep_row(
     *,
     acquisition_row: dict[str, Any],
     ceiling_result: dict[str, Any],
+    receiver_proof_index: dict[str, dict[str, Any]],
     exact_index: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     family = str(acquisition_row.get("family") or "unknown")
@@ -154,6 +162,20 @@ def _compact_base_sweep_row(
     coverage = acquisition_row.get("coverage") if isinstance(acquisition_row.get("coverage"), dict) else {}
     coverage_valid = coverage.get("valid_for_base_comparison") is True
     fits_ceiling = ceiling_result.get("fits") is True
+    source = (
+        acquisition_row.get("source_archive")
+        if isinstance(acquisition_row.get("source_archive"), dict)
+        else {}
+    )
+    receiver_proof = _lookup_receiver_proof(
+        acquisition_row=acquisition_row,
+        source=source,
+        receiver_proof_index=receiver_proof_index,
+    )
+    receiver_proof_passed = (
+        receiver_proof is not None
+        and receiver_proof.get("runtime_consumption_proof_passed") is True
+    )
     exact_report = exact_index.get(str(acquisition_row.get("projection_manifest_path") or ""))
     if not coverage_valid:
         action = "train_or_scale_to_full_coverage_emit_spine_then_receiver_proof"
@@ -184,6 +206,9 @@ def _compact_base_sweep_row(
         "route_status": route_status,
         "required_spine_projection": True,
         "requires_receiver_proof": True,
+        "receiver_proof_observed": receiver_proof is not None,
+        "receiver_proof_passed": receiver_proof_passed,
+        "receiver_proof_summary": _receiver_proof_summary(receiver_proof),
         "requires_full_video_mlx_replay": True,
         "requires_exact_gate": True,
         "exact_gate_observed": exact_report is not None,
@@ -194,8 +219,17 @@ def _compact_base_sweep_row(
                 *([] if fits_ceiling else ["candidate_exceeds_hard_byte_ceiling"]),
                 *(
                     []
+                    if receiver_proof_passed
+                    else [
+                        "receiver_proof_failed"
+                        if receiver_proof is not None
+                        else "receiver_proof_not_attached"
+                    ]
+                ),
+                *(
+                    []
                     if exact_report is not None
-                    else ["receiver_proof_and_exact_gate_not_yet_attached"]
+                    else ["exact_gate_not_yet_attached"]
                 ),
                 "contest_cpu_cuda_exact_eval_not_executed",
             ]
@@ -309,7 +343,17 @@ def _choose_runner_rows(*, compact_base_rows: list[dict[str, Any]]) -> list[dict
         row for row in compact_base_rows if row["coverage_valid_for_base_comparison"]
     ]
     shrink.sort(key=lambda row: (int(row["excess_bytes"] or 0), int(row["ceiling_bytes"])))
-    return shrink[:3]
+    if shrink:
+        return shrink[:3]
+    blocked = sorted(
+        compact_base_rows,
+        key=lambda row: (
+            int(row["ceiling_bytes"]),
+            int(row["effective_archive_bytes"] or 0),
+            row["family"],
+        ),
+    )
+    return blocked[:3]
 
 
 def _index_section_evidence(
@@ -493,6 +537,57 @@ def _index_exact_reports(reports: list[dict[str, Any]]) -> dict[str, dict[str, A
     return index
 
 
+def _index_receiver_proofs(reports: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for item in reports:
+        payload = item["payload"]
+        for key in (
+            payload.get("archive_path"),
+            payload.get("archive_sha256"),
+            payload.get("proof_path"),
+        ):
+            if isinstance(key, str) and key:
+                index[key] = payload
+    return index
+
+
+def _lookup_receiver_proof(
+    *,
+    acquisition_row: dict[str, Any],
+    source: dict[str, Any],
+    receiver_proof_index: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    keys = (
+        source.get("archive_zip_path"),
+        source.get("archive_path"),
+        source.get("path"),
+        source.get("archive_zip_sha256"),
+        source.get("sha256"),
+        acquisition_row.get("projection_manifest_path"),
+    )
+    for key in keys:
+        if isinstance(key, str) and key in receiver_proof_index:
+            return receiver_proof_index[key]
+    return None
+
+
+def _receiver_proof_summary(proof: dict[str, Any] | None) -> dict[str, Any] | None:
+    if proof is None:
+        return None
+    return {
+        "proof_path": proof.get("proof_path"),
+        "archive_path": proof.get("archive_path"),
+        "archive_sha256": proof.get("archive_sha256"),
+        "runtime_consumption_proof_passed": proof.get(
+            "runtime_consumption_proof_passed"
+        ),
+        "receiver_contract_satisfied": proof.get("receiver_contract_satisfied"),
+        "receiver_output_kind": proof.get("receiver_output_kind"),
+        "receiver_output_bytes": proof.get("receiver_output_bytes"),
+        "blockers": proof.get("blockers"),
+    }
+
+
 def _posterior_update_hooks(
     *,
     compact_base_rows: list[dict[str, Any]],
@@ -550,6 +645,12 @@ def _load_profile(path: str | Path, *, root: Path) -> dict[str, Any]:
     payload = _load_json_object(resolved)
     if payload.get("schema") != HPRC_MLX_COMPONENT_PROFILE_SCHEMA:
         raise ValueError(f"MLX profile has unexpected schema: {resolved}")
+    return {"path": resolved.as_posix(), "sha256": _sha256_file(resolved), "payload": payload}
+
+
+def _load_receiver_proof(path: str | Path, *, root: Path) -> dict[str, Any]:
+    resolved = _resolve(path, base=root)
+    payload = _load_json_object(resolved)
     return {"path": resolved.as_posix(), "sha256": _sha256_file(resolved), "payload": payload}
 
 

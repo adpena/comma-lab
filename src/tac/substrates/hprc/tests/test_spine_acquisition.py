@@ -105,6 +105,51 @@ def test_acquisition_cli_writes_report(tmp_path: Path) -> None:
     assert report["rows"][0]["stack_role"]["position"] == "implicit_residual_or_procedural_atom"
 
 
+def test_acquisition_knows_compact_nerv_vq_stack_roles(tmp_path: Path) -> None:
+    boost = _projection(
+        tmp_path / "boost",
+        family=HprcRepresentationFamily.BOOST_NERV,
+        decoder=b"d" * 60,
+        latents=b"l" * 16,
+    )
+    pvq = _projection(
+        tmp_path / "pvq",
+        family=HprcRepresentationFamily.PVQ_NERV,
+        decoder=b"d" * 20,
+        codebooks=b"c" * 12,
+        selectors=b"s" * 8,
+    )
+    rt_vq = _projection(
+        tmp_path / "rt_vq",
+        family=HprcRepresentationFamily.RT_VQ_NERV,
+        decoder=b"d" * 20,
+        codebooks=b"c" * 12,
+        residual=b"r" * 8,
+    )
+
+    report = build_spine_acquisition_report(
+        projection_manifest_paths=[boost, pvq, rt_vq],
+        hard_byte_ceilings=[10_000],
+    )
+
+    rows = {row["family"]: row for row in report["rows"]}
+    assert rows["boostnerv"]["stack_role"]["position"] == (
+        "primary_learned_receiver_carrier"
+    )
+    assert rows["boostnerv"]["recommended_next_action"] == (
+        "run_full_replay_then_exact_gate_before_residual_bytes"
+    )
+    assert rows["pvq_nerv"]["stack_role"]["position"] == (
+        "latent_codebook_base_or_residual_codec"
+    )
+    assert rows["pvq_nerv"]["recommended_next_action"] == (
+        "run_full_replay_then_admit_only_if_value_per_byte_beats_primary_carrier"
+    )
+    assert rows["rt_vq_nerv"]["stack_role"]["position"] == (
+        "residual_token_vq_base_or_residual_codec"
+    )
+
+
 def _projection(
     out: Path,
     *,

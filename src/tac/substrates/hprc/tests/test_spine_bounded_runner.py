@@ -57,6 +57,63 @@ def test_spine_bounded_runner_forces_receiver_proof_and_coverage(tmp_path: Path)
     assert plan["score_claim"] is False
 
 
+def test_spine_bounded_runner_consumes_receiver_proof_report(tmp_path: Path) -> None:
+    manifest = _projection(
+        tmp_path / "vq",
+        family=HprcRepresentationFamily.PACT_NERV_VQ,
+        decoder=b"d" * 8,
+        selectors=b"s" * 4,
+        manifest_extra={"num_pairs": 600},
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    source = payload["manifest"]["representation_spine"]["source"]
+    source.update(
+        {
+            "archive_zip_path": (tmp_path / "archive.zip").as_posix(),
+            "archive_zip_sha256": "a" * 64,
+            "archive_zip_bytes": 12345,
+        }
+    )
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    proof_path = tmp_path / "receiver_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "generated_receiver_proof.v1",
+                "proof_path": proof_path.as_posix(),
+                "archive_path": (tmp_path / "archive.zip").as_posix(),
+                "archive_sha256": "a" * 64,
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "receiver_output_kind": "directory",
+                "receiver_output_bytes": 2860,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        receiver_proof_report_paths=[proof_path],
+    )
+
+    row = plan["compact_base_sweep_rows"][0]
+    assert row["receiver_proof_observed"] is True
+    assert row["receiver_proof_passed"] is True
+    assert row["receiver_proof_summary"]["receiver_output_kind"] == "directory"
+    assert "receiver_proof_not_attached" not in row["blockers"]
+    assert "receiver_proof_failed" not in row["blockers"]
+    assert "exact_gate_not_yet_attached" in row["blockers"]
+
+
 def test_section_value_admission_demotes_bad_residual_tokens(tmp_path: Path) -> None:
     residual = _projection(
         tmp_path / "residual",

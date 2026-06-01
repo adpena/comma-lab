@@ -20,7 +20,9 @@ _PRIMARY_CARRIER_FAMILIES = frozenset(
         HprcRepresentationFamily.PR95_HNERV.value,
         HprcRepresentationFamily.HNERV_PACKED.value,
         HprcRepresentationFamily.RNERV.value,
+        HprcRepresentationFamily.BOOST_NERV.value,
         HprcRepresentationFamily.PACT_NERV.value,
+        HprcRepresentationFamily.SR_NERV.value,
     }
 )
 _STACK_ROLES: dict[str, dict[str, Any]] = {
@@ -35,6 +37,12 @@ _STACK_ROLES: dict[str, dict[str, Any]] = {
     HprcRepresentationFamily.RNERV.value: {
         "position": "primary_learned_receiver_carrier",
         "byte_policy": "sweep_under_hard_ceiling_before_residual_sidecar",
+    },
+    HprcRepresentationFamily.BOOST_NERV.value: {
+        "position": "primary_learned_receiver_carrier",
+        "byte_policy": (
+            "boosted_compact_base_must_beat_pr95_scale_byte_value_before_residuals"
+        ),
     },
     HprcRepresentationFamily.PACT_NERV.value: {
         "position": "primary_learned_receiver_carrier",
@@ -53,12 +61,22 @@ _STACK_ROLES: dict[str, dict[str, Any]] = {
         "byte_policy": "multi_level_features_selected_by_value_per_byte",
     },
     HprcRepresentationFamily.SR_NERV.value: {
-        "position": "low_resolution_base_plus_learned_upsample",
+        "position": "primary_learned_receiver_carrier",
         "byte_policy": "lowres_carrier_must_pay_for_upsampler_and_latents",
     },
     HprcRepresentationFamily.VQ_NERV.value: {
         "position": "latent_codebook_base_or_residual_codec",
         "byte_policy": "indices_and_codebooks_charged_against_replay_gain",
+    },
+    HprcRepresentationFamily.PVQ_NERV.value: {
+        "position": "latent_codebook_base_or_residual_codec",
+        "byte_policy": "gain_shape_codebook_indices_charged_against_replay_gain",
+    },
+    HprcRepresentationFamily.RT_VQ_NERV.value: {
+        "position": "residual_token_vq_base_or_residual_codec",
+        "byte_policy": (
+            "residual_tokens_admitted_only_by_full_video_value_per_byte"
+        ),
     },
     HprcRepresentationFamily.SIREN_IMPLICIT.value: {
         "position": "implicit_residual_or_procedural_atom",

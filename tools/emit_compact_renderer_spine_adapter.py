@@ -48,6 +48,11 @@ FALSE_AUTHORITY: dict[str, Any] = {
 }
 
 FAMILY_ALIASES: dict[str, HprcRepresentationFamily] = {
+    "pr95": HprcRepresentationFamily.PR95_HNERV,
+    "pr95_hnerv": HprcRepresentationFamily.PR95_HNERV,
+    "hnerv": HprcRepresentationFamily.PR95_HNERV,
+    "hnerv_packed": HprcRepresentationFamily.HNERV_PACKED,
+    "packed_hnerv": HprcRepresentationFamily.HNERV_PACKED,
     "rnerv": HprcRepresentationFamily.RNERV,
     "srnerv": HprcRepresentationFamily.SR_NERV,
     "sr_nerv": HprcRepresentationFamily.SR_NERV,
@@ -129,6 +134,7 @@ def emit_compact_renderer_spine_adapter(
     trained_weights_provenance: str,
     trained_latents_provenance: str,
     allow_untrained_fixture: bool = False,
+    manifest_extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     fam = _coerce_family(family)
     if not allow_untrained_fixture:
@@ -168,6 +174,7 @@ def emit_compact_renderer_spine_adapter(
             "allow_untrained_fixture": bool(allow_untrained_fixture),
             "source_artifacts": source_rows,
             "promotion_rule": "receiver_proof_and_exact_gate_required; proxy wins forbidden",
+            **(manifest_extra or {}),
         },
     )
     projection = write_representation_spine_projection(
@@ -217,6 +224,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--trained-weights-provenance", default="")
     parser.add_argument("--trained-latents-provenance", default="")
     parser.add_argument("--allow-untrained-fixture", action="store_true")
+    parser.add_argument(
+        "--num-pairs",
+        type=int,
+        help="Declared full-video pair coverage for coverage gating.",
+    )
     return parser.parse_args(argv)
 
 
@@ -234,6 +246,14 @@ def main(argv: list[str] | None = None) -> int:
         trained_weights_provenance=args.trained_weights_provenance,
         trained_latents_provenance=args.trained_latents_provenance,
         allow_untrained_fixture=bool(args.allow_untrained_fixture),
+        manifest_extra=(
+            None
+            if args.num_pairs is None
+            else {
+                "num_pairs": int(args.num_pairs),
+                "coverage_source": "compact_renderer_spine_adapter_cli",
+            }
+        ),
     )
     print(
         "[compact-spine] "

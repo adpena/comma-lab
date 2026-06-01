@@ -10,6 +10,7 @@ and posterior hook. It is intentionally score-authority false.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -114,11 +115,29 @@ def run_generated_inflate_receiver_proof(
         stderr = _safe_text(exc.stderr)
     wall_seconds = round(time.monotonic() - started, 6)
 
-    output_present = receiver_raw.is_file()
-    output_sha256 = sha256_file(receiver_raw) if output_present else None
-    output_bytes = receiver_raw.stat().st_size if output_present else None
+    if (
+        expected_receiver_output_name is None
+        and not receiver_raw.exists()
+    ):
+        raw_dir_candidate = receiver_out_dir / Path(video_name).with_suffix(".raw").name
+        if raw_dir_candidate.exists():
+            receiver_raw = raw_dir_candidate
+    output_kind = "file" if receiver_raw.is_file() else "directory" if receiver_raw.is_dir() else "missing"
+    output_present = output_kind in {"file", "directory"}
+    if output_kind == "file":
+        output_sha256 = sha256_file(receiver_raw)
+        output_bytes = receiver_raw.stat().st_size
+    elif output_kind == "directory":
+        output_sha256 = tree_sha256(receiver_raw)
+        output_bytes = _tree_byte_count(receiver_raw)
+    else:
+        output_sha256 = None
+        output_bytes = None
     if output_present and not retain_receiver_output:
-        receiver_raw.unlink()
+        if output_kind == "directory":
+            shutil.rmtree(receiver_raw)
+        else:
+            receiver_raw.unlink()
     if not retain_receiver_output:
         try:
             receiver_out_dir.rmdir()
@@ -168,6 +187,7 @@ def run_generated_inflate_receiver_proof(
         "file_list_path": _repo_relative(file_list, repo_root),
         "receiver_output_dir": _repo_relative(receiver_out_dir, repo_root),
         "receiver_output_path": _repo_relative(receiver_raw, repo_root),
+        "receiver_output_kind": output_kind,
         "receiver_output_present_during_proof": output_present,
         "receiver_output_retained": bool(retain_receiver_output and output_present),
         "receiver_output_sha256": output_sha256,
@@ -188,6 +208,14 @@ def run_generated_inflate_receiver_proof(
     proof["proof_path"] = _repo_relative(proof_path, repo_root)
     write_json(proof_path, proof)
     return proof
+
+
+def _tree_byte_count(path: Path) -> int:
+    total = 0
+    for child in path.rglob("*"):
+        if child.is_file():
+            total += child.stat().st_size
+    return total
 
 
 class _SingleArchiveBoundRuntimeCandidateAdapter:

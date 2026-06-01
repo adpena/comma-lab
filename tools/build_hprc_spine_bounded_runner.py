@@ -41,6 +41,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Exact gate bridge/report JSON to attach when available. Repeatable.",
     )
+    parser.add_argument(
+        "--receiver-proof",
+        action="append",
+        default=[],
+        type=Path,
+        help="Generated inflate receiver proof JSON to attach when available. Repeatable.",
+    )
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
     parser.add_argument("--force", action="store_true")
@@ -53,6 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         acquisition_report_path=args.acquisition_report,
         repo_root=args.repo_root,
         mlx_profile_paths=args.mlx_profile,
+        receiver_proof_report_paths=args.receiver_proof,
         exact_gate_report_paths=args.exact_gate_report,
     )
     out = _resolve(args.output, base=args.repo_root)

@@ -80,3 +80,21 @@ def test_emit_rt_vq_nerv_spine_blocks_promotion_until_receiver_and_exact(
     assert "trained_latents_or_tokens" in section_roles
     assert "codebooks" in section_roles
     assert "selectors" in section_roles
+
+
+def test_emit_pr95_hnerv_alias_projects_control_base(tmp_path: Path) -> None:
+    decoder = _blob(tmp_path / "decoder.pt", b"trained-pr95-mlx-weights")
+    latents = _blob(tmp_path / "latents.npy", b"trained-pr95-mlx-latents")
+
+    report = emit_compact_renderer_spine_adapter(
+        family="pr95_hnerv",
+        output_dir=tmp_path / "out",
+        decoder_blob=decoder,
+        latents_blob=latents,
+        trained_weights_provenance="mlx-smoke-checkpoint",
+        trained_latents_provenance="mlx-smoke-latents",
+    )
+
+    assert report["family"] == HprcRepresentationFamily.PR95_HNERV.value
+    assert report["score_claim"] is False
+    assert Path(report["projection"]["manifest_path"]).is_file()
