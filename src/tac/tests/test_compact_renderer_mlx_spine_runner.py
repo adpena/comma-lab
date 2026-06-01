@@ -19,6 +19,7 @@ import tools.run_compact_renderer_mlx_spine_runner as runner_mod  # noqa: E402
 from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
     _parse_args,
+    _require_scorer_upstream_dir_for_distillation,
     adapt_pr95_mlx_report_to_spine,
     adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
@@ -300,6 +301,8 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
         [
             "--execute-family",
             "pact_nerv_vq",
+            "--upstream-dir",
+            "canonical_upstream",
             "--segnet-distillation-weight",
             "0.25",
             "--pose-distillation-weight",
@@ -331,6 +334,7 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     )
 
     assert args.segnet_distillation_weight == 0.25
+    assert args.upstream_dir == Path("canonical_upstream")
     assert args.pose_distillation_weight == 0.75
     assert args.segnet_distillation_objective == "boundary_argmax_hinge"
     assert args.distillation_temperature == 1.5
@@ -347,6 +351,26 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
         Path("hprc_queue_followup_report.json")
     ]
     assert args.allow_segnet_only_research is False
+
+
+def test_real_scorer_distillation_requires_complete_upstream_snapshot(
+    tmp_path: Path,
+) -> None:
+    incomplete = tmp_path / "upstream"
+    (incomplete / "models").mkdir(parents=True)
+    (incomplete / "modules.py").write_text("# synthetic upstream\n", encoding="utf-8")
+
+    with pytest.raises(runner_mod.CompactRendererMlxSpineRunnerError) as exc:
+        _require_scorer_upstream_dir_for_distillation(
+            upstream_dir=incomplete,
+            segnet_distillation_weight=0.1,
+            pose_distillation_weight=0.0,
+        )
+
+    msg = str(exc.value)
+    assert "--upstream-dir" in msg
+    assert "posenet.safetensors" in msg
+    assert "segnet.safetensors" in msg
 
 
 def test_selector_v4_execute_parser_exposes_real_family_controls() -> None:

@@ -68,6 +68,7 @@ DEFAULT_PR95_RECEIVER_RUNTIME_DIR = (
     / "experiments/results/public_pr_archive_release_view"
     / "public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
 )
+DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
 TARGET_FAMILIES = (
     "pr95_hnerv",
     "hi_nerv",
@@ -396,6 +397,62 @@ def _scorer_coupled_rd_metadata() -> dict[str, Any]:
         ),
         "authority": "planning_metadata_only_not_score_authority",
     }
+
+
+def _resolve_scorer_upstream_dir(
+    repo_root: str | Path,
+    upstream_dir: str | Path | None,
+) -> Path:
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    if upstream_dir is None:
+        return (root / "upstream").resolve(strict=False)
+    candidate = Path(upstream_dir).expanduser()
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    return candidate.resolve(strict=False)
+
+
+def _file_sha256_or_none(path: Path) -> str | None:
+    return _sha256_file(path) if path.is_file() else None
+
+
+def _scorer_upstream_metadata(upstream_dir: str | Path) -> dict[str, Any]:
+    upstream = Path(upstream_dir).expanduser().resolve(strict=False)
+    modules_path = upstream / "modules.py"
+    posenet_path = upstream / "models" / "posenet.safetensors"
+    segnet_path = upstream / "models" / "segnet.safetensors"
+    return {
+        "schema": "compact_runner_scorer_upstream_snapshot.v1",
+        "upstream_dir": upstream.as_posix(),
+        "modules_py_exists": modules_path.is_file(),
+        "modules_py_sha256": _file_sha256_or_none(modules_path),
+        "posenet_safetensors_exists": posenet_path.is_file(),
+        "posenet_safetensors_sha256": _file_sha256_or_none(posenet_path),
+        "segnet_safetensors_exists": segnet_path.is_file(),
+        "segnet_safetensors_sha256": _file_sha256_or_none(segnet_path),
+    }
+
+
+def _require_scorer_upstream_dir_for_distillation(
+    *,
+    upstream_dir: str | Path,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+) -> None:
+    if segnet_distillation_weight <= 0.0 and pose_distillation_weight <= 0.0:
+        return
+    upstream = Path(upstream_dir).expanduser().resolve(strict=False)
+    required = (
+        upstream / "modules.py",
+        upstream / "models" / "posenet.safetensors",
+        upstream / "models" / "segnet.safetensors",
+    )
+    missing = [path.as_posix() for path in required if not path.is_file()]
+    if missing:
+        raise CompactRendererMlxSpineRunnerError(
+            "real scorer distillation requires --upstream-dir to point at the "
+            "pinned contest upstream snapshot; missing: " + ", ".join(missing)
+        )
 
 
 def adapt_pr95_mlx_report_to_spine(
@@ -1015,6 +1072,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     distillation_device: str,
     allow_segnet_only_research: bool,
     random_seed: int,
+    scorer_upstream_dir: Path,
     repo_root: Path,
 ) -> Any:
     import mlx.core as mx
@@ -1060,6 +1118,11 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             "--pose-distillation-weight > 0, or explicitly pass "
             "--allow-segnet-only-research for a false-authority SegNet-axis probe."
         )
+    _require_scorer_upstream_dir_for_distillation(
+        upstream_dir=scorer_upstream_dir,
+        segnet_distillation_weight=segnet_distillation_weight,
+        pose_distillation_weight=pose_distillation_weight,
+    )
     packet = parse_pr95_public_archive_zip(Path(source_archive_zip))
     if pairs > int(packet.latents.shape[0]):
         raise CompactRendererMlxSpineRunnerError(
@@ -1129,6 +1192,9 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                scorer_upstream_dir
+            ),
             "pr95_public_archive_seeded": True,
             "stage8_muon_continuation_optimizer_wired": False,
             "stage8_muon_continuation_blocker": (
@@ -1154,7 +1220,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     if segnet_distillation_weight > 0.0:
         scorer_teacher = build_mlx_segnet_pair_teacher(
             teacher_probe_bundle,
-            upstream_dir=repo_root / "upstream",
+            upstream_dir=scorer_upstream_dir,
             device=distillation_device,
         )
         learnable_student_head = build_learnable_student_head(
@@ -1164,7 +1230,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     if pose_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
-            upstream_dir=repo_root / "upstream",
+            upstream_dir=scorer_upstream_dir,
             device=distillation_device,
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
@@ -1234,6 +1300,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
     allow_segnet_only_research: bool = False,
+    scorer_upstream_dir: str | Path | None = None,
     run_receiver_proof: bool = False,
     receiver_proof_runtime_dir: str | Path = DEFAULT_PR95_RECEIVER_RUNTIME_DIR,
     keep_receiver_proof_output: bool = False,
@@ -1245,6 +1312,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     """Train/export a public-PR95-seeded HNeRV candidate through the spine."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise CompactRendererMlxSpineRunnerError(
@@ -1272,6 +1340,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             distillation_device=distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
             random_seed=random_seed,
+            scorer_upstream_dir=scorer_upstream,
             repo_root=root,
         )
     except Exception as exc:
@@ -1285,6 +1354,9 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             {
                 "execute_family": "pr95_hnerv",
                 "failure": repr(exc),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
                 "blockers": ["pr95_hnerv_mlx_scoreaware_or_export_failed"],
             }
         )
@@ -1435,6 +1507,9 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
                 "stage8_muon_continuation_optimizer_wired": False,
                 "stage8_muon_continuation_blocker": (
                     "shared_mlx_scoreaware_harness_lacks_stage8_start_epoch_offset"
@@ -1670,6 +1745,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
     allow_segnet_only_research: bool = False,
+    scorer_upstream_dir: str | Path | None = None,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
     coder_qat_quant_residual_weight: float = 1.0e-4,
@@ -1682,6 +1758,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     """Train/export a tiny real-video PACT-NeRV-VQ candidate through the spine."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
     out = Path(output_dir).expanduser().resolve(strict=False)
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
@@ -1717,6 +1794,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
             random_seed=random_seed,
+            scorer_upstream_dir=scorer_upstream,
             repo_root=root,
         )
     except Exception as exc:
@@ -1730,6 +1808,9 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             {
                 "execute_family": "pact_nerv_vq",
                 "failure": repr(exc),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
                 "blockers": ["pact_nerv_vq_mlx_smoke_or_export_failed"],
             }
         )
@@ -1805,6 +1886,9 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
                 "coder_aware_qat": {
                     "enabled": bool(coder_aware_qat),
                     "quant_bits": int(coder_qat_quant_bits),
@@ -2050,6 +2134,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
     allow_segnet_only_research: bool = False,
+    scorer_upstream_dir: str | Path | None = None,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
     coder_qat_quant_residual_weight: float = 1.0e-4,
@@ -2062,6 +2147,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     """Train/export a tiny real-video PACT-NeRV-SELECTOR-V4 candidate."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise CompactRendererMlxSpineRunnerError(
@@ -2096,6 +2182,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
             random_seed=random_seed,
+            scorer_upstream_dir=scorer_upstream,
             repo_root=root,
         )
     except Exception as exc:
@@ -2109,6 +2196,9 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             {
                 "execute_family": "pact_nerv_selector_v4",
                 "failure": repr(exc),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
                 "blockers": ["pact_nerv_selector_v4_mlx_smoke_or_export_failed"],
             }
         )
@@ -2190,6 +2280,9 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
                 "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
                 "coder_aware_qat": {
                     "enabled": bool(coder_aware_qat),
@@ -2652,6 +2745,7 @@ def _run_pact_nerv_vq_mlx_smoke(
     coder_qat_magnitude_weight: float,
     coder_qat_delta_weight: float,
     random_seed: int,
+    scorer_upstream_dir: Path,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
@@ -2696,6 +2790,11 @@ def _run_pact_nerv_vq_mlx_smoke(
             "--pose-distillation-weight > 0, or explicitly pass "
             "--allow-segnet-only-research for a false-authority SegNet-axis probe."
         )
+    _require_scorer_upstream_dir_for_distillation(
+        upstream_dir=scorer_upstream_dir,
+        segnet_distillation_weight=segnet_distillation_weight,
+        pose_distillation_weight=pose_distillation_weight,
+    )
     cfg = PactNervVqConfig(
         latent_dim=int(latent_dim),
         embed_dim=int(embed_dim),
@@ -2762,6 +2861,9 @@ def _run_pact_nerv_vq_mlx_smoke(
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                scorer_upstream_dir
+            ),
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_codec": str(decoder_codec),
         },
@@ -2788,7 +2890,7 @@ def _run_pact_nerv_vq_mlx_smoke(
     if segnet_distillation_weight > 0.0:
         scorer_teacher = build_mlx_segnet_pair_teacher(
             teacher_probe_bundle,
-            upstream_dir=repo_root / "upstream",
+            upstream_dir=scorer_upstream_dir,
             device=distillation_device,
         )
         learnable_student_head = build_learnable_student_head(
@@ -2798,7 +2900,7 @@ def _run_pact_nerv_vq_mlx_smoke(
     if pose_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
-            upstream_dir=repo_root / "upstream",
+            upstream_dir=scorer_upstream_dir,
             device=distillation_device,
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
@@ -2872,6 +2974,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     coder_qat_magnitude_weight: float,
     coder_qat_delta_weight: float,
     random_seed: int,
+    scorer_upstream_dir: Path,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
@@ -2924,6 +3027,11 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             "Pass --pose-distillation-weight > 0, or explicitly pass "
             "--allow-segnet-only-research for a false-authority SegNet-axis probe."
         )
+    _require_scorer_upstream_dir_for_distillation(
+        upstream_dir=scorer_upstream_dir,
+        segnet_distillation_weight=segnet_distillation_weight,
+        pose_distillation_weight=pose_distillation_weight,
+    )
     cfg = PactNervSelectorV4Config(
         latent_dim=int(latent_dim),
         embed_dim=int(embed_dim),
@@ -2991,6 +3099,9 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                scorer_upstream_dir
+            ),
             "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_codec": str(decoder_codec),
@@ -3016,7 +3127,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     if segnet_distillation_weight > 0.0:
         scorer_teacher = build_mlx_segnet_pair_teacher(
             teacher_probe_bundle,
-            upstream_dir=repo_root / "upstream",
+            upstream_dir=scorer_upstream_dir,
             device=distillation_device,
         )
         learnable_student_head = build_learnable_student_head(
@@ -3026,7 +3137,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     if pose_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
-            upstream_dir=repo_root / "upstream",
+            upstream_dir=scorer_upstream_dir,
             device=distillation_device,
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
@@ -3224,6 +3335,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--receiver-proof-timeout-seconds",
         default=1800,
         type=int,
+    )
+    parser.add_argument(
+        "--upstream-dir",
+        default=DEFAULT_UPSTREAM_DIR,
+        type=Path,
+        help=(
+            "Pinned contest upstream snapshot for real scorer teachers "
+            "(modules.py plus scorer safetensors). Separate from --repo-root "
+            "so clean SSD code worktrees can reuse the canonical upstream bytes."
+        ),
     )
     parser.add_argument("--source-video-path", default=Path("upstream/videos/0.mkv"), type=Path)
     parser.add_argument("--max-frames", default=4, type=int)
@@ -3479,6 +3600,7 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            scorer_upstream_dir=args.upstream_dir,
             run_receiver_proof=args.run_receiver_proof,
             receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
             keep_receiver_proof_output=args.keep_receiver_proof_output,
@@ -3512,6 +3634,7 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            scorer_upstream_dir=args.upstream_dir,
             coder_aware_qat=args.coder_aware_qat,
             coder_qat_quant_bits=args.coder_qat_quant_bits,
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
@@ -3546,6 +3669,7 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            scorer_upstream_dir=args.upstream_dir,
             coder_aware_qat=args.coder_aware_qat,
             coder_qat_quant_bits=args.coder_qat_quant_bits,
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
