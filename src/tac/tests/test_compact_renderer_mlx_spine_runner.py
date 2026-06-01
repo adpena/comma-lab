@@ -126,7 +126,7 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert "pvq_nerv" in families
     assert "rt_vq_nerv" in families
     assert "pact_nerv_selector_v4" in families
-    assert families["pr95_hnerv"]["status"] == "checkpoint_adapter_available"
+    assert families["pr95_hnerv"]["status"] == "executable_mlx_backend_available"
     assert families["pact_nerv_vq"]["status"] == "executable_mlx_backend_available"
     assert families["pvq_nerv"]["status"] == "executable_via_pact_nerv_vq_adapter"
     assert families["rnerv"]["status"] == "migration_required"
@@ -148,6 +148,9 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         for row in report["compact_base_campaign_rows"]
     }
     assert rows[("pact_nerv_vq", 178_000)]["route_status"] == (
+        "queued_for_mlx_training_archive_export_receiver_proof"
+    )
+    assert rows[("pr95_hnerv", 178_000)]["route_status"] == (
         "queued_for_mlx_training_archive_export_receiver_proof"
     )
     assert rows[("pvq_nerv", 178_000)]["canonical_family"] == "pact_nerv_vq"
@@ -200,3 +203,23 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
         Path("hprc_queue_followup_report.json")
     ]
     assert args.allow_segnet_only_research is False
+
+
+def test_pr95_hnerv_execute_parser_exposes_public_archive_seed() -> None:
+    args = _parse_args(
+        [
+            "--execute-family",
+            "pr95_hnerv",
+            "--pr95-source-archive",
+            "public_pr95/archive.zip",
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "2",
+        ]
+    )
+
+    assert args.execute_family == "pr95_hnerv"
+    assert args.pr95_source_archive == Path("public_pr95/archive.zip")
+    assert args.num_pairs == 600
+    assert args.epochs == 2

@@ -29,6 +29,10 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
+from tac.substrates.hprc.representation_spine import (  # noqa: E402
+    build_pr95_hnerv_spine_from_archive,
+    write_representation_spine_projection,
+)
 from tac.substrates.hprc.spine_acquisition import (  # noqa: E402
     DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
     build_spine_acquisition_report,
@@ -46,6 +50,11 @@ DEFAULT_SSD_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact"),
     Path("/Volumes/APDataStore/pact"),
 )
+DEFAULT_PR95_SOURCE_ARCHIVE_ZIP = (
+    REPO_ROOT
+    / "experiments/results/public_pr_archive_release_view"
+    / "public_pr95_intake_20260505_auto/archive.zip"
+)
 TARGET_FAMILIES = (
     "pr95_hnerv",
     "rnerv",
@@ -56,16 +65,16 @@ TARGET_FAMILIES = (
     "pact_nerv_selector_v4",
     "pact_nerv_vq",
 )
-EXECUTABLE_FAMILIES = ("pact_nerv_vq",)
+EXECUTABLE_FAMILIES = ("pr95_hnerv", "pact_nerv_vq")
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
         "canonical_family": "pr95_hnerv",
-        "backend_status": "checkpoint_adapter_available",
-        "trainer_kind": "pr95_mlx_8stage_continuation_control",
-        "trainer_entrypoint": "tools/run_pr95_mlx_long_training.py",
-        "archive_exporter": None,
-        "receiver_proof": "blocked_until_pr95_archive_runtime_adapter_emits_byte_closed_packet",
-        "next_action": "continue_or_import_pr95_mlx_checkpoint_then_emit_spine_projection",
+        "backend_status": "executable_mlx_backend_available",
+        "trainer_kind": "canonical_mlx_score_aware_harness_public_pr95_seeded",
+        "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family pr95_hnerv",
+        "archive_exporter": "tac.local_acceleration.pr95_hnerv_mlx.write_pr95_public_archive_zip",
+        "receiver_proof": "pr95_public_inflate_sh_required_before_exact_gate",
+        "next_action": "run_pr95_hnerv_scoreaware_full_pair_continuation_then_receiver_proof",
     },
     "pact_nerv_vq": {
         "canonical_family": "pact_nerv_vq",
@@ -371,6 +380,406 @@ def execute_pr95_mlx_smoke_and_adapt(
             "adapted_report_path": adapted["report_path"],
             "adapted_blockers": adapted["blockers"],
             "blockers": adapted["blockers"],
+        }
+    )
+    path = out / "compact_renderer_mlx_spine_runner_report.json"
+    _write_json(path, final)
+    return {**final, "report_path": path.as_posix()}
+
+
+def _run_pr95_hnerv_mlx_scoreaware_smoke(
+    *,
+    output_dir: Path,
+    num_pairs: int,
+    epochs: int,
+    batch_pair_indices_per_step: int,
+    learning_rate: float,
+    source_video_path: str | Path,
+    source_archive_zip: str | Path,
+    latent_dim: int,
+    base_channels: int,
+    ema_decay: float,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    segnet_distillation_objective: str,
+    distillation_temperature: float,
+    segnet_tau_boundary: float,
+    segnet_hinge_margin: float,
+    distillation_device: str,
+    allow_segnet_only_research: bool,
+    random_seed: int,
+    repo_root: Path,
+) -> Any:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.local_acceleration.pr95_hnerv_mlx import (
+        HNeRVSyntheticTrainingBundleMLX,
+        load_pytorch_state_dict_into_mlx,
+        parse_pr95_public_archive_zip,
+        pytorch_state_dict_from_mlx,
+        write_pr95_public_archive_zip,
+    )
+    from tac.substrates._shared.mlx_score_aware import (
+        RendererBundle,
+        build_mlx_posenet_pair_teacher,
+        build_mlx_segnet_pair_teacher,
+        decode_mlx_targets,
+        run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
+    )
+
+    pairs = int(num_pairs)
+    if pairs < 1:
+        raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
+    if segnet_distillation_weight < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "segnet_distillation_weight must be >= 0"
+        )
+    if pose_distillation_weight < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_weight must be >= 0"
+        )
+    if (
+        segnet_distillation_weight > 0.0
+        and pose_distillation_weight <= 0.0
+        and not allow_segnet_only_research
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "SegNet-bound PR95 training must also bind PoseNet. Pass "
+            "--pose-distillation-weight > 0, or explicitly pass "
+            "--allow-segnet-only-research for a false-authority SegNet-axis probe."
+        )
+    packet = parse_pr95_public_archive_zip(Path(source_archive_zip))
+    if pairs > int(packet.latents.shape[0]):
+        raise CompactRendererMlxSpineRunnerError(
+            f"requested {pairs} pairs but source archive has "
+            f"{int(packet.latents.shape[0])} latent rows"
+        )
+    if int(latent_dim) != int(packet.latents.shape[1]):
+        raise CompactRendererMlxSpineRunnerError(
+            f"latent_dim={latent_dim} does not match source archive "
+            f"latent_dim={int(packet.latents.shape[1])}"
+        )
+    target_rgb_0, target_rgb_1 = decode_mlx_targets(
+        source_video_path,
+        num_pairs=pairs,
+        output_height=384,
+        output_width=512,
+    )
+    model = HNeRVSyntheticTrainingBundleMLX(
+        latent_count=pairs,
+        latent_dim=int(latent_dim),
+        base_channels=int(base_channels),
+        seed=int(random_seed),
+        output_layout="n2chw",
+    )
+    load_pytorch_state_dict_into_mlx(model.decoder, packet.state_dict)
+    model.latents = mx.array(np.asarray(packet.latents[:pairs], dtype=np.float32))
+
+    def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
+        export = write_pr95_public_archive_zip(
+            pytorch_state_dict_from_mlx(model_obj.decoder),
+            np.asarray(model_obj.latents).astype(np.float32, copy=False),
+            meta={
+                "n_pairs": pairs,
+                "latent_dim": int(latent_dim),
+                "base_channels": int(base_channels),
+                "eval_size": [384, 512],
+                "training_fidelity": (
+                    "pr95_public_archive_seeded_scoreaware_mlx_advisory"
+                ),
+                "source_archive_sha256": packet.archive_zip_sha256,
+            },
+            output_zip_path=archive_output_dir / "pr95_public_archive.zip",
+        )
+        return (
+            Path(export["archive_zip_path"]),
+            str(export["archive_zip_sha256"]),
+            int(export["archive_zip_bytes"]),
+        )
+
+    artifact_metadata = {
+        "schema": "compact_pr95_hnerv_scoreaware_mlx_runner_metadata.v1",
+        "family": "pr95_hnerv",
+        "num_pairs": pairs,
+        "full_video_pairs_required_for_promotion": 600,
+        "source_archive_zip": str(Path(source_archive_zip)),
+        "source_archive_sha256": packet.archive_zip_sha256,
+        "archive_exporter": (
+            "tac.local_acceleration.pr95_hnerv_mlx.write_pr95_public_archive_zip"
+        ),
+        "score_aware_training": {
+            "schema": "compact_pr95_hnerv_scoreaware_training.v1",
+            "segnet_distillation_weight": float(segnet_distillation_weight),
+            "pose_distillation_weight": float(pose_distillation_weight),
+            "segnet_distillation_objective": segnet_distillation_objective,
+            "distillation_temperature": float(distillation_temperature),
+            "segnet_tau_boundary": float(segnet_tau_boundary),
+            "segnet_hinge_margin": float(segnet_hinge_margin),
+            "distillation_device": distillation_device,
+            "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "pr95_public_archive_seeded": True,
+            "stage8_muon_continuation_optimizer_wired": False,
+            "stage8_muon_continuation_blocker": (
+                "shared_mlx_scoreaware_harness_lacks_stage8_start_epoch_offset"
+            ),
+        },
+        "score_authority": "false_macos_mlx_research_signal",
+    }
+    bundle_kwargs: dict[str, Any] = {
+        "model": model,
+        "target_rgb_0": target_rgb_0,
+        "target_rgb_1": target_rgb_1,
+        "num_pairs": pairs,
+        "forward_convention": "call_b2chw_255",
+        "export_archive_fn": _export_archive,
+        "substrate_artifact_metadata": artifact_metadata,
+    }
+    teacher_probe_bundle = RendererBundle(**bundle_kwargs)
+    scorer_teacher = None
+    learnable_student_head = None
+    pose_scorer_teacher = None
+    learnable_pose_student_head = None
+    if segnet_distillation_weight > 0.0:
+        scorer_teacher = build_mlx_segnet_pair_teacher(
+            teacher_probe_bundle,
+            upstream_dir=repo_root / "upstream",
+            device=distillation_device,
+        )
+        learnable_student_head = build_learnable_student_head(
+            num_classes=int(scorer_teacher.num_classes),
+            seed=int(random_seed),
+        )
+    if pose_distillation_weight > 0.0:
+        pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+            teacher_probe_bundle,
+            upstream_dir=repo_root / "upstream",
+            device=distillation_device,
+        )
+        learnable_pose_student_head = build_learnable_pose_student_head(
+            pose_dims=int(pose_scorer_teacher.pose_dims),
+            seed=int(random_seed) + 1,
+        )
+    bundle = RendererBundle(
+        **bundle_kwargs,
+        distillation_weight=float(segnet_distillation_weight),
+        scorer_teacher=scorer_teacher,
+        learnable_student_head=learnable_student_head,
+        distillation_temperature=float(distillation_temperature),
+        segnet_distillation_objective=segnet_distillation_objective,
+        segnet_tau_boundary=float(segnet_tau_boundary),
+        segnet_hinge_margin=float(segnet_hinge_margin),
+        distillation_num_classes=(
+            int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
+        ),
+        pose_distillation_weight=float(pose_distillation_weight),
+        pose_scorer_teacher=pose_scorer_teacher,
+        learnable_pose_student_head=learnable_pose_student_head,
+        pose_dims=int(pose_scorer_teacher.pose_dims)
+        if pose_scorer_teacher is not None
+        else 6,
+        allow_segnet_only_research=bool(allow_segnet_only_research),
+    )
+    return run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="compact_runner_pr95_hnerv_mlx",
+        lane_id="lane_compact_renderer_mlx_spine_runner_pr95_hnerv_20260601",
+        output_dir=output_dir,
+        epochs=int(epochs),
+        batch_pair_indices_per_step=max(1, int(batch_pair_indices_per_step)),
+        learning_rate=float(learning_rate),
+        ema_decay=float(ema_decay),
+        seed=int(random_seed),
+        checkpoint_interval_epochs=max(1, int(epochs)),
+        pr95_faithful_curriculum_enabled=False,
+        notes=(
+            "Compact PR95/HNeRV MLX spine runner seeded from the public PR95 "
+            "archive, trained on real contest-video targets, exported as a "
+            "PR95-compatible byte-closed archive, and false-authority MLX only."
+        ),
+    )
+
+
+def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
+    *,
+    output_dir: str | Path,
+    num_pairs: int,
+    epochs: int,
+    batch_pair_indices_per_step: int,
+    learning_rate: float,
+    source_video_path: str | Path,
+    source_archive_zip: str | Path,
+    hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
+    latent_dim: int = 28,
+    base_channels: int = 36,
+    ema_decay: float = 0.9,
+    segnet_distillation_weight: float = 0.0,
+    pose_distillation_weight: float = 0.0,
+    segnet_distillation_objective: str = "kl_t2",
+    distillation_temperature: float = 2.0,
+    segnet_tau_boundary: float = 1.0,
+    segnet_hinge_margin: float = 1.0,
+    distillation_device: str = "cpu",
+    allow_segnet_only_research: bool = False,
+    random_seed: int = 0,
+    allow_overwrite: bool = False,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Train/export a public-PR95-seeded HNeRV candidate through the spine."""
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+        raise CompactRendererMlxSpineRunnerError(
+            f"output dir is non-empty; pass --overwrite: {out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+    try:
+        artifact = _run_pr95_hnerv_mlx_scoreaware_smoke(
+            output_dir=out / "pr95_hnerv_mlx_training",
+            num_pairs=num_pairs,
+            epochs=epochs,
+            batch_pair_indices_per_step=batch_pair_indices_per_step,
+            learning_rate=learning_rate,
+            source_video_path=source_video_path,
+            source_archive_zip=source_archive_zip,
+            latent_dim=latent_dim,
+            base_channels=base_channels,
+            ema_decay=ema_decay,
+            segnet_distillation_weight=segnet_distillation_weight,
+            pose_distillation_weight=pose_distillation_weight,
+            segnet_distillation_objective=segnet_distillation_objective,
+            distillation_temperature=distillation_temperature,
+            segnet_tau_boundary=segnet_tau_boundary,
+            segnet_hinge_margin=segnet_hinge_margin,
+            distillation_device=distillation_device,
+            allow_segnet_only_research=allow_segnet_only_research,
+            random_seed=random_seed,
+            repo_root=root,
+        )
+    except Exception as exc:
+        blocker_report = _base_report(
+            output_dir=out,
+            mode="pr95_hnerv_mlx_scoreaware_failed",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        blocker_report.update(
+            {
+                "execute_family": "pr95_hnerv",
+                "failure": repr(exc),
+                "blockers": ["pr95_hnerv_mlx_scoreaware_or_export_failed"],
+            }
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, blocker_report)
+        return {**blocker_report, "report_path": path.as_posix()}
+
+    artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
+    archive_path = artifact_dict.get("archive_path")
+    archive_file = _optional_existing(archive_path, base=root)
+    spine_projection_error: str | None = None
+    projection_paths: list[Path] = []
+    acquisition_path = out / "hprc_spine_acquisition_report.json"
+    runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
+    selected_runner_rows: list[dict[str, Any]] = []
+    runner_plan_blockers: list[Any] = []
+    if archive_file is not None:
+        try:
+            spine = build_pr95_hnerv_spine_from_archive(archive_file)
+            projection = write_representation_spine_projection(
+                output_dir=out / "pr95_hnerv_spine",
+                spine=spine,
+                basename="pr95_hnerv_representation_spine",
+            )
+            projection_manifest = Path(projection["manifest_path"])
+            projection_paths = [projection_manifest]
+            acquisition = build_spine_acquisition_report(
+                projection_manifest_paths=projection_paths,
+                hard_byte_ceilings=hard_byte_ceilings,
+            )
+            _write_json(acquisition_path, acquisition)
+            runner_plan = build_spine_bounded_runner_plan(
+                acquisition_report_path=acquisition_path,
+                hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
+                repo_root=root,
+            )
+            write_spine_bounded_runner_plan(
+                output_path=runner_plan_path,
+                plan=runner_plan,
+                allow_overwrite=True,
+            )
+            selected_runner_rows = list(runner_plan.get("selected_runner_rows") or [])
+            runner_plan_blockers = list(runner_plan.get("blockers") or [])
+        except Exception as exc:
+            spine_projection_error = repr(exc)
+    blockers: list[Any] = [
+        "receiver_proof_not_executed",
+        "full_video_mlx_scorer_replay_not_attached",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    if int(num_pairs) < 600:
+        blockers.append("partial_pair_coverage_not_promotion_comparable")
+    if archive_path is None:
+        blockers.append("pr95_hnerv_archive_export_missing")
+    if archive_file is None:
+        blockers.append("pr95_hnerv_archive_export_missing_or_unreadable")
+    if spine_projection_error is not None:
+        blockers.append("pr95_hnerv_spine_projection_failed")
+    blockers.extend(runner_plan_blockers)
+
+    final = _base_report(
+        output_dir=out,
+        mode="executed_pr95_hnerv_mlx_scoreaware_and_exported",
+        hard_byte_ceilings=hard_byte_ceilings,
+        repo_root=root,
+    )
+    final.update(
+        {
+            "execute_family": "pr95_hnerv",
+            "num_pairs": int(num_pairs),
+            "coverage_valid_for_base_comparison": int(num_pairs) >= 600,
+            "training_artifact": artifact_dict,
+            "archive_path": archive_path,
+            "archive_bytes": artifact_dict.get("archive_bytes"),
+            "archive_sha256": artifact_dict.get("archive_sha256"),
+            "source_archive_zip": str(Path(source_archive_zip)),
+            "projection_manifest_paths": [path.as_posix() for path in projection_paths],
+            "spine_projection_error": spine_projection_error,
+            "acquisition_report_path": (
+                acquisition_path.as_posix() if acquisition_path.is_file() else None
+            ),
+            "bounded_runner_plan_path": (
+                runner_plan_path.as_posix() if runner_plan_path.is_file() else None
+            ),
+            "selected_runner_rows": selected_runner_rows,
+            "ema_decay": float(ema_decay),
+            "score_aware_training": {
+                "schema": "compact_pr95_hnerv_scoreaware_training.v1",
+                "segnet_distillation_weight": float(segnet_distillation_weight),
+                "pose_distillation_weight": float(pose_distillation_weight),
+                "segnet_distillation_objective": segnet_distillation_objective,
+                "distillation_temperature": float(distillation_temperature),
+                "segnet_tau_boundary": float(segnet_tau_boundary),
+                "segnet_hinge_margin": float(segnet_hinge_margin),
+                "distillation_device": distillation_device,
+                "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "stage8_muon_continuation_optimizer_wired": False,
+                "stage8_muon_continuation_blocker": (
+                    "shared_mlx_scoreaware_harness_lacks_stage8_start_epoch_offset"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            "hprc_queue_followup_report_paths": [
+                _resolve(path, base=root).as_posix()
+                for path in hprc_queue_followup_report_paths
+            ],
+            "blockers": _dedupe(blockers),
         }
     )
     path = out / "compact_renderer_mlx_spine_runner_report.json"
@@ -972,6 +1381,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=EXECUTABLE_FAMILIES,
         help="Execute a real MLX compact-family training/export row.",
     )
+    parser.add_argument(
+        "--pr95-source-archive",
+        default=DEFAULT_PR95_SOURCE_ARCHIVE_ZIP,
+        type=Path,
+        help="Public PR95 archive.zip used to seed --execute-family pr95_hnerv.",
+    )
     parser.add_argument("--source-video-path", default=Path("upstream/videos/0.mkv"), type=Path)
     parser.add_argument("--max-frames", default=4, type=int)
     parser.add_argument("--num-pairs", default=2, type=int)
@@ -1097,6 +1512,32 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=output_dir,
             hard_byte_ceilings=ceilings,
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            allow_overwrite=args.overwrite,
+            repo_root=args.repo_root,
+        )
+    elif args.execute_family == "pr95_hnerv":
+        report = execute_pr95_hnerv_mlx_scoreaware_and_adapt(
+            output_dir=output_dir,
+            num_pairs=args.num_pairs,
+            epochs=args.epochs,
+            batch_pair_indices_per_step=args.batch_pairs,
+            learning_rate=args.learning_rate,
+            source_video_path=args.source_video_path,
+            source_archive_zip=args.pr95_source_archive,
+            hard_byte_ceilings=ceilings,
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            latent_dim=args.latent_dim or 28,
+            base_channels=args.base_channels or 36,
+            ema_decay=args.compact_ema_decay,
+            segnet_distillation_weight=args.segnet_distillation_weight,
+            pose_distillation_weight=args.pose_distillation_weight,
+            segnet_distillation_objective=args.segnet_distillation_objective,
+            distillation_temperature=args.distillation_temperature,
+            segnet_tau_boundary=args.segnet_tau_boundary,
+            segnet_hinge_margin=args.segnet_hinge_margin,
+            distillation_device=args.distillation_device,
+            allow_segnet_only_research=args.allow_segnet_only_research,
+            random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
         )
