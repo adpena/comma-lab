@@ -11,29 +11,15 @@ Laplacian fixtures unit-test the math, not a fabricated empirical anchor.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import math
-import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
 
+from tac.substrates.z8_hierarchical_predictive_coding import detail_entropy_headroom as T
+
 _REPO_ROOT = Path(__file__).resolve().parents[5]
-_TOOL_PATH = _REPO_ROOT / "tools" / "z8_detail_coeff_entropy_headroom_report.py"
-
-
-def _load_tool():
-    spec = importlib.util.spec_from_file_location("_z8_headroom_tool", _TOOL_PATH)
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    # Register before exec so @dataclass can resolve cls.__module__ via sys.modules.
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-T = _load_tool()
 
 
 # --------------------------------------------------------------------------- #
