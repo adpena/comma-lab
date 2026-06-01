@@ -1,0 +1,443 @@
+{
+  "campaign_pairs": [
+    32,
+    128,
+    600
+  ],
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "plan_count": 3,
+  "plans": [
+    {
+      "candidate_id": "hprc_compact_receiver_hprc_compact_receiver_campaign_20260601T023730Z_pairs0032",
+      "candidate_params": {
+        "basis_count": 3,
+        "decode_height": 96,
+        "decode_max_pairs": null,
+        "decode_pairs": 32,
+        "decode_width": 128,
+        "epochs": 8,
+        "residual_grid_h": 24,
+        "residual_grid_w": 32,
+        "run_id": "hprc_compact_receiver_campaign_20260601T023730Z_pairs0032",
+        "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "lane_id": "lane_hprc_compact_receiver_training",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_execution": {
+        "device": "local_numpy",
+        "dispatch_attempted": false,
+        "extra_artifact_postconditions": [
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/training_artifact.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/training_artifact.json",
+            "type": "json_false_authority"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_training_export.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_training_export.json",
+            "type": "json_false_authority"
+          },
+          {
+            "equals": "hprc_compact_receiver_training_run_result.v1",
+            "key": "schema",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_training_run_result.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": "contest_video_decode",
+            "key": "source_manifest.source_kind",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_training_run_result.json",
+            "type": "json_equals"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "path_exists"
+          },
+          {
+            "equals": "hprc_generated_receiver_proof.v1",
+            "key": "schema",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "score_claim",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "promotion_eligible",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "ready_for_exact_eval_dispatch",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_archive_export/archive_bound_candidate_adapter_package.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_archive_export/archive_bound_candidate_adapter_package.json",
+            "type": "json_false_authority"
+          }
+        ],
+        "gpu_launched": false,
+        "output_manifest": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_training_run_result.json",
+        "promotable": false,
+        "promotion_eligible": false,
+        "python_command_args": [
+          ".venv/bin/python",
+          "tools/run_hprc_compact_receiver_training.py",
+          "--video-path",
+          "upstream/videos/0.mkv",
+          "--decode-pairs",
+          "32",
+          "--decode-height",
+          "96",
+          "--decode-width",
+          "128",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032",
+          "--output-manifest",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0032/hprc_compact_receiver_training_run_result.json",
+          "--storage-plan-path",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/hprc_compact_receiver_training_storage_plan.json",
+          "--epochs",
+          "8",
+          "--batch-pair-indices-per-step",
+          "16",
+          "--learning-rate",
+          "0.01",
+          "--basis-count",
+          "3",
+          "--residual-grid-h",
+          "24",
+          "--residual-grid-w",
+          "32"
+        ],
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "schema": "hprc_compact_receiver_training_recommended_execution.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "tool": "tools/run_hprc_compact_receiver_training.py",
+        "training_backend": "local_numpy"
+      },
+      "representation_family": "hprc",
+      "schema": "hprc_compact_receiver_training_plan.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_dir": "upstream/videos/0.mkv",
+      "substrate_family": "hierarchical_predictive_coding",
+      "training_signal_kind": "real_contest_video_lowres_frame_fit"
+    },
+    {
+      "candidate_id": "hprc_compact_receiver_hprc_compact_receiver_campaign_20260601T023730Z_pairs0128",
+      "candidate_params": {
+        "basis_count": 3,
+        "decode_height": 96,
+        "decode_max_pairs": null,
+        "decode_pairs": 128,
+        "decode_width": 128,
+        "epochs": 8,
+        "residual_grid_h": 24,
+        "residual_grid_w": 32,
+        "run_id": "hprc_compact_receiver_campaign_20260601T023730Z_pairs0128",
+        "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "lane_id": "lane_hprc_compact_receiver_training",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_execution": {
+        "device": "local_numpy",
+        "dispatch_attempted": false,
+        "extra_artifact_postconditions": [
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/training_artifact.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/training_artifact.json",
+            "type": "json_false_authority"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_training_export.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_training_export.json",
+            "type": "json_false_authority"
+          },
+          {
+            "equals": "hprc_compact_receiver_training_run_result.v1",
+            "key": "schema",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_training_run_result.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": "contest_video_decode",
+            "key": "source_manifest.source_kind",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_training_run_result.json",
+            "type": "json_equals"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "path_exists"
+          },
+          {
+            "equals": "hprc_generated_receiver_proof.v1",
+            "key": "schema",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "score_claim",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "promotion_eligible",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "ready_for_exact_eval_dispatch",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_archive_export/archive_bound_candidate_adapter_package.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_archive_export/archive_bound_candidate_adapter_package.json",
+            "type": "json_false_authority"
+          }
+        ],
+        "gpu_launched": false,
+        "output_manifest": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_training_run_result.json",
+        "promotable": false,
+        "promotion_eligible": false,
+        "python_command_args": [
+          ".venv/bin/python",
+          "tools/run_hprc_compact_receiver_training.py",
+          "--video-path",
+          "upstream/videos/0.mkv",
+          "--decode-pairs",
+          "128",
+          "--decode-height",
+          "96",
+          "--decode-width",
+          "128",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128",
+          "--output-manifest",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0128/hprc_compact_receiver_training_run_result.json",
+          "--storage-plan-path",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/hprc_compact_receiver_training_storage_plan.json",
+          "--epochs",
+          "8",
+          "--batch-pair-indices-per-step",
+          "16",
+          "--learning-rate",
+          "0.01",
+          "--basis-count",
+          "3",
+          "--residual-grid-h",
+          "24",
+          "--residual-grid-w",
+          "32"
+        ],
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "schema": "hprc_compact_receiver_training_recommended_execution.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "tool": "tools/run_hprc_compact_receiver_training.py",
+        "training_backend": "local_numpy"
+      },
+      "representation_family": "hprc",
+      "schema": "hprc_compact_receiver_training_plan.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_dir": "upstream/videos/0.mkv",
+      "substrate_family": "hierarchical_predictive_coding",
+      "training_signal_kind": "real_contest_video_lowres_frame_fit"
+    },
+    {
+      "candidate_id": "hprc_compact_receiver_hprc_compact_receiver_campaign_20260601T023730Z_pairs0600",
+      "candidate_params": {
+        "basis_count": 3,
+        "decode_height": 96,
+        "decode_max_pairs": null,
+        "decode_pairs": 600,
+        "decode_width": 128,
+        "epochs": 8,
+        "residual_grid_h": 24,
+        "residual_grid_w": 32,
+        "run_id": "hprc_compact_receiver_campaign_20260601T023730Z_pairs0600",
+        "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+      },
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "lane_id": "lane_hprc_compact_receiver_training",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_execution": {
+        "device": "local_numpy",
+        "dispatch_attempted": false,
+        "extra_artifact_postconditions": [
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/training_artifact.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/training_artifact.json",
+            "type": "json_false_authority"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_training_export.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_training_export.json",
+            "type": "json_false_authority"
+          },
+          {
+            "equals": "hprc_compact_receiver_training_run_result.v1",
+            "key": "schema",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_training_run_result.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": "contest_video_decode",
+            "key": "source_manifest.source_kind",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_training_run_result.json",
+            "type": "json_equals"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "path_exists"
+          },
+          {
+            "equals": "hprc_generated_receiver_proof.v1",
+            "key": "schema",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "score_claim",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "promotion_eligible",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "equals": false,
+            "key": "ready_for_exact_eval_dispatch",
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_archive_export/receiver_proof/hprc_receiver_proof.json",
+            "type": "json_equals"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_archive_export/archive_bound_candidate_adapter_package.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_archive_export/archive_bound_candidate_adapter_package.json",
+            "type": "json_false_authority"
+          }
+        ],
+        "gpu_launched": false,
+        "output_manifest": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_training_run_result.json",
+        "promotable": false,
+        "promotion_eligible": false,
+        "python_command_args": [
+          ".venv/bin/python",
+          "tools/run_hprc_compact_receiver_training.py",
+          "--video-path",
+          "upstream/videos/0.mkv",
+          "--decode-pairs",
+          "600",
+          "--decode-height",
+          "96",
+          "--decode-width",
+          "128",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600",
+          "--output-manifest",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/pairs_0600/hprc_compact_receiver_training_run_result.json",
+          "--storage-plan-path",
+          "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_compact_receiver_campaign_20260601T023730Z/hprc_compact_receiver_training_storage_plan.json",
+          "--epochs",
+          "8",
+          "--batch-pair-indices-per-step",
+          "16",
+          "--learning-rate",
+          "0.01",
+          "--basis-count",
+          "3",
+          "--residual-grid-h",
+          "24",
+          "--residual-grid-w",
+          "32"
+        ],
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "schema": "hprc_compact_receiver_training_recommended_execution.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "tool": "tools/run_hprc_compact_receiver_training.py",
+        "training_backend": "local_numpy"
+      },
+      "representation_family": "hprc",
+      "schema": "hprc_compact_receiver_training_plan.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_dir": "upstream/videos/0.mkv",
+      "substrate_family": "hierarchical_predictive_coding",
+      "training_signal_kind": "real_contest_video_lowres_frame_fit"
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "run_id": "hprc_compact_receiver_campaign_20260601T023730Z",
+  "schema": "hprc_compact_receiver_training_plan_suite.v1",
+  "score_claim": false,
+  "score_claim_valid": false
+}

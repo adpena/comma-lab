@@ -9,6 +9,7 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
     build_archive_bound_candidate_runtime_package,
 )
 from tac.substrates.hprc.archive import HprcSectionKind, pack_hprc_packet
+from tac.substrates.hprc.campaign import build_hprc_queue_followup_report
 from tac.substrates.hprc.inflate import hprc_preview_digest
 
 
@@ -131,3 +132,121 @@ def test_hprc_export_emits_archive_bound_package(tmp_path: Path, monkeypatch) ->
         "runtime_payload_materializer_backlog_count"
     ] == 3
     assert (tmp_path / "hprc_archive_byte_ledger.json").is_file()
+
+
+def test_hprc_queue_followup_report_blocks_partial_and_missing_z8(tmp_path: Path) -> None:
+    result_path = tmp_path / "hprc_compact_receiver_training_run_result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_compact_receiver_training_run_result.v1",
+                "artifact": {
+                    "archive_path": (tmp_path / "archive.zip").as_posix(),
+                    "archive_sha256": "a" * 64,
+                    "archive_bytes": 1234,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_hprc_queue_followup_report(
+        training_result_path=result_path,
+        decode_pairs=32,
+        repo_root=tmp_path,
+    )
+
+    assert report["schema"] == "hprc_queue_followup_report.v1"
+    assert report["local_replay_gate"]["required"] is False
+    assert "partial_pair_campaign_not_full_video_replay_candidate" in report[
+        "local_replay_gate"
+    ]["blockers"]
+    assert report["z8_residual_sidecar_followup"]["status"] == "blocked"
+    assert report["full_video_p18_p19_allocator_followup"]["status"] == "blocked"
+    assert "exact_auth_gate_not_executed_or_missing" in report["exact_auth_gate"][
+        "blockers"
+    ]
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hprc_queue_followup_report_accepts_local_replay_but_keeps_false_authority(
+    tmp_path: Path,
+) -> None:
+    result_path = tmp_path / "hprc_compact_receiver_training_run_result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_compact_receiver_training_run_result.v1",
+                "artifact": {
+                    "archive_path": (tmp_path / "archive.zip").as_posix(),
+                    "archive_sha256": "b" * 64,
+                    "archive_bytes": 4321,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    replay_path = tmp_path / "local_replay.json"
+    replay_path.write_text(
+        json.dumps(
+            {
+                "schema": "local_submission_replay.v1",
+                "evaluation_passed": True,
+                "axis_tag": "[macOS-CPU advisory]",
+                "local_score_estimate": 0.18,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    gate_path = tmp_path / "gate.json"
+    gate_path.write_text(
+        json.dumps(
+            {
+                "schema": "local_candidate_exact_auth_gate.v1",
+                "exact_auth_dispatch_recommended": True,
+                "next_required_action": "claim_lane_and_run_exact_cpu_auth_eval",
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    z8_archive = tmp_path / "z8.bin"
+    z8_archive.write_bytes(b"z8")
+    z8_surface = tmp_path / "surface.npz"
+    z8_surface.write_bytes(b"surface")
+
+    report = build_hprc_queue_followup_report(
+        training_result_path=result_path,
+        decode_pairs=600,
+        local_replay_summary_path=replay_path,
+        exact_auth_gate_path=gate_path,
+        z8_archive_bin_path=z8_archive,
+        z8_surface_path=z8_surface,
+        repo_root=tmp_path,
+    )
+
+    assert report["local_replay_gate"]["evaluation_passed"] is True
+    assert report["exact_auth_gate"]["exact_auth_dispatch_recommended"] is True
+    assert report["full_video_p18_p19_allocator_followup"]["status"] == (
+        "ready_for_queue_execution"
+    )
+    assert report["promotion_gate"]["ready_for_exact_eval_dispatch"] is False
+    assert "contest_cpu_cuda_exact_eval_not_executed" in report["promotion_gate"]["blockers"]
