@@ -2063,6 +2063,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     coder_qat_quant_residual_weight: float = 1.0e-4,
     coder_qat_magnitude_weight: float = 0.0,
     coder_qat_delta_weight: float = 0.0,
+    recon_pixel_weight_path: str | Path | None = None,
+    auto_segnet_boundary_recon_weight: bool = False,
+    recon_pixel_weight_tau: float = 1.0,
+    recon_pixel_weight_normalize: str = "mean",
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
@@ -2107,6 +2111,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
+            recon_pixel_weight_path=recon_pixel_weight_path,
+            auto_segnet_boundary_recon_weight=auto_segnet_boundary_recon_weight,
+            recon_pixel_weight_tau=recon_pixel_weight_tau,
+            recon_pixel_weight_normalize=recon_pixel_weight_normalize,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -2247,6 +2255,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     quant_residual_weight=coder_qat_quant_residual_weight,
                     magnitude_weight=coder_qat_magnitude_weight,
                     delta_weight=coder_qat_delta_weight,
+                ),
+                "recon_pixel_weight": _recon_pixel_weight_report_metadata(
+                    artifact_dict
                 ),
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
@@ -2613,6 +2624,169 @@ def _coder_qat_report_metadata(
     }
 
 
+def _weight_stats(arr: Any) -> dict[str, Any]:
+    import numpy as np
+
+    a = np.asarray(arr, dtype=np.float32)
+    return {
+        "shape": [int(v) for v in a.shape],
+        "dtype": "float32",
+        "min": float(np.min(a)),
+        "max": float(np.max(a)),
+        "mean": float(np.mean(a)),
+        "nonzero_fraction": float(np.count_nonzero(a) / max(int(a.size), 1)),
+    }
+
+
+def _validate_recon_pixel_weight_array(
+    arr: Any,
+    *,
+    expected_hw: tuple[int, int] = (384, 512),
+) -> Any:
+    import numpy as np
+
+    weight = np.asarray(arr, dtype=np.float32)
+    if weight.ndim == 2:
+        h, w = weight.shape
+        channels = 1
+    elif weight.ndim == 3:
+        h, w, channels = weight.shape
+    elif weight.ndim == 4:
+        leading, h, w, channels = weight.shape
+        if int(leading) != 1:
+            raise CompactRendererMlxSpineRunnerError(
+                "recon pixel weight with 4 dims must have leading dimension 1"
+            )
+    else:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight must be shaped (H,W), (H,W,1/3), or (1,H,W,1/3)"
+        )
+    if (int(h), int(w)) != tuple(int(v) for v in expected_hw):
+        raise CompactRendererMlxSpineRunnerError(
+            f"recon pixel weight spatial shape {(int(h), int(w))} != {expected_hw}"
+        )
+    if int(channels) not in (1, 3):
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight channel count must be 1 or 3"
+        )
+    if not bool(np.all(np.isfinite(weight))):
+        raise CompactRendererMlxSpineRunnerError("recon pixel weight must be finite")
+    if float(np.min(weight)) < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight must be non-negative"
+        )
+    if float(np.mean(weight)) <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight must have positive total mass"
+        )
+    return weight
+
+
+def _load_recon_pixel_weight(
+    path: str | Path,
+    *,
+    base: Path,
+    expected_hw: tuple[int, int] = (384, 512),
+    normalize: str = "mean",
+) -> tuple[Any, dict[str, Any]]:
+    import numpy as np
+
+    if normalize not in ("mean", "none"):
+        raise CompactRendererMlxSpineRunnerError(
+            "recon_pixel_weight_normalize must be 'mean' or 'none'"
+        )
+    resolved = _resolve_existing(path, base=base)
+    key: str | None = None
+    if resolved.suffix == ".npz":
+        with np.load(resolved) as data:
+            keys = sorted(str(item) for item in data.files)
+            if not keys:
+                raise CompactRendererMlxSpineRunnerError(
+                    f"recon pixel weight npz is empty: {resolved}"
+                )
+            key = "weight" if "weight" in data.files else keys[0]
+            weight = np.asarray(data[key], dtype=np.float32)
+    else:
+        weight = np.asarray(np.load(resolved), dtype=np.float32)
+    weight = _validate_recon_pixel_weight_array(weight, expected_hw=expected_hw)
+    metadata = {
+        "schema": "compact_recon_pixel_weight.v1",
+        "enabled": True,
+        "source_kind": "file",
+        "path": resolved.as_posix(),
+        "sha256": _sha256_file(resolved),
+        "npz_key": key,
+        "normalize": normalize,
+        "scorer_terms": {
+            "p18_segnet": "caller_supplied",
+            "p19_posenet": "caller_supplied",
+        },
+        "stats": _weight_stats(weight),
+        "authority": "false_macos_mlx_research_signal",
+    }
+    return weight, metadata
+
+
+def _segnet_boundary_recon_pixel_weight(
+    scorer_teacher: Any,
+    *,
+    tau: float,
+    normalize: str = "mean",
+) -> tuple[Any, dict[str, Any]]:
+    import numpy as np
+
+    if tau <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight tau must be > 0"
+        )
+    if normalize not in ("mean", "none"):
+        raise CompactRendererMlxSpineRunnerError(
+            "recon_pixel_weight_normalize must be 'mean' or 'none'"
+        )
+    logits = np.asarray(scorer_teacher.teacher_logits_thwk, dtype=np.float32)
+    if logits.ndim != 4 or int(logits.shape[-1]) < 2:
+        raise CompactRendererMlxSpineRunnerError(
+            "SegNet boundary recon weight requires teacher logits shaped (T,H,W,K>=2)"
+        )
+    sorted_logits = np.sort(logits, axis=-1)
+    margin = sorted_logits[..., -1] - sorted_logits[..., -2]
+    saliency = np.exp(-np.maximum(margin, 0.0) / float(tau)).astype(np.float32)
+    weight = np.mean(saliency, axis=0).astype(np.float32)
+    weight = _validate_recon_pixel_weight_array(weight, expected_hw=(384, 512))
+    metadata = {
+        "schema": "compact_recon_pixel_weight.v1",
+        "enabled": True,
+        "source_kind": "auto_segnet_top2_boundary_margin",
+        "tau": float(tau),
+        "normalize": normalize,
+        "scorer_terms": {
+            "p18_segnet": "top2_margin_exp_boundary_saliency_from_real_teacher",
+            "p19_posenet": "not_included_use_recon_pixel_weight_path_for_joint_map",
+        },
+        "stats": _weight_stats(weight),
+        "authority": "false_macos_mlx_research_signal",
+    }
+    return weight, metadata
+
+
+def _disabled_recon_pixel_weight_metadata() -> dict[str, Any]:
+    return {
+        "schema": "compact_recon_pixel_weight.v1",
+        "enabled": False,
+        "authority": "false_macos_mlx_research_signal",
+    }
+
+
+def _recon_pixel_weight_report_metadata(
+    artifact_dict: Mapping[str, Any],
+) -> dict[str, Any]:
+    score_training = _substrate_score_aware_training_from_artifact(artifact_dict)
+    value = score_training.get("recon_pixel_weight")
+    if isinstance(value, Mapping):
+        return dict(value)
+    return _disabled_recon_pixel_weight_metadata()
+
+
 def _target_family_rows() -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for family in TARGET_FAMILIES:
@@ -2777,6 +2951,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     coder_qat_quant_residual_weight: float,
     coder_qat_magnitude_weight: float,
     coder_qat_delta_weight: float,
+    recon_pixel_weight_path: str | Path | None,
+    auto_segnet_boundary_recon_weight: bool,
+    recon_pixel_weight_tau: float,
+    recon_pixel_weight_normalize: str,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -2826,6 +3004,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         segnet_distillation_weight=segnet_distillation_weight,
         pose_distillation_weight=pose_distillation_weight,
     )
+    if recon_pixel_weight_path is not None and auto_segnet_boundary_recon_weight:
+        raise CompactRendererMlxSpineRunnerError(
+            "pass either --recon-pixel-weight-path or "
+            "--auto-segnet-boundary-recon-weight, not both"
+        )
     cfg = HinervConfig(
         latent_dim_coarse=max(1, int(latent_dim) // 2),
         latent_dim_mid=max(1, int(latent_dim)),
@@ -2907,6 +3090,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
@@ -2925,6 +3109,16 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "export_archive_fn": _export_archive,
         "substrate_artifact_metadata": artifact_metadata,
     }
+    recon_pixel_weight = None
+    if recon_pixel_weight_path is not None:
+        recon_pixel_weight, recon_metadata = _load_recon_pixel_weight(
+            recon_pixel_weight_path,
+            base=repo_root,
+            normalize=recon_pixel_weight_normalize,
+        )
+        artifact_metadata["score_aware_training"]["recon_pixel_weight"] = (
+            recon_metadata
+        )
     teacher_probe_bundle = RendererBundle(**bundle_kwargs)
     scorer_teacher = None
     learnable_student_head = None
@@ -2940,6 +3134,21 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             num_classes=int(scorer_teacher.num_classes),
             seed=int(random_seed),
         )
+    if auto_segnet_boundary_recon_weight:
+        if scorer_teacher is None:
+            raise CompactRendererMlxSpineRunnerError(
+                "--auto-segnet-boundary-recon-weight requires "
+                "--segnet-distillation-weight > 0 so real SegNet teacher "
+                "logits exist"
+            )
+        recon_pixel_weight, recon_metadata = _segnet_boundary_recon_pixel_weight(
+            scorer_teacher,
+            tau=float(recon_pixel_weight_tau),
+            normalize=recon_pixel_weight_normalize,
+        )
+        artifact_metadata["score_aware_training"]["recon_pixel_weight"] = (
+            recon_metadata
+        )
     if pose_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
@@ -2952,6 +3161,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         )
     bundle = RendererBundle(
         **bundle_kwargs,
+        recon_pixel_weight=recon_pixel_weight,
+        recon_pixel_weight_normalize=recon_pixel_weight_normalize,
         distillation_weight=float(segnet_distillation_weight),
         scorer_teacher=scorer_teacher,
         learnable_student_head=learnable_student_head,
@@ -3760,6 +3971,28 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--coder-qat-magnitude-weight", default=0.0, type=float)
     parser.add_argument("--coder-qat-delta-weight", default=0.0, type=float)
+    parser.add_argument(
+        "--recon-pixel-weight-path",
+        type=Path,
+        help=(
+            "File-backed P18/P19 recon_pixel_weight map (.npy or .npz). "
+            "Must be shaped (384,512), (384,512,1/3), or (1,384,512,1/3)."
+        ),
+    )
+    parser.add_argument(
+        "--auto-segnet-boundary-recon-weight",
+        action="store_true",
+        help=(
+            "Build a P18-only recon_pixel_weight from real SegNet teacher "
+            "top-2 margins. Use file-backed maps for joint P18/P19 weights."
+        ),
+    )
+    parser.add_argument("--recon-pixel-weight-tau", default=1.0, type=float)
+    parser.add_argument(
+        "--recon-pixel-weight-normalize",
+        default="mean",
+        choices=("mean", "none"),
+    )
     parser.add_argument("--smoke-epochs-per-stage", default=1, type=int)
     parser.add_argument(
         "--stage8-epochs",
@@ -4022,6 +4255,12 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
+            recon_pixel_weight_path=args.recon_pixel_weight_path,
+            auto_segnet_boundary_recon_weight=(
+                args.auto_segnet_boundary_recon_weight
+            ),
+            recon_pixel_weight_tau=args.recon_pixel_weight_tau,
+            recon_pixel_weight_normalize=args.recon_pixel_weight_normalize,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
