@@ -352,6 +352,7 @@ def _run_mlx_responses(
     device: str,
     progress_every: int,
     allow_batch_shape_research_signal: bool,
+    response_family_prefix: str = "pact_nerv_selector_v3_section_value",
 ) -> dict[str, dict[str, Any]]:
     jobs = [
         MLXScorerResponseBatchJob(
@@ -359,7 +360,7 @@ def _run_mlx_responses(
             archive_size_bytes=variant.archive_bytes,
             output=output_dir / "mlx_responses" / f"{variant.variant_id}.json",
             components_dir=output_dir / "mlx_components" / variant.variant_id,
-            response_family=f"pact_nerv_selector_v3_section_value_{variant.variant_id}",
+            response_family=f"{response_family_prefix}_{variant.variant_id}",
         )
         for variant in variants
     ]
@@ -408,6 +409,11 @@ def _build_report(
     window_pairs: int,
     scorer_batch_pairs: int,
     started: float,
+    profile_schema: str = PSV3_SECTION_VALUE_PROFILE_SCHEMA,
+    source_schema: str = PSV3_SECTION_VALUE_SOURCE_SCHEMA,
+    layout_key: str = "psv3_section_layout",
+    residual_policy_schema: str = "pact_nerv_selector_v3_residual_admission_policy.v1",
+    tool_path: Path | None = None,
 ) -> dict[str, Any]:
     baseline = payloads["baseline"]
     baseline_variant = variants[0]
@@ -444,12 +450,16 @@ def _build_report(
                 }
             )
     return {
-        "schema": PSV3_SECTION_VALUE_PROFILE_SCHEMA,
-        "source_schema": PSV3_SECTION_VALUE_SOURCE_SCHEMA,
+        "schema": profile_schema,
+        "source_schema": source_schema,
         "created_at_unix": time.time(),
         "elapsed_seconds": time.time() - started,
         "repo_root": repo_root.as_posix(),
-        "tool_argv": [sys.executable, str(Path(__file__).resolve()), *raw_argv],
+        "tool_argv": [
+            sys.executable,
+            str((tool_path or Path(__file__)).resolve()),
+            *raw_argv,
+        ],
         "family": "pact_nerv",
         "projection_manifest_path": None if projection_manifest is None else projection_manifest.as_posix(),
         "candidate_archive": {
@@ -458,7 +468,7 @@ def _build_report(
             "sha256": _sha256_file(archive),
         },
         "reference_cache_dir": reference_cache_dir.as_posix(),
-        "psv3_section_layout": layout,
+        layout_key: layout,
         "cache_materialization_rows": cache_rows,
         "max_pairs": int(max_pairs),
         "window_pairs": int(window_pairs),
@@ -493,7 +503,7 @@ def _build_report(
             "boundary": "blocked_missing_boundary_surface_in_cache",
         },
         "residual_admission_policy": {
-            "schema": "pact_nerv_selector_v3_residual_admission_policy.v1",
+            "schema": residual_policy_schema,
             "rule": "admit residual bytes only when measured_delta_nonrate + rate_cost < 0",
             "observed_residual_section": "absent",
             "default_action": "demote_unmeasured_or_absent_residual_tokens",
