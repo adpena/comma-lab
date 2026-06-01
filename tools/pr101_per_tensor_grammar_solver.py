@@ -21,6 +21,7 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
     CoderName,
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
+    build_u32_receiver_adapter_source_from_report,
     default_state_dict_output_path_hint,
     materialize_grouped_archive_from_report,
     materialize_grouped_decoder_blob_from_report,
@@ -155,6 +156,18 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--grouped-receiver-adapter-output",
+        type=Path,
+        default=None,
+        help="Optional generated Python parser adapter source for u32 decoder-length archives.",
+    )
+    parser.add_argument(
+        "--grouped-receiver-adapter-proof-output",
+        type=Path,
+        default=None,
+        help="Optional receiver adapter source proof JSON.",
+    )
+    parser.add_argument(
         "--grouped-transform-mode",
         choices=("stock_pr101", "best_brotli_per_tensor"),
         default="best_brotli_per_tensor",
@@ -252,6 +265,8 @@ def main(argv: list[str] | None = None) -> int:
         or args.grouped_decoder_proof_output is not None
         or args.grouped_archive_output is not None
         or args.grouped_archive_proof_output is not None
+        or args.grouped_receiver_adapter_output is not None
+        or args.grouped_receiver_adapter_proof_output is not None
     ):
         exact_stream_count = (
             None
@@ -318,6 +333,20 @@ def main(argv: list[str] | None = None) -> int:
                     json.dumps(archive_proof, indent=2, sort_keys=True, default=_json_default),
                     encoding="utf-8",
                 )
+        if (
+            args.grouped_receiver_adapter_output is not None
+            or args.grouped_receiver_adapter_proof_output is not None
+        ):
+            source, adapter_proof = build_u32_receiver_adapter_source_from_report(grouped_report)
+            if args.grouped_receiver_adapter_output is not None:
+                args.grouped_receiver_adapter_output.parent.mkdir(parents=True, exist_ok=True)
+                args.grouped_receiver_adapter_output.write_text(source, encoding="utf-8")
+            if args.grouped_receiver_adapter_proof_output is not None:
+                args.grouped_receiver_adapter_proof_output.parent.mkdir(parents=True, exist_ok=True)
+                args.grouped_receiver_adapter_proof_output.write_text(
+                    json.dumps(adapter_proof, indent=2, sort_keys=True, default=_json_default),
+                    encoding="utf-8",
+                )
     bytes_ = report["byte_accounting"]
     print(f"Wrote PR101 per-tensor grammar report to {args.output}")
     if args.queue_output is not None:
@@ -334,6 +363,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Wrote grouped archive zip to {args.grouped_archive_output}")
     if args.grouped_archive_proof_output is not None:
         print(f"Wrote grouped archive materialization proof to {args.grouped_archive_proof_output}")
+    if args.grouped_receiver_adapter_output is not None:
+        print(f"Wrote grouped receiver adapter source to {args.grouped_receiver_adapter_output}")
+    if args.grouped_receiver_adapter_proof_output is not None:
+        print(
+            "Wrote grouped receiver adapter source proof to "
+            f"{args.grouped_receiver_adapter_proof_output}"
+        )
     print(
         "selected isolated bytes="
         f"{bytes_['selected_isolated_tensor_bytes']}; "

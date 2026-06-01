@@ -16,8 +16,10 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
     PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA,
     PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA,
     PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA,
+    PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA,
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
+    build_u32_receiver_adapter_source_from_report,
     empirical_shannon_floor_bytes,
     materialize_grouped_archive_from_report,
     materialize_grouped_decoder_blob_from_report,
@@ -370,6 +372,57 @@ def test_grouped_archive_materializer_can_emit_u32_decoder_len_adapter_layout() 
     assert manifest["proof"]["u32_decoder_len_adapter_parse_safe"] is True
     assert "stock_runtime_fixed_offset_decoder_blob_length_mismatch" not in manifest["blockers"]
     assert "receiver_runtime_source_not_emitted" in manifest["blockers"]
+
+
+def test_u32_receiver_adapter_source_is_executable_parser_glue() -> None:
+    state_dict = _tiny_state_dict(seed=9)
+    report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=7,
+        max_streams=7,
+        brotli_quality=4,
+    )
+    source, manifest = build_u32_receiver_adapter_source_from_report(report)
+    decoder_blob = b"decoder"
+    latent_blob = b"L" * LATENT_BLOB_LEN
+    sidecar_blob = b"sidecar"
+    inner = struct.pack("<I", 4 + len(decoder_blob)) + decoder_blob + latent_blob + sidecar_blob
+    calls: dict[str, object] = {}
+
+    def fake_decode_decoder_compact(blob: bytes, **kwargs: object) -> dict[str, object]:
+        calls["decoder_blob"] = blob
+        calls["decoder_kwargs"] = kwargs
+        return {"ok": True}
+
+    def fake_decode_latents_compact(blob: bytes) -> bytes:
+        calls["latent_blob"] = blob
+        return b"latents"
+
+    def fake_apply_latent_sidecar(latents: bytes, sidecar: bytes) -> tuple[bytes, bytes]:
+        calls["latents"] = latents
+        calls["sidecar_blob"] = sidecar
+        return latents, sidecar
+
+    namespace: dict[str, object] = {}
+    exec(compile(source, "<generated_pr101_u32_adapter>", "exec"), namespace)
+    parsed = namespace["parse_archive_u32_decoder_len"](
+        inner,
+        decode_decoder_compact=fake_decode_decoder_compact,
+        decode_latents_compact=fake_decode_latents_compact,
+        apply_latent_sidecar=fake_apply_latent_sidecar,
+    )
+
+    assert manifest["schema"] == PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA
+    assert manifest["score_claim"] is False
+    assert manifest["runtime_consumption_status"] == "u32_decoder_len_adapter_source_emitted"
+    assert calls["decoder_blob"] == decoder_blob
+    assert calls["latent_blob"] == latent_blob
+    assert calls["sidecar_blob"] == sidecar_blob
+    assert "derived_stream_ends" in calls["decoder_kwargs"]
+    assert parsed[0] == {"ok": True}
+    assert parsed[1] == (b"latents", sidecar_blob)
+    assert parsed[2]["n_pairs"] == 600
 
 
 def test_grouped_archive_materializer_rejects_multimember_source_zip() -> None:

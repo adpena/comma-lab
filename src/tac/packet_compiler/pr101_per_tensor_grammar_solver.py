@@ -20,6 +20,7 @@ import hashlib
 import heapq
 import io
 import itertools
+import json
 import lzma
 import math
 import struct
@@ -63,6 +64,7 @@ PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA = (
 PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA = (
     "pr101_grouped_archive_materialization.v1"
 )
+PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA = "pr101_u32_receiver_adapter_source.v1"
 PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 PR101_INNER_MEMBER_NAME = "x"
 FALSE_AUTHORITY_FIELDS = {
@@ -1025,6 +1027,112 @@ def materialize_grouped_archive_from_report(
     return archive_zip, manifest
 
 
+def build_u32_receiver_adapter_source_from_report(
+    report: Mapping[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    """Emit the parser adapter source for ``u32_decoder_len_adapter`` archives."""
+
+    if report.get("schema") != PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA:
+        raise ValueError("expected pr101_grouped_brotli_packet_grammar.v1 report")
+    adapter = report.get("adapter_params")
+    if not isinstance(adapter, Mapping):
+        raise ValueError("grouped report missing adapter_params")
+    byte_maps = _parse_adapter_byte_maps(adapter.get("effective_byte_maps"))
+    storage_order = tuple(int(v) for v in _as_sequence(adapter.get("derived_storage_order")))
+    stream_ends = tuple(int(v) for v in _as_sequence(adapter.get("derived_stream_ends")))
+    conv4_perms = _parse_adapter_conv4_perms(adapter.get("derived_conv4_perms"))
+    _validate_storage_order(storage_order, n_tensors=len(FIXED_STATE_SCHEMA))
+    adapter_params = {
+        "effective_byte_maps": {str(k): v for k, v in sorted(byte_maps.items())},
+        "derived_storage_order": list(storage_order),
+        "derived_stream_ends": list(stream_ends),
+        "derived_conv4_perms": {str(k): list(v) for k, v in sorted(conv4_perms.items())},
+    }
+    adapter_json = json.dumps(adapter_params, sort_keys=True, separators=(",", ":"))
+    source = f'''# SPDX-License-Identifier: MIT
+"""Generated PR101 u32 decoder-length receiver adapter.
+
+This adapter parses a PR101-family inner archive payload with layout:
+
+    uint32_le decoder_section_total_bytes
+    decoder_blob[4:decoder_section_total_bytes]
+    latent_blob[decoder_section_total_bytes:decoder_section_total_bytes + {LATENT_BLOB_LEN}]
+    sidecar_blob[decoder_section_total_bytes + {LATENT_BLOB_LEN}:]
+
+It intentionally expects the caller to supply the codec functions from the
+submission runtime so this generated file does not duplicate decoder code.
+"""
+
+LATENT_BLOB_LEN = {LATENT_BLOB_LEN}
+N_PAIRS = 600
+LATENT_DIM = 28
+BASE_CHANNELS = 36
+EVAL_SIZE = (384, 512)
+ADAPTER_PARAMS_JSON = {adapter_json!r}
+
+
+def _adapter_params():
+    import json
+
+    params = json.loads(ADAPTER_PARAMS_JSON)
+    return {{
+        "effective_byte_maps": {{int(k): v for k, v in params["effective_byte_maps"].items()}},
+        "derived_storage_order": tuple(params["derived_storage_order"]),
+        "derived_stream_ends": tuple(params["derived_stream_ends"]),
+        "derived_conv4_perms": {{
+            int(k): tuple(v) for k, v in params["derived_conv4_perms"].items()
+        }},
+    }}
+
+
+def parse_archive_u32_decoder_len(
+    archive_bytes,
+    *,
+    decode_decoder_compact,
+    decode_latents_compact,
+    apply_latent_sidecar,
+):
+    if len(archive_bytes) < 4:
+        raise ValueError("archive too short for u32 decoder section header")
+    section_total = int.from_bytes(archive_bytes[:4], "little")
+    if section_total < 4 or section_total > len(archive_bytes):
+        raise ValueError(f"bad decoder_section_total {{section_total}}")
+    decoder_blob = archive_bytes[4:section_total]
+    latent_blob = archive_bytes[section_total:section_total + LATENT_BLOB_LEN]
+    sidecar_blob = archive_bytes[section_total + LATENT_BLOB_LEN:]
+    if not decoder_blob or len(latent_blob) != LATENT_BLOB_LEN:
+        raise ValueError("bad PR101 u32 decoder-length archive layout")
+    decoder_sd = decode_decoder_compact(decoder_blob, **_adapter_params())
+    latents = apply_latent_sidecar(decode_latents_compact(latent_blob), sidecar_blob)
+    meta = {{
+        "n_pairs": N_PAIRS,
+        "latent_dim": LATENT_DIM,
+        "base_channels": BASE_CHANNELS,
+        "eval_size": list(EVAL_SIZE),
+    }}
+    return decoder_sd, latents, meta
+'''
+    sha = hashlib.sha256(source.encode("utf-8")).hexdigest()
+    manifest = {
+        "schema": PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA,
+        "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
+        "source_report_schema": report.get("schema"),
+        "receiver_adapter_source_sha256": sha,
+        "receiver_adapter_source_bytes": len(source.encode("utf-8")),
+        "archive_layout": "u32_decoder_len_adapter",
+        "adapter_params": adapter_params,
+        "runtime_consumption_status": "u32_decoder_len_adapter_source_emitted",
+        "blockers": [
+            "inflate_sh_integration_missing",
+            "full_frame_inflate_parity_missing",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        "axis_tag": "[receiver-adapter-source-only]",
+        **FALSE_AUTHORITY_FIELDS,
+    }
+    return source, manifest
+
+
 def empirical_shannon_floor_bytes(payload: bytes | bytearray | memoryview) -> float:
     """Return the order-0 Shannon lower bound for a byte payload."""
 
@@ -1848,10 +1956,12 @@ __all__ = [
     "PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA",
     "PR101_TENSOR_GRAMMAR_CANDIDATE_SCHEMA",
     "PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA",
+    "PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA",
     "CoderName",
     "StoragePermMode",
     "build_grouped_optimizer_candidate_queue_from_report",
     "build_optimizer_candidate_queue_from_solver_report",
+    "build_u32_receiver_adapter_source_from_report",
     "default_state_dict_output_path_hint",
     "empirical_shannon_floor_bytes",
     "materialize_grouped_archive_from_report",
