@@ -124,6 +124,41 @@ def test_section_value_admission_demotes_bad_residual_tokens(tmp_path: Path) -> 
     assert any(hook["status"] == "demote_from_measured_value_per_byte" for hook in plan["posterior_update_hooks"])
 
 
+def test_projection_metadata_and_short_coverage_do_not_force_mlx_value_replay(
+    tmp_path: Path,
+) -> None:
+    short_vq = _projection(
+        tmp_path / "short_vq",
+        family=HprcRepresentationFamily.PACT_NERV_VQ,
+        decoder=b"d" * 8,
+        codebooks=b"c" * 12,
+        selectors=b"s" * 4,
+        manifest_extra={"num_pairs": 32},
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[short_vq],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+    )
+
+    sections = {row["section_name"]: row for row in plan["section_value_rows"]}
+    assert sections["rdo_plan"]["evidence_status"] == (
+        "metadata_contract_no_mlx_replay_required"
+    )
+    assert sections["rdo_plan"]["requires_full_video_mlx_replay"] is False
+    assert sections["codebooks_q"]["evidence_status"] == (
+        "not_required_until_full_video_coverage"
+    )
+    assert sections["codebooks_q"]["requires_full_video_mlx_replay"] is False
+    assert "some_sections_missing_value_per_byte_measurement" not in plan["blockers"]
+
+
 def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:
     tool = _load_tool()
     manifest = _projection(

@@ -102,6 +102,10 @@ from tac.substrates.hprc.resolution_contract import (
     RGB_CHANNEL_COUNT,
     hprc_resolution_contract,
 )
+from tac.substrates.hprc.runtime_closure_repair import (
+    HPRC_RUNTIME_CLOSURE_REPAIR_REPORT_SCHEMA,
+    repair_embedded_runtime_zip_closure,
+)
 from tac.substrates.hprc.spine_acquisition import (
     DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
     HPRC_SPINE_ACQUISITION_REPORT_SCHEMA,
@@ -113,6 +117,12 @@ from tac.substrates.hprc.spine_bounded_runner import (
     HPRC_SPINE_SECTION_VALUE_ROW_SCHEMA,
     build_spine_bounded_runner_plan,
     write_spine_bounded_runner_plan,
+)
+from tac.substrates.hprc.spine_receiver_execution import (
+    HPRC_SPINE_RECEIVER_EXECUTION_REPORT_SCHEMA,
+    HPRC_SPINE_RECEIVER_PROOF_SCHEMA,
+    SpineReceiverRuntimeOverride,
+    execute_spine_receiver_rows,
 )
 from tac.substrates.hprc.training_adapter import (
     HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA,
@@ -146,10 +156,13 @@ __all__ = [
     "HPRC_REPRESENTATION_SPINE_PROJECTION_SCHEMA",
     "HPRC_REPRESENTATION_SPINE_SCHEMA",
     "HPRC_RESOLUTION_CONTRACT_SCHEMA",
+    "HPRC_RUNTIME_CLOSURE_REPAIR_REPORT_SCHEMA",
     "HPRC_SCHEMA_VERSION",
     "HPRC_SPINE_ACQUISITION_REPORT_SCHEMA",
     "HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA",
     "HPRC_SPINE_COMPACT_BASE_SWEEP_ROW_SCHEMA",
+    "HPRC_SPINE_RECEIVER_EXECUTION_REPORT_SCHEMA",
+    "HPRC_SPINE_RECEIVER_PROOF_SCHEMA",
     "HPRC_SPINE_SECTION_VALUE_ROW_SCHEMA",
     "HPRC_V0_EXACT_READINESS_BLOCKERS",
     "PACT_NERV_LEN_PREFIXED_HEADER_FMT",
@@ -176,6 +189,7 @@ __all__ = [
     "HprcSectionKind",
     "Pr95HprcControlPacket",
     "ResidualTokenCollapseSpec",
+    "SpineReceiverRuntimeOverride",
     "build_generic_neural_spine_packet",
     "build_hprc_campaign_manifest",
     "build_hprc_exact_readiness_refusal",
@@ -194,6 +208,7 @@ __all__ = [
     "build_spine_acquisition_report",
     "build_spine_bounded_runner_plan",
     "collapse_residual_tokens",
+    "execute_spine_receiver_rows",
     "export_hprc_archive_bytes",
     "get_binding",
     "hprc_campaign_manifest",
@@ -206,6 +221,7 @@ __all__ = [
     "parse_residual_token_collapse_specs",
     "primary_rate_collapse_candidates",
     "rate_collapse_variant_groups",
+    "repair_embedded_runtime_zip_closure",
     "residual_sidecar_candidates",
     "transcode_compact_receiver_residual_tokens",
     "transcode_compact_receiver_sections",

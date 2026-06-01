@@ -216,11 +216,40 @@ def _section_value_row(
     rate_cost = contest_rate_term(byte_count)
     evidence_rows = section_evidence.get(section_name, [])
     best_evidence = _best_section_evidence(evidence_rows)
-    if best_evidence is None:
+    coverage = (
+        acquisition_row.get("coverage")
+        if isinstance(acquisition_row.get("coverage"), dict)
+        else {}
+    )
+    coverage_valid = coverage.get("valid_for_base_comparison") is True
+    projection_only_metadata = section_name in {"rdo_plan", "manifest_json"}
+    if projection_only_metadata:
+        admission_status = "projection_contract_metadata_not_candidate_runtime_spend"
+        delta_nonrate = 0.0
+        admission_delta = 0.0
+        evidence_status = "metadata_contract_no_mlx_replay_required"
+        requires_replay = False
+        blockers = ["contest_cpu_cuda_exact_eval_not_executed"]
+    elif not coverage_valid:
+        admission_status = "blocked_until_full_video_coverage_before_section_pricing"
+        delta_nonrate = None
+        admission_delta = None
+        evidence_status = "not_required_until_full_video_coverage"
+        requires_replay = False
+        blockers = [
+            "declared_pair_coverage_below_full_video",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ]
+    elif best_evidence is None:
         admission_status = "blocked_until_full_video_mlx_section_value_replay"
         delta_nonrate = None
         admission_delta = None
         evidence_status = "missing"
+        requires_replay = True
+        blockers = [
+            "full_video_mlx_section_value_replay_missing",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ]
     else:
         delta_nonrate = best_evidence["presence_delta_nonrate"]
         admission_delta = float(delta_nonrate) + rate_cost
@@ -231,6 +260,8 @@ def _section_value_row(
             admission_status = "demote_or_block_residual_tokens"
         else:
             admission_status = "protect_or_shrink_by_smaller_recode_only"
+        requires_replay = False
+        blockers = ["contest_cpu_cuda_exact_eval_not_executed"]
     return {
         "schema": HPRC_SPINE_SECTION_VALUE_ROW_SCHEMA,
         "family": acquisition_row.get("family"),
@@ -246,18 +277,9 @@ def _section_value_row(
         "admission_status": admission_status,
         "evidence_rows": evidence_rows,
         "requires_receiver_proof": True,
-        "requires_full_video_mlx_replay": best_evidence is None,
+        "requires_full_video_mlx_replay": requires_replay,
         "requires_exact_gate": True,
-        "blockers": _dedupe(
-            [
-                *(
-                    ["full_video_mlx_section_value_replay_missing"]
-                    if best_evidence is None
-                    else []
-                ),
-                "contest_cpu_cuda_exact_eval_not_executed",
-            ]
-        ),
+        "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
 
