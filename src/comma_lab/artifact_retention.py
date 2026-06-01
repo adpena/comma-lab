@@ -37,6 +37,7 @@ INVERSE_SCORER_PARITY_PROOF_NAMES = frozenset(
         "inverse_scorer_cell_inflate_parity_probe.json",
     }
 )
+INVERSE_SCORER_PARITY_PROOF_ANCESTOR_SCAN_DEPTH = 5
 KNOWN_RAW_WORKDIR_NAMES = frozenset(
     {
         "auth_eval_work",
@@ -561,7 +562,7 @@ def _candidate_inverse_scorer_parity_proofs(path: Path, repo_root: Path) -> list
     seen: set[Path] = set()
     ancestors = [path, *path.parents]
     for depth, ancestor in enumerate(ancestors):
-        if depth > 8:
+        if depth > INVERSE_SCORER_PARITY_PROOF_ANCESTOR_SCAN_DEPTH:
             break
         try:
             entries = list(ancestor.iterdir())
@@ -965,16 +966,33 @@ def _mlx_cache_identity_certificate(
     repo_root: Path,
     blockers: list[str],
 ) -> dict[str, Any] | None:
-    for stamp_key, expected_verdict, source_keys in (
+    for (
+        stamp_key,
+        expected_verdict,
+        source_keys,
+        expected_schema_version,
+        require_source_sha256,
+    ) in (
         (
             "auth_eval_identity_audit",
             "PASS_CACHE_AUTH_EVAL_IDENTITY",
             ("auth_eval_path", "auth_eval_dir"),
+            None,
+            False,
         ),
         (
             "local_cpu_advisory_cache_identity_audit",
             "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
             ("local_cpu_advisory_path",),
+            None,
+            False,
+        ),
+        (
+            "hprc_direct_receiver_render_cache_identity_audit",
+            "PASS_HPRC_DIRECT_RECEIVER_RENDER_CACHE_IDENTITY",
+            ("archive_path", "source_archive_path"),
+            "hprc_direct_receiver_render_cache_identity_audit.v1",
+            True,
         ),
     ):
         stamp = manifest.get(stamp_key)
@@ -988,6 +1006,8 @@ def _mlx_cache_identity_certificate(
             stamp_key=stamp_key,
             expected_verdict=expected_verdict,
             source_keys=source_keys,
+            expected_schema_version=expected_schema_version,
+            require_source_sha256=require_source_sha256,
             manifest=manifest,
             cache_root=cache_root,
             repo_root=repo_root,
@@ -1003,6 +1023,8 @@ def _validate_mlx_identity_stamp(
     stamp_key: str,
     expected_verdict: str,
     source_keys: tuple[str, ...],
+    expected_schema_version: str | None,
+    require_source_sha256: bool,
     manifest: dict[str, Any],
     cache_root: Path,
     repo_root: Path,
@@ -1016,6 +1038,11 @@ def _validate_mlx_identity_stamp(
         blockers.append(f"{stamp_key}_verdict_not_{expected_verdict}")
     if stamp.get("passed") is not True:
         blockers.append(f"{stamp_key}_passed_not_true")
+    if (
+        expected_schema_version is not None
+        and stamp.get("schema_version") != expected_schema_version
+    ):
+        blockers.append(f"{stamp_key}_schema_version_not_{expected_schema_version}")
     _append_authority_false_blockers(blockers, stamp, prefix=stamp_key)
 
     audit_path = _resolve_referenced_path(
@@ -1035,6 +1062,11 @@ def _validate_mlx_identity_stamp(
         certificate["sha256"] = expected_sha
         audit = _load_optional_json(audit_path, blockers)
         if audit is not None:
+            if (
+                expected_schema_version is not None
+                and audit.get("schema_version") != expected_schema_version
+            ):
+                blockers.append(f"{stamp_key}_audit_schema_version_not_{expected_schema_version}")
             _append_mlx_identity_audit_blockers(
                 blockers,
                 audit,
@@ -1051,6 +1083,7 @@ def _validate_mlx_identity_stamp(
         cache_root=cache_root,
         blockers=blockers,
         prefix=stamp_key,
+        require_source_sha256=require_source_sha256,
     )
     if source_certificate:
         certificate["source"] = source_certificate
@@ -1094,7 +1127,11 @@ def _mlx_identity_source_certificate(
     cache_root: Path,
     blockers: list[str],
     prefix: str,
+    require_source_sha256: bool = False,
 ) -> dict[str, Any] | None:
+    expected_source_sha256 = _stamp_expected_source_sha256(stamp)
+    if require_source_sha256 and expected_source_sha256 is None:
+        blockers.append(f"{prefix}_source_sha256_missing")
     for key in source_keys:
         source_path = _resolve_referenced_path(
             stamp.get(key),
@@ -1103,12 +1140,27 @@ def _mlx_identity_source_certificate(
         )
         if source_path is None:
             continue
+        actual_sha256 = sha256_file(source_path) if source_path.is_file() else None
+        if (
+            expected_source_sha256 is not None
+            and actual_sha256 is not None
+            and actual_sha256 != expected_source_sha256
+        ):
+            blockers.append(f"{prefix}_source_sha256_mismatch")
         return {
             "key": key,
             "path": _rel(source_path, repo_root),
-            "sha256": sha256_file(source_path) if source_path.is_file() else None,
+            "sha256": actual_sha256,
         }
     blockers.append(f"{prefix}_source_path_missing_or_not_found")
+    return None
+
+
+def _stamp_expected_source_sha256(stamp: dict[str, Any]) -> str | None:
+    for key in ("source_sha256", "archive_sha256"):
+        value = stamp.get(key)
+        if isinstance(value, str) and len(value) == 64:
+            return value
     return None
 
 

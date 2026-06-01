@@ -215,6 +215,19 @@ def test_submission_mlx_cache_can_render_hprc_direct_without_raw_scratch(
     assert payload["cached_pair_count"] == 1
     assert payload["score_claim"] is False
     assert payload["hprc_direct_cache_report"]["receiver_proof_required_for_promotion"] is True
+    assert (
+        payload["candidate_cache_identity_mode"]
+        == "hprc_direct_receiver_render_cache_identity_audited_false_authority"
+    )
+    stamp = manifest["hprc_direct_receiver_render_cache_identity_audit"]
+    audit_path = Path(stamp["path"])
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    assert stamp["verdict"] == "PASS_HPRC_DIRECT_RECEIVER_RENDER_CACHE_IDENTITY"
+    assert stamp["score_claim"] is False
+    assert stamp["ready_for_exact_eval_dispatch"] is False
+    assert audit["cache"]["raw_sha256"] == manifest["raw_sha256"]
+    assert audit["cache"]["array_sha256"] == manifest["array_sha256"]
+    assert audit["receiver_proof_required_for_promotion"] is True
     assert manifest["source_kind"] == "hprc_direct_receiver_render"
     assert manifest["pair_count"] == 1
     assert manifest["raw_sha256"] == hashlib.sha256(expected_raw).hexdigest()
@@ -294,6 +307,10 @@ def test_submission_mlx_cache_hprc_direct_can_render_pair_subset(
     assert payload["cached_pair_count"] == 1
     assert payload["hprc_direct_cache_report"]["selected_pair_ranges"] == [[1, 1]]
     assert payload["hprc_direct_cache_report"]["pair_index_scope"] == "explicit_pair_ranges"
+    stamp = manifest["hprc_direct_receiver_render_cache_identity_audit"]
+    audit = json.loads(Path(stamp["path"]).read_text(encoding="utf-8"))
+    assert audit["direct_render"]["selected_pair_ranges"] == [[1, 1]]
+    assert audit["direct_render"]["pair_index_scope"] == "explicit_pair_ranges"
     assert manifest["pair_count"] == 1
     assert pair_indices.tolist() == [[2, 3]]
     assert manifest["raw_sha256"] == hashlib.sha256(expected_raw).hexdigest()

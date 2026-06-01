@@ -936,6 +936,7 @@ def test_hprc_incremental_exact_gate_bridge_blocks_uncertified_cleanup(
                     "blockers": [
                         "contest_cpu_cuda_exact_eval_not_executed",
                         "mlx_local_response_is_advisory_not_score_authority",
+                        "uncertified_mlx_cache_retained_cleanup_blocker",
                     ],
                 },
             }
@@ -952,8 +953,109 @@ def test_hprc_incremental_exact_gate_bridge_blocks_uncertified_cleanup(
     assert bridge["archive_custody"]["verified"] is True
     assert bridge["receiver_proof_custody"]["verified"] is True
     assert bridge["cleanup_custody"]["verified"] is False
+    assert bridge["exact_packet"]["packet_kind"] == "blocked_exact_packet"
+    assert bridge["exact_packet"]["dispatchable_after_lane_claim"] is False
+    assert bridge["exact_packet"]["preclaim_blockers"] == [
+        "mlx_cache_identity_audit_stamp_missing",
+        "cleanup_status_blocked",
+    ]
     assert bridge["exact_dispatch_plan"]["dispatchable_after_lane_claim"] is False
+    assert bridge["exact_dispatch_plan"]["source_packet_kind"] == "blocked_exact_packet"
     assert "mlx_cache_identity_audit_stamp_missing" in bridge["exact_axis_gate"]["blockers"]
+    assert "uncertified_mlx_cache_retained_cleanup_blocker" not in bridge[
+        "exact_axis_gate"
+    ]["blockers"]
+    assert bridge["score_claim"] is False
+
+
+def test_hprc_incremental_exact_gate_bridge_emits_dispatchable_packet(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    hprc_0bin = tmp_path / "0.bin"
+    hprc_0bin.write_bytes(b"hprc")
+    proof = tmp_path / "hprc_receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "archive_sha256": _sha256(archive),
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_ready": True,
+                "receiver_output_sha256": "b" * 64,
+                "receiver_output_bytes": 123,
+            }
+        ),
+        encoding="utf-8",
+    )
+    retention_plan = tmp_path / "artifact_retention_plan.json"
+    retention_plan.write_text("{}\n", encoding="utf-8")
+    report = tmp_path / "execution_report.json"
+    report.write_text(
+        json.dumps(
+            {
+                "candidate_id": "candidate-a",
+                "candidate_variant_id": "variant-a",
+                "archive": {
+                    "path": archive.as_posix(),
+                    "bytes": archive.stat().st_size,
+                    "sha256": _sha256(archive),
+                    "hprc_0bin_path": hprc_0bin.as_posix(),
+                    "hprc_0bin_sha256": _sha256(hprc_0bin),
+                },
+                "receiver_proof_binding": {
+                    "status": "linked_by_archive_sha256",
+                    "proof_path": proof.as_posix(),
+                    "archive_sha256": _sha256(archive),
+                    "receiver_contract_satisfied": True,
+                    "runtime_consumption_proof_ready": True,
+                    "receiver_output_sha256": "b" * 64,
+                    "receiver_output_bytes": 123,
+                    "blockers": [],
+                },
+                "cleanup": {
+                    "status": "planned",
+                    "plan_path": retention_plan.as_posix(),
+                    "blocked_bytes_retained": 0,
+                    "reclaimable_bytes": 100,
+                    "blockers": [],
+                },
+                "incremental_summary": {
+                    "delta_total_mlx_score_advisory": -1.0,
+                },
+                "exact_axis_gate": {
+                    "ready_for_exact_eval_dispatch": False,
+                    "blockers": [
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                        "mlx_local_response_is_advisory_not_score_authority",
+                        "receiver_proof_missing_for_incremental_runner_candidate_sha",
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    bridge = build_hprc_incremental_exact_gate_bridge(
+        execution_report_path=report,
+        repo_root=tmp_path,
+    )
+
+    assert bridge["archive_custody"]["verified"] is True
+    assert bridge["receiver_proof_custody"]["verified"] is True
+    assert bridge["cleanup_custody"]["verified"] is True
+    assert bridge["exact_packet"]["packet_kind"] == "dispatchable_exact_packet"
+    assert bridge["exact_packet"]["preclaim_blockers"] == []
+    assert bridge["exact_packet"]["dispatchable_after_lane_claim"] is True
+    assert bridge["exact_dispatch_plan"]["dispatchable_after_lane_claim"] is True
+    assert bridge["exact_dispatch_plan"]["source_packet_kind"] == "dispatchable_exact_packet"
+    assert bridge["ready_for_exact_eval_dispatch"] is True
+    assert "receiver_proof_missing_for_incremental_runner_candidate_sha" not in bridge[
+        "exact_axis_gate"
+    ]["blockers"]
+    assert "contest_cpu_cuda_exact_eval_not_executed" in bridge["exact_axis_gate"][
+        "blockers"
+    ]
     assert bridge["score_claim"] is False
 
 

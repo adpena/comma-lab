@@ -194,6 +194,74 @@ def _write_mlx_delta_cache(
     return cache
 
 
+def _write_hprc_direct_mlx_cache(root: Path) -> Path:
+    cache = root / "candidate_hprc" / "mlx_scorer_input_cache"
+    _write(cache / "pair_indices.npy", b"pairs")
+    _write(cache / "posenet_yuv6_pair.npy", b"pose")
+    _write(cache / "segnet_last_rgb.npy", b"seg")
+    archive = root / "candidate_hprc" / "archive.zip"
+    _write(archive, b"hprc-archive")
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    manifest = {
+        **false_authority,
+        "archive_sha256": sha256_file(archive),
+        "inflated_outputs_aggregate_sha256": "b" * 64,
+        "raw_sha256": "c" * 64,
+        "pair_count": 1,
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "array_sha256": {
+            "pair_indices": "1" * 64,
+            "posenet_yuv6_pair": "2" * 64,
+            "segnet_last_rgb": "3" * 64,
+        },
+        "artifacts": {
+            "pair_indices": {"sha256": sha256_file(cache / "pair_indices.npy")},
+            "posenet_yuv6_pair": {"sha256": sha256_file(cache / "posenet_yuv6_pair.npy")},
+            "segnet_last_rgb": {"sha256": sha256_file(cache / "segnet_last_rgb.npy")},
+        },
+    }
+    audit = {
+        "schema_version": "hprc_direct_receiver_render_cache_identity_audit.v1",
+        "verdict": "PASS_HPRC_DIRECT_RECEIVER_RENDER_CACHE_IDENTITY",
+        "passed": True,
+        "cache": {
+            "archive_sha256": manifest["archive_sha256"],
+            "inflated_outputs_aggregate_sha256": manifest["inflated_outputs_aggregate_sha256"],
+            "raw_sha256": manifest["raw_sha256"],
+            "pair_count": manifest["pair_count"],
+            "hash_domain": manifest["hash_domain"],
+            "array_sha256": manifest["array_sha256"],
+        },
+        "source": {
+            "archive_path": str(archive),
+            "archive_sha256": manifest["archive_sha256"],
+        },
+        "receiver_proof_required_for_promotion": True,
+        **false_authority,
+    }
+    audit_path = cache / "hprc_direct_receiver_render_cache_identity_audit.json"
+    audit_path.write_text(json.dumps(audit), encoding="utf-8")
+    manifest["hprc_direct_receiver_render_cache_identity_audit"] = {
+        "schema_version": audit["schema_version"],
+        "path": str(audit_path),
+        "sha256": sha256_file(audit_path),
+        "verdict": audit["verdict"],
+        "passed": True,
+        "archive_path": str(archive),
+        "archive_sha256": manifest["archive_sha256"],
+        **false_authority,
+    }
+    (cache / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return cache
+
+
 def _proxy_false_authority() -> dict[str, bool]:
     return {
         "ready_for_exact_eval_dispatch": False,
@@ -852,6 +920,28 @@ def test_retention_certifies_canonical_mlx_scorer_input_cache_dir(
     candidate = plan.candidates[0]
     assert candidate.path == cache.relative_to(tmp_path).as_posix()
     assert candidate.kind == "mlx_scorer_input_cache"
+
+
+def test_retention_certifies_hprc_direct_receiver_render_cache_stamp(
+    tmp_path: Path,
+) -> None:
+    _write_hprc_direct_mlx_cache(tmp_path)
+
+    plan = build_retention_plan(
+        [tmp_path],
+        repo_root=tmp_path,
+        include_kinds={"mlx_scorer_input_cache"},
+        min_bytes=1,
+    )
+
+    assert plan.blocked_candidates == []
+    assert len(plan.candidates) == 1
+    candidate = plan.candidates[0]
+    identity = candidate.certificate["identity_audit"]
+    assert identity["stamp_key"] == "hprc_direct_receiver_render_cache_identity_audit"
+    assert identity["schema_version"] == "hprc_direct_receiver_render_cache_identity_audit.v1"
+    assert identity["source"]["key"] == "archive_path"
+    assert identity["source"]["sha256"] == candidate.certificate["archive_sha256"]
 
 
 def test_retention_blocks_mlx_cache_without_identity_stamp(tmp_path: Path) -> None:

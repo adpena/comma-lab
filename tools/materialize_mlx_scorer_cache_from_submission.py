@@ -287,6 +287,11 @@ def main(argv: list[str] | None = None) -> int:
         **FALSE_AUTHORITY,
     }
     write_json(output_cache / "manifest.json", manifest)
+    cache_identity_mode = (
+        str(direct_cache_report["candidate_cache_identity_mode"])
+        if direct_cache_report is not None
+        else "unaudited_candidate_generation_prior"
+    )
     report = {
         "schema": SCHEMA,
         "tool_command": [sys.executable, str(Path(__file__).resolve()), *raw_argv],
@@ -328,7 +333,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "inflate_elapsed_seconds": float(inflate_elapsed),
         "elapsed_seconds": time.time() - started,
-        "candidate_cache_identity_mode": "unaudited_candidate_generation_prior",
+        "candidate_cache_identity_mode": cache_identity_mode,
         "cpu_score_computed": False,
         "mlx_first_acquisition_only": True,
         "requires_local_cpu_gate_before_exact_auth": True,
@@ -432,6 +437,59 @@ def _write_hprc_direct_cache(
         compute_raw_sha256=True,
     )
     manifest["inflated_outputs_aggregate_sha256"] = manifest.get("raw_sha256")
+    audit_path = output_cache / "hprc_direct_receiver_render_cache_identity_audit.json"
+    audit = {
+        "schema_version": "hprc_direct_receiver_render_cache_identity_audit.v1",
+        "verdict": "PASS_HPRC_DIRECT_RECEIVER_RENDER_CACHE_IDENTITY",
+        "passed": True,
+        "created_by": "tools/materialize_mlx_scorer_cache_from_submission.py",
+        "allowed_use": "certify_hprc_direct_mlx_cache_rebuildability_for_disk_retention",
+        "forbidden_use": "score_claim_or_promotion_or_rank_or_exact_dispatch",
+        "cache": {
+            "archive_sha256": manifest.get("archive_sha256"),
+            "inflated_outputs_aggregate_sha256": manifest.get(
+                "inflated_outputs_aggregate_sha256"
+            ),
+            "raw_sha256": manifest.get("raw_sha256"),
+            "pair_count": manifest.get("pair_count"),
+            "hash_domain": manifest.get("hash_domain"),
+            "array_sha256": manifest.get("array_sha256"),
+        },
+        "source": {
+            "archive_path": str(archive),
+            "archive_sha256": archive_sha256,
+            "zip_member": member_name,
+            "packet_config": packet.config.as_dict(),
+        },
+        "direct_render": {
+            "raw_pair_count": raw_pair_count,
+            "selected_pair_count": int(pair_count),
+            "selected_pair_ranges": _format_pair_ranges(selected_pair_indices),
+            "pair_index_scope": (
+                "explicit_pair_ranges" if pair_indices_filter is not None else "prefix_from_zero"
+            ),
+            "frame_shape_hwc": [h, w, 3],
+            "batch_pairs": int(batch_pairs),
+            "max_pairs": max_pairs,
+            "local_acquisition_max_pairs": local_acquisition_max_pairs,
+            "raw_file_written": False,
+            "rebuilds_from_archive_bytes": True,
+        },
+        "receiver_proof_required_for_promotion": True,
+        **FALSE_AUTHORITY,
+    }
+    write_json(audit_path, audit)
+    manifest["hprc_direct_receiver_render_cache_identity_audit"] = {
+        "schema_version": audit["schema_version"],
+        "path": str(audit_path),
+        "sha256": _sha256(audit_path, prefix=0),
+        "verdict": audit["verdict"],
+        "passed": True,
+        "archive_path": str(archive),
+        "archive_sha256": archive_sha256,
+        **FALSE_AUTHORITY,
+    }
+    manifest["eligible_for_hprc_direct_rebuild_cleanup"] = True
     write_json(output_cache / "manifest.json", manifest)
     report = {
         "schema": "hprc_direct_mlx_scorer_cache_render.v1",
@@ -453,7 +511,13 @@ def _write_hprc_direct_cache(
         "direct_render_raw_sha256_scope": manifest.get("raw_sha256_scope"),
         "raw_file_written": False,
         "receiver_proof_required_for_promotion": True,
-        "candidate_cache_identity_mode": "hprc_direct_receiver_render_advisory",
+        "identity_audit_path": str(audit_path),
+        "identity_audit_sha256": manifest[
+            "hprc_direct_receiver_render_cache_identity_audit"
+        ]["sha256"],
+        "candidate_cache_identity_mode": (
+            "hprc_direct_receiver_render_cache_identity_audited_false_authority"
+        ),
         **FALSE_AUTHORITY,
     }
     return report, manifest

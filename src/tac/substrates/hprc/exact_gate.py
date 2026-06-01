@@ -53,7 +53,7 @@ def build_hprc_incremental_exact_gate_bridge(
     )
     cleanup = report.get("cleanup") if isinstance(report.get("cleanup"), dict) else {}
     cleanup_checks = _cleanup_checks(cleanup)
-    source_blockers = _source_exact_blockers(report)
+    source_blockers = _source_score_authority_blockers(report)
     custody_blockers = [
         *archive_checks["blockers"],
         *hprc_0bin_checks["blockers"],
@@ -70,6 +70,22 @@ def build_hprc_incremental_exact_gate_bridge(
         ]
     )
     ready_for_exact_eval_dispatch = bool(preclaim_ready)
+    exact_packet = _exact_packet(
+        report_path=report_path,
+        report_sha256=_sha256_file(report_path),
+        candidate_id=report.get("candidate_id"),
+        candidate_variant_id=report.get("candidate_variant_id"),
+        archive_path=archive_path,
+        archive=archive,
+        archive_checks=archive_checks,
+        hprc_0bin_checks=hprc_0bin_checks,
+        proof_checks=proof_checks,
+        cleanup_checks=cleanup_checks,
+        mlx_advisory_summary=report.get("incremental_summary"),
+        preclaim_ready=preclaim_ready,
+        preclaim_blockers=preclaim_blockers,
+        score_authority_blockers=score_authority_blockers,
+    )
     return {
         "schema": HPRC_INCREMENTAL_EXACT_GATE_BRIDGE_SCHEMA,
         "generated_at_utc": _utc_stamp(),
@@ -91,10 +107,13 @@ def build_hprc_incremental_exact_gate_bridge(
         "cleanup_custody": cleanup_checks,
         "mlx_advisory_summary": report.get("incremental_summary"),
         "source_exact_axis_gate": report.get("exact_axis_gate"),
+        "exact_packet": exact_packet,
         "exact_dispatch_plan": {
             "schema": "hprc_incremental_exact_dispatch_plan.v1",
             "target_modes": ["contest_exact_eval"],
             "lane_id": "hprc_hierarchical_predictive_receiver_codec",
+            "source_packet_schema": exact_packet["schema"],
+            "source_packet_kind": exact_packet["packet_kind"],
             "dispatchable_after_lane_claim": ready_for_exact_eval_dispatch,
             "preclaim_ready": preclaim_ready,
             "preclaim_blockers": preclaim_blockers,
@@ -231,14 +250,91 @@ def _cleanup_checks(cleanup: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _source_exact_blockers(report: dict[str, Any]) -> list[str]:
+def _source_score_authority_blockers(report: dict[str, Any]) -> list[str]:
     gate = report.get("exact_axis_gate")
     if not isinstance(gate, dict):
         return ["source_exact_axis_gate_missing"]
     blockers = gate.get("blockers")
     if not isinstance(blockers, list):
         return ["source_exact_axis_gate_blockers_missing"]
-    return [str(blocker) for blocker in blockers]
+    return [
+        str(blocker)
+        for blocker in blockers
+        if not _source_blocker_is_bridge_recomputed_custody(str(blocker))
+    ]
+
+
+def _source_blocker_is_bridge_recomputed_custody(blocker: str) -> bool:
+    return (
+        blocker.startswith("receiver_")
+        or blocker.startswith("cleanup_")
+        or blocker.startswith("archive_")
+        or blocker.startswith("hprc_0bin_")
+        or blocker.startswith("uncertified_")
+        or blocker.startswith("mlx_cache_identity_")
+    )
+
+
+def _exact_packet(
+    *,
+    report_path: Path,
+    report_sha256: str,
+    candidate_id: Any,
+    candidate_variant_id: Any,
+    archive_path: Path | None,
+    archive: dict[str, Any],
+    archive_checks: dict[str, Any],
+    hprc_0bin_checks: dict[str, Any],
+    proof_checks: dict[str, Any],
+    cleanup_checks: dict[str, Any],
+    mlx_advisory_summary: Any,
+    preclaim_ready: bool,
+    preclaim_blockers: list[str],
+    score_authority_blockers: list[str],
+) -> dict[str, Any]:
+    packet_kind = (
+        "dispatchable_exact_packet" if preclaim_ready else "blocked_exact_packet"
+    )
+    return {
+        "schema": "hprc_incremental_exact_gate_packet.v1",
+        "packet_kind": packet_kind,
+        "custody_interpretation_source": "hprc_incremental_exact_gate_bridge",
+        "input_execution_report": {
+            "path": report_path.as_posix(),
+            "sha256": report_sha256,
+        },
+        "candidate_id": candidate_id,
+        "candidate_variant_id": candidate_variant_id,
+        "archive": {
+            "path": archive_path.as_posix() if archive_path is not None else None,
+            "bytes": archive.get("bytes"),
+            "sha256": archive.get("sha256"),
+        },
+        "custody_checks": {
+            "archive": archive_checks,
+            "hprc_0bin": hprc_0bin_checks,
+            "receiver_proof": proof_checks,
+            "cleanup": cleanup_checks,
+        },
+        "preclaim_ready": preclaim_ready,
+        "dispatchable_after_lane_claim": preclaim_ready,
+        "preclaim_blockers": preclaim_blockers,
+        "score_authority_blockers_before_promotion": score_authority_blockers,
+        "mlx_advisory_summary": mlx_advisory_summary,
+        "blocked": not preclaim_ready,
+        "blocker_class": (
+            "none_preclaim_ready"
+            if preclaim_ready
+            else "custody_or_cleanup_preclaim_blocker"
+        ),
+        "allowed_next_action": (
+            "claim_lane_and_dispatch_contest_exact_eval"
+            if preclaim_ready
+            else "repair_preclaim_custody_then_rebuild_exact_packet"
+        ),
+        **FALSE_AUTHORITY,
+        "ready_for_exact_eval_dispatch": preclaim_ready,
+    }
 
 
 def _resolve_required_path(value: Any, *, base: Path) -> Path | None:
