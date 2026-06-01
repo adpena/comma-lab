@@ -169,7 +169,34 @@ def carrier_rate_term(archive_path: str | Path) -> CarrierRateTerm:
     )
 
 
-def load_carrier_decoder(archive_path: str | Path) -> tuple[Any, np.ndarray, CarrierRateTerm]:
+# The render-parity crux (drift source #1) is fp32 conv2d accumulation ORDER:
+# native ``mx.conv2d`` ("optimized") accumulates differently than PyTorch
+# ``F.conv2d``, and the ``sigmoid(rgb)*255`` head amplifies it to ~8e-4 in
+# [0,255] pixel space. The canonical lower-drift conv mode ``fixed_fp64`` casts
+# the conv ACCUMULATOR to float64 (fixed spatial-then-channel order), tightening
+# the float drift ~4.5x (8.4e-4 -> 1.9e-4) and reducing uint8-differing pixels
+# ~28% (46 -> 33 of 1.18M).
+#
+# CRUX FINDING (the reason this is NOT the carrier default): even ``optimized``
+# is ALREADY uint8-faithful (<=1 LSB on <0.004% of pixels) and yields the
+# IDENTICAL SegNet argmax-flip d_seg as the PyTorch-fp32 reference render
+# (delta = 0.0). The carrier advisory distortion (~0.189) is therefore NOT a
+# render-parity artifact; it is the carrier R(D) + the Apple-Silicon-CPU eval
+# axis (drift source #2, out of scope). ``fixed_fp64`` buys ZERO d_seg benefit
+# while paying ~56x per-forward cost (slow fixed-order Python conv on the MLX CPU
+# device), so the render path defaults to the fast ``optimized`` mode. The
+# low-drift mode is available via the explicit kwarg for byte-tightest export
+# parity. See ``tac.analysis.mlx_pytorch_render_parity_crux`` +
+# ``feedback_mlx_pytorch_render_parity_crux_landed_20260601.md``.
+CARRIER_RENDER_DEFAULT_CONV_MODE = "optimized"
+CARRIER_RENDER_LOW_DRIFT_CONV_MODE = "fixed_fp64"
+
+
+def load_carrier_decoder(
+    archive_path: str | Path,
+    *,
+    conv2d_accumulation_mode: str = CARRIER_RENDER_DEFAULT_CONV_MODE,
+) -> tuple[Any, np.ndarray, CarrierRateTerm]:
     """Load the REAL PR95-HNeRV carrier: MLX decoder with REAL trained weights.
 
     Returns ``(decoder, latents_np, rate_term)``. The decoder is an
@@ -177,6 +204,15 @@ def load_carrier_decoder(archive_path: str | Path) -> tuple[Any, np.ndarray, Car
     canonical ``load_pytorch_state_dict_into_mlx`` (NOT default-init). ``latents_np``
     is the carrier's ``(n_pairs, latent_dim)`` per-pair latents. Raises if MLX is
     unavailable (the render path requires it on Apple Silicon).
+
+    ``conv2d_accumulation_mode`` defaults to the fast native ``"optimized"`` path
+    because the render-parity crux is empirically settled: ``optimized`` is
+    already uint8-faithful and yields the IDENTICAL SegNet d_seg as the
+    PyTorch-fp32 reference render. Pass ``"fixed_fp64"`` for the byte-tightest
+    export parity (~4.5x lower float drift, ~56x slower per forward; requires the
+    MLX CPU device, auto-pinned by the render path). The render axis remains
+    ``[macOS-MLX research-signal]``; the eval hardware axis (Apple-Silicon-CPU vs
+    GHA-Linux-x86_64 vs T4) is the separate drift source #2, NOT closed by mode.
     """
     from tac.local_acceleration.pr95_hnerv_mlx import (
         HNeRVDecoderMLX,
@@ -190,9 +226,30 @@ def load_carrier_decoder(archive_path: str | Path) -> tuple[Any, np.ndarray, Car
         latent_dim=rt.latent_dim,
         base_channels=rt.base_channels,
         eval_size=tuple(int(d) for d in packet.meta.get("eval_size", (384, 512))),
+        conv2d_accumulation_mode=conv2d_accumulation_mode,
     )
     load_pytorch_state_dict_into_mlx(decoder, packet.state_dict)
     return decoder, np.asarray(packet.latents).astype(np.float32), rt
+
+
+def _pin_carrier_render_device(decoder: Any) -> None:
+    """Pin the MLX device to CPU when the decoder needs fp64 conv accumulation.
+
+    The canonical low-drift ``fixed_fp64`` conv mode casts the conv accumulator
+    to float64, which Metal does not support; the MLX CPU device does. Pinning
+    CPU also makes the render the deterministic accumulation path that the
+    PyTorch-CPU reference (the faithful reference per the render-parity crux) is
+    compared against. ``optimized``/fp32 modes leave the device unconstrained.
+    """
+    import mlx.core as mx
+
+    mode = getattr(decoder, "conv2d_accumulation_mode", "optimized")
+    overrides = getattr(decoder, "conv2d_accumulation_overrides", {}) or {}
+    needs_fp64 = mode == "fixed_fp64" or any(
+        m == "fixed_fp64" for m in overrides.values()
+    )
+    if needs_fp64:
+        mx.set_default_device(mx.cpu)
 
 
 def render_carrier_pair_bcthw(
@@ -208,6 +265,7 @@ def render_carrier_pair_bcthw(
     """
     import mlx.core as mx
 
+    _pin_carrier_render_device(decoder)
     z = np.asarray(latent_row, dtype=np.float32).reshape(1, -1)
     out = decoder.decode_pair_nhwc(mx.array(z))
     mx.eval(out)
@@ -264,6 +322,7 @@ def push_pixel_saliency_to_latent(
 
     if frame_slot not in (0, 1):
         raise Pr95HnervCarrierError("frame_slot must be 0 or 1")
+    _pin_carrier_render_device(decoder)
     z = np.asarray(latent_row, dtype=np.float64).reshape(-1)
     latent_dim = int(z.size)
 
