@@ -66,6 +66,8 @@ PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA = (
 )
 PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA = "pr101_u32_receiver_adapter_source.v1"
 PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA = "pr101_u32_runtime_tree_materialization.v1"
+PR101_LEN24_RECEIVER_ADAPTER_SOURCE_SCHEMA = "pr101_len24_receiver_adapter_source.v1"
+PR101_LEN24_RUNTIME_TREE_MATERIALIZATION_SCHEMA = "pr101_len24_runtime_tree_materialization.v1"
 PR101_GRAMMAR_CAMPAIGN_SUMMARY_SCHEMA = "pr101_optimal_grammar_campaign_summary.v1"
 PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 PR101_INNER_MEMBER_NAME = "x"
@@ -80,6 +82,11 @@ FALSE_AUTHORITY_FIELDS = {
     "dispatch_attempted": False,
 }
 StoragePermMode = Literal["identity", "pr101-plus-identity", "exhaustive-conv4"]
+DecoderLenArchiveLayout = Literal[
+    "fixed_pr101",
+    "u32_decoder_len_adapter",
+    "len24_decoder_len_adapter",
+]
 CoderName = Literal[
     "brotli",
     "lzma_raw",
@@ -1092,7 +1099,7 @@ def materialize_grouped_archive_from_report(
     source_archive_zip: bytes,
     n_quant: int | None = None,
     member_name: str = PR101_INNER_MEMBER_NAME,
-    archive_layout: Literal["fixed_pr101", "u32_decoder_len_adapter"] = "fixed_pr101",
+    archive_layout: DecoderLenArchiveLayout = "fixed_pr101",
 ) -> tuple[bytes, dict[str, Any]]:
     """Build a deterministic PR101-shaped archive from a grouped decoder report.
 
@@ -1114,7 +1121,11 @@ def materialize_grouped_archive_from_report(
         expected_member_name=member_name,
     )
     source_inner = source_layout["inner_member_bytes"]
-    if archive_layout not in {"fixed_pr101", "u32_decoder_len_adapter"}:
+    if archive_layout not in {
+        "fixed_pr101",
+        "u32_decoder_len_adapter",
+        "len24_decoder_len_adapter",
+    }:
         raise ValueError(f"unknown PR101 grouped archive layout: {archive_layout!r}")
     source_decoder, latent_blob, sidecar_blob = _split_pr101_inner_blob(source_inner)
     if archive_layout == "fixed_pr101":
@@ -1122,7 +1133,8 @@ def materialize_grouped_archive_from_report(
         decoder_blob_offset = 0
         latent_blob_offset = len(decoder_blob)
         sidecar_blob_offset = len(decoder_blob) + len(latent_blob)
-    else:
+        decoder_len_header_bytes = 0
+    elif archive_layout == "u32_decoder_len_adapter":
         decoder_section_total = 4 + len(decoder_blob)
         output_inner = (
             struct.pack("<I", decoder_section_total)
@@ -1133,6 +1145,23 @@ def materialize_grouped_archive_from_report(
         decoder_blob_offset = 4
         latent_blob_offset = decoder_section_total
         sidecar_blob_offset = decoder_section_total + len(latent_blob)
+        decoder_len_header_bytes = 4
+    else:
+        decoder_section_total = 3 + len(decoder_blob)
+        if decoder_section_total >= 1 << 24:
+            raise ValueError(
+                "len24_decoder_len_adapter requires decoder section < 2^24 bytes"
+            )
+        output_inner = (
+            decoder_section_total.to_bytes(3, "little")
+            + decoder_blob
+            + latent_blob
+            + sidecar_blob
+        )
+        decoder_blob_offset = 3
+        latent_blob_offset = decoder_section_total
+        sidecar_blob_offset = decoder_section_total + len(latent_blob)
+        decoder_len_header_bytes = 3
     archive_zip = _write_single_stored_zip_member(member_name, output_inner)
     output_layout = _read_pr101_source_archive_layout(
         archive_zip,
@@ -1145,6 +1174,7 @@ def materialize_grouped_archive_from_report(
         and bool(decoder_manifest.get("stock_runtime_compatible"))
     )
     u32_adapter_parse_safe = archive_layout == "u32_decoder_len_adapter"
+    len24_adapter_parse_safe = archive_layout == "len24_decoder_len_adapter"
     latent_preserved = hashlib.sha256(latent_blob).hexdigest() == hashlib.sha256(
         source_inner[DECODER_BLOB_LEN : DECODER_BLOB_LEN + LATENT_BLOB_LEN]
     ).hexdigest()
@@ -1159,7 +1189,7 @@ def materialize_grouped_archive_from_report(
     ]
     if archive_layout == "fixed_pr101" and not fixed_offset_parse_safe:
         blockers.append("stock_runtime_fixed_offset_decoder_blob_length_mismatch")
-    if u32_adapter_parse_safe:
+    if u32_adapter_parse_safe or len24_adapter_parse_safe:
         blockers.append("receiver_runtime_source_not_emitted")
     if not bool(decoder_manifest.get("stock_runtime_compatible")):
         if archive_layout == "fixed_pr101":
@@ -1194,6 +1224,7 @@ def materialize_grouped_archive_from_report(
         "inner_member_name": member_name,
         "inner_member_bytes": len(output_inner),
         "inner_member_sha256": output_inner_sha,
+        "decoder_len_header_bytes": decoder_len_header_bytes,
         "source_inner_member_bytes": len(source_inner),
         "source_inner_member_sha256": source_inner_sha,
         "decoder_blob_offset": decoder_blob_offset,
@@ -1209,6 +1240,7 @@ def materialize_grouped_archive_from_report(
         "sidecar_blob_sha256": sidecar_sha,
         "fixed_offset_stock_runtime_parse_safe": bool(fixed_offset_parse_safe),
         "u32_decoder_len_adapter_parse_safe": bool(u32_adapter_parse_safe),
+        "len24_decoder_len_adapter_parse_safe": bool(len24_adapter_parse_safe),
         "byte_closed_archive_zip_materialized": True,
         "decoder_materialization": decoder_manifest,
         "zip_proof": {
@@ -1240,6 +1272,7 @@ def materialize_grouped_archive_from_report(
             "sidecar_blob_preserved": bool(sidecar_preserved),
             "fixed_offset_stock_runtime_parse_safe": bool(fixed_offset_parse_safe),
             "u32_decoder_len_adapter_parse_safe": bool(u32_adapter_parse_safe),
+            "len24_decoder_len_adapter_parse_safe": bool(len24_adapter_parse_safe),
             "byte_closed_archive_zip_materialized": True,
         },
         "blockers": blockers,
@@ -1254,6 +1287,28 @@ def build_u32_receiver_adapter_source_from_report(
 ) -> tuple[str, dict[str, Any]]:
     """Emit the parser adapter source for ``u32_decoder_len_adapter`` archives."""
 
+    return _build_decoder_len_receiver_adapter_source_from_report(
+        report,
+        archive_layout="u32_decoder_len_adapter",
+    )
+
+
+def build_len24_receiver_adapter_source_from_report(
+    report: Mapping[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    """Emit the parser adapter source for ``len24_decoder_len_adapter`` archives."""
+
+    return _build_decoder_len_receiver_adapter_source_from_report(
+        report,
+        archive_layout="len24_decoder_len_adapter",
+    )
+
+
+def _build_decoder_len_receiver_adapter_source_from_report(
+    report: Mapping[str, Any],
+    *,
+    archive_layout: Literal["u32_decoder_len_adapter", "len24_decoder_len_adapter"],
+) -> tuple[str, dict[str, Any]]:
     if report.get("schema") != PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA:
         raise ValueError("expected pr101_grouped_brotli_packet_grammar.v1 report")
     adapter = report.get("adapter_params")
@@ -1271,13 +1326,29 @@ def build_u32_receiver_adapter_source_from_report(
         "derived_conv4_perms": {str(k): list(v) for k, v in sorted(conv4_perms.items())},
     }
     adapter_json = json.dumps(adapter_params, sort_keys=True, separators=(",", ":"))
+    if archive_layout == "u32_decoder_len_adapter":
+        schema = PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA
+        header_bytes = 4
+        header_doc = "uint32_le decoder_section_total_bytes"
+        header_expr = 'int.from_bytes(archive_bytes[:4], "little")'
+        parser_name = "parse_archive_u32_decoder_len"
+        status = "u32_decoder_len_adapter_source_emitted"
+        title = "u32"
+    else:
+        schema = PR101_LEN24_RECEIVER_ADAPTER_SOURCE_SCHEMA
+        header_bytes = 3
+        header_doc = "uint24_le decoder_section_total_bytes"
+        header_expr = 'int.from_bytes(archive_bytes[:3], "little")'
+        parser_name = "parse_archive_len24_decoder_len"
+        status = "len24_decoder_len_adapter_source_emitted"
+        title = "len24"
     source = f'''# SPDX-License-Identifier: MIT
-"""Generated PR101 u32 decoder-length receiver adapter.
+"""Generated PR101 {title} decoder-length receiver adapter.
 
 This adapter parses a PR101-family inner archive payload with layout:
 
-    uint32_le decoder_section_total_bytes
-    decoder_blob[4:decoder_section_total_bytes]
+    {header_doc}
+    decoder_blob[{header_bytes}:decoder_section_total_bytes]
     latent_blob[decoder_section_total_bytes:decoder_section_total_bytes + {LATENT_BLOB_LEN}]
     sidecar_blob[decoder_section_total_bytes + {LATENT_BLOB_LEN}:]
 
@@ -1307,23 +1378,23 @@ def _adapter_params():
     }}
 
 
-def parse_archive_u32_decoder_len(
+def {parser_name}(
     archive_bytes,
     *,
     decode_decoder_compact,
     decode_latents_compact,
     apply_latent_sidecar,
 ):
-    if len(archive_bytes) < 4:
-        raise ValueError("archive too short for u32 decoder section header")
-    section_total = int.from_bytes(archive_bytes[:4], "little")
-    if section_total < 4 or section_total > len(archive_bytes):
+    if len(archive_bytes) < {header_bytes}:
+        raise ValueError("archive too short for {title} decoder section header")
+    section_total = {header_expr}
+    if section_total < {header_bytes} or section_total > len(archive_bytes):
         raise ValueError(f"bad decoder_section_total {{section_total}}")
-    decoder_blob = archive_bytes[4:section_total]
+    decoder_blob = archive_bytes[{header_bytes}:section_total]
     latent_blob = archive_bytes[section_total:section_total + LATENT_BLOB_LEN]
     sidecar_blob = archive_bytes[section_total + LATENT_BLOB_LEN:]
     if not decoder_blob or len(latent_blob) != LATENT_BLOB_LEN:
-        raise ValueError("bad PR101 u32 decoder-length archive layout")
+        raise ValueError("bad PR101 {title} decoder-length archive layout")
     decoder_sd = decode_decoder_compact(decoder_blob, **_adapter_params())
     latents = apply_latent_sidecar(decode_latents_compact(latent_blob), sidecar_blob)
     meta = {{
@@ -1336,14 +1407,15 @@ def parse_archive_u32_decoder_len(
 '''
     sha = hashlib.sha256(source.encode("utf-8")).hexdigest()
     manifest = {
-        "schema": PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA,
+        "schema": schema,
         "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
         "source_report_schema": report.get("schema"),
         "receiver_adapter_source_sha256": sha,
         "receiver_adapter_source_bytes": len(source.encode("utf-8")),
-        "archive_layout": "u32_decoder_len_adapter",
+        "archive_layout": archive_layout,
+        "decoder_len_header_bytes": header_bytes,
         "adapter_params": adapter_params,
-        "runtime_consumption_status": "u32_decoder_len_adapter_source_emitted",
+        "runtime_consumption_status": status,
         "blockers": [
             "inflate_sh_integration_missing",
             "full_frame_inflate_parity_missing",
@@ -1367,11 +1439,57 @@ def build_u32_receiver_runtime_tree_from_report(
     write to disk so callers can enforce their own storage/preflight policy.
     """
 
-    adapter_source, adapter_manifest = build_u32_receiver_adapter_source_from_report(report)
+    return _build_decoder_len_receiver_runtime_tree_from_report(
+        report,
+        codec_py_source=codec_py_source,
+        model_py_source=model_py_source,
+        archive_layout="u32_decoder_len_adapter",
+    )
+
+
+def build_len24_receiver_runtime_tree_from_report(
+    report: Mapping[str, Any],
+    *,
+    codec_py_source: bytes | str,
+    model_py_source: bytes | str,
+) -> tuple[dict[str, bytes], dict[str, Any]]:
+    """Build a self-contained PR101 len24-adapter submission runtime tree."""
+
+    return _build_decoder_len_receiver_runtime_tree_from_report(
+        report,
+        codec_py_source=codec_py_source,
+        model_py_source=model_py_source,
+        archive_layout="len24_decoder_len_adapter",
+    )
+
+
+def _build_decoder_len_receiver_runtime_tree_from_report(
+    report: Mapping[str, Any],
+    *,
+    codec_py_source: bytes | str,
+    model_py_source: bytes | str,
+    archive_layout: Literal["u32_decoder_len_adapter", "len24_decoder_len_adapter"],
+) -> tuple[dict[str, bytes], dict[str, Any]]:
+    if archive_layout == "u32_decoder_len_adapter":
+        adapter_source, adapter_manifest = build_u32_receiver_adapter_source_from_report(
+            report
+        )
+        schema = PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA
+        adapter_rel = "pr101_u32_adapter.py"
+        runtime_status = "u32_receiver_runtime_tree_materialized"
+    else:
+        adapter_source, adapter_manifest = build_len24_receiver_adapter_source_from_report(
+            report
+        )
+        schema = PR101_LEN24_RUNTIME_TREE_MATERIALIZATION_SCHEMA
+        adapter_rel = "pr101_len24_adapter.py"
+        runtime_status = "len24_receiver_runtime_tree_materialized"
     files = {
         "inflate.sh": _generated_u32_inflate_sh().encode("utf-8"),
-        "inflate.py": _generated_u32_inflate_py().encode("utf-8"),
-        "pr101_u32_adapter.py": adapter_source.encode("utf-8"),
+        "inflate.py": _generated_decoder_len_inflate_py(
+            archive_layout=archive_layout
+        ).encode("utf-8"),
+        adapter_rel: adapter_source.encode("utf-8"),
         "src/codec.py": _source_bytes(codec_py_source),
         "src/model.py": _source_bytes(model_py_source),
     }
@@ -1385,14 +1503,14 @@ def build_u32_receiver_runtime_tree_from_report(
         for rel_path, data in sorted(files.items())
     ]
     manifest = {
-        "schema": PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA,
+        "schema": schema,
         "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
         "source_report_schema": report.get("schema"),
-        "archive_layout": "u32_decoder_len_adapter",
+        "archive_layout": archive_layout,
         "file_count": len(file_rows),
         "files": file_rows,
         "receiver_adapter": adapter_manifest,
-        "runtime_consumption_status": "u32_receiver_runtime_tree_materialized",
+        "runtime_consumption_status": runtime_status,
         "blockers": [
             "full_frame_inflate_parity_missing",
             "contest_cpu_cuda_exact_eval_not_executed",
@@ -2063,18 +2181,25 @@ def _grammar_campaign_artifact_status(
         "receiver_adapter_source_emitted": bool(
             isinstance(receiver_adapter_manifest, Mapping)
             and receiver_adapter_manifest.get("runtime_consumption_status")
-            == "u32_decoder_len_adapter_source_emitted"
+            in {
+                "u32_decoder_len_adapter_source_emitted",
+                "len24_decoder_len_adapter_source_emitted",
+            }
         ),
         "runtime_tree_materialized": bool(
             isinstance(runtime_tree_manifest, Mapping)
             and runtime_tree_manifest.get("runtime_consumption_status")
-            == "u32_receiver_runtime_tree_materialized"
+            in {
+                "u32_receiver_runtime_tree_materialized",
+                "len24_receiver_runtime_tree_materialized",
+            }
         ),
         "archive_receiver_parse_safe": bool(
             isinstance(archive_manifest, Mapping)
             and (
                 archive_manifest.get("fixed_offset_stock_runtime_parse_safe")
                 or archive_manifest.get("u32_decoder_len_adapter_parse_safe")
+                or archive_manifest.get("len24_decoder_len_adapter_parse_safe")
             )
         ),
         "runtime_tree_compatible_with_archive_layout": bool(
@@ -2086,6 +2211,14 @@ def _grammar_campaign_artifact_status(
                     and isinstance(runtime_tree_manifest, Mapping)
                     and runtime_tree_manifest.get("runtime_consumption_status")
                     == "u32_receiver_runtime_tree_materialized"
+                )
+                or (
+                    archive_manifest.get("archive_layout")
+                    == "len24_decoder_len_adapter"
+                    and archive_manifest.get("len24_decoder_len_adapter_parse_safe")
+                    and isinstance(runtime_tree_manifest, Mapping)
+                    and runtime_tree_manifest.get("runtime_consumption_status")
+                    == "len24_receiver_runtime_tree_materialized"
                 )
                 or (
                     archive_manifest.get("archive_layout") == "fixed_pr101"
@@ -2362,8 +2495,23 @@ done < "$FILE_LIST"
 
 
 def _generated_u32_inflate_py() -> str:
-    return '''#!/usr/bin/env python
-"""Inflate PR101-family u32 decoder-length archive to raw uint8 RGB frames."""
+    return _generated_decoder_len_inflate_py(archive_layout="u32_decoder_len_adapter")
+
+
+def _generated_decoder_len_inflate_py(
+    *,
+    archive_layout: Literal["u32_decoder_len_adapter", "len24_decoder_len_adapter"],
+) -> str:
+    if archive_layout == "u32_decoder_len_adapter":
+        adapter_module = "pr101_u32_adapter"
+        parser_name = "parse_archive_u32_decoder_len"
+        title = "u32"
+    else:
+        adapter_module = "pr101_len24_adapter"
+        parser_name = "parse_archive_len24_decoder_len"
+        title = "len24"
+    return f'''#!/usr/bin/env python
+"""Inflate PR101-family {title} decoder-length archive to raw uint8 RGB frames."""
 import sys
 from pathlib import Path
 
@@ -2376,7 +2524,7 @@ sys.path.insert(0, str(HERE / "src"))
 
 from codec import apply_latent_sidecar, decode_decoder_compact, decode_latents_compact
 from model import HNeRVDecoder
-from pr101_u32_adapter import parse_archive_u32_decoder_len
+from {adapter_module} import {parser_name}
 
 
 CAMERA_H, CAMERA_W = 874, 1164
@@ -2384,7 +2532,7 @@ CAMERA_H, CAMERA_W = 874, 1164
 
 def inflate(src_bin: str, dst_raw: str):
     archive_bytes = Path(src_bin).read_bytes()
-    decoder_sd, latents, meta = parse_archive_u32_decoder_len(
+    decoder_sd, latents, meta = {parser_name}(
         archive_bytes,
         decode_decoder_compact=decode_decoder_compact,
         decode_latents_compact=decode_latents_compact,
@@ -2433,7 +2581,7 @@ def inflate(src_bin: str, dst_raw: str):
             fout.write(frames.tobytes())
             n += batch * 2
 
-    print(f"saved {n} frames")
+    print(f"saved {{n}} frames")
     return n
 
 
@@ -2455,14 +2603,19 @@ __all__ = [
     "PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA",
     "PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA",
     "PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA",
+    "PR101_LEN24_RECEIVER_ADAPTER_SOURCE_SCHEMA",
+    "PR101_LEN24_RUNTIME_TREE_MATERIALIZATION_SCHEMA",
     "PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA",
     "PR101_TENSOR_GRAMMAR_CANDIDATE_SCHEMA",
     "PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA",
     "PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA",
     "PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA",
     "CoderName",
+    "DecoderLenArchiveLayout",
     "StoragePermMode",
     "build_grouped_optimizer_candidate_queue_from_report",
+    "build_len24_receiver_adapter_source_from_report",
+    "build_len24_receiver_runtime_tree_from_report",
     "build_optimizer_candidate_queue_from_solver_report",
     "build_pr101_optimal_grammar_campaign_summary",
     "build_u32_receiver_adapter_source_from_report",

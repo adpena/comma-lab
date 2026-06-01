@@ -21,6 +21,8 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
     DEFAULT_CODERS,
     CoderName,
     build_grouped_optimizer_candidate_queue_from_report,
+    build_len24_receiver_adapter_source_from_report,
+    build_len24_receiver_runtime_tree_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     build_pr101_optimal_grammar_campaign_summary,
     build_u32_receiver_adapter_source_from_report,
@@ -150,12 +152,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--grouped-archive-layout",
-        choices=("fixed_pr101", "u32_decoder_len_adapter"),
+        choices=("fixed_pr101", "u32_decoder_len_adapter", "len24_decoder_len_adapter"),
         default="fixed_pr101",
         help=(
             "Archive inner layout for --grouped-archive-output. fixed_pr101 "
             "keeps PR101 fixed offsets; u32_decoder_len_adapter emits a "
-            "length-prefixed decoder section and requires a receiver runtime adapter."
+            "4-byte length-prefixed decoder section; len24_decoder_len_adapter "
+            "uses the minimal 3-byte section length. Adapter layouts require "
+            "a receiver runtime adapter."
         ),
     )
     parser.add_argument(
@@ -399,7 +403,14 @@ def main(argv: list[str] | None = None) -> int:
             args.grouped_receiver_adapter_output is not None
             or args.grouped_receiver_adapter_proof_output is not None
         ):
-            source, adapter_proof = build_u32_receiver_adapter_source_from_report(grouped_report)
+            if args.grouped_archive_layout == "len24_decoder_len_adapter":
+                source, adapter_proof = build_len24_receiver_adapter_source_from_report(
+                    grouped_report
+                )
+            else:
+                source, adapter_proof = build_u32_receiver_adapter_source_from_report(
+                    grouped_report
+                )
             if args.grouped_receiver_adapter_output is not None:
                 args.grouped_receiver_adapter_output.parent.mkdir(parents=True, exist_ok=True)
                 args.grouped_receiver_adapter_output.write_text(source, encoding="utf-8")
@@ -417,11 +428,18 @@ def main(argv: list[str] | None = None) -> int:
                 raise SystemExit(f"source runtime model.py not found: {model_source}")
             if not args.runtime_codec_source.is_file():
                 raise SystemExit(f"runtime codec source not found: {args.runtime_codec_source}")
-            runtime_files, runtime_proof = build_u32_receiver_runtime_tree_from_report(
-                grouped_report,
-                codec_py_source=args.runtime_codec_source.read_bytes(),
-                model_py_source=model_source.read_bytes(),
-            )
+            if args.grouped_archive_layout == "len24_decoder_len_adapter":
+                runtime_files, runtime_proof = build_len24_receiver_runtime_tree_from_report(
+                    grouped_report,
+                    codec_py_source=args.runtime_codec_source.read_bytes(),
+                    model_py_source=model_source.read_bytes(),
+                )
+            else:
+                runtime_files, runtime_proof = build_u32_receiver_runtime_tree_from_report(
+                    grouped_report,
+                    codec_py_source=args.runtime_codec_source.read_bytes(),
+                    model_py_source=model_source.read_bytes(),
+                )
             if args.grouped_runtime_output_dir is not None:
                 _write_runtime_tree(args.grouped_runtime_output_dir, runtime_files)
             if args.grouped_runtime_proof_output is not None:
