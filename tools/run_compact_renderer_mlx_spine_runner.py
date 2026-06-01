@@ -286,6 +286,249 @@ def adapt_pr95_mlx_report_to_spine(
     return {**final_report, "report_path": final_report_path.as_posix()}
 
 
+def adapt_pr95_stage8_report_to_spine(
+    *,
+    pr95_stage8_report_path: str | Path,
+    output_dir: str | Path,
+    hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
+    run_receiver_proof: bool = False,
+    receiver_proof_runtime_dir: str | Path = DEFAULT_PR95_RECEIVER_RUNTIME_DIR,
+    keep_receiver_proof_output: bool = False,
+    receiver_proof_timeout_seconds: int = 1800,
+    allow_overwrite: bool = False,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Adapt a source-faithful PR95 Stage-8 report into the compact spine."""
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+        raise CompactRendererMlxSpineRunnerError(
+            f"output dir is non-empty; pass --overwrite: {out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+    report_path = _resolve_existing(pr95_stage8_report_path, base=root)
+    stage8_report = _load_json(report_path)
+    archive_raw = (
+        stage8_report.get("candidate_archive_zip_path")
+        or (stage8_report.get("package_report") or {}).get("archive_zip_path")
+    )
+    if not isinstance(archive_raw, str) or not archive_raw:
+        raise CompactRendererMlxSpineRunnerError(
+            "pr95_stage8_report_missing_candidate_archive_zip_path"
+        )
+    archive = _resolve_existing(archive_raw, base=root)
+    receiver_proof_report: dict[str, Any] | None = None
+    receiver_proof_paths: list[Path] = []
+    package_report = (
+        stage8_report.get("package_report")
+        if isinstance(stage8_report.get("package_report"), dict)
+        else {}
+    )
+    embedded_receiver_proof = (
+        package_report.get("archive_bound_candidate_receiver_proof")
+        if isinstance(package_report.get("archive_bound_candidate_receiver_proof"), dict)
+        else None
+    )
+    if embedded_receiver_proof is not None:
+        receiver_proof_report = embedded_receiver_proof
+        proof_path = embedded_receiver_proof.get("proof_path")
+        if isinstance(proof_path, str) and proof_path:
+            receiver_proof_paths = [_resolve(proof_path, base=root)]
+    if run_receiver_proof:
+        receiver_proof_report = run_pr95_hnerv_receiver_proof(
+            archive_zip=archive,
+            runtime_dir=receiver_proof_runtime_dir,
+            output_dir=out / "receiver_proof",
+            keep_output=keep_receiver_proof_output,
+            timeout_seconds=receiver_proof_timeout_seconds,
+            repo_root=root,
+        )
+        proof_path = receiver_proof_report.get("report_path")
+        if isinstance(proof_path, str) and proof_path:
+            receiver_proof_paths = [Path(proof_path)]
+
+    spine = build_pr95_hnerv_spine_from_archive(archive)
+    projection = write_representation_spine_projection(
+        output_dir=out / "pr95_stage8_hnerv_spine",
+        spine=spine,
+        basename="pr95_stage8_hnerv_representation_spine",
+    )
+    projection_manifest = Path(projection["manifest_path"])
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[projection_manifest],
+        hard_byte_ceilings=hard_byte_ceilings,
+    )
+    acquisition_path = out / "hprc_spine_acquisition_report.json"
+    _write_json(acquisition_path, acquisition)
+    runner_plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        receiver_proof_report_paths=receiver_proof_paths,
+        hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
+        repo_root=root,
+    )
+    runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
+    write_spine_bounded_runner_plan(
+        output_path=runner_plan_path,
+        plan=runner_plan,
+        allow_overwrite=True,
+    )
+
+    exact_gate = stage8_report.get("exact_gate")
+    stage8_blockers = (
+        exact_gate.get("blockers")
+        if isinstance(exact_gate, dict) and isinstance(exact_gate.get("blockers"), list)
+        else []
+    )
+    local_training = stage8_report.get("local_training_result")
+    raw_result = (
+        local_training.get("raw_result")
+        if isinstance(local_training, dict)
+        and isinstance(local_training.get("raw_result"), dict)
+        else {}
+    )
+    public_stage8_train_called = raw_result.get("public_stage8_train_stage_called")
+    blockers: list[Any] = [
+        *stage8_blockers,
+        *runner_plan.get("blockers", []),
+        "full_video_mlx_scorer_replay_not_attached",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    receiver_proof_passed = (
+        receiver_proof_report is not None
+        and (
+            receiver_proof_report.get("receiver_proof_valid") is True
+            or receiver_proof_report.get("runtime_consumption_proof_passed") is True
+            or receiver_proof_report.get("receiver_contract_satisfied") is True
+        )
+    )
+    if receiver_proof_report is None:
+        blockers.append("receiver_proof_not_executed")
+    elif not receiver_proof_passed:
+        blockers.append("receiver_proof_failed")
+        blockers.extend(receiver_proof_report.get("blockers") or [])
+    else:
+        refusal = receiver_proof_report.get("exact_readiness_refusal")
+        if isinstance(refusal, dict):
+            blockers.extend(refusal.get("blockers") or [])
+
+    final_report = _base_report(
+        output_dir=out,
+        mode="adapted_pr95_stage8_public_archive_report",
+        hard_byte_ceilings=hard_byte_ceilings,
+        repo_root=root,
+    )
+    final_report.update(
+        {
+            "pr95_stage8_report_path": report_path.as_posix(),
+            "pr95_stage8_report_sha256": _sha256_file(report_path),
+            "stage8_mode": stage8_report.get("mode"),
+            "source_archive_zip": stage8_report.get("source_archive_zip"),
+            "candidate_archive_zip_path": archive.as_posix(),
+            "candidate_archive_zip_bytes": archive.stat().st_size,
+            "candidate_archive_zip_sha256": _sha256_file(archive),
+            "projection_manifest_paths": [projection_manifest.as_posix()],
+            "receiver_proof_report_paths": [
+                path.as_posix() for path in receiver_proof_paths
+            ],
+            "receiver_proof_report": receiver_proof_report,
+            "acquisition_report_path": acquisition_path.as_posix(),
+            "bounded_runner_plan_path": runner_plan_path.as_posix(),
+            "selected_runner_rows": runner_plan["selected_runner_rows"],
+            "stage8_source_faithfulness": {
+                "schema": "pr95_stage8_source_faithfulness.v1",
+                "public_stage8_train_stage_called": public_stage8_train_called is True,
+                "source_faithful_training_complete": (
+                    public_stage8_train_called is True
+                    and "stage8_zero_epoch_source_seed_packaged_no_training"
+                    not in stage8_blockers
+                    and "stage8_training_not_executed_plan_only"
+                    not in stage8_blockers
+                ),
+                "optimizer_semantics": "public_pr95_stage8_muon_adamw_source_code",
+                "score_authority": "none_until_exact_cpu_cuda",
+            },
+            "hprc_queue_followup_report_paths": [
+                _resolve(path, base=root).as_posix()
+                for path in hprc_queue_followup_report_paths
+            ],
+            "blockers": _dedupe(blockers),
+        }
+    )
+    final_report_path = out / "compact_renderer_mlx_spine_runner_report.json"
+    _write_json(final_report_path, final_report)
+    return {**final_report, "report_path": final_report_path.as_posix()}
+
+
+def execute_pr95_stage8_source_and_adapt(
+    *,
+    output_dir: str | Path,
+    source_archive_zip: str | Path,
+    source_video_path: str | Path,
+    hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
+    stage8_epochs: int = 0,
+    stage8_eval_every: int = 1,
+    stage8_batch_size: int = 1,
+    stage8_device: str = "cpu",
+    stage8_muon_weight_decay: float = 5e-4,
+    stage8_target_cache_path: str | Path | None = None,
+    stage8_build_target_cache_if_missing: bool = True,
+    run_receiver_proof: bool = False,
+    receiver_proof_runtime_dir: str | Path = DEFAULT_PR95_RECEIVER_RUNTIME_DIR,
+    keep_receiver_proof_output: bool = False,
+    receiver_proof_timeout_seconds: int = 1800,
+    allow_overwrite: bool = False,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Execute the public PR95 Stage-8 source lane, then adapt it to the spine."""
+
+    from tools.run_pr95_stage8_from_public_archive import (
+        DEFAULT_CHALLENGE_ROOT,
+        DEFAULT_PUBLIC_SUBMISSION_ROOT,
+        run_pr95_stage8_from_public_archive,
+    )
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+        raise CompactRendererMlxSpineRunnerError(
+            f"output dir is non-empty; pass --overwrite: {out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+    stage8_report = run_pr95_stage8_from_public_archive(
+        source_archive_zip=_resolve_existing(source_archive_zip, base=root),
+        public_submission_root=DEFAULT_PUBLIC_SUBMISSION_ROOT,
+        challenge_root=DEFAULT_CHALLENGE_ROOT,
+        source_video_path=_resolve(source_video_path, base=root),
+        output_dir=out / "pr95_stage8_source_lane",
+        epochs=int(stage8_epochs),
+        eval_every=int(stage8_eval_every),
+        batch_size=int(stage8_batch_size),
+        muon_weight_decay=float(stage8_muon_weight_decay),
+        device=stage8_device,
+        execute=True,
+        target_cache_path=None
+        if stage8_target_cache_path is None
+        else _resolve(stage8_target_cache_path, base=root),
+        build_target_cache_if_missing=bool(stage8_build_target_cache_if_missing),
+        overwrite=True,
+    )
+    return adapt_pr95_stage8_report_to_spine(
+        pr95_stage8_report_path=stage8_report["report_path"],
+        output_dir=out,
+        hard_byte_ceilings=hard_byte_ceilings,
+        hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
+        run_receiver_proof=run_receiver_proof,
+        receiver_proof_runtime_dir=receiver_proof_runtime_dir,
+        keep_receiver_proof_output=keep_receiver_proof_output,
+        receiver_proof_timeout_seconds=receiver_proof_timeout_seconds,
+        allow_overwrite=True,
+        repo_root=root,
+    )
+
+
 def build_plan_only_report(
     *,
     output_dir: str | Path,
@@ -1654,7 +1897,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--from-pr95-mlx-report", type=Path)
+    parser.add_argument(
+        "--from-pr95-stage8-report",
+        type=Path,
+        help="Adapt a source-faithful PR95 Stage-8 report into the compact spine.",
+    )
     parser.add_argument("--execute-pr95-mlx-smoke", action="store_true")
+    parser.add_argument(
+        "--execute-pr95-stage8-source",
+        action="store_true",
+        help="Run the public PR95 Stage-8 source lane, then adapt its archive.",
+    )
     parser.add_argument(
         "--execute-family",
         choices=EXECUTABLE_FAMILIES,
@@ -1757,6 +2010,21 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--smoke-epochs-per-stage", default=1, type=int)
     parser.add_argument(
+        "--stage8-epochs",
+        default=0,
+        type=int,
+        help=(
+            "Epochs for --execute-pr95-stage8-source. Default 0 proves archive "
+            "custody without launching a long Stage-8 run."
+        ),
+    )
+    parser.add_argument("--stage8-eval-every", default=1, type=int)
+    parser.add_argument("--stage8-batch-size", default=1, type=int)
+    parser.add_argument("--stage8-device", choices=("auto", "cpu", "cuda"), default="cpu")
+    parser.add_argument("--stage8-muon-weight-decay", default=5e-4, type=float)
+    parser.add_argument("--stage8-target-cache-path", type=Path)
+    parser.add_argument("--stage8-no-build-target-cache", action="store_true")
+    parser.add_argument(
         "--training-loss-surface",
         choices=("rgb_mse", "rgb_yuv6_mse"),
         default="rgb_yuv6_mse",
@@ -1784,13 +2052,16 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     modes = [
         args.execute_pr95_mlx_smoke,
+        args.execute_pr95_stage8_source,
         args.from_pr95_mlx_report is not None,
+        args.from_pr95_stage8_report is not None,
         args.execute_family is not None,
     ]
     if sum(1 for item in modes if item) > 1:
         raise SystemExit(
-            "pass only one of --execute-pr95-mlx-smoke, --from-pr95-mlx-report, "
-            "or --execute-family"
+            "pass only one of --execute-pr95-mlx-smoke, "
+            "--execute-pr95-stage8-source, --from-pr95-mlx-report, "
+            "--from-pr95-stage8-report, or --execute-family"
         )
     ceilings = tuple(args.hard_byte_ceiling or DEFAULT_BASE_RENDERER_BYTE_CEILINGS)
     output_dir = args.output_dir or _default_output_dir()
@@ -1815,6 +2086,40 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=output_dir,
             hard_byte_ceilings=ceilings,
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            allow_overwrite=args.overwrite,
+            repo_root=args.repo_root,
+        )
+    elif args.from_pr95_stage8_report is not None:
+        report = adapt_pr95_stage8_report_to_spine(
+            pr95_stage8_report_path=args.from_pr95_stage8_report,
+            output_dir=output_dir,
+            hard_byte_ceilings=ceilings,
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            run_receiver_proof=args.run_receiver_proof,
+            receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
+            keep_receiver_proof_output=args.keep_receiver_proof_output,
+            receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
+            allow_overwrite=args.overwrite,
+            repo_root=args.repo_root,
+        )
+    elif args.execute_pr95_stage8_source:
+        report = execute_pr95_stage8_source_and_adapt(
+            output_dir=output_dir,
+            source_archive_zip=args.pr95_source_archive,
+            source_video_path=args.source_video_path,
+            hard_byte_ceilings=ceilings,
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            stage8_epochs=args.stage8_epochs,
+            stage8_eval_every=args.stage8_eval_every,
+            stage8_batch_size=args.stage8_batch_size,
+            stage8_device=args.stage8_device,
+            stage8_muon_weight_decay=args.stage8_muon_weight_decay,
+            stage8_target_cache_path=args.stage8_target_cache_path,
+            stage8_build_target_cache_if_missing=not args.stage8_no_build_target_cache,
+            run_receiver_proof=args.run_receiver_proof,
+            receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
+            keep_receiver_proof_output=args.keep_receiver_proof_output,
+            receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
         )

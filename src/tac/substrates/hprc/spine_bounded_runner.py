@@ -598,8 +598,11 @@ def _index_receiver_proofs(reports: list[dict[str, Any]]) -> dict[str, dict[str,
         payload = item["payload"]
         for key in (
             payload.get("archive_path"),
+            payload.get("archive_zip_path"),
             payload.get("archive_sha256"),
+            payload.get("archive_zip_sha256"),
             payload.get("proof_path"),
+            payload.get("report_path"),
         ):
             if isinstance(key, str) and key:
                 index[key] = payload

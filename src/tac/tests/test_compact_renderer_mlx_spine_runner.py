@@ -18,6 +18,7 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
     _parse_args,
     adapt_pr95_mlx_report_to_spine,
+    adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
     execute_pr95_hnerv_mlx_scoreaware_and_adapt,
 )
@@ -249,6 +250,184 @@ def test_pr95_hnerv_execute_parser_exposes_public_archive_seed() -> None:
     assert args.run_receiver_proof is True
     assert args.keep_receiver_proof_output is True
     assert args.receiver_proof_timeout_seconds == 17
+
+
+def test_pr95_stage8_execute_parser_exposes_source_lane_controls() -> None:
+    args = _parse_args(
+        [
+            "--execute-pr95-stage8-source",
+            "--stage8-epochs",
+            "25",
+            "--stage8-eval-every",
+            "5",
+            "--stage8-batch-size",
+            "4",
+            "--stage8-device",
+            "cpu",
+            "--stage8-muon-weight-decay",
+            "0.0007",
+            "--stage8-target-cache-path",
+            "targets.pt",
+            "--stage8-no-build-target-cache",
+        ]
+    )
+
+    assert args.execute_pr95_stage8_source is True
+    assert args.stage8_epochs == 25
+    assert args.stage8_eval_every == 5
+    assert args.stage8_batch_size == 4
+    assert args.stage8_device == "cpu"
+    assert args.stage8_muon_weight_decay == 0.0007
+    assert args.stage8_target_cache_path == Path("targets.pt")
+    assert args.stage8_no_build_target_cache is True
+
+
+def test_adapt_pr95_stage8_report_emits_spine_runner_and_proof(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    archive = _write_synthetic_pr95_archive(tmp_path / "stage8_archive.zip")
+    stage8_report_path = tmp_path / "pr95_stage8_report.json"
+    stage8_report = {
+        "schema": "pr95_stage8_from_public_archive_lane.v1",
+        "mode": "execute",
+        "report_path": stage8_report_path.as_posix(),
+        "source_archive_zip": archive.as_posix(),
+        "candidate_archive_zip_path": archive.as_posix(),
+        "candidate_archive_zip_bytes": archive.stat().st_size,
+        "candidate_archive_zip_sha256": runner_mod._sha256_file(archive),
+        "local_training_result": {
+            "raw_result": {"public_stage8_train_stage_called": True}
+        },
+        "exact_gate": {
+            "schema": "exact_gate_blocker.v1",
+            "blockers": ["contest_cpu_cuda_exact_eval_missing"],
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    stage8_report_path.write_text(
+        json.dumps(stage8_report, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    def fake_receiver_proof(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        proof_path = out / "pr95_hnerv_receiver_proof.json"
+        report = {
+            "schema": "pr95_hnerv_receiver_proof.v1",
+            "report_path": proof_path.as_posix(),
+            "archive_zip_path": Path(kwargs["archive_zip"]).as_posix(),
+            "archive_zip_sha256": runner_mod._sha256_file(Path(kwargs["archive_zip"])),
+            "runtime_consumption_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "receiver_output_kind": "contest_raw_rgb_interleaved",
+            "receiver_output_bytes": 1,
+            "receiver_proof_valid": True,
+            "blockers": [],
+            "exact_readiness_refusal": {
+                "schema": "exact_readiness_refusal.v1",
+                "ready": False,
+                "blockers": ["runtime_consumption_smoke_is_not_score_authority"],
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        proof_path.write_text(
+            json.dumps(report, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return report
+
+    monkeypatch.setattr(runner_mod, "run_pr95_hnerv_receiver_proof", fake_receiver_proof)
+
+    out = adapt_pr95_stage8_report_to_spine(
+        pr95_stage8_report_path=stage8_report_path,
+        output_dir=tmp_path / "adapted",
+        hard_byte_ceilings=(178_000,),
+        run_receiver_proof=True,
+        allow_overwrite=True,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "adapted_pr95_stage8_public_archive_report"
+    assert out["score_claim"] is False
+    assert out["stage8_source_faithfulness"]["public_stage8_train_stage_called"] is True
+    assert out["stage8_source_faithfulness"]["source_faithful_training_complete"] is True
+    assert out["receiver_proof_report_paths"]
+    runner = json.loads(Path(out["bounded_runner_plan_path"]).read_text())
+    row = runner["selected_runner_rows"][0]
+    assert row["receiver_proof_observed"] is True
+    assert row["receiver_proof_passed"] is True
+    assert "contest_cpu_cuda_exact_eval_missing" in out["blockers"]
+    assert "runtime_consumption_smoke_is_not_score_authority" in out["blockers"]
+
+
+def test_adapt_pr95_stage8_report_reuses_embedded_package_proof(
+    tmp_path: Path,
+) -> None:
+    archive = _write_synthetic_pr95_archive(tmp_path / "stage8_archive.zip")
+    proof_path = tmp_path / "embedded_receiver_proof.json"
+    proof = {
+        "schema": "pr95_mlx_pytorch_package_receiver_proof.v1",
+        "proof_path": proof_path.as_posix(),
+        "archive_path": archive.as_posix(),
+        "archive_sha256": runner_mod._sha256_file(archive),
+        "runtime_consumption_proof_passed": True,
+        "receiver_contract_satisfied": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    proof_path.write_text(
+        json.dumps(proof, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    stage8_report_path = tmp_path / "pr95_stage8_report.json"
+    stage8_report_path.write_text(
+        json.dumps(
+            {
+                "schema": "pr95_stage8_from_public_archive_lane.v1",
+                "mode": "execute",
+                "candidate_archive_zip_path": archive.as_posix(),
+                "candidate_archive_zip_bytes": archive.stat().st_size,
+                "candidate_archive_zip_sha256": runner_mod._sha256_file(archive),
+                "package_report": {
+                    "archive_bound_candidate_receiver_proof": proof,
+                },
+                "local_training_result": {
+                    "raw_result": {"public_stage8_train_stage_called": False}
+                },
+                "exact_gate": {"blockers": []},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    out = adapt_pr95_stage8_report_to_spine(
+        pr95_stage8_report_path=stage8_report_path,
+        output_dir=tmp_path / "adapted",
+        hard_byte_ceilings=(178_000,),
+        allow_overwrite=True,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["receiver_proof_report_paths"] == [proof_path.as_posix()]
+    assert "receiver_proof_not_executed" not in out["blockers"]
+    runner = json.loads(Path(out["bounded_runner_plan_path"]).read_text())
+    row = runner["selected_runner_rows"][0]
+    assert row["receiver_proof_observed"] is True
+    assert row["receiver_proof_passed"] is True
 
 
 def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(

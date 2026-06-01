@@ -10,6 +10,9 @@ from typing import Any
 
 from tac.archive_byte_profile import contest_rate_term
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
+from tac.substrates.hprc.bitstream_grammar import (
+    build_optimal_bitstream_grammar_plan,
+)
 from tac.substrates.hprc.representation_spine import HprcRepresentationFamily
 from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
 
@@ -113,11 +116,16 @@ def build_spine_acquisition_report(
         projection = _load_json_object(path)
         rows.append(_projection_row(path=path, projection=projection, ceilings=ceilings))
     rows = sorted(rows, key=lambda row: (row["effective_archive_bytes"], row["family"]))
+    optimal_grammar = build_optimal_bitstream_grammar_plan(
+        acquisition_rows=rows,
+        hard_byte_ceilings=ceilings,
+    )
     return {
         "schema": HPRC_SPINE_ACQUISITION_REPORT_SCHEMA,
         "hard_byte_ceilings": list(ceilings),
         "row_count": len(rows),
         "rows": rows,
+        "optimal_bitstream_grammar": optimal_grammar,
         "best_under_each_ceiling": {
             str(ceiling): _best_under_ceiling(rows, ceiling) for ceiling in ceilings
         },
