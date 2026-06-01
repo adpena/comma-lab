@@ -22,6 +22,7 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     default_state_dict_output_path_hint,
+    materialize_grouped_decoder_blob_from_report,
     solve_grouped_brotli_packet_grammar,
     solve_state_dict_per_tensor_grammar,
 )
@@ -101,6 +102,21 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=None,
         help="Optional planning-only optimizer queue for the grouped packet report.",
+    )
+    parser.add_argument(
+        "--grouped-decoder-blob-output",
+        type=Path,
+        default=None,
+        help=(
+            "Optional byte-closed grouped decoder blob output. Requires a full "
+            "schema run; still not a submission archive."
+        ),
+    )
+    parser.add_argument(
+        "--grouped-decoder-proof-output",
+        type=Path,
+        default=None,
+        help="Optional materialization proof JSON for --grouped-decoder-blob-output.",
     )
     parser.add_argument(
         "--grouped-transform-mode",
@@ -193,7 +209,12 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
     grouped_report = None
-    if args.grouped_output is not None or args.grouped_queue_output is not None:
+    if (
+        args.grouped_output is not None
+        or args.grouped_queue_output is not None
+        or args.grouped_decoder_blob_output is not None
+        or args.grouped_decoder_proof_output is not None
+    ):
         exact_stream_count = (
             None
             if args.grouped_exact_stream_count < 0
@@ -223,6 +244,21 @@ def main(argv: list[str] | None = None) -> int:
                 json.dumps(grouped_queue, indent=2, sort_keys=True, default=_json_default),
                 encoding="utf-8",
             )
+        if args.grouped_decoder_blob_output is not None or args.grouped_decoder_proof_output is not None:
+            blob, proof = materialize_grouped_decoder_blob_from_report(
+                state_dict,
+                grouped_report,
+                n_quant=args.n_quant,
+            )
+            if args.grouped_decoder_blob_output is not None:
+                args.grouped_decoder_blob_output.parent.mkdir(parents=True, exist_ok=True)
+                args.grouped_decoder_blob_output.write_bytes(blob)
+            if args.grouped_decoder_proof_output is not None:
+                args.grouped_decoder_proof_output.parent.mkdir(parents=True, exist_ok=True)
+                args.grouped_decoder_proof_output.write_text(
+                    json.dumps(proof, indent=2, sort_keys=True, default=_json_default),
+                    encoding="utf-8",
+                )
     bytes_ = report["byte_accounting"]
     print(f"Wrote PR101 per-tensor grammar report to {args.output}")
     if args.queue_output is not None:
@@ -231,6 +267,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Wrote grouped split-Brotli packet report to {args.grouped_output}")
     if args.grouped_queue_output is not None:
         print(f"Wrote grouped planning-only optimizer queue to {args.grouped_queue_output}")
+    if args.grouped_decoder_blob_output is not None:
+        print(f"Wrote grouped decoder blob to {args.grouped_decoder_blob_output}")
+    if args.grouped_decoder_proof_output is not None:
+        print(f"Wrote grouped decoder materialization proof to {args.grouped_decoder_proof_output}")
     print(
         "selected isolated bytes="
         f"{bytes_['selected_isolated_tensor_bytes']}; "

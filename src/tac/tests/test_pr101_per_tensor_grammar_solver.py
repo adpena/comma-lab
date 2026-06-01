@@ -8,11 +8,13 @@ import torch
 from tac.optimization.byte_shaving_campaign import build_signal_surface_from_candidate_queue
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
     PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA,
+    PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA,
     PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA,
     PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA,
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     empirical_shannon_floor_bytes,
+    materialize_grouped_decoder_blob_from_report,
     measure_tensor_grammar_candidates,
     select_best_tensor_candidate,
     solve_grouped_brotli_packet_grammar,
@@ -231,6 +233,50 @@ def test_grouped_brotli_queue_is_consumable_only_for_positive_packet_savings() -
         surface = build_signal_surface_from_candidate_queue(queue)
         assert surface["score_claim"] is False
         assert surface["units"][0]["candidate_saved_bytes"] == saved
+
+
+def test_grouped_decoder_blob_materializer_proves_receiver_parse_without_score_claim() -> None:
+    state_dict = _tiny_state_dict(seed=4)
+    report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=7,
+        max_streams=7,
+        brotli_quality=4,
+    )
+
+    blob, manifest = materialize_grouped_decoder_blob_from_report(state_dict, report)
+
+    assert blob
+    assert manifest["schema"] == PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA
+    assert manifest["decoder_blob_bytes"] == len(blob)
+    assert manifest["reported_grouped_brotli_bytes"] == len(blob)
+    assert len(manifest["decoder_blob_sha256"]) == 64
+    assert manifest["byte_closed_decoder_blob_materialized"] is True
+    assert manifest["proof"]["stream_roundtrip_exact"] is True
+    assert manifest["proof"]["materialized_bytes_match_report"] is True
+    assert manifest["proof"]["state_dict_parser_roundtrip_exact"] is True
+    assert manifest["proof"]["quantized_state_dict_exact"] is True
+    assert manifest["ready_for_archive_packaging"] is True
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "archive_zip_not_materialized" in manifest["blockers"]
+
+
+def test_grouped_decoder_blob_materializer_rejects_partial_schema_report() -> None:
+    state_dict = _tiny_state_dict(seed=5)
+    report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="best_brotli_per_tensor",
+        storage_perm_mode="identity",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=4,
+    )
+
+    with pytest.raises(ValueError, match="full PR101 schema"):
+        materialize_grouped_decoder_blob_from_report(state_dict, report)
 
 
 def test_negzig_rejects_int8_min_roundtrip_instead_of_faking_exactness() -> None:

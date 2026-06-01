@@ -16,6 +16,7 @@ intelligence:
 
 from __future__ import annotations
 
+import hashlib
 import heapq
 import itertools
 import lzma
@@ -51,6 +52,9 @@ from tac.pr101_split_brotli_codec import (
 PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA = "pr101_per_tensor_grammar_solver.v1"
 PR101_TENSOR_GRAMMAR_CANDIDATE_SCHEMA = "pr101_tensor_grammar_candidate.v1"
 PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA = "pr101_grouped_brotli_packet_grammar.v1"
+PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA = (
+    "pr101_grouped_decoder_blob_materialization.v1"
+)
 PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 FALSE_AUTHORITY_FIELDS = {
     "score_claim": False,
@@ -724,6 +728,128 @@ def build_grouped_optimizer_candidate_queue_from_report(
         "axis_tag": "[planning-only byte-profile]",
         **FALSE_AUTHORITY_FIELDS,
     }
+
+
+def materialize_grouped_decoder_blob_from_report(
+    state_dict: Mapping[str, Any],
+    report: Mapping[str, Any],
+    *,
+    n_quant: int | None = None,
+) -> tuple[bytes, dict[str, Any]]:
+    """Materialize and prove the grouped decoder blob described by ``report``.
+
+    This is the first receiver-facing proof surface after grouped planning.  It
+    writes no archive and claims no score: the output is a byte-closed decoder
+    section plus the adapter parameters a receiver would need to decode it.
+    Full submission authority still requires archive splicing, ``inflate.sh``
+    receiver consumption, full-frame parity/replay, and exact CPU/CUDA eval.
+    """
+
+    if report.get("schema") != PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA:
+        raise ValueError("expected pr101_grouped_brotli_packet_grammar.v1 report")
+    n_tensors = int(report.get("n_tensors") or 0)
+    if n_tensors != len(FIXED_STATE_SCHEMA):
+        raise ValueError("decoder blob materialization requires the full PR101 schema")
+    quant = int(n_quant if n_quant is not None else report.get("n_quant", N_QUANT))
+    adapter = report.get("adapter_params")
+    partition = report.get("partition")
+    if not isinstance(adapter, Mapping):
+        raise ValueError("grouped report missing adapter_params")
+    if not isinstance(partition, Mapping):
+        raise ValueError("grouped report missing partition")
+    byte_maps = _parse_adapter_byte_maps(adapter.get("effective_byte_maps"))
+    storage_order = tuple(int(v) for v in _as_sequence(adapter.get("derived_storage_order")))
+    stream_ends = tuple(int(v) for v in _as_sequence(adapter.get("derived_stream_ends")))
+    conv4_perms = _parse_adapter_conv4_perms(adapter.get("derived_conv4_perms"))
+    _validate_storage_order(storage_order, n_tensors=len(FIXED_STATE_SCHEMA))
+
+    payloads_by_tensor: dict[int, bytes] = {}
+    for idx, (name, expected_shape) in enumerate(FIXED_STATE_SCHEMA):
+        if name not in state_dict:
+            raise ValueError(f"state_dict missing tensor {name!r}")
+        qt = _quantize_tensor(name, state_dict[name], n_quant=quant)
+        if tuple(qt.shape) != tuple(expected_shape):
+            raise ValueError(
+                f"shape mismatch for {name!r}: expected {expected_shape}, got {qt.shape}"
+            )
+        payloads_by_tensor[idx] = _build_transformed_tensor_payload(
+            qt.q_i8,
+            scale=qt.scale,
+            byte_map=byte_maps.get(idx, DECODER_BYTE_MAPS.get(idx, "zig")),
+            perm=conv4_perms.get(idx),
+        )
+    parts_by_storage = [payloads_by_tensor[idx] for idx in storage_order]
+    blob = _pack_parts_for_stream_ends(
+        parts_by_storage,
+        stream_ends=stream_ends,
+        brotli_quality=int(report.get("brotli_quality", 11)),
+        brotli_lgwin_sweep=bool(report.get("brotli_lgwin_sweep", False)),
+    )
+    raw_concat = b"".join(parts_by_storage)
+    stream_roundtrip_exact = decompress_brotli_streams(blob, len(stream_ends)) == raw_concat
+    decoded = decode_decoder_compact(
+        blob,
+        effective_byte_maps=byte_maps,
+        derived_storage_order=storage_order,
+        derived_stream_ends=stream_ends,
+        derived_conv4_perms=conv4_perms,
+    )
+    mismatches = _quantized_decode_mismatches(decoded, state_dict, n_quant=quant)
+    quantized_exact = not mismatches
+    sha = hashlib.sha256(blob).hexdigest()
+    byte_accounting = report.get("byte_accounting")
+    reported_bytes = (
+        int(byte_accounting.get("selected_grouped_brotli_bytes"))
+        if isinstance(byte_accounting, Mapping)
+        and byte_accounting.get("selected_grouped_brotli_bytes") is not None
+        else None
+    )
+    stock_runtime_compatible = bool(report.get("stock_runtime_compatible"))
+    blockers = [
+        "archive_zip_not_materialized",
+        "full_frame_inflate_parity_missing",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    if not stock_runtime_compatible:
+        blockers.extend(["receiver_adapter_not_emitted", "runtime_consumption_proof_missing"])
+    if not stream_roundtrip_exact:
+        blockers.append("grouped_brotli_stream_roundtrip_failed")
+    if not quantized_exact:
+        blockers.append("decoded_quantized_state_dict_mismatch")
+    if reported_bytes is not None and len(blob) != reported_bytes:
+        blockers.append("materialized_decoder_blob_bytes_mismatch_report")
+    manifest = {
+        "schema": PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA,
+        "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
+        "source_report_schema": report.get("schema"),
+        "decoder_blob_bytes": len(blob),
+        "decoder_blob_sha256": sha,
+        "reported_grouped_brotli_bytes": reported_bytes,
+        "byte_closed_decoder_blob_materialized": True,
+        "adapter_params": {
+            "effective_byte_maps": {str(k): v for k, v in sorted(byte_maps.items())},
+            "derived_storage_order": list(storage_order),
+            "derived_stream_ends": list(stream_ends),
+            "derived_conv4_perms": {str(k): list(v) for k, v in sorted(conv4_perms.items())},
+        },
+        "proof": {
+            "stream_roundtrip_exact": bool(stream_roundtrip_exact),
+            "materialized_bytes_match_report": (
+                None if reported_bytes is None else len(blob) == reported_bytes
+            ),
+            "state_dict_parser_roundtrip_exact": set(decoded) == {name for name, _ in FIXED_STATE_SCHEMA},
+            "quantized_state_dict_exact": bool(quantized_exact),
+            "mismatch_count": len(mismatches),
+            "mismatches": mismatches[:8],
+        },
+        "stock_runtime_compatible": stock_runtime_compatible,
+        "runtime_consumption_status": report.get("runtime_consumption_status"),
+        "ready_for_archive_packaging": bool(stream_roundtrip_exact and quantized_exact),
+        "blockers": blockers,
+        "axis_tag": "[decoder-blob-materialization-only]",
+        **FALSE_AUTHORITY_FIELDS,
+    }
+    return blob, manifest
 
 
 def empirical_shannon_floor_bytes(payload: bytes | bytearray | memoryview) -> float:
@@ -1411,6 +1537,75 @@ def _selected_conv4_perms_are_pr101_defaults(
     return not extra
 
 
+def _as_sequence(value: Any) -> Sequence[Any]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError("expected sequence adapter parameter")
+    return value
+
+
+def _parse_adapter_byte_maps(value: Any) -> dict[int, str]:
+    if not isinstance(value, Mapping):
+        raise ValueError("adapter_params.effective_byte_maps must be a mapping")
+    out: dict[int, str] = {}
+    for raw_idx, raw_map in value.items():
+        idx = int(raw_idx)
+        byte_map = str(raw_map)
+        if byte_map not in VALID_BYTE_MAP_STRATEGIES:
+            raise ValueError(f"unknown adapter byte_map: {byte_map!r}")
+        out[idx] = byte_map
+    return out
+
+
+def _parse_adapter_conv4_perms(value: Any) -> dict[int, tuple[int, int, int, int]]:
+    if not isinstance(value, Mapping):
+        raise ValueError("adapter_params.derived_conv4_perms must be a mapping")
+    out: dict[int, tuple[int, int, int, int]] = {}
+    for raw_idx, raw_perm in value.items():
+        values = tuple(int(v) for v in _as_sequence(raw_perm))
+        if sorted(values) != [0, 1, 2, 3]:
+            raise ValueError(f"bad adapter conv4 perm for tensor {raw_idx!r}: {values!r}")
+        out[int(raw_idx)] = values  # type: ignore[assignment]
+    return out
+
+
+def _quantized_decode_mismatches(
+    decoded: Mapping[str, Any],
+    state_dict: Mapping[str, Any],
+    *,
+    n_quant: int,
+) -> list[dict[str, Any]]:
+    mismatches: list[dict[str, Any]] = []
+    for name, _shape in FIXED_STATE_SCHEMA:
+        qt = _quantize_tensor(name, state_dict[name], n_quant=n_quant)
+        scale = float(np.array([qt.scale], dtype=np.float16)[0])
+        expected = qt.q_i8.astype(np.float32) * scale
+        observed_raw = decoded.get(name)
+        if observed_raw is None:
+            mismatches.append({"tensor_name": name, "reason": "missing_decoded_tensor"})
+            continue
+        observed = observed_raw.detach().cpu().numpy() if hasattr(observed_raw, "detach") else np.asarray(observed_raw)
+        if observed.shape != expected.shape:
+            mismatches.append(
+                {
+                    "tensor_name": name,
+                    "reason": "shape_mismatch",
+                    "expected_shape": list(expected.shape),
+                    "observed_shape": list(observed.shape),
+                }
+            )
+            continue
+        if not np.array_equal(observed.astype(np.float32, copy=False), expected):
+            max_abs = float(np.max(np.abs(observed.astype(np.float32) - expected)))
+            mismatches.append(
+                {
+                    "tensor_name": name,
+                    "reason": "value_mismatch",
+                    "max_abs_diff": max_abs,
+                }
+            )
+    return mismatches
+
+
 def default_state_dict_output_path_hint() -> str:
     """Return the preferred bulky-output root for operator CLIs."""
 
@@ -1419,6 +1614,7 @@ def default_state_dict_output_path_hint() -> str:
 
 __all__ = [
     "PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA",
+    "PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA",
     "PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA",
     "PR101_TENSOR_GRAMMAR_CANDIDATE_SCHEMA",
     "PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA",
@@ -1428,6 +1624,7 @@ __all__ = [
     "build_optimizer_candidate_queue_from_solver_report",
     "default_state_dict_output_path_hint",
     "empirical_shannon_floor_bytes",
+    "materialize_grouped_decoder_blob_from_report",
     "measure_tensor_grammar_candidates",
     "select_best_tensor_candidate",
     "solve_grouped_brotli_packet_grammar",
