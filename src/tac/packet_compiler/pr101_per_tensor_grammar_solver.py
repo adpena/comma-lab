@@ -22,6 +22,7 @@ import io
 import itertools
 import lzma
 import math
+import struct
 import zipfile
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -867,6 +868,7 @@ def materialize_grouped_archive_from_report(
     source_archive_zip: bytes,
     n_quant: int | None = None,
     member_name: str = PR101_INNER_MEMBER_NAME,
+    archive_layout: Literal["fixed_pr101", "u32_decoder_len_adapter"] = "fixed_pr101",
 ) -> tuple[bytes, dict[str, Any]]:
     """Build a deterministic PR101-shaped archive from a grouped decoder report.
 
@@ -888,8 +890,25 @@ def materialize_grouped_archive_from_report(
         expected_member_name=member_name,
     )
     source_inner = source_layout["inner_member_bytes"]
+    if archive_layout not in {"fixed_pr101", "u32_decoder_len_adapter"}:
+        raise ValueError(f"unknown PR101 grouped archive layout: {archive_layout!r}")
     source_decoder, latent_blob, sidecar_blob = _split_pr101_inner_blob(source_inner)
-    output_inner = decoder_blob + latent_blob + sidecar_blob
+    if archive_layout == "fixed_pr101":
+        output_inner = decoder_blob + latent_blob + sidecar_blob
+        decoder_blob_offset = 0
+        latent_blob_offset = len(decoder_blob)
+        sidecar_blob_offset = len(decoder_blob) + len(latent_blob)
+    else:
+        decoder_section_total = 4 + len(decoder_blob)
+        output_inner = (
+            struct.pack("<I", decoder_section_total)
+            + decoder_blob
+            + latent_blob
+            + sidecar_blob
+        )
+        decoder_blob_offset = 4
+        latent_blob_offset = decoder_section_total
+        sidecar_blob_offset = decoder_section_total + len(latent_blob)
     archive_zip = _write_single_stored_zip_member(member_name, output_inner)
     output_layout = _read_pr101_source_archive_layout(
         archive_zip,
@@ -897,9 +916,11 @@ def materialize_grouped_archive_from_report(
     )
 
     fixed_offset_parse_safe = (
-        len(decoder_blob) == DECODER_BLOB_LEN
+        archive_layout == "fixed_pr101"
+        and len(decoder_blob) == DECODER_BLOB_LEN
         and bool(decoder_manifest.get("stock_runtime_compatible"))
     )
+    u32_adapter_parse_safe = archive_layout == "u32_decoder_len_adapter"
     latent_preserved = hashlib.sha256(latent_blob).hexdigest() == hashlib.sha256(
         source_inner[DECODER_BLOB_LEN : DECODER_BLOB_LEN + LATENT_BLOB_LEN]
     ).hexdigest()
@@ -912,10 +933,15 @@ def materialize_grouped_archive_from_report(
         "full_frame_inflate_parity_missing",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
-    if not fixed_offset_parse_safe:
+    if archive_layout == "fixed_pr101" and not fixed_offset_parse_safe:
         blockers.append("stock_runtime_fixed_offset_decoder_blob_length_mismatch")
+    if u32_adapter_parse_safe:
+        blockers.append("receiver_runtime_source_not_emitted")
     if not bool(decoder_manifest.get("stock_runtime_compatible")):
-        blockers.extend(["receiver_adapter_not_emitted", "runtime_consumption_proof_missing"])
+        if archive_layout == "fixed_pr101":
+            blockers.extend(["receiver_adapter_not_emitted", "runtime_consumption_proof_missing"])
+        else:
+            blockers.append("receiver_codec_constants_override_source_not_emitted")
     if not latent_preserved:
         blockers.append("latent_blob_not_preserved")
     if not sidecar_preserved:
@@ -935,6 +961,7 @@ def materialize_grouped_archive_from_report(
         "schema": PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
         "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
         "source_report_schema": report.get("schema"),
+        "archive_layout": archive_layout,
         "source_archive_zip_bytes": len(source_archive_zip),
         "source_archive_zip_sha256": source_zip_sha,
         "archive_zip_bytes": len(archive_zip),
@@ -945,18 +972,19 @@ def materialize_grouped_archive_from_report(
         "inner_member_sha256": output_inner_sha,
         "source_inner_member_bytes": len(source_inner),
         "source_inner_member_sha256": source_inner_sha,
-        "decoder_blob_offset": 0,
+        "decoder_blob_offset": decoder_blob_offset,
         "decoder_blob_bytes": len(decoder_blob),
         "decoder_blob_sha256": decoder_sha,
         "source_decoder_blob_bytes": len(source_decoder),
         "source_decoder_blob_sha256": source_decoder_sha,
-        "latent_blob_offset": len(decoder_blob),
+        "latent_blob_offset": latent_blob_offset,
         "latent_blob_bytes": len(latent_blob),
         "latent_blob_sha256": latent_sha,
-        "sidecar_blob_offset": len(decoder_blob) + len(latent_blob),
+        "sidecar_blob_offset": sidecar_blob_offset,
         "sidecar_blob_bytes": len(sidecar_blob),
         "sidecar_blob_sha256": sidecar_sha,
         "fixed_offset_stock_runtime_parse_safe": bool(fixed_offset_parse_safe),
+        "u32_decoder_len_adapter_parse_safe": bool(u32_adapter_parse_safe),
         "byte_closed_archive_zip_materialized": True,
         "decoder_materialization": decoder_manifest,
         "zip_proof": {
@@ -987,6 +1015,7 @@ def materialize_grouped_archive_from_report(
             "latent_blob_preserved": bool(latent_preserved),
             "sidecar_blob_preserved": bool(sidecar_preserved),
             "fixed_offset_stock_runtime_parse_safe": bool(fixed_offset_parse_safe),
+            "u32_decoder_len_adapter_parse_safe": bool(u32_adapter_parse_safe),
             "byte_closed_archive_zip_materialized": True,
         },
         "blockers": blockers,

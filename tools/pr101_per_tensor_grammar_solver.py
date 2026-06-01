@@ -145,6 +145,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional archive materialization proof JSON for --grouped-archive-output.",
     )
     parser.add_argument(
+        "--grouped-archive-layout",
+        choices=("fixed_pr101", "u32_decoder_len_adapter"),
+        default="fixed_pr101",
+        help=(
+            "Archive inner layout for --grouped-archive-output. fixed_pr101 "
+            "keeps PR101 fixed offsets; u32_decoder_len_adapter emits a "
+            "length-prefixed decoder section and requires a receiver runtime adapter."
+        ),
+    )
+    parser.add_argument(
         "--grouped-transform-mode",
         choices=("stock_pr101", "best_brotli_per_tensor"),
         default="best_brotli_per_tensor",
@@ -297,6 +307,7 @@ def main(argv: list[str] | None = None) -> int:
                 grouped_report,
                 source_archive_zip=args.source_archive.read_bytes(),
                 n_quant=args.n_quant,
+                archive_layout=args.grouped_archive_layout,
             )
             if args.grouped_archive_output is not None:
                 args.grouped_archive_output.parent.mkdir(parents=True, exist_ok=True)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import struct
 import zipfile
 
 import numpy as np
@@ -335,6 +336,40 @@ def test_grouped_archive_materializer_preserves_sections_and_fails_closed() -> N
     assert "full_frame_inflate_parity_missing" in manifest["blockers"]
     if manifest["decoder_blob_bytes"] != DECODER_BLOB_LEN:
         assert "stock_runtime_fixed_offset_decoder_blob_length_mismatch" in manifest["blockers"]
+
+
+def test_grouped_archive_materializer_can_emit_u32_decoder_len_adapter_layout() -> None:
+    state_dict = _tiny_state_dict(seed=8)
+    report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=7,
+        max_streams=7,
+        brotli_quality=4,
+    )
+    source_latent = b"L" * LATENT_BLOB_LEN
+    source_sidecar = b"S" * 607
+    source_zip = _stored_zip("x", b"D" * DECODER_BLOB_LEN + source_latent + source_sidecar)
+
+    archive_zip, manifest = materialize_grouped_archive_from_report(
+        state_dict,
+        report,
+        source_archive_zip=source_zip,
+        archive_layout="u32_decoder_len_adapter",
+    )
+
+    with zipfile.ZipFile(io.BytesIO(archive_zip), "r") as zf:
+        inner = zf.read("x")
+    section_total = struct.unpack_from("<I", inner, 0)[0]
+    assert section_total == 4 + manifest["decoder_blob_bytes"]
+    assert inner[section_total : section_total + LATENT_BLOB_LEN] == source_latent
+    assert inner[section_total + LATENT_BLOB_LEN :] == source_sidecar
+    assert manifest["archive_layout"] == "u32_decoder_len_adapter"
+    assert manifest["decoder_blob_offset"] == 4
+    assert manifest["latent_blob_offset"] == section_total
+    assert manifest["proof"]["u32_decoder_len_adapter_parse_safe"] is True
+    assert "stock_runtime_fixed_offset_decoder_blob_length_mismatch" not in manifest["blockers"]
+    assert "receiver_runtime_source_not_emitted" in manifest["blockers"]
 
 
 def test_grouped_archive_materializer_rejects_multimember_source_zip() -> None:
