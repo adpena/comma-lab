@@ -298,6 +298,17 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
             "1.25",
             "--distillation-device",
             "cpu",
+            "--compact-decoder-codec",
+            "int8_scale_bundled",
+            "--coder-aware-qat",
+            "--coder-qat-quant-bits",
+            "4",
+            "--coder-qat-quant-residual-weight",
+            "0.001",
+            "--coder-qat-magnitude-weight",
+            "0.0001",
+            "--coder-qat-delta-weight",
+            "0.0002",
             "--hprc-queue-followup-report",
             "hprc_queue_followup_report.json",
         ]
@@ -310,6 +321,12 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.segnet_tau_boundary == 0.8
     assert args.segnet_hinge_margin == 1.25
     assert args.distillation_device == "cpu"
+    assert args.compact_decoder_codec == "int8_scale_bundled"
+    assert args.coder_aware_qat is True
+    assert args.coder_qat_quant_bits == 4
+    assert args.coder_qat_quant_residual_weight == 0.001
+    assert args.coder_qat_magnitude_weight == 0.0001
+    assert args.coder_qat_delta_weight == 0.0002
     assert args.hprc_queue_followup_report == [
         Path("hprc_queue_followup_report.json")
     ]
@@ -703,7 +720,10 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
     def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
         out = Path(kwargs["output_dir"])
         out.mkdir(parents=True, exist_ok=True)
         archive = out / "archive.zip"
@@ -855,7 +875,13 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
         embed_dim=8,
         selector_palette_size=16,
         decoder_channel=8,
+        decoder_codec="int4_scale_bundled",
         mlx_profile_paths=(mlx_profile_path,),
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_magnitude_weight=0.0001,
+        coder_qat_delta_weight=0.0002,
         allow_overwrite=True,
         repo_root=REPO_ROOT,
     )
@@ -871,6 +897,21 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert out["score_aware_training"]["scorer_coupled_rd"][
         "fixed_marginal_byte_price"
     ] == "25/uncompressed_total"
+    assert out["score_aware_training"]["coder_aware_qat"] == {
+        "enabled": True,
+        "quant_bits": 4,
+        "quant_residual_weight": 0.001,
+        "magnitude_weight": 0.0001,
+        "delta_weight": 0.0002,
+        "authority": "false_macos_mlx_research_signal",
+    }
+    assert out["score_aware_training"]["decoder_codec"] == "int4_scale_bundled"
+    assert captured_train_kwargs["coder_aware_qat"] is True
+    assert captured_train_kwargs["decoder_codec"] == "int4_scale_bundled"
+    assert captured_train_kwargs["coder_qat_quant_bits"] == 4
+    assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
+    assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
+    assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
     assert out["projection_manifest_paths"]
     assert out["receiver_proof_report_paths"]
     assert out["mlx_profile_paths"] == [mlx_profile_path.as_posix()]

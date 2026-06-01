@@ -171,6 +171,30 @@ def test_archive_pack_int8_decoder_and_auto_indices_roundtrip() -> None:
     assert arc.meta["_decoder_state_codec"]["codec"] == "int8_mixed"
 
 
+def test_archive_pack_scale_bundled_decoder_roundtrip() -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(6)
+    model = PactNervVqSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+    codebook = model.quantizer.codebook.clone()
+    indices = torch.tensor([0, 5, 7], dtype=torch.long)
+
+    blob = pack_archive(
+        decoder_sd,
+        codebook,
+        indices,
+        _smoke_meta(cfg),
+        decoder_codec="int8_scale_bundled",
+        indices_codec="auto",
+    )
+    arc = parse_archive(blob)
+
+    assert torch.equal(arc.indices, indices)
+    assert arc.decoder_state_dict.keys() == decoder_sd.keys()
+    assert arc.meta["_decoder_state_codec"]["codec"] == "int8_scale_bundled"
+
+
 def test_archive_candidate_quantizes_exported_state_dict_to_pvq_packet() -> None:
     from tac.substrates.pact_nerv_vq.archive_candidate import (
         pack_archive_from_exported_state_dict,

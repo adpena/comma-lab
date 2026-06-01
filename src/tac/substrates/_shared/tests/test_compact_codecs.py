@@ -7,6 +7,10 @@ import numpy as np
 import torch
 
 from tac.substrates._shared.decoder_state_codec import (
+    _decode_int8_record,
+    _decode_nbit_record,
+    _encode_int8_record,
+    _encode_nbit_record,
     decoder_state_codec_stats,
     deserialize_decoder_state_dict,
     serialize_decoder_state_dict,
@@ -48,6 +52,73 @@ def test_decoder_state_codec_int4_and_int2_bitpacked_roundtrip_shapes() -> None:
         assert stats.codec == codec
         assert decoded["w"].shape == state["w"].shape
         assert torch.isfinite(decoded["w"]).all()
+
+
+def test_decoder_state_codec_scale_bundled_roundtrips_shapes_and_metadata() -> None:
+    torch.manual_seed(2)
+    state = {
+        "conv.weight": torch.randn(8, 3, 3, 3)
+        * torch.tensor([0.001, 0.2, 0.003, 0.1, 0.002, 0.4, 0.004, 0.05]).reshape(
+            8, 1, 1, 1
+        ),
+        "conv.bias": torch.randn(8) * 0.01,
+    }
+    for codec in ("int8_scale_bundled", "int4_scale_bundled", "int2_scale_bundled"):
+        blob = serialize_decoder_state_dict(state, codec=codec)
+        stats = decoder_state_codec_stats(blob)
+        decoded = deserialize_decoder_state_dict(blob)
+        assert stats.codec == codec
+        assert stats.envelope_bytes == len(blob)
+        assert decoded["conv.weight"].shape == state["conv.weight"].shape
+        assert decoded["conv.bias"].shape == state["conv.bias"].shape
+        assert torch.isfinite(decoded["conv.weight"]).all()
+
+
+def test_decoder_state_codec_portfolio_auto_beats_or_matches_int8_modes() -> None:
+    torch.manual_seed(3)
+    state = {
+        "conv.weight": torch.randn(16, 3, 3, 3)
+        * torch.linspace(0.001, 0.4, steps=16).reshape(16, 1, 1, 1),
+        "conv.bias": torch.randn(16) * 0.01,
+    }
+
+    auto = serialize_decoder_state_dict(state, codec="portfolio_auto")
+    int8_plain = serialize_decoder_state_dict(state, codec="int8_mixed")
+    int8_bundled = serialize_decoder_state_dict(state, codec="int8_scale_bundled")
+    decoded = deserialize_decoder_state_dict(auto)
+
+    assert len(auto) <= min(len(int8_plain), len(int8_bundled))
+    assert decoder_state_codec_stats(auto).codec in {
+        "int8_mixed",
+        "int8_scale_bundled",
+        "fp16_enveloped",
+    }
+    assert decoded["conv.weight"].shape == state["conv.weight"].shape
+
+
+def test_scale_bundled_records_store_nontrivial_order_and_restore_axis0() -> None:
+    tensor = torch.tensor(
+        [
+            [[1.0, -1.0]],
+            [[0.001, -0.001]],
+            [[0.1, -0.1]],
+            [[0.01, -0.01]],
+        ],
+        dtype=torch.float32,
+    )
+
+    int8_record = _encode_int8_record(tensor, scale_bundled=True)
+    assert int8_record["kind"] == "int8_per_channel_axis0_fp16_scale_bundled"
+    assert list(int8_record["axis0_order"]) != list(range(tensor.shape[0]))
+    assert _decode_int8_record(int8_record).shape == tensor.shape
+
+    for bits in (2, 4):
+        nbit_record = _encode_nbit_record(tensor, bits=bits, scale_bundled=True)
+        assert nbit_record["kind"] == (
+            f"int{bits}_per_channel_axis0_fp16_scale_bundled_bitpacked"
+        )
+        assert list(nbit_record["axis0_order"]) != list(range(tensor.shape[0]))
+        assert _decode_nbit_record(nbit_record, bits=bits).shape == tensor.shape
 
 
 def test_int_stream_auto_uses_compact_envelope_and_roundtrips() -> None:

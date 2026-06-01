@@ -146,6 +146,30 @@ def test_archive_pack_int8_decoder_roundtrip() -> None:
     assert arc.selector_bytes == selector_bytes
 
 
+def test_archive_pack_scale_bundled_decoder_roundtrip() -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(8)
+    model = PactNervSelectorV4Substrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents", "selectors")}
+    latents = sd["latents"].clone()
+    selector_bytes = b"\x00\x05\x05"
+
+    blob = pack_archive(
+        decoder_sd,
+        latents,
+        selector_bytes,
+        _smoke_meta(cfg),
+        palette_size=16,
+        decoder_codec="int8_scale_bundled",
+    )
+    arc = parse_archive(blob)
+
+    assert arc.decoder_state_dict.keys() == decoder_sd.keys()
+    assert arc.meta["_decoder_state_codec"]["codec"] == "int8_scale_bundled"
+    assert arc.selector_bytes == selector_bytes
+
+
 def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> None:
     import json
 

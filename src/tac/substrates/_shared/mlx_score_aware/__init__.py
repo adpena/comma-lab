@@ -54,6 +54,13 @@ from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (
     CarrierTrainingThresholds,
     build_score_aware_carrier_training_plan,
 )
+from tac.substrates._shared.mlx_score_aware.coder_qat import (
+    CODER_QAT_AUTHORITY,
+    CoderAwareQATConfig,
+    build_decoder_coder_qat_terms,
+    coder_qat_loss_weights,
+    coder_qat_metadata,
+)
 from tac.substrates._shared.mlx_score_aware.device_gate import (
     MlxScoreAwareHarnessError,
     is_mlx_available,
@@ -81,6 +88,7 @@ from tac.substrates._shared.mlx_score_aware.targets import (
 
 __all__ = [
     "CANONICAL_SCORE_AWARE_DECODER_TRAINING_STACK",
+    "CODER_QAT_AUTHORITY",
     "CONTEST_NORMALIZER",
     "FORBIDDEN_INFLATE_IMPORT_ROOTS",
     "FORWARD_CONVENTIONS",
@@ -88,6 +96,7 @@ __all__ = [
     "N_PAIRS_FULL",
     "CarrierTrainingPlanError",
     "CarrierTrainingThresholds",
+    "CoderAwareQATConfig",
     "MlxRenderer",
     "MlxScoreAwareAdapter",
     "MlxScoreAwareHarnessError",
@@ -95,9 +104,12 @@ __all__ = [
     "RendererBundle",
     "ScorerTeacherProvider",
     "assert_numpy_portable_inflate",
+    "build_decoder_coder_qat_terms",
     "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",
     "build_score_aware_carrier_training_plan",
+    "coder_qat_loss_weights",
+    "coder_qat_metadata",
     "decode_frames_nhwc01",
     "decode_mlx_targets",
     "is_mlx_available",

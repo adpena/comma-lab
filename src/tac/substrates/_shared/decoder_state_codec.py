@@ -24,6 +24,9 @@ from tac.substrates._shared.int_stream_codec import (
 DECODER_STATE_CODEC_MAGIC = b"DSC1"
 _HEADER = struct.Struct("<4sBI")
 _SUPPORTED_COMPRESSORS = ("brotli_q11", "lzma_preset9", "zlib_level9", "none")
+_MIN_POSITIVE_FP16_SCALE = np.nextafter(np.float16(0.0), np.float16(1.0)).astype(
+    np.float32
+)
 
 
 @dataclass(frozen=True)
@@ -62,7 +65,7 @@ def serialize_decoder_state_dict(
         return _legacy_fp16_brotli(state_dict)
     candidates: list[tuple[bytes, DecoderStateCodecStats]] = []
     if normalized in {"auto", "portfolio_auto", "int8_auto"}:
-        for tensor_codec in ("int8_mixed", "fp16_enveloped"):
+        for tensor_codec in ("int8_mixed", "int8_scale_bundled", "fp16_enveloped"):
             payload = _payload_for_codec(state_dict, codec=tensor_codec)
             for compressor in _SUPPORTED_COMPRESSORS:
                 candidates.append(
@@ -72,14 +75,28 @@ def serialize_decoder_state_dict(
         payload = _payload_for_codec(state_dict, codec="int8_mixed")
         for compressor in _SUPPORTED_COMPRESSORS:
             candidates.append(_wrap_payload(payload, codec="int8_mixed", compressor=compressor))
+    elif normalized in {"int8_scale_bundled", "int8_by_scale", "int8_scale_sorted"}:
+        payload = _payload_for_codec(state_dict, codec="int8_scale_bundled")
+        for compressor in _SUPPORTED_COMPRESSORS:
+            candidates.append(_wrap_payload(payload, codec="int8_scale_bundled", compressor=compressor))
     elif normalized in {"int4", "int4_mixed", "int4_mixed_auto"}:
-        payload = _payload_for_codec(state_dict, codec="int4_mixed")
+        for tensor_codec in ("int4_mixed", "int4_scale_bundled"):
+            payload = _payload_for_codec(state_dict, codec=tensor_codec)
+            for compressor in _SUPPORTED_COMPRESSORS:
+                candidates.append(_wrap_payload(payload, codec=tensor_codec, compressor=compressor))
+    elif normalized in {"int4_scale_bundled", "int4_by_scale", "int4_scale_sorted"}:
+        payload = _payload_for_codec(state_dict, codec="int4_scale_bundled")
         for compressor in _SUPPORTED_COMPRESSORS:
-            candidates.append(_wrap_payload(payload, codec="int4_mixed", compressor=compressor))
+            candidates.append(_wrap_payload(payload, codec="int4_scale_bundled", compressor=compressor))
     elif normalized in {"int2", "int2_mixed", "int2_mixed_auto"}:
-        payload = _payload_for_codec(state_dict, codec="int2_mixed")
+        for tensor_codec in ("int2_mixed", "int2_scale_bundled"):
+            payload = _payload_for_codec(state_dict, codec=tensor_codec)
+            for compressor in _SUPPORTED_COMPRESSORS:
+                candidates.append(_wrap_payload(payload, codec=tensor_codec, compressor=compressor))
+    elif normalized in {"int2_scale_bundled", "int2_by_scale", "int2_scale_sorted"}:
+        payload = _payload_for_codec(state_dict, codec="int2_scale_bundled")
         for compressor in _SUPPORTED_COMPRESSORS:
-            candidates.append(_wrap_payload(payload, codec="int2_mixed", compressor=compressor))
+            candidates.append(_wrap_payload(payload, codec="int2_scale_bundled", compressor=compressor))
     elif normalized == "fp16_enveloped":
         payload = _payload_for_codec(state_dict, codec="fp16_enveloped")
         for compressor in _SUPPORTED_COMPRESSORS:
@@ -117,14 +134,14 @@ def deserialize_decoder_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
             name: torch.from_numpy(np.asarray(value).copy())
             for name, value in records.items()
         }
-    if codec == "int8_mixed":
+    if codec in {"int8_mixed", "int8_scale_bundled"}:
         return {name: _decode_int8_record(record) for name, record in records.items()}
-    if codec == "int4_mixed":
+    if codec in {"int4_mixed", "int4_scale_bundled"}:
         return {
             name: _decode_nbit_record(record, bits=4)
             for name, record in records.items()
         }
-    if codec == "int2_mixed":
+    if codec in {"int2_mixed", "int2_scale_bundled"}:
         return {
             name: _decode_nbit_record(record, bits=2)
             for name, record in records.items()
@@ -176,7 +193,19 @@ def _payload_for_codec(state_dict: dict[str, torch.Tensor], *, codec: str) -> by
         }
     elif codec == "int8_mixed":
         records = {
-            name: _encode_int8_record(tensor.detach().to("cpu", dtype=torch.float32))
+            name: _encode_int8_record(
+                tensor.detach().to("cpu", dtype=torch.float32),
+                scale_bundled=False,
+            )
+            for name, tensor in state_dict.items()
+            if name != "selectors"
+        }
+    elif codec == "int8_scale_bundled":
+        records = {
+            name: _encode_int8_record(
+                tensor.detach().to("cpu", dtype=torch.float32),
+                scale_bundled=True,
+            )
             for name, tensor in state_dict.items()
             if name != "selectors"
         }
@@ -185,6 +214,17 @@ def _payload_for_codec(state_dict: dict[str, torch.Tensor], *, codec: str) -> by
             name: _encode_nbit_record(
                 tensor.detach().to("cpu", dtype=torch.float32),
                 bits=4,
+                scale_bundled=False,
+            )
+            for name, tensor in state_dict.items()
+            if name != "selectors"
+        }
+    elif codec == "int4_scale_bundled":
+        records = {
+            name: _encode_nbit_record(
+                tensor.detach().to("cpu", dtype=torch.float32),
+                bits=4,
+                scale_bundled=True,
             )
             for name, tensor in state_dict.items()
             if name != "selectors"
@@ -194,6 +234,17 @@ def _payload_for_codec(state_dict: dict[str, torch.Tensor], *, codec: str) -> by
             name: _encode_nbit_record(
                 tensor.detach().to("cpu", dtype=torch.float32),
                 bits=2,
+                scale_bundled=False,
+            )
+            for name, tensor in state_dict.items()
+            if name != "selectors"
+        }
+    elif codec == "int2_scale_bundled":
+        records = {
+            name: _encode_nbit_record(
+                tensor.detach().to("cpu", dtype=torch.float32),
+                bits=2,
+                scale_bundled=True,
             )
             for name, tensor in state_dict.items()
             if name != "selectors"
@@ -203,7 +254,11 @@ def _payload_for_codec(state_dict: dict[str, torch.Tensor], *, codec: str) -> by
     return pickle.dumps(records, protocol=4)
 
 
-def _encode_int8_record(tensor: torch.Tensor) -> dict[str, Any]:
+def _encode_int8_record(
+    tensor: torch.Tensor,
+    *,
+    scale_bundled: bool = False,
+) -> dict[str, Any]:
     arr = tensor.contiguous().numpy().astype(np.float32, copy=False)
     if arr.size == 0:
         return {"kind": "empty", "shape": list(arr.shape)}
@@ -211,20 +266,28 @@ def _encode_int8_record(tensor: torch.Tensor) -> dict[str, Any]:
         axis = 0
         reduce_axes = tuple(i for i in range(arr.ndim) if i != axis)
         abs_max = np.max(np.abs(arr), axis=reduce_axes)
-        scale = np.where(abs_max > 0.0, abs_max / 127.0, 1.0).astype(np.float16)
+        scale = _positive_fp16_scale(abs_max / 127.0, nonzero_mask=abs_max > 0.0)
         scale32 = scale.astype(np.float32)
         broadcast = [1] * arr.ndim
         broadcast[axis] = arr.shape[axis]
         q = np.round(arr / scale32.reshape(broadcast)).clip(-127, 127).astype(np.int8)
+        kind = "int8_per_channel_axis0_fp16_scale"
+        order: np.ndarray | None = None
+        if scale_bundled:
+            order = _scale_bundle_order(scale32)
+            q = np.take(q, order, axis=axis)
+            scale = np.take(scale, order, axis=0)
+            kind = "int8_per_channel_axis0_fp16_scale_bundled"
         return {
-            "kind": "int8_per_channel_axis0_fp16_scale",
+            "kind": kind,
             "shape": list(arr.shape),
             "axis": axis,
             "scale": scale,
             "q": q,
+            **({"axis0_order": _smallest_uint_order(order)} if order is not None else {}),
         }
     abs_max = float(np.max(np.abs(arr)))
-    scale = np.float16(abs_max / 127.0 if abs_max > 0.0 else 1.0)
+    scale = _positive_fp16_scale(abs_max / 127.0, nonzero_mask=abs_max > 0.0)
     q = np.round(arr / np.float32(scale)).clip(-127, 127).astype(np.int8)
     return {
         "kind": "int8_per_tensor_fp16_scale",
@@ -242,12 +305,22 @@ def _decode_int8_record(record: Any) -> torch.Tensor:
     if kind == "empty":
         return torch.empty(shape, dtype=torch.float32)
     q = np.asarray(record["q"], dtype=np.int8).reshape(shape)
-    if kind == "int8_per_channel_axis0_fp16_scale":
+    if kind in {
+        "int8_per_channel_axis0_fp16_scale",
+        "int8_per_channel_axis0_fp16_scale_bundled",
+    }:
         axis = int(record.get("axis", 0))
         scale = np.asarray(record["scale"], dtype=np.float16).astype(np.float32)
         broadcast = [1] * len(shape)
         broadcast[axis] = shape[axis]
         arr = q.astype(np.float32) * scale.reshape(broadcast)
+        if kind.endswith("_bundled"):
+            order = np.asarray(record["axis0_order"], dtype=np.int64)
+            restored = np.empty_like(arr)
+            if axis != 0:
+                raise ValueError("scale-bundled int8 records support axis=0 only")
+            restored[order] = arr
+            arr = restored
         return torch.from_numpy(arr.copy())
     if kind == "int8_per_tensor_fp16_scale":
         scale = np.float32(np.asarray(record["scale"], dtype=np.float16))
@@ -255,7 +328,40 @@ def _decode_int8_record(record: Any) -> torch.Tensor:
     raise ValueError(f"unsupported int8 decoder-state record kind: {kind!r}")
 
 
-def _encode_nbit_record(tensor: torch.Tensor, *, bits: int) -> dict[str, Any]:
+def _positive_fp16_scale(value: Any, *, nonzero_mask: Any) -> np.ndarray | np.float16:
+    """Return an fp16 scale that never underflows nonzero tensors to zero."""
+
+    raw = np.asarray(value, dtype=np.float32)
+    mask = np.asarray(nonzero_mask, dtype=bool)
+    scale32 = np.where(mask, np.maximum(raw, _MIN_POSITIVE_FP16_SCALE), 1.0)
+    scale16 = scale32.astype(np.float16)
+    return scale16.item() if scale16.ndim == 0 else scale16
+
+
+def _scale_bundle_order(scale32: np.ndarray) -> np.ndarray:
+    """Stable axis-0 order that groups similar quantization scales."""
+
+    values = np.asarray(scale32, dtype=np.float32).reshape(-1)
+    buckets = np.floor(np.log2(np.maximum(values, _MIN_POSITIVE_FP16_SCALE))).astype(
+        np.int32
+    )
+    return np.lexsort((np.arange(values.size, dtype=np.int64), values, buckets)).astype(
+        np.int64
+    )
+
+
+def _smallest_uint_order(order: np.ndarray) -> np.ndarray:
+    max_value = int(np.max(order)) if order.size else 0
+    dtype = np.uint16 if max_value <= np.iinfo(np.uint16).max else np.uint32
+    return np.asarray(order, dtype=dtype)
+
+
+def _encode_nbit_record(
+    tensor: torch.Tensor,
+    *,
+    bits: int,
+    scale_bundled: bool = False,
+) -> dict[str, Any]:
     if bits not in (2, 4):
         raise ValueError(f"n-bit codec supports int2/int4 only; got {bits}")
     arr = tensor.contiguous().numpy().astype(np.float32, copy=False)
@@ -267,8 +373,9 @@ def _encode_nbit_record(tensor: torch.Tensor, *, bits: int) -> dict[str, Any]:
         axis = 0
         reduce_axes = tuple(i for i in range(arr.ndim) if i != axis)
         abs_max = np.max(np.abs(arr), axis=reduce_axes)
-        scale = np.where(abs_max > 0.0, abs_max / float(qmax), 1.0).astype(
-            np.float16
+        scale = _positive_fp16_scale(
+            abs_max / float(qmax),
+            nonzero_mask=abs_max > 0.0,
         )
         scale32 = scale.astype(np.float32)
         broadcast = [1] * arr.ndim
@@ -278,21 +385,32 @@ def _encode_nbit_record(tensor: torch.Tensor, *, bits: int) -> dict[str, Any]:
             .clip(-qmax, qmax)
             .astype(np.int16)
         )
+        kind = f"int{bits}_per_channel_axis0_fp16_scale_bitpacked"
+        order: np.ndarray | None = None
+        if scale_bundled:
+            order = _scale_bundle_order(scale32)
+            q_signed = np.take(q_signed, order, axis=axis)
+            scale = np.take(scale, order, axis=0)
+            kind = f"int{bits}_per_channel_axis0_fp16_scale_bundled_bitpacked"
         packed = pack_fixed_width_uints(
             (q_signed.astype(np.int16) + offset).reshape(-1),
             bits=bits,
         )
         return {
-            "kind": f"int{bits}_per_channel_axis0_fp16_scale_bitpacked",
+            "kind": kind,
             "shape": list(arr.shape),
             "axis": axis,
             "bits": bits,
             "offset": offset,
             "scale": scale,
             "packed_q": packed,
+            **({"axis0_order": _smallest_uint_order(order)} if order is not None else {}),
         }
     abs_max = float(np.max(np.abs(arr)))
-    scale = np.float16(abs_max / float(qmax) if abs_max > 0.0 else 1.0)
+    scale = _positive_fp16_scale(
+        abs_max / float(qmax),
+        nonzero_mask=abs_max > 0.0,
+    )
     q_signed = np.round(arr / np.float32(scale)).clip(-qmax, qmax).astype(np.int16)
     packed = pack_fixed_width_uints(q_signed.reshape(-1) + offset, bits=bits)
     return {
@@ -321,12 +439,22 @@ def _decode_nbit_record(record: Any, *, bits: int) -> torch.Tensor:
         count=count,
     ).astype(np.int16)
     q_signed = (q_unsigned - int(record["offset"])).reshape(shape).astype(np.float32)
-    if kind == f"int{bits}_per_channel_axis0_fp16_scale_bitpacked":
+    if kind in {
+        f"int{bits}_per_channel_axis0_fp16_scale_bitpacked",
+        f"int{bits}_per_channel_axis0_fp16_scale_bundled_bitpacked",
+    }:
         axis = int(record.get("axis", 0))
         scale = np.asarray(record["scale"], dtype=np.float16).astype(np.float32)
         broadcast = [1] * len(shape)
         broadcast[axis] = shape[axis]
         arr = q_signed * scale.reshape(broadcast)
+        if "_scale_bundled_" in kind:
+            order = np.asarray(record["axis0_order"], dtype=np.int64)
+            restored = np.empty_like(arr)
+            if axis != 0:
+                raise ValueError("scale-bundled n-bit records support axis=0 only")
+            restored[order] = arr
+            arr = restored
         return torch.from_numpy(arr.copy())
     if kind == f"int{bits}_per_tensor_fp16_scale_bitpacked":
         scale = np.float32(np.asarray(record["scale"], dtype=np.float16))

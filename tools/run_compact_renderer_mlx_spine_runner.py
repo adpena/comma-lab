@@ -1656,6 +1656,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     embed_dim: int = 8,
     codebook_size: int = 16,
     decoder_channel: int = 8,
+    decoder_codec: str = "int8_mixed",
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
@@ -1665,6 +1666,11 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
     allow_segnet_only_research: bool = False,
+    coder_aware_qat: bool = False,
+    coder_qat_quant_bits: int = 8,
+    coder_qat_quant_residual_weight: float = 1.0e-4,
+    coder_qat_magnitude_weight: float = 0.0,
+    coder_qat_delta_weight: float = 0.0,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -1690,6 +1696,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             embed_dim=embed_dim,
             codebook_size=codebook_size,
             decoder_channel=decoder_channel,
+            decoder_codec=decoder_codec,
             ema_decay=ema_decay,
             segnet_distillation_weight=segnet_distillation_weight,
             pose_distillation_weight=pose_distillation_weight,
@@ -1699,6 +1706,11 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             segnet_hinge_margin=segnet_hinge_margin,
             distillation_device=distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
+            coder_aware_qat=coder_aware_qat,
+            coder_qat_quant_bits=coder_qat_quant_bits,
+            coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
+            coder_qat_magnitude_weight=coder_qat_magnitude_weight,
+            coder_qat_delta_weight=coder_qat_delta_weight,
             random_seed=random_seed,
             repo_root=root,
         )
@@ -1788,6 +1800,15 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "coder_aware_qat": {
+                    "enabled": bool(coder_aware_qat),
+                    "quant_bits": int(coder_qat_quant_bits),
+                    "quant_residual_weight": float(coder_qat_quant_residual_weight),
+                    "magnitude_weight": float(coder_qat_magnitude_weight),
+                    "delta_weight": float(coder_qat_delta_weight),
+                    "authority": "false_macos_mlx_research_signal",
+                },
+                "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
@@ -1831,6 +1852,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     embed_dim: int = 8,
     selector_palette_size: int = 16,
     decoder_channel: int = 8,
+    decoder_codec: str = "int8_mixed",
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
@@ -1840,6 +1862,11 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
     allow_segnet_only_research: bool = False,
+    coder_aware_qat: bool = False,
+    coder_qat_quant_bits: int = 8,
+    coder_qat_quant_residual_weight: float = 1.0e-4,
+    coder_qat_magnitude_weight: float = 0.0,
+    coder_qat_delta_weight: float = 0.0,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -1865,6 +1892,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             embed_dim=embed_dim,
             selector_palette_size=selector_palette_size,
             decoder_channel=decoder_channel,
+            decoder_codec=decoder_codec,
             ema_decay=ema_decay,
             segnet_distillation_weight=segnet_distillation_weight,
             pose_distillation_weight=pose_distillation_weight,
@@ -1874,6 +1902,11 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             segnet_hinge_margin=segnet_hinge_margin,
             distillation_device=distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
+            coder_aware_qat=coder_aware_qat,
+            coder_qat_quant_bits=coder_qat_quant_bits,
+            coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
+            coder_qat_magnitude_weight=coder_qat_magnitude_weight,
+            coder_qat_delta_weight=coder_qat_delta_weight,
             random_seed=random_seed,
             repo_root=root,
         )
@@ -1970,6 +2003,15 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
                 "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
+                "coder_aware_qat": {
+                    "enabled": bool(coder_aware_qat),
+                    "quant_bits": int(coder_qat_quant_bits),
+                    "quant_residual_weight": float(coder_qat_quant_residual_weight),
+                    "magnitude_weight": float(coder_qat_magnitude_weight),
+                    "delta_weight": float(coder_qat_delta_weight),
+                    "authority": "false_macos_mlx_research_signal",
+                },
+                "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "selector_v4_archive_surface": {
@@ -2187,6 +2229,7 @@ def _run_pact_nerv_vq_mlx_smoke(
     embed_dim: int,
     codebook_size: int,
     decoder_channel: int,
+    decoder_codec: str,
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
@@ -2196,13 +2239,22 @@ def _run_pact_nerv_vq_mlx_smoke(
     segnet_hinge_margin: float,
     distillation_device: str,
     allow_segnet_only_research: bool,
+    coder_aware_qat: bool,
+    coder_qat_quant_bits: int,
+    coder_qat_quant_residual_weight: float,
+    coder_qat_magnitude_weight: float,
+    coder_qat_delta_weight: float,
     random_seed: int,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
+        CoderAwareQATConfig,
         RendererBundle,
+        build_decoder_coder_qat_terms,
         build_mlx_posenet_pair_teacher,
         build_mlx_segnet_pair_teacher,
+        coder_qat_loss_weights,
+        coder_qat_metadata,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
     )
@@ -2256,9 +2308,18 @@ def _run_pact_nerv_vq_mlx_smoke(
         output_width=int(cfg.output_width),
     )
     model = PactNervVqSubstrateMLX(cfg)
+    coder_qat_cfg = CoderAwareQATConfig(
+        enabled=bool(coder_aware_qat),
+        quant_bits=int(coder_qat_quant_bits),
+        quant_residual_weight=float(coder_qat_quant_residual_weight),
+        magnitude_weight=float(coder_qat_magnitude_weight),
+        delta_weight=float(coder_qat_delta_weight),
+    ).validated()
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
-        return {"vq_commitment": model_obj.last_commitment_loss}
+        terms = {"vq_commitment": model_obj.last_commitment_loss}
+        terms.update(build_decoder_coder_qat_terms(model_obj, coder_qat_cfg))
+        return terms
 
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
         return export_pact_nerv_vq_mlx_archive(
@@ -2267,6 +2328,7 @@ def _run_pact_nerv_vq_mlx_smoke(
             repo_root=repo_root,
             emit_archive_bound_candidate_package=True,
             retain_receiver_proof_output=False,
+            decoder_codec=str(decoder_codec),
             mlx_triage_argv=[
                 "tools/run_compact_renderer_mlx_spine_runner.py",
                 "--execute-family",
@@ -2293,9 +2355,13 @@ def _run_pact_nerv_vq_mlx_smoke(
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "decoder_codec": str(decoder_codec),
         },
         "score_authority": "false_macos_mlx_research_signal",
     }
+    extra_loss_weights = {"vq_commitment": float(cfg.commitment_weight)}
+    extra_loss_weights.update(coder_qat_loss_weights(coder_qat_cfg))
     bundle_kwargs: dict[str, Any] = {
         "model": model,
         "target_rgb_0": target_rgb_0,
@@ -2303,7 +2369,7 @@ def _run_pact_nerv_vq_mlx_smoke(
         "num_pairs": pairs,
         "forward_convention": "call_b2chw_255",
         "extra_loss_terms": _extra_loss_terms,
-        "extra_loss_weights": {"vq_commitment": float(cfg.commitment_weight)},
+        "extra_loss_weights": extra_loss_weights,
         "export_archive_fn": _export_archive,
         "substrate_artifact_metadata": artifact_metadata,
     }
@@ -2383,6 +2449,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     embed_dim: int,
     selector_palette_size: int,
     decoder_channel: int,
+    decoder_codec: str,
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
@@ -2392,13 +2459,22 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     segnet_hinge_margin: float,
     distillation_device: str,
     allow_segnet_only_research: bool,
+    coder_aware_qat: bool,
+    coder_qat_quant_bits: int,
+    coder_qat_quant_residual_weight: float,
+    coder_qat_magnitude_weight: float,
+    coder_qat_delta_weight: float,
     random_seed: int,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
+        CoderAwareQATConfig,
         RendererBundle,
+        build_decoder_coder_qat_terms,
         build_mlx_posenet_pair_teacher,
         build_mlx_segnet_pair_teacher,
+        coder_qat_loss_weights,
+        coder_qat_metadata,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
     )
@@ -2460,6 +2536,16 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         output_width=int(cfg.output_width),
     )
     model = PactNervSelectorV4SubstrateMLX(cfg)
+    coder_qat_cfg = CoderAwareQATConfig(
+        enabled=bool(coder_aware_qat),
+        quant_bits=int(coder_qat_quant_bits),
+        quant_residual_weight=float(coder_qat_quant_residual_weight),
+        magnitude_weight=float(coder_qat_magnitude_weight),
+        delta_weight=float(coder_qat_delta_weight),
+    ).validated()
+
+    def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
+        return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
 
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
         return export_pact_nerv_selector_v4_mlx_archive(
@@ -2468,6 +2554,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             repo_root=repo_root,
             emit_archive_bound_candidate_package=True,
             retain_receiver_proof_output=False,
+            decoder_codec=str(decoder_codec),
             mlx_triage_argv=[
                 "tools/run_compact_renderer_mlx_spine_runner.py",
                 "--execute-family",
@@ -2498,6 +2585,8 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
+            "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "decoder_codec": str(decoder_codec),
         },
         "score_authority": "false_macos_mlx_research_signal",
     }
@@ -2507,6 +2596,8 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         "target_rgb_1": target_rgb_1,
         "num_pairs": pairs,
         "forward_convention": "call_b2chw_255",
+        "extra_loss_terms": _extra_loss_terms,
+        "extra_loss_weights": coder_qat_loss_weights(coder_qat_cfg),
         "export_archive_fn": _export_archive,
         "substrate_artifact_metadata": artifact_metadata,
     }
@@ -2739,6 +2830,25 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--compact-selector-palette-size", default=16, type=int)
     parser.add_argument("--compact-decoder-channel", default=8, type=int)
     parser.add_argument(
+        "--compact-decoder-codec",
+        default="int8_mixed",
+        choices=(
+            "int8_mixed",
+            "int8_scale_bundled",
+            "portfolio_auto",
+            "fp16_enveloped",
+            "int4_mixed",
+            "int4_scale_bundled",
+            "int2_mixed",
+            "int2_scale_bundled",
+        ),
+        help=(
+            "Charged decoder-state archive codec for compact PACT/selector "
+            "exports. Lower bit-depths are promotion-eligible only after "
+            "receiver proof and full-video scorer-value replay."
+        ),
+    )
+    parser.add_argument(
         "--compact-ema-decay",
         default=0.9,
         type=float,
@@ -2793,6 +2903,23 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "This remains false-authority and is never promotion-ready by itself."
         ),
     )
+    parser.add_argument(
+        "--coder-aware-qat",
+        action="store_true",
+        help=(
+            "Add false-authority decoder-weight QAT/rate pressure during compact "
+            "MLX training. Archive bytes and receiver proof remain the only "
+            "promotion surface."
+        ),
+    )
+    parser.add_argument("--coder-qat-quant-bits", default=8, type=int)
+    parser.add_argument(
+        "--coder-qat-quant-residual-weight",
+        default=1.0e-4,
+        type=float,
+    )
+    parser.add_argument("--coder-qat-magnitude-weight", default=0.0, type=float)
+    parser.add_argument("--coder-qat-delta-weight", default=0.0, type=float)
     parser.add_argument("--smoke-epochs-per-stage", default=1, type=int)
     parser.add_argument(
         "--stage8-epochs",
@@ -2968,6 +3095,7 @@ def main(argv: list[str] | None = None) -> int:
             embed_dim=args.compact_embed_dim,
             codebook_size=args.compact_codebook_size,
             decoder_channel=args.compact_decoder_channel,
+            decoder_codec=args.compact_decoder_codec,
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
@@ -2977,6 +3105,11 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            coder_aware_qat=args.coder_aware_qat,
+            coder_qat_quant_bits=args.coder_qat_quant_bits,
+            coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
+            coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
+            coder_qat_delta_weight=args.coder_qat_delta_weight,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -2996,6 +3129,7 @@ def main(argv: list[str] | None = None) -> int:
             embed_dim=args.compact_embed_dim,
             selector_palette_size=args.compact_selector_palette_size,
             decoder_channel=args.compact_decoder_channel,
+            decoder_codec=args.compact_decoder_codec,
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
@@ -3005,6 +3139,11 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            coder_aware_qat=args.coder_aware_qat,
+            coder_qat_quant_bits=args.coder_qat_quant_bits,
+            coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
+            coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
+            coder_qat_delta_weight=args.coder_qat_delta_weight,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
