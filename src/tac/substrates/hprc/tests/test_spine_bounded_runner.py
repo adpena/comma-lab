@@ -15,6 +15,7 @@ from tac.substrates.hprc.representation_spine import (
 )
 from tac.substrates.hprc.spine_acquisition import build_spine_acquisition_report
 from tac.substrates.hprc.spine_bounded_runner import (
+    HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA,
     HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA,
     build_spine_bounded_runner_plan,
 )
@@ -611,6 +612,19 @@ def test_full_video_section_value_profile_marks_cut_candidates(
         "cut_section_bytes_measured_removal_improves_objective"
     )
     assert sections["latents_rc"]["measured_removal_delta_total_mlx_advisory"] < 0
+    work_orders = plan["section_cut_materializer_work_orders"]
+    assert len(work_orders) == 1
+    order = work_orders[0]
+    assert order["schema"] == HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA
+    assert order["status"] == "queued_for_byte_closed_section_cut_materializer"
+    assert order["materializer_tool"] == (
+        "tools/materialize_pact_nerv_selector_v4_section_cut_candidate.py"
+    )
+    assert order["cut_sections"] == ["latents_rc"]
+    assert order["archive_zip_path"] == archive.as_posix()
+    assert order["full_video_profile_path"] == profile_path.as_posix()
+    assert "--run-receiver-proof" in order["argv"]
+    assert order["score_claim"] is False
 
 
 def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:

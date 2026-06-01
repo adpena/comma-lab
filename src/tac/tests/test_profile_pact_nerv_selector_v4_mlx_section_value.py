@@ -12,6 +12,7 @@ REPO = Path(__file__).resolve().parents[3]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+import tools.materialize_pact_nerv_selector_v4_section_cut_candidate as cut_tool  # noqa: E402
 import tools.profile_pact_nerv_selector_v4_mlx_section_value as profiler  # noqa: E402
 from tac.archive_byte_profile import contest_rate_term  # noqa: E402
 from tac.auth_eval_schema import contest_formula_score  # noqa: E402
@@ -174,6 +175,52 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
     assert "contest_cpu_cuda_exact_eval_not_executed" in profile["blockers"]
     assert profile["score_claim"] is False
     assert profile["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materialize_v4_section_cut_candidate_combines_measured_cuts(
+    tmp_path: Path,
+) -> None:
+    archive = _archive(tmp_path / "archive.zip")
+    profile = tmp_path / "profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "section_value_rows": [],
+                "score_claim": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rc = cut_tool.main(
+        [
+            "--archive",
+            archive.as_posix(),
+            "--profile",
+            profile.as_posix(),
+            "--output-dir",
+            (tmp_path / "cut").as_posix(),
+            "--sections",
+            "latents_rc",
+            "selectors_rc",
+        ]
+    )
+
+    assert rc == 0
+    report = json.loads(
+        (tmp_path / "cut" / "pact_nerv_selector_v4_section_cut_candidate.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["sections_cut"] == ["latents_rc", "selectors_rc"]
+    with zipfile.ZipFile(report["candidate_archive"]["path"]) as zf:
+        arc = parse_archive(zf.read("0.bin"))
+    assert float(arc.latents.abs().max()) == 0.0
+    assert arc.selector_bytes == b""
 
 
 def _cfg() -> PactNervSelectorV4Config:

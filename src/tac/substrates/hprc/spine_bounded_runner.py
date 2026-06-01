@@ -21,6 +21,9 @@ HPRC_SPINE_SECTION_VALUE_ROW_SCHEMA = "hprc_spine_section_value_row.v1"
 HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA = (
     "hprc_spine_section_value_profile_work_order.v1"
 )
+HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA = (
+    "hprc_spine_section_cut_materializer_work_order.v1"
+)
 HPRC_MLX_COMPONENT_PROFILE_SCHEMA = "hprc_mlx_component_neutralization_profile.v1"
 _SECTION_VALUE_PROFILERS: dict[str, dict[str, Any]] = {
     "pact_nerv_selector_v3_psv3": {
@@ -30,6 +33,12 @@ _SECTION_VALUE_PROFILERS: dict[str, dict[str, Any]] = {
     "pact_nerv_selector_v4_psv4": {
         "tool": "tools/profile_pact_nerv_selector_v4_mlx_section_value.py",
         "sections": ("decoder_qw", "latents_rc", "selectors_rc", "residual_rc"),
+    },
+}
+_SECTION_CUT_MATERIALIZERS: dict[str, dict[str, Any]] = {
+    "pact_nerv_selector_v4_psv4": {
+        "tool": "tools/materialize_pact_nerv_selector_v4_section_cut_candidate.py",
+        "sections": ("latents_rc", "selectors_rc"),
     },
 }
 _SECTION_VALUE_PROFILE_STORAGE_WATERFALL = (
@@ -101,6 +110,11 @@ def build_spine_bounded_runner_plan(
         section_value_rows=section_value_rows,
         repo_root=root,
     )
+    section_cut_materializer_work_orders = _section_cut_materializer_work_orders(
+        acquisition_rows=_rows(acquisition_report, "rows"),
+        section_value_rows=section_value_rows,
+        repo_root=root,
+    )
     residual_rows = [
         row
         for row in section_value_rows
@@ -133,6 +147,7 @@ def build_spine_bounded_runner_plan(
         "compact_base_sweep_rows": compact_base_rows,
         "section_value_rows": section_value_rows,
         "section_value_profile_work_orders": section_value_profile_work_orders,
+        "section_cut_materializer_work_orders": section_cut_materializer_work_orders,
         "residual_token_admission_rows": [*residual_rows, *residual_candidate_rows],
         "selected_runner_rows": runner_rows,
         "runner_policy": {
@@ -146,7 +161,8 @@ def build_spine_bounded_runner_plan(
             "section_value_rule": (
                 "section and residual bytes are admitted only when measured "
                 "delta_nonrate + charged_rate_cost < 0; missing MLX evidence "
-                "routes to replay, never promotion"
+                "routes to replay; cut recommendations route to byte-closed "
+                "materializers, never promotion"
             ),
             "residual_rule": (
                 "VQ/HPRC/Z8 residual tokens are blocked unless the measured "
@@ -638,6 +654,202 @@ def _profile_work_order_id(
     fingerprint_source = f"{projection_manifest_path}\n{archive_sha256 or ''}\n{payload_kind}"
     fingerprint = hashlib.sha256(fingerprint_source.encode("utf-8")).hexdigest()[:16]
     return f"section_value_profile:{_safe_path_token(payload_kind)}:{fingerprint}"
+
+
+def _section_cut_materializer_work_orders(
+    *,
+    acquisition_rows: list[dict[str, Any]],
+    section_value_rows: list[dict[str, Any]],
+    repo_root: Path,
+) -> list[dict[str, Any]]:
+    rows_by_projection: dict[str, list[dict[str, Any]]] = {}
+    for row in section_value_rows:
+        if row.get("admission_status") != "cut_section_bytes_for_receiver_proof":
+            continue
+        key = str(row.get("projection_manifest_path") or "")
+        rows_by_projection.setdefault(key, []).append(row)
+
+    work_orders: list[dict[str, Any]] = []
+    for acquisition_row in acquisition_rows:
+        projection = str(acquisition_row.get("projection_manifest_path") or "")
+        cut_rows = rows_by_projection.get(projection, [])
+        if not cut_rows:
+            continue
+        work_order = _section_cut_materializer_work_order(
+            acquisition_row=acquisition_row,
+            cut_rows=cut_rows,
+            repo_root=repo_root,
+        )
+        if work_order is not None:
+            work_orders.append(work_order)
+    work_orders.sort(
+        key=lambda row: (
+            row["status"],
+            str(row.get("source_payload_kind") or ""),
+            str(row.get("projection_manifest_path") or ""),
+        )
+    )
+    return work_orders
+
+
+def _section_cut_materializer_work_order(
+    *,
+    acquisition_row: dict[str, Any],
+    cut_rows: list[dict[str, Any]],
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    payload_kind = str(acquisition_row.get("representation_source_payload_kind") or "")
+    materializer = _SECTION_CUT_MATERIALIZERS.get(payload_kind)
+    if materializer is None:
+        return None
+    source = (
+        acquisition_row.get("source_archive")
+        if isinstance(acquisition_row.get("source_archive"), dict)
+        else {}
+    )
+    archive_path = _source_archive_path(source)
+    archive_sha256 = source.get("archive_zip_sha256") or source.get("sha256")
+    archive_bytes = source.get("archive_zip_bytes") or source.get("bytes")
+    projection = str(acquisition_row.get("projection_manifest_path") or "")
+    allowed_sections = set(materializer["sections"])
+    sections = [
+        section
+        for section in materializer["sections"]
+        if any(row.get("section_name") == section for row in cut_rows)
+    ]
+    unsupported_sections = sorted(
+        {
+            str(row.get("section_name") or "")
+            for row in cut_rows
+            if str(row.get("section_name") or "") not in allowed_sections
+        }
+    )
+    evidence_profile_paths = sorted(
+        {
+            str(evidence.get("profile_path") or "")
+            for row in cut_rows
+            for evidence in _rows(row, "evidence_rows")
+            if str(evidence.get("profile_path") or "")
+        }
+    )
+    profile_path = evidence_profile_paths[0] if len(evidence_profile_paths) == 1 else ""
+    output_dir = _section_cut_work_order_output_dir(
+        acquisition_row=acquisition_row,
+        archive_sha256=archive_sha256,
+        sections=sections,
+    )
+    blockers: list[str] = []
+    if not archive_path:
+        blockers.append("source_archive_zip_path_missing_for_section_cut_materializer")
+    if not profile_path:
+        blockers.append("single_full_video_profile_path_missing_for_section_cut")
+    if not sections:
+        blockers.append("no_supported_sections_to_cut")
+    if unsupported_sections:
+        blockers.append("unsupported_cut_sections_require_new_materializer")
+    status = (
+        "blocked_section_cut_materializer_work_order"
+        if blockers
+        else "queued_for_byte_closed_section_cut_materializer"
+    )
+    argv = [
+        ".venv/bin/python",
+        str(materializer["tool"]),
+        "--archive",
+        archive_path or "<missing-archive.zip>",
+        "--profile",
+        profile_path or "<missing-full-video-profile.json>",
+        "--output-dir",
+        output_dir,
+        "--repo-root",
+        repo_root.as_posix(),
+        "--sections",
+        *sections,
+        "--run-receiver-proof",
+        "--force",
+    ]
+    return {
+        "schema": HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA,
+        "work_order_id": _section_cut_work_order_id(
+            projection_manifest_path=projection,
+            archive_sha256=archive_sha256,
+            payload_kind=payload_kind,
+            sections=sections,
+        ),
+        "family": acquisition_row.get("family"),
+        "source_payload_kind": payload_kind,
+        "projection_manifest_path": projection,
+        "archive_zip_path": archive_path,
+        "archive_zip_sha256": archive_sha256,
+        "archive_zip_bytes": archive_bytes,
+        "full_video_profile_path": profile_path or None,
+        "cut_sections": sections,
+        "unsupported_sections": unsupported_sections,
+        "materializer_tool": materializer["tool"],
+        "argv": argv,
+        "shell_command": " ".join(_shell_quote_arg(arg) for arg in argv),
+        "preferred_output_dir": output_dir,
+        "storage_waterfall": list(_SECTION_VALUE_PROFILE_STORAGE_WATERFALL),
+        "cleanup_contract": {
+            "schema": "ssd_first_section_cut_materializer_cleanup_contract.v1",
+            "artifact_tier": "ssd_preferred",
+            "receiver_raw_output_retained_by_default": False,
+            "report_archive_hashes_and_receiver_proof_retained": True,
+            "no_signal_loss": True,
+        },
+        "provenance_requirements": [
+            "archive_zip_path_bytes_sha256",
+            "full_video_profile_path_sha256",
+            "tool_argv",
+            "receiver_proof_report",
+            "false_authority_flags",
+        ],
+        "status": status,
+        "blockers": _dedupe(
+            [
+                *blockers,
+                "receiver_proof_required_before_exact_gate",
+                "contest_cpu_cuda_exact_eval_not_executed",
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _section_cut_work_order_output_dir(
+    *,
+    acquisition_row: dict[str, Any],
+    archive_sha256: Any,
+    sections: list[str],
+) -> str:
+    family = str(acquisition_row.get("family") or "unknown")
+    payload_kind = str(acquisition_row.get("representation_source_payload_kind") or "unknown")
+    projection = str(acquisition_row.get("projection_manifest_path") or "")
+    section_token = ",".join(sections)
+    fingerprint_source = f"{projection}\n{archive_sha256 or ''}\n{payload_kind}\n{section_token}"
+    fingerprint = hashlib.sha256(fingerprint_source.encode("utf-8")).hexdigest()[:16]
+    safe_name = _safe_path_token(f"{family}_{payload_kind}_{section_token}_{fingerprint}")
+    return (
+        Path(_SECTION_VALUE_PROFILE_STORAGE_WATERFALL[0])
+        / "hprc_section_cut_candidates"
+        / safe_name
+    ).as_posix()
+
+
+def _section_cut_work_order_id(
+    *,
+    projection_manifest_path: str,
+    archive_sha256: Any,
+    payload_kind: str,
+    sections: list[str],
+) -> str:
+    section_token = ",".join(sections)
+    fingerprint_source = (
+        f"{projection_manifest_path}\n{archive_sha256 or ''}\n{payload_kind}\n"
+        f"{section_token}"
+    )
+    fingerprint = hashlib.sha256(fingerprint_source.encode("utf-8")).hexdigest()[:16]
+    return f"section_cut:{_safe_path_token(payload_kind)}:{fingerprint}"
 
 
 def _safe_path_token(value: str) -> str:
