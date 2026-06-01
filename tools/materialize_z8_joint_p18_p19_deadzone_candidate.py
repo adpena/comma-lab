@@ -103,8 +103,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--run-inflate-runtime-benchmark",
         action="store_true",
         help=(
-            "Run the advisory full inflate.sh benchmark immediately. This can "
-            "write contest-sized raw output."
+            "Run the advisory full inflate.sh benchmark immediately. Raw output "
+            "is manifest-hashed and deleted by default."
         ),
     )
     parser.add_argument("--inflate-runtime-benchmark-timeout-seconds", type=float, default=1800.0)

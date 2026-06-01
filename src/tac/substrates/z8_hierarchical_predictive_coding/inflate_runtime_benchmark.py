@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import time
 from collections.abc import Mapping
@@ -109,6 +110,7 @@ def benchmark_z8_submission_inflate_runtime(
     auth_eval_window_seconds: float = 1800.0,
     inflate_device: str = "cpu",
     env: Mapping[str, str] | None = None,
+    retain_output: bool = False,
 ) -> dict[str, Any]:
     """Run the full Z8 receiver shell and return an advisory timing report."""
 
@@ -177,6 +179,14 @@ def benchmark_z8_submission_inflate_runtime(
             )
         elapsed = time.perf_counter() - start
         output_manifest = manifest_tree(run_output_dir)
+        output_cleanup_blocker: str | None = None
+        if not retain_output:
+            try:
+                shutil.rmtree(run_output_dir)
+            except OSError as exc:
+                output_cleanup_blocker = f"inflate_output_cleanup_failed:{exc}"
+                if "inflate_output_cleanup_failed" not in blockers:
+                    blockers.append("inflate_output_cleanup_failed")
         if timed_out and "inflate_sh_timed_out" not in blockers:
             blockers.append("inflate_sh_timed_out")
         if returncode not in {0} and "inflate_sh_returned_nonzero" not in blockers:
@@ -197,6 +207,8 @@ def benchmark_z8_submission_inflate_runtime(
                 "stderr_tail": stderr_tail,
                 "output_dir": run_output_dir.as_posix(),
                 "output_manifest": output_manifest,
+                "output_retained": bool(retain_output),
+                "output_cleanup_blocker": output_cleanup_blocker,
             }
         )
 
@@ -226,6 +238,10 @@ def benchmark_z8_submission_inflate_runtime(
         "timeout_seconds": float(timeout_seconds),
         "auth_eval_window_seconds": float(auth_eval_window_seconds),
         "inflate_device": inflate_device,
+        "output_retention_policy": (
+            "retained_by_request" if retain_output else "manifest_then_delete"
+        ),
+        "large_artifact_cleanup_default": True,
         "successful_runs": len(successful),
         "inflate_seconds_best": float(best) if best is not None else None,
         "inflate_seconds_mean": float(mean) if mean is not None else None,

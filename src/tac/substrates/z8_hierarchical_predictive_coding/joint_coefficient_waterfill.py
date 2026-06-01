@@ -25,6 +25,7 @@ from typing import Any
 
 import numpy as np
 
+from tac.archive_byte_profile import CONTEST_ORIGINAL_BYTES, contest_rate_term
 from tac.repo_io import write_json
 from tac.substrates.z8_hierarchical_predictive_coding.archive import (
     pack_archive,
@@ -1261,6 +1262,25 @@ def _exact_axis_blocker_report(
     }
 
 
+def _rate_floor_report(*, archive_zip_bytes: int | None) -> dict[str, Any]:
+    blockers: list[str] = []
+    rate_bytes = int(archive_zip_bytes or 0)
+    if archive_zip_bytes is None:
+        blockers.append("archive_zip_bytes_missing_for_contest_rate_floor")
+    rate_term = contest_rate_term(rate_bytes) if archive_zip_bytes is not None else None
+    return {
+        "schema": "z8_contest_rate_floor_gate.v1",
+        "axis_tag": "[macOS-CPU advisory]",
+        "uncompressed_total_bytes": CONTEST_ORIGINAL_BYTES,
+        "archive_zip_bytes": archive_zip_bytes,
+        "rate_only_score_floor": rate_term,
+        "rate_term_exceeds_one": bool(rate_term is not None and rate_term > 1.0),
+        "exact_eval_rate_floor_gate_ready": archive_zip_bytes is not None,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def apply_joint_p18_p19_deadzone_to_z8_archive(
     archive_bytes: bytes,
     *,
@@ -1575,6 +1595,7 @@ def materialize_joint_p18_p19_deadzone_candidate(
         archive_zip_sha256=archive_sha256,
         candidate_bin_sha256=candidate_bin_sha256,
     )
+    rate_floor_report = _rate_floor_report(archive_zip_bytes=archive_zip_bytes)
     manifest = {
         "schema": Z8_JOINT_COEFFICIENT_VARIANT_MANIFEST_SCHEMA,
         "candidate_bin_path": candidate_bin.as_posix(),
@@ -1589,6 +1610,7 @@ def materialize_joint_p18_p19_deadzone_candidate(
         "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
         "exact_axis_blocker": exact_axis_blocker,
         "exact_axis_blocker_report": exact_axis_blocker_report,
+        "rate_floor_report": rate_floor_report,
         "waterfill_result": {key: value for key, value in result.items() if key != "mutated_archive_bytes"},
         **FALSE_AUTHORITY,
     }
@@ -1917,6 +1939,7 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
         archive_zip_sha256=archive_sha256,
         candidate_bin_sha256=candidate_bin_sha256,
     )
+    rate_floor_report = _rate_floor_report(archive_zip_bytes=archive_zip_bytes)
     manifest = {key: value for key, value in result.items() if key != "final_archive_bytes_payload"}
     manifest.update(
         {
@@ -1932,6 +1955,7 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
             "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
             "exact_axis_blocker": exact_axis_blocker,
             "exact_axis_blocker_report": exact_axis_blocker_report,
+            "rate_floor_report": rate_floor_report,
             **FALSE_AUTHORITY,
         }
     )

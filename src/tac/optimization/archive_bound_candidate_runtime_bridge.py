@@ -271,6 +271,7 @@ def build_archive_bound_candidate_runtime_package(
         **dict(runtime_adapter_manifest_extra or {}),
     }
     row = {
+        **FALSE_AUTHORITY,
         "schema": candidate_row_schema,
         "candidate_id": f"{candidate_id_prefix}_{archive_sha256[:16]}",
         "candidate_family": candidate_family,
@@ -313,7 +314,6 @@ def build_archive_bound_candidate_runtime_package(
         "score_claim_valid": False,
         "dispatch_attempted": False,
         "gpu_launched": False,
-        **FALSE_AUTHORITY,
     }
     package = build_archive_bound_candidate_adapter_package(
         _SingleArchiveBoundRuntimeCandidateAdapter(

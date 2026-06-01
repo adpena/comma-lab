@@ -60,11 +60,16 @@ done < "$file_list"
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["successful_runs"] == 1
     assert report["inflate_seconds_best"] is not None
+    assert report["output_retention_policy"] == "manifest_then_delete"
+    assert report["large_artifact_cleanup_default"] is True
     assert report["file_list_entries"] == ["0", "nested/1"]
     assert report["archive_member_manifest"]["file_count"] == 2
     assert report["runs"][0]["returncode"] == 0
     assert report["runs"][0]["output_manifest"]["file_count"] == 2
     assert report["runs"][0]["output_manifest"]["total_bytes"] > 0
+    assert report["runs"][0]["output_retained"] is False
+    assert report["runs"][0]["output_cleanup_blocker"] is None
+    assert not (tmp_path / "inflate_bench" / "run_000").exists()
     assert "auth_evaluator_not_run" in report["blockers"]
     assert "contest_cpu_cuda_score_not_measured" in report["blockers"]
     assert "inflate_sh_returned_nonzero" not in report["blockers"]

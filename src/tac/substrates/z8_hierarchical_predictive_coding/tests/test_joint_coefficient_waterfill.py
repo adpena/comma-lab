@@ -182,6 +182,10 @@ def test_joint_p18_p19_deadzone_materializer_emits_byte_closed_archive(
     assert manifest["exact_axis_blocker"] == ("receiver_proof_and_contest_cpu_cuda_eval_not_executed")
     assert manifest["exact_axis_blocker_report"]["exact_axis_blocker_present"] is True
     assert manifest["exact_axis_blocker_report"]["exact_axis_blocker_stale"] is False
+    assert manifest["rate_floor_report"]["schema"] == "z8_contest_rate_floor_gate.v1"
+    assert manifest["rate_floor_report"]["archive_zip_bytes"] == manifest["archive_zip_bytes"]
+    assert manifest["rate_floor_report"]["rate_only_score_floor"] > 0.0
+    assert manifest["rate_floor_report"]["score_claim"] is False
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
 
@@ -591,6 +595,8 @@ def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
     assert manifest["inflate_runtime_benchmark_work_order"]["schema"] == (
         "z8_inflate_runtime_benchmark_work_order.v1"
     )
+    assert manifest["rate_floor_report"]["archive_zip_bytes"] == manifest["archive_zip_bytes"]
+    assert manifest["rate_floor_report"]["ready_for_exact_eval_dispatch"] is False
     assert (
         manifest["cumulative_rate_report"]["final_archive_bytes"]
         <= manifest["cumulative_rate_report"]["original_archive_bytes"]

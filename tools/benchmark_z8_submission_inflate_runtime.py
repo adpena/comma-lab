@@ -28,6 +28,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout-seconds", type=float, default=1800.0)
     parser.add_argument("--auth-eval-window-seconds", type=float, default=1800.0)
     parser.add_argument("--inflate-device", default="cpu")
+    parser.add_argument(
+        "--retain-output",
+        action="store_true",
+        help="Keep inflated raw benchmark outputs. Defaults to manifest-then-delete.",
+    )
     parser.add_argument("--out-json", type=Path, default=None)
     return parser
 
@@ -44,6 +49,7 @@ def main() -> int:
         timeout_seconds=float(args.timeout_seconds),
         auth_eval_window_seconds=float(args.auth_eval_window_seconds),
         inflate_device=str(args.inflate_device),
+        retain_output=bool(args.retain_output),
     )
     if args.out_json is not None:
         args.out_json.parent.mkdir(parents=True, exist_ok=True)
