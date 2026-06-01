@@ -791,6 +791,106 @@ GRAND_COUNCIL: tuple[CouncilSeat, ...] = (
             "lane_inverse_steganalysis_optimal_full_stack_20260601"
         ),
     ),
+    # --- 2026-06-01 SNeRV + HiNeRV carrier-architecture seats (lane
+    # lane_inverse_steganalysis_optimal_full_stack_20260601, deep-research
+    # subagent follow-on) per Catalog #110 APPEND-ONLY + #346. These are the
+    # VERIFIED principal authors of the two OPERATOR-APPROVED top-priority
+    # PHASE-2 carrier candidates for the inverse-steganalysis full stack
+    # (§7 GREEN: the L∞ pose-Fisher margin-budget allocation beats L2 by 56.9%
+    # at equal rate, POSE-DOMINATED). SNeRV = the wavelet-override
+    # RECONCILIATION (stores ONLY LF DWT coefficients + GENERATES the
+    # byte-heavy HF detail via a decoder -> cures the Z8 "wavelet blobs too big"
+    # disease WHILE keeping the exact orthonormal-DWT synthesis adjoint that
+    # closes G3 by construction). HiNeRV = the cheapest measured RD INR
+    # (-72.3% bit-rate vs HNeRV on UVG) whose prune+6-bit-QAT+arithmetic-coding
+    # pipeline IS the cheapness engine. Author lists verified across >=2
+    # independent sources (arXiv abstract + ECCV/NeurIPS proceedings + GitHub +
+    # institutional pages); see lane research return. These seats are the
+    # AUTHORITATIVE voices on the SNeRV LF-store/HF-generate split + the HiNeRV
+    # hierarchical-encoding + compression-pipeline cheapness engine.
+    CouncilSeat(
+        name="Kang_SNeRV",
+        role="grand_council",
+        canonical_position_summary=(
+            "Je-Won Kang (Ewha Womans University, Dept. of Electronic & "
+            "Electrical Engineering; corresponding/senior author) — with "
+            "co-authors Jina Kim + Jihoo Lee — of SNeRV: Spectra-preserving "
+            "Neural Representation for Video (ECCV 2024). Canonical position: "
+            "neural INRs have a SPECTRAL BIAS (learn LF faster than HF), so the "
+            "right carrier STORES only the low-frequency 2D-DWT subband (CLL) "
+            "as encoded features and GENERATES the three high-frequency "
+            "subbands (CLH/CHL/CHH) via a decoder (High-Frequency Restorer) "
+            "rather than storing them. This is the WAVELET-OVERRIDE "
+            "RECONCILIATION: it cures the Z8 'wavelet detail blobs are too big' "
+            "disease (the byte-heavy detail is GENERATED, not stored) while "
+            "keeping the exact orthonormal-DWT synthesis adjoint (closes G3 by "
+            "construction) and aligning with the SegNet stride-2-stem detail-"
+            "subband structural dead-zone. The AUTHORITATIVE voice on the "
+            "store-LF/generate-HF carrier split + the wavelet-domain + pixel-"
+            "space dual loss."
+        ),
+        relevance_tokens=(
+            "snerv", "spectra_preserving", "wavelet_hybrid",
+            "lf_store_hf_generate", "dwt_subband_split",
+            "high_frequency_restorer", "spectral_bias",
+            "neural_video_representation", "implicit_video_codec",
+            "carrier_architecture", "carrier_cheapness",
+            "wavelet_override_reconciliation", "synthesis_adjoint_g3",
+        ),
+        canonical_reference_path=(
+            "arXiv:2501.01681 (SNeRV, ECCV 2024) + "
+            "link.springer.com/chapter/10.1007/978-3-031-73001-6_19 (ECCV "
+            "proceedings) + pure.ewha.ac.kr (Ewha Womans Univ EEE) + "
+            "github.com/qwertja/SNeRV; lane research return "
+            "lane_inverse_steganalysis_optimal_full_stack_20260601"
+        ),
+    ),
+    CouncilSeat(
+        name="Bull_HiNeRV",
+        role="grand_council",
+        canonical_position_summary=(
+            "David Bull (University of Bristol, Visual Information Lab; senior "
+            "author) — with co-authors Ho Man Kwan (lead), Ge Gao, Fan Zhang, "
+            "and Andrew Gower (BT, Immersive Content & Comms Research) — of "
+            "HiNeRV: Video Compression with Hierarchical Encoding-based Neural "
+            "Representation (NeurIPS 2023) and the fully-end-to-end successor "
+            "NVRC: Neural Video Representation Compression (NeurIPS 2024). "
+            "Canonical position: the cheapest INR carrier RD comes from "
+            "(a) HIERARCHICAL multi-resolution local feature grids whose "
+            "parameter count scales with the upsampling factor NOT the "
+            "resolution (base grid 150x18x32 x8ch on UVG, upsample factors "
+            "(5,3,2,2)), depthwise-conv + MLP + bilinear-interp blocks, and a "
+            "unified frame+patch encoding; and (b) a DISCIPLINED COMPRESSION "
+            "PIPELINE — adaptive ~15% pruning + fine-tune, 6-bit "
+            "quantization-aware training (Quant-Noise, no STE), arithmetic "
+            "entropy coding — that is the CHEAPNESS ENGINE (-72.3% bit-rate vs "
+            "HNeRV, -43.4% vs DCVC on UVG; NVRC then closes the loop "
+            "end-to-end with per-group learned quantization + hierarchical "
+            "coding of all network/quant/entropy params, first INR codec to "
+            "beat VTM-RA on long sequences). The AUTHORITATIVE voice on the "
+            "hierarchical-encoding carrier + the prune/quantize/entropy-code "
+            "cheapness engine (the learned-renderer Phase-2 fallback with a "
+            "dense decoder-VJP adjoint)."
+        ),
+        relevance_tokens=(
+            "hinerv", "nvrc", "hierarchical_encoding",
+            "multi_resolution_feature_grid", "depthwise_conv_mlp_interp",
+            "frame_patch_unified", "prune_quantize_entropy_code",
+            "quant_noise_qat", "arithmetic_coding",
+            "neural_video_representation", "implicit_video_codec",
+            "carrier_architecture", "carrier_cheapness",
+            "learned_renderer_fallback", "decoder_vjp_adjoint",
+        ),
+        canonical_reference_path=(
+            "arXiv:2306.09818 (HiNeRV, NeurIPS 2023) + "
+            "proceedings.neurips.cc/paper_files/paper/2023/hash/"
+            "e5dc475c370ff42f2f96dddf8191a40c (NeurIPS proceedings) + "
+            "openreview.net/forum?id=CpoS56pYnU + github.com/hmkx/HiNeRV "
+            "(MIT license) + arXiv:2409.07414 (NVRC, NeurIPS 2024, same "
+            "authors); lane research return "
+            "lane_inverse_steganalysis_optimal_full_stack_20260601"
+        ),
+    ),
 )
 
 

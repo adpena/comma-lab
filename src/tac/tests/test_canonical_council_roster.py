@@ -213,7 +213,7 @@ class TestFourCoLeadStructure:
 
 
 class TestGrandCouncilRoster:
-    def test_grand_council_has_25_seats(self) -> None:
+    def test_grand_council_has_27_seats(self) -> None:
         # 11 existing (since 2026-04-29; Schmidhuber listed once) +
         # 8 new (2026-05-15 expansion: Atick/Redlich/Rao/Ballard/Tishby/
         # Zaslavsky/Wyner/TimeTravelerProtege) +
@@ -226,8 +226,13 @@ class TestGrandCouncilRoster:
         # subagent: HaoChen_NeRV / Shrivastava_INR / Gwilliam_RNeRV, verified
         # principal authors of the NeRV/HNeRV/VINRB-RNeRV neural-video-codec
         # lineage that supplies the inverse-steganalysis PHASE-2 carrier
-        # candidates) = 25.
-        assert len(GRAND_COUNCIL) == 25
+        # candidates) = 25, +
+        # 2 SNeRV + HiNeRV carrier-architecture seats (2026-06-01, same lane
+        # deep-research follow-on: Kang_SNeRV / Bull_HiNeRV, verified principal
+        # authors of the two OPERATOR-APPROVED top-priority PHASE-2 carrier
+        # candidates — SNeRV stores-LF/generates-HF DWT carrier + HiNeRV
+        # hierarchical-encoding + prune/quant/entropy cheapness engine) = 27.
+        assert len(GRAND_COUNCIL) == 27
 
     def test_existing_11_seats_present(self) -> None:
         names = frozenset(s.name for s in GRAND_COUNCIL)
@@ -268,6 +273,33 @@ class TestGrandCouncilRoster:
         # coexists with Daubechies_Grand sister seat.
         names = frozenset(s.name for s in GRAND_COUNCIL)
         assert "Daubechies_Grand" in names
+
+    def test_snerv_hinerv_carrier_seats_present(self) -> None:
+        # Per 2026-06-01 lane lane_inverse_steganalysis_optimal_full_stack_20260601
+        # deep-research follow-on (Catalog #110 APPEND-ONLY + #346): the two
+        # OPERATOR-APPROVED top-priority PHASE-2 carrier-candidate author seats.
+        # Kang_SNeRV = Je-Won Kang (Ewha Womans Univ EEE) SNeRV ECCV 2024;
+        # Bull_HiNeRV = David Bull (Univ Bristol VIL) HiNeRV NeurIPS 2023 + NVRC.
+        names = frozenset(s.name for s in GRAND_COUNCIL)
+        assert "Kang_SNeRV" in names
+        assert "Bull_HiNeRV" in names
+
+    def test_snerv_hinerv_seats_carry_carrier_relevance_tokens(self) -> None:
+        by_name = {s.name: s for s in GRAND_COUNCIL}
+        snerv = by_name["Kang_SNeRV"]
+        hinerv = by_name["Bull_HiNeRV"]
+        # Both must carry the carrier-architecture + carrier-cheapness lens.
+        for seat in (snerv, hinerv):
+            assert "carrier_architecture" in seat.relevance_tokens
+            assert "carrier_cheapness" in seat.relevance_tokens
+            assert seat.role == "grand_council"
+            assert not seat.is_co_lead
+        # SNeRV is the store-LF/generate-HF wavelet-hybrid carrier.
+        assert "lf_store_hf_generate" in snerv.relevance_tokens
+        assert "snerv" in snerv.relevance_tokens
+        # HiNeRV is the hierarchical-encoding + prune/quant/entropy carrier.
+        assert "hierarchical_encoding" in hinerv.relevance_tokens
+        assert "prune_quantize_entropy_code" in hinerv.relevance_tokens
 
 
 class TestRequiredAttendeesForTopic:
