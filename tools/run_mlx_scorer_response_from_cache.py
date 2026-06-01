@@ -32,6 +32,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     archive_group.add_argument("--archive-size-bytes", type=int)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=Path("."), type=Path)
+    parser.add_argument(
+        "--upstream-dir",
+        type=Path,
+        help=(
+            "Explicit upstream scorer snapshot directory. Defaults to "
+            "<repo-root>/upstream. Use this for SSD worktrees whose code checkout "
+            "is separate from the canonical upstream snapshot."
+        ),
+    )
     parser.add_argument("--batch-pairs", type=int, default=1)
     parser.add_argument("--start-pair", type=int, default=0)
     parser.add_argument("--max-pairs", type=int)
@@ -57,6 +66,7 @@ def main(argv: list[str] | None = None) -> int:
         candidate_cache_dir=args.candidate_cache_dir,
         archive_size_bytes=archive_size,
         repo_root=args.repo_root,
+        upstream_dir=args.upstream_dir,
         batch_pairs=args.batch_pairs,
         device_type=args.device,
         components_dir=args.components_dir,

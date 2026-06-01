@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import subprocess
 import sys
@@ -9,8 +10,16 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 import numpy as np
+import torch
 
 from tac.local_acceleration.mlx_preprocess import CAMERA_HW
+from tac.substrates._shared.inflate_runtime import (
+    rgb_pair_to_uint8_frames,
+    write_rgb_pair_to_raw,
+)
+from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
+from tac.substrates.hi_nerv.archive import pack_archive as pack_hi_nerv_archive
+from tac.substrates.hi_nerv.inflate import build_model_from_archive
 from tac.substrates.hprc.archive import parse_hprc_packet
 from tac.substrates.hprc.learned_receiver import (
     build_compact_receiver_packet_from_lowres_frames,
@@ -53,6 +62,21 @@ def test_local_acquisition_partial_raw_uses_full_video_pair_floor() -> None:
         )
         is False
     )
+
+
+def test_rgb_pair_to_uint8_frames_matches_raw_writer_lowering() -> None:
+    rgb_0 = torch.linspace(0.0, 1.0, 3 * 4 * 5, dtype=torch.float32).reshape(
+        1, 3, 4, 5
+    )
+    rgb_1 = torch.flip(rgb_0, dims=(-1,))
+
+    lowered = rgb_pair_to_uint8_frames(rgb_0, rgb_1, input_range="unit")
+    buf = io.BytesIO()
+    n = write_rgb_pair_to_raw(buf, rgb_0, rgb_1, input_range="unit")
+
+    assert n == 2
+    assert lowered.shape == (2, CAMERA_HW[0], CAMERA_HW[1], 3)
+    assert buf.getvalue() == lowered.tobytes(order="C")
 
 
 def test_submission_mlx_cache_can_reuse_preinflated_receiver_output(
@@ -558,3 +582,136 @@ def test_submission_mlx_cache_hprc_direct_can_render_pair_subset(
     assert manifest["pair_count"] == 1
     assert pair_indices.tolist() == [[2, 3]]
     assert manifest["raw_sha256"] == hashlib.sha256(expected_raw).hexdigest()
+
+
+def test_submission_mlx_cache_can_render_hi_nerv_direct_without_raw_scratch(
+    tmp_path: Path,
+) -> None:
+    cfg = HinervConfig(
+        latent_dim_coarse=2,
+        latent_dim_mid=2,
+        latent_dim_fine=2,
+        embed_dim=2,
+        initial_grid_h=1,
+        initial_grid_w=1,
+        decoder_channels=(2, 2, 2),
+        sin_frequency=3.0,
+        num_upsample_blocks=3,
+        mid_injection_block_index=0,
+        fine_injection_block_index=1,
+        num_pairs=2,
+        output_height=8,
+        output_width=8,
+    )
+    torch.manual_seed(7)
+    model = HinervSubstrate(cfg).eval()
+    meta = {
+        "embed_dim": cfg.embed_dim,
+        "initial_grid_h": cfg.initial_grid_h,
+        "initial_grid_w": cfg.initial_grid_w,
+        "decoder_channels": list(cfg.decoder_channels),
+        "sin_frequency": cfg.sin_frequency,
+        "num_upsample_blocks": cfg.num_upsample_blocks,
+        "mid_injection_block_index": cfg.mid_injection_block_index,
+        "fine_injection_block_index": cfg.fine_injection_block_index,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+    }
+    packet_bytes = pack_hi_nerv_archive(
+        dict(model.state_dict()),
+        model.latents_coarse.detach(),
+        model.latents_mid.detach(),
+        model.latents_fine.detach(),
+        meta,
+    )
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", packet_bytes)
+
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nexit 99\n",
+        encoding="utf-8",
+    )
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    report = tmp_path / "report.json"
+    cache_dir = tmp_path / "cache"
+    work_dir = tmp_path / "work"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--archive",
+            str(archive),
+            "--submission-dir",
+            str(submission),
+            "--upstream-dir",
+            str(upstream),
+            "--video-names-file",
+            str(video_names),
+            "--output-cache-dir",
+            str(cache_dir),
+            "--work-dir",
+            str(work_dir),
+            "--report-output",
+            str(report),
+            "--receiver-direct-cache",
+            "--pair-ranges",
+            "1",
+            "--batch-pairs",
+            "1",
+            "--allow-large-tensor-cache",
+            "--force",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    manifest = json.loads((cache_dir / "manifest.json").read_text(encoding="utf-8"))
+    _, _, receiver_model = build_model_from_archive(packet_bytes, device="cpu")
+    with torch.no_grad():
+        rgb_0, rgb_1 = receiver_model(torch.tensor([1], dtype=torch.long))
+    expected_raw = rgb_pair_to_uint8_frames(
+        rgb_0,
+        rgb_1,
+        input_range="unit",
+    ).tobytes(order="C")
+    pair_indices = np.load(cache_dir / "pair_indices.npy")
+
+    assert stdout["cached_pair_count"] == 1
+    assert payload["inflate_executed"] is False
+    assert payload["receiver_direct_cache"] is True
+    assert payload["hprc_direct_cache"] is False
+    assert payload["raw_path"] is None
+    assert payload["raw_pair_count"] == 2
+    assert payload["cached_pair_count"] == 1
+    assert payload["direct_receiver_cache_report"]["source_family"] == "hi_nerv"
+    assert payload["direct_receiver_cache_report"]["selected_pair_ranges"] == [[1, 1]]
+    assert (
+        payload["candidate_cache_identity_mode"]
+        == "hi_nerv_direct_receiver_render_cache_identity_audited_false_authority"
+    )
+    stamp = manifest["hi_nerv_direct_receiver_render_cache_identity_audit"]
+    audit = json.loads(Path(stamp["path"]).read_text(encoding="utf-8"))
+    assert stamp["verdict"] == "PASS_HI_NERV_DIRECT_RECEIVER_RENDER_CACHE_IDENTITY"
+    assert stamp["score_claim"] is False
+    assert audit["source"]["archive_magic"] == "HIV1"
+    assert audit["cache"]["raw_sha256"] == manifest["raw_sha256"]
+    assert audit["direct_render"]["pair_index_scope"] == "explicit_pair_ranges"
+    assert audit["direct_render"]["lowering"] == (
+        "rgb_pair_to_uint8_frames_input_range_unit_bicubic"
+    )
+    assert manifest["source_kind"] == "hi_nerv_direct_receiver_render"
+    assert manifest["pair_count"] == 1
+    assert pair_indices.tolist() == [[2, 3]]
+    assert manifest["raw_sha256"] == hashlib.sha256(expected_raw).hexdigest()
+    assert not (work_dir / "inflated").exists()

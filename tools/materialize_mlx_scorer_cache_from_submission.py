@@ -106,9 +106,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--pair-ranges",
         help=(
-            "For --hprc-direct-cache, render only explicit pair indices/ranges "
-            "such as 1-2,4,9-12. The manifest preserves source pair indices so "
-            "MLX response can align the subset against the full reference cache."
+            "For --receiver-direct-cache/--hprc-direct-cache, render only "
+            "explicit pair indices/ranges such as 1-2,4,9-12. The manifest "
+            "preserves source pair indices so MLX response can align the "
+            "subset against the full reference cache."
         ),
     )
     parser.add_argument(
@@ -132,6 +133,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "scratch file. Advisory only; receiver proof remains mandatory."
         ),
     )
+    parser.add_argument(
+        "--receiver-direct-cache",
+        action="store_true",
+        help=(
+            "Render scorer-input tensors directly from supported deterministic "
+            "receiver archive bytes instead of writing a multi-GB raw scratch "
+            "file. Currently supports compact HPRC packets and HiNeRV HIV1 "
+            "archives. Advisory only; receiver proof remains mandatory."
+        ),
+    )
     parser.add_argument("--force", action="store_true")
     return parser.parse_args(argv)
 
@@ -147,8 +158,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--max-pairs must be >= 1")
     if args.local_acquisition_max_pairs is not None and args.local_acquisition_max_pairs < 1:
         raise SystemExit("--local-acquisition-max-pairs must be >= 1")
-    if args.pair_ranges and not args.hprc_direct_cache:
-        raise SystemExit("--pair-ranges currently requires --hprc-direct-cache")
+    receiver_direct_cache = bool(args.hprc_direct_cache or args.receiver_direct_cache)
+    if args.pair_ranges and not receiver_direct_cache:
+        raise SystemExit(
+            "--pair-ranges currently requires --receiver-direct-cache "
+            "or --hprc-direct-cache"
+        )
     if args.large_cache_pair_threshold < 1:
         raise SystemExit("--large-cache-pair-threshold must be >= 1")
 
@@ -179,8 +194,11 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     if preinflated_output_dir is not None:
-        if args.hprc_direct_cache:
-            raise SystemExit("--hprc-direct-cache cannot be combined with --preinflated-output-dir")
+        if receiver_direct_cache:
+            raise SystemExit(
+                "--receiver-direct-cache/--hprc-direct-cache cannot be combined "
+                "with --preinflated-output-dir"
+            )
         if not preinflated_output_dir.is_dir():
             raise SystemExit(
                 f"--preinflated-output-dir is not a directory: {preinflated_output_dir}"
@@ -211,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
     started = time.time()
     extracted_dir = work_dir / "archive"
     inflated_dir = work_dir / "inflated"
-    inflate_executed = preinflated_output_dir is None and not args.hprc_direct_cache
+    inflate_executed = preinflated_output_dir is None and not receiver_direct_cache
     local_acquisition_env = (
         {"PACT_LOCAL_ACQUISITION_MAX_PAIRS": str(int(args.local_acquisition_max_pairs))}
         if args.local_acquisition_max_pairs is not None
@@ -232,7 +250,7 @@ def main(argv: list[str] | None = None) -> int:
         if preinflated_proof_manifest is not None
         else None
     )
-    if args.hprc_direct_cache:
+    if receiver_direct_cache:
         _validate_archive_without_extracting(archive)
         inflate_elapsed = 0.0
     elif inflate_executed:
@@ -278,8 +296,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         **FALSE_AUTHORITY,
     }
-    if args.hprc_direct_cache:
-        direct_cache_report, manifest = _write_hprc_direct_cache(
+    if receiver_direct_cache:
+        direct_cache_report, manifest = _write_direct_receiver_cache(
             archive,
             output_cache,
             max_pairs=args.max_pairs,
@@ -356,7 +374,7 @@ def main(argv: list[str] | None = None) -> int:
             f"{cached_pair_count} pairs (> threshold {args.large_cache_pair_threshold}); "
             "pass --allow-large-tensor-cache after confirming disk budget"
         )
-    if not args.hprc_direct_cache:
+    if not receiver_direct_cache:
         if raw_path is not None and raw_path.is_dir():
             assert png_frame_count is not None
             png_paths = _png_frame_paths(raw_path)
@@ -449,7 +467,7 @@ def main(argv: list[str] | None = None) -> int:
         "output_cache_dir": str(output_cache),
         "cache_manifest": str(output_cache / "manifest.json"),
         "inflated_outputs_manifest": (
-            None if args.hprc_direct_cache else str(work_dir / "inflated_outputs_manifest.json")
+            None if receiver_direct_cache else str(work_dir / "inflated_outputs_manifest.json")
         ),
         "inflated_outputs_aggregate_sha256": inflated_manifest["aggregate_sha256"],
         "raw_path": str(raw_path) if raw_path is not None else None,
@@ -467,7 +485,14 @@ def main(argv: list[str] | None = None) -> int:
         "local_acquisition_full_raw_pair_floor": 600,
         "inflate_executed": inflate_executed,
         "hprc_direct_cache": bool(args.hprc_direct_cache),
-        "hprc_direct_cache_report": direct_cache_report,
+        "hprc_direct_cache_report": (
+            direct_cache_report
+            if direct_cache_report is not None
+            and direct_cache_report.get("source_family") == "hprc"
+            else None
+        ),
+        "receiver_direct_cache": bool(receiver_direct_cache),
+        "direct_receiver_cache_report": direct_cache_report,
         "preinflated_output_dir": (
             str(preinflated_output_dir) if preinflated_output_dir is not None else None
         ),
@@ -486,7 +511,7 @@ def main(argv: list[str] | None = None) -> int:
         **FALSE_AUTHORITY,
     }
     write_json(report_output, report)
-    if not args.keep_raw and inflate_executed and not args.hprc_direct_cache:
+    if not args.keep_raw and inflate_executed and not receiver_direct_cache:
         shutil.rmtree(inflated_dir, ignore_errors=True)
     print(
         json.dumps(
@@ -512,7 +537,7 @@ def _local_acquisition_is_partial_raw(
     return int(raw_pair_count) < 600
 
 
-def _write_hprc_direct_cache(
+def _write_direct_receiver_cache(
     archive: Path,
     output_cache: Path,
     *,
@@ -523,6 +548,43 @@ def _write_hprc_direct_cache(
     pair_indices_filter: list[int] | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     member_name, packet_bytes = _read_single_member_zip(archive)
+    if packet_bytes.startswith(b"HIV1"):
+        return _write_hi_nerv_direct_cache_from_payload(
+            archive,
+            output_cache,
+            member_name=member_name,
+            archive_payload=packet_bytes,
+            max_pairs=max_pairs,
+            local_acquisition_max_pairs=local_acquisition_max_pairs,
+            batch_pairs=batch_pairs,
+            archive_sha256=archive_sha256,
+            pair_indices_filter=pair_indices_filter,
+        )
+    return _write_hprc_direct_cache_from_payload(
+        archive,
+        output_cache,
+        member_name=member_name,
+        packet_bytes=packet_bytes,
+        max_pairs=max_pairs,
+        local_acquisition_max_pairs=local_acquisition_max_pairs,
+        batch_pairs=batch_pairs,
+        archive_sha256=archive_sha256,
+        pair_indices_filter=pair_indices_filter,
+    )
+
+
+def _write_hprc_direct_cache_from_payload(
+    archive: Path,
+    output_cache: Path,
+    *,
+    member_name: str,
+    packet_bytes: bytes,
+    max_pairs: int | None,
+    local_acquisition_max_pairs: int | None,
+    batch_pairs: int,
+    archive_sha256: str,
+    pair_indices_filter: list[int] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     from tac.substrates.hprc.archive import parse_hprc_packet
     from tac.substrates.hprc.learned_receiver import (
         decode_compact_receiver_packet,
@@ -639,6 +701,7 @@ def _write_hprc_direct_cache(
     write_json(output_cache / "manifest.json", manifest)
     report = {
         "schema": "hprc_direct_mlx_scorer_cache_render.v1",
+        "source_family": "hprc",
         "archive_path": str(archive),
         "archive_sha256": archive_sha256,
         "zip_member": member_name,
@@ -663,6 +726,186 @@ def _write_hprc_direct_cache(
         ]["sha256"],
         "candidate_cache_identity_mode": (
             "hprc_direct_receiver_render_cache_identity_audited_false_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    return report, manifest
+
+
+def _write_hi_nerv_direct_cache_from_payload(
+    archive: Path,
+    output_cache: Path,
+    *,
+    member_name: str,
+    archive_payload: bytes,
+    max_pairs: int | None,
+    local_acquisition_max_pairs: int | None,
+    batch_pairs: int,
+    archive_sha256: str,
+    pair_indices_filter: list[int] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    import torch
+
+    from tac.substrates._shared.inflate_runtime import (
+        CAMERA_HW as INFLATE_CAMERA_HW,
+    )
+    from tac.substrates._shared.inflate_runtime import (
+        rgb_pair_to_uint8_frames,
+    )
+    from tac.substrates.hi_nerv.inflate import build_model_from_archive
+
+    arc, cfg, model = build_model_from_archive(archive_payload, device="cpu")
+    raw_pair_count = int(cfg.num_pairs)
+    if local_acquisition_max_pairs is not None:
+        raw_pair_count = min(raw_pair_count, int(local_acquisition_max_pairs))
+    selected_pair_indices = (
+        list(range(raw_pair_count))
+        if pair_indices_filter is None
+        else _validate_selected_pair_indices(pair_indices_filter, raw_pair_count=raw_pair_count)
+    )
+    if max_pairs is not None:
+        selected_pair_indices = selected_pair_indices[: int(max_pairs)]
+    pair_count = len(selected_pair_indices)
+    if pair_count < 1:
+        raise SystemExit("HiNeRV direct cache has no complete frame pairs")
+
+    h, w = INFLATE_CAMERA_HW
+    scorer_pair_indices = np.array(
+        [[2 * idx, 2 * idx + 1] for idx in selected_pair_indices],
+        dtype=np.int64,
+    )
+
+    def pair_batches():
+        with torch.no_grad():
+            for start in range(0, pair_count, int(batch_pairs)):
+                chunk_indices = selected_pair_indices[start : start + int(batch_pairs)]
+                rendered_pairs: list[np.ndarray] = []
+                for pair_index in chunk_indices:
+                    idx_tensor = torch.tensor([pair_index], device="cpu", dtype=torch.long)
+                    rgb_0, rgb_1 = model(idx_tensor)
+                    rendered_pairs.append(
+                        rgb_pair_to_uint8_frames(
+                            rgb_0,
+                            rgb_1,
+                            input_range="unit",
+                        ).reshape(1, 2, h, w, 3)
+                    )
+                yield np.concatenate(rendered_pairs, axis=0)
+
+    manifest = write_scorer_input_cache_from_pair_batches(
+        pair_batches(),
+        output_cache,
+        pair_count=pair_count,
+        pair_indices=scorer_pair_indices,
+        frame_shape_hwc=(h, w, 3),
+        source=str(archive),
+        source_kind="hi_nerv_direct_receiver_render",
+        archive_sha256=archive_sha256,
+        inflated_outputs_aggregate_sha256=None,
+        batch_pairs=batch_pairs,
+        compute_raw_sha256=True,
+    )
+    manifest["inflated_outputs_aggregate_sha256"] = manifest.get("raw_sha256")
+    audit_path = output_cache / "hi_nerv_direct_receiver_render_cache_identity_audit.json"
+    audit = {
+        "schema_version": "hi_nerv_direct_receiver_render_cache_identity_audit.v1",
+        "verdict": "PASS_HI_NERV_DIRECT_RECEIVER_RENDER_CACHE_IDENTITY",
+        "passed": True,
+        "created_by": "tools/materialize_mlx_scorer_cache_from_submission.py",
+        "allowed_use": "certify_hi_nerv_direct_mlx_cache_rebuildability_for_disk_retention",
+        "forbidden_use": "score_claim_or_promotion_or_rank_or_exact_dispatch",
+        "cache": {
+            "archive_sha256": manifest.get("archive_sha256"),
+            "inflated_outputs_aggregate_sha256": manifest.get(
+                "inflated_outputs_aggregate_sha256"
+            ),
+            "raw_sha256": manifest.get("raw_sha256"),
+            "pair_count": manifest.get("pair_count"),
+            "hash_domain": manifest.get("hash_domain"),
+            "array_sha256": manifest.get("array_sha256"),
+        },
+        "source": {
+            "archive_path": str(archive),
+            "archive_sha256": archive_sha256,
+            "zip_member": member_name,
+            "archive_magic": "HIV1",
+            "schema_version": int(arc.schema_version),
+            "config": {
+                "num_pairs": int(cfg.num_pairs),
+                "latent_dim_coarse": int(cfg.latent_dim_coarse),
+                "latent_dim_mid": int(cfg.latent_dim_mid),
+                "latent_dim_fine": int(cfg.latent_dim_fine),
+                "embed_dim": int(cfg.embed_dim),
+                "initial_grid_h": int(cfg.initial_grid_h),
+                "initial_grid_w": int(cfg.initial_grid_w),
+                "decoder_channels": [int(c) for c in cfg.decoder_channels],
+                "sin_frequency": float(cfg.sin_frequency),
+                "num_upsample_blocks": int(cfg.num_upsample_blocks),
+                "mid_injection_block_index": int(cfg.mid_injection_block_index),
+                "fine_injection_block_index": int(cfg.fine_injection_block_index),
+                "output_height": int(cfg.output_height),
+                "output_width": int(cfg.output_width),
+            },
+        },
+        "direct_render": {
+            "raw_pair_count": raw_pair_count,
+            "selected_pair_count": int(pair_count),
+            "selected_pair_ranges": _format_pair_ranges(selected_pair_indices),
+            "pair_index_scope": (
+                "explicit_pair_ranges" if pair_indices_filter is not None else "prefix_from_zero"
+            ),
+            "frame_shape_hwc": [h, w, 3],
+            "batch_pairs": int(batch_pairs),
+            "max_pairs": max_pairs,
+            "local_acquisition_max_pairs": local_acquisition_max_pairs,
+            "raw_file_written": False,
+            "rebuilds_from_archive_bytes": True,
+            "lowering": "rgb_pair_to_uint8_frames_input_range_unit_bicubic",
+        },
+        "receiver_proof_required_for_promotion": True,
+        **FALSE_AUTHORITY,
+    }
+    write_json(audit_path, audit)
+    manifest["hi_nerv_direct_receiver_render_cache_identity_audit"] = {
+        "schema_version": audit["schema_version"],
+        "path": str(audit_path),
+        "sha256": _sha256(audit_path, prefix=0),
+        "verdict": audit["verdict"],
+        "passed": True,
+        "archive_path": str(archive),
+        "archive_sha256": archive_sha256,
+        **FALSE_AUTHORITY,
+    }
+    manifest["eligible_for_hi_nerv_direct_rebuild_cleanup"] = True
+    write_json(output_cache / "manifest.json", manifest)
+    report = {
+        "schema": "hi_nerv_direct_mlx_scorer_cache_render.v1",
+        "source_family": "hi_nerv",
+        "archive_path": str(archive),
+        "archive_sha256": archive_sha256,
+        "zip_member": member_name,
+        "archive_magic": "HIV1",
+        "schema_version": int(arc.schema_version),
+        "raw_pair_count": raw_pair_count,
+        "cached_pair_count": int(manifest["pair_count"]),
+        "selected_pair_count": int(pair_count),
+        "selected_pair_ranges": _format_pair_ranges(selected_pair_indices),
+        "pair_index_scope": (
+            "explicit_pair_ranges" if pair_indices_filter is not None else "prefix_from_zero"
+        ),
+        "frame_shape_hwc": [h, w, 3],
+        "direct_render_raw_bytes": int(manifest["pair_count"]) * 2 * h * w * 3,
+        "direct_render_raw_pair_count": int(manifest["pair_count"]),
+        "direct_render_raw_sha256": manifest.get("raw_sha256"),
+        "direct_render_raw_sha256_scope": manifest.get("raw_sha256_scope"),
+        "raw_file_written": False,
+        "receiver_proof_required_for_promotion": True,
+        "identity_audit_path": str(audit_path),
+        "identity_audit_sha256": manifest[
+            "hi_nerv_direct_receiver_render_cache_identity_audit"
+        ]["sha256"],
+        "candidate_cache_identity_mode": (
+            "hi_nerv_direct_receiver_render_cache_identity_audited_false_authority"
         ),
         **FALSE_AUTHORITY,
     }

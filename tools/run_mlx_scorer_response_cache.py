@@ -9,7 +9,15 @@ import json
 import sys
 from pathlib import Path
 
-from tac.local_acceleration.mlx_scorer_response import (
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.local_acceleration.mlx_scorer_response import (  # noqa: E402
     build_mlx_scorer_response_payload,
     write_mlx_scorer_response_payload,
 )
@@ -22,6 +30,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--archive-size-bytes", required=True, type=int)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=Path("."), type=Path)
+    parser.add_argument(
+        "--upstream-dir",
+        type=Path,
+        help=(
+            "Explicit upstream scorer snapshot directory. Defaults to "
+            "<repo-root>/upstream. Use this for SSD worktrees whose code checkout "
+            "is separate from the canonical upstream snapshot."
+        ),
+    )
     parser.add_argument("--batch-pairs", type=int, default=1)
     parser.add_argument(
         "--start-pair",
@@ -112,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
             candidate_cache_dir=args.candidate_cache_dir,
             archive_size_bytes=args.archive_size_bytes,
             repo_root=args.repo_root,
+            upstream_dir=args.upstream_dir,
             batch_pairs=args.batch_pairs,
             device_type=args.device,
             components_dir=args.components_dir,

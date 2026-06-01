@@ -138,6 +138,7 @@ def build_mlx_scorer_response_payload(
     candidate_cache_dir: str | Path,
     archive_size_bytes: int,
     repo_root: str | Path = ".",
+    upstream_dir: str | Path | None = None,
     batch_pairs: int = 1,
     device_type: str = "cpu",
     components_dir: str | Path | None = None,
@@ -176,7 +177,11 @@ def build_mlx_scorer_response_payload(
         allow_local_cpu_advisory_cache_identity=allow_local_cpu_advisory_cache_identity,
     )
     started = time.time()
-    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    scorer_upstream_dir = _resolve_upstream_dir(
+        Path(repo_root).resolve(),
+        upstream_dir=upstream_dir,
+    )
+    dist = _load_upstream_distortion_net(scorer_upstream_dir)
     with temporary_mlx_device(device_type):
         adapter = torch_distortion_net_to_mlx(dist)
         return _build_mlx_scorer_response_payload_loaded(
@@ -198,6 +203,7 @@ def build_mlx_scorer_response_payload(
             allow_batch_shape_research_signal=allow_batch_shape_research_signal,
             allow_unaudited_candidate_cache_debug=allow_unaudited_candidate_cache_debug,
             allow_local_cpu_advisory_cache_identity=allow_local_cpu_advisory_cache_identity,
+            scorer_upstream_dir=scorer_upstream_dir,
         )
 
 
@@ -206,6 +212,7 @@ def build_mlx_scorer_response_payload_batch(
     reference_cache_dir: str | Path,
     jobs: Sequence[MLXScorerResponseBatchJob],
     repo_root: str | Path = ".",
+    upstream_dir: str | Path | None = None,
     batch_pairs: int = 1,
     device_type: str = "cpu",
     progress_every: int = 0,
@@ -236,7 +243,11 @@ def build_mlx_scorer_response_payload_batch(
         reference_cache_dir,
         integrity_mode=cache_integrity_mode,
     )
-    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    scorer_upstream_dir = _resolve_upstream_dir(
+        Path(repo_root).resolve(),
+        upstream_dir=upstream_dir,
+    )
+    dist = _load_upstream_distortion_net(scorer_upstream_dir)
     payloads: list[dict[str, Any]] = []
     batch_started = time.time()
     with temporary_mlx_device(device_type):
@@ -281,6 +292,7 @@ def build_mlx_scorer_response_payload_batch(
                 allow_local_cpu_advisory_cache_identity=(
                     allow_local_cpu_advisory_cache_identity
                 ),
+                scorer_upstream_dir=scorer_upstream_dir,
             )
             payload["batch_process"] = {
                 "schema": "mlx_scorer_response_batch_process_member.v1",
@@ -327,6 +339,7 @@ def _build_mlx_scorer_response_payload_loaded(
     allow_batch_shape_research_signal: bool,
     allow_unaudited_candidate_cache_debug: bool,
     allow_local_cpu_advisory_cache_identity: bool,
+    scorer_upstream_dir: Path,
 ) -> dict[str, Any]:
     pose_chunks: list[np.ndarray] = []
     seg_chunks: list[np.ndarray] = []
@@ -413,6 +426,7 @@ def _build_mlx_scorer_response_payload_loaded(
         "score_axis": EVIDENCE_TAG_MLX,
         "response_family": family,
         "hardware_substrate": f"MLX {device_type}",
+        "scorer_upstream": _scorer_upstream_record(scorer_upstream_dir),
         "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
         "batch_shape_research_signal_allowed": bool(allow_batch_shape_research_signal),
         "score_claim": False,
@@ -610,8 +624,47 @@ def write_mlx_scorer_response_payload(payload: dict[str, Any], output: str | Pat
     path.write_text(json.dumps(_jsonable(payload), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _load_upstream_distortion_net(repo_root: Path) -> Any:
-    upstream_dir = repo_root / "upstream"
+def _resolve_upstream_dir(
+    repo_root: Path,
+    *,
+    upstream_dir: str | Path | None = None,
+) -> Path:
+    upstream = (
+        repo_root / "upstream"
+        if upstream_dir is None
+        else Path(upstream_dir).expanduser().resolve()
+    )
+    if not upstream.is_dir():
+        raise FileNotFoundError(f"missing upstream directory: {upstream}")
+    modules_path = upstream / "modules.py"
+    if not modules_path.is_file():
+        raise FileNotFoundError(f"missing upstream modules.py: {modules_path}")
+    return upstream
+
+
+def _scorer_upstream_record(upstream_dir: Path) -> dict[str, Any]:
+    modules_path = upstream_dir / "modules.py"
+    frame_utils_path = upstream_dir / "frame_utils.py"
+    evaluate_path = upstream_dir / "evaluate.py"
+    files = {
+        "modules_py": _artifact_record(modules_path),
+    }
+    if frame_utils_path.is_file():
+        files["frame_utils_py"] = _artifact_record(frame_utils_path)
+    if evaluate_path.is_file():
+        files["evaluate_py"] = _artifact_record(evaluate_path)
+    return {
+        "schema": "mlx_scorer_response_upstream_snapshot.v1",
+        "upstream_dir": str(upstream_dir),
+        "files": files,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _load_upstream_distortion_net(upstream_dir: Path) -> Any:
     if not upstream_dir.is_dir():
         raise FileNotFoundError(f"missing upstream directory: {upstream_dir}")
     old_path = list(sys.path)
@@ -1028,8 +1081,8 @@ __all__ = [
     "STRICT_CACHE_INTEGRITY_MODE",
     "MLXScorerResponseBatchJob",
     "ScorerInputCache",
-    "build_mlx_scorer_response_payload_batch",
     "build_mlx_scorer_response_payload",
+    "build_mlx_scorer_response_payload_batch",
     "load_scorer_input_cache",
     "write_mlx_scorer_response_payload",
 ]

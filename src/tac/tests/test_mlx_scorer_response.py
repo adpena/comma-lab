@@ -7,8 +7,10 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
+from tac.local_acceleration import mlx_scorer_response
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
 from tac.local_acceleration.mlx_scorer_response import (
     AUDIT_STAMP_DEREFERENCE_BLOCKER,
@@ -23,9 +25,18 @@ from tac.local_acceleration.mlx_scorer_response import (
     build_mlx_scorer_response_payload,
     load_scorer_input_cache,
 )
-from tac.local_acceleration import mlx_scorer_response
 
 REPO = Path(__file__).resolve().parents[3]
+
+
+def _upstream_cli_args() -> list[str]:
+    for upstream in (
+        REPO / "upstream",
+        Path("/Users/adpena/Projects/pact/upstream"),
+    ):
+        if (upstream / "modules.py").is_file():
+            return ["--upstream-dir", str(upstream)]
+    pytest.skip("upstream scorer snapshot not available")
 
 
 def test_mlx_scorer_response_cache_cli_is_non_authoritative(tmp_path: Path) -> None:
@@ -50,7 +61,8 @@ def test_mlx_scorer_response_cache_cli_is_non_authoritative(tmp_path: Path) -> N
             "--output",
             str(output),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
         ],
         check=True,
         text=True,
@@ -123,7 +135,8 @@ def test_mlx_scorer_response_cli_rejects_unaudited_candidate_cache(tmp_path: Pat
             "--output",
             str(tmp_path / "mlx_response.json"),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
         ],
         check=False,
         text=True,
@@ -168,7 +181,8 @@ def test_mlx_scorer_response_cli_rejects_missing_auth_audit_stamp_file(
             "--output",
             str(tmp_path / "mlx_response.json"),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
         ],
         check=False,
         text=True,
@@ -218,7 +232,8 @@ def test_mlx_scorer_response_cli_rejects_stale_auth_audit_cache_identity(
             "--output",
             str(tmp_path / "mlx_response.json"),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
         ],
         check=False,
         text=True,
@@ -265,7 +280,8 @@ def test_mlx_scorer_response_local_advisory_identity_has_limited_allowed_uses(
             "--output",
             str(output),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
             "--allow-local-cpu-advisory-cache-identity",
         ],
         check=True,
@@ -345,7 +361,8 @@ def test_mlx_scorer_response_from_local_advisory_cli_uses_advisory_archive_size(
             "--output",
             str(output),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
             "--device",
             "cpu",
             "--allow-local-cpu-advisory-cache-identity",
@@ -403,7 +420,8 @@ def test_mlx_scorer_response_local_advisory_stamp_must_dereference(
             "--output",
             str(tmp_path / "mlx_response.json"),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
             "--allow-local-cpu-advisory-cache-identity",
         ],
         check=False,
@@ -450,7 +468,8 @@ def test_mlx_scorer_response_cli_rejects_mutated_cache_after_manifest_stamp(
             "--output",
             str(tmp_path / "mlx_response.json"),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
         ],
         check=False,
         text=True,
@@ -522,7 +541,8 @@ def test_mlx_scorer_response_cli_can_score_deterministic_pair_window(tmp_path: P
             "--output",
             str(output),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
             "--start-pair",
             "1",
             "--max-pairs",
@@ -590,6 +610,36 @@ def test_mlx_scorer_response_rejects_invalid_pair_window_before_loading() -> Non
         raise AssertionError("invalid max_pairs was accepted")
 
 
+def test_mlx_scorer_response_resolves_explicit_upstream_dir_for_ssd_worktree(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "ssd_worktree"
+    repo_root.mkdir()
+    upstream = tmp_path / "canonical_upstream"
+    upstream.mkdir()
+    (upstream / "modules.py").write_text("# scorer snapshot\n", encoding="utf-8")
+    (upstream / "frame_utils.py").write_text("# frame utils\n", encoding="utf-8")
+
+    try:
+        mlx_scorer_response._resolve_upstream_dir(repo_root)
+    except FileNotFoundError as exc:
+        assert "missing upstream directory" in str(exc)
+    else:
+        raise AssertionError("missing repo_root/upstream was accepted")
+
+    resolved = mlx_scorer_response._resolve_upstream_dir(
+        repo_root,
+        upstream_dir=upstream,
+    )
+    record = mlx_scorer_response._scorer_upstream_record(resolved)
+
+    assert resolved == upstream.resolve()
+    assert record["upstream_dir"] == str(upstream.resolve())
+    assert record["score_claim"] is False
+    assert record["files"]["modules_py"]["sha256"]
+    assert record["files"]["frame_utils_py"]["sha256"]
+
+
 def test_mlx_scorer_response_rejects_gpu_without_explicit_research_allowance() -> None:
     try:
         build_mlx_scorer_response_payload(
@@ -641,7 +691,8 @@ def test_mlx_scorer_response_cli_rejects_gpu_without_explicit_research_allowance
             "--output",
             str(tmp_path / "mlx_response.json"),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
             "--device",
             "gpu",
         ],
@@ -691,7 +742,8 @@ def test_mlx_scorer_response_cli_rejects_non_singleton_gpu_batch_after_allowance
             "--output",
             str(tmp_path / "mlx_response.json"),
             "--repo-root",
-            str(REPO),
+                str(REPO),
+                *_upstream_cli_args(),
             "--device",
             "gpu",
             "--allow-gpu-research-signal",

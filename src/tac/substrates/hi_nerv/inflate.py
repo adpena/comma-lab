@@ -26,16 +26,16 @@ from tac.substrates._shared.inflate_runtime import (
 )
 
 from .architecture import HinervConfig, HinervSubstrate
-from .archive import parse_archive
+from .archive import HinervArchive, parse_archive
 
 
-def inflate_one_video(
+def build_model_from_archive(
     archive_bytes: bytes,
-    output_path: Path,
     *,
     device: str = "cpu",
-) -> None:
-    """Inflate one archive's bytes into one contest-shaped raw output file."""
+) -> tuple[HinervArchive, HinervConfig, HinervSubstrate]:
+    """Parse HIV1 bytes and build the exact receiver model used by inflate."""
+
     arc = parse_archive(archive_bytes)
     meta = arc.meta
 
@@ -68,6 +68,18 @@ def inflate_one_video(
         model.latents_fine.copy_(
             arc.latents_fine.to(device=device, dtype=model.latents_fine.dtype)
         )
+    return arc, cfg, model
+
+
+def inflate_one_video(
+    archive_bytes: bytes,
+    output_path: Path,
+    *,
+    device: str = "cpu",
+) -> None:
+    """Inflate one archive's bytes into one contest-shaped raw output file."""
+
+    _, cfg, model = build_model_from_archive(archive_bytes, device=device)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with torch.no_grad(), output_path.open("wb") as fh:

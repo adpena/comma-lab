@@ -12,10 +12,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import BinaryIO
+from typing import TYPE_CHECKING, BinaryIO
 
 import torch
 import torch.nn.functional as F
+
+if TYPE_CHECKING:
+    import numpy as np
 
 CAMERA_HW: tuple[int, int] = (874, 1164)
 
@@ -68,19 +71,17 @@ def raw_output_path(output_dir: Path, video_name: str) -> Path:
     return target
 
 
-def write_rgb_pair_to_raw(
-    fh: BinaryIO,
+def rgb_pair_to_uint8_frames(
     rgb_0: torch.Tensor,
     rgb_1: torch.Tensor,
     *,
     input_range: str = "unit",
     resize_mode: str = "bicubic",
     apply_pr98_l28_channel_postprocess: bool = False,
-) -> int:
-    """Append one rendered frame-pair to an open contest ``.raw`` file.
+) -> np.ndarray:
+    """Lower one rendered RGB pair to contest raw uint8 frame bytes.
 
     Args:
-        fh: Binary file opened for append/write.
         rgb_0, rgb_1: tensors shaped ``(1, 3, H, W)``.
         input_range: ``"unit"`` for tensors in ``[0, 1]`` or ``"byte"`` for
             tensors already in ``[0, 255]``.
@@ -103,12 +104,12 @@ def write_rgb_pair_to_raw(
             up[:, 1, 1].sub_(1.0)``).
 
     Returns:
-        Number of frames written, always 2 for valid inputs.
+        ``(2, CAMERA_H, CAMERA_W, 3)`` uint8 RGB frames.
     """
 
     if rgb_0.shape != rgb_1.shape or rgb_0.dim() != 4 or rgb_0.shape[0] != 1 or rgb_0.shape[1] != 3:
         raise ValueError(
-            "write_rgb_pair_to_raw expects two tensors shaped (1, 3, H, W); "
+            "rgb_pair_to_uint8_frames expects two tensors shaped (1, 3, H, W); "
             f"got {tuple(rgb_0.shape)} and {tuple(rgb_1.shape)}"
         )
     frames = torch.cat([rgb_0, rgb_1], dim=0)
@@ -134,13 +135,46 @@ def write_rgb_pair_to_raw(
         frames[0, 0].sub_(1.0)
         frames[0, 2].sub_(1.0)
         frames[1, 1].sub_(1.0)
-    frames_u8 = (
+    return (
         frames.clamp(0.0, 255.0)
         .permute(0, 2, 3, 1)
         .round()
         .to(torch.uint8)
         .cpu()
         .numpy()
+    )
+
+
+def write_rgb_pair_to_raw(
+    fh: BinaryIO,
+    rgb_0: torch.Tensor,
+    rgb_1: torch.Tensor,
+    *,
+    input_range: str = "unit",
+    resize_mode: str = "bicubic",
+    apply_pr98_l28_channel_postprocess: bool = False,
+) -> int:
+    """Append one rendered frame-pair to an open contest ``.raw`` file.
+
+    Args:
+        fh: Binary file opened for append/write.
+        rgb_0, rgb_1: tensors shaped ``(1, 3, H, W)``.
+        input_range: ``"unit"`` for tensors in ``[0, 1]`` or ``"byte"`` for
+            tensors already in ``[0, 255]``.
+        resize_mode: interpolation mode for scorer-resolution outputs.
+        apply_pr98_l28_channel_postprocess: see
+            :func:`rgb_pair_to_uint8_frames`.
+
+    Returns:
+        Number of frames written, always 2 for valid inputs.
+    """
+
+    frames_u8 = rgb_pair_to_uint8_frames(
+        rgb_0,
+        rgb_1,
+        input_range=input_range,
+        resize_mode=resize_mode,
+        apply_pr98_l28_channel_postprocess=apply_pr98_l28_channel_postprocess,
     )
     fh.write(frames_u8.tobytes(order="C"))
     return int(frames_u8.shape[0])
@@ -149,6 +183,7 @@ def write_rgb_pair_to_raw(
 __all__ = [
     "CAMERA_HW",
     "raw_output_path",
+    "rgb_pair_to_uint8_frames",
     "select_inflate_device",
     "write_rgb_pair_to_raw",
 ]
