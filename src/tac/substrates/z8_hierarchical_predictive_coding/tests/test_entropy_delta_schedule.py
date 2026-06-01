@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule import (
+    build_entropy_delta_campaign_plan,
     build_entropy_delta_materializer_work_order,
     build_entropy_delta_schedule_from_headroom_report,
     coerce_entropy_detail_quantization_steps,
@@ -246,6 +247,84 @@ def test_entropy_delta_schedule_work_order_blocks_not_ready_schedule() -> None:
     assert work_order["materializer_command"] is None
     assert work_order["blockers"]
     assert work_order["score_claim"] is False
+
+
+def test_entropy_delta_campaign_plan_chains_report_schedule_and_work_order(tmp_path: Path) -> None:
+    archive_bin = tmp_path / "0.bin"
+    archive_bin.write_bytes(b"z8")
+    report = {
+        "schema": "z8_detail_coeff_entropy_headroom_report.v1",
+        "tool": "z8_detail_coeff_entropy_headroom_report",
+        "archive_path": archive_bin.as_posix(),
+        "archive_sha256": "archive-sha",
+        "archive_total_bytes": 1000,
+        "wavelet_blob_bytes": 900,
+        "pairs_measured": 600,
+        "total_pairs_in_archive": 600,
+        "per_subband": [
+            {
+                "subband": "L0_hh",
+                "quant_sweep": [
+                    {
+                        "quant_step": 0.03125,
+                        "distortion_mse": 1.0e-7,
+                        "live_codec_method": "qi16_constriction_range",
+                        "live_codec_brotli_bytes_per_coeff": 0.2,
+                    }
+                ],
+            }
+        ],
+    }
+
+    plan = build_entropy_delta_campaign_plan(
+        report,
+        max_subband_mse=1.0e-6,
+        schedule_json_path=tmp_path / "schedule.json",
+        materializer_output_dir=tmp_path / "materialized",
+        emit_receiver_proof=True,
+    )
+
+    assert plan["schema"] == "z8_entropy_delta_campaign_plan.v1"
+    assert plan["ready_for_queue_execution"] is True
+    assert plan["score_claim"] is False
+    assert plan["schedule"]["ready_for_materializer"] is True
+    work_order = plan["materializer_work_order"]
+    assert work_order["ready_for_materializer_execution"] is True
+    assert work_order["source_archive_bin"] == archive_bin.as_posix()
+    assert "--entropy-detail-quantization-steps-json" in work_order["materializer_command"]
+
+
+def test_entropy_delta_campaign_plan_preserves_blockers(tmp_path: Path) -> None:
+    report = {
+        "schema": "z8_detail_coeff_entropy_headroom_report.v1",
+        "archive_path": "missing.bin",
+        "pairs_measured": 1,
+        "total_pairs_in_archive": 600,
+        "per_subband": [
+            {
+                "subband": "L0_hh",
+                "quant_sweep": [
+                    {
+                        "quant_step": 0.03125,
+                        "distortion_mse": 1.0e-7,
+                        "live_codec_method": "qi16_constriction_range",
+                        "live_codec_brotli_bytes_per_coeff": 0.2,
+                    }
+                ],
+            }
+        ],
+    }
+
+    plan = build_entropy_delta_campaign_plan(
+        report,
+        max_subband_mse=1.0e-6,
+        schedule_json_path=tmp_path / "schedule.json",
+        materializer_output_dir=tmp_path / "materialized",
+    )
+
+    assert plan["ready_for_queue_execution"] is False
+    assert "partial_headroom_coverage:1/600" in plan["blockers"]
+    assert any(str(blocker).startswith("schedule_not_materializer_ready:") for blocker in plan["blockers"])
 
 
 def test_entropy_delta_schedule_work_order_blocks_missing_archive_bin() -> None:

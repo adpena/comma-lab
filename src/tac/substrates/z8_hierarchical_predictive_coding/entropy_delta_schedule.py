@@ -320,9 +320,72 @@ def build_entropy_delta_materializer_work_order(
     return work_order
 
 
+def build_entropy_delta_campaign_plan(
+    report: Mapping[str, Any],
+    *,
+    max_subband_mse: float,
+    schedule_json_path: str | Path,
+    materializer_output_dir: str | Path,
+    archive_bin: str | Path | None = None,
+    repo_root: str | Path | None = None,
+    require_full_archive_coverage: bool = True,
+    require_existing_archive_bin: bool = True,
+    emit_receiver_proof: bool = False,
+    run_inflate_runtime_benchmark: bool = False,
+    extra_materializer_args: Sequence[str] = (),
+) -> dict[str, Any]:
+    """Build the queue-consumable headroom -> schedule -> materializer plan.
+
+    This is the package-level bridge that keeps Z8 entropy-delta work out of
+    manual JSON handoffs: a headroom report becomes a fail-closed schedule, then
+    the exact materializer command that consumes that schedule.
+    """
+
+    report_dict = dict(report)
+    schedule = build_entropy_delta_schedule_from_headroom_report(
+        report_dict,
+        max_subband_mse=float(max_subband_mse),
+        require_full_archive_coverage=bool(require_full_archive_coverage),
+    )
+    work_order = build_entropy_delta_materializer_work_order(
+        schedule,
+        schedule_json_path=schedule_json_path,
+        output_dir=materializer_output_dir,
+        archive_bin=archive_bin,
+        repo_root=repo_root,
+        require_existing_archive_bin=bool(require_existing_archive_bin),
+        emit_receiver_proof=bool(emit_receiver_proof),
+        run_inflate_runtime_benchmark=bool(run_inflate_runtime_benchmark),
+        extra_args=tuple(extra_materializer_args),
+    )
+    blockers = list(schedule.get("blockers") or []) + list(work_order.get("blockers") or [])
+    return {
+        "schema": "z8_entropy_delta_campaign_plan.v1",
+        "purpose": (
+            "Queue-owned Z8 detail entropy-delta bridge: headroom report to "
+            "per-subband schedule to byte-closed materializer work order."
+        ),
+        **NON_PROMOTABLE_MARKERS,
+        "source_report_schema": report_dict.get("schema"),
+        "source_archive_path": report_dict.get("archive_path"),
+        "source_archive_sha256": report_dict.get("archive_sha256"),
+        "max_subband_mse": float(max_subband_mse),
+        "require_full_archive_coverage": bool(require_full_archive_coverage),
+        "schedule": schedule,
+        "materializer_work_order": work_order,
+        "blockers": blockers,
+        "ready_for_queue_execution": bool(
+            schedule.get("ready_for_materializer")
+            and work_order.get("ready_for_materializer_execution")
+            and not blockers
+        ),
+    }
+
+
 __all__ = [
     "NON_PROMOTABLE_MARKERS",
     "Z8_ENTROPY_DELTA_MATERIALIZER_WORK_ORDER_SCHEMA",
+    "build_entropy_delta_campaign_plan",
     "build_entropy_delta_materializer_work_order",
     "build_entropy_delta_schedule_from_headroom_report",
     "coerce_entropy_detail_quantization_steps",
