@@ -144,6 +144,47 @@ def test_archive_candidate_quantizes_exported_state_dict_to_pvq_packet() -> None
     assert "latents" not in arc.decoder_state_dict
 
 
+def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> None:
+    import json
+
+    from tac.substrates.pact_nerv_vq.archive_candidate import export_pact_nerv_vq_mlx_archive
+
+    cfg = _smoke_cfg()
+    torch.manual_seed(17)
+    model = PactNervVqSubstrate(cfg).eval()
+    exported = {
+        name: tensor.detach().cpu().numpy().copy()
+        for name, tensor in model.state_dict().items()
+    }
+
+    class _ExportableModel:
+        def __init__(self) -> None:
+            self.cfg = cfg
+
+        def export_state_dict(self):
+            return exported
+
+    archive_path, archive_sha, archive_bytes = export_pact_nerv_vq_mlx_archive(
+        _ExportableModel(),
+        tmp_path / "export",
+        emit_archive_bound_candidate_package=False,
+    )
+
+    projection = (
+        tmp_path
+        / "export"
+        / "hprc_representation_spine_pact_nerv_vq_manifest.json"
+    )
+    assert archive_path.is_file()
+    assert len(archive_sha) == 64
+    assert archive_bytes > 0
+    payload = json.loads(projection.read_text(encoding="utf-8"))
+    assert payload["schema"] == "hprc_representation_spine_projection.v1"
+    assert payload["family"] == "pact_nerv_vq"
+    assert payload["score_claim"] is False
+    assert payload["manifest"]["representation_spine"]["family"] == "pact_nerv_vq"
+
+
 def test_archive_grammar_header_size_invariant_is_27_bytes() -> None:
     assert PVQ_HEADER_SIZE == 27
 
