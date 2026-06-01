@@ -50,6 +50,102 @@ def _write_json(path: Path, payload: dict[str, object]) -> Path:
     return path
 
 
+def test_operator_briefing_surfaces_saturated_tensor_payload_grammar(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "grammar"
+    _write_json(
+        root / "run" / "pr101_tensor_payload_report.json",
+        {
+            "schema": "tensor_payload_grammar_optimizer.v1",
+            "campaign_id": "pr101_identity",
+            "tensor_count": 28,
+            "byte_accounting": {
+                "selected_isolated_tensor_bytes": 162234,
+                "baseline_isolated_tensor_bytes": 162273,
+                "selected_saved_bytes_vs_baseline": 39,
+                "selected_over_floor_ratio": 1.0147403705437608,
+            },
+            "saturation_diagnostic": {"status": "entropy_saturated"},
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        root / "run" / "pr101_tensor_payload_report_consumer_result.json",
+        {
+            "schema": "tensor_payload_grammar_consumer_result.v1",
+            "campaign_id": "pr101_identity",
+            "tensor_count": 28,
+            "saturation_status": "entropy_saturated",
+            "selected_isolated_tensor_bytes": 162234,
+            "baseline_isolated_tensor_bytes": 162273,
+            "selected_saved_bytes_vs_baseline": 39,
+            "selected_over_floor_ratio": 1.0147403705437608,
+            "receiver_work_justified": False,
+            "demotion_recommended": True,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS", (root,))
+
+    summary = mod._tensor_payload_grammar_summary()
+    text = mod._format_tensor_payload_grammar_summary()
+
+    assert summary["status"] == "SATURATED"
+    assert summary["artifact_count"] == 2
+    assert summary["optimizer_report_count"] == 1
+    assert summary["consumer_result_count"] == 1
+    assert summary["primary_row_count"] == 1
+    assert summary["demotion_recommended_count"] == 1
+    assert summary["total_selected_saved_bytes_vs_baseline"] == 39
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert "preserve as negative posterior" in summary["reason"]
+    assert "Generic tensor payload grammar saturation diagnostics" in text
+    assert "status: SATURATED" in text
+
+
+def test_operator_briefing_routes_unsaturated_tensor_payload_to_receiver_binding(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "grammar"
+    _write_json(
+        root / "candidate" / "z8_tensor_payload_report_consumer_result.json",
+        {
+            "schema": "tensor_payload_grammar_consumer_result.v1",
+            "campaign_id": "z8_tensor_payload_gap",
+            "tensor_count": 6,
+            "saturation_status": "unsaturated_entropy_gap",
+            "selected_isolated_tensor_bytes": 8192,
+            "baseline_isolated_tensor_bytes": 12288,
+            "selected_saved_bytes_vs_baseline": 4096,
+            "selected_over_floor_ratio": 1.45,
+            "receiver_work_justified": True,
+            "demotion_recommended": False,
+            "planner_action": "bind_substrate_receiver_and_materialize_byte_closed_archive",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS", (root,))
+
+    summary = mod._tensor_payload_grammar_summary()
+    text = mod._format_tensor_payload_grammar_summary()
+
+    assert summary["status"] == "NEEDS_RECEIVER_BINDING"
+    assert summary["receiver_work_justified_count"] == 1
+    assert summary["demotion_recommended_count"] == 0
+    assert summary["total_selected_saved_bytes_vs_baseline"] == 4096
+    assert "bind the winning tensor map" in summary["next_command"]
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert "receiver_work=True" in text
+
+
 def test_briefing_delegates_to_repo_venv_when_available(monkeypatch):
     module = _load_briefing_module()
     calls = []

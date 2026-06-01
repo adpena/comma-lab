@@ -86,10 +86,19 @@ DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS = (
+    REPO_ROOT / "experiments" / "results",
+    REPO_ROOT / ".omx" / "research",
+    Path("/Volumes/VertigoDataTier/pact"),
+    Path("/Volumes/APDataStore/pact"),
+)
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
 FRONTIER_FEEDBACK_CYCLE_REPORT_NAME = "frontier_rate_attack_feedback_cycle.json"
 FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
 PR95_MLX_MATRIX_MANIFEST_NAME = "matrix_manifest.json"
+TENSOR_PAYLOAD_GRAMMAR_REPORT_GLOB = "*tensor_payload*report*.json"
+TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA = "tensor_payload_grammar_optimizer.v1"
+TENSOR_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA = "tensor_payload_grammar_consumer_result.v1"
 DISTORTION_AXIS_PROBE_VERDICT_GLOB = "probe_*_verdict.json"
 DISTORTION_AXIS_LEARNED_SWEEP_PAYLOAD_GLOB = (
     "distortion_axis_probe_learned_sweep_candidates*.json"
@@ -5035,6 +5044,219 @@ def _format_byte_shaving_acquisition_summary() -> str:
     return "\n".join(lines)
 
 
+def _tensor_payload_grammar_artifact_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+    *,
+    max_depth: int = 4,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
+    patterns = tuple(
+        f"{'*/' * depth}{TENSOR_PAYLOAD_GRAMMAR_REPORT_GLOB}"
+        for depth in range(max_depth + 1)
+    )
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                resolved = path.resolve(strict=False)
+                if resolved in seen or not path.is_file():
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime if item.exists() else 0.0,
+        reverse=True,
+    )
+
+
+def _tensor_payload_grammar_row(path: Path) -> dict[str, object] | None:
+    payload = _load_json_file(path)
+    schema = payload.get("schema")
+    if schema not in (
+        TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA,
+        TENSOR_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA,
+    ):
+        return None
+
+    if schema == TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA:
+        byte_accounting = payload.get("byte_accounting")
+        if not isinstance(byte_accounting, dict):
+            byte_accounting = {}
+        saturation = payload.get("saturation_diagnostic")
+        if not isinstance(saturation, dict):
+            saturation = {}
+        selected_saved = max(
+            0, _safe_int(byte_accounting.get("selected_saved_bytes_vs_baseline"))
+        )
+        saturation_status = str(saturation.get("status") or "unknown")
+        receiver_work_justified = (
+            saturation_status == "unsaturated_entropy_gap" and selected_saved > 0
+        )
+        demotion_recommended = saturation_status in {
+            "entropy_saturated",
+            "weak_entropy_gap",
+        }
+        selected_bytes = _safe_int(byte_accounting.get("selected_isolated_tensor_bytes"))
+        baseline_bytes = _safe_int(byte_accounting.get("baseline_isolated_tensor_bytes"))
+        over_floor = _safe_float(
+            byte_accounting.get("selected_over_floor_ratio"), default=0.0
+        )
+    else:
+        selected_saved = max(
+            0, _safe_int(payload.get("selected_saved_bytes_vs_baseline"))
+        )
+        saturation_status = str(payload.get("saturation_status") or "unknown")
+        receiver_work_justified = payload.get("receiver_work_justified") is True
+        demotion_recommended = payload.get("demotion_recommended") is True
+        selected_bytes = _safe_int(payload.get("selected_isolated_tensor_bytes"))
+        baseline_bytes = _safe_int(payload.get("baseline_isolated_tensor_bytes"))
+        over_floor = _safe_float(payload.get("selected_over_floor_ratio"), default=0.0)
+
+    return {
+        "path": _repo_rel(path),
+        "schema": schema,
+        "campaign_id": str(payload.get("campaign_id") or ""),
+        "source_kind": str(payload.get("source_kind") or ""),
+        "tensor_count": _safe_int(payload.get("tensor_count")),
+        "saturation_status": saturation_status,
+        "selected_over_floor_ratio": over_floor,
+        "selected_isolated_tensor_bytes": selected_bytes,
+        "baseline_isolated_tensor_bytes": baseline_bytes,
+        "selected_saved_bytes_vs_baseline": selected_saved,
+        "receiver_work_justified": receiver_work_justified,
+        "demotion_recommended": demotion_recommended,
+        "planner_action": str(payload.get("planner_action") or ""),
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "mtime": path.stat().st_mtime if path.exists() else 0.0,
+    }
+
+
+def _tensor_payload_grammar_next_command(summary: dict[str, object]) -> str:
+    if _safe_int(summary.get("receiver_work_justified_count")):
+        return (
+            ".venv/bin/python tools/tensor_payload_grammar_optimizer.py --help  "
+            "# then bind the winning tensor map into a substrate receiver/archive"
+        )
+    return ".venv/bin/python tools/tensor_payload_grammar_optimizer.py --help"
+
+
+def _tensor_payload_grammar_summary() -> dict[str, object]:
+    rows = [
+        row
+        for path in _tensor_payload_grammar_artifact_paths()
+        if (row := _tensor_payload_grammar_row(path)) is not None
+    ]
+    consumer_rows = [
+        row for row in rows if row.get("schema") == TENSOR_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA
+    ]
+    optimizer_rows = [
+        row for row in rows if row.get("schema") == TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA
+    ]
+    primary_rows = consumer_rows if consumer_rows else optimizer_rows
+    receiver_work_justified_count = sum(
+        1 for row in primary_rows if row.get("receiver_work_justified") is True
+    )
+    demotion_recommended_count = sum(
+        1 for row in primary_rows if row.get("demotion_recommended") is True
+    )
+    saturated_count = sum(
+        1
+        for row in primary_rows
+        if row.get("saturation_status") in {"entropy_saturated", "weak_entropy_gap"}
+    )
+    if not rows:
+        status = "PENDING"
+        reason = "no generic tensor payload grammar reports found"
+    elif receiver_work_justified_count:
+        status = "NEEDS_RECEIVER_BINDING"
+        reason = (
+            f"{receiver_work_justified_count} tensor grammar report(s) show "
+            "unsaturated entropy gap; bind receiver/archive before replay"
+        )
+    elif primary_rows and demotion_recommended_count == len(primary_rows):
+        status = "SATURATED"
+        reason = (
+            "all consumed tensor grammar reports are saturated or weak-gap; "
+            "preserve as negative posterior and stop same-substrate format churn"
+        )
+    else:
+        status = "INCOMPLETE"
+        reason = "tensor grammar reports are present but not fully consumed or decisive"
+
+    summary = {
+        "schema": "pact.tensor_payload_grammar_summary.v1",
+        "scan_roots": [_repo_rel(root) for root in TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS],
+        "status": status,
+        "reason": reason,
+        "artifact_count": len(rows),
+        "optimizer_report_count": len(optimizer_rows),
+        "consumer_result_count": len(consumer_rows),
+        "primary_row_count": len(primary_rows),
+        "receiver_work_justified_count": receiver_work_justified_count,
+        "demotion_recommended_count": demotion_recommended_count,
+        "saturated_count": saturated_count,
+        "total_selected_saved_bytes_vs_baseline": sum(
+            _safe_int(row.get("selected_saved_bytes_vs_baseline"))
+            for row in primary_rows
+        ),
+        "max_selected_over_floor_ratio": max(
+            (_safe_float(row.get("selected_over_floor_ratio")) for row in primary_rows),
+            default=0.0,
+        ),
+        "latest_rows": rows[:5],
+        **_false_authority_fields(),
+    }
+    summary["next_command"] = _tensor_payload_grammar_next_command(summary)
+    return summary
+
+
+def _format_tensor_payload_grammar_summary() -> str:
+    payload = _tensor_payload_grammar_summary()
+    lines = [
+        "Generic tensor payload grammar saturation diagnostics. "
+        "This is planning-only rate signal, not score authority.",
+        f"status: {payload['status']} — {payload['reason']}",
+        (
+            "artifacts: "
+            f"{payload['artifact_count']} "
+            f"optimizer_reports={payload['optimizer_report_count']} "
+            f"consumer_results={payload['consumer_result_count']} "
+            f"receiver_work={payload['receiver_work_justified_count']} "
+            f"demotions={payload['demotion_recommended_count']} "
+            f"saved_bytes={payload['total_selected_saved_bytes_vs_baseline']} "
+            f"max_over_floor={payload['max_selected_over_floor_ratio']:.6g}"
+        ),
+        f"score_claim: {payload['score_claim']}",
+        f"ready_for_exact_eval_dispatch: {payload['ready_for_exact_eval_dispatch']}",
+    ]
+    latest_rows = payload.get("latest_rows")
+    if isinstance(latest_rows, list) and latest_rows:
+        lines.append("latest tensor grammar rows:")
+        for row in latest_rows[:5]:
+            if not isinstance(row, dict):
+                continue
+            over_floor = _safe_float(row.get("selected_over_floor_ratio"))
+            lines.append(
+                "  - "
+                f"{row.get('path')} schema={row.get('schema')} "
+                f"campaign={row.get('campaign_id') or '<none>'} "
+                f"status={row.get('saturation_status')} "
+                f"saved={row.get('selected_saved_bytes_vs_baseline', 0)} "
+                f"over_floor={over_floor:.6g} "
+                f"receiver_work={row.get('receiver_work_justified') is True} "
+                f"demote={row.get('demotion_recommended') is True}"
+            )
+    lines.append("next command:")
+    lines.append(f"  {payload['next_command']}")
+    return "\n".join(lines)
+
+
 def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
     readiness = _run_json(PR91_HPM1_READINESS)
     runtime = _run_json(PR91_HPM1_RUNTIME_CONTRACT)
@@ -6848,6 +7070,7 @@ def _dispatch_readiness() -> dict[str, object]:
     distortion_probe_signals = _distortion_axis_probe_summary()
     distortion_learned_sweep = _distortion_axis_learned_sweep_summary()
     dqs1_drop_many_greedy = _dqs1_drop_many_greedy_summary()
+    tensor_payload_grammar = _tensor_payload_grammar_summary()
     archive_contract_hygiene = _archive_bound_contract_hygiene_summary()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
@@ -6951,6 +7174,27 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "local_mlx_ready_step_count": byte_shaving_acquisition[
                 "local_mlx_ready_step_count"
+            ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
+        "phase_6c_tensor_payload_grammar": {
+            "status": tensor_payload_grammar["status"],
+            "reason": tensor_payload_grammar["reason"],
+            "artifact_count": tensor_payload_grammar["artifact_count"],
+            "optimizer_report_count": tensor_payload_grammar["optimizer_report_count"],
+            "consumer_result_count": tensor_payload_grammar["consumer_result_count"],
+            "receiver_work_justified_count": tensor_payload_grammar[
+                "receiver_work_justified_count"
+            ],
+            "demotion_recommended_count": tensor_payload_grammar[
+                "demotion_recommended_count"
+            ],
+            "total_selected_saved_bytes_vs_baseline": tensor_payload_grammar[
+                "total_selected_saved_bytes_vs_baseline"
+            ],
+            "max_selected_over_floor_ratio": tensor_payload_grammar[
+                "max_selected_over_floor_ratio"
             ],
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
@@ -7277,6 +7521,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "public_submission_audit": _public_submission_audit_status(),
             "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
+            "tensor_payload_grammar": _tensor_payload_grammar_summary(),
             "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
             "pr95_mlx_control_profiles": _pr95_mlx_control_profile_summary(),
             "distortion_axis_probe_signals": _distortion_axis_probe_summary(),
@@ -7432,6 +7677,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6c — High-level byte-shaving acquisition queue",
         _format_byte_shaving_acquisition_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6c.1 — Generic tensor payload grammar",
+        _format_tensor_payload_grammar_summary(),
     ))
     parts.append(_section(
         "Phase 6d — Frontier feedback cycle autopolicy",
