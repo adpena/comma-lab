@@ -1,0 +1,83 @@
+{
+  "archive": {
+    "bytes": 859923,
+    "hprc_0bin_path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/variants/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66/0.bin",
+    "hprc_0bin_sha256": "3b42cb2039cc4d3d030bbd3316454acfcc810936060cb0f2dc2687725141ddae",
+    "path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/variants/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66/archive.zip",
+    "sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3"
+  },
+  "baseline_reuse": {
+    "enabled": true,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "hprc_baseline_mlx_response_reuse_report.v1",
+    "score_claim": false,
+    "source_cache_dir": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_caches/baseline",
+    "source_cache_report": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_cache_reports/baseline.json",
+    "source_components_dir": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_components/baseline",
+    "source_profile": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_mlx_component_neutralization_profile.json",
+    "source_response": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_responses/baseline.json",
+    "validation": {
+      "component_artifacts_present": true,
+      "hprc_0bin_sha256_matched": true,
+      "max_pairs_matched": true,
+      "reference_cache_dir_matched": true
+    }
+  },
+  "batch_shape_research_signal": false,
+  "candidate_id": "hprc-threshold-abs-le-pairs-984a5d110c0f3a66",
+  "cleanup": {
+    "blocked_bytes_retained": 2831169500,
+    "blocked_candidate_count": 1,
+    "blockers": [
+      "mlx_cache_identity_audit_stamp_missing"
+    ],
+    "candidate_count": 0,
+    "plan_path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/artifact_retention_plan.json",
+    "reclaimable_bytes": 0,
+    "schema": "hprc_pair_scoped_cleanup_status.v1",
+    "status": "blocked"
+  },
+  "dispatch_attempted": false,
+  "exact_axis_gate": {
+    "blockers": [
+      "contest_cpu_cuda_exact_eval_not_executed",
+      "mlx_local_response_is_advisory_not_score_authority",
+      "uncertified_mlx_cache_retained_cleanup_blocker"
+    ],
+    "ready_for_exact_eval_dispatch": false
+  },
+  "generated_at_utc": "20260601T022330Z",
+  "gpu_launched": false,
+  "mlx_advisory_delta": {
+    "archive_bytes_removed_vs_baseline": 303937,
+    "delta_nonrate_score": -1.949817179715751,
+    "delta_rate_score": -0.20237917263509342,
+    "delta_total_mlx_score_advisory": -2.152196352350849,
+    "marginal_status": "cut_candidate_distortion_nonworse"
+  },
+  "profile_elapsed_seconds": 547.525964975357,
+  "profile_path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_mlx_component_neutralization_profile.json",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_binding": {
+    "archive_sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3",
+    "blockers": [],
+    "proof_path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/receiver_proof/hprc_receiver_proof.json",
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_contract_satisfied": true,
+    "receiver_output_bytes": 3662409600,
+    "receiver_output_sha256": "b8a444f9342ebddeae769a467fd5661f2979e1e2cad70cf9d2e0b4a04b26783e",
+    "runtime_consumption_proof_ready": true,
+    "schema": "hprc_pair_scoped_receiver_proof_binding.v1",
+    "status": "linked_by_archive_sha256"
+  },
+  "repo_root": "/Users/adpena/Projects/pact",
+  "runner_plan_path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc_pair_scoped_residual_bounded_runner_plan.json",
+  "schema": "hprc_pair_scoped_residual_runner_harvest.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "scorer_batch_pairs": 1
+}

@@ -1,0 +1,288 @@
+{
+  "archive_sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3",
+  "archive_size_bytes": 859923,
+  "avg_posenet_dist": 139.93157342806458,
+  "avg_segnet_dist": 0.04492400275853773,
+  "batch_pairs": 1,
+  "batch_process": {
+    "job_count": 1,
+    "job_index": 0,
+    "output": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_responses/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66.json",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "mlx_scorer_response_batch_process_member.v1",
+    "score_claim": false
+  },
+  "batch_process_summary": {
+    "batch_process_wall_seconds": 522.2204751968384,
+    "job_count": 1,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "mlx_scorer_response_batch_process_summary.v1",
+    "score_claim": false
+  },
+  "batch_shape_research_signal_allowed": false,
+  "cache_identity": {
+    "candidate": {
+      "archive_sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3",
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "35f67319f73456459e0ac0d17343345d26884b3996d9bb194fa5e3a1f7520999",
+        "segnet_last_rgb": "eaff9e6e8b06c2d207289c03ad8005d862c9d9b75acfcbec746d8623c16368b1"
+      },
+      "auth_eval_identity_audit": null,
+      "cache_integrity": {
+        "array_sha256": {
+          "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+          "posenet_yuv6_pair": "35f67319f73456459e0ac0d17343345d26884b3996d9bb194fa5e3a1f7520999",
+          "segnet_last_rgb": "eaff9e6e8b06c2d207289c03ad8005d862c9d9b75acfcbec746d8623c16368b1"
+        },
+        "artifact_bytes": {
+          "pair_indices": 9728,
+          "posenet_yuv6_pair": 1415577728,
+          "segnet_last_rgb": 1415577728
+        },
+        "artifact_sha256": {
+          "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+          "posenet_yuv6_pair": "99cd7721eac4538914e9d5ab71477dc619bff150d4493a650bde475dda9e99a2",
+          "segnet_last_rgb": "ae67fbbdc8111d12c9e25caefdb9cbb8556567921a24e59e9474a79eff87f3fe"
+        },
+        "blockers": [],
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "integrity_mode": "manifest",
+        "manifest_hashes_reused": true,
+        "passed": true,
+        "strict_rehash_performed": false
+      },
+      "candidate_cache_identity_mode": "unaudited_debug_override",
+      "eligible_for_local_mlx_local_advisory_debug": false,
+      "eligible_for_local_mlx_transfer_calibration": false,
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "inflated_outputs_aggregate_sha256": "b8a444f9342ebddeae769a467fd5661f2979e1e2cad70cf9d2e0b4a04b26783e",
+      "local_cpu_advisory_cache_identity_audit": null,
+      "pair_count": 600,
+      "pair_indices_shape": [
+        600,
+        2
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_caches/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66",
+      "posenet_yuv6_pair_shape": [
+        600,
+        12,
+        192,
+        256
+      ],
+      "raw_sha256": "b8a444f9342ebddeae769a467fd5661f2979e1e2cad70cf9d2e0b4a04b26783e",
+      "segnet_last_rgb_shape": [
+        600,
+        3,
+        384,
+        512
+      ]
+    },
+    "pair_index_alignment_mode": "exact_row_match",
+    "pair_indices_equal": true,
+    "reference": {
+      "archive_sha256": null,
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+        "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+      },
+      "auth_eval_identity_audit": null,
+      "cache_integrity": {
+        "array_sha256": {
+          "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+          "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+          "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+        },
+        "artifact_bytes": {
+          "pair_indices": 9728,
+          "posenet_yuv6_pair": 1415577728,
+          "segnet_last_rgb": 1415577728
+        },
+        "artifact_sha256": {
+          "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+          "posenet_yuv6_pair": "65fba1abb0de07a6b1af4170d65c54e5eaec78a54928b6005913736885e56f8f",
+          "segnet_last_rgb": "604ed34ba21a4c8201227ac52472a5dc6120ac5d7c78a8292f983f914b1b1886"
+        },
+        "blockers": [],
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "integrity_mode": "manifest",
+        "manifest_hashes_reused": true,
+        "passed": true,
+        "strict_rehash_performed": false
+      },
+      "eligible_for_local_mlx_local_advisory_debug": false,
+      "eligible_for_local_mlx_transfer_calibration": false,
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "inflated_outputs_aggregate_sha256": null,
+      "local_cpu_advisory_cache_identity_audit": null,
+      "pair_count": 600,
+      "pair_indices_shape": [
+        600,
+        2
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+      "posenet_yuv6_pair_shape": [
+        600,
+        12,
+        192,
+        256
+      ],
+      "raw_sha256": null,
+      "segnet_last_rgb_shape": [
+        600,
+        3,
+        384,
+        512
+      ]
+    },
+    "reference_row_indices_sha256": "cc9a30cb8f087da45cd87f6f03a2fd8724fe0d9daf238e39e471e30f89d72705",
+    "reference_row_window": [
+      0,
+      599
+    ]
+  },
+  "cache_integrity": {
+    "candidate": {
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "35f67319f73456459e0ac0d17343345d26884b3996d9bb194fa5e3a1f7520999",
+        "segnet_last_rgb": "eaff9e6e8b06c2d207289c03ad8005d862c9d9b75acfcbec746d8623c16368b1"
+      },
+      "artifact_bytes": {
+        "pair_indices": 9728,
+        "posenet_yuv6_pair": 1415577728,
+        "segnet_last_rgb": 1415577728
+      },
+      "artifact_sha256": {
+        "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+        "posenet_yuv6_pair": "99cd7721eac4538914e9d5ab71477dc619bff150d4493a650bde475dda9e99a2",
+        "segnet_last_rgb": "ae67fbbdc8111d12c9e25caefdb9cbb8556567921a24e59e9474a79eff87f3fe"
+      },
+      "blockers": [],
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "integrity_mode": "manifest",
+      "manifest_hashes_reused": true,
+      "passed": true,
+      "strict_rehash_performed": false
+    },
+    "reference": {
+      "array_sha256": {
+        "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+        "posenet_yuv6_pair": "68adacc09260245c74a5f576ae964751fa5edf457b4f5144839e7f5693cbfe96",
+        "segnet_last_rgb": "f2b904ac329cbb2123cfb29c1d4d70c1fdb380764bb064ae5212bd190e3eb62f"
+      },
+      "artifact_bytes": {
+        "pair_indices": 9728,
+        "posenet_yuv6_pair": 1415577728,
+        "segnet_last_rgb": 1415577728
+      },
+      "artifact_sha256": {
+        "pair_indices": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e",
+        "posenet_yuv6_pair": "65fba1abb0de07a6b1af4170d65c54e5eaec78a54928b6005913736885e56f8f",
+        "segnet_last_rgb": "604ed34ba21a4c8201227ac52472a5dc6120ac5d7c78a8292f983f914b1b1886"
+      },
+      "blockers": [],
+      "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+      "integrity_mode": "manifest",
+      "manifest_hashes_reused": true,
+      "passed": true,
+      "strict_rehash_performed": false
+    }
+  },
+  "candidate_cache_pairs": 600,
+  "candidate_generation_only": true,
+  "canonical_score": 42.472416569273946,
+  "canonical_score_source": "score_recomputed_from_components",
+  "components": {
+    "artifacts": {
+      "posenet_distortion": {
+        "bytes": 2528,
+        "path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_components/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66/posenet_distortion.npy",
+        "sha256": "b67011ca368edbe5a8d390822347f1d5b4b99f942cfb6c4cb384d55ffd299124"
+      },
+      "segnet_distortion": {
+        "bytes": 2528,
+        "path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_components/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66/segnet_distortion.npy",
+        "sha256": "58ee2b9ff9c64e75e659e3192a05937b55ce852c4cee53552c1440ac9c85370e"
+      }
+    },
+    "posenet_sha256": "7169dd7cfdb798cd032f257ad42629c4d7830b8df1963db4b4106f0bc5e2e60c",
+    "posenet_shape": [
+      600
+    ],
+    "segnet_sha256": "ef474be8d3097b029b640ad457634d625ad5fdf2d76c679729ba2f9942a60a8c",
+    "segnet_shape": [
+      600
+    ]
+  },
+  "device_contract": {
+    "allowed_uses": [
+      "local_tensor_ingestion_debug_only",
+      "non_authoritative_component_smoke"
+    ],
+    "batch_pairs_allowed_without_invariance_override": 1,
+    "batch_shape_research_signal_blocker": "mlx_scorer_response_non_singleton_batches_require_explicit_batch_shape_research_signal_allowance",
+    "batch_shape_research_signal_required": false,
+    "candidate_cache_identity_mode": "unaudited_debug_override",
+    "candidate_cache_transfer_blocker": "mlx_scorer_response_candidate_cache_requires_passing_auth_identity_audit",
+    "forbidden_uses": [
+      "auth_eval",
+      "score_claim",
+      "promotion",
+      "rank_or_kill",
+      "leaderboard_claim",
+      "replacement_for_cuda_t4_or_linux_x86_64_eval"
+    ],
+    "gpu_batch_pairs_allowed_without_invariance_override": 1,
+    "gpu_batch_shape_blocker": "mlx_gpu_scorer_response_requires_singleton_batches_until_invariance_passes",
+    "gpu_research_signal_blocker": "mlx_gpu_scorer_response_requires_explicit_research_signal_allowance",
+    "gpu_research_signal_required": false,
+    "local_advisory_cache_identity_blocker": "mlx_scorer_response_local_advisory_cache_identity_requires_explicit_allowance",
+    "local_cpu_advisory_cache_identity_allowed": false,
+    "unaudited_candidate_cache_debug_allowed": true
+  },
+  "elapsed_seconds": 522.135458946228,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "gpu_research_signal_allowed": false,
+  "hardware_substrate": "MLX cpu",
+  "inflated_outputs_aggregate_sha256": "b8a444f9342ebddeae769a467fd5661f2979e1e2cad70cf9d2e0b4a04b26783e",
+  "max_pairs": 600,
+  "n_samples": 600,
+  "pair_window": [
+    0,
+    600
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_unscaled": 0.02290349714182708,
+  "raw_sha256": "b8a444f9342ebddeae769a467fd5661f2979e1e2cad70cf9d2e0b4a04b26783e",
+  "ready_for_exact_eval_dispatch": false,
+  "reference_cache_pairs": 600,
+  "requires_exact_eval_before_promotion": true,
+  "response_family": "hprc_component_neutralization_residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66",
+  "schema_version": "mlx_scorer_response.v1",
+  "score_axis": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "score_rate_contribution": 0.572587428545677,
+  "score_recomputed_from_components": 42.472416569273946,
+  "source_pair_window": [
+    [
+      0,
+      1
+    ],
+    [
+      1198,
+      1199
+    ]
+  ],
+  "start_pair": 0,
+  "total_cache_pairs": 600
+}

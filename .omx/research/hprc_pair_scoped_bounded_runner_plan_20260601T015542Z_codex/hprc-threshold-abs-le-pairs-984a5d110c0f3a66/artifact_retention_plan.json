@@ -1,0 +1,131 @@
+{
+  "artifact_catalog_metadata": {
+    "artifact_paths": [
+      ".omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/artifact_retention_plan.json"
+    ],
+    "cleanup_plan_path": ".omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/artifact_retention_plan.json",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "journal_path": null,
+    "lifecycle_kind": "HISTORICAL_PROVENANCE",
+    "policy_id": "operator_storage_waterfall.v1",
+    "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_plan_path": null,
+    "tracked_local_boundary": {
+      ".omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/artifact_retention_plan.json": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      }
+    }
+  },
+  "cleanup_safety_policy": {
+    "certify_or_block": true,
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact/cold_store",
+      "/Volumes/APDataStore/pact/cold_store"
+    ],
+    "default_action": "move",
+    "delete_requires_explicit_action": true,
+    "deterministic_reproducibility_manifest_required": true,
+    "no_signal_loss_contract": "certified_rebuildable_or_skipped"
+  },
+  "execution": null,
+  "operator_storage_policy": {
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact/cold_store",
+      "/Volumes/APDataStore/pact/cold_store"
+    ],
+    "cold_store_subdir": "cold_store",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "explicit_cold_store_override": true,
+    "explicit_storage_tier_override": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_disk_enabled": false,
+    "local_disk_enabled_by_default": false,
+    "local_disk_requires_explicit_opt_in": true,
+    "policy_id": "operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_tier_cli_specs": [
+      "vertigo=/Volumes/VertigoDataTier/pact",
+      "apdatastore=/Volumes/APDataStore/pact"
+    ],
+    "work_tier_order": [
+      {
+        "allow_local_disk": false,
+        "name": "vertigo",
+        "priority": 0,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "source": "operator_policy"
+      },
+      {
+        "allow_local_disk": false,
+        "name": "apdatastore",
+        "priority": 1,
+        "root": "/Volumes/APDataStore/pact",
+        "source": "operator_policy"
+      }
+    ]
+  },
+  "plan": {
+    "blocked_candidate_count": 1,
+    "blocked_candidates": [
+      {
+        "blockers": [
+          "mlx_cache_identity_audit_stamp_missing"
+        ],
+        "bytes": 2831169500,
+        "certificate": {
+          "archive_sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3",
+          "inflated_outputs_aggregate_sha256": "b8a444f9342ebddeae769a467fd5661f2979e1e2cad70cf9d2e0b4a04b26783e",
+          "kind": "mlx_scorer_input_cache",
+          "manifest_path": ".omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_caches/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66/manifest.json",
+          "manifest_sha256": "26f9022a341e6ff826d18840d0cf8707cdad0e7e8301446b5910fc0b31f6d5b2",
+          "raw_sha256": "b8a444f9342ebddeae769a467fd5661f2979e1e2cad70cf9d2e0b4a04b26783e"
+        },
+        "certified_rebuildable": false,
+        "kind": "mlx_scorer_input_cache",
+        "path": ".omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_caches/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66"
+      }
+    ],
+    "candidate_count": 0,
+    "candidates": [],
+    "exclude_paths": [],
+    "generated_at_utc": "2026-06-01T02:19:00.739676+00:00",
+    "include_kinds": [
+      "mlx_scorer_input_cache"
+    ],
+    "min_bytes": 1000000,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repo_root": ".",
+    "roots": [
+      ".omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_caches"
+    ],
+    "schema": "comma_lab.artifact_retention_plan.v1",
+    "score_claim": false,
+    "total_reclaimable_bytes": 0
+  }
+}

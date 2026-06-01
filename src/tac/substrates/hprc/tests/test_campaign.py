@@ -18,11 +18,16 @@ from tac.substrates.hprc.campaign import (  # noqa: E402
     HPRC_EXACT_READINESS_REFUSAL_SCHEMA,
     materialize_minimal_hprc_campaign,
 )
+from tac.substrates.hprc.pair_scoped_residual_harvest import (  # noqa: E402
+    HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_HARVEST_SCHEMA,
+    build_pair_scoped_residual_runner_harvest,
+)
 from tac.substrates.hprc.pair_scoped_residual_runner import (  # noqa: E402
     HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_PLAN_SCHEMA,
     build_pair_scoped_residual_bounded_runner_plan,
 )
 from tools import build_hprc_pair_scoped_residual_bounded_runner as pair_runner_tool  # noqa: E402
+from tools import harvest_hprc_pair_scoped_residual_runner as harvest_runner_tool  # noqa: E402
 from tools import package_hprc_minimal_candidate as hprc_tool  # noqa: E402
 
 
@@ -316,3 +321,168 @@ def test_hprc_pair_scoped_residual_runner_allows_batched_research_rows(
     assert row["scorer_batch_pairs"] == 8
     assert row["batch_shape_research_signal"] is True
     assert "--allow-batch-shape-research-signal" in row["profile_command_argv"]
+
+
+def test_hprc_pair_scoped_residual_harvest_binds_receiver_proof_by_sha(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    output_dir = repo / "runner"
+    profile_dir = output_dir / "candidate-a"
+    profile_dir.mkdir(parents=True)
+    runner_plan = repo / "runner_plan.json"
+    runner_plan.write_text(
+        json.dumps(
+            {
+                "runner_rows": [
+                    {
+                        "candidate_id": "candidate-a",
+                        "expected_profile_report": (
+                            profile_dir / "hprc_mlx_component_neutralization_profile.json"
+                        ).as_posix(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (profile_dir / "hprc_mlx_component_neutralization_profile.json").write_text(
+        json.dumps(
+            {
+                "elapsed_seconds": 12.5,
+                "baseline_reuse": {"enabled": True},
+                "scorer_batch_pairs": 1,
+                "batch_shape_research_signal": False,
+                "variant_rows": [
+                    {"variant_id": "baseline"},
+                    {
+                        "variant_id": "residual_transform_threshold_abs_le_pairs_3_x",
+                        "archive_zip_path": "candidate/archive.zip",
+                        "archive_zip_bytes": 859923,
+                        "archive_zip_sha256": "a" * 64,
+                        "hprc_0bin_path": "candidate/0.bin",
+                        "hprc_0bin_sha256": "b" * 64,
+                    },
+                ],
+                "section_value_rows": [
+                    {"variant_id": "baseline"},
+                    {
+                        "variant_id": "residual_transform_threshold_abs_le_pairs_3_x",
+                        "delta_nonrate_score": -1.0,
+                        "delta_rate_score": -0.2,
+                        "delta_total_mlx_score_advisory": -1.2,
+                        "archive_bytes_removed_vs_baseline": 303937,
+                        "marginal_status": "cut_candidate_distortion_nonworse",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (profile_dir / "artifact_retention_plan.json").write_text(
+        json.dumps(
+            {
+                "plan": {
+                    "candidates": [],
+                    "blocked_candidates": [
+                        {"bytes": 10, "blockers": ["mlx_cache_identity_audit_stamp_missing"]}
+                    ],
+                    "total_reclaimable_bytes": 0,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    proof_dir = repo / "proof" / "receiver_proof"
+    proof_dir.mkdir(parents=True)
+    (proof_dir / "hprc_receiver_proof.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": "a" * 64,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_ready": True,
+                "receiver_output_sha256": "c" * 64,
+                "receiver_output_bytes": 3662409600,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    harvest = build_pair_scoped_residual_runner_harvest(
+        runner_plan_path=runner_plan,
+        candidate_id="candidate-a",
+        proof_roots=[repo / "proof"],
+        repo_root=repo,
+    )
+
+    assert harvest["schema"] == HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_HARVEST_SCHEMA
+    assert harvest["archive"]["sha256"] == "a" * 64
+    assert harvest["receiver_proof_binding"]["status"] == "linked_by_archive_sha256"
+    assert harvest["cleanup"]["status"] == "blocked"
+    assert harvest["ready_for_exact_eval_dispatch"] is False
+    assert "contest_cpu_cuda_exact_eval_not_executed" in harvest["exact_axis_gate"]["blockers"]
+
+
+def test_hprc_pair_scoped_residual_harvest_cli_writes_output(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    profile_dir = repo / "runner" / "candidate-a"
+    profile_dir.mkdir(parents=True)
+    runner_plan = repo / "runner_plan.json"
+    runner_plan.write_text(
+        json.dumps(
+            {
+                "runner_rows": [
+                    {
+                        "candidate_id": "candidate-a",
+                        "expected_profile_report": (
+                            profile_dir / "hprc_mlx_component_neutralization_profile.json"
+                        ).as_posix(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (profile_dir / "hprc_mlx_component_neutralization_profile.json").write_text(
+        json.dumps(
+            {
+                "variant_rows": [
+                    {"variant_id": "baseline"},
+                    {
+                        "variant_id": "candidate",
+                        "archive_zip_path": "archive.zip",
+                        "archive_zip_bytes": 1,
+                        "archive_zip_sha256": "d" * 64,
+                    },
+                ],
+                "section_value_rows": [
+                    {"variant_id": "baseline"},
+                    {"variant_id": "candidate"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    output = repo / "harvest.json"
+    exit_code = harvest_runner_tool.main(
+        [
+            "--repo-root",
+            repo.as_posix(),
+            "--runner-plan",
+            runner_plan.as_posix(),
+            "--candidate-id",
+            "candidate-a",
+            "--output",
+            output.as_posix(),
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(output.read_text())
+    assert payload["receiver_proof_binding"]["status"] == "missing"
