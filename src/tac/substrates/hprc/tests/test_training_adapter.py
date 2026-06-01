@@ -522,6 +522,69 @@ def test_hprc_training_cli_consumes_native_rate_protection_surface(
     assert artifact_metadata["training_backend"]["portable_runtime"] == "numpy"
 
 
+def test_hprc_training_cli_emits_protected_highres_residual_pathway(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    frames_path = tmp_path / "frames.npy"
+    protection_path = tmp_path / "protection.npy"
+    output_dir = tmp_path / "hprc_cli_protected_pathway_out"
+    protection = np.zeros((6, 4, 5, 3), dtype=np.float32)
+    protection[:, :2, :3, :] = 1.0
+    np.save(frames_path, _frames())
+    np.save(protection_path, protection)
+
+    exit_code = hprc_training_tool.main(
+        [
+            "--frames-npy",
+            frames_path.as_posix(),
+            "--output-dir",
+            output_dir.as_posix(),
+            "--epochs",
+            "1",
+            "--batch-pair-indices-per-step",
+            "3",
+            "--learning-rate",
+            "0.01",
+            "--training-backend",
+            "numpy",
+            "--residual-grid-h",
+            "4",
+            "--residual-grid-w",
+            "5",
+            "--rate-aware-residual-protection-npy",
+            protection_path.as_posix(),
+            "--enable-protected-residual-pathway",
+            "--protected-residual-grid-h",
+            "8",
+            "--protected-residual-grid-w",
+            "10",
+            "--skip-runtime-consumption-proof",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    pathway = payload["protected_highres_residual_pathway"]
+    assert pathway["enabled"] is True
+    assert pathway["grid_h"] == 8
+    assert pathway["grid_w"] == 10
+    assert pathway["mask_source"] == "p18_p19_residual_protection"
+    packet = parse_hprc_packet(
+        (output_dir / "hprc_compact_receiver_archive_export" / "0.bin").read_bytes()
+    )
+    compact = decode_compact_receiver_packet(packet)
+    assert compact.residual.protected_q is not None
+    assert compact.residual.protected_grid_h == 8
+    assert compact.residual.protected_grid_w == 10
+    assert compact.rdo_plan["protected_residual_pathway"]["enabled"] is True
+    assert compact.manifest["protected_highres_pose_pathway_ready"] is True
+    metrics = compact_receiver_reconstruction_metrics(compact, _frames())
+    assert metrics["score_claim"] is False
+
+
 def test_hprc_training_cli_refuses_residual_protection_shape_mismatch(
     tmp_path: Path,
     monkeypatch,
@@ -559,6 +622,50 @@ def test_hprc_training_cli_refuses_residual_protection_shape_mismatch(
                 "--skip-runtime-consumption-proof",
             ]
         )
+
+
+def test_hprc_training_cli_prefix_projects_full_video_protection_surface(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    frames_path = tmp_path / "frames.npy"
+    protection_path = tmp_path / "full_video_protection.npy"
+    np.save(frames_path, _frames())
+    np.save(protection_path, np.ones((12, 4, 5, 3), dtype=np.float32))
+
+    exit_code = hprc_training_tool.main(
+        [
+            "--frames-npy",
+            frames_path.as_posix(),
+            "--output-dir",
+            (tmp_path / "hprc_cli_prefix_projection_out").as_posix(),
+            "--epochs",
+            "1",
+            "--batch-pair-indices-per-step",
+            "3",
+            "--learning-rate",
+            "0.01",
+            "--training-backend",
+            "numpy",
+            "--residual-grid-h",
+            "4",
+            "--residual-grid-w",
+            "5",
+            "--rate-aware-residual-protection-npy",
+            protection_path.as_posix(),
+            "--skip-runtime-consumption-proof",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    manifest = payload["residual_protection_manifest"]
+    assert manifest["shape"] == [6, 4, 5, 3]
+    assert manifest["source_shape"] == [12, 4, 5, 3]
+    assert manifest["prefix_projected_from_full_video_surface"] is True
+    assert manifest["projection_kind"] == "first_n_frames_prefix"
 
 
 def test_hprc_training_cli_decodes_real_video_source_via_canonical_helper(

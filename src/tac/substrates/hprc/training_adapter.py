@@ -32,6 +32,7 @@ from tac.substrates.hprc.learned_receiver import (
     pack_compact_latents,
     pack_compact_receiver_state,
     pack_compact_residual,
+    pack_compact_residual_protected,
     pack_compact_selectors,
 )
 
@@ -197,6 +198,9 @@ class HprcCompactReceiverTrainingModel:
         basis_count: int = 3,
         residual_grid_h: int = 24,
         residual_grid_w: int = 32,
+        protected_residual_grid_h: int | None = None,
+        protected_residual_grid_w: int | None = None,
+        protected_residual_mask: np.ndarray | None = None,
         source_manifest: Mapping[str, Any] | None = None,
         initial_latent_gain: float = 1.0,
         initial_residual_gain: float = 1.0,
@@ -211,6 +215,9 @@ class HprcCompactReceiverTrainingModel:
             basis_count=int(basis_count),
             residual_grid_h=int(residual_grid_h),
             residual_grid_w=int(residual_grid_w),
+            protected_residual_grid_h=protected_residual_grid_h,
+            protected_residual_grid_w=protected_residual_grid_w,
+            protected_residual_mask=protected_residual_mask,
             source_manifest={
                 **self.source_manifest,
                 "training_adapter": HPRC_LONG_TRAINING_SUBSTRATE_ID,
@@ -230,6 +237,12 @@ class HprcCompactReceiverTrainingModel:
         self.selectors = compact.selectors.values.astype(np.float32) / 255.0
         self.residual = (
             compact.residual.q.astype(np.float32) * float(compact.residual.scale)
+        )
+        self.protected_residual = (
+            None
+            if compact.residual.protected_q is None
+            else compact.residual.protected_q.astype(np.float32)
+            * float(compact.residual.protected_scale)
         )
         self.receiver_state = (
             compact.receiver_state.q.astype(np.float32)
@@ -292,6 +305,15 @@ class HprcCompactReceiverTrainingModel:
                 int(self.packet_config.width),
             )
         )
+        if self.protected_residual is not None:
+            residual_component = residual_component + (
+                float(self.selectors[frame_index])
+                * _nearest_resize(
+                    self.protected_residual[frame_index],
+                    int(self.packet_config.height),
+                    int(self.packet_config.width),
+                )
+            )
         pair_index = min(
             self.receiver_state.shape[0] - 1,
             frame_index // max(int(self.packet_config.gop_size), 1),
@@ -319,6 +341,19 @@ class HprcCompactReceiverTrainingModel:
             "basis_count": int(self.basis.shape[0]),
             "residual_grid_h": int(self.residual.shape[1]),
             "residual_grid_w": int(self.residual.shape[2]),
+            "protected_residual_pathway": {
+                "enabled": self.protected_residual is not None,
+                "grid_h": (
+                    0
+                    if self.protected_residual is None
+                    else int(self.protected_residual.shape[1])
+                ),
+                "grid_w": (
+                    0
+                    if self.protected_residual is None
+                    else int(self.protected_residual.shape[2])
+                ),
+            },
             "output_resize": "bilinear",
             "output_resize_alignment": "bilinear_align_corners_false",
             "train_steps": int(self.train_steps),
@@ -332,6 +367,7 @@ class HprcCompactReceiverTrainingModel:
             "candidate_kind": "compact_numpy_receiver_with_trained_rdo_gains",
             "trained_renderer_export_ready": True,
             "z8_scorer_weighted_residual_sidecar_ready": False,
+            "protected_highres_pose_pathway_ready": self.protected_residual is not None,
             "mamba_dreamer_stack_ready": False,
             "exact_cpu_cuda_authority_ready": False,
             "training_backend": dict(self.training_backend_lineage),
@@ -350,7 +386,11 @@ class HprcCompactReceiverTrainingModel:
             HprcSectionKind.SELECTORS_RC: pack_compact_selectors(
                 np.rint(self.selectors * 255.0).clip(0, 255).astype(np.uint8)
             ),
-            HprcSectionKind.RESIDUAL_RC: pack_compact_residual(self.residual),
+            HprcSectionKind.RESIDUAL_RC: (
+                pack_compact_residual(self.residual)
+                if self.protected_residual is None
+                else pack_compact_residual_protected(self.residual, self.protected_residual)
+            ),
             HprcSectionKind.RDO_PLAN: _json_bytes(rdo_plan),
             HprcSectionKind.RECEIVER_STATE: pack_compact_receiver_state(self.receiver_state),
             HprcSectionKind.MANIFEST_JSON: _json_bytes(manifest),
@@ -402,6 +442,9 @@ class HprcCompactReceiverLongTrainingAdapter:
         rate_aware_residual_l1_weight: float = 0.0,
         rate_aware_residual_prox_weight: float = 0.0,
         residual_protection: np.ndarray | None = None,
+        enable_protected_residual_pathway: bool = False,
+        protected_residual_grid_h: int | None = None,
+        protected_residual_grid_w: int | None = None,
         training_backend: str = "auto",
     ) -> None:
         self.requested_training_backend = _training_backend_requested(training_backend)
@@ -412,6 +455,13 @@ class HprcCompactReceiverLongTrainingAdapter:
             basis_count=basis_count,
             residual_grid_h=residual_grid_h,
             residual_grid_w=residual_grid_w,
+            protected_residual_grid_h=protected_residual_grid_h
+            if enable_protected_residual_pathway
+            else None,
+            protected_residual_grid_w=protected_residual_grid_w
+            if enable_protected_residual_pathway
+            else None,
+            protected_residual_mask=residual_protection if enable_protected_residual_pathway else None,
             source_manifest=source_manifest,
             initial_latent_gain=initial_latent_gain,
             initial_residual_gain=initial_residual_gain,
@@ -609,6 +659,17 @@ class HprcCompactReceiverLongTrainingAdapter:
             state_component = mx.broadcast_to(state.reshape((int(indices.size), 1, 1, 3)), target.shape)
         else:
             state_component = mx.zeros_like(target)
+        protected_residual_component = mx.zeros_like(target)
+        if model.protected_residual is not None:
+            protected_batch = mx.array(
+                model.protected_residual[indices].astype(np.float32, copy=False)
+            )
+            protected_residual_component = selector * _nearest_resize_batch_mlx(
+                mx,
+                protected_batch,
+                int(model.packet_config.height),
+                int(model.packet_config.width),
+            )
         protection_component = None
         if self.residual_protection is not None:
             protection_grid = mx.array(
@@ -627,6 +688,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             "latent_component": latent_component,
             "selector": selector,
             "state_component": state_component,
+            "protected_residual_component": protected_residual_component,
             "protection_component": protection_component,
             "height": int(model.packet_config.height),
             "width": int(model.packet_config.width),
@@ -646,6 +708,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             int(common["height"]),
             int(common["width"]),
         )
+        residual_component = residual_component + common["protected_residual_component"]
         pred = (
             common["mean"]
             + float(model.latent_gain) * common["latent_component"]
@@ -971,6 +1034,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             "decoder_grid_mse_rgb255_advisory": float(loss),
             "archive_rate_term_advisory": 0.0,
             "native_rate_aware_training_enabled": bool(self.native_rate_aware),
+            "protected_highres_residual_pathway_enabled": self.model.protected_residual is not None,
             "native_residual_nonzero_fraction": float(
                 np.count_nonzero(model.residual) / model.residual.size
             ),
@@ -1010,6 +1074,33 @@ class HprcCompactReceiverLongTrainingAdapter:
                 "residual_nonzero_fraction": float(
                     np.count_nonzero(self.model.residual) / self.model.residual.size
                 ),
+            },
+            "protected_highres_residual_pathway": {
+                "schema": "hprc_protected_highres_residual_pathway.v1",
+                "enabled": self.model.protected_residual is not None,
+                "grid_h": (
+                    0
+                    if self.model.protected_residual is None
+                    else int(self.model.protected_residual.shape[1])
+                ),
+                "grid_w": (
+                    0
+                    if self.model.protected_residual is None
+                    else int(self.model.protected_residual.shape[2])
+                ),
+                "channels": (
+                    0
+                    if self.model.protected_residual is None
+                    else int(self.model.protected_residual.shape[3])
+                ),
+                "mask_source": (
+                    "none"
+                    if self.residual_protection is None
+                    else "p18_p19_residual_protection"
+                ),
+                "receiver_storage": "residual_rc_v2_int8_protected_sidecar",
+                "training_backend": self.effective_training_backend,
+                "portable_runtime": "numpy",
             },
             "packet_sha256_at_metadata": _sha256_bytes(packet),
             "frame_count": int(self.model.frame_count),

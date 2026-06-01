@@ -576,6 +576,107 @@ def test_hprc_campaign_queue_builds_native_rate_surface_before_training(tmp_path
     assert plan["native_rate_surface_steps"][0]["schema"] == "hprc_native_rate_surface_step_config.v1"
 
 
+def test_hprc_campaign_queue_scales_with_mlx_prefilter_and_protected_pathway(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    p19_artifact = repo_root / ".omx" / "research" / "p19.json"
+    p18_artifact = repo_root / ".omx" / "research" / "p18.json"
+    p19_artifact.parent.mkdir(parents=True)
+    p19_artifact.write_text("{}")
+    p18_artifact.write_text("{}")
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+    plan_path = tmp_path / "hprc_plan.json"
+
+    assert (
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--plan-output",
+                plan_path.as_posix(),
+                "--campaign-pairs",
+                "32",
+                "--campaign-pairs",
+                "128",
+                "--campaign-pairs",
+                "600",
+                "--epochs",
+                "1",
+                "--training-backend",
+                "mlx",
+                "--enable-native-rate-aware-hprc",
+                "--native-rate-residual-prox-weight",
+                "0.25",
+                "--native-rate-p19-posenet-null-pairs",
+                p19_artifact.as_posix(),
+                "--native-rate-p18-segnet-region-waterfill",
+                p18_artifact.as_posix(),
+                "--enable-protected-residual-pathway",
+                "--protected-residual-grid-h",
+                "32",
+                "--protected-residual-grid-w",
+                "32",
+                "--enable-hprc-mlx-prefilter-before-local-replay",
+                "--hprc-mlx-prefilter-max-score-for-local-replay",
+                "0.5",
+                "--auth-frontier-score",
+                "0.19",
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+        == 0
+    )
+
+    queue = json.loads(queue_path.read_text())
+    plan = json.loads(plan_path.read_text())
+    assert plan["campaign_pairs"] == [32, 128, 600]
+    full = queue["experiments"][2]
+    step_ids = [step["id"] for step in full["steps"]]
+    assert "run_hprc_full_video_mlx_prefilter" in step_ids
+    assert "gate_hprc_mlx_prefilter_before_local_replay" in step_ids
+    train_step = next(step for step in full["steps"] if step["id"] == "run_local_training")
+    train_command = train_step["command"]
+    assert "--training-backend" in train_command
+    assert train_command[train_command.index("--training-backend") + 1] == "mlx"
+    assert "--enable-protected-residual-pathway" in train_command
+    assert train_command[train_command.index("--protected-residual-grid-h") + 1] == "32"
+    assert train_command[train_command.index("--protected-residual-grid-w") + 1] == "32"
+    assert "--rate-aware-residual-protection-npy" in train_command
+    assert train_step["requires"] == ["build_hprc_native_rate_residual_protection_surface"]
+    assert any(
+        condition.get("key") == "protected_highres_residual_pathway.enabled"
+        and condition.get("equals") is True
+        for condition in train_step["postconditions"]
+    )
+    mlx_step = next(
+        step for step in full["steps"] if step["id"] == "run_hprc_full_video_mlx_prefilter"
+    )
+    assert mlx_step["resources"]["kind"] == "local_mlx"
+    assert "--max-pairs" in mlx_step["command"]
+    assert mlx_step["command"][mlx_step["command"].index("--max-pairs") + 1] == "600"
+    replay_step = next(step for step in full["steps"] if step["id"] == "run_local_cpu_replay")
+    assert replay_step["requires"] == ["gate_hprc_mlx_prefilter_before_local_replay"]
+    full_plan = plan["plans"][2]
+    assert full_plan["candidate_params"]["protected_highres_residual_pathway_enabled"] is True
+    assert full_plan["candidate_params"]["protected_residual_grid_h"] == 32
+    assert full_plan["candidate_params"]["protected_residual_grid_w"] == 32
+
+
 def test_archive_rate_gate_blocks_replay_when_rate_alone_loses() -> None:
     report = build_archive_rate_local_replay_gate(
         training_result={

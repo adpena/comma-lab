@@ -45,6 +45,7 @@ _DECODER_HEADER_FMT = "<8sBHHBHf"
 _LATENT_HEADER_FMT = "<8sBHHf"
 _SELECTOR_HEADER_FMT = "<8sBH"
 _RESIDUAL_HEADER_FMT = "<8sBHHHBf"
+_PROTECTED_RESIDUAL_HEADER_FMT = "<8sBHHHBfHHf"
 _STATE_HEADER_FMT = "<8sBHBf"
 _ENTROPY_WRAPPER_HEADER_FMT = "<8sBBHI32s"
 
@@ -52,8 +53,10 @@ _DECODER_HEADER_SIZE = struct.calcsize(_DECODER_HEADER_FMT)
 _LATENT_HEADER_SIZE = struct.calcsize(_LATENT_HEADER_FMT)
 _SELECTOR_HEADER_SIZE = struct.calcsize(_SELECTOR_HEADER_FMT)
 _RESIDUAL_HEADER_SIZE = struct.calcsize(_RESIDUAL_HEADER_FMT)
+_PROTECTED_RESIDUAL_HEADER_SIZE = struct.calcsize(_PROTECTED_RESIDUAL_HEADER_FMT)
 _STATE_HEADER_SIZE = struct.calcsize(_STATE_HEADER_FMT)
 _ENTROPY_WRAPPER_HEADER_SIZE = struct.calcsize(_ENTROPY_WRAPPER_HEADER_FMT)
+_PROTECTED_RESIDUAL_VERSION = 2
 
 
 class HprcCompactReceiverError(ValueError):
@@ -93,6 +96,14 @@ class CompactResidual:
     channels: int
     scale: float
     q: np.ndarray
+    protected_grid_h: int = 0
+    protected_grid_w: int = 0
+    protected_scale: float = 0.0
+    protected_q: np.ndarray | None = None
+
+    @property
+    def protected_pathway_enabled(self) -> bool:
+        return self.protected_q is not None
 
 
 @dataclass(frozen=True)
@@ -364,13 +375,84 @@ def pack_compact_residual(residual_grid: np.ndarray) -> bytes:
     return header + q.tobytes(order="C")
 
 
-def pack_compact_residual_quantized(q: np.ndarray, *, scale: float) -> bytes:
+def pack_compact_residual_protected(
+    residual_grid: np.ndarray,
+    protected_residual_grid: np.ndarray,
+) -> bytes:
+    residual_f = np.asarray(residual_grid, dtype=np.float32)
+    protected_f = np.asarray(protected_residual_grid, dtype=np.float32)
+    if residual_f.ndim != 4:
+        raise HprcCompactReceiverError("residual must be frames x grid_h x grid_w x channels")
+    if protected_f.ndim != 4:
+        raise HprcCompactReceiverError(
+            "protected residual must be frames x protected_grid_h x protected_grid_w x channels"
+        )
+    if residual_f.shape[0] != protected_f.shape[0] or residual_f.shape[3] != protected_f.shape[3]:
+        raise HprcCompactReceiverError("protected residual frame/channel shape must match residual")
+    if residual_f.shape[3] != 3:
+        raise HprcCompactReceiverError("compact protected residual currently requires RGB")
+    residual_max = float(np.max(np.abs(residual_f))) if residual_f.size else 0.0
+    protected_max = float(np.max(np.abs(protected_f))) if protected_f.size else 0.0
+    residual_scale = max(residual_max / 127.0, 1.0 / 127.0)
+    protected_scale = max(protected_max / 127.0, 1.0 / 127.0)
+    residual_q = np.rint(residual_f / residual_scale).clip(-127, 127).astype(np.int8)
+    protected_q = np.rint(protected_f / protected_scale).clip(-127, 127).astype(np.int8)
+    header = struct.pack(
+        _PROTECTED_RESIDUAL_HEADER_FMT,
+        _RESIDUAL_MAGIC,
+        _PROTECTED_RESIDUAL_VERSION,
+        int(residual_q.shape[0]),
+        int(residual_q.shape[1]),
+        int(residual_q.shape[2]),
+        int(residual_q.shape[3]),
+        float(residual_scale),
+        int(protected_q.shape[1]),
+        int(protected_q.shape[2]),
+        float(protected_scale),
+    )
+    return header + residual_q.tobytes(order="C") + protected_q.tobytes(order="C")
+
+
+def pack_compact_residual_quantized(
+    q: np.ndarray,
+    *,
+    scale: float,
+    protected_q: np.ndarray | None = None,
+    protected_scale: float = 0.0,
+) -> bytes:
     q_i8 = np.asarray(q, dtype=np.int16)
     if q_i8.ndim != 4:
         raise HprcCompactReceiverError("quantized residual must be frames x grid_h x grid_w x channels")
     if q_i8.shape[3] != 3:
         raise HprcCompactReceiverError("compact residual currently requires RGB")
     q_i8 = q_i8.clip(-127, 127).astype(np.int8)
+    if protected_q is not None:
+        protected_i8 = np.asarray(protected_q, dtype=np.int16)
+        if protected_i8.ndim != 4:
+            raise HprcCompactReceiverError(
+                "quantized protected residual must be frames x grid_h x grid_w x channels"
+            )
+        if protected_i8.shape[0] != q_i8.shape[0] or protected_i8.shape[3] != q_i8.shape[3]:
+            raise HprcCompactReceiverError(
+                "quantized protected residual frame/channel shape must match residual"
+            )
+        if float(protected_scale) <= 0.0 or not np.isfinite(float(protected_scale)):
+            raise HprcCompactReceiverError("quantized protected residual scale must be positive")
+        protected_i8 = protected_i8.clip(-127, 127).astype(np.int8)
+        header = struct.pack(
+            _PROTECTED_RESIDUAL_HEADER_FMT,
+            _RESIDUAL_MAGIC,
+            _PROTECTED_RESIDUAL_VERSION,
+            int(q_i8.shape[0]),
+            int(q_i8.shape[1]),
+            int(q_i8.shape[2]),
+            int(q_i8.shape[3]),
+            float(scale),
+            int(protected_i8.shape[1]),
+            int(protected_i8.shape[2]),
+            float(protected_scale),
+        )
+        return header + q_i8.tobytes(order="C") + protected_i8.tobytes(order="C")
     header = struct.pack(
         _RESIDUAL_HEADER_FMT,
         _RESIDUAL_MAGIC,
@@ -395,6 +477,49 @@ def unpack_compact_residual(payload: bytes) -> CompactResidual:
         _RESIDUAL_HEADER_FMT, payload[:_RESIDUAL_HEADER_SIZE]
     )
     _check_magic(magic, _RESIDUAL_MAGIC, "residual_rc")
+    if version == _PROTECTED_RESIDUAL_VERSION:
+        (
+            magic,
+            version,
+            frames,
+            grid_h,
+            grid_w,
+            channels,
+            scale,
+            protected_grid_h,
+            protected_grid_w,
+            protected_scale,
+        ) = struct.unpack(
+            _PROTECTED_RESIDUAL_HEADER_FMT,
+            payload[:_PROTECTED_RESIDUAL_HEADER_SIZE],
+        )
+        _check_magic(magic, _RESIDUAL_MAGIC, "residual_rc")
+        base_len = int(frames) * int(grid_h) * int(grid_w) * int(channels)
+        protected_len = (
+            int(frames) * int(protected_grid_h) * int(protected_grid_w) * int(channels)
+        )
+        expected = _PROTECTED_RESIDUAL_HEADER_SIZE + base_len + protected_len
+        _require_exact_length(len(payload), expected, "residual_rc")
+        base_start = _PROTECTED_RESIDUAL_HEADER_SIZE
+        protected_start = base_start + base_len
+        q = np.frombuffer(payload[base_start:protected_start], dtype=np.int8).reshape(
+            (frames, grid_h, grid_w, channels)
+        )
+        protected_q = np.frombuffer(payload[protected_start:], dtype=np.int8).reshape(
+            (frames, protected_grid_h, protected_grid_w, channels)
+        )
+        return CompactResidual(
+            frames=int(frames),
+            grid_h=int(grid_h),
+            grid_w=int(grid_w),
+            channels=int(channels),
+            scale=float(scale),
+            q=q,
+            protected_grid_h=int(protected_grid_h),
+            protected_grid_w=int(protected_grid_w),
+            protected_scale=float(protected_scale),
+            protected_q=protected_q,
+        )
     if version != _VERSION:
         raise HprcCompactReceiverError(f"residual_rc version mismatch: {version}")
     expected = _RESIDUAL_HEADER_SIZE + int(frames) * int(grid_h) * int(grid_w) * int(channels)
@@ -547,6 +672,11 @@ def compact_receiver_section_byte_profile(packet: HprcPacket) -> dict[str, Any]:
         "basis_count": int(compact.decoder.basis_count),
         "residual_grid_height": int(compact.residual.grid_h),
         "residual_grid_width": int(compact.residual.grid_w),
+        "protected_residual_pathway": {
+            "enabled": bool(compact.residual.protected_pathway_enabled),
+            "grid_height": int(compact.residual.protected_grid_h),
+            "grid_width": int(compact.residual.protected_grid_w),
+        },
         "section_rows": rows,
         "low_hanging_fruit": [
             {
@@ -603,17 +733,27 @@ def _neutralized_section_payload(
     if kind == HprcSectionKind.SELECTORS_RC:
         return pack_compact_selectors(np.zeros((compact.selectors.frames,), dtype=np.uint8))
     if kind == HprcSectionKind.RESIDUAL_RC:
-        return pack_compact_residual(
-            np.zeros(
-                (
-                    compact.residual.frames,
-                    compact.residual.grid_h,
-                    compact.residual.grid_w,
-                    compact.residual.channels,
-                ),
-                dtype=np.float32,
-            )
+        base = np.zeros(
+            (
+                compact.residual.frames,
+                compact.residual.grid_h,
+                compact.residual.grid_w,
+                compact.residual.channels,
+            ),
+            dtype=np.float32,
         )
+        if compact.residual.protected_q is None:
+            return pack_compact_residual(base)
+        protected = np.zeros(
+            (
+                compact.residual.frames,
+                compact.residual.protected_grid_h,
+                compact.residual.protected_grid_w,
+                compact.residual.channels,
+            ),
+            dtype=np.float32,
+        )
+        return pack_compact_residual_protected(base, protected)
     if kind == HprcSectionKind.RDO_PLAN:
         rdo = dict(compact.rdo_plan)
         rdo["latent_gain"] = 0.0
@@ -742,9 +882,19 @@ def _output_resize_mode(rdo: dict[str, Any]) -> str:
     return mode
 
 
-def _residual_to_decoder_grid(residual: CompactResidual, decoder: CompactDecoder, frame_index: int) -> np.ndarray:
+def _residual_to_decoder_grid(
+    residual: CompactResidual,
+    decoder: CompactDecoder,
+    frame_index: int,
+    *,
+    protected_gain: float = 1.0,
+) -> np.ndarray:
     low = residual.q[frame_index].astype(np.float32) * residual.scale
-    return _nearest_resize(low, decoder.height, decoder.width)
+    out = _nearest_resize(low, decoder.height, decoder.width)
+    if residual.protected_q is not None:
+        protected = residual.protected_q[frame_index].astype(np.float32) * residual.protected_scale
+        out = out + float(protected_gain) * _nearest_resize(protected, decoder.height, decoder.width)
+    return out
 
 
 def _render_compact_receiver_frame_batch(
@@ -785,11 +935,17 @@ def _render_compact_receiver_frame_batch(
         compact.residual.q[start_frame:stop_frame].astype(np.float32)
         * compact.residual.scale
     )
-    frame += (
-        float(rdo.get("residual_gain", 1.0))
-        * selector
-        * _nearest_resize_batch(residual_low, decoder.height, decoder.width)
-    )
+    residual_component = _nearest_resize_batch(residual_low, decoder.height, decoder.width)
+    if compact.residual.protected_q is not None:
+        protected = (
+            compact.residual.protected_q[start_frame:stop_frame].astype(np.float32)
+            * compact.residual.protected_scale
+        )
+        residual_component = residual_component + (
+            float(rdo.get("protected_residual_gain", 1.0))
+            * _nearest_resize_batch(protected, decoder.height, decoder.width)
+        )
+    frame += float(rdo.get("residual_gain", 1.0)) * selector * residual_component
     state_gain = float(rdo.get("receiver_state_gain", 0.0))
     if state_gain:
         pair_indices = (
@@ -853,7 +1009,12 @@ def render_compact_receiver_frame(
     frame += (
         float(rdo.get("residual_gain", 1.0))
         * selector
-        * _residual_to_decoder_grid(compact.residual, decoder, frame_index)
+        * _residual_to_decoder_grid(
+            compact.residual,
+            decoder,
+            frame_index,
+            protected_gain=float(rdo.get("protected_residual_gain", 1.0)),
+        )
     )
     state_gain = float(rdo.get("receiver_state_gain", 0.0))
     if state_gain:
@@ -1017,6 +1178,8 @@ def transform_compact_receiver_residual(
     section_map[HprcSectionKind.RESIDUAL_RC] = pack_compact_residual_quantized(
         q,
         scale=compact.residual.scale,
+        protected_q=compact.residual.protected_q,
+        protected_scale=compact.residual.protected_scale,
     )
     rdo = dict(compact.rdo_plan)
     rdo["residual_token_transform"] = residual_transform
@@ -1196,12 +1359,43 @@ def _block_means(frames: np.ndarray, *, grid_h: int, grid_w: int) -> np.ndarray:
     return out
 
 
+def _protection_mask_to_grid(
+    value: np.ndarray,
+    *,
+    frames: int,
+    grid_h: int,
+    grid_w: int,
+    channels: int,
+) -> np.ndarray:
+    arr = np.asarray(value, dtype=np.float32)
+    if arr.ndim == 3:
+        arr = arr[:, :, :, None]
+    if arr.ndim != 4:
+        raise HprcCompactReceiverError("protected residual mask must be FxHxW or FxHxWxC")
+    if arr.shape[0] not in {1, frames}:
+        raise HprcCompactReceiverError("protected residual mask frame count mismatch")
+    if arr.shape[3] not in {1, channels}:
+        raise HprcCompactReceiverError("protected residual mask channel count mismatch")
+    if not np.all(np.isfinite(arr)):
+        raise HprcCompactReceiverError("protected residual mask contains non-finite values")
+    arr = np.clip(arr, 0.0, 1.0)
+    if arr.shape[0] == 1:
+        arr = np.broadcast_to(arr, (frames, arr.shape[1], arr.shape[2], arr.shape[3]))
+    if arr.shape[3] == 1:
+        arr = np.broadcast_to(arr, (frames, arr.shape[1], arr.shape[2], channels))
+    resized = _nearest_resize_batch(arr, int(grid_h), int(grid_w))
+    return np.asarray(resized > 0.5, dtype=np.float32)
+
+
 def build_compact_receiver_packet_from_lowres_frames(
     frames: np.ndarray,
     *,
     basis_count: int = 3,
     residual_grid_h: int = 24,
     residual_grid_w: int = 32,
+    protected_residual_grid_h: int | None = None,
+    protected_residual_grid_w: int | None = None,
+    protected_residual_mask: np.ndarray | None = None,
     source_manifest: dict[str, Any] | None = None,
 ) -> bytes:
     """Build an HPRC compact receiver from full-video low-resolution frames.
@@ -1232,6 +1426,26 @@ def build_compact_receiver_packet_from_lowres_frames(
     latents = (flat_centered @ flat_basis.T) / denom[None, :]
     base = mean.astype(np.float32) + np.tensordot(latents, basis, axes=(1, 0))
     residual = _block_means(arr - base, grid_h=int(residual_grid_h), grid_w=int(residual_grid_w))
+    protected_residual: np.ndarray | None = None
+    if protected_residual_grid_h is not None or protected_residual_grid_w is not None:
+        protected_h = int(protected_residual_grid_h or residual_grid_h)
+        protected_w = int(protected_residual_grid_w or residual_grid_w)
+        if protected_h <= 0 or protected_w <= 0:
+            raise HprcCompactReceiverError("protected residual grid must be positive")
+        coarse_repair = _nearest_resize_batch(residual, height, width)
+        protected_residual = _block_means(
+            arr - base - coarse_repair,
+            grid_h=protected_h,
+            grid_w=protected_w,
+        )
+        if protected_residual_mask is not None:
+            protected_residual = protected_residual * _protection_mask_to_grid(
+                protected_residual_mask,
+                frames=frame_count,
+                grid_h=protected_h,
+                grid_w=protected_w,
+                channels=channels,
+            )
     selectors = np.full((frame_count,), 255, dtype=np.uint8)
     pairs = math.ceil(frame_count / 2)
     state = np.zeros((pairs, 6), dtype=np.float32)
@@ -1245,9 +1459,16 @@ def build_compact_receiver_packet_from_lowres_frames(
         "latent_gain": 1.0,
         "residual_gain": 1.0,
         "receiver_state_gain": 0.25,
+        "protected_residual_gain": 1.0,
         "basis_count": basis_count,
         "residual_grid_h": int(residual_grid_h),
         "residual_grid_w": int(residual_grid_w),
+        "protected_residual_pathway": {
+            "enabled": protected_residual is not None,
+            "grid_h": 0 if protected_residual is None else int(protected_residual.shape[1]),
+            "grid_w": 0 if protected_residual is None else int(protected_residual.shape[2]),
+            "mask_source": "none" if protected_residual_mask is None else "p18_p19_residual_protection",
+        },
         "output_resize": "bilinear",
         "output_resize_alignment": "bilinear_align_corners_false",
         "score_claim": False,
@@ -1258,7 +1479,8 @@ def build_compact_receiver_packet_from_lowres_frames(
         "hprc_receiver_mode": COMPACT_RECEIVER_MODE,
         "candidate_kind": "compact_numpy_receiver_with_block_residual_tokens",
         "trained_renderer_export_ready": True,
-        "z8_scorer_weighted_residual_sidecar_ready": False,
+        "z8_scorer_weighted_residual_sidecar_ready": protected_residual is not None,
+        "protected_highres_pose_pathway_ready": protected_residual is not None,
         "mamba_dreamer_stack_ready": False,
         "exact_cpu_cuda_authority_ready": False,
         "score_claim": False,
@@ -1269,7 +1491,11 @@ def build_compact_receiver_packet_from_lowres_frames(
         HprcSectionKind.DECODER_QW: pack_compact_decoder(mean, basis),
         HprcSectionKind.LATENTS_RC: pack_compact_latents(latents),
         HprcSectionKind.SELECTORS_RC: pack_compact_selectors(selectors),
-        HprcSectionKind.RESIDUAL_RC: pack_compact_residual(residual),
+        HprcSectionKind.RESIDUAL_RC: (
+            pack_compact_residual(residual)
+            if protected_residual is None
+            else pack_compact_residual_protected(residual, protected_residual)
+        ),
         HprcSectionKind.RDO_PLAN: _json_bytes(rdo_plan),
         HprcSectionKind.RECEIVER_STATE: pack_compact_receiver_state(state),
         HprcSectionKind.MANIFEST_JSON: _json_bytes(manifest),
@@ -1315,8 +1541,23 @@ def mutate_compact_receiver_section(
         data[_SELECTOR_HEADER_SIZE:] = bytes([fill]) * (len(data) - _SELECTOR_HEADER_SIZE)
         return _maybe_rewrap_mutated_section(kind, bytes(data), was_wrapped=was_wrapped)
     if kind == HprcSectionKind.RESIDUAL_RC and len(data) > _RESIDUAL_HEADER_SIZE:
-        data[_RESIDUAL_HEADER_SIZE:] = bytes([127]) * (len(data) - _RESIDUAL_HEADER_SIZE)
-        return _maybe_rewrap_mutated_section(kind, bytes(data), was_wrapped=was_wrapped)
+        residual = unpack_compact_residual(semantic_payload)
+        q = np.full_like(residual.q, 127, dtype=np.int8)
+        protected_q = (
+            None
+            if residual.protected_q is None
+            else np.full_like(residual.protected_q, 127, dtype=np.int8)
+        )
+        return _maybe_rewrap_mutated_section(
+            kind,
+            pack_compact_residual_quantized(
+                q,
+                scale=residual.scale,
+                protected_q=protected_q,
+                protected_scale=residual.protected_scale,
+            ),
+            was_wrapped=was_wrapped,
+        )
     if kind == HprcSectionKind.RECEIVER_STATE and len(data) > _STATE_HEADER_SIZE:
         data[_STATE_HEADER_SIZE] = (data[_STATE_HEADER_SIZE] + 23 + salt) & 0xFF
         return _maybe_rewrap_mutated_section(kind, bytes(data), was_wrapped=was_wrapped)
@@ -1363,6 +1604,7 @@ __all__ = [
     "pack_compact_latents",
     "pack_compact_receiver_state",
     "pack_compact_residual",
+    "pack_compact_residual_protected",
     "pack_compact_residual_quantized",
     "pack_compact_selectors",
     "pack_entropy_wrapped_compact_section",

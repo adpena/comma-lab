@@ -254,6 +254,8 @@ def transcode_compact_receiver_residual_tokens(
     section_map[HprcSectionKind.RESIDUAL_RC] = pack_compact_residual_quantized(
         collapsed_q,
         scale=compact.residual.scale,
+        protected_q=compact.residual.protected_q,
+        protected_scale=compact.residual.protected_scale,
     )
     collapsed_packet = pack_hprc_packet(section_map, config=packet.config)
     out, rows = transcode_compact_receiver_sections(
@@ -319,6 +321,8 @@ def transcode_compact_receiver_importance_weighted_residual_tokens(
     section_map[HprcSectionKind.RESIDUAL_RC] = pack_compact_residual_quantized(
         collapsed_q,
         scale=compact.residual.scale,
+        protected_q=compact.residual.protected_q,
+        protected_scale=compact.residual.protected_scale,
     )
     collapsed_packet = pack_hprc_packet(section_map, config=packet.config)
     out, rows = transcode_compact_receiver_sections(

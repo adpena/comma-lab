@@ -78,6 +78,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--residual-grid-h", type=int, default=24)
     parser.add_argument("--residual-grid-w", type=int, default=32)
     parser.add_argument(
+        "--enable-protected-residual-pathway",
+        action="store_true",
+        help=(
+            "Store an explicit high-resolution protected residual sidecar in "
+            "RESIDUAL_RC v2 so PoseNet/SegNet-sensitive geometry does not have "
+            "to be represented by the coarse interior residual grid."
+        ),
+    )
+    parser.add_argument(
+        "--protected-residual-grid-h",
+        type=int,
+        help="Grid height for the protected residual sidecar; defaults to residual-grid-h.",
+    )
+    parser.add_argument(
+        "--protected-residual-grid-w",
+        type=int,
+        help="Grid width for the protected residual sidecar; defaults to residual-grid-w.",
+    )
+    parser.add_argument(
         "--training-backend",
         choices=("auto", "mlx", "numpy"),
         default="auto",
@@ -167,6 +186,9 @@ def main(argv: list[str] | None = None) -> int:
         rate_aware_residual_l1_weight=float(args.rate_aware_residual_l1_weight),
         rate_aware_residual_prox_weight=float(args.rate_aware_residual_prox_weight),
         residual_protection=residual_protection,
+        enable_protected_residual_pathway=bool(args.enable_protected_residual_pathway),
+        protected_residual_grid_h=args.protected_residual_grid_h,
+        protected_residual_grid_w=args.protected_residual_grid_w,
         training_backend=str(args.training_backend),
     )
     curriculum_stages = _build_curriculum_stages(args)
@@ -200,6 +222,9 @@ def main(argv: list[str] | None = None) -> int:
         },
         "curriculum_preset": str(args.curriculum_preset),
         "curriculum_stages": [stage.as_dict() for stage in curriculum_stages],
+        "protected_highres_residual_pathway": adapter.artifact_metadata()[
+            "protected_highres_residual_pathway"
+        ],
         "artifact": artifact.as_dict(),
         "runtime_consumption_proof_requested": not bool(args.skip_runtime_consumption_proof),
         "exact_axis_blocker": "contest_cpu_cuda_exact_eval_not_executed",
@@ -584,32 +609,35 @@ def _load_residual_protection(
     path = path.resolve(strict=False)
     if not path.is_file():
         raise ValueError(f"rate-aware residual protection missing: {path}")
-    arr = np.load(path)
-    _validate_residual_protection_shape(
-        arr.shape,
+    arr = np.load(path, mmap_mode="r")
+    projected, projection_manifest = _project_residual_protection_to_expected_shape(
+        arr,
         expected_residual_shape=expected_residual_shape,
         path=path,
     )
-    return arr, {
+    return projected, {
         "schema": "hprc_native_rate_residual_protection_input.v1",
         "path": path.as_posix(),
         "bytes": path.stat().st_size,
         "sha256": sha256_file(path),
-        "shape": [int(v) for v in arr.shape],
-        "dtype": str(arr.dtype),
+        "shape": [int(v) for v in projected.shape],
+        "source_shape": [int(v) for v in arr.shape],
+        "dtype": str(projected.dtype),
         "semantics": "1=protect_from_rate_pressure,0=safest_to_shrink",
+        **projection_manifest,
         "score_claim": False,
         "promotion_eligible": False,
     }
 
 
-def _validate_residual_protection_shape(
-    shape: tuple[int, ...],
+def _project_residual_protection_to_expected_shape(
+    arr: np.ndarray,
     *,
     expected_residual_shape: tuple[int, int, int, int],
     path: Path,
-) -> None:
+) -> tuple[np.ndarray, dict[str, object]]:
     frames, grid_h, grid_w, channels = expected_residual_shape
+    shape = tuple(int(v) for v in arr.shape)
     allowed = {
         (frames, grid_h, grid_w, channels),
         (frames, grid_h, grid_w),
@@ -618,13 +646,36 @@ def _validate_residual_protection_shape(
         (1, grid_h, grid_w, channels),
         (1, grid_h, grid_w),
     }
-    if tuple(int(v) for v in shape) not in allowed:
-        raise ValueError(
-            "rate-aware residual protection shape mismatch: "
-            f"{path} has shape {tuple(shape)}, but decode/residual config expects one of "
-            f"{sorted(allowed)}. Match --decode-pairs/--decode-max-pairs and "
-            "--residual-grid-h/--residual-grid-w, or rebuild the P18/P19 protection surface."
-        )
+    if shape in allowed:
+        return np.asarray(arr, dtype=np.float32), {
+            "prefix_projected_from_full_video_surface": False,
+            "projection_kind": "shape_exact_or_broadcastable",
+        }
+    if (
+        len(shape) in {3, 4}
+        and shape[0] >= frames
+        and shape[1] == grid_h
+        and shape[2] == grid_w
+    ):
+        if len(shape) == 4 and shape[3] not in {1, channels}:
+            raise ValueError(
+                "rate-aware residual protection channel mismatch: "
+                f"{path} has shape {shape}, expected channel count 1 or {channels}"
+            )
+        return np.asarray(arr[:frames], dtype=np.float32), {
+            "prefix_projected_from_full_video_surface": True,
+            "projection_kind": "first_n_frames_prefix",
+            "projected_frame_count": int(frames),
+            "source_frame_count": int(shape[0]),
+        }
+    raise ValueError(
+        "rate-aware residual protection shape mismatch: "
+        f"{path} has shape {tuple(shape)}, but decode/residual config expects one of "
+        f"{sorted(allowed)} or a longer full-video prefix-compatible surface with "
+        f"shape (N>={frames}, {grid_h}, {grid_w}[, {channels}]). Match "
+        "--decode-pairs/--decode-max-pairs and --residual-grid-h/--residual-grid-w, "
+        "or rebuild the P18/P19 protection surface."
+    )
 
 
 def _resolve_output_dir(

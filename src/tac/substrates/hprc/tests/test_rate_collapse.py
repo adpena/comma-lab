@@ -134,6 +134,41 @@ def test_residual_token_collapse_is_receiver_decodable_and_records_damage() -> N
     assert metrics["residual_q_mse"] > 0.0
 
 
+def test_residual_token_collapse_preserves_protected_highres_sidecar() -> None:
+    rng = np.random.default_rng(17)
+    frames = rng.integers(0, 256, size=(6, 12, 16, 3), dtype=np.uint8).astype(np.float32)
+    mask = np.zeros((6, 3, 4, 3), dtype=np.float32)
+    mask[:, :2, :2, :] = 1.0
+    packet = build_compact_receiver_packet_from_lowres_frames(
+        frames,
+        basis_count=3,
+        residual_grid_h=3,
+        residual_grid_w=4,
+        protected_residual_grid_h=6,
+        protected_residual_grid_w=8,
+        protected_residual_mask=mask,
+        source_manifest={"source": "unit_residual_token_collapse_protected_pathway"},
+    )
+    base = decode_compact_receiver_packet(parse_hprc_packet(packet))
+    assert base.residual.protected_q is not None
+    base_protected = np.array(base.residual.protected_q, copy=True)
+
+    collapsed, rows, metrics = transcode_compact_receiver_residual_tokens(
+        packet,
+        spec=ResidualTokenCollapseSpec(deadzone=0, quant_divisor=4),
+        sections=DEFAULT_RATE_COLLAPSE_SECTIONS,
+        brotli_quality=11,
+    )
+
+    compact = decode_compact_receiver_packet(parse_hprc_packet(collapsed))
+    assert compact.residual.protected_q is not None
+    np.testing.assert_array_equal(compact.residual.protected_q, base_protected)
+    rendered = render_compact_receiver_frame_batch(compact, 0, 6, height=24, width=32)
+    assert rendered.shape == (6, 24, 32, 3)
+    assert any(row["accepted"] for row in rows)
+    assert metrics["tokens_changed"] > 0
+
+
 def test_importance_weighted_residual_collapse_protects_high_importance_tokens() -> None:
     q = np.array([[[[13, 17, 25], [11, 17, 23]]]], dtype=np.int16)
     importance = np.array([[[0.0, 10.0]]], dtype=np.float32)

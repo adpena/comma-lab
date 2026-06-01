@@ -82,6 +82,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--residual-grid-h", type=int, default=24)
     parser.add_argument("--residual-grid-w", type=int, default=32)
     parser.add_argument(
+        "--enable-protected-residual-pathway",
+        action="store_true",
+        help=(
+            "Train/export HPRC with RESIDUAL_RC v2: coarse residual tokens plus "
+            "a high-resolution protected residual sidecar, masked by the same "
+            "P18/P19 protection surface when available."
+        ),
+    )
+    parser.add_argument(
+        "--protected-residual-grid-h",
+        type=int,
+        help="Protected residual sidecar grid height; defaults to --residual-grid-h.",
+    )
+    parser.add_argument(
+        "--protected-residual-grid-w",
+        type=int,
+        help="Protected residual sidecar grid width; defaults to --residual-grid-w.",
+    )
+    parser.add_argument(
         "--training-backend",
         choices=("auto", "mlx", "numpy"),
         default="auto",
@@ -328,6 +347,11 @@ def main(argv: list[str] | None = None) -> int:
                 basis_count=int(args.basis_count),
                 residual_grid_h=int(args.residual_grid_h),
                 residual_grid_w=int(args.residual_grid_w),
+                enable_protected_residual_pathway=bool(
+                    args.enable_protected_residual_pathway
+                ),
+                protected_residual_grid_h=args.protected_residual_grid_h,
+                protected_residual_grid_w=args.protected_residual_grid_w,
                 training_backend=str(args.training_backend),
                 native_rate_aware=bool(args.enable_native_rate_aware_hprc),
                 native_rate_residual_l1_weight=float(args.native_rate_residual_l1_weight),
@@ -430,6 +454,9 @@ def build_hprc_compact_receiver_training_plan(
     basis_count: int,
     residual_grid_h: int,
     residual_grid_w: int,
+    enable_protected_residual_pathway: bool,
+    protected_residual_grid_h: int | None,
+    protected_residual_grid_w: int | None,
     training_backend: str,
     native_rate_aware: bool,
     native_rate_residual_l1_weight: float,
@@ -473,6 +500,22 @@ def build_hprc_compact_receiver_training_plan(
         "--training-backend",
         str(training_backend),
     ]
+    if enable_protected_residual_pathway:
+        command.append("--enable-protected-residual-pathway")
+        if protected_residual_grid_h is not None:
+            command.extend(
+                [
+                    "--protected-residual-grid-h",
+                    str(int(protected_residual_grid_h)),
+                ]
+            )
+        if protected_residual_grid_w is not None:
+            command.extend(
+                [
+                    "--protected-residual-grid-w",
+                    str(int(protected_residual_grid_w)),
+                ]
+            )
     if native_rate_aware:
         command.append("--native-rate-aware")
         command.extend(
@@ -569,6 +612,17 @@ def build_hprc_compact_receiver_training_plan(
                 {"type": "json_false_authority", "path": adapter_package.as_posix()},
             ]
         )
+    if enable_protected_residual_pathway:
+        extra_postconditions.append(
+            {
+                "type": "json_equals",
+                "path": output_manifest.as_posix(),
+                "key": (
+                    "protected_highres_residual_pathway.enabled"
+                ),
+                "equals": True,
+            }
+        )
     return {
         "schema": HPRC_TRAINING_PLAN_SCHEMA,
         "candidate_id": f"hprc_compact_receiver_{run_id}",
@@ -589,6 +643,19 @@ def build_hprc_compact_receiver_training_plan(
             "basis_count": int(basis_count),
             "residual_grid_h": int(residual_grid_h),
             "residual_grid_w": int(residual_grid_w),
+            "protected_highres_residual_pathway_enabled": bool(
+                enable_protected_residual_pathway
+            ),
+            "protected_residual_grid_h": (
+                None
+                if protected_residual_grid_h is None
+                else int(protected_residual_grid_h)
+            ),
+            "protected_residual_grid_w": (
+                None
+                if protected_residual_grid_w is None
+                else int(protected_residual_grid_w)
+            ),
             "training_backend": str(training_backend),
             "portable_runtime": "numpy",
             "native_rate_aware": bool(native_rate_aware),
@@ -1785,12 +1852,26 @@ def _validate_native_rate_residual_protection_shape_for_campaigns(
             }
         )
     if shape not in expected_shapes:
+        max_frames = max(expected[0] for expected in expected_shapes if expected[0] != 1)
+        grid_h = int(args.residual_grid_h)
+        grid_w = int(args.residual_grid_w)
+        prefix_compatible = (
+            len(shape) in {3, 4}
+            and shape[0] >= max_frames
+            and shape[1] == grid_h
+            and shape[2] == grid_w
+            and (len(shape) == 3 or shape[3] in {1, 3})
+        )
+        if prefix_compatible:
+            return
         raise ValueError(
             "native rate residual protection npy shape mismatch: "
             f"{path} has shape {shape}, but campaign pairs/grid expect one of "
-            f"{sorted(expected_shapes)}. Match --campaign-pairs/--decode-max-pairs and "
-            "--residual-grid-h/--residual-grid-w, or let the queue rebuild the surface "
-            "from P18/P19 artifacts."
+            f"{sorted(expected_shapes)} or one full-video prefix-compatible surface "
+            f"with shape (N>={max_frames}, {grid_h}, {grid_w}[, 3]). Match "
+            "--campaign-pairs/--decode-max-pairs and --residual-grid-h/"
+            "--residual-grid-w, or let the queue rebuild the surface from P18/P19 "
+            "artifacts."
         )
 
 
