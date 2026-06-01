@@ -10,11 +10,12 @@ import numpy as np
 import pytest
 
 from tac.repo_io import sha256_file
-from tac.substrates.hprc.archive import HprcSectionKind, parse_hprc_packet
+from tac.substrates.hprc.archive import HprcSectionKind, pack_hprc_packet, parse_hprc_packet
 from tac.substrates.hprc.archive_candidate import export_hprc_archive_bytes
 from tac.substrates.hprc.learned_receiver import (
     build_compact_receiver_packet_from_lowres_frames,
     decode_compact_receiver_packet,
+    pack_compact_residual_quantized,
     render_compact_receiver_frame_batch,
 )
 from tac.substrates.hprc.rate_collapse import (
@@ -164,7 +165,28 @@ def test_residual_token_collapse_preserves_protected_highres_sidecar() -> None:
     assert compact.residual.protected_q is not None
     np.testing.assert_array_equal(compact.residual.protected_q, base_protected)
     rendered = render_compact_receiver_frame_batch(compact, 0, 6, height=24, width=32)
+    without_protected_sections = parse_hprc_packet(collapsed).section_map()
+    without_protected_sections[HprcSectionKind.RESIDUAL_RC] = pack_compact_residual_quantized(
+        compact.residual.q,
+        scale=compact.residual.scale,
+        protected_q=np.zeros_like(compact.residual.protected_q),
+        protected_scale=compact.residual.protected_scale,
+    )
+    collapsed_packet = parse_hprc_packet(collapsed)
+    without_protected = decode_compact_receiver_packet(
+        parse_hprc_packet(
+            pack_hprc_packet(without_protected_sections, config=collapsed_packet.config)
+        )
+    )
+    rendered_without_protected = render_compact_receiver_frame_batch(
+        without_protected,
+        0,
+        6,
+        height=24,
+        width=32,
+    )
     assert rendered.shape == (6, 24, 32, 3)
+    assert not np.array_equal(rendered, rendered_without_protected)
     assert any(row["accepted"] for row in rows)
     assert metrics["tokens_changed"] > 0
 

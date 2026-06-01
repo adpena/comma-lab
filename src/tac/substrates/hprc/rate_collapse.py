@@ -249,6 +249,7 @@ def transcode_compact_receiver_residual_tokens(
     packet = parse_hprc_packet(packet_bytes)
     compact = decode_compact_receiver_packet(packet)
     section_map = packet.section_map()
+    section_tuple = tuple(sections)
     original_q = np.asarray(compact.residual.q, dtype=np.int16)
     collapsed_q = collapse_residual_tokens(original_q, spec=spec)
     section_map[HprcSectionKind.RESIDUAL_RC] = pack_compact_residual_quantized(
@@ -256,11 +257,12 @@ def transcode_compact_receiver_residual_tokens(
         scale=compact.residual.scale,
         protected_q=compact.residual.protected_q,
         protected_scale=compact.residual.protected_scale,
+        protected_storage_cost_model=_protected_storage_cost_model_for_sections(section_tuple),
     )
     collapsed_packet = pack_hprc_packet(section_map, config=packet.config)
     out, rows = transcode_compact_receiver_sections(
         collapsed_packet,
-        sections=sections,
+        sections=section_tuple,
         brotli_quality=brotli_quality,
         force=False,
     )
@@ -308,6 +310,7 @@ def transcode_compact_receiver_importance_weighted_residual_tokens(
     packet = parse_hprc_packet(packet_bytes)
     compact = decode_compact_receiver_packet(packet)
     section_map = packet.section_map()
+    section_tuple = tuple(sections)
     original_q = np.asarray(compact.residual.q, dtype=np.int16)
     collapsed_q, metrics = collapse_residual_tokens_with_importance(
         original_q,
@@ -323,11 +326,12 @@ def transcode_compact_receiver_importance_weighted_residual_tokens(
         scale=compact.residual.scale,
         protected_q=compact.residual.protected_q,
         protected_scale=compact.residual.protected_scale,
+        protected_storage_cost_model=_protected_storage_cost_model_for_sections(section_tuple),
     )
     collapsed_packet = pack_hprc_packet(section_map, config=packet.config)
     out, rows = transcode_compact_receiver_sections(
         collapsed_packet,
-        sections=sections,
+        sections=section_tuple,
         brotli_quality=brotli_quality,
         force=False,
     )
@@ -350,6 +354,12 @@ def collapse_residual_tokens(
         divisor = int(spec.quant_divisor)
         values = np.rint(values.astype(np.float32) / float(divisor)).astype(np.int16) * divisor
     return values.clip(-127, 127).astype(np.int16)
+
+
+def _protected_storage_cost_model_for_sections(
+    sections: Iterable[HprcSectionKind],
+) -> str:
+    return "brotli" if HprcSectionKind.RESIDUAL_RC in tuple(sections) else "deflate"
 
 
 def collapse_residual_tokens_with_importance(

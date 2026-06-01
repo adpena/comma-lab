@@ -1115,7 +1115,7 @@ class HprcCompactReceiverLongTrainingAdapter:
                     if self.residual_protection is not None
                     else "unmasked_highres_residual"
                 ),
-                "receiver_storage": "residual_rc_v2_int8_protected_sidecar",
+                "receiver_storage": "residual_rc_v2_dense_or_v3_sparse_int8_protected_sidecar",
                 "training_backend": self.effective_training_backend,
                 "portable_runtime": "numpy",
             },

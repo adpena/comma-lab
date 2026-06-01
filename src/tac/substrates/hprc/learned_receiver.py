@@ -46,6 +46,7 @@ _LATENT_HEADER_FMT = "<8sBHHf"
 _SELECTOR_HEADER_FMT = "<8sBH"
 _RESIDUAL_HEADER_FMT = "<8sBHHHBf"
 _PROTECTED_RESIDUAL_HEADER_FMT = "<8sBHHHBfHHf"
+_SPARSE_PROTECTED_RESIDUAL_HEADER_FMT = "<8sBHHHBfHHfI"
 _STATE_HEADER_FMT = "<8sBHBf"
 _ENTROPY_WRAPPER_HEADER_FMT = "<8sBBHI32s"
 
@@ -54,9 +55,14 @@ _LATENT_HEADER_SIZE = struct.calcsize(_LATENT_HEADER_FMT)
 _SELECTOR_HEADER_SIZE = struct.calcsize(_SELECTOR_HEADER_FMT)
 _RESIDUAL_HEADER_SIZE = struct.calcsize(_RESIDUAL_HEADER_FMT)
 _PROTECTED_RESIDUAL_HEADER_SIZE = struct.calcsize(_PROTECTED_RESIDUAL_HEADER_FMT)
+_SPARSE_PROTECTED_RESIDUAL_HEADER_SIZE = struct.calcsize(
+    _SPARSE_PROTECTED_RESIDUAL_HEADER_FMT
+)
 _STATE_HEADER_SIZE = struct.calcsize(_STATE_HEADER_FMT)
 _ENTROPY_WRAPPER_HEADER_SIZE = struct.calcsize(_ENTROPY_WRAPPER_HEADER_FMT)
 _PROTECTED_RESIDUAL_VERSION = 2
+_SPARSE_PROTECTED_RESIDUAL_VERSION = 3
+_SPARSE_PROTECTED_COMPRESSED_FRACTION_LIMIT = 0.002
 
 
 class HprcCompactReceiverError(ValueError):
@@ -152,6 +158,11 @@ def _require_exact_length(actual: int, expected: int, section: str) -> None:
         raise HprcCompactReceiverError(
             f"{section} length mismatch: expected {expected}, got {actual}"
         )
+
+
+def _require_positive_finite(value: float, section: str) -> None:
+    if float(value) <= 0.0 or not np.isfinite(float(value)):
+        raise HprcCompactReceiverError(f"{section} scale must be positive and finite")
 
 
 def is_entropy_wrapped_compact_section(payload: bytes | bytearray | memoryview) -> bool:
@@ -378,6 +389,8 @@ def pack_compact_residual(residual_grid: np.ndarray) -> bytes:
 def pack_compact_residual_protected(
     residual_grid: np.ndarray,
     protected_residual_grid: np.ndarray,
+    *,
+    protected_storage_cost_model: str = "deflate",
 ) -> bytes:
     residual_f = np.asarray(residual_grid, dtype=np.float32)
     protected_f = np.asarray(protected_residual_grid, dtype=np.float32)
@@ -397,20 +410,13 @@ def pack_compact_residual_protected(
     protected_scale = max(protected_max / 127.0, 1.0 / 127.0)
     residual_q = np.rint(residual_f / residual_scale).clip(-127, 127).astype(np.int8)
     protected_q = np.rint(protected_f / protected_scale).clip(-127, 127).astype(np.int8)
-    header = struct.pack(
-        _PROTECTED_RESIDUAL_HEADER_FMT,
-        _RESIDUAL_MAGIC,
-        _PROTECTED_RESIDUAL_VERSION,
-        int(residual_q.shape[0]),
-        int(residual_q.shape[1]),
-        int(residual_q.shape[2]),
-        int(residual_q.shape[3]),
-        float(residual_scale),
-        int(protected_q.shape[1]),
-        int(protected_q.shape[2]),
-        float(protected_scale),
+    return _pack_compact_residual_quantized_with_protected(
+        residual_q,
+        scale=residual_scale,
+        protected_q=protected_q,
+        protected_scale=protected_scale,
+        protected_storage_cost_model=protected_storage_cost_model,
     )
-    return header + residual_q.tobytes(order="C") + protected_q.tobytes(order="C")
 
 
 def pack_compact_residual_quantized(
@@ -419,6 +425,7 @@ def pack_compact_residual_quantized(
     scale: float,
     protected_q: np.ndarray | None = None,
     protected_scale: float = 0.0,
+    protected_storage_cost_model: str = "deflate",
 ) -> bytes:
     q_i8 = np.asarray(q, dtype=np.int16)
     if q_i8.ndim != 4:
@@ -438,21 +445,13 @@ def pack_compact_residual_quantized(
             )
         if float(protected_scale) <= 0.0 or not np.isfinite(float(protected_scale)):
             raise HprcCompactReceiverError("quantized protected residual scale must be positive")
-        protected_i8 = protected_i8.clip(-127, 127).astype(np.int8)
-        header = struct.pack(
-            _PROTECTED_RESIDUAL_HEADER_FMT,
-            _RESIDUAL_MAGIC,
-            _PROTECTED_RESIDUAL_VERSION,
-            int(q_i8.shape[0]),
-            int(q_i8.shape[1]),
-            int(q_i8.shape[2]),
-            int(q_i8.shape[3]),
-            float(scale),
-            int(protected_i8.shape[1]),
-            int(protected_i8.shape[2]),
-            float(protected_scale),
+        return _pack_compact_residual_quantized_with_protected(
+            q_i8,
+            scale=scale,
+            protected_q=protected_i8.clip(-127, 127).astype(np.int8),
+            protected_scale=protected_scale,
+            protected_storage_cost_model=protected_storage_cost_model,
         )
-        return header + q_i8.tobytes(order="C") + protected_i8.tobytes(order="C")
     header = struct.pack(
         _RESIDUAL_HEADER_FMT,
         _RESIDUAL_MAGIC,
@@ -464,6 +463,113 @@ def pack_compact_residual_quantized(
         float(scale),
     )
     return header + q_i8.tobytes(order="C")
+
+
+def _pack_compact_residual_quantized_with_protected(
+    q_i8: np.ndarray,
+    *,
+    scale: float,
+    protected_q: np.ndarray,
+    protected_scale: float,
+    protected_storage_cost_model: str,
+) -> bytes:
+    """Pack protected residuals using the smaller dense or sparse grammar.
+
+    Version 2 stores the whole protected grid densely. Version 3 stores only
+    non-zero protected tokens as flat uint32 indices plus int8 values. Both
+    decode to the same ``CompactResidual.protected_q`` tensor, so receiver
+    semantics stay byte-for-byte equivalent after unpacking.
+    """
+
+    dense_header = struct.pack(
+        _PROTECTED_RESIDUAL_HEADER_FMT,
+        _RESIDUAL_MAGIC,
+        _PROTECTED_RESIDUAL_VERSION,
+        int(q_i8.shape[0]),
+        int(q_i8.shape[1]),
+        int(q_i8.shape[2]),
+        int(q_i8.shape[3]),
+        float(scale),
+        int(protected_q.shape[1]),
+        int(protected_q.shape[2]),
+        float(protected_scale),
+    )
+    base_bytes = q_i8.tobytes(order="C")
+    dense_payload = dense_header + base_bytes + protected_q.tobytes(order="C")
+
+    flat = protected_q.reshape(-1)
+    nonzero = np.flatnonzero(flat)
+    if nonzero.size > np.iinfo(np.uint32).max:
+        raise HprcCompactReceiverError("sparse protected residual token count exceeds u32")
+    sparse_header = struct.pack(
+        _SPARSE_PROTECTED_RESIDUAL_HEADER_FMT,
+        _RESIDUAL_MAGIC,
+        _SPARSE_PROTECTED_RESIDUAL_VERSION,
+        int(q_i8.shape[0]),
+        int(q_i8.shape[1]),
+        int(q_i8.shape[2]),
+        int(q_i8.shape[3]),
+        float(scale),
+        int(protected_q.shape[1]),
+        int(protected_q.shape[2]),
+        float(protected_scale),
+        int(nonzero.size),
+    )
+    sparse_payload = (
+        sparse_header
+        + base_bytes
+        + nonzero.astype("<u4", copy=False).tobytes(order="C")
+        + flat[nonzero].astype(np.int8, copy=False).tobytes(order="C")
+    )
+    if _sparse_protected_residual_is_preferred(
+        nonzero_count=int(nonzero.size),
+        total_count=int(flat.size),
+        dense_bytes=len(dense_payload),
+        sparse_bytes=len(sparse_payload),
+        cost_model=protected_storage_cost_model,
+    ):
+        return sparse_payload
+    return dense_payload
+
+
+def _sparse_protected_residual_is_preferred(
+    *,
+    nonzero_count: int,
+    total_count: int,
+    dense_bytes: int,
+    sparse_bytes: int,
+    cost_model: str,
+) -> bool:
+    """Return whether the coordinate-stream grammar should replace dense zeros.
+
+    Default HPRC exports are ZIP/deflate-wrapped. Rate-collapse promotion
+    candidates pass through a section-local brotli wrapper before the final ZIP
+    container. Exact brotli-in-the-loop selection is too expensive at full600,
+    and deflate is a misleading proxy for coordinate-heavy streams. The safe
+    structural rule is therefore conservative: sparse coordinates are useful
+    for ultra-sparse protected paths, while dense zero runs are the right input
+    to LZ-style coders once the mask has real spatial mass.
+    """
+
+    if sparse_bytes >= dense_bytes:
+        return False
+    if cost_model == "raw":
+        return True
+    if cost_model in {"brotli", "deflate"}:
+        fraction = float(nonzero_count) / float(max(int(total_count), 1))
+        return fraction <= _SPARSE_PROTECTED_COMPRESSED_FRACTION_LIMIT
+    raise HprcCompactReceiverError(f"unknown protected residual cost model: {cost_model}")
+
+
+def _validate_sparse_protected_indices(indices: np.ndarray, protected_len: int) -> None:
+    if indices.size == 0:
+        return
+    if int(indices.max()) >= int(protected_len):
+        raise HprcCompactReceiverError("residual_rc sparse protected index out of range")
+    if np.any(indices[1:] <= indices[:-1]):
+        raise HprcCompactReceiverError(
+            "residual_rc sparse protected indices must be strictly increasing"
+        )
 
 
 def unpack_compact_residual(payload: bytes) -> CompactResidual:
@@ -478,6 +584,8 @@ def unpack_compact_residual(payload: bytes) -> CompactResidual:
     )
     _check_magic(magic, _RESIDUAL_MAGIC, "residual_rc")
     if version == _PROTECTED_RESIDUAL_VERSION:
+        if len(payload) < _PROTECTED_RESIDUAL_HEADER_SIZE:
+            raise HprcCompactReceiverError("residual_rc protected header truncated")
         (
             magic,
             version,
@@ -494,6 +602,8 @@ def unpack_compact_residual(payload: bytes) -> CompactResidual:
             payload[:_PROTECTED_RESIDUAL_HEADER_SIZE],
         )
         _check_magic(magic, _RESIDUAL_MAGIC, "residual_rc")
+        _require_positive_finite(float(scale), "residual_rc")
+        _require_positive_finite(float(protected_scale), "residual_rc protected")
         base_len = int(frames) * int(grid_h) * int(grid_w) * int(channels)
         protected_len = (
             int(frames) * int(protected_grid_h) * int(protected_grid_w) * int(channels)
@@ -520,8 +630,65 @@ def unpack_compact_residual(payload: bytes) -> CompactResidual:
             protected_scale=float(protected_scale),
             protected_q=protected_q,
         )
+    if version == _SPARSE_PROTECTED_RESIDUAL_VERSION:
+        if len(payload) < _SPARSE_PROTECTED_RESIDUAL_HEADER_SIZE:
+            raise HprcCompactReceiverError("residual_rc sparse protected header truncated")
+        (
+            magic,
+            version,
+            frames,
+            grid_h,
+            grid_w,
+            channels,
+            scale,
+            protected_grid_h,
+            protected_grid_w,
+            protected_scale,
+            protected_nnz,
+        ) = struct.unpack(
+            _SPARSE_PROTECTED_RESIDUAL_HEADER_FMT,
+            payload[:_SPARSE_PROTECTED_RESIDUAL_HEADER_SIZE],
+        )
+        _check_magic(magic, _RESIDUAL_MAGIC, "residual_rc")
+        _require_positive_finite(float(scale), "residual_rc")
+        _require_positive_finite(float(protected_scale), "residual_rc sparse protected")
+        base_len = int(frames) * int(grid_h) * int(grid_w) * int(channels)
+        protected_len = (
+            int(frames) * int(protected_grid_h) * int(protected_grid_w) * int(channels)
+        )
+        index_len = int(protected_nnz) * 4
+        value_len = int(protected_nnz)
+        expected = (
+            _SPARSE_PROTECTED_RESIDUAL_HEADER_SIZE + base_len + index_len + value_len
+        )
+        _require_exact_length(len(payload), expected, "residual_rc")
+        base_start = _SPARSE_PROTECTED_RESIDUAL_HEADER_SIZE
+        index_start = base_start + base_len
+        value_start = index_start + index_len
+        q = np.frombuffer(payload[base_start:index_start], dtype=np.int8).reshape(
+            (frames, grid_h, grid_w, channels)
+        )
+        indices = np.frombuffer(payload[index_start:value_start], dtype="<u4")
+        _validate_sparse_protected_indices(indices, protected_len)
+        values = np.frombuffer(payload[value_start:], dtype=np.int8)
+        protected_q = np.zeros((protected_len,), dtype=np.int8)
+        protected_q[indices.astype(np.int64, copy=False)] = values
+        protected_q = protected_q.reshape((frames, protected_grid_h, protected_grid_w, channels))
+        return CompactResidual(
+            frames=int(frames),
+            grid_h=int(grid_h),
+            grid_w=int(grid_w),
+            channels=int(channels),
+            scale=float(scale),
+            q=q,
+            protected_grid_h=int(protected_grid_h),
+            protected_grid_w=int(protected_grid_w),
+            protected_scale=float(protected_scale),
+            protected_q=protected_q,
+        )
     if version != _VERSION:
         raise HprcCompactReceiverError(f"residual_rc version mismatch: {version}")
+    _require_positive_finite(float(scale), "residual_rc")
     expected = _RESIDUAL_HEADER_SIZE + int(frames) * int(grid_h) * int(grid_w) * int(channels)
     _require_exact_length(len(payload), expected, "residual_rc")
     q = np.frombuffer(payload[_RESIDUAL_HEADER_SIZE:], dtype=np.int8).reshape(

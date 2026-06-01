@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -167,6 +168,163 @@ def test_compact_receiver_entropy_wrapped_sections_roundtrip_pixels() -> None:
     assert value_profile["metric_scope"] == "decoder_grid_lowres_advisory_not_contest_score"
     assert value_profile["score_claim"] is False
     assert any(row["delta_mse_rgb255"] > 0 for row in value_profile["section_rows"])
+
+
+def test_compact_receiver_sparse_protected_residual_roundtrips() -> None:
+    residual_q = np.zeros((2, 2, 3, 3), dtype=np.int8)
+    protected_q = np.zeros((2, 64, 64, 3), dtype=np.int8)
+    selected = np.array([7, 101, 4099, 19000], dtype=np.uint32)
+    values = np.array([12, -8, 5, 31], dtype=np.int8)
+    protected_q.reshape(-1)[selected] = values
+    payload = (
+        struct.pack(
+            hprc_receiver._SPARSE_PROTECTED_RESIDUAL_HEADER_FMT,
+            hprc_receiver._RESIDUAL_MAGIC,
+            hprc_receiver._SPARSE_PROTECTED_RESIDUAL_VERSION,
+            residual_q.shape[0],
+            residual_q.shape[1],
+            residual_q.shape[2],
+            residual_q.shape[3],
+            1.0,
+            protected_q.shape[1],
+            protected_q.shape[2],
+            1.0,
+            int(selected.size),
+        )
+        + residual_q.tobytes(order="C")
+        + selected.astype("<u4").tobytes(order="C")
+        + values.tobytes(order="C")
+    )
+
+    assert payload[8] == hprc_receiver._SPARSE_PROTECTED_RESIDUAL_VERSION
+    compact = hprc_receiver.unpack_compact_residual(payload)
+    assert compact.protected_q is not None
+    assert compact.protected_q.shape == protected_q.shape
+    np.testing.assert_array_equal(compact.protected_q, protected_q)
+
+
+def test_compact_receiver_dense_protected_residual_still_roundtrips() -> None:
+    residual = np.zeros((2, 2, 3, 3), dtype=np.float32)
+    protected = np.ones((2, 3, 4, 3), dtype=np.float32) * 7.0
+
+    payload = hprc_receiver.pack_compact_residual_protected(residual, protected)
+
+    assert payload[8] == hprc_receiver._PROTECTED_RESIDUAL_VERSION
+    compact = hprc_receiver.unpack_compact_residual(payload)
+    assert compact.protected_q is not None
+    assert compact.protected_q.shape == protected.shape
+    assert np.count_nonzero(compact.protected_q) == compact.protected_q.size
+
+
+def test_compact_receiver_packer_can_select_sparse_protected_residual() -> None:
+    rng = np.random.default_rng(0)
+    residual = np.zeros((2, 2, 3, 3), dtype=np.float32)
+    protected = np.zeros((2, 64, 64, 3), dtype=np.float32)
+    selected = rng.choice(protected.size, 24, replace=False)
+    protected.reshape(-1)[selected] = rng.integers(-127, 128, size=24).astype(np.float32)
+
+    payload = hprc_receiver.pack_compact_residual_protected(
+        residual,
+        protected,
+        protected_storage_cost_model="deflate",
+    )
+
+    assert payload[8] == hprc_receiver._SPARSE_PROTECTED_RESIDUAL_VERSION
+    compact = hprc_receiver.unpack_compact_residual(payload)
+    assert compact.protected_q is not None
+    assert np.count_nonzero(compact.protected_q) == 24
+
+
+def test_compact_receiver_packer_keeps_dense_for_compressed_non_ultrasparse() -> None:
+    rng = np.random.default_rng(4)
+    residual = np.zeros((2, 2, 3, 3), dtype=np.float32)
+    protected = np.zeros((2, 64, 64, 3), dtype=np.float32)
+    selected = rng.choice(protected.size, 256, replace=False)
+    protected.reshape(-1)[selected] = 25.0
+
+    payload = hprc_receiver.pack_compact_residual_protected(
+        residual,
+        protected,
+        protected_storage_cost_model="brotli",
+    )
+
+    assert payload[8] == hprc_receiver._PROTECTED_RESIDUAL_VERSION
+    compact = hprc_receiver.unpack_compact_residual(payload)
+    assert compact.protected_q is not None
+    assert np.count_nonzero(compact.protected_q) == 256
+
+
+def test_compact_receiver_refuses_duplicate_sparse_protected_indices() -> None:
+    residual_q = np.zeros((1, 1, 1, 3), dtype=np.int8)
+    selected = np.array([2, 2], dtype=np.uint32)
+    values = np.array([12, -8], dtype=np.int8)
+    payload = (
+        struct.pack(
+            hprc_receiver._SPARSE_PROTECTED_RESIDUAL_HEADER_FMT,
+            hprc_receiver._RESIDUAL_MAGIC,
+            hprc_receiver._SPARSE_PROTECTED_RESIDUAL_VERSION,
+            residual_q.shape[0],
+            residual_q.shape[1],
+            residual_q.shape[2],
+            residual_q.shape[3],
+            1.0,
+            1,
+            2,
+            1.0,
+            int(selected.size),
+        )
+        + residual_q.tobytes(order="C")
+        + selected.astype("<u4").tobytes(order="C")
+        + values.tobytes(order="C")
+    )
+
+    with pytest.raises(HprcCompactReceiverError, match="strictly increasing"):
+        hprc_receiver.unpack_compact_residual(payload)
+
+
+def test_compact_receiver_refuses_nonfinite_residual_scales() -> None:
+    residual_q = np.zeros((1, 1, 1, 3), dtype=np.int8)
+    payload = (
+        struct.pack(
+            hprc_receiver._RESIDUAL_HEADER_FMT,
+            hprc_receiver._RESIDUAL_MAGIC,
+            hprc_receiver._VERSION,
+            residual_q.shape[0],
+            residual_q.shape[1],
+            residual_q.shape[2],
+            residual_q.shape[3],
+            float("nan"),
+        )
+        + residual_q.tobytes(order="C")
+    )
+
+    with pytest.raises(HprcCompactReceiverError, match="scale must be positive"):
+        hprc_receiver.unpack_compact_residual(payload)
+
+
+def test_compact_receiver_refuses_nonfinite_protected_scale() -> None:
+    residual_q = np.zeros((1, 1, 1, 3), dtype=np.int8)
+    protected_q = np.zeros((1, 1, 1, 3), dtype=np.int8)
+    payload = (
+        struct.pack(
+            hprc_receiver._PROTECTED_RESIDUAL_HEADER_FMT,
+            hprc_receiver._RESIDUAL_MAGIC,
+            hprc_receiver._PROTECTED_RESIDUAL_VERSION,
+            residual_q.shape[0],
+            residual_q.shape[1],
+            residual_q.shape[2],
+            residual_q.shape[3],
+            1.0,
+            protected_q.shape[1],
+            protected_q.shape[2],
+            float("inf"),
+        )
+        + residual_q.tobytes(order="C")
+        + protected_q.tobytes(order="C")
+    )
+
+    with pytest.raises(HprcCompactReceiverError, match="scale must be positive"):
+        hprc_receiver.unpack_compact_residual(payload)
 
 
 def test_compact_receiver_section_proof_uses_valid_semantic_mutations() -> None:
