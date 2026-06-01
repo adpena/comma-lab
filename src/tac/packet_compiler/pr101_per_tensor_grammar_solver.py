@@ -82,6 +82,13 @@ FALSE_AUTHORITY_FIELDS = {
     "dispatch_attempted": False,
 }
 StoragePermMode = Literal["identity", "pr101-plus-identity", "exhaustive-conv4"]
+StorageOrderMode = Literal[
+    "pr101",
+    "identity",
+    "size_desc",
+    "histogram_greedy",
+    "best-of-builtins",
+]
 DecoderLenArchiveLayout = Literal[
     "fixed_pr101",
     "u32_decoder_len_adapter",
@@ -475,6 +482,7 @@ def solve_grouped_brotli_packet_grammar(
     selected_transform_mode: Literal["stock_pr101", "best_brotli_per_tensor"] = "best_brotli_per_tensor",
     storage_perm_mode: StoragePermMode = "pr101-plus-identity",
     storage_order: Sequence[int] | None = None,
+    storage_order_mode: StorageOrderMode = "pr101",
     exact_stream_count: int | None = len(DECODER_STREAM_ENDS),
     max_streams: int = len(DECODER_STREAM_ENDS),
     brotli_quality: int = 11,
@@ -487,7 +495,9 @@ def solve_grouped_brotli_packet_grammar(
     function prices the next layer that actually matters for PR101-style
     packets: concatenate transformed tensor payloads in storage order, split
     them into Brotli windows, and solve the split-point DP on the real
-    concatenated bytes.  The output is still not a submission packet; non-stock
+    concatenated bytes.  ``storage_order_mode`` makes the section-order axis an
+    automated, deterministic grammar decision instead of a hand-tuned PR101
+    constant.  The output is still not a submission packet; non-stock
     transform/order/split choices need a receiver adapter and full
     inflate/eval replay before dispatch.
     """
@@ -507,6 +517,17 @@ def solve_grouped_brotli_packet_grammar(
     if max_streams < 1:
         raise ValueError("max_streams must be >= 1")
     max_streams = min(int(max_streams), n_tensors)
+    explicit_order = None if storage_order is None else tuple(int(v) for v in storage_order)
+    if explicit_order is not None:
+        _validate_storage_order(explicit_order, n_tensors=n_tensors)
+    elif storage_order_mode not in {
+        "pr101",
+        "identity",
+        "size_desc",
+        "histogram_greedy",
+        "best-of-builtins",
+    }:
+        raise ValueError(f"unknown storage_order_mode: {storage_order_mode!r}")
 
     rows: list[dict[str, Any]] = []
     payloads_by_tensor: dict[int, bytes] = {}
@@ -564,14 +585,52 @@ def solve_grouped_brotli_packet_grammar(
             }
         )
 
-    parts_by_storage = [payloads_by_tensor[idx] for idx in order]
-    selected_partition = _solve_brotli_stream_partition(
-        parts_by_storage,
-        max_streams=max_streams,
-        exact_stream_count=exact_stream_count,
-        brotli_quality=brotli_quality,
-        brotli_lgwin_sweep=brotli_lgwin_sweep,
+    order_candidates = (
+        [{"order_label": "explicit", "storage_order": explicit_order}]
+        if explicit_order is not None
+        else _candidate_storage_orders(
+            payloads_by_tensor,
+            mode=storage_order_mode,
+            n_tensors=n_tensors,
+        )
     )
+    order_results: list[dict[str, Any]] = []
+    selected_order_result: dict[str, Any] | None = None
+    for order_candidate in order_candidates:
+        order = tuple(int(v) for v in order_candidate["storage_order"])
+        _validate_storage_order(order, n_tensors=n_tensors)
+        parts_by_storage = [payloads_by_tensor[idx] for idx in order]
+        partition = _solve_brotli_stream_partition(
+            parts_by_storage,
+            max_streams=max_streams,
+            exact_stream_count=exact_stream_count,
+            brotli_quality=brotli_quality,
+            brotli_lgwin_sweep=brotli_lgwin_sweep,
+        )
+        row = {
+            "schema": "pr101_grouped_brotli_storage_order_candidate.v1",
+            "order_label": str(order_candidate["order_label"]),
+            "storage_order": list(order),
+            "compressed_bytes": int(partition["compressed_bytes"]),
+            "raw_bytes": int(partition["raw_bytes"]),
+            "stream_count": int(partition["stream_count"]),
+            "stream_ends": list(partition["stream_ends"]),
+            "partition": partition,
+        }
+        order_results.append(row)
+        if selected_order_result is None or (
+            int(row["compressed_bytes"]),
+            str(row["order_label"]),
+        ) < (
+            int(selected_order_result["compressed_bytes"]),
+            str(selected_order_result["order_label"]),
+        ):
+            selected_order_result = row
+    if selected_order_result is None:
+        raise ValueError("no feasible grouped storage order candidate")
+    order = tuple(int(v) for v in selected_order_result["storage_order"])
+    selected_partition = dict(selected_order_result["partition"])
+    parts_by_storage = [payloads_by_tensor[idx] for idx in order]
     selected_blob = _pack_parts_for_stream_ends(
         parts_by_storage,
         stream_ends=tuple(selected_partition["stream_ends"]),
@@ -651,7 +710,20 @@ def solve_grouped_brotli_packet_grammar(
         "n_quant": int(n_quant),
         "selected_transform_mode": selected_transform_mode,
         "storage_perm_mode": storage_perm_mode,
+        "storage_order_mode": "explicit" if explicit_order is not None else storage_order_mode,
+        "selected_storage_order_label": str(selected_order_result["order_label"]),
         "storage_order": list(order),
+        "storage_order_candidates": [
+            {
+                key: value
+                for key, value in row.items()
+                if key != "partition"
+            }
+            for row in sorted(
+                order_results,
+                key=lambda item: (int(item["compressed_bytes"]), str(item["order_label"])),
+            )
+        ],
         "exact_stream_count": exact_stream_count,
         "max_streams": max_streams,
         "brotli_quality": int(brotli_quality),
@@ -726,6 +798,9 @@ def build_grouped_optimizer_candidate_queue_from_report(
         "operation_id": "pr101_grouped_brotli_packet_selection",
         "operation_params": {
             "storage_order": report.get("storage_order"),
+            "storage_order_mode": report.get("storage_order_mode"),
+            "selected_storage_order_label": report.get("selected_storage_order_label"),
+            "storage_order_candidates": report.get("storage_order_candidates"),
             "partition": report.get("partition"),
             "adapter_params": report.get("adapter_params"),
             "selected_transform_mode": report.get("selected_transform_mode"),
@@ -778,6 +853,7 @@ def build_pr101_optimal_grammar_campaign_summary(
     archive_manifest: Mapping[str, Any] | None = None,
     receiver_adapter_manifest: Mapping[str, Any] | None = None,
     runtime_tree_manifest: Mapping[str, Any] | None = None,
+    shell_inflate_parity_manifest: Mapping[str, Any] | None = None,
     campaign_id: str = "pr101_optimal_grammar",
 ) -> dict[str, Any]:
     """Build the planner-facing verdict for a PR101 grammar campaign.
@@ -823,6 +899,7 @@ def build_pr101_optimal_grammar_campaign_summary(
         archive_manifest=archive_manifest,
         receiver_adapter_manifest=receiver_adapter_manifest,
         runtime_tree_manifest=runtime_tree_manifest,
+        shell_inflate_parity_manifest=shell_inflate_parity_manifest,
     )
     archive_delta = (
         int(archive_manifest.get("archive_zip_delta_bytes"))
@@ -842,6 +919,7 @@ def build_pr101_optimal_grammar_campaign_summary(
                     _mapping_blockers(archive_manifest),
                     _mapping_blockers(receiver_adapter_manifest),
                     _mapping_blockers(runtime_tree_manifest),
+                    _mapping_blockers(shell_inflate_parity_manifest),
                 )
                 for blocker in (
                     source
@@ -865,6 +943,11 @@ def build_pr101_optimal_grammar_campaign_summary(
             verdict = "grouped_positive_archive_materialized_but_receiver_incompatible"
             next_action = (
                 "materialize_a_receiver_compatible_archive_layout_before_local_replay"
+            )
+        elif artifact_status["local_replay_passed"] and archive_rate_positive:
+            verdict = "grouped_positive_full_frame_parity_passed_exact_auth_gate"
+            next_action = (
+                "queue_exact_cpu_auth_eval_after_lane_claim; cuda_only_if_cpu_axis_warrants"
             )
         elif archive_delta is not None and archive_delta >= 0:
             verdict = "grouped_positive_consumed_by_archive_overhead"
@@ -914,6 +997,9 @@ def build_pr101_optimal_grammar_campaign_summary(
             "runtime_tree_manifest": None
             if runtime_tree_manifest is None
             else runtime_tree_manifest.get("schema"),
+            "shell_inflate_parity_manifest": None
+            if shell_inflate_parity_manifest is None
+            else shell_inflate_parity_manifest.get("schema"),
         },
         "verdict": verdict,
         "next_action": next_action,
@@ -947,12 +1033,21 @@ def build_pr101_optimal_grammar_campaign_summary(
             "receiver_adapter_work_justified": bool(
                 grouped_positive and (archive_delta is None or archive_rate_positive)
             ),
-            "exact_auth_work_justified": False,
-            "exact_auth_work_blocked_until": [
-                "receiver_runtime_consumption_proof_passed",
-                "full_frame_inflate_parity_passed",
-                "local_replay_gate_wins",
-            ],
+            "exact_auth_work_justified": bool(
+                archive_rate_positive and artifact_status["local_replay_passed"]
+            ),
+            "exact_auth_work_blocked_until": (
+                [
+                    "contest_cpu_auth_eval_passed",
+                    "contest_cuda_auth_eval_passed_if_cpu_axis_warrants",
+                ]
+                if archive_rate_positive and artifact_status["local_replay_passed"]
+                else [
+                    "receiver_runtime_consumption_proof_passed",
+                    "full_frame_inflate_parity_passed",
+                    "local_replay_gate_wins",
+                ]
+            ),
             "consumer_surfaces": [
                 "tac.optimization.byte_shaving_campaign.build_signal_surface_from_candidate_queue",
                 "tac.cathedral_consumers.packetir_candidate_queue_consumer.consume_queue",
@@ -1974,6 +2069,106 @@ def _default_storage_order_for_n(n_tensors: int) -> tuple[int, ...]:
     return tuple(idx for idx in DECODER_STORAGE_ORDER if idx < n_tensors)
 
 
+def _candidate_storage_orders(
+    payloads_by_tensor: Mapping[int, bytes],
+    *,
+    mode: StorageOrderMode,
+    n_tensors: int,
+) -> list[dict[str, Any]]:
+    builders = {
+        "pr101": lambda: _default_storage_order_for_n(n_tensors),
+        "identity": lambda: tuple(range(n_tensors)),
+        "size_desc": lambda: tuple(
+            sorted(
+                range(n_tensors),
+                key=lambda idx: (-len(payloads_by_tensor[idx]), idx),
+            )
+        ),
+        "histogram_greedy": lambda: _histogram_greedy_storage_order(
+            payloads_by_tensor,
+            n_tensors=n_tensors,
+        ),
+    }
+    labels = (
+        ("pr101", "identity", "size_desc", "histogram_greedy")
+        if mode == "best-of-builtins"
+        else (mode,)
+    )
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[int, ...]] = set()
+    for label in labels:
+        order = tuple(int(v) for v in builders[label]())
+        _validate_storage_order(order, n_tensors=n_tensors)
+        if order in seen:
+            continue
+        seen.add(order)
+        out.append({"order_label": label, "storage_order": order})
+    return out
+
+
+def _histogram_greedy_storage_order(
+    payloads_by_tensor: Mapping[int, bytes],
+    *,
+    n_tensors: int,
+) -> tuple[int, ...]:
+    """Deterministically cluster tensors by byte-distribution similarity.
+
+    This is deliberately modest: it avoids factorial order search while making
+    the "group statistically homogeneous bytes" rule executable.  Brotli stream
+    split DP still makes the final byte decision after this order is proposed.
+    """
+
+    if n_tensors <= 0:
+        raise ValueError("n_tensors must be positive")
+    distributions = {
+        idx: _payload_byte_distribution(payloads_by_tensor[idx])
+        for idx in range(n_tensors)
+    }
+    remaining = set(range(n_tensors))
+    current = max(remaining, key=lambda idx: (len(payloads_by_tensor[idx]), -idx))
+    order = [current]
+    remaining.remove(current)
+    while remaining:
+        current_dist = distributions[current]
+        current = min(
+            remaining,
+            key=lambda idx: (
+                _jensen_shannon_divergence(current_dist, distributions[idx]),
+                -len(payloads_by_tensor[idx]),
+                idx,
+            ),
+        )
+        order.append(current)
+        remaining.remove(current)
+    return tuple(order)
+
+
+def _payload_byte_distribution(payload: bytes) -> np.ndarray:
+    if not payload:
+        return np.full(256, 1.0 / 256.0, dtype=np.float64)
+    counts = np.bincount(np.frombuffer(payload, dtype=np.uint8), minlength=256).astype(
+        np.float64,
+        copy=False,
+    )
+    total = float(counts.sum())
+    if total <= 0.0:
+        return np.full(256, 1.0 / 256.0, dtype=np.float64)
+    return counts / total
+
+
+def _jensen_shannon_divergence(left: np.ndarray, right: np.ndarray) -> float:
+    midpoint = 0.5 * (left + right)
+    return 0.5 * _kl_divergence_bits(left, midpoint) + 0.5 * _kl_divergence_bits(
+        right,
+        midpoint,
+    )
+
+
+def _kl_divergence_bits(left: np.ndarray, right: np.ndarray) -> float:
+    mask = left > 0
+    return float(np.sum(left[mask] * np.log2(left[mask] / right[mask])))
+
+
 def _validate_storage_order(order: Sequence[int], *, n_tensors: int) -> None:
     values = [int(v) for v in order]
     if sorted(values) != list(range(n_tensors)):
@@ -2168,7 +2363,9 @@ def _grammar_campaign_artifact_status(
     archive_manifest: Mapping[str, Any] | None,
     receiver_adapter_manifest: Mapping[str, Any] | None,
     runtime_tree_manifest: Mapping[str, Any] | None,
+    shell_inflate_parity_manifest: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    local_replay_passed = _shell_inflate_parity_passed(shell_inflate_parity_manifest)
     return {
         "decoder_blob_materialized": bool(
             isinstance(decoder_blob_manifest, Mapping)
@@ -2226,9 +2423,25 @@ def _grammar_campaign_artifact_status(
                 )
             )
         ),
-        "local_replay_passed": False,
+        "local_replay_passed": bool(local_replay_passed),
+        "full_frame_inflate_parity_passed": bool(local_replay_passed),
         "exact_cpu_cuda_eval_passed": False,
     }
+
+
+def _shell_inflate_parity_passed(value: Mapping[str, Any] | None) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+    blockers = value.get("blockers")
+    has_blockers = bool(blockers) if isinstance(blockers, Sequence) else False
+    return bool(
+        value.get("schema") == "shell_inflate_parity_proof_v2"
+        and value.get("full_frame_inflate_output_parity_claim") is True
+        and value.get("contest_full_sample_parity_claim") is True
+        and value.get("cmp_equal") is True
+        and value.get("output_sha256_match") is True
+        and not has_blockers
+    )
 
 
 def _mapping_blockers(value: Mapping[str, Any] | None) -> list[str]:
@@ -2278,6 +2491,14 @@ def _filter_resolved_campaign_blockers(
                 "receiver_codec_constants_override_source_not_emitted",
                 "receiver_runtime_source_not_emitted",
                 "runtime_consumption_proof_missing",
+            }
+        )
+    if artifact_status.get("local_replay_passed"):
+        resolved.update(
+            {
+                "full_frame_inflate_parity_missing",
+                "byte_closed_archive_replay_not_run",
+                "full_frame_file_list_claim_missing",
             }
         )
     return [blocker for blocker in blockers if blocker not in resolved]

@@ -41,6 +41,7 @@ _AUTHORITY_FIELDS = (
 )
 
 _REPLAY_READY_VERDICT = "grouped_positive_runtime_ready_for_local_replay_gate"
+_EXACT_AUTH_GATE_VERDICT = "grouped_positive_full_frame_parity_passed_exact_auth_gate"
 _DEMOTION_VERDICTS = frozenset(
     {
         "current_substrate_grammar_saturated",
@@ -90,11 +91,20 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         and runtime_compatible
         and not _truthy_authority(candidate)
     )
+    exact_auth_recommended = (
+        verdict == _EXACT_AUTH_GATE_VERDICT
+        and archive_rate_positive
+        and artifact_status.get("local_replay_passed") is True
+        and artifact_status.get("full_frame_inflate_parity_passed") is True
+        and not _truthy_authority(candidate)
+    )
     receiver_work_justified = (
         planner_feedback.get("receiver_adapter_work_justified") is True
     )
     demotion_recommended = verdict in _DEMOTION_VERDICTS
-    if local_replay_recommended:
+    if exact_auth_recommended:
+        planner_action = "queue_exact_cpu_auth_eval_after_lane_claim"
+    elif local_replay_recommended:
         planner_action = "run_full_frame_inflate_parity_and_local_replay_gate"
     elif receiver_work_justified:
         planner_action = "build_receiver_adapter_then_reconsume_campaign_summary"
@@ -115,6 +125,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "next_action": next_action,
         "planner_action": planner_action,
         "local_replay_recommended": local_replay_recommended,
+        "exact_auth_recommended": exact_auth_recommended,
         "receiver_adapter_work_justified": receiver_work_justified,
         "demotion_recommended": demotion_recommended,
         "grouped_positive": planner_feedback.get("grouped_positive") is True,
@@ -137,7 +148,9 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
-        "confidence": 0.0 if blockers else (0.5 if local_replay_recommended else 0.25),
+        "confidence": 0.0
+        if blockers
+        else (0.75 if exact_auth_recommended else (0.5 if local_replay_recommended else 0.25)),
         "blockers": blockers,
     }
 
@@ -184,6 +197,12 @@ def _rationale(
         return (
             "Grammar campaign has archive-positive, receiver-compatible bytes; "
             "route to local full-frame replay before any exact auth dispatch."
+        )
+    if verdict == _EXACT_AUTH_GATE_VERDICT:
+        return (
+            "Grammar campaign has archive-positive bytes and full-frame shell "
+            "inflate parity; route to claimed exact CPU auth, with CUDA only if "
+            "the CPU axis warrants follow-up."
         )
     if demotion_recommended:
         return (

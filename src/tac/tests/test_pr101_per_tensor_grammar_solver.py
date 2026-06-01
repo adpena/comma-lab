@@ -274,11 +274,55 @@ def test_grouped_brotli_packet_solver_prices_split_context_not_isolated_bytes() 
     assert "byte_closed_archive_not_materialized" in report["blockers"]
 
 
+def test_grouped_solver_automates_storage_order_selection() -> None:
+    state_dict = _tiny_state_dict(seed=31)
+    pr101_report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="best_brotli_per_tensor",
+        storage_perm_mode="identity",
+        storage_order_mode="pr101",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=5,
+    )
+    best_report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="best_brotli_per_tensor",
+        storage_perm_mode="identity",
+        storage_order_mode="best-of-builtins",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=5,
+    )
+
+    assert best_report["storage_order_mode"] == "best-of-builtins"
+    assert best_report["selected_storage_order_label"] in {
+        "pr101",
+        "identity",
+        "size_desc",
+        "histogram_greedy",
+    }
+    labels = {
+        row["order_label"] for row in best_report["storage_order_candidates"]
+    }
+    assert "pr101" in labels
+    assert "histogram_greedy" in labels
+    assert (
+        best_report["byte_accounting"]["selected_grouped_brotli_bytes"]
+        <= pr101_report["byte_accounting"]["selected_grouped_brotli_bytes"]
+    )
+    assert best_report["partition"]["stream_ends"][-1] == 5
+    assert best_report["parser_roundtrip"]["stream_roundtrip_exact"] is True
+
+
 def test_grouped_brotli_queue_is_consumable_only_for_positive_packet_savings() -> None:
     report = solve_grouped_brotli_packet_grammar(
         _tiny_state_dict(seed=0),
         selected_transform_mode="best_brotli_per_tensor",
         storage_perm_mode="identity",
+        storage_order_mode="best-of-builtins",
         exact_stream_count=2,
         max_streams=2,
         brotli_quality=4,
@@ -291,7 +335,15 @@ def test_grouped_brotli_queue_is_consumable_only_for_positive_packet_savings() -
     assert queue["ready_for_exact_eval_dispatch"] is False
     assert queue["candidate_count"] == 1
     saved = report["byte_accounting"]["grouped_saved_bytes_vs_current_stock"]
-    assert queue["candidates"][0]["candidate_saved_bytes"] == saved
+    first = queue["candidates"][0]
+    assert first["candidate_saved_bytes"] == saved
+    assert first["operation_params"]["storage_order_mode"] == "best-of-builtins"
+    assert first["operation_params"]["selected_storage_order_label"] in {
+        "pr101",
+        "identity",
+        "size_desc",
+        "histogram_greedy",
+    }
     assert len(queue["top_k"]) == (1 if saved > 0 else 0)
     if saved > 0:
         surface = build_signal_surface_from_candidate_queue(queue)
@@ -428,6 +480,77 @@ def test_campaign_summary_routes_grouped_positive_runtime_tree_to_local_replay()
     assert "runtime_consumption_proof_missing" not in summary["blockers"]
     assert "local_replay_gate_wins" in summary["planner_feedback"][
         "exact_auth_work_blocked_until"
+    ]
+
+
+def test_campaign_summary_consumes_full_frame_shell_parity_for_exact_auth_gate() -> None:
+    state_dict = _tiny_state_dict(seed=121)
+    per_tensor_report = solve_state_dict_per_tensor_grammar(
+        state_dict,
+        storage_perm_mode="identity",
+        coders=("brotli",),
+        brotli_quality=4,
+        max_tensors=4,
+        include_current_grouped_pr101=False,
+    )
+    grouped_report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=4,
+    )
+    grouped_report = {
+        **grouped_report,
+        "byte_accounting": {
+            **grouped_report["byte_accounting"],
+            "grouped_delta_bytes_vs_current_stock": -7,
+            "grouped_saved_bytes_vs_current_stock": 7,
+        },
+    }
+    archive_manifest = {
+        "schema": PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
+        "archive_layout": "len24_decoder_len_adapter",
+        "byte_closed_archive_zip_materialized": True,
+        "len24_decoder_len_adapter_parse_safe": True,
+        "archive_zip_delta_bytes": -4,
+        "blockers": ["full_frame_inflate_parity_missing"],
+    }
+    runtime_manifest = {
+        "schema": PR101_LEN24_RUNTIME_TREE_MATERIALIZATION_SCHEMA,
+        "runtime_consumption_status": "len24_receiver_runtime_tree_materialized",
+        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+    }
+    shell_parity = {
+        "schema": "shell_inflate_parity_proof_v2",
+        "full_frame_inflate_output_parity_claim": True,
+        "contest_full_sample_parity_claim": True,
+        "cmp_equal": True,
+        "output_sha256_match": True,
+        "blockers": [],
+    }
+
+    summary = build_pr101_optimal_grammar_campaign_summary(
+        per_tensor_report,
+        grouped_report=grouped_report,
+        archive_manifest=archive_manifest,
+        runtime_tree_manifest=runtime_manifest,
+        shell_inflate_parity_manifest=shell_parity,
+    )
+
+    assert (
+        summary["verdict"]
+        == "grouped_positive_full_frame_parity_passed_exact_auth_gate"
+    )
+    assert summary["artifact_status"]["local_replay_passed"] is True
+    assert summary["artifact_status"]["full_frame_inflate_parity_passed"] is True
+    assert summary["planner_feedback"]["exact_auth_work_justified"] is True
+    assert "full_frame_inflate_parity_missing" not in summary["blockers"]
+    assert "contest_cpu_cuda_exact_eval_not_executed" in summary["blockers"]
+    assert summary["planner_feedback"]["exact_auth_work_blocked_until"] == [
+        "contest_cpu_auth_eval_passed",
+        "contest_cuda_auth_eval_passed_if_cpu_axis_warrants",
     ]
 
 

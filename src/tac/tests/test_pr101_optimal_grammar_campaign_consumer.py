@@ -94,6 +94,31 @@ def test_consumer_routes_archive_positive_runtime_ready_summary_to_local_replay(
     assert verdict["ready_for_exact_eval_dispatch"] is False
 
 
+def test_consumer_routes_full_frame_parity_win_to_exact_cpu_gate() -> None:
+    payload = _summary(
+        verdict="grouped_positive_full_frame_parity_passed_exact_auth_gate",
+        archive_delta=-9,
+        archive_rate_positive=True,
+        runtime_compatible=True,
+    )
+    payload["artifact_status"] = {
+        **payload["artifact_status"],  # type: ignore[index]
+        "local_replay_passed": True,
+        "full_frame_inflate_parity_passed": True,
+    }
+    payload["blockers"] = ["contest_cpu_cuda_exact_eval_not_executed"]
+
+    verdict = consumer.consume_candidate(payload)
+
+    assert verdict["planner_action"] == "queue_exact_cpu_auth_eval_after_lane_claim"
+    assert verdict["exact_auth_recommended"] is True
+    assert verdict["local_replay_recommended"] is False
+    assert verdict["candidate_archive_bytes_delta"] == -9
+    assert verdict["rate_delta_score_if_components_unchanged"] == contest_rate_term(-9)
+    assert verdict["score_claim"] is False
+    assert verdict["ready_for_exact_eval_dispatch"] is False
+
+
 def test_consumer_preserves_false_authority_and_schema_blockers() -> None:
     payload = _summary()
     payload["schema"] = "wrong"

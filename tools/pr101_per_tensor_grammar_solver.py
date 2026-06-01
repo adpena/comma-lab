@@ -218,9 +218,30 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--shell-inflate-parity-proof",
+        type=Path,
+        default=None,
+        help=(
+            "Optional shell_inflate_parity_proof_v2 JSON to fold into the "
+            "campaign summary. This marks full-frame parity as consumed only "
+            "when the proof is blocker-free and contest-full-sample scoped."
+        ),
+    )
+    parser.add_argument(
         "--grouped-transform-mode",
         choices=("stock_pr101", "best_brotli_per_tensor"),
         default="best_brotli_per_tensor",
+    )
+    parser.add_argument(
+        "--grouped-storage-order-mode",
+        choices=("pr101", "identity", "size_desc", "histogram_greedy", "best-of-builtins"),
+        default="pr101",
+        help=(
+            "Automatic section-order candidate set for grouped Brotli solving. "
+            "best-of-builtins prices the PR101 hand order, identity order, "
+            "size-desc order, and byte-histogram greedy order, then selects "
+            "the smallest real grouped payload."
+        ),
     )
     parser.add_argument(
         "--grouped-exact-stream-count",
@@ -341,6 +362,7 @@ def main(argv: list[str] | None = None) -> int:
             n_quant=args.n_quant,
             selected_transform_mode=args.grouped_transform_mode,
             storage_perm_mode=args.storage_perm_mode,
+            storage_order_mode=args.grouped_storage_order_mode,
             exact_stream_count=exact_stream_count,
             max_streams=args.grouped_max_streams,
             brotli_quality=args.brotli_quality,
@@ -449,6 +471,15 @@ def main(argv: list[str] | None = None) -> int:
                     encoding="utf-8",
                 )
     if args.campaign_summary_output is not None:
+        shell_parity_proof = None
+        if args.shell_inflate_parity_proof is not None:
+            if not args.shell_inflate_parity_proof.is_file():
+                raise SystemExit(
+                    f"shell parity proof not found: {args.shell_inflate_parity_proof}"
+                )
+            shell_parity_proof = json.loads(
+                args.shell_inflate_parity_proof.read_text(encoding="utf-8")
+            )
         summary = build_pr101_optimal_grammar_campaign_summary(
             report,
             grouped_report=grouped_report,
@@ -458,6 +489,7 @@ def main(argv: list[str] | None = None) -> int:
             archive_manifest=archive_proof,
             receiver_adapter_manifest=adapter_proof,
             runtime_tree_manifest=runtime_proof,
+            shell_inflate_parity_manifest=shell_parity_proof,
         )
         args.campaign_summary_output.parent.mkdir(parents=True, exist_ok=True)
         args.campaign_summary_output.write_text(
