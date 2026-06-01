@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 
 from tac.optimization.recon_pixel_weight_surface import (
+    VALID_SCORER_BACKENDS,
     JointReconPixelWeightConfig,
     write_joint_p18_p19_recon_pixel_weight_artifact,
 )
@@ -26,6 +27,16 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--num-pairs", default=2, type=int)
     parser.add_argument("--pair-chunk-size", default=2, type=int)
     parser.add_argument("--scorer-device", default="cpu")
+    parser.add_argument(
+        "--scorer-backend",
+        default="mlx",
+        choices=tuple(sorted(VALID_SCORER_BACKENDS)),
+        help=(
+            "Gradient backend. 'mlx' is the fast local acquisition path; "
+            "'torch' is the exact-CPU differentiable scorer fallback when MLX "
+            "direct scorer VJP emits nonfinite gradients."
+        ),
+    )
     parser.add_argument("--d-pose-operating-point", default=3.4e-5, type=float)
     parser.add_argument("--seg-weight", default=100.0, type=float)
     parser.add_argument("--pose-axis-count", default=6, type=int)
@@ -69,6 +80,7 @@ def main() -> int:
         upstream_dir=args.upstream_dir,
         config=config,
         scorer_device=str(args.scorer_device),
+        scorer_backend=str(args.scorer_backend),
         allow_overwrite=bool(args.overwrite),
     )
     print(
@@ -79,6 +91,7 @@ def main() -> int:
                 "weight_path": manifest["weight_path"],
                 "weight_sha256": manifest["weight_sha256"],
                 "weight_bytes": manifest["weight_bytes"],
+                "scorer_backend": manifest["scorer_backend"],
                 "training_consumption_recommended": manifest["metadata"][
                     "training_consumption_recommended"
                 ],

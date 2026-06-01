@@ -37,6 +37,7 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "ready_for_exact_eval_dispatch": False,
     "dispatch_attempted": False,
 }
+VALID_SCORER_BACKENDS = frozenset({"mlx", "torch"})
 
 
 @dataclass(frozen=True)
@@ -202,6 +203,70 @@ def _mlx_to_numpy(value: Any) -> np.ndarray:
     return np.asarray(value)
 
 
+def _finalize_joint_weight_surface(
+    *,
+    seg: np.ndarray,
+    pose: np.ndarray,
+    config: JointReconPixelWeightConfig,
+    gradient_sanitization: list[dict[str, Any]],
+    surface_generation_backend: str,
+    scorer_terms: dict[str, str],
+) -> tuple[np.ndarray, dict[str, Any]]:
+    if seg.shape != pose.shape or seg.ndim != 4 or seg.shape[1] != 2:
+        raise ValueError(f"seg/pose saliency must both be (N,2,H,W); got {seg.shape} vs {pose.shape}")
+
+    nonfinite_records = [
+        item for item in gradient_sanitization if int(item["nonfinite_count"]) > 0
+    ]
+    blockers = [
+        f"nonfinite_gradient_sanitized:{item['component']}"
+        for item in nonfinite_records
+    ]
+    joint = (
+        float(config.seg_weight) * np.asarray(seg, dtype=np.float64)
+        + float(config.pose_gain) * np.asarray(pose, dtype=np.float64)
+    )
+    joint_positive = bool(np.any(joint > 0.0))
+    if not joint_positive:
+        blockers.append("joint_recon_pixel_weight_surface_degenerate_uniform")
+    positive_mean = float(np.mean(joint[joint > 0.0])) if joint_positive else 1.0
+    if float(config.weight_floor_fraction) > 0.0:
+        joint = joint + float(config.weight_floor_fraction) * positive_mean
+    if config.normalize == "mean":
+        mean = float(np.mean(joint))
+        if mean <= 0.0 or not np.isfinite(mean):
+            joint = np.ones_like(joint, dtype=np.float64)
+            mean = 1.0
+        joint = joint / mean
+    weight = np.ascontiguousarray(joint[..., None].astype(np.float32))
+    n, _frames, h, w = seg.shape
+    metadata = {
+        "schema": JOINT_RECON_PIXEL_WEIGHT_SCHEMA,
+        "surface_generation_backend": surface_generation_backend,
+        "local_axis": EVIDENCE_TAG_MLX,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "num_pairs": int(n),
+        "height": int(h),
+        "width": int(w),
+        "channels": 1,
+        "shape": [int(v) for v in weight.shape],
+        "scorer_terms": scorer_terms,
+        "pose_gain": float(config.pose_gain),
+        "seg_weight": float(config.seg_weight),
+        "d_pose_operating_point": float(config.d_pose_operating_point),
+        "normalize": config.normalize,
+        "weight_floor_fraction": float(config.weight_floor_fraction),
+        "weight_stats": _stats(weight),
+        "seg_saliency_stats": _stats(seg),
+        "pose_saliency_stats": _stats(pose),
+        "gradient_sanitization": gradient_sanitization,
+        "blockers": blockers,
+        "training_consumption_recommended": not blockers,
+        **FALSE_AUTHORITY,
+    }
+    return weight, metadata
+
+
 def build_joint_p18_p19_recon_pixel_weight(
     target_rgb_0: Any,
     target_rgb_1: Any,
@@ -228,9 +293,8 @@ def build_joint_p18_p19_recon_pixel_weight(
         )
 
     n, h, w, _c = t0.shape
-    joint = np.zeros((n, 2, h, w), dtype=np.float64)
-    seg = np.zeros_like(joint)
-    pose = np.zeros_like(joint)
+    seg = np.zeros((n, 2, h, w), dtype=np.float64)
+    pose = np.zeros_like(seg)
     sanitization: list[dict[str, Any]] = []
     pose_inverse_variance = [
         float(v) for v in config.pose_inverse_variance[: config.pose_axis_count]
@@ -300,58 +364,125 @@ def build_joint_p18_p19_recon_pixel_weight(
 
         seg[start:end] = seg_saliency
         pose[start:end] = pose_saliency
-        joint[start:end] = (
-            float(config.seg_weight) * seg_saliency
-            + float(config.pose_gain) * pose_saliency
-        )
 
-    nonfinite_records = [
-        item for item in sanitization if int(item["nonfinite_count"]) > 0
-    ]
-    blockers = [
-        f"nonfinite_gradient_sanitized:{item['component']}"
-        for item in nonfinite_records
-    ]
-    joint_positive = bool(np.any(joint > 0.0))
-    if not joint_positive:
-        blockers.append("joint_recon_pixel_weight_surface_degenerate_uniform")
-    positive_mean = float(np.mean(joint[joint > 0.0])) if joint_positive else 1.0
-    if float(config.weight_floor_fraction) > 0.0:
-        joint = joint + float(config.weight_floor_fraction) * positive_mean
-    if config.normalize == "mean":
-        mean = float(np.mean(joint))
-        if mean <= 0.0 or not np.isfinite(mean):
-            joint = np.ones_like(joint, dtype=np.float64)
-            mean = 1.0
-        joint = joint / mean
-    weight = np.ascontiguousarray(joint[..., None].astype(np.float32))
-    metadata = {
-        "schema": JOINT_RECON_PIXEL_WEIGHT_SCHEMA,
-        "local_axis": EVIDENCE_TAG_MLX,
-        "evidence_grade": EVIDENCE_GRADE_MLX,
-        "num_pairs": int(n),
-        "height": int(h),
-        "width": int(w),
-        "channels": 1,
-        "shape": [int(v) for v in weight.shape],
-        "scorer_terms": {
+    return _finalize_joint_weight_surface(
+        seg=seg,
+        pose=pose,
+        config=config,
+        gradient_sanitization=sanitization,
+        surface_generation_backend="mlx_direct_scorer_vjp.v1",
+        scorer_terms={
             "p18_segnet": "mlx_segnet_top2_margin_vjp_on_last_frame",
             "p19_posenet": "mlx_posenet_per_axis_jacobian_norm_on_pair",
         },
-        "pose_gain": float(config.pose_gain),
-        "seg_weight": float(config.seg_weight),
-        "d_pose_operating_point": float(config.d_pose_operating_point),
-        "normalize": config.normalize,
-        "weight_floor_fraction": float(config.weight_floor_fraction),
-        "weight_stats": _stats(weight),
-        "seg_saliency_stats": _stats(seg),
-        "pose_saliency_stats": _stats(pose),
-        "gradient_sanitization": sanitization,
-        "blockers": blockers,
-        "training_consumption_recommended": not blockers,
-        **FALSE_AUTHORITY,
-    }
-    return weight, metadata
+    )
+
+
+def build_joint_p18_p19_recon_pixel_weight_torch(
+    target_rgb_0: Any,
+    target_rgb_1: Any,
+    *,
+    torch_posenet: Any,
+    torch_segnet: Any,
+    config: JointReconPixelWeightConfig,
+    device: str = "cpu",
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Compute finite P18/P19 saliency with PyTorch autograd.
+
+    This backend is slower than the MLX direct-scorer VJP path, but it uses the
+    canonical differentiable scorer preprocessing and is the fail-closed fallback
+    when the MLX scorer adapter produces nonfinite gradients.
+    """
+
+    import torch
+
+    t0 = _as_target_array(target_rgb_0, name="target_rgb_0")
+    t1 = _as_target_array(target_rgb_1, name="target_rgb_1")
+    if t0.shape != t1.shape:
+        raise ValueError(f"target shapes must match; got {t0.shape} vs {t1.shape}")
+    if int(t0.shape[0]) != int(config.num_pairs):
+        raise ValueError(
+            f"config.num_pairs={config.num_pairs} does not match targets {t0.shape[0]}"
+        )
+    n, h, w, _c = t0.shape
+    seg = np.zeros((n, 2, h, w), dtype=np.float64)
+    pose = np.zeros_like(seg)
+    sanitization: list[dict[str, Any]] = []
+    pose_inverse_variance = [
+        float(v) for v in config.pose_inverse_variance[: config.pose_axis_count]
+    ]
+    dev = torch.device(device)
+    torch_posenet.eval().to(dev)
+    torch_segnet.eval().to(dev)
+    for parameter in list(torch_posenet.parameters()) + list(torch_segnet.parameters()):
+        parameter.requires_grad_(False)
+
+    for start in range(0, n, int(config.pair_chunk_size)):
+        end = min(start + int(config.pair_chunk_size), n)
+        pairs_np = np.stack([t0[start:end], t1[start:end]], axis=1) * 255.0
+        pairs = torch.as_tensor(
+            np.ascontiguousarray(pairs_np.transpose(0, 1, 4, 2, 3)),
+            dtype=torch.float32,
+            device=dev,
+        )
+        pairs.requires_grad_(True)
+
+        seg_input = torch_segnet.preprocess_input(pairs)
+        logits = torch_segnet(seg_input)
+        with torch.no_grad():
+            ref_classes = logits.argmax(dim=1)
+        true_logit = logits.gather(1, ref_classes[:, None, :, :]).squeeze(1)
+        masked = logits.masked_fill(
+            torch.nn.functional.one_hot(
+                ref_classes,
+                num_classes=int(logits.shape[1]),
+            )
+            .permute(0, 3, 1, 2)
+            .bool(),
+            -1.0e9,
+        )
+        other_logit = masked.max(dim=1).values
+        hinge = torch.relu(other_logit - true_logit + float(config.seg_margin_delta))
+        seg_loss = hinge.mean()
+        seg_grad = torch.autograd.grad(seg_loss, pairs, retain_graph=False)[0]
+        seg_raw, seg_sanitized = _sanitize_gradient_component(
+            np.abs(seg_grad.detach().cpu().numpy().transpose(0, 1, 3, 4, 2)),
+            component=f"torch_seg_margin_grad_pairs_{start}_{end}",
+        )
+        sanitization.append(seg_sanitized)
+        seg[start:end] = np.sum(seg_raw.astype(np.float64), axis=-1)
+
+        pose_sq = np.zeros_like(seg[start:end])
+        pose_pairs = pairs.detach().clone().requires_grad_(True)
+        pose_input = torch_posenet.preprocess_input(pose_pairs)
+        pose_out = torch_posenet(pose_input)["pose"]
+        axis_count = min(int(config.pose_axis_count), int(pose_out.shape[-1]))
+        for axis, inv_var in enumerate(pose_inverse_variance[:axis_count]):
+            retain = axis < axis_count - 1
+            grad = torch.autograd.grad(
+                pose_out[..., axis].mean(),
+                pose_pairs,
+                retain_graph=retain,
+            )[0]
+            g_raw, pose_sanitized = _sanitize_gradient_component(
+                grad.detach().cpu().numpy().transpose(0, 1, 3, 4, 2),
+                component=f"torch_pose_axis_{axis}_grad_pairs_{start}_{end}",
+            )
+            sanitization.append(pose_sanitized)
+            pose_sq += float(inv_var) * np.sum(np.square(g_raw), axis=-1)
+        pose[start:end] = np.sqrt(np.maximum(pose_sq, 0.0))
+
+    return _finalize_joint_weight_surface(
+        seg=seg,
+        pose=pose,
+        config=config,
+        gradient_sanitization=sanitization,
+        surface_generation_backend="torch_exact_cpu_scorer_vjp.v1",
+        scorer_terms={
+            "p18_segnet": "torch_segnet_reference_argmax_margin_vjp_on_last_frame",
+            "p19_posenet": "torch_posenet_differentiable_preprocess_per_axis_jacobian_norm_on_pair",
+        },
+    )
 
 
 def build_joint_p18_p19_recon_pixel_weight_from_video(
@@ -360,6 +491,7 @@ def build_joint_p18_p19_recon_pixel_weight_from_video(
     upstream_dir: str | Path,
     config: JointReconPixelWeightConfig,
     scorer_device: str = "cpu",
+    scorer_backend: str = "mlx",
 ) -> tuple[np.ndarray, dict[str, Any]]:
     """Decode the real video, load the MLX scorer adapter, and build weights."""
 
@@ -374,6 +506,24 @@ def build_joint_p18_p19_recon_pixel_weight_from_video(
         output_height=int(config.scorer_hw[0]),
         output_width=int(config.scorer_hw[1]),
     )
+    backend = str(scorer_backend)
+    if backend not in VALID_SCORER_BACKENDS:
+        raise ValueError(f"scorer_backend must be one of {sorted(VALID_SCORER_BACKENDS)}")
+    if backend == "torch":
+        from tac.scorer import load_differentiable_scorers
+
+        posenet, segnet = load_differentiable_scorers(
+            str(upstream_dir),
+            device=scorer_device,
+        )
+        return build_joint_p18_p19_recon_pixel_weight_torch(
+            target_rgb_0,
+            target_rgb_1,
+            torch_posenet=posenet,
+            torch_segnet=segnet,
+            config=config,
+            device=scorer_device,
+        )
     mlx_scorer = load_mlx_distortion_scorer_adapter_from_upstream(
         str(upstream_dir),
         device=scorer_device,
@@ -393,6 +543,7 @@ def write_joint_p18_p19_recon_pixel_weight_artifact(
     upstream_dir: str | Path,
     config: JointReconPixelWeightConfig,
     scorer_device: str = "cpu",
+    scorer_backend: str = "mlx",
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     """Build and write a queue-consumable joint recon-pixel-weight artifact."""
@@ -407,6 +558,7 @@ def write_joint_p18_p19_recon_pixel_weight_artifact(
         upstream_dir=upstream_dir,
         config=config,
         scorer_device=scorer_device,
+        scorer_backend=scorer_backend,
     )
     weight_path = out / "joint_p18_p19_recon_pixel_weight.npz"
     np.savez_compressed(weight_path, weight=weight)
@@ -421,6 +573,7 @@ def write_joint_p18_p19_recon_pixel_weight_artifact(
         "source_video_path": Path(source_video_path).expanduser().as_posix(),
         "upstream_dir": Path(upstream_dir).expanduser().as_posix(),
         "scorer_device": scorer_device,
+        "scorer_backend": scorer_backend,
         "config": asdict(config),
         "elapsed_seconds": time.time() - started,
         "metadata": metadata,
@@ -434,8 +587,10 @@ __all__ = [
     "FALSE_AUTHORITY",
     "JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA",
     "JOINT_RECON_PIXEL_WEIGHT_SCHEMA",
+    "VALID_SCORER_BACKENDS",
     "JointReconPixelWeightConfig",
     "build_joint_p18_p19_recon_pixel_weight",
     "build_joint_p18_p19_recon_pixel_weight_from_video",
+    "build_joint_p18_p19_recon_pixel_weight_torch",
     "write_joint_p18_p19_recon_pixel_weight_artifact",
 ]

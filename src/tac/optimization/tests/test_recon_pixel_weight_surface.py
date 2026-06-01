@@ -10,6 +10,7 @@ from tac.optimization.recon_pixel_weight_surface import (
     JOINT_RECON_PIXEL_WEIGHT_SCHEMA,
     JointReconPixelWeightConfig,
     build_joint_p18_p19_recon_pixel_weight,
+    build_joint_p18_p19_recon_pixel_weight_torch,
     write_joint_p18_p19_recon_pixel_weight_artifact,
 )
 
@@ -42,6 +43,48 @@ class _FakeMlxScorer:
                 axis=1,
             )
         }
+
+
+class _FakeTorchSegNet:
+    def eval(self):
+        return self
+
+    def to(self, _device):
+        return self
+
+    def parameters(self):
+        return []
+
+    def preprocess_input(self, x):
+        return x[:, -1, ...]
+
+    def __call__(self, x):
+        import torch
+
+        red = x[:, 0:1, :, :] / 255.0
+        green = x[:, 1:2, :, :] / 255.0
+        zeros = torch.zeros_like(red)
+        return torch.cat([red, green, -red, -green, zeros], dim=1)
+
+
+class _FakeTorchPoseNet:
+    def eval(self):
+        return self
+
+    def to(self, _device):
+        return self
+
+    def parameters(self):
+        return []
+
+    def preprocess_input(self, x):
+        return x
+
+    def __call__(self, x):
+        import torch
+
+        base = torch.mean(x, dim=(1, 2, 3, 4)).reshape((-1, 1)) / 255.0
+        return {"pose": torch.cat([base * float(i + 1) for i in range(6)], dim=1)}
 
 
 @mlx_only
@@ -91,6 +134,39 @@ def test_joint_recon_pixel_weight_config_refuses_bad_pose_variance() -> None:
         )
 
 
+def test_torch_joint_recon_pixel_weight_surface_is_finite_and_recommended() -> None:
+    pytest.importorskip("torch")
+    rng = np.random.default_rng(44)
+    target0 = rng.random((2, 8, 8, 3), dtype=np.float32)
+    target1 = rng.random((2, 8, 8, 3), dtype=np.float32)
+
+    weight, metadata = build_joint_p18_p19_recon_pixel_weight_torch(
+        target0,
+        target1,
+        torch_posenet=_FakeTorchPoseNet(),
+        torch_segnet=_FakeTorchSegNet(),
+        config=JointReconPixelWeightConfig(
+            num_pairs=2,
+            pair_chunk_size=1,
+            scorer_hw=(8, 8),
+            d_pose_operating_point=3.4e-5,
+            seg_margin_delta=1.0,
+            weight_floor_fraction=0.05,
+            normalize="mean",
+        ),
+        device="cpu",
+    )
+
+    assert weight.shape == (2, 2, 8, 8, 1)
+    assert weight.dtype == np.float32
+    assert np.all(np.isfinite(weight))
+    assert metadata["surface_generation_backend"] == "torch_exact_cpu_scorer_vjp.v1"
+    assert metadata["training_consumption_recommended"] is True
+    assert metadata["blockers"] == []
+    assert metadata["seg_saliency_stats"]["max"] > 0.0
+    assert metadata["pose_saliency_stats"]["max"] > 0.0
+
+
 def test_write_joint_recon_pixel_weight_artifact_preserves_blockers(
     tmp_path, monkeypatch
 ) -> None:
@@ -120,6 +196,7 @@ def test_write_joint_recon_pixel_weight_artifact_preserves_blockers(
         source_video_path="upstream/videos/0.mkv",
         upstream_dir="upstream",
         config=JointReconPixelWeightConfig(num_pairs=1),
+        scorer_backend="torch",
     )
 
     manifest_path = tmp_path / "joint_p18_p19_recon_pixel_weight_manifest.json"
@@ -130,5 +207,6 @@ def test_write_joint_recon_pixel_weight_artifact_preserves_blockers(
     assert loaded["metadata"]["blockers"] == [
         "nonfinite_gradient_sanitized:pose_axis_0_grad_pairs_0_1"
     ]
+    assert loaded["scorer_backend"] == "torch"
     assert loaded["score_claim"] is False
     assert loaded["ready_for_exact_eval_dispatch"] is False
