@@ -108,6 +108,33 @@ DEFAULT_CODERS: tuple[CoderName, ...] = (
 )
 
 
+def measure_payload_coder_candidate(
+    payload: bytes | bytearray | memoryview,
+    *,
+    coder: CoderName,
+    brotli_quality: int = 11,
+    brotli_lgwin_sweep: bool = False,
+) -> dict[str, Any]:
+    """Measure one shared payload-coder candidate.
+
+    This public facade lets non-PR101 packet compilers reuse the same tested
+    entropy-coder portfolio without importing private implementation helpers.
+    """
+
+    return _measure_coder(
+        bytes(payload),
+        coder=coder,
+        brotli_quality=brotli_quality,
+        brotli_lgwin_sweep=brotli_lgwin_sweep,
+    )
+
+
+def payload_saturation_diagnostic(ratio: float | None) -> dict[str, Any]:
+    """Return the shared coded-over-Shannon-floor saturation diagnostic."""
+
+    return _saturation_diagnostic(ratio)
+
+
 def measure_tensor_grammar_candidates(
     q_i8: np.ndarray,
     *,
