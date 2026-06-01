@@ -11,11 +11,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+import tools.run_compact_renderer_mlx_spine_runner as runner_mod  # noqa: E402
 from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+    DEFAULT_PR95_SOURCE_ARCHIVE_ZIP,
     _parse_args,
     adapt_pr95_mlx_report_to_spine,
     build_plan_only_report,
+    execute_pr95_hnerv_mlx_scoreaware_and_adapt,
 )
 
 
@@ -126,7 +129,12 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert "pvq_nerv" in families
     assert "rt_vq_nerv" in families
     assert "pact_nerv_selector_v4" in families
-    assert families["pr95_hnerv"]["status"] == "executable_mlx_backend_available"
+    assert families["pr95_hnerv"]["status"] == (
+        "executable_mlx_archive_export_control_arm"
+    )
+    assert "not a PR95-faithful reproduction" in families["pr95_hnerv"][
+        "execution_scope"
+    ]
     assert families["pact_nerv_vq"]["status"] == "executable_mlx_backend_available"
     assert families["pvq_nerv"]["status"] == "executable_via_pact_nerv_vq_adapter"
     assert families["rnerv"]["status"] == "migration_required"
@@ -216,6 +224,10 @@ def test_pr95_hnerv_execute_parser_exposes_public_archive_seed() -> None:
             "600",
             "--epochs",
             "2",
+            "--run-receiver-proof",
+            "--keep-receiver-proof-output",
+            "--receiver-proof-timeout-seconds",
+            "17",
         ]
     )
 
@@ -223,3 +235,90 @@ def test_pr95_hnerv_execute_parser_exposes_public_archive_seed() -> None:
     assert args.pr95_source_archive == Path("public_pr95/archive.zip")
     assert args.num_pairs == 600
     assert args.epochs == 2
+    assert args.run_receiver_proof is True
+    assert args.keep_receiver_proof_output is True
+    assert args.receiver_proof_timeout_seconds == 17
+
+
+def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "pr95_public_archive.zip"
+        archive.write_bytes(DEFAULT_PR95_SOURCE_ARCHIVE_ZIP.read_bytes())
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    def fake_receiver_proof(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = Path(kwargs["archive_zip"])
+        report = {
+            "schema": "pr95_hnerv_receiver_proof.v1",
+            "proof_path": (out / "pr95_hnerv_receiver_proof.json").as_posix(),
+            "archive_path": archive.as_posix(),
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "runtime_consumption_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "receiver_output_kind": "contest_raw_rgb_interleaved",
+            "receiver_output_bytes": 1,
+            "receiver_proof_valid": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "exact_readiness_refusal": {
+                "schema": "exact_readiness_refusal.v1",
+                "ready": False,
+                "blockers": ["runtime_consumption_smoke_is_not_score_authority"],
+            },
+        }
+        Path(report["proof_path"]).write_text(
+            json.dumps(report, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return report
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_run_pr95_hnerv_mlx_scoreaware_smoke",
+        fake_train,
+    )
+    monkeypatch.setattr(runner_mod, "run_pr95_hnerv_receiver_proof", fake_receiver_proof)
+
+    out = execute_pr95_hnerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "run",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-5,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        source_archive_zip=DEFAULT_PR95_SOURCE_ARCHIVE_ZIP,
+        hard_byte_ceilings=(178_000,),
+        run_receiver_proof=True,
+        allow_overwrite=True,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["score_claim"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert out["projection_manifest_paths"]
+    assert out["receiver_proof_report_paths"]
+    assert Path(out["acquisition_report_path"]).is_file()
+    runner = json.loads(Path(out["bounded_runner_plan_path"]).read_text())
+    row = runner["selected_runner_rows"][0]
+    assert row["family"] == "pr95_hnerv"
+    assert row["receiver_proof_observed"] is True
+    assert row["receiver_proof_passed"] is True
+    assert out["control_arm_scope"]["source_faithful_pr95_reproduction"] is False
+    assert (
+        "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction"
+        in out["blockers"]
+    )
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in out["blockers"]

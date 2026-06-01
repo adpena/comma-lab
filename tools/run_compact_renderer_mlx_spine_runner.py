@@ -14,8 +14,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -28,6 +30,9 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
+    PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
 from tac.substrates.hprc.representation_spine import (  # noqa: E402
     build_pr95_hnerv_spine_from_archive,
@@ -55,6 +60,11 @@ DEFAULT_PR95_SOURCE_ARCHIVE_ZIP = (
     / "experiments/results/public_pr_archive_release_view"
     / "public_pr95_intake_20260505_auto/archive.zip"
 )
+DEFAULT_PR95_RECEIVER_RUNTIME_DIR = (
+    REPO_ROOT
+    / "experiments/results/public_pr_archive_release_view"
+    / "public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
+)
 TARGET_FAMILIES = (
     "pr95_hnerv",
     "rnerv",
@@ -69,12 +79,17 @@ EXECUTABLE_FAMILIES = ("pr95_hnerv", "pact_nerv_vq")
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
         "canonical_family": "pr95_hnerv",
-        "backend_status": "executable_mlx_backend_available",
-        "trainer_kind": "canonical_mlx_score_aware_harness_public_pr95_seeded",
+        "backend_status": "executable_mlx_archive_export_control_arm",
+        "trainer_kind": "canonical_mlx_score_aware_harness_public_pr95_seeded_control_arm",
         "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family pr95_hnerv",
         "archive_exporter": "tac.local_acceleration.pr95_hnerv_mlx.write_pr95_public_archive_zip",
         "receiver_proof": "pr95_public_inflate_sh_required_before_exact_gate",
         "next_action": "run_pr95_hnerv_scoreaware_full_pair_continuation_then_receiver_proof",
+        "execution_scope": (
+            "MLX advisory archive-export control arm; not a PR95-faithful "
+            "reproduction or score authority until source-faithful curriculum, "
+            "receiver proof, full-frame parity, and exact CPU/CUDA gates close"
+        ),
     },
     "pact_nerv_vq": {
         "canonical_family": "pact_nerv_vq",
@@ -87,6 +102,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         ),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
         "next_action": "train_mlx_export_archive_spine_receiver_proof_then_full_video_replay",
+        "execution_scope": "MLX advisory train/export/archive candidate lane",
     },
     "pvq_nerv": {
         "canonical_family": "pact_nerv_vq",
@@ -99,6 +115,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         ),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
         "next_action": "route_to_pact_nerv_vq_until_pvq_specific_adapter_diverges",
+        "execution_scope": "MLX advisory adapter route through pact_nerv_vq",
     },
     "pact_nerv_selector_v4": {
         "canonical_family": "pact_nerv",
@@ -111,6 +128,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         ),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
         "next_action": "wire_selector_v4_bundle_into_this_runner_or_import_existing_training_artifact",
+        "execution_scope": "archive exporter exists; trainer actuator migration pending",
     },
     "rnerv": {
         "canonical_family": "rnerv",
@@ -120,6 +138,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "archive_exporter": None,
         "receiver_proof": "missing_until_adapter_implemented",
         "next_action": "implement_rnerv_mlx_renderer_exporter_under_spine_contract",
+        "execution_scope": "not executable until MLX trainer/exporter lands",
     },
     "sr_nerv": {
         "canonical_family": "sr_nerv",
@@ -129,6 +148,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "archive_exporter": None,
         "receiver_proof": "missing_until_adapter_implemented",
         "next_action": "implement_lowres_base_plus_charged_upsampler_mlx_adapter",
+        "execution_scope": "not executable until protected-resolution MLX adapter lands",
     },
     "boostnerv": {
         "canonical_family": "boostnerv",
@@ -138,6 +158,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "archive_exporter": None,
         "receiver_proof": "missing_until_mlx_or_portable_runtime_adapter_implemented",
         "next_action": "migrate_boost_residual_to_mlx_or_mark_as_non_primary_sidecar",
+        "execution_scope": "not executable in the MLX-first runner yet",
     },
     "rt_vq_nerv": {
         "canonical_family": "rt_vq_nerv",
@@ -147,8 +168,18 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "archive_exporter": None,
         "receiver_proof": "missing_until_adapter_implemented",
         "next_action": "implement_residual_token_vq_as_charged_section_not_hidden_sidecar",
+        "execution_scope": "not executable until residual-token adapter lands",
     },
 }
+
+PR95_HNERV_CONTROL_ARM_EXACT_BLOCKERS: tuple[str, ...] = (
+    "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction",
+    *PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
+    "pr95_hnerv_stage8_muon_continuation_not_wired",
+    "pr95_hnerv_default_scorer_distillation_weights_are_zero_unless_cli_overridden",
+    "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+    "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+)
 
 
 class CompactRendererMlxSpineRunnerError(ValueError):
@@ -626,6 +657,10 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
     allow_segnet_only_research: bool = False,
+    run_receiver_proof: bool = False,
+    receiver_proof_runtime_dir: str | Path = DEFAULT_PR95_RECEIVER_RUNTIME_DIR,
+    keep_receiver_proof_output: bool = False,
+    receiver_proof_timeout_seconds: int = 1800,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -689,7 +724,33 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
     selected_runner_rows: list[dict[str, Any]] = []
     runner_plan_blockers: list[Any] = []
+    receiver_proof_report: dict[str, Any] | None = None
+    receiver_proof_paths: list[Path] = []
     if archive_file is not None:
+        if run_receiver_proof:
+            try:
+                receiver_proof_report = run_pr95_hnerv_receiver_proof(
+                    archive_zip=archive_file,
+                    runtime_dir=receiver_proof_runtime_dir,
+                    output_dir=out / "receiver_proof",
+                    keep_output=keep_receiver_proof_output,
+                    timeout_seconds=receiver_proof_timeout_seconds,
+                    repo_root=root,
+                )
+                report_path = receiver_proof_report.get(
+                    "report_path",
+                    receiver_proof_report.get("proof_path"),
+                )
+                if isinstance(report_path, str) and report_path:
+                    receiver_proof_paths = [Path(report_path)]
+            except Exception as exc:
+                receiver_proof_report = {
+                    "schema": "pr95_hnerv_receiver_proof.v1",
+                    "receiver_proof_valid": False,
+                    "failure": repr(exc),
+                    "blockers": ["pr95_receiver_proof_execution_failed"],
+                    **FALSE_AUTHORITY,
+                }
         try:
             spine = build_pr95_hnerv_spine_from_archive(archive_file)
             projection = write_representation_spine_projection(
@@ -706,6 +767,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             _write_json(acquisition_path, acquisition)
             runner_plan = build_spine_bounded_runner_plan(
                 acquisition_report_path=acquisition_path,
+                receiver_proof_report_paths=receiver_proof_paths,
                 hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
                 repo_root=root,
             )
@@ -719,10 +781,28 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
         except Exception as exc:
             spine_projection_error = repr(exc)
     blockers: list[Any] = [
-        "receiver_proof_not_executed",
         "full_video_mlx_scorer_replay_not_attached",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    if receiver_proof_report is None:
+        blockers.append("receiver_proof_not_executed")
+    elif not receiver_proof_report.get("receiver_proof_valid"):
+        blockers.append("receiver_proof_failed")
+        blockers.extend(receiver_proof_report.get("blockers") or [])
+    else:
+        proof_refusal = receiver_proof_report.get("exact_readiness_refusal")
+        if isinstance(proof_refusal, dict):
+            blockers.extend(proof_refusal.get("blockers") or [])
+    blockers.extend(PR95_HNERV_CONTROL_ARM_EXACT_BLOCKERS)
+    if receiver_proof_report is None or not receiver_proof_report.get(
+        "runtime_consumption_proof_passed"
+    ):
+        blockers.extend(
+            [
+                "runtime_consumption_proof_missing",
+                "receiver_proof_missing",
+            ]
+        )
     if int(num_pairs) < 600:
         blockers.append("partial_pair_coverage_not_promotion_comparable")
     if archive_path is None:
@@ -750,6 +830,10 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             "archive_sha256": artifact_dict.get("archive_sha256"),
             "source_archive_zip": str(Path(source_archive_zip)),
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
+            "receiver_proof_report_paths": [
+                path.as_posix() for path in receiver_proof_paths
+            ],
+            "receiver_proof_report": receiver_proof_report,
             "spine_projection_error": spine_projection_error,
             "acquisition_report_path": (
                 acquisition_path.as_posix() if acquisition_path.is_file() else None
@@ -775,6 +859,19 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
+            "control_arm_scope": {
+                "schema": "pr95_hnerv_mlx_control_arm_scope.v1",
+                "archive_export_executable": archive_file is not None,
+                "source_faithful_pr95_reproduction": False,
+                "score_authority": False,
+                "runtime_consumption_proven": (
+                    receiver_proof_report is not None
+                    and receiver_proof_report.get("runtime_consumption_proof_passed")
+                    is True
+                ),
+                "full_frame_inflate_parity_proven": False,
+                "exact_cpu_cuda_authority": False,
+            },
             "hprc_queue_followup_report_paths": [
                 _resolve(path, base=root).as_posix()
                 for path in hprc_queue_followup_report_paths
@@ -785,6 +882,185 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     path = out / "compact_renderer_mlx_spine_runner_report.json"
     _write_json(path, final)
     return {**final, "report_path": path.as_posix()}
+
+
+def run_pr95_hnerv_receiver_proof(
+    *,
+    archive_zip: str | Path,
+    runtime_dir: str | Path,
+    output_dir: str | Path,
+    keep_output: bool,
+    timeout_seconds: int,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Prove the PR95 runtime consumes the candidate archive bytes.
+
+    The raw RGB output can be several GB for full 600-pair archives, so the
+    default is certify-and-delete: hash the deterministic output, record the
+    archive/runtime custody that rebuilds it, then remove the rebuildable raw
+    file unless the operator explicitly asks to retain it.
+    """
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    archive_path = _resolve_existing(archive_zip, base=root)
+    runtime = _resolve(runtime_dir, base=root)
+    inflate_sh = runtime / "inflate.sh"
+    if not inflate_sh.is_file():
+        raise CompactRendererMlxSpineRunnerError(
+            f"PR95 receiver runtime missing inflate.sh: {inflate_sh}"
+        )
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    data_dir = out / "data"
+    raw_dir = out / "raw"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    report_path = out / "pr95_hnerv_receiver_proof.json"
+
+    with zipfile.ZipFile(archive_path) as zf:
+        names = zf.namelist()
+        if "0.bin" not in names:
+            raise CompactRendererMlxSpineRunnerError(
+                f"PR95 receiver proof expects 0.bin; archive members={names!r}"
+            )
+        member_bytes = zf.read("0.bin")
+    member_path = data_dir / "0.bin"
+    member_path.write_bytes(member_bytes)
+    file_list_path = out / "file_list.txt"
+    file_list_path.write_text("0.mkv\n", encoding="utf-8")
+
+    packet = None
+    expected_raw_bytes: int | None = None
+    try:
+        from tac.local_acceleration.pr95_hnerv_mlx import parse_pr95_public_archive_zip
+
+        packet = parse_pr95_public_archive_zip(archive_path)
+        expected_raw_bytes = int(packet.meta["n_pairs"]) * 2 * 874 * 1164 * 3
+    except Exception:
+        packet = None
+
+    runtime_files = [
+        runtime / "inflate.sh",
+        runtime / "inflate.py",
+        runtime / "src/model.py",
+        runtime / "src/codec.py",
+    ]
+    command = [
+        "bash",
+        inflate_sh.as_posix(),
+        data_dir.as_posix(),
+        raw_dir.as_posix(),
+        file_list_path.as_posix(),
+    ]
+    env = dict(os.environ)
+    venv_bin = root / ".venv/bin"
+    if venv_bin.is_dir():
+        env["PATH"] = f"{venv_bin.as_posix()}:{env.get('PATH', '')}"
+    completed = subprocess.run(
+        command,
+        cwd=root,
+        env=env,
+        text=True,
+        capture_output=True,
+        timeout=int(timeout_seconds),
+        check=False,
+    )
+    raw_path = raw_dir / "0.raw"
+    raw_exists = raw_path.is_file()
+    raw_bytes = raw_path.stat().st_size if raw_exists else 0
+    raw_sha256 = _sha256_file(raw_path) if raw_exists else None
+    receiver_proof_valid = (
+        completed.returncode == 0
+        and raw_exists
+        and raw_bytes > 0
+        and (expected_raw_bytes is None or raw_bytes == expected_raw_bytes)
+    )
+    cleanup: dict[str, Any] = {
+        "schema": "receiver_proof_output_cleanup.v1",
+        "keep_output_requested": bool(keep_output),
+        "raw_output_path": raw_path.as_posix(),
+        "staged_member_path": member_path.as_posix(),
+        "file_list_path": file_list_path.as_posix(),
+        "raw_output_rebuildable_from_archive_and_runtime": receiver_proof_valid,
+        "raw_output_retained": bool(raw_exists),
+        "deleted_rebuildable_raw_output": False,
+        "deleted_rebuildable_work_files": False,
+    }
+    if receiver_proof_valid and raw_exists and not keep_output:
+        raw_path.unlink()
+        for scratch in (member_path, file_list_path):
+            if scratch.exists():
+                scratch.unlink()
+        for scratch_dir in (raw_dir, data_dir):
+            if scratch_dir.exists():
+                try:
+                    scratch_dir.rmdir()
+                except OSError:
+                    pass
+        cleanup["raw_output_retained"] = False
+        cleanup["deleted_rebuildable_raw_output"] = True
+        cleanup["deleted_rebuildable_work_files"] = True
+
+    blockers: list[str] = []
+    if completed.returncode != 0:
+        blockers.append("pr95_receiver_inflate_sh_failed")
+    if not raw_exists:
+        blockers.append("pr95_receiver_raw_output_missing")
+    if expected_raw_bytes is not None and raw_bytes != expected_raw_bytes:
+        blockers.append("pr95_receiver_raw_output_byte_count_mismatch")
+
+    report = {
+        "schema": "pr95_hnerv_receiver_proof.v1",
+        "generated_utc": datetime.now(UTC).isoformat(),
+        "proof_path": report_path.as_posix(),
+        "archive_path": archive_path.as_posix(),
+        "archive_zip_path": archive_path.as_posix(),
+        "archive_zip_bytes": archive_path.stat().st_size,
+        "archive_zip_sha256": _sha256_file(archive_path),
+        "archive_sha256": _sha256_file(archive_path),
+        "archive_member": {
+            "name": "0.bin",
+            "bytes": len(member_bytes),
+            "sha256": hashlib.sha256(member_bytes).hexdigest(),
+        },
+        "runtime_dir": runtime.as_posix(),
+        "runtime_files": [_file_record(path) for path in runtime_files],
+        "command": command,
+        "cwd": root.as_posix(),
+        "env_overrides": {
+            "PATH_prefix": venv_bin.as_posix() if venv_bin.is_dir() else None,
+        },
+        "returncode": int(completed.returncode),
+        "stdout_tail": completed.stdout[-4000:],
+        "stderr_tail": completed.stderr[-4000:],
+        "output_raw": {
+            "path": raw_path.as_posix(),
+            "bytes": raw_bytes,
+            "sha256": raw_sha256,
+            "expected_bytes": expected_raw_bytes,
+            "retained": cleanup["raw_output_retained"],
+        },
+        "parsed_archive_meta": None if packet is None else dict(packet.meta),
+        "receiver_proof_valid": receiver_proof_valid,
+        "runtime_consumption_proof_passed": receiver_proof_valid,
+        "receiver_contract_satisfied": receiver_proof_valid,
+        "receiver_output_kind": "contest_raw_rgb_interleaved",
+        "receiver_output_bytes": raw_bytes,
+        "full_frame_inflate_parity": False,
+        "exact_readiness_refusal": {
+            "schema": "exact_readiness_refusal.v1",
+            "ready": False,
+            "blockers": [
+                "runtime_consumption_smoke_is_not_score_authority",
+                "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+                "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+            ],
+        },
+        "blockers": _dedupe(blockers),
+        "cleanup": cleanup,
+        **FALSE_AUTHORITY,
+    }
+    _write_json(report_path, report)
+    return {**report, "report_path": report_path.as_posix()}
 
 
 def execute_pact_nerv_vq_mlx_smoke_and_adapt(
@@ -1007,6 +1283,7 @@ def _target_family_rows() -> list[dict[str, Any]]:
                 "archive_exporter": backend["archive_exporter"],
                 "receiver_proof": backend["receiver_proof"],
                 "next_action": backend["next_action"],
+                "execution_scope": backend["execution_scope"],
                 "required_inputs": [
                     "trained_decoder_weights_or_program",
                     "trained_latents_or_tokens",
@@ -1036,6 +1313,7 @@ def _compact_base_campaign_rows(
             status = str(backend["backend_status"])
             if status in {
                 "executable_mlx_backend_available",
+                "executable_mlx_archive_export_control_arm",
                 "executable_via_pact_nerv_vq_adapter",
             }:
                 route_status = "queued_for_mlx_training_archive_export_receiver_proof"
@@ -1057,6 +1335,7 @@ def _compact_base_campaign_rows(
                     "trainer_entrypoint": backend["trainer_entrypoint"],
                     "archive_exporter": backend["archive_exporter"],
                     "receiver_proof": backend["receiver_proof"],
+                    "execution_scope": backend["execution_scope"],
                     "byte_policy": (
                         "train/export only charged weights, latents, selectors, "
                         "codebooks, and residual tokens; no hidden sidecars"
@@ -1387,6 +1666,30 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="Public PR95 archive.zip used to seed --execute-family pr95_hnerv.",
     )
+    parser.add_argument(
+        "--run-receiver-proof",
+        action="store_true",
+        help=(
+            "For PR95/HNeRV execution, run the public PR95 inflate.sh against "
+            "the exported archive and emit a receiver-proof report."
+        ),
+    )
+    parser.add_argument(
+        "--pr95-receiver-runtime-dir",
+        default=DEFAULT_PR95_RECEIVER_RUNTIME_DIR,
+        type=Path,
+        help="Runtime directory containing PR95 inflate.sh for receiver proof.",
+    )
+    parser.add_argument(
+        "--keep-receiver-proof-output",
+        action="store_true",
+        help="Retain raw receiver-proof output instead of certify-and-delete.",
+    )
+    parser.add_argument(
+        "--receiver-proof-timeout-seconds",
+        default=1800,
+        type=int,
+    )
     parser.add_argument("--source-video-path", default=Path("upstream/videos/0.mkv"), type=Path)
     parser.add_argument("--max-frames", default=4, type=int)
     parser.add_argument("--num-pairs", default=2, type=int)
@@ -1537,6 +1840,10 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            run_receiver_proof=args.run_receiver_proof,
+            receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
+            keep_receiver_proof_output=args.keep_receiver_proof_output,
+            receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -1628,6 +1935,17 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _file_record(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {"path": path.as_posix(), "exists": False}
+    return {
+        "path": path.as_posix(),
+        "exists": True,
+        "bytes": path.stat().st_size,
+        "sha256": _sha256_file(path),
+    }
 
 
 def _dedupe(values: list[Any]) -> list[Any]:
