@@ -1,0 +1,69 @@
+{
+  "axis_tag": "[macOS-CPU advisory]",
+  "exact_readiness_refusal": {
+    "blockers": [
+      "frontier_comparison_is_rate_only_not_score_authority",
+      "full_600_pair_receiver_replay_missing",
+      "paired_contest_cpu_cuda_auth_eval_missing",
+      "receiver_runtime_does_not_yet_parse_linf_step_maps",
+      "score_axis_is_macos_cpu_advisory"
+    ],
+    "promotion_eligible": false,
+    "ready": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reason": "SNeRV rows are advisory-only and either need charged step-map replay, receiver runtime parsing, full-600 replay, or paired contest CPU/CUDA eval.",
+    "score_claim": false
+  },
+  "frontier_score_claim": false,
+  "pose_preservation_ceiling": 0.1,
+  "pr101_frontier_bytes": 178493,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "archive_bytes_charged": 273300,
+      "axis_tag": "[macOS-CPU advisory]",
+      "beats_frontier_rate_only": false,
+      "bits_per_coeff": null,
+      "blockers": [
+        "receiver_runtime_does_not_yet_parse_linf_step_maps",
+        "frontier_comparison_is_rate_only_not_score_authority",
+        "score_axis_is_macos_cpu_advisory",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "classification": "distortion_promising_step_map_rate_blocked",
+      "d_pose_linf": 0.08289374620653689,
+      "d_seg_linf": 0.009864806896075606,
+      "frontier_score_claim": false,
+      "levels": 3,
+      "lf_payload_bytes": 150260,
+      "linf_steps_payload_bytes": 122624,
+      "pr101_frontier_bytes": 178493,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_l2_advisory": 2.4563445727082054,
+      "score_linf_advisory": 2.078919969210065,
+      "source_index": 0,
+      "step_map_accounting": "charged_receiver_visible_payload",
+      "step_map_overhead_bytes": 122624
+    }
+  ],
+  "schema": "snerv_rate_adjudication.v1",
+  "score_claim": false,
+  "seg_preservation_ceiling": 0.02,
+  "source_path": "/Users/adpena/Projects/pact/.omx/research/snerv_inverse_steg_advisory_20260601.json",
+  "summary": {
+    "actionable_next_code_move": "compact_shared_step_map_coder_or_receiver_parsable_step_map_generator",
+    "any_frontier_score_claim": false,
+    "best_distortion_classification": "distortion_promising_step_map_rate_blocked",
+    "best_distortion_source_index": 0,
+    "best_rate_classification": "distortion_promising_step_map_rate_blocked",
+    "best_rate_source_index": 0,
+    "classification_counts": {
+      "distortion_promising_step_map_rate_blocked": 1
+    },
+    "row_count": 1
+  }
+}

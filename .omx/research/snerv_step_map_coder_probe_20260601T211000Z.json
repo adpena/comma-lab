@@ -1,0 +1,31 @@
+{
+  "axis_tag": "[codec-unit:false-authority]",
+  "map_count": 24,
+  "next_action": "wire encode_step_maps into SNeRV advisory/runtime and replace fp32 step-map accounting with this receiver-visible packet",
+  "packet": {
+    "bins": 64,
+    "fp32_lzma_baseline_bytes": 200876,
+    "header_bytes": 371,
+    "map_count": 24,
+    "max_relative_error": 0.0058471099473536015,
+    "mean_relative_error": 0.0029138363897800446,
+    "packet": {
+      "bytes": 6151,
+      "sha256_uncomputed": true
+    },
+    "payload_bytes": 5780,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "snerv_step_map_coder.v1",
+    "score_claim": false,
+    "total_bytes": 6151
+  },
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_step_map_coder_probe.v1",
+  "score_claim": false,
+  "shape": [
+    48,
+    64
+  ]
+}
