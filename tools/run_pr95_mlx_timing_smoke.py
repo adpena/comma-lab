@@ -381,7 +381,29 @@ def _parse_int_tuple(value: str, *, field: str, expected_len: int | None = None)
 
 
 def _source_video_pair_indices(args: argparse.Namespace) -> list[int]:
-    return list(args.source_video_pair_index or [0])
+    explicit_indices = args.source_video_pair_index
+    if explicit_indices:
+        indices = [int(item) for item in explicit_indices]
+        source = "--source-video-pair-index"
+    else:
+        explicit_count = args.source_video_pair_count
+        if explicit_count is not None:
+            count = int(explicit_count)
+            source = "--source-video-pair-count"
+        elif args.train_on_source_video_pairs:
+            count = int(args.synthetic_pairs)
+            source = "--synthetic-pairs"
+        else:
+            count = 1
+            source = "default-preprocess-smoke"
+        indices = list(range(count))
+    if not indices:
+        raise ValueError(f"{source} selected no source-video pairs")
+    if any(index < 0 for index in indices):
+        raise ValueError(f"{source} source-video pair indices must be non-negative")
+    if len(indices) != len(set(indices)):
+        raise ValueError(f"{source} source-video pair indices must be unique")
+    return indices
 
 
 def _source_video_output_hw(args: argparse.Namespace) -> tuple[int, int]:
@@ -2654,6 +2676,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="append",
         type=int,
         help="PR95 pair index to decode for source-video preprocess smoke.",
+    )
+    parser.add_argument(
+        "--source-video-pair-count",
+        type=int,
+        help=(
+            "Decode/train on source-video pairs range(count) when explicit "
+            "--source-video-pair-index values are not supplied. Source-video "
+            "training defaults to --synthetic-pairs so full-coverage runs do "
+            "not silently export a one-latent archive."
+        ),
     )
     parser.add_argument(
         "--source-video-output-hw",

@@ -401,6 +401,53 @@ def test_pr95_mlx_plan_defaults_gpu_drift_to_public_release_no_cliff_preset(
     ] == "blocks02_kahan_fp32"
 
 
+def test_pr95_mlx_source_video_training_defaults_to_full_requested_pair_count(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "pr95_mlx_source_video_full_requested_pairs"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_timing_smoke.py"),
+            "--stage",
+            "8",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "3",
+            "--seed",
+            "23",
+            "--base-channels",
+            "36",
+            "--output-dir",
+            str(output_dir),
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse",
+            "--plan-only",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert result.returncode == 0, result.stderr
+    plan = json.loads(
+        (output_dir / "representation_training_plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    execution = plan["recommended_execution"]
+    assert execution["source_video_pair_indices"] == [0, 1, 2]
+    assert plan["candidate_params"]["source_video_pair_indices"] == [0, 1, 2]
+    command = execution["python_command_args"]
+    assert command.count("--source-video-pair-index") == 3
+
+
 def test_pr95_mlx_plan_only_can_write_execution_queue(tmp_path: Path) -> None:
     output_dir = tmp_path / "pr95_mlx_stage8_queue_plan"
     result = subprocess.run(

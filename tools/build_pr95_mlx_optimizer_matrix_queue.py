@@ -68,6 +68,36 @@ def _slug(value: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in value.lower()).strip("_")
 
 
+def _source_video_pair_indices(args: argparse.Namespace) -> list[int]:
+    explicit_indices = args.source_video_pair_index
+    if explicit_indices:
+        indices = [int(item) for item in explicit_indices]
+        source = "--source-video-pair-index"
+    else:
+        explicit_count = args.source_video_pair_count
+        if explicit_count is not None:
+            count = int(explicit_count)
+            source = "--source-video-pair-count"
+        elif args.train_on_source_video_pairs:
+            count = int(args.synthetic_pairs)
+            source = "--synthetic-pairs"
+        else:
+            count = 1
+            source = "default-preprocess-smoke"
+        indices = list(range(count))
+    if not indices:
+        raise ExperimentQueueError(f"{source} selected no source-video pairs")
+    if any(index < 0 for index in indices):
+        raise ExperimentQueueError(
+            f"{source} source-video pair indices must be non-negative"
+        )
+    if len(indices) != len(set(indices)):
+        raise ExperimentQueueError(
+            f"{source} source-video pair indices must be unique"
+        )
+    return indices
+
+
 def _stage_indices(values: list[int] | None) -> list[int]:
     stages = values or sorted(PR95_STAGE_MODULES)
     unknown = sorted(set(stages) - set(PR95_STAGE_MODULES))
@@ -734,6 +764,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="PR95 pair index to decode for source-video preprocess smoke.",
     )
     parser.add_argument(
+        "--source-video-pair-count",
+        type=int,
+        help=(
+            "Decode/train on source-video pairs range(count) when explicit "
+            "--source-video-pair-index values are not supplied. Source-video "
+            "training defaults to --synthetic-pairs so optimizer queues cannot "
+            "silently export one-latent candidates."
+        ),
+    )
+    parser.add_argument(
         "--source-video-output-hw",
         default="384,512",
         help="Comma-separated scorer output H,W for source-video preprocess smoke.",
@@ -839,7 +879,7 @@ def _apply_control_profile(args: argparse.Namespace) -> None:
         args.write_source_video_preprocess_smoke = True
         args.train_on_source_video_pairs = True
         args.source_video_loss_surface = PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
-        if args.source_video_pair_index is None:
+        if args.source_video_pair_index is None and args.source_video_pair_count is None:
             args.source_video_pair_index = [0]
         args.source_video_output_hw = "384,512"
         args.local_mlx_concurrency = 1
@@ -862,7 +902,7 @@ def _apply_control_profile(args: argparse.Namespace) -> None:
         args.write_source_video_preprocess_smoke = True
         args.train_on_source_video_pairs = True
         args.source_video_loss_surface = PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
-        if args.source_video_pair_index is None:
+        if args.source_video_pair_index is None and args.source_video_pair_count is None:
             args.source_video_pair_index = [0]
         args.source_video_output_hw = "384,512"
         args.local_mlx_concurrency = 1
@@ -897,6 +937,7 @@ def main(argv: list[str] | None = None) -> int:
     except OutputDirSafetyError as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
         return 3
+    source_video_pair_indices = _source_video_pair_indices(args)
     try:
         payload = build_pr95_mlx_optimizer_matrix_queue(
             repo_root=args.repo_root,
@@ -934,7 +975,7 @@ def main(argv: list[str] | None = None) -> int:
             source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
             source_video_path=args.source_video_path,
             source_video_upstream_dir=args.source_video_upstream_dir,
-            source_video_pair_indices=args.source_video_pair_index or [0],
+            source_video_pair_indices=source_video_pair_indices,
             source_video_output_hw=args.source_video_output_hw,
             source_video_gradient_shape=args.source_video_gradient_shape,
             runtime_proof_timeout_seconds=args.runtime_proof_timeout_seconds,
