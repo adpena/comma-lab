@@ -2040,6 +2040,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
 
     root = Path(repo_root).expanduser().resolve(strict=False)
     out = Path(output_dir).expanduser().resolve(strict=False)
+    scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise CompactRendererMlxSpineRunnerError(
@@ -2067,6 +2068,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             distillation_device=distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
             random_seed=random_seed,
+            scorer_upstream_dir=scorer_upstream,
             repo_root=root,
         )
     except Exception as exc:
@@ -2080,6 +2082,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             {
                 "execute_family": "hi_nerv",
                 "failure": repr(exc),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
                 "blockers": ["hi_nerv_mlx_scoreaware_or_export_failed"],
             }
         )
@@ -2108,7 +2113,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             archive_zip_path=archive_path,
             runtime_submission_dir=training_dir / "submission",
             output_dir=out / "local_cpu_replay",
-            upstream_dir=upstream_dir,
+            upstream_dir=scorer_upstream,
             num_pairs=int(num_pairs),
             requested=run_local_cpu_replay,
             keep_inflated=keep_local_replay_inflated,
@@ -2183,6 +2188,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
@@ -2646,6 +2654,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     distillation_device: str,
     allow_segnet_only_research: bool,
     random_seed: int,
+    scorer_upstream_dir: Path,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
@@ -2684,6 +2693,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "--pose-distillation-weight > 0, or explicitly pass "
             "--allow-segnet-only-research for a false-authority SegNet-axis probe."
         )
+    _require_scorer_upstream_dir_for_distillation(
+        upstream_dir=scorer_upstream_dir,
+        segnet_distillation_weight=segnet_distillation_weight,
+        pose_distillation_weight=pose_distillation_weight,
+    )
     cfg = HinervConfig(
         latent_dim_coarse=max(1, int(latent_dim) // 2),
         latent_dim_mid=max(1, int(latent_dim)),
@@ -2754,6 +2768,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                scorer_upstream_dir
+            ),
         },
         "training_executed": True,
         "score_authority": "false_macos_mlx_research_signal",
@@ -2775,7 +2792,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     if segnet_distillation_weight > 0.0:
         scorer_teacher = build_mlx_segnet_pair_teacher(
             teacher_probe_bundle,
-            upstream_dir=repo_root / "upstream",
+            upstream_dir=scorer_upstream_dir,
             device=distillation_device,
         )
         learnable_student_head = build_learnable_student_head(
@@ -2785,7 +2802,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     if pose_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
-            upstream_dir=repo_root / "upstream",
+            upstream_dir=scorer_upstream_dir,
             device=distillation_device,
         )
         learnable_pose_student_head = build_learnable_pose_student_head(

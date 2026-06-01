@@ -453,7 +453,10 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
     def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
         out = Path(kwargs["output_dir"])
         out.mkdir(parents=True, exist_ok=True)
         archive = out / "archive.zip"
@@ -524,9 +527,13 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        upstream_dir=tmp_path / "canonical_upstream",
         repo_root=REPO_ROOT,
     )
 
+    assert Path(captured_train_kwargs["scorer_upstream_dir"]) == (
+        tmp_path / "canonical_upstream"
+    )
     assert staged_calls
     assert replay_calls
     assert out["local_cpu_replay_gate"]["executed"] is True
