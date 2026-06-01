@@ -9,6 +9,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -436,6 +437,13 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--run-local-cpu-replay",
             "--keep-local-replay-inflated",
             "--retain-failed-local-replay-scratch",
+            "--recon-pixel-weight-path",
+            "weights.npz",
+            "--auto-segnet-boundary-recon-weight",
+            "--recon-pixel-weight-tau",
+            "0.75",
+            "--recon-pixel-weight-normalize",
+            "none",
         ]
     )
     sn = _parse_args(["--execute-family", "snerv", "--num-pairs", "128"])
@@ -445,8 +453,60 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.run_local_cpu_replay is True
     assert hi.keep_local_replay_inflated is True
     assert hi.retain_failed_local_replay_scratch is True
+    assert hi.recon_pixel_weight_path == Path("weights.npz")
+    assert hi.auto_segnet_boundary_recon_weight is True
+    assert hi.recon_pixel_weight_tau == 0.75
+    assert hi.recon_pixel_weight_normalize == "none"
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
+
+
+def test_recon_pixel_weight_loader_records_file_custody(
+    tmp_path: Path,
+) -> None:
+    weight_path = tmp_path / "joint_p18_p19_weight.npz"
+    np.savez(
+        weight_path,
+        weight=np.ones((384, 512, 1), dtype=np.float32),
+    )
+
+    weight, metadata = runner_mod._load_recon_pixel_weight(
+        weight_path,
+        base=tmp_path,
+        normalize="mean",
+    )
+
+    assert weight.shape == (384, 512, 1)
+    assert metadata["schema"] == "compact_recon_pixel_weight.v1"
+    assert metadata["enabled"] is True
+    assert metadata["source_kind"] == "file"
+    assert metadata["path"] == weight_path.as_posix()
+    assert metadata["sha256"] == runner_mod._sha256_file(weight_path)
+    assert metadata["npz_key"] == "weight"
+    assert metadata["normalize"] == "mean"
+    assert metadata["scorer_terms"] == {
+        "p18_segnet": "caller_supplied",
+        "p19_posenet": "caller_supplied",
+    }
+    assert metadata["stats"]["shape"] == [384, 512, 1]
+    assert metadata["stats"]["nonzero_fraction"] == 1.0
+    assert metadata["authority"] == "false_macos_mlx_research_signal"
+
+
+def test_recon_pixel_weight_loader_fails_closed_on_bad_shape(
+    tmp_path: Path,
+) -> None:
+    weight_path = tmp_path / "wrong_shape.npy"
+    np.save(weight_path, np.ones((192, 256), dtype=np.float32))
+
+    with pytest.raises(runner_mod.CompactRendererMlxSpineRunnerError) as exc:
+        runner_mod._load_recon_pixel_weight(
+            weight_path,
+            base=tmp_path,
+            normalize="mean",
+        )
+
+    assert "spatial shape" in str(exc.value)
 
 
 def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
@@ -769,6 +829,8 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     monkeypatch,
 ) -> None:
     captured_train_kwargs: dict[str, object] = {}
+    weight_path = tmp_path / "joint_p18_p19_weight.npy"
+    np.save(weight_path, np.ones((384, 512), dtype=np.float32))
 
     def fake_train(**kwargs):
         captured_train_kwargs.update(kwargs)
@@ -800,6 +862,24 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
                         "delta_weight": 0.0002,
                         "authority": "false_macos_mlx_research_signal",
                     },
+                    "recon_pixel_weight": {
+                        "schema": "compact_recon_pixel_weight.v1",
+                        "enabled": True,
+                        "source_kind": "file",
+                        "path": Path(
+                            kwargs["recon_pixel_weight_path"]
+                        ).as_posix(),
+                        "sha256": runner_mod._sha256_file(
+                            Path(kwargs["recon_pixel_weight_path"])
+                        ),
+                        "npz_key": None,
+                        "normalize": kwargs["recon_pixel_weight_normalize"],
+                        "scorer_terms": {
+                            "p18_segnet": "caller_supplied",
+                            "p19_posenet": "caller_supplied",
+                        },
+                        "authority": "false_macos_mlx_research_signal",
+                    },
                 },
             },
         }
@@ -822,6 +902,10 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         coder_qat_quant_residual_weight=0.001,
         coder_qat_magnitude_weight=0.0001,
         coder_qat_delta_weight=0.0002,
+        recon_pixel_weight_path=weight_path,
+        auto_segnet_boundary_recon_weight=False,
+        recon_pixel_weight_tau=0.5,
+        recon_pixel_weight_normalize="mean",
         repo_root=REPO_ROOT,
     )
 
@@ -830,6 +914,10 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
     assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
+    assert captured_train_kwargs["recon_pixel_weight_path"] == weight_path
+    assert captured_train_kwargs["auto_segnet_boundary_recon_weight"] is False
+    assert captured_train_kwargs["recon_pixel_weight_tau"] == 0.5
+    assert captured_train_kwargs["recon_pixel_weight_normalize"] == "mean"
     assert out["score_aware_training"]["coder_aware_qat"] == {
         "schema": "coder_aware_decoder_qat.v1",
         "enabled": True,
@@ -838,6 +926,16 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         "magnitude_weight": 0.0001,
         "delta_weight": 0.0002,
         "authority": "false_macos_mlx_research_signal",
+    }
+    assert out["score_aware_training"]["recon_pixel_weight"][
+        "source_kind"
+    ] == "file"
+    assert out["score_aware_training"]["recon_pixel_weight"]["path"] == (
+        weight_path.as_posix()
+    )
+    assert out["score_aware_training"]["recon_pixel_weight"]["scorer_terms"] == {
+        "p18_segnet": "caller_supplied",
+        "p19_posenet": "caller_supplied",
     }
 
 
