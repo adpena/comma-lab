@@ -1,0 +1,242 @@
+{
+  "advisory_tag": "[macOS-CPU advisory]",
+  "contest_rate_price_per_byte": 6.658589531221714e-07,
+  "decoupling_thesis": {
+    "holds_for_pose": true,
+    "holds_for_seg": true,
+    "interpretation": "If top-10% pixels hold >=80% of saliency mass, a rate-axis allocator can dead-zone the bottom 90% while preserving distortion. s_seg is extremely concentrated (boundary-peaked); s_pose is more spread (geometric, full-frame) but still concentrated.",
+    "s_pose_top10pct_mass_mean": 0.9271937396769449,
+    "s_seg_top10pct_mass_mean": 0.9997280370104776
+  },
+  "device": "cpu",
+  "generated_at_utc": "2026-06-01T18:04:31Z",
+  "grad_finite_all_pairs": {
+    "s_pose": true,
+    "s_seg": true
+  },
+  "models_present": true,
+  "num_pairs_sampled": 60,
+  "pair_stride": 10,
+  "profile": {
+    "projected_full_video_minutes": 18.66192999263876,
+    "projected_full_video_seconds": 1119.7157995583257,
+    "s_pose_seconds_per_pair": 0.8393053673343578,
+    "s_seg_seconds_per_pair": 1.0268876319295184,
+    "total_seconds_per_pair": 1.8661929992638762,
+    "wall_clock_seconds": 135.45366474997718
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "budget_spend_requires": [
+      "source custody contract_valid=true",
+      "saliency row names upstream source SHA-256s",
+      "saliency row names mirror implementation SHA-256s",
+      "real-video or deterministic tensor numerical proof artifact",
+      "score_claim=false until exact CPU/CUDA eval"
+    ],
+    "contest_compliance": {
+      "compress_side_may": [
+        "use frozen upstream scorers for offline analysis",
+        "derive saliency/allocation/latents before archive emission",
+        "overfit the declared contest video in contest mode"
+      ],
+      "promotion_boundary": "only emitted archive.zip plus deterministic inflate runtime cross the receiver boundary",
+      "receiver_must_not": [
+        "load PoseNet/SegNet",
+        "inspect evaluator score state",
+        "fetch sidecars",
+        "adapt at eval time"
+      ]
+    },
+    "mirror_paths": {
+      "differentiable_yuv6": "tac.differentiable_eval_roundtrip.differentiable_rgb_to_yuv6",
+      "fidelity_verifier": "tools/verify_upstream_scorer_mirror_fidelity.py",
+      "scorer_patch": "tac.scorer.make_scorers_differentiable"
+    },
+    "p18_method": "DeepFool top-2 margin flip-risk on LAST frame (||grad m||^2 / m^2)",
+    "p19_method": "squared input-Jacobian of first-6 pose dims over BOTH frames (diag J^T J)",
+    "producer_module": "tac.analysis.score_exact_saliency",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "required_numerical_proofs": [
+      {
+        "authority_path": "upstream/frame_utils.py::rgb_to_yuv6",
+        "mirror_path": "tac.differentiable_eval_roundtrip.differentiable_rgb_to_yuv6",
+        "name": "yuv6_forward_parity",
+        "purpose": "PoseNet VJP/JVP uses mirror; upstream remains eval authority",
+        "requirement": "max_abs_error==0 on deterministic random and real-video tensors"
+      },
+      {
+        "authority_path": "upstream implementation is no_grad/inplace-clamp",
+        "mirror_path": "differentiable mirror",
+        "name": "yuv6_gradient_nonzero",
+        "purpose": "prevents fake P19 surfaces with severed pose gradients",
+        "requirement": "finite nonzero input gradient in unclamped region"
+      },
+      {
+        "authority_path": "upstream/modules.py::SegNet.preprocess_input",
+        "name": "segnet_last_frame_asymmetry",
+        "purpose": "prevents spending SegNet budget on frame_0 atoms",
+        "requirement": "mutating pair frame_0 alone leaves SegNet input unchanged; mutating pair frame_1 can change SegNet logits"
+      },
+      {
+        "authority_path": "upstream/modules.py::SegNet.compute_distortion",
+        "name": "segnet_argmax_flip_exactness",
+        "purpose": "ties P18 hinge/margin proxy back to hard contest metric",
+        "requirement": "local d_seg equals mean(argmax(gt)!=argmax(candidate))"
+      },
+      {
+        "authority_path": "upstream/modules.py::PoseNet.compute_distortion",
+        "name": "posenet_pair_six_axis_exactness",
+        "purpose": "ties P19 Mahalanobis/Jacobian weighting back to contest MSE",
+        "requirement": "local d_pose equals MSE over first six pose-head dims"
+      },
+      {
+        "authority_path": "upstream/evaluate.py",
+        "name": "rate_byte_price_exactness",
+        "purpose": "sets the reverse-waterfill spend threshold",
+        "requirement": "one archive byte costs exactly 25/source_video_bytes score; source_video_bytes must not be confused with inflated raw bytes"
+      }
+    ],
+    "schema": "score_exact_saliency_producer_provenance.v1",
+    "score_claim": false,
+    "upstream_contract_valid": true,
+    "upstream_model_custody": [
+      {
+        "bytes": 55835560,
+        "exists": true,
+        "relative_path": "models/posenet.safetensors",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+        "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+      },
+      {
+        "bytes": 38502892,
+        "exists": true,
+        "relative_path": "models/segnet.safetensors",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+        "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+      }
+    ],
+    "upstream_source_custody": [
+      {
+        "bytes": 6005,
+        "exists": true,
+        "relative_path": "evaluate.py",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      },
+      {
+        "bytes": 1934,
+        "exists": true,
+        "relative_path": "evaluate.sh",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/evaluate.sh",
+        "sha256": "9612284ce6e9585aefcf636f3027808a56160ffd572edffdf4b8622a65fac917"
+      },
+      {
+        "bytes": 8322,
+        "exists": true,
+        "relative_path": "modules.py",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+        "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+      },
+      {
+        "bytes": 9345,
+        "exists": true,
+        "relative_path": "frame_utils.py",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+        "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+      },
+      {
+        "bytes": 4678,
+        "exists": true,
+        "relative_path": ".github/workflows/eval.yml",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/.github/workflows/eval.yml",
+        "sha256": "8a6cd6300b51a44f36b49774bc0c6100dbb37ef8290d42bf8e584f1dceddce56"
+      }
+    ]
+  },
+  "ran": true,
+  "rank_or_kill_eligible": false,
+  "s_pose_concentration": {
+    "gini": {
+      "max": 0.9669377620890305,
+      "mean": 0.943149774829209,
+      "median": 0.9423110053257728,
+      "min": 0.926962457502148
+    },
+    "top_10pct_mass": {
+      "max": 0.9666377332795133,
+      "mean": 0.9271937396769449,
+      "median": 0.925896864663368,
+      "min": 0.9006154821468202
+    },
+    "top_1pct_mass": {
+      "max": 0.6882042649924792,
+      "mean": 0.5283701787695676,
+      "median": 0.5258376021769607,
+      "min": 0.40629364157154874
+    },
+    "top_5pct_mass": {
+      "max": 0.9149173979465938,
+      "mean": 0.8309219901817713,
+      "median": 0.8287748636029325,
+      "min": 0.7687346286283285
+    },
+    "total_mass": {
+      "max": 0.014359098557516442,
+      "mean": 0.0036999477635800433,
+      "median": 0.0030098102792079627,
+      "min": 0.0010078834797787113
+    }
+  },
+  "s_pose_method": "batched_vjp",
+  "s_seg_concentration": {
+    "boundary_over_interior_ratio": {
+      "max": 223890.4640680947,
+      "mean": 47520.60383680848,
+      "median": 36123.46691105191,
+      "min": 12007.471974805945
+    },
+    "gini": {
+      "max": 0.999936576877618,
+      "mean": 0.9996531772676414,
+      "median": 0.9996790416325142,
+      "min": 0.999175451453586
+    },
+    "top_10pct_mass": {
+      "max": 0.9999552859382222,
+      "mean": 0.9997280370104776,
+      "median": 0.9997478539754909,
+      "min": 0.9992348206045857
+    },
+    "top_1pct_mass": {
+      "max": 0.9997927359697558,
+      "mean": 0.9986413797976932,
+      "median": 0.9987100038338543,
+      "min": 0.9965864383767702
+    },
+    "top_5pct_mass": {
+      "max": 0.999928114878525,
+      "mean": 0.9995596406424275,
+      "median": 0.9995924850832009,
+      "min": 0.9987908315772582
+    },
+    "total_mass": {
+      "max": 956144844.1821858,
+      "mean": 210108911.2806783,
+      "median": 162388625.49106404,
+      "min": 58532873.71339637
+    }
+  },
+  "sampling": "stratified_uniform",
+  "schema": "full_video_dead_zone_diagnostic.v1",
+  "score_allocation_contract_schema": "upstream_score_allocation_contract.v1",
+  "score_claim": false,
+  "score_per_0p001": "1501.82 bytes <-> 0.001 score",
+  "total_pairs_in_video": 600,
+  "video": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+  "video_present": true
+}
