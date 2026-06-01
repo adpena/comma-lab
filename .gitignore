@@ -524,6 +524,7 @@ experiments/results/public_pr_intake_full/*/source/
 .omx/research/**/floor_loop_runtime_custody/
 .omx/research/**/inflated/
 .omx/research/**/output/
+.omx/research/**/output_dir/
 .omx/research/**/outputs/
 .omx/research/**/queue_results/
 .omx/research/**/receiver_output/
