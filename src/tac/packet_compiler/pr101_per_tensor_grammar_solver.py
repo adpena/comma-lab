@@ -66,6 +66,7 @@ PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA = (
 )
 PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA = "pr101_u32_receiver_adapter_source.v1"
 PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA = "pr101_u32_runtime_tree_materialization.v1"
+PR101_GRAMMAR_CAMPAIGN_SUMMARY_SCHEMA = "pr101_optimal_grammar_campaign_summary.v1"
 PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 PR101_INNER_MEMBER_NAME = "x"
 FALSE_AUTHORITY_FIELDS = {
@@ -736,6 +737,207 @@ def build_grouped_optimizer_candidate_queue_from_report(
         "blockers": blockers,
         "consumer_surfaces": [
             "tac.optimization.byte_shaving_campaign.build_signal_surface_from_candidate_queue",
+        ],
+        "axis_tag": "[planning-only byte-profile]",
+        **FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def build_pr101_optimal_grammar_campaign_summary(
+    per_tensor_report: Mapping[str, Any],
+    *,
+    grouped_report: Mapping[str, Any] | None = None,
+    per_tensor_queue: Mapping[str, Any] | None = None,
+    grouped_queue: Mapping[str, Any] | None = None,
+    decoder_blob_manifest: Mapping[str, Any] | None = None,
+    archive_manifest: Mapping[str, Any] | None = None,
+    receiver_adapter_manifest: Mapping[str, Any] | None = None,
+    runtime_tree_manifest: Mapping[str, Any] | None = None,
+    campaign_id: str = "pr101_optimal_grammar",
+) -> dict[str, Any]:
+    """Build the planner-facing verdict for a PR101 grammar campaign.
+
+    The lower-level reports answer local questions: isolated tensor choices,
+    grouped Brotli context, archive materialization, or receiver tree emission.
+    This summary is the durable planner bridge for the full objective: it tells
+    the queue/autopilot whether the current substrate is entropy-saturated or
+    whether runtime-adapter / replay work is justified by grouped-positive
+    bytes.  It never upgrades byte profiles into score or dispatch authority.
+    """
+
+    if per_tensor_report.get("schema") != PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA:
+        raise ValueError("expected pr101_per_tensor_grammar_solver.v1 report")
+    per_bytes = per_tensor_report.get("byte_accounting")
+    if not isinstance(per_bytes, Mapping):
+        raise ValueError("per-tensor report missing byte_accounting")
+    saturation = per_tensor_report.get("saturation_diagnostic")
+    if not isinstance(saturation, Mapping):
+        raise ValueError("per-tensor report missing saturation_diagnostic")
+
+    grouped_bytes: Mapping[str, Any] | None = None
+    grouped_saved = None
+    grouped_delta = None
+    grouped_runtime = None
+    grouped_blockers: list[str] = []
+    grouped_positive = False
+    if grouped_report is not None:
+        if grouped_report.get("schema") != PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA:
+            raise ValueError("expected pr101_grouped_brotli_packet_grammar.v1 report")
+        raw_grouped_bytes = grouped_report.get("byte_accounting")
+        if not isinstance(raw_grouped_bytes, Mapping):
+            raise ValueError("grouped report missing byte_accounting")
+        grouped_bytes = raw_grouped_bytes
+        grouped_saved = int(grouped_bytes.get("grouped_saved_bytes_vs_current_stock") or 0)
+        grouped_delta = int(grouped_bytes.get("grouped_delta_bytes_vs_current_stock") or 0)
+        grouped_runtime = grouped_report.get("runtime_consumption_status")
+        grouped_blockers = [str(v) for v in grouped_report.get("blockers") or []]
+        grouped_positive = grouped_saved > 0
+
+    artifact_status = _grammar_campaign_artifact_status(
+        decoder_blob_manifest=decoder_blob_manifest,
+        archive_manifest=archive_manifest,
+        receiver_adapter_manifest=receiver_adapter_manifest,
+        runtime_tree_manifest=runtime_tree_manifest,
+    )
+    archive_delta = (
+        int(archive_manifest.get("archive_zip_delta_bytes"))
+        if isinstance(archive_manifest, Mapping)
+        and archive_manifest.get("archive_zip_delta_bytes") is not None
+        else None
+    )
+    archive_rate_positive = archive_delta is not None and archive_delta < 0
+    exact_blockers = _filter_resolved_campaign_blockers(
+        sorted(
+            {
+                str(blocker)
+                for source in (
+                    per_tensor_report.get("blockers") or [],
+                    grouped_blockers,
+                    _mapping_blockers(decoder_blob_manifest),
+                    _mapping_blockers(archive_manifest),
+                    _mapping_blockers(receiver_adapter_manifest),
+                    _mapping_blockers(runtime_tree_manifest),
+                )
+                for blocker in (
+                    source
+                    if isinstance(source, Sequence)
+                    and not isinstance(source, (str, bytes))
+                    else [source]
+                )
+                if blocker
+            }
+        ),
+        artifact_status=artifact_status,
+    )
+
+    if grouped_report is None:
+        verdict = "needs_grouped_packet_measurement"
+        next_action = "run_grouped_brotli_packet_grammar_before_receiver_adapter_work"
+    elif grouped_positive:
+        if artifact_status["archive_materialized"] and not artifact_status[
+            "archive_receiver_parse_safe"
+        ]:
+            verdict = "grouped_positive_archive_materialized_but_receiver_incompatible"
+            next_action = (
+                "materialize_a_receiver_compatible_archive_layout_before_local_replay"
+            )
+        elif archive_delta is not None and archive_delta >= 0:
+            verdict = "grouped_positive_consumed_by_archive_overhead"
+            next_action = (
+                "demote_current_pr101_adapter_branch; require_fixed_runtime_or_larger_grouped_savings"
+            )
+        elif artifact_status["archive_materialized"] and artifact_status[
+            "runtime_tree_compatible_with_archive_layout"
+        ]:
+            verdict = "grouped_positive_runtime_ready_for_local_replay_gate"
+            next_action = "run_full_frame_inflate_parity_and_local_replay_before_exact_auth"
+        elif artifact_status["archive_materialized"]:
+            verdict = "grouped_positive_archive_materialized_runtime_missing"
+            next_action = "emit_receiver_runtime_tree_then_run_runtime_consumption_proof"
+        else:
+            verdict = "grouped_positive_build_receiver_adapter"
+            next_action = "materialize_archive_and_receiver_runtime_for_grouped_positive_candidate"
+    elif str(saturation.get("status")) in {"entropy_saturated", "weak_entropy_gap"}:
+        verdict = "current_substrate_grammar_saturated"
+        next_action = (
+            "demote_current_pr101_format_churn; preserve solver_for_future_unsaturated_substrates"
+        )
+    else:
+        verdict = "isolated_gap_not_grouped_positive"
+        next_action = "treat_isolated_savings_as_negative_grouped_posterior"
+
+    selected_isolated = int(per_bytes.get("selected_isolated_tensor_bytes") or 0)
+    current_isolated = int(per_bytes.get("current_pr101_isolated_tensor_bytes") or 0)
+    floor = float(per_bytes.get("empirical_shannon_floor_bytes") or 0.0)
+    isolated_saved = current_isolated - selected_isolated
+    return {
+        "schema": PR101_GRAMMAR_CAMPAIGN_SUMMARY_SCHEMA,
+        "campaign_id": campaign_id,
+        "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
+        "source_schemas": {
+            "per_tensor_report": per_tensor_report.get("schema"),
+            "grouped_report": None if grouped_report is None else grouped_report.get("schema"),
+            "per_tensor_queue": None if per_tensor_queue is None else per_tensor_queue.get("schema"),
+            "grouped_queue": None if grouped_queue is None else grouped_queue.get("schema"),
+            "decoder_blob_manifest": None
+            if decoder_blob_manifest is None
+            else decoder_blob_manifest.get("schema"),
+            "archive_manifest": None if archive_manifest is None else archive_manifest.get("schema"),
+            "receiver_adapter_manifest": None
+            if receiver_adapter_manifest is None
+            else receiver_adapter_manifest.get("schema"),
+            "runtime_tree_manifest": None
+            if runtime_tree_manifest is None
+            else runtime_tree_manifest.get("schema"),
+        },
+        "verdict": verdict,
+        "next_action": next_action,
+        "rate_axis": {
+            "selected_isolated_tensor_bytes": selected_isolated,
+            "current_pr101_isolated_tensor_bytes": current_isolated,
+            "isolated_saved_bytes_vs_current_pr101": isolated_saved,
+            "empirical_shannon_floor_bytes": floor,
+            "selected_over_floor_ratio": saturation.get("selected_over_floor_ratio"),
+            "saturation_status": saturation.get("status"),
+            "grouped_report_present": grouped_report is not None,
+            "grouped_delta_bytes_vs_current_stock": grouped_delta,
+            "grouped_saved_bytes_vs_current_stock": grouped_saved,
+            "grouped_runtime_consumption_status": grouped_runtime,
+            "archive_zip_delta_bytes": archive_delta,
+            "archive_rate_positive": archive_rate_positive,
+            "rate_delta_score_if_components_unchanged": (
+                None if archive_delta is None else contest_rate_term(archive_delta)
+            ),
+        },
+        "artifact_status": artifact_status,
+        "planner_feedback": {
+            "grammar_payoff_is_substrate_conditional": True,
+            "current_pr101_fec6_expected_payoff": "near_zero_when_grouped_saved_bytes_is_zero",
+            "future_substrate_use": (
+                "reuse_for_HNeRV_RNeRV_Z8_and_compact_receiver_export_archives"
+            ),
+            "queue_candidate_count": _candidate_count(per_tensor_queue)
+            + _candidate_count(grouped_queue),
+            "grouped_positive": grouped_positive,
+            "receiver_adapter_work_justified": bool(
+                grouped_positive and (archive_delta is None or archive_rate_positive)
+            ),
+            "exact_auth_work_justified": False,
+            "exact_auth_work_blocked_until": [
+                "receiver_runtime_consumption_proof_passed",
+                "full_frame_inflate_parity_passed",
+                "local_replay_gate_wins",
+            ],
+            "consumer_surfaces": [
+                "tac.optimization.byte_shaving_campaign.build_signal_surface_from_candidate_queue",
+                "tac.cathedral_consumers.packetir_candidate_queue_consumer.consume_queue",
+                "tools.operator_briefing._byte_shaving_acquisition_summary",
+            ],
+        },
+        "blockers": exact_blockers
+        or [
+            "full_frame_inflate_parity_missing",
+            "contest_cpu_cuda_exact_eval_not_executed",
         ],
         "axis_tag": "[planning-only byte-profile]",
         **FALSE_AUTHORITY_FIELDS,
@@ -1823,6 +2025,121 @@ def _planner_feedback(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _grammar_campaign_artifact_status(
+    *,
+    decoder_blob_manifest: Mapping[str, Any] | None,
+    archive_manifest: Mapping[str, Any] | None,
+    receiver_adapter_manifest: Mapping[str, Any] | None,
+    runtime_tree_manifest: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return {
+        "decoder_blob_materialized": bool(
+            isinstance(decoder_blob_manifest, Mapping)
+            and decoder_blob_manifest.get("byte_closed_decoder_blob_materialized")
+        ),
+        "archive_materialized": bool(
+            isinstance(archive_manifest, Mapping)
+            and archive_manifest.get("byte_closed_archive_zip_materialized")
+        ),
+        "receiver_adapter_source_emitted": bool(
+            isinstance(receiver_adapter_manifest, Mapping)
+            and receiver_adapter_manifest.get("runtime_consumption_status")
+            == "u32_decoder_len_adapter_source_emitted"
+        ),
+        "runtime_tree_materialized": bool(
+            isinstance(runtime_tree_manifest, Mapping)
+            and runtime_tree_manifest.get("runtime_consumption_status")
+            == "u32_receiver_runtime_tree_materialized"
+        ),
+        "archive_receiver_parse_safe": bool(
+            isinstance(archive_manifest, Mapping)
+            and (
+                archive_manifest.get("fixed_offset_stock_runtime_parse_safe")
+                or archive_manifest.get("u32_decoder_len_adapter_parse_safe")
+            )
+        ),
+        "runtime_tree_compatible_with_archive_layout": bool(
+            isinstance(archive_manifest, Mapping)
+            and (
+                (
+                    archive_manifest.get("archive_layout") == "u32_decoder_len_adapter"
+                    and archive_manifest.get("u32_decoder_len_adapter_parse_safe")
+                    and isinstance(runtime_tree_manifest, Mapping)
+                    and runtime_tree_manifest.get("runtime_consumption_status")
+                    == "u32_receiver_runtime_tree_materialized"
+                )
+                or (
+                    archive_manifest.get("archive_layout") == "fixed_pr101"
+                    and archive_manifest.get("fixed_offset_stock_runtime_parse_safe")
+                )
+            )
+        ),
+        "local_replay_passed": False,
+        "exact_cpu_cuda_eval_passed": False,
+    }
+
+
+def _mapping_blockers(value: Mapping[str, Any] | None) -> list[str]:
+    if not isinstance(value, Mapping):
+        return []
+    blockers = value.get("blockers")
+    if not isinstance(blockers, Sequence) or isinstance(blockers, (str, bytes)):
+        return []
+    return [str(blocker) for blocker in blockers]
+
+
+def _filter_resolved_campaign_blockers(
+    blockers: Sequence[str],
+    *,
+    artifact_status: Mapping[str, Any],
+) -> list[str]:
+    resolved: set[str] = set()
+    if artifact_status.get("decoder_blob_materialized"):
+        resolved.add("decoder_blob_not_materialized")
+    if artifact_status.get("archive_materialized"):
+        resolved.update(
+            {
+                "archive_zip_not_materialized",
+                "byte_closed_archive_not_materialized",
+            }
+        )
+    if artifact_status.get("receiver_adapter_source_emitted"):
+        resolved.update(
+            {
+                "receiver_adapter_not_emitted",
+                "receiver_runtime_source_not_emitted",
+                "receiver_codec_constants_override_source_not_emitted",
+            }
+        )
+    if artifact_status.get("runtime_tree_materialized"):
+        resolved.update(
+            {
+                "inflate_sh_integration_missing",
+                "receiver_runtime_source_not_emitted",
+                "runtime_consumption_proof_missing",
+            }
+        )
+    if artifact_status.get("runtime_tree_compatible_with_archive_layout"):
+        resolved.update(
+            {
+                "receiver_adapter_not_emitted",
+                "receiver_codec_constants_override_source_not_emitted",
+                "receiver_runtime_source_not_emitted",
+                "runtime_consumption_proof_missing",
+            }
+        )
+    return [blocker for blocker in blockers if blocker not in resolved]
+
+
+def _candidate_count(queue: Mapping[str, Any] | None) -> int:
+    if not isinstance(queue, Mapping):
+        return 0
+    try:
+        return int(queue.get("candidate_count") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _validate_q_i8(q_i8: np.ndarray) -> np.ndarray:
     q = np.asarray(q_i8)
     if q.dtype != np.int8:
@@ -2127,6 +2444,7 @@ __all__ = [
     "StoragePermMode",
     "build_grouped_optimizer_candidate_queue_from_report",
     "build_optimizer_candidate_queue_from_solver_report",
+    "build_pr101_optimal_grammar_campaign_summary",
     "build_u32_receiver_adapter_source_from_report",
     "build_u32_receiver_runtime_tree_from_report",
     "default_state_dict_output_path_hint",

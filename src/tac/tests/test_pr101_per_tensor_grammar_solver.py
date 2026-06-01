@@ -11,6 +11,7 @@ import torch
 
 from tac.optimization.byte_shaving_campaign import build_signal_surface_from_candidate_queue
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
+    PR101_GRAMMAR_CAMPAIGN_SUMMARY_SCHEMA,
     PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
     PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA,
     PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA,
@@ -20,6 +21,7 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
     PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA,
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
+    build_pr101_optimal_grammar_campaign_summary,
     build_u32_receiver_adapter_source_from_report,
     build_u32_receiver_runtime_tree_from_report,
     empirical_shannon_floor_bytes,
@@ -253,6 +255,253 @@ def test_grouped_brotli_queue_is_consumable_only_for_positive_packet_savings() -
         surface = build_signal_surface_from_candidate_queue(queue)
         assert surface["score_claim"] is False
         assert surface["units"][0]["candidate_saved_bytes"] == saved
+
+
+def test_campaign_summary_demotes_grouped_zero_saturated_pr101_grammar() -> None:
+    state_dict = _tiny_state_dict(seed=11)
+    per_tensor_report = solve_state_dict_per_tensor_grammar(
+        state_dict,
+        storage_perm_mode="identity",
+        coders=("brotli",),
+        brotli_quality=4,
+        max_tensors=4,
+        include_current_grouped_pr101=False,
+    )
+    per_tensor_report = dict(per_tensor_report)
+    per_tensor_report["saturation_diagnostic"] = {
+        **per_tensor_report["saturation_diagnostic"],
+        "status": "entropy_saturated",
+        "selected_over_floor_ratio": 1.01,
+    }
+    grouped_report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=4,
+    )
+    grouped_report = {
+        **grouped_report,
+        "byte_accounting": {
+            **grouped_report["byte_accounting"],
+            "grouped_delta_bytes_vs_current_stock": 0,
+            "grouped_saved_bytes_vs_current_stock": 0,
+        },
+    }
+
+    summary = build_pr101_optimal_grammar_campaign_summary(
+        per_tensor_report,
+        grouped_report=grouped_report,
+        per_tensor_queue=build_optimizer_candidate_queue_from_solver_report(
+            per_tensor_report
+        ),
+        grouped_queue=build_grouped_optimizer_candidate_queue_from_report(grouped_report),
+    )
+
+    assert summary["schema"] == PR101_GRAMMAR_CAMPAIGN_SUMMARY_SCHEMA
+    assert summary["verdict"] == "current_substrate_grammar_saturated"
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["score_claim"] is False
+    assert summary["planner_feedback"]["grouped_positive"] is False
+    assert summary["planner_feedback"]["receiver_adapter_work_justified"] is False
+    assert summary["planner_feedback"]["grammar_payoff_is_substrate_conditional"] is True
+    assert (
+        summary["rate_axis"]["grouped_saved_bytes_vs_current_stock"]
+        == 0
+    )
+    assert "full_frame_inflate_parity_missing" in summary["blockers"]
+
+
+def test_campaign_summary_routes_grouped_positive_runtime_tree_to_local_replay() -> None:
+    state_dict = _tiny_state_dict(seed=12)
+    per_tensor_report = solve_state_dict_per_tensor_grammar(
+        state_dict,
+        storage_perm_mode="identity",
+        coders=("brotli",),
+        brotli_quality=4,
+        max_tensors=4,
+        include_current_grouped_pr101=False,
+    )
+    grouped_report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=4,
+    )
+    grouped_report = {
+        **grouped_report,
+        "byte_accounting": {
+            **grouped_report["byte_accounting"],
+            "grouped_delta_bytes_vs_current_stock": -7,
+            "grouped_saved_bytes_vs_current_stock": 7,
+        },
+    }
+    archive_manifest = {
+        "schema": PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
+        "archive_layout": "u32_decoder_len_adapter",
+        "byte_closed_archive_zip_materialized": True,
+        "u32_decoder_len_adapter_parse_safe": True,
+        "archive_zip_delta_bytes": -7,
+        "blockers": ["full_frame_inflate_parity_missing"],
+    }
+    runtime_manifest = {
+        "schema": PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA,
+        "runtime_consumption_status": "u32_receiver_runtime_tree_materialized",
+        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+    }
+
+    summary = build_pr101_optimal_grammar_campaign_summary(
+        per_tensor_report,
+        grouped_report=grouped_report,
+        archive_manifest=archive_manifest,
+        runtime_tree_manifest=runtime_manifest,
+    )
+
+    assert (
+        summary["verdict"]
+        == "grouped_positive_runtime_ready_for_local_replay_gate"
+    )
+    assert summary["planner_feedback"]["grouped_positive"] is True
+    assert summary["planner_feedback"]["receiver_adapter_work_justified"] is True
+    assert summary["planner_feedback"]["exact_auth_work_justified"] is False
+    assert summary["rate_axis"]["archive_zip_delta_bytes"] == -7
+    assert summary["rate_axis"]["rate_delta_score_if_components_unchanged"] < 0
+    assert summary["artifact_status"]["archive_materialized"] is True
+    assert summary["artifact_status"]["archive_receiver_parse_safe"] is True
+    assert summary["artifact_status"]["runtime_tree_materialized"] is True
+    assert (
+        summary["artifact_status"]["runtime_tree_compatible_with_archive_layout"]
+        is True
+    )
+    assert "archive_zip_not_materialized" not in summary["blockers"]
+    assert "byte_closed_archive_not_materialized" not in summary["blockers"]
+    assert "receiver_runtime_source_not_emitted" not in summary["blockers"]
+    assert "runtime_consumption_proof_missing" not in summary["blockers"]
+    assert "local_replay_gate_wins" in summary["planner_feedback"][
+        "exact_auth_work_blocked_until"
+    ]
+
+
+def test_campaign_summary_refuses_incompatible_archive_runtime_layout() -> None:
+    state_dict = _tiny_state_dict(seed=13)
+    per_tensor_report = solve_state_dict_per_tensor_grammar(
+        state_dict,
+        storage_perm_mode="identity",
+        coders=("brotli",),
+        brotli_quality=4,
+        max_tensors=4,
+        include_current_grouped_pr101=False,
+    )
+    grouped_report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=4,
+    )
+    grouped_report = {
+        **grouped_report,
+        "byte_accounting": {
+            **grouped_report["byte_accounting"],
+            "grouped_delta_bytes_vs_current_stock": -1,
+            "grouped_saved_bytes_vs_current_stock": 1,
+        },
+    }
+    archive_manifest = {
+        "schema": PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
+        "archive_layout": "fixed_pr101",
+        "byte_closed_archive_zip_materialized": True,
+        "fixed_offset_stock_runtime_parse_safe": False,
+        "archive_zip_delta_bytes": -1,
+        "blockers": ["stock_runtime_fixed_offset_decoder_blob_length_mismatch"],
+    }
+    runtime_manifest = {
+        "schema": PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA,
+        "runtime_consumption_status": "u32_receiver_runtime_tree_materialized",
+        "blockers": [],
+    }
+
+    summary = build_pr101_optimal_grammar_campaign_summary(
+        per_tensor_report,
+        grouped_report=grouped_report,
+        archive_manifest=archive_manifest,
+        runtime_tree_manifest=runtime_manifest,
+    )
+
+    assert (
+        summary["verdict"]
+        == "grouped_positive_archive_materialized_but_receiver_incompatible"
+    )
+    assert summary["artifact_status"]["archive_materialized"] is True
+    assert summary["artifact_status"]["archive_receiver_parse_safe"] is False
+    assert (
+        summary["artifact_status"]["runtime_tree_compatible_with_archive_layout"]
+        is False
+    )
+    assert "stock_runtime_fixed_offset_decoder_blob_length_mismatch" in summary[
+        "blockers"
+    ]
+
+
+def test_campaign_summary_demotes_adapter_overhead_that_consumes_grouped_win() -> None:
+    state_dict = _tiny_state_dict(seed=14)
+    per_tensor_report = solve_state_dict_per_tensor_grammar(
+        state_dict,
+        storage_perm_mode="identity",
+        coders=("brotli",),
+        brotli_quality=4,
+        max_tensors=4,
+        include_current_grouped_pr101=False,
+    )
+    grouped_report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=2,
+        max_streams=2,
+        brotli_quality=4,
+        max_tensors=4,
+    )
+    grouped_report = {
+        **grouped_report,
+        "byte_accounting": {
+            **grouped_report["byte_accounting"],
+            "grouped_delta_bytes_vs_current_stock": -1,
+            "grouped_saved_bytes_vs_current_stock": 1,
+        },
+    }
+    archive_manifest = {
+        "schema": PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
+        "archive_layout": "u32_decoder_len_adapter",
+        "byte_closed_archive_zip_materialized": True,
+        "u32_decoder_len_adapter_parse_safe": True,
+        "archive_zip_delta_bytes": 3,
+        "blockers": ["full_frame_inflate_parity_missing"],
+    }
+    runtime_manifest = {
+        "schema": PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA,
+        "runtime_consumption_status": "u32_receiver_runtime_tree_materialized",
+        "blockers": [],
+    }
+
+    summary = build_pr101_optimal_grammar_campaign_summary(
+        per_tensor_report,
+        grouped_report=grouped_report,
+        archive_manifest=archive_manifest,
+        runtime_tree_manifest=runtime_manifest,
+    )
+
+    assert summary["verdict"] == "grouped_positive_consumed_by_archive_overhead"
+    assert summary["rate_axis"]["archive_zip_delta_bytes"] == 3
+    assert summary["rate_axis"]["archive_rate_positive"] is False
+    assert summary["planner_feedback"]["grouped_positive"] is True
+    assert summary["planner_feedback"]["receiver_adapter_work_justified"] is False
+    assert "archive_zip_not_materialized" not in summary["blockers"]
+    assert "byte_closed_archive_not_materialized" not in summary["blockers"]
+    assert "runtime_consumption_proof_missing" not in summary["blockers"]
 
 
 def test_grouped_decoder_blob_materializer_proves_receiver_parse_without_score_claim() -> None:

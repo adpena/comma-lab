@@ -21,6 +21,7 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
     CoderName,
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
+    build_pr101_optimal_grammar_campaign_summary,
     build_u32_receiver_adapter_source_from_report,
     build_u32_receiver_runtime_tree_from_report,
     default_state_dict_output_path_hint,
@@ -202,6 +203,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional runtime-tree materialization proof JSON.",
     )
     parser.add_argument(
+        "--campaign-summary-output",
+        type=Path,
+        default=None,
+        help=(
+            "Optional planner-facing campaign verdict that merges per-tensor, "
+            "grouped, queue, archive, and runtime-proof outputs into one "
+            "false-authority saturation/action summary."
+        ),
+    )
+    parser.add_argument(
         "--grouped-transform-mode",
         choices=("stock_pr101", "best_brotli_per_tensor"),
         default="best_brotli_per_tensor",
@@ -284,13 +295,22 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(report, indent=2, sort_keys=True, default=_json_default),
         encoding="utf-8",
     )
-    if args.queue_output is not None:
+    per_tensor_queue = None
+    grouped_queue = None
+    decoder_proof = None
+    archive_proof = None
+    adapter_proof = None
+    runtime_proof = None
+
+    if args.queue_output is not None or args.campaign_summary_output is not None:
         queue = build_optimizer_candidate_queue_from_solver_report(report)
-        args.queue_output.parent.mkdir(parents=True, exist_ok=True)
-        args.queue_output.write_text(
-            json.dumps(queue, indent=2, sort_keys=True, default=_json_default),
-            encoding="utf-8",
-        )
+        per_tensor_queue = queue
+        if args.queue_output is not None:
+            args.queue_output.parent.mkdir(parents=True, exist_ok=True)
+            args.queue_output.write_text(
+                json.dumps(queue, indent=2, sort_keys=True, default=_json_default),
+                encoding="utf-8",
+            )
     grouped_report = None
     if (
         args.grouped_output is not None
@@ -303,6 +323,7 @@ def main(argv: list[str] | None = None) -> int:
         or args.grouped_receiver_adapter_proof_output is not None
         or args.grouped_runtime_output_dir is not None
         or args.grouped_runtime_proof_output is not None
+        or args.campaign_summary_output is not None
     ):
         exact_stream_count = (
             None
@@ -333,12 +354,15 @@ def main(argv: list[str] | None = None) -> int:
                 json.dumps(grouped_queue, indent=2, sort_keys=True, default=_json_default),
                 encoding="utf-8",
             )
+        elif args.campaign_summary_output is not None:
+            grouped_queue = build_grouped_optimizer_candidate_queue_from_report(grouped_report)
         if args.grouped_decoder_blob_output is not None or args.grouped_decoder_proof_output is not None:
             blob, proof = materialize_grouped_decoder_blob_from_report(
                 state_dict,
                 grouped_report,
                 n_quant=args.n_quant,
             )
+            decoder_proof = proof
             if args.grouped_decoder_blob_output is not None:
                 args.grouped_decoder_blob_output.parent.mkdir(parents=True, exist_ok=True)
                 args.grouped_decoder_blob_output.write_bytes(blob)
@@ -404,6 +428,22 @@ def main(argv: list[str] | None = None) -> int:
                     json.dumps(runtime_proof, indent=2, sort_keys=True, default=_json_default),
                     encoding="utf-8",
                 )
+    if args.campaign_summary_output is not None:
+        summary = build_pr101_optimal_grammar_campaign_summary(
+            report,
+            grouped_report=grouped_report,
+            per_tensor_queue=per_tensor_queue,
+            grouped_queue=grouped_queue,
+            decoder_blob_manifest=decoder_proof,
+            archive_manifest=archive_proof,
+            receiver_adapter_manifest=adapter_proof,
+            runtime_tree_manifest=runtime_proof,
+        )
+        args.campaign_summary_output.parent.mkdir(parents=True, exist_ok=True)
+        args.campaign_summary_output.write_text(
+            json.dumps(summary, indent=2, sort_keys=True, default=_json_default),
+            encoding="utf-8",
+        )
     bytes_ = report["byte_accounting"]
     print(f"Wrote PR101 per-tensor grammar report to {args.output}")
     if args.queue_output is not None:
@@ -431,6 +471,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Wrote grouped receiver runtime tree to {args.grouped_runtime_output_dir}")
     if args.grouped_runtime_proof_output is not None:
         print(f"Wrote grouped receiver runtime tree proof to {args.grouped_runtime_proof_output}")
+    if args.campaign_summary_output is not None:
+        print(f"Wrote grammar campaign summary to {args.campaign_summary_output}")
     print(
         "selected isolated bytes="
         f"{bytes_['selected_isolated_tensor_bytes']}; "
