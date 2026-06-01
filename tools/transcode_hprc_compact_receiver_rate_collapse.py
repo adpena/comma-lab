@@ -697,16 +697,31 @@ def _importance_from_p18_p19_artifacts(
         p19 = _load_json_object(path)
         if p19.get("schema") != "p19_posenet_null_pair_detection.v1":
             raise ValueError("P19 PoseNet-null artifact schema mismatch")
-        if p19.get("n_pairs") is not None and int(p19["n_pairs"]) != expected_pair_count:
-            raise ValueError("P19 PoseNet-null artifact n_pairs does not match HPRC packet")
-        selected_pair_ids = {int(item) for item in p19.get("selected_pair_ids") or []}
-        out_of_range = [
-            pair_id
-            for pair_id in selected_pair_ids
-            if pair_id < 0 or pair_id >= expected_pair_count
+        p19_declared_pairs = None
+        if p19.get("n_pairs") is not None:
+            p19_declared_pairs = int(p19["n_pairs"])
+            if p19_declared_pairs < expected_pair_count:
+                raise ValueError("P19 PoseNet-null artifact shorter than HPRC packet")
+            if p19_declared_pairs > expected_pair_count:
+                source_binding_blockers.append(
+                    "p19_full_video_artifact_prefix_projected_to_hprc_packet"
+                )
+        selected_pair_ids_all = {int(item) for item in p19.get("selected_pair_ids") or []}
+        negative_pair_ids = [pair_id for pair_id in selected_pair_ids_all if pair_id < 0]
+        above_range_pair_ids = [
+            pair_id for pair_id in selected_pair_ids_all if pair_id >= expected_pair_count
         ]
-        if out_of_range:
+        if negative_pair_ids or (
+            above_range_pair_ids
+            and (p19_declared_pairs is None or p19_declared_pairs <= expected_pair_count)
+        ):
             raise ValueError("P19 PoseNet-null artifact contains out-of-range pair ids")
+        selected_pair_ids = {
+            pair_id
+            for pair_id in selected_pair_ids_all
+            if 0 <= pair_id < expected_pair_count
+        }
+        out_of_range_pair_count = len(selected_pair_ids_all) - len(selected_pair_ids)
         for pair_id in selected_pair_ids:
             for frame_idx in _frames_for_pair(pair_id, frame_count=q_shape[0], gop_size=gop_size):
                 importance[frame_idx, :, :] = 0.0
@@ -717,7 +732,11 @@ def _importance_from_p18_p19_artifacts(
             "path": path.as_posix(),
             "bytes": path.stat().st_size,
             "sha256": sha256_file(path),
+            "declared_pair_count": p19_declared_pairs,
+            "expected_pair_count": expected_pair_count,
             "selected_pair_count": len(selected_pair_ids),
+            "source_selected_pair_count": len(selected_pair_ids_all),
+            "out_of_range_pair_count": int(out_of_range_pair_count),
             "source_archive": p19.get("source_archive"),
         }
         if isinstance(p19.get("source_archive"), dict):
@@ -728,21 +747,31 @@ def _importance_from_p18_p19_artifacts(
         p18 = _load_json_object(path)
         if p18.get("schema") != "p18_segnet_region_waterfill.v1":
             raise ValueError("P18 SegNet-region artifact schema mismatch")
-        if (
-            p18.get("n_pairs_available") is not None
-            and int(p18["n_pairs_available"]) != expected_pair_count
-        ):
-            raise ValueError("P18 SegNet-region artifact n_pairs_available does not match HPRC packet")
+        p18_declared_pairs = None
+        if p18.get("n_pairs_available") is not None:
+            p18_declared_pairs = int(p18["n_pairs_available"])
+            if p18_declared_pairs < expected_pair_count:
+                raise ValueError("P18 SegNet-region artifact shorter than HPRC packet")
+            if p18_declared_pairs > expected_pair_count:
+                source_binding_blockers.append(
+                    "p18_full_video_artifact_prefix_projected_to_hprc_packet"
+                )
         grid_h = q_shape[1]
         grid_w = q_shape[2]
+        source_row_count = 0
+        ignored_out_of_range_row_count = 0
         for row in p18.get("rows") or []:
             if not isinstance(row, dict):
                 continue
+            source_row_count += 1
             pair_id = int(row.get("pair_id", -1))
             if pair_id < 0:
                 continue
             if pair_id >= expected_pair_count:
-                raise ValueError("P18 SegNet-region artifact contains out-of-range pair ids")
+                if p18_declared_pairs is None or p18_declared_pairs <= expected_pair_count:
+                    raise ValueError("P18 SegNet-region artifact contains out-of-range pair ids")
+                ignored_out_of_range_row_count += 1
+                continue
             for region in row.get("regions256") or []:
                 if not isinstance(region, dict) or not isinstance(region.get("box"), dict):
                     continue
@@ -763,6 +792,10 @@ def _importance_from_p18_p19_artifacts(
             "path": path.as_posix(),
             "bytes": path.stat().st_size,
             "sha256": sha256_file(path),
+            "declared_pair_count": p18_declared_pairs,
+            "expected_pair_count": expected_pair_count,
+            "source_row_count": int(source_row_count),
+            "ignored_out_of_range_row_count": int(ignored_out_of_range_row_count),
             "protected_region_count": p18_protected_region_count,
             "source_p19_posenet_null_pairs": p18.get("source_p19_posenet_null_pairs"),
         }

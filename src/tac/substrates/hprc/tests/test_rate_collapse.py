@@ -471,6 +471,71 @@ def test_rate_collapse_rejects_stale_p19_out_of_range_pair_artifact(tmp_path: Pa
         )
 
 
+def test_rate_collapse_accepts_full_video_p18_p19_prefix_projection(tmp_path: Path) -> None:
+    packet = build_compact_receiver_packet_from_lowres_frames(
+        _compressible_frames(),
+        basis_count=3,
+        residual_grid_h=3,
+        residual_grid_w=4,
+        source_manifest={"source": "unit_rate_collapse_cli_prefix_projection"},
+    )
+    p19_path = tmp_path / "p19_full_video.json"
+    p19_path.write_text(
+        json.dumps(
+            {
+                "schema": "p19_posenet_null_pair_detection.v1",
+                "n_pairs": 10,
+                "selected_pair_ids": [0, 5],
+            }
+        ),
+        encoding="utf-8",
+    )
+    p18_path = tmp_path / "p18_full_video.json"
+    p18_path.write_text(
+        json.dumps(
+            {
+                "schema": "p18_segnet_region_waterfill.v1",
+                "n_pairs_available": 10,
+                "rows": [
+                    {
+                        "pair_id": 0,
+                        "regions256": [
+                            {"box": {"x0": 0.0, "y0": 0.0, "x1": 0.5, "y1": 0.5}}
+                        ],
+                    },
+                    {
+                        "pair_id": 5,
+                        "regions256": [
+                            {"box": {"x0": 0.5, "y0": 0.5, "x1": 1.0, "y1": 1.0}}
+                        ],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = rate_tool._importance_from_p18_p19_artifacts(
+        packet,
+        p19_path=p19_path,
+        p18_path=p18_path,
+        repo_root=REPO,
+    )
+
+    source = payload["source"]
+    assert source["source_binding_status"] == "video_pair_count_compatible_proxy_priors"
+    assert "p19_full_video_artifact_prefix_projected_to_hprc_packet" in source[
+        "source_binding_blockers"
+    ]
+    assert "p18_full_video_artifact_prefix_projected_to_hprc_packet" in source[
+        "source_binding_blockers"
+    ]
+    assert source["p19_posenet_null_pairs"]["selected_pair_count"] == 1
+    assert source["p19_posenet_null_pairs"]["out_of_range_pair_count"] == 1
+    assert source["p18_segnet_region_waterfill"]["ignored_out_of_range_row_count"] == 1
+    assert source["eligible_cell_count"] > 0
+
+
 def test_rate_collapse_exact_execution_report_feeds_existing_exact_gate(
     tmp_path: Path,
 ) -> None:
