@@ -94,10 +94,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC = REPO_ROOT / "src"
@@ -127,11 +130,159 @@ Z8_FULL_MAIN_CONFIG = {
     "deterministic_state_dim": 8,
 }
 
+FAITHFUL_TOP_LL_REFERENCE = (
+    REPO_ROOT
+    / "experiments"
+    / "results"
+    / "z8_top_ll_clamp_fix_render_faithfulness_remeasure"
+    / "result.json"
+)
+DEFAULT_SSD_RESULT_SUBDIR = (
+    "experiments/results/z8_seg_lever_top_ll_clamped_confirm"
+)
+SSD_WORK_TIERS = (
+    Path("/Volumes/VertigoDataTier/pact"),
+    Path("/Volumes/APDataStore/pact"),
+)
+
 
 def _utc_now() -> str:
     import datetime
 
     return datetime.datetime.now(datetime.UTC).isoformat()
+
+
+def _sha256_file(path: Path) -> str:
+    h = __import__("hashlib").sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _tree_size_bytes(root: Path) -> int:
+    total = 0
+    if not root.exists():
+        return total
+    for path in root.rglob("*"):
+        if path.is_file():
+            try:
+                total += path.stat().st_size
+            except OSError:
+                pass
+    return total
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _load_faithful_top_ll_reference(path: Path) -> dict:
+    ref = json.loads(path.read_text(encoding="utf-8"))
+    if ref.get("verdict") != "FAITHFUL_CONTEST_VALID_UNLOCK":
+        raise RuntimeError(
+            f"top-LL faithful render reference is not unlocked: {path} "
+            f"verdict={ref.get('verdict')!r}"
+        )
+    if ref.get("faithful") is not True:
+        raise RuntimeError(f"top-LL faithful render reference is not faithful: {path}")
+    render_path = str(ref.get("render_path", ""))
+    required = (
+        "build_z8hpc1_archive_bytes_from_canonical_quadruple",
+        "projected_pair_pyramids_from_archive_bytes",
+        "reconstruct_pair_rgb_from_pyramid",
+    )
+    if not all(token in render_path for token in required):
+        raise RuntimeError(
+            f"top-LL reference does not name the faithful archive path: {path}"
+        )
+    ref["result_json_sha256"] = _sha256_file(path)
+    return ref
+
+
+def _resolve_output_root(
+    out_root_arg: Path | None,
+    *,
+    allow_local_output: bool,
+) -> tuple[Path, dict]:
+    """Resolve bulky output to the operator SSD waterfall by default."""
+
+    selected_tier: Path | None = None
+    for tier in SSD_WORK_TIERS:
+        if tier.exists():
+            selected_tier = tier
+            break
+
+    requested = Path(DEFAULT_SSD_RESULT_SUBDIR) if out_root_arg is None else out_root_arg
+    if selected_tier is None:
+        if not allow_local_output:
+            raise RuntimeError(
+                "No SSD work tier is mounted; refusing local output without "
+                "--allow-local-output per operator storage policy."
+            )
+        resolved = (
+            (REPO_ROOT / requested) if not requested.is_absolute() else requested
+        ).resolve()
+        tier_name = "local_explicit_opt_in"
+    elif requested.is_absolute():
+        resolved = requested.resolve()
+        if not any(
+            os.path.commonpath([str(resolved), str(tier.resolve())])
+            == str(tier.resolve())
+            for tier in SSD_WORK_TIERS
+            if tier.exists()
+        ):
+            if not allow_local_output:
+                raise RuntimeError(
+                    f"Refusing non-SSD output root without --allow-local-output: "
+                    f"{resolved}"
+                )
+            tier_name = "local_explicit_opt_in"
+        else:
+            tier_name = selected_tier.name
+    else:
+        resolved = (selected_tier / requested).resolve()
+        tier_name = selected_tier.name
+
+    return resolved, {
+        "schema": "z8_seg_lever_confirmation_storage_preflight.v1",
+        "operator_storage_policy": "operator_storage_waterfall.v1",
+        "ssd_tier_order": [str(tier) for tier in SSD_WORK_TIERS],
+        "selected_tier": tier_name,
+        "output_root": str(resolved),
+        "allow_local_output": bool(allow_local_output),
+        **CANONICAL_NON_PROMOTABLE,
+    }
+
+
+def _assert_storage_preflight(
+    out_root: Path,
+    payload: dict,
+    *,
+    required_free_gb: float,
+) -> dict:
+    out_root.parent.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(out_root.parent)
+    required_bytes = int(float(required_free_gb) * 1024**3)
+    passed = usage.free >= required_bytes
+    payload = {
+        **payload,
+        "checked_path": str(out_root.parent),
+        "required_free_gb": float(required_free_gb),
+        "free_bytes": int(usage.free),
+        "free_gb": float(usage.free / 1024**3),
+        "passed": bool(passed),
+    }
+    if not passed:
+        raise RuntimeError(
+            f"Storage preflight failed: {out_root.parent} has "
+            f"{payload['free_gb']:.1f} GiB free; requires "
+            f"{required_free_gb:.1f} GiB."
+        )
+    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +356,12 @@ def _train_arm(
         str(weight_decay),
         "--optimizer-kind",
         "adamw",
+        # This confirmation only needs matched arm training plus the patched
+        # archive-path measurement below. The joint variational driver currently
+        # emits nested authority/readiness metadata rejected by the canonical
+        # MLX harness; disabling it keeps the two-arm confirmation focused and
+        # fail-closed without weakening the measured SegNet/PoseNet functional.
+        "--disable-joint-variational-driver",
     ]
     if extra_args:
         cmd.extend(extra_args)
@@ -325,6 +482,164 @@ def _render_all_pairs(model, cfg, num_pairs: int):
         arr = np.transpose(arr, (0, 2, 3, 1))  # (2, H, W, 3)
         recon.append(arr)
     return np.stack(recon, axis=0).astype(np.float32)  # (P, 2, H, W, 3)
+
+
+def _canonical_archive_cfg(*, num_pairs: int, eval_h: int, eval_w: int):
+    """Z8HPC1 archive-path config matching the top-LL faithfulness reference."""
+
+    return SimpleNamespace(
+        num_levels=3,
+        num_groups_per_level=(4, 3, 2),
+        num_categories_per_level=(16, 8, 4),
+        num_pairs=int(num_pairs),
+        deterministic_state_dim=16,
+        ego_motion_dim=6,
+        eval_size=(int(eval_h), int(eval_w)),
+    )
+
+
+def _resize_render_to_archive_grid(rendered_pairs, *, eval_h: int, eval_w: int):
+    """Downsample trained 384x512 arm renders to the top-LL archive grid.
+
+    Input/output:
+      rendered_pairs: ``(P, 2, 384, 512, 3)`` float ``[0,255]``.
+      returns frame0/frame1 ``(P, eval_h, eval_w, 3)`` float ``[0,1]``.
+    """
+
+    import numpy as np
+    import torch
+    import torch.nn.functional as F
+
+    P = int(rendered_pairs.shape[0])
+    flat = rendered_pairs.reshape(P * 2, rendered_pairs.shape[2], rendered_pairs.shape[3], 3)
+    t = torch.from_numpy(np.transpose(flat, (0, 3, 1, 2)).copy()).float() / 255.0
+    resized = F.interpolate(
+        t,
+        size=(int(eval_h), int(eval_w)),
+        mode="bicubic",
+        align_corners=False,
+    ).clamp(0.0, 1.0)
+    arr = np.transpose(resized.numpy(), (0, 2, 3, 1)).reshape(
+        P, 2, int(eval_h), int(eval_w), 3
+    )
+    return arr[:, 0].astype(np.float32), arr[:, 1].astype(np.float32)
+
+
+def _reconstruct_archive_pairs_to_scorer_grid(archive_bytes: bytes, *, num_pairs: int):
+    """Render Z8HPC1 bytes through the clamp-fixed top-LL archive path.
+
+    This is the faithful path established by
+    ``experiments/results/z8_top_ll_clamp_fix_render_faithfulness_remeasure/result.json``:
+    archive bytes -> WZ top-LL projection -> inverse wavelet -> final-pixel clip
+    -> bicubic scorer-grid resize.
+    """
+
+    import numpy as np
+    import torch
+    import torch.nn.functional as F
+
+    from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+        reconstruct_pair_rgb_from_pyramid,
+    )
+    from tac.substrates.z8_hierarchical_predictive_coding.runtime_payload_bridge import (
+        projected_pair_pyramids_from_archive_bytes,
+    )
+
+    binding, pair_pyramids, stats = projected_pair_pyramids_from_archive_bytes(
+        archive_bytes
+    )
+    recon: list[object] = []
+    for pyramid in pair_pyramids:
+        r0, r1 = reconstruct_pair_rgb_from_pyramid(binding, pyramid)
+        recon.append(
+            np.stack(
+                [
+                    np.transpose(r0[0], (1, 2, 0)),
+                    np.transpose(r1[0], (1, 2, 0)),
+                ],
+                axis=0,
+            )
+        )
+    recon_unit = np.stack(recon, axis=0).astype(np.float32)
+    flat = recon_unit.reshape(
+        int(num_pairs), 2, recon_unit.shape[2], recon_unit.shape[3], 3
+    ).reshape(int(num_pairs) * 2, recon_unit.shape[2], recon_unit.shape[3], 3)
+    t = torch.from_numpy(np.transpose(flat, (0, 3, 1, 2)).copy())
+    up = F.interpolate(t, size=(384, 512), mode="bicubic", align_corners=False)
+    up = up.clamp(0.0, 1.0) * 255.0
+    up_np = np.transpose(up.numpy().astype(np.float32), (0, 2, 3, 1))
+    return up_np.reshape(int(num_pairs), 2, 384, 512, 3), stats, recon_unit
+
+
+def _render_pairs_through_top_ll_clamped_archive_path(
+    rendered_pairs,
+    *,
+    eval_h: int,
+    eval_w: int,
+) -> tuple[object, dict]:
+    """Encode trained arm renders into Z8HPC1 bytes, then render via receiver.
+
+    The arm distinction remains upstream of the archive: ``rendered_pairs`` is
+    produced by that arm's EMA-shadow model. The measurement, however, now uses
+    the same top-LL-clamp-fixed archive/inflate receiver path as the faithful
+    WAVE-1F reference instead of the collapsed direct argmax path.
+    """
+
+    import hashlib
+
+    import numpy as np
+
+    from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_binding import (
+        build_canonical_quadruple_binding_from_z8_config,
+        build_z8hpc1_archive_bytes_from_canonical_quadruple,
+    )
+
+    num_pairs = int(rendered_pairs.shape[0])
+    frame0, frame1 = _resize_render_to_archive_grid(
+        rendered_pairs,
+        eval_h=int(eval_h),
+        eval_w=int(eval_w),
+    )
+    cfg = _canonical_archive_cfg(
+        num_pairs=num_pairs,
+        eval_h=int(eval_h),
+        eval_w=int(eval_w),
+    )
+    binding = build_canonical_quadruple_binding_from_z8_config(cfg)
+    archive_bytes = build_z8hpc1_archive_bytes_from_canonical_quadruple(
+        binding,
+        frame0,
+        frame1,
+    )
+    recon_scorer, projection_stats, recon_unit = _reconstruct_archive_pairs_to_scorer_grid(
+        archive_bytes,
+        num_pairs=num_pairs,
+    )
+    meta = {
+        "schema": "z8_seg_lever_top_ll_clamped_archive_render.v1",
+        "render_path": (
+            "trained_ema_argmax_render"
+            "->build_z8hpc1_archive_bytes_from_canonical_quadruple"
+            "->projected_pair_pyramids_from_archive_bytes"
+            "->reconstruct_pair_rgb_from_pyramid"
+            "->bicubic_scorer_grid"
+        ),
+        "eval_h": int(eval_h),
+        "eval_w": int(eval_w),
+        "archive_bytes": len(archive_bytes),
+        "archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "wz_projected_pair_changed_count": int(
+            projection_stats.get("projected_pair_changed_count") or 0
+        ),
+        "source_render_mean": float(np.mean(rendered_pairs)),
+        "source_render_std": float(np.std(rendered_pairs)),
+        "archive_grid_frame0_mean": float(np.mean(frame0) * 255.0),
+        "archive_grid_frame1_mean": float(np.mean(frame1) * 255.0),
+        "receiver_unit_recon_mean": float(np.mean(recon_unit) * 255.0),
+        "receiver_unit_recon_std": float(np.std(recon_unit) * 255.0),
+        **CANONICAL_NON_PROMOTABLE,
+    }
+    return recon_scorer, meta
 
 
 # ---------------------------------------------------------------------------
@@ -448,18 +763,43 @@ def _render_faithfulness(recon_pairs, gt_pairs) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _measure_arm(out_dir: Path, *, num_pairs: int, dn, gt_pairs) -> dict:
+def _measure_arm(
+    out_dir: Path,
+    *,
+    num_pairs: int,
+    dn,
+    gt_pairs,
+    render_path: str,
+    eval_h: int,
+    eval_w: int,
+) -> dict:
     model, cfg, npsd = _load_trained_model(out_dir, num_pairs=num_pairs)
-    recon = _render_all_pairs(model, cfg, num_pairs)
+    source_recon = _render_all_pairs(model, cfg, num_pairs)
+    archive_meta = None
+    if render_path == "top_ll_clamped_archive":
+        recon, archive_meta = _render_pairs_through_top_ll_clamped_archive_path(
+            source_recon,
+            eval_h=int(eval_h),
+            eval_w=int(eval_w),
+        )
+    elif render_path == "direct_argmax":
+        recon = source_recon
+    else:
+        raise ValueError(f"unknown render_path: {render_path!r}")
     metrics = _measure_real_d_seg_d_pose(dn, gt_pairs, recon)
-    metrics["ema_shadow_npsd"] = str(npsd.relative_to(REPO_ROOT))
+    metrics["ema_shadow_npsd"] = _display_path(npsd)
     # NO-FAKE invariant: recon mean/std (proves the render is not a constant).
     import numpy as np
 
+    metrics["measurement_render_path"] = render_path
+    metrics["source_direct_argmax_recon_mean"] = float(source_recon.mean())
+    metrics["source_direct_argmax_recon_std"] = float(source_recon.std())
     metrics["recon_mean"] = float(recon.mean())
     metrics["recon_std"] = float(recon.std())
     metrics["recon_is_nonconstant"] = bool(np.std(recon) > 1e-3)
     metrics["render_faithfulness"] = _render_faithfulness(recon, gt_pairs)
+    if archive_meta is not None:
+        metrics["top_ll_clamped_archive_render"] = archive_meta
     return metrics
 
 
@@ -500,7 +840,49 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--video", default="upstream/videos/0.mkv")
     ap.add_argument(
         "--out-root", type=Path,
-        default=Path("experiments/results/z8_seg_lever_faithful_render_confirm"),
+        default=None,
+        help=(
+            "Output root. Relative paths are placed under the first mounted "
+            "operator SSD tier by default."
+        ),
+    )
+    ap.add_argument(
+        "--allow-local-output",
+        action="store_true",
+        help="Explicit opt-in for local-disk output if no SSD tier is available.",
+    )
+    ap.add_argument(
+        "--required-free-gb",
+        type=float,
+        default=20.0,
+        help="Fail closed unless the selected output tier has this much free space.",
+    )
+    ap.add_argument(
+        "--render-path",
+        choices=("top_ll_clamped_archive", "direct_argmax"),
+        default="top_ll_clamped_archive",
+        help=(
+            "Measurement render path. Default uses the WAVE-1F top-LL-clamp-"
+            "fixed Z8HPC1 archive receiver path."
+        ),
+    )
+    ap.add_argument(
+        "--faithful-render-reference",
+        type=Path,
+        default=FAITHFUL_TOP_LL_REFERENCE,
+        help="Faithful top-LL-clamped render result.json used to pin the path.",
+    )
+    ap.add_argument(
+        "--eval-h",
+        type=int,
+        default=None,
+        help="Archive-path eval height; defaults to faithful reference eval_h.",
+    )
+    ap.add_argument(
+        "--eval-w",
+        type=int,
+        default=None,
+        help="Archive-path eval width; defaults to faithful reference eval_w.",
     )
     ap.add_argument(
         "--reuse-existing", action="store_true",
@@ -511,12 +893,31 @@ def main(argv: list[str] | None = None) -> int:
 
     margins = [float(x) for x in str(args.hinge_margins).split(",") if x.strip()]
     started = _utc_now()
-    out_root = (
-        (REPO_ROOT / args.out_root)
-        if not args.out_root.is_absolute()
-        else args.out_root
+    faithful_ref = _load_faithful_top_ll_reference(
+        Path(args.faithful_render_reference)
+    )
+    eval_h = int(args.eval_h or faithful_ref.get("eval_h") or 96)
+    eval_w = int(args.eval_w or faithful_ref.get("eval_w") or 128)
+    out_root, storage_preflight = _resolve_output_root(
+        args.out_root,
+        allow_local_output=bool(args.allow_local_output),
+    )
+    storage_preflight = _assert_storage_preflight(
+        out_root,
+        storage_preflight,
+        required_free_gb=float(args.required_free_gb),
+    )
+    print(
+        f"[storage] output_root={out_root} "
+        f"free={storage_preflight['free_gb']:.1f}GiB "
+        f"required={args.required_free_gb:.1f}GiB",
+        flush=True,
     )
     out_root.mkdir(parents=True, exist_ok=True)
+    (out_root / "storage_preflight.json").write_text(
+        json.dumps(storage_preflight, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
     # --- Train all arms (control kl_t2 + one hinge arm per margin) ---
     arm_specs: list[tuple[str, str, float]] = [("kl_t2", "kl_t2", 1.0)]
@@ -583,7 +984,13 @@ def main(argv: list[str] | None = None) -> int:
         arm_dir = out_root / arm_name
         print(f"[measure] {arm_name} ...")
         metrics = _measure_arm(
-            arm_dir, num_pairs=int(args.num_pairs), dn=dn, gt_pairs=gt_pairs
+            arm_dir,
+            num_pairs=int(args.num_pairs),
+            dn=dn,
+            gt_pairs=gt_pairs,
+            render_path=str(args.render_path),
+            eval_h=eval_h,
+            eval_w=eval_w,
         )
         metrics["objective"] = objective
         metrics["hinge_margin"] = margin
@@ -676,6 +1083,16 @@ def main(argv: list[str] | None = None) -> int:
             "hinge+kl warmup."
         )
 
+    go_no_go = "GO" if verdict == "PARADIGM-VALIDATED" else "NO-GO"
+    go_no_go_detail = (
+        "GO: hinge arm improves d_seg versus kl_t2 on a non-collapsed "
+        "top-LL-clamped archive render without pose regression."
+        if go_no_go == "GO"
+        else "NO-GO: do not route this Z8 seg-lever arm to paid exact eval; "
+        "the confirmation either collapsed or failed to beat kl_t2 on the "
+        "top-LL-clamped archive render path."
+    )
+
     result = {
         "schema": "z8_argmax_hinge_faithful_render_seg_confirm_v1",
         **CANONICAL_NON_PROMOTABLE,
@@ -690,11 +1107,31 @@ def main(argv: list[str] | None = None) -> int:
         "measurement_functional": (
             "d_seg = (SegNet(GT).argmax != SegNet(recon).argmax).mean() "
             "[upstream/modules.py:112]; d_pose = PoseNet first-half MSE "
-            "[upstream/modules.py:84]; recon = DETERMINISTIC per-level argmax "
-            "eval render of EMA-shadow trained Z8 "
-            "(argmax(logits_per_level) -> forward_eval_from_indices)"
+            f"[upstream/modules.py:84]; recon render_path={args.render_path}. "
+            "For top_ll_clamped_archive: EMA-shadow trained Z8 argmax render "
+            "is encoded into Z8HPC1 bytes and measured after "
+            "projected_pair_pyramids_from_archive_bytes -> "
+            "reconstruct_pair_rgb_from_pyramid, the faithful top-LL-clamp-fixed "
+            "receiver path pinned by the reference result.json."
         ),
         "no_fake_identity_guard": "compute_distortion(gt, gt) == 0.0 (verified)",
+        "storage_preflight": storage_preflight,
+        "faithful_top_ll_reference": {
+            "path": str(Path(args.faithful_render_reference)),
+            "sha256": faithful_ref.get("result_json_sha256"),
+            "schema": faithful_ref.get("schema"),
+            "verdict": faithful_ref.get("verdict"),
+            "faithful": faithful_ref.get("faithful"),
+            "render_path": faithful_ref.get("render_path"),
+            "num_pairs": faithful_ref.get("num_pairs"),
+            "eval_h": faithful_ref.get("eval_h"),
+            "eval_w": faithful_ref.get("eval_w"),
+            "distortion_net": faithful_ref.get("distortion_net"),
+            "render_faithfulness": faithful_ref.get("render_faithfulness"),
+        },
+        "measurement_render_path": str(args.render_path),
+        "archive_render_eval_h": eval_h,
+        "archive_render_eval_w": eval_w,
         "z8_full_main_config": Z8_FULL_MAIN_CONFIG,
         "epochs": int(args.epochs),
         "num_pairs": int(args.num_pairs),
@@ -708,6 +1145,7 @@ def main(argv: list[str] | None = None) -> int:
             "weight_decay": float(args.weight_decay),
             "optimizer": "adamw",
             "ema_decay": 0.997,
+            "joint_variational_driver": "disabled_for_confirmation_harness",
         },
         "train_meta": train_meta,
         "arm_metrics": arm_metrics,
@@ -726,6 +1164,8 @@ def main(argv: list[str] | None = None) -> int:
         "seg_improved": seg_improved,
         "verdict": verdict,
         "verdict_detail": verdict_detail,
+        "go_no_go": go_no_go,
+        "go_no_go_detail": go_no_go_detail,
         "canonical_equation_status": (
             "ADVANCES d_seg_faithful_seg_distill_argmax_hinge_dominates_soft_kd_v1"
             if verdict == "PARADIGM-VALIDATED"
@@ -774,6 +1214,40 @@ def main(argv: list[str] | None = None) -> int:
     result["result_body_sha256_pre_provenance"] = artifact_sha
     out_json.write_text(json.dumps(result, indent=2, sort_keys=False) + "\n")
 
+    retention_path = out_root / "artifact_retention_manifest.json"
+    retention_manifest = {
+        "schema": "z8_seg_lever_confirmation_artifact_retention_manifest.v1",
+        "created_at_utc": _utc_now(),
+        "output_root": str(out_root),
+        "result_json": str(out_json),
+        "storage_preflight_json": str(out_root / "storage_preflight.json"),
+        "total_output_tree_bytes": _tree_size_bytes(out_root),
+        "cleanup_action": "retain_on_ssd",
+        "deletion_performed": False,
+        "destructive_cleanup_blocked": False,
+        "retention_reason": (
+            "Bulky training checkpoints and top-LL archive render outputs were "
+            "created directly under the operator SSD tier; keeping bytes is the "
+            "lossless cleanup path for this confirmation artifact."
+        ),
+        "rebuild_command_argv": [sys.executable, *sys.argv],
+        "faithful_top_ll_reference_path": str(Path(args.faithful_render_reference)),
+        "faithful_top_ll_reference_sha256": faithful_ref.get("result_json_sha256"),
+        **CANONICAL_NON_PROMOTABLE,
+    }
+    retention_path.write_text(
+        json.dumps(retention_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    result["artifact_retention_manifest"] = {
+        "path": str(retention_path),
+        "sha256": _sha256_file(retention_path),
+        "schema": retention_manifest["schema"],
+        "cleanup_action": retention_manifest["cleanup_action"],
+        "deletion_performed": False,
+    }
+    out_json.write_text(json.dumps(result, indent=2, sort_keys=False) + "\n")
+
     # human-readable verdict.
     print("\n" + "=" * 78)
     print(f"VERDICT: {verdict}")
@@ -802,7 +1276,13 @@ def main(argv: list[str] | None = None) -> int:
         f"(regressed={pose_regressed})"
     )
     print(f"  detail: {verdict_detail}")
-    print(f"\nwrote {out_json.relative_to(REPO_ROOT)}")
+    print(f"  go/no-go: {go_no_go} — {go_no_go_detail}")
+    try:
+        printed_out = out_json.relative_to(REPO_ROOT)
+    except ValueError:
+        printed_out = out_json
+    print(f"\nwrote {printed_out}")
+    print(f"retention manifest: {retention_path}")
     print("[macOS-MLX research-signal] — NON-PROMOTABLE per Catalog #192/#341")
     print("=" * 78)
     return 0

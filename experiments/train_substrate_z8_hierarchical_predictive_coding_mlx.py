@@ -805,6 +805,20 @@ def _full_main(args: argparse.Namespace) -> int:
     runtime_custody_contract[
         "authority_fields_omitted_from_training_metadata"
     ] = True
+    z8_joint_variational_metadata = (
+        build_z8_joint_variational_driver_metadata(
+            joint_config,
+            archive_export_enabled=joint_variational_enabled,
+        )
+        if joint_variational_enabled
+        else {
+            "schema": "z8_joint_variational_driver_disabled.v1",
+            "enabled": False,
+            "archive_export_enabled": False,
+            "disabled_reason": "explicit_disable_joint_variational_driver_flag",
+            "local_axis": "[macOS-MLX research-signal]",
+        }
+    )
     bundle = RendererBundle(
         model=model,
         target_rgb_0=target_rgb_0,
@@ -834,10 +848,7 @@ def _full_main(args: argparse.Namespace) -> int:
             "z8_trainer_mode": "full",
             "z8_mlx_schedule_provenance": z8_schedule_metadata,
             "score_aware_training": score_aware_training_metadata,
-            "z8_joint_variational_driver": build_z8_joint_variational_driver_metadata(
-                joint_config,
-                archive_export_enabled=joint_variational_enabled,
-            ),
+            "z8_joint_variational_driver": z8_joint_variational_metadata,
             "z8_runtime_custody_contract": runtime_custody_contract,
         },
     )

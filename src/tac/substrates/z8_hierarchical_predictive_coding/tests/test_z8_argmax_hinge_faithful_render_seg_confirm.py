@@ -202,6 +202,31 @@ def test_render_faithfulness_classifies_collapse_vs_faithful(runner, gt_pairs):
     assert ff_noisy["faithful"] is True
 
 
+def test_top_ll_clamped_archive_path_preserves_gt_like_render(runner, gt_pairs):
+    """Archive-path measurement is faithful for GT-like arm renders.
+
+    This guards the patched confirmation surface: rendered arm frames must pass
+    through the WAVE-1F top-LL-clamp-fixed archive receiver path, and that path
+    must stay capable of reconstructing a non-collapsed GT-like render. A direct
+    return of the input or a collapsed receiver would fail the metadata and
+    faithfulness checks below.
+    """
+
+    recon, meta = runner._render_pairs_through_top_ll_clamped_archive_path(
+        gt_pairs,
+        eval_h=32,
+        eval_w=48,
+    )
+    assert recon.shape == gt_pairs.shape
+    assert meta["archive_bytes"] > 1000
+    assert len(meta["archive_sha256"]) == 64
+    assert meta["wz_projected_pair_changed_count"] == gt_pairs.shape[0]
+    assert "projected_pair_pyramids_from_archive_bytes" in meta["render_path"]
+    ff = runner._render_faithfulness(recon, gt_pairs)
+    assert ff["faithful"] is True
+    assert ff["collapsed"] is False
+
+
 def test_score_partial_uses_canonical_contest_weights(
     runner, real_distortion_net, gt_pairs
 ):
