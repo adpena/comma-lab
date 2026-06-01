@@ -189,6 +189,50 @@ def test_hprc_native_rate_protection_blocks_residual_shrink() -> None:
     np.testing.assert_allclose(adapter.model.residual, before)
 
 
+def test_hprc_score_protection_recon_weight_activates_protected_pathway() -> None:
+    protection = np.zeros((6, 4, 5, 3), dtype=np.float32)
+    protection[:, 0, 0, :] = 1.0
+    adapter = HprcCompactReceiverLongTrainingAdapter(
+        np.zeros_like(_frames()),
+        basis_count=3,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        initial_latent_gain=0.0,
+        initial_residual_gain=1.0,
+        initial_receiver_state_gain=0.0,
+        residual_protection=protection,
+        emit_archive_bound_candidate_package=False,
+    )
+    adapter.model.target_frames[:] = 100.0
+    adapter.model.mean[:] = 0
+    adapter.model.latents[:] = 0.0
+    adapter.model.receiver_state[:] = 0.0
+    adapter.model.selectors[:] = 1.0
+    adapter.model.residual[:] = 0.0
+    batch = {"frame_indices": np.arange(6, dtype=np.int32)}
+
+    protected = adapter.loss_fn(
+        adapter.model,
+        batch,
+        {"recon": 1.0, "score_protection_recon": 4.0},
+    )
+    adapter.train_step(
+        batch,
+        learning_rate=0.01,
+        loss_weights={
+            "recon": 0.0,
+            "residual_recon_update": 1.0,
+            "score_protection_recon": 4.0,
+        },
+    )
+
+    assert protected["score_protection_recon_active"] == 1.0
+    assert protected["score_protection_recon_weight"] == 4.0
+    assert abs(float(adapter.model.residual[0, 0, 0, 0])) > abs(
+        float(adapter.model.residual[0, -1, -1, 0])
+    )
+
+
 def test_hprc_residual_recon_update_works_without_rate_pressure() -> None:
     adapter = HprcCompactReceiverLongTrainingAdapter(
         _frames(),
@@ -308,6 +352,66 @@ def test_hprc_training_cli_emits_native_rate_ramp_curriculum(
     assert payload["curriculum_stages"][-1]["loss_weights"]["residual_rate_prox"] == 0.5
 
 
+def test_hprc_training_cli_emits_pr95_pose_guard_rate_curriculum(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    frames_path = tmp_path / "frames.npy"
+    protection_path = tmp_path / "protection.npy"
+    np.save(frames_path, _frames())
+    np.save(protection_path, np.zeros((6, 4, 5, 3), dtype=np.float32))
+
+    exit_code = hprc_training_tool.main(
+        [
+            "--frames-npy",
+            frames_path.as_posix(),
+            "--output-dir",
+            (tmp_path / "hprc_cli_pr95_pose_guard_out").as_posix(),
+            "--epochs",
+            "16",
+            "--batch-pair-indices-per-step",
+            "3",
+            "--learning-rate",
+            "0.01",
+            "--training-backend",
+            "numpy",
+            "--residual-grid-h",
+            "4",
+            "--residual-grid-w",
+            "5",
+            "--native-rate-aware",
+            "--rate-aware-residual-prox-weight",
+            "0.5",
+            "--rate-aware-residual-protection-npy",
+            protection_path.as_posix(),
+            "--curriculum-preset",
+            "hprc_pr95_pose_guard_rate_v1",
+            "--skip-runtime-consumption-proof",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["curriculum_preset"] == "hprc_pr95_pose_guard_rate_v1"
+    stage_names = [stage["name"] for stage in payload["curriculum_stages"]]
+    assert stage_names == [
+        "rdo_gain_anchor",
+        "residual_warm_start",
+        "pose_guard_fit",
+        "gentle_native_rate_probe",
+        "native_rate_ramp",
+        "protected_token_compaction",
+        "byte_closed_polish",
+        "pose_guard_repair_polish",
+    ]
+    assert payload["curriculum_stages"][2]["loss_weights"]["score_protection_recon"] == 3.0
+    assert payload["curriculum_stages"][6]["loss_weights"]["residual_rate_prox"] == 0.5
+    metadata = payload["artifact"]["substrate_artifact_metadata"]["native_rate_aware_training"]
+    assert metadata["protected_reconstruction_pathway"] is True
+
+
 def test_hprc_gain_l2_gradient_matches_reweighted_loss() -> None:
     adapter = HprcCompactReceiverLongTrainingAdapter(
         _frames(),
@@ -416,6 +520,45 @@ def test_hprc_training_cli_consumes_native_rate_protection_surface(
     assert artifact_metadata["native_rate_aware_training"]["enabled"] is True
     assert artifact_metadata["native_rate_aware_training"]["residual_protection_present"] is True
     assert artifact_metadata["training_backend"]["portable_runtime"] == "numpy"
+
+
+def test_hprc_training_cli_refuses_residual_protection_shape_mismatch(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    frames_path = tmp_path / "frames.npy"
+    protection_path = tmp_path / "wrong_grid_protection.npy"
+    np.save(frames_path, _frames())
+    np.save(protection_path, np.zeros((6, 2, 2, 3), dtype=np.float32))
+
+    with pytest.raises(ValueError, match="residual protection shape mismatch"):
+        hprc_training_tool.main(
+            [
+                "--frames-npy",
+                frames_path.as_posix(),
+                "--output-dir",
+                (tmp_path / "hprc_cli_rate_out").as_posix(),
+                "--epochs",
+                "1",
+                "--batch-pair-indices-per-step",
+                "3",
+                "--learning-rate",
+                "0.01",
+                "--training-backend",
+                "numpy",
+                "--residual-grid-h",
+                "4",
+                "--residual-grid-w",
+                "5",
+                "--native-rate-aware",
+                "--rate-aware-residual-prox-weight",
+                "0.5",
+                "--rate-aware-residual-protection-npy",
+                protection_path.as_posix(),
+                "--skip-runtime-consumption-proof",
+            ]
+        )
 
 
 def test_hprc_training_cli_decodes_real_video_source_via_canonical_helper(

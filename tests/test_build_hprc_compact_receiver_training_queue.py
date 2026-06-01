@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tools import build_hprc_compact_receiver_training_queue as builder
@@ -353,6 +354,48 @@ def test_hprc_campaign_queue_refuses_missing_native_protection_input(tmp_path: P
     assert not queue_path.exists()
 
 
+def test_hprc_campaign_queue_refuses_native_protection_shape_mismatch(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+    protection = repo_root / ".omx" / "research" / "wrong_shape.npy"
+    protection.parent.mkdir(parents=True)
+    np.save(protection, np.zeros((64, 16, 16, 3), dtype=np.float32))
+
+    with pytest.raises(ValueError, match="native rate residual protection npy shape mismatch"):
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--campaign-pairs",
+                "32",
+                "--enable-native-rate-aware-hprc",
+                "--native-rate-residual-protection-npy",
+                protection.as_posix(),
+                "--residual-grid-h",
+                "24",
+                "--residual-grid-w",
+                "32",
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+
+    assert not queue_path.exists()
+
+
 def test_hprc_campaign_queue_can_insert_mlx_prefilter_before_cpu_replay(
     tmp_path: Path,
 ) -> None:
@@ -596,7 +639,7 @@ def test_hprc_mlx_prefilter_gate_blocks_cpu_replay_for_obvious_local_loser(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
-def test_hprc_campaign_queue_passes_native_rate_curriculum_preset(tmp_path: Path) -> None:
+def test_hprc_campaign_queue_passes_pr95_pose_guard_curriculum_preset(tmp_path: Path) -> None:
     repo_root = tmp_path
     video_path = repo_root / "upstream" / "videos" / "0.mkv"
     video_path.parent.mkdir(parents=True)
@@ -618,7 +661,7 @@ def test_hprc_campaign_queue_passes_native_rate_curriculum_preset(tmp_path: Path
                 "--epochs",
                 "8",
                 "--curriculum-preset",
-                "hprc_native_rate_ramp_v1",
+                "hprc_pr95_pose_guard_rate_v1",
                 "--storage-tier",
                 f"test={storage_root.as_posix()}",
                 "--storage-expected-bytes",
@@ -634,4 +677,7 @@ def test_hprc_campaign_queue_passes_native_rate_curriculum_preset(tmp_path: Path
     queue = json.loads(queue_path.read_text())
     train_command = queue["experiments"][0]["steps"][0]["command"]
     assert "--curriculum-preset" in train_command
-    assert train_command[train_command.index("--curriculum-preset") + 1] == "hprc_native_rate_ramp_v1"
+    assert (
+        train_command[train_command.index("--curriculum-preset") + 1]
+        == "hprc_pr95_pose_guard_rate_v1"
+    )

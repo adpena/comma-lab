@@ -538,6 +538,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         recon_weight = float(loss_weights.get("recon", 1.0))
         gain_l2_weight = float(loss_weights.get("gain_l2", 0.0))
         residual_l1_weight = self._residual_l1_weight(loss_weights)
+        score_protection_recon_weight = self._score_protection_recon_weight(loss_weights)
         sse = 0.0
         count = 0
         grad = np.zeros((3,), dtype=np.float64)
@@ -545,11 +546,16 @@ class HprcCompactReceiverLongTrainingAdapter:
             pred, components = model.render_continuous(int(frame_index))
             target = model.target_frames[int(frame_index)]
             diff = pred - target
-            sse += float(np.sum(diff * diff))
+            pixel_weight = self._score_protection_pixel_weight_np(
+                int(frame_index),
+                score_protection_recon_weight,
+            )
+            weighted_diff = diff if pixel_weight is None else diff * pixel_weight
+            sse += float(np.sum(diff * weighted_diff))
             count += int(diff.size)
             inv_count = 2.0 / max(diff.size, 1)
             for i, component in enumerate(components):
-                grad[i] += float(np.sum(diff * component) * inv_count)
+                grad[i] += float(np.sum(weighted_diff * component) * inv_count)
         mse = sse / max(count, 1)
         residual_rate_l1 = self._residual_rate_l1(frame_indices)
         recon_objective = float(mse)
@@ -573,6 +579,10 @@ class HprcCompactReceiverLongTrainingAdapter:
             "recon": float(mse),
             "residual_rate_l1_proxy": float(residual_rate_l1),
             "residual_rate_l1_weight": float(residual_l1_weight),
+            "score_protection_recon_weight": float(score_protection_recon_weight),
+            "score_protection_recon_active": float(
+                score_protection_recon_weight > 0.0 and self.residual_protection is not None
+            ),
             "residual_nonzero_fraction": float(np.count_nonzero(model.residual) / model.residual.size),
         }
 
@@ -599,6 +609,17 @@ class HprcCompactReceiverLongTrainingAdapter:
             state_component = mx.broadcast_to(state.reshape((int(indices.size), 1, 1, 3)), target.shape)
         else:
             state_component = mx.zeros_like(target)
+        protection_component = None
+        if self.residual_protection is not None:
+            protection_grid = mx.array(
+                self.residual_protection[indices].astype(np.float32, copy=False)
+            )
+            protection_component = _nearest_resize_batch_mlx(
+                mx,
+                protection_grid,
+                int(model.packet_config.height),
+                int(model.packet_config.width),
+            )
         return {
             "mx": mx,
             "target": target,
@@ -606,6 +627,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             "latent_component": latent_component,
             "selector": selector,
             "state_component": state_component,
+            "protection_component": protection_component,
             "height": int(model.packet_config.height),
             "width": int(model.packet_config.width),
             "frame_indices": indices,
@@ -649,11 +671,14 @@ class HprcCompactReceiverLongTrainingAdapter:
         recon_weight = float(loss_weights.get("recon", 1.0))
         gain_l2_weight = float(loss_weights.get("gain_l2", 0.0))
         residual_l1_weight = self._residual_l1_weight(loss_weights)
-        mse = mx.mean(diff * diff)
+        score_protection_recon_weight = self._score_protection_recon_weight(loss_weights)
+        pixel_weight = self._score_protection_pixel_weight_mlx(common, score_protection_recon_weight)
+        weighted_diff = diff if pixel_weight is None else diff * pixel_weight
+        mse = mx.mean(diff * weighted_diff)
         grad_scale = 2.0 / float(np.prod(model.target_frames.shape[1:]) * frame_indices.size)
-        grad_latent = mx.sum(diff * common["latent_component"]) * grad_scale
-        grad_residual = mx.sum(diff * residual_component) * grad_scale
-        grad_state = mx.sum(diff * common["state_component"]) * grad_scale
+        grad_latent = mx.sum(weighted_diff * common["latent_component"]) * grad_scale
+        grad_residual = mx.sum(weighted_diff * residual_component) * grad_scale
+        grad_state = mx.sum(weighted_diff * common["state_component"]) * grad_scale
         recon_objective = mse
         if gain_l2_weight:
             defaults = mx.array([1.0, 1.0, 0.25], dtype=mx.float32)
@@ -680,6 +705,10 @@ class HprcCompactReceiverLongTrainingAdapter:
             "recon": _mx_scalar(mse),
             "residual_rate_l1_proxy": _mx_scalar(residual_rate_l1),
             "residual_rate_l1_weight": float(residual_l1_weight),
+            "score_protection_recon_weight": float(score_protection_recon_weight),
+            "score_protection_recon_active": float(
+                score_protection_recon_weight > 0.0 and self.residual_protection is not None
+            ),
             "residual_nonzero_fraction": float(np.count_nonzero(model.residual) / model.residual.size),
             "loss_backend_is_mlx": 1.0,
         }
@@ -702,6 +731,39 @@ class HprcCompactReceiverLongTrainingAdapter:
 
     def _residual_recon_update_weight(self, loss_weights: Mapping[str, float]) -> float:
         return max(0.0, float(loss_weights.get("residual_recon_update", 0.0)))
+
+    def _score_protection_recon_weight(self, loss_weights: Mapping[str, float]) -> float:
+        return max(0.0, float(loss_weights.get("score_protection_recon", 0.0)))
+
+    def _score_protection_pixel_weight_np(
+        self,
+        frame_index: int,
+        weight: float,
+    ) -> np.ndarray | None:
+        if weight <= 0.0 or self.residual_protection is None:
+            return None
+        protection_grid = self.residual_protection[int(frame_index)]
+        protection = _nearest_resize(
+            protection_grid,
+            int(self.model.packet_config.height),
+            int(self.model.packet_config.width),
+        ).astype(np.float64, copy=False)
+        pixel_weight = 1.0 + float(weight) * protection
+        mean = float(np.mean(pixel_weight))
+        if mean > 0.0:
+            pixel_weight = pixel_weight / mean
+        return pixel_weight
+
+    def _score_protection_pixel_weight_mlx(
+        self,
+        common: Mapping[str, Any],
+        weight: float,
+    ) -> Any | None:
+        if weight <= 0.0 or common.get("protection_component") is None:
+            return None
+        mx = common["mx"]
+        pixel_weight = 1.0 + float(weight) * common["protection_component"]
+        return pixel_weight / mx.maximum(mx.mean(pixel_weight), 1e-6)
 
     def _residual_rate_pressure(self) -> np.ndarray:
         if self.residual_protection is None:
@@ -743,12 +805,18 @@ class HprcCompactReceiverLongTrainingAdapter:
         before = self.model.residual[frame_indices].copy()
         pressure_all = self._residual_rate_pressure()
         recon_weight = float(residual_recon_weight)
+        score_protection_recon_weight = self._score_protection_recon_weight(loss_weights)
         grid_h, grid_w = int(self.model.residual.shape[1]), int(self.model.residual.shape[2])
         for frame_index in frame_indices:
             idx = int(frame_index)
             pred, _components = self.model.render_continuous(idx)
             diff = pred - self.model.target_frames[idx]
-            grad_grid = _downsample_sum_nearest_inverse(diff, grid_h, grid_w)
+            pixel_weight = self._score_protection_pixel_weight_np(
+                idx,
+                score_protection_recon_weight,
+            )
+            weighted_diff = diff if pixel_weight is None else diff * pixel_weight
+            grad_grid = _downsample_sum_nearest_inverse(weighted_diff, grid_h, grid_w)
             grad_grid *= (
                 recon_weight
                 * float(self.model.selectors[idx])
@@ -810,6 +878,11 @@ class HprcCompactReceiverLongTrainingAdapter:
         residual_batch = mx.array(before.astype(np.float32, copy=False))
         pressure = mx.array(self._residual_rate_pressure()[frame_indices].astype(np.float32, copy=False))
         recon_weight = float(residual_recon_weight)
+        score_protection_recon_weight = self._score_protection_recon_weight(loss_weights)
+        pixel_weight = self._score_protection_pixel_weight_mlx(
+            common,
+            score_protection_recon_weight,
+        )
 
         def residual_objective(residual_value: Any) -> Any:
             pred, _residual_component = self._mlx_prediction_from_residual(
@@ -818,7 +891,8 @@ class HprcCompactReceiverLongTrainingAdapter:
                 residual_value,
             )
             diff = pred - common["target"]
-            recon = float(recon_weight) * mx.mean(diff * diff)
+            weighted_diff = diff if pixel_weight is None else diff * pixel_weight
+            recon = float(recon_weight) * mx.mean(diff * weighted_diff)
             rate = float(l1_weight) * mx.mean(mx.abs(residual_value) * pressure)
             return recon + rate
 
@@ -926,6 +1000,12 @@ class HprcCompactReceiverLongTrainingAdapter:
                 "residual_protection_present": self.residual_protection is not None,
                 "residual_protection_semantics": (
                     "1=protect_from_rate_pressure,0=safest_to_shrink"
+                ),
+                "protected_reconstruction_pathway": self.residual_protection is not None,
+                "protected_reconstruction_semantics": (
+                    "curriculum loss weight score_protection_recon upweights "
+                    "P18/P19 protected residual cells during reconstruction and "
+                    "residual-token repair updates"
                 ),
                 "residual_nonzero_fraction": float(
                     np.count_nonzero(self.model.residual) / self.model.residual.size

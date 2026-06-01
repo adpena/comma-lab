@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
@@ -69,7 +71,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=1e-2)
     parser.add_argument(
         "--curriculum-preset",
-        choices=("single_stage", "hprc_native_rate_ramp_v1"),
+        choices=(
+            "single_stage",
+            "hprc_native_rate_ramp_v1",
+            "hprc_pr95_pose_guard_rate_v1",
+        ),
         default="single_stage",
     )
     parser.add_argument("--basis-count", type=int, default=3)
@@ -1735,7 +1741,12 @@ def _validate_input_artifact_paths(args: argparse.Namespace, *, repo_root: Path)
                     f"(resolved: {resolved})"
                 )
             continue
-        _require_existing_file(value, repo_root=repo_root, label=label)
+        resolved_file = _require_existing_file(value, repo_root=repo_root, label=label)
+        if attr == "native_rate_residual_protection_npy":
+            _validate_native_rate_residual_protection_shape_for_campaigns(
+                resolved_file,
+                args=args,
+            )
 
 
 def _require_existing_file(path: Path, *, repo_root: Path, label: str) -> Path:
@@ -1746,6 +1757,41 @@ def _require_existing_file(path: Path, *, repo_root: Path, label: str) -> Path:
             f"(resolved: {resolved})"
         )
     return resolved
+
+
+def _validate_native_rate_residual_protection_shape_for_campaigns(
+    path: Path,
+    *,
+    args: argparse.Namespace,
+) -> None:
+    shape = tuple(int(v) for v in np.load(path, mmap_mode="r").shape)
+    campaign_pairs = _campaign_pairs(args)
+    expected_shapes: set[tuple[int, ...]] = set()
+    for pairs in campaign_pairs:
+        effective_pairs = int(pairs)
+        if args.decode_max_pairs is not None:
+            effective_pairs = min(effective_pairs, int(args.decode_max_pairs))
+        frames = int(effective_pairs) * 2
+        grid_h = int(args.residual_grid_h)
+        grid_w = int(args.residual_grid_w)
+        expected_shapes.update(
+            {
+                (frames, grid_h, grid_w, 3),
+                (frames, grid_h, grid_w),
+                (frames, 1, 1, 1),
+                (frames, 1, 1),
+                (1, grid_h, grid_w, 3),
+                (1, grid_h, grid_w),
+            }
+        )
+    if shape not in expected_shapes:
+        raise ValueError(
+            "native rate residual protection npy shape mismatch: "
+            f"{path} has shape {shape}, but campaign pairs/grid expect one of "
+            f"{sorted(expected_shapes)}. Match --campaign-pairs/--decode-max-pairs and "
+            "--residual-grid-h/--residual-grid-w, or let the queue rebuild the surface "
+            "from P18/P19 artifacts."
+        )
 
 
 def _repo_rel_or_abs(path: Path, repo_root: Path) -> str:

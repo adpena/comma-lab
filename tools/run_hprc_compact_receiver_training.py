@@ -60,11 +60,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--learning-rate", type=float, default=1e-2)
     parser.add_argument(
         "--curriculum-preset",
-        choices=("single_stage", "hprc_native_rate_ramp_v1"),
+        choices=(
+            "single_stage",
+            "hprc_native_rate_ramp_v1",
+            "hprc_pr95_pose_guard_rate_v1",
+        ),
         default="single_stage",
         help=(
             "Training schedule. hprc_native_rate_ramp_v1 adds residual-recon "
-            "warmup, protected rate ramp, and low-LR polish before archive export."
+            "warmup, protected rate ramp, and low-LR polish before archive export. "
+            "hprc_pr95_pose_guard_rate_v1 is the 8-stage PR95-style scaffold: "
+            "fit, protected scorer-surface repair, native rate ramp, and final "
+            "byte-polish while preserving P18/P19 protected residual cells."
         ),
     )
     parser.add_argument("--basis-count", type=int, default=3)
@@ -132,7 +139,16 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = Path(args.repo_root).expanduser().resolve(strict=False)
     output_dir, storage_plan_path = _resolve_output_dir(args, repo_root=repo_root)
     frames, source_manifest = _load_source_frames(args, repo_root=repo_root)
-    residual_protection, protection_manifest = _load_residual_protection(args, repo_root=repo_root)
+    residual_protection, protection_manifest = _load_residual_protection(
+        args,
+        repo_root=repo_root,
+        expected_residual_shape=(
+            int(frames.shape[0]),
+            int(args.residual_grid_h),
+            int(args.residual_grid_w),
+            3,
+        ),
+    )
     external_storage_plan = _resolve_optional_path(args.storage_plan_path, repo_root=repo_root)
     storage_plan_for_result = storage_plan_path or external_storage_plan
     adapter = HprcCompactReceiverLongTrainingAdapter(
@@ -225,6 +241,12 @@ def _build_curriculum_stages(args: argparse.Namespace) -> tuple[CurriculumStage,
                 ),
             ),
         )
+    if str(args.curriculum_preset) == "hprc_pr95_pose_guard_rate_v1":
+        return _build_pr95_pose_guard_rate_curriculum(
+            epochs,
+            final_l1=final_l1,
+            final_prox=final_prox,
+        )
     if str(args.curriculum_preset) != "hprc_native_rate_ramp_v1":
         raise ValueError(f"unknown curriculum preset: {args.curriculum_preset!r}")
 
@@ -297,11 +319,142 @@ def _build_curriculum_stages(args: argparse.Namespace) -> tuple[CurriculumStage,
     )
 
 
+def _build_pr95_pose_guard_rate_curriculum(
+    epochs: int,
+    *,
+    final_l1: float,
+    final_prox: float,
+) -> tuple[CurriculumStage, ...]:
+    stages = [
+        (
+            "rdo_gain_anchor",
+            0.08,
+            0.80,
+            _hprc_loss_weights(
+                residual_l1=0.0,
+                residual_prox=0.0,
+                residual_recon_update=0.0,
+                gain_l2=1e-4,
+            ),
+            "Anchor compact receiver gains before mutating residual tokens.",
+        ),
+        (
+            "residual_warm_start",
+            0.12,
+            1.00,
+            _hprc_loss_weights(
+                residual_l1=0.0,
+                residual_prox=0.0,
+                residual_recon_update=0.45,
+                score_protection_recon=1.0,
+                gain_l2=1e-4,
+            ),
+            "Start residual fitting with scorer-protected cells weighted above interiors.",
+        ),
+        (
+            "pose_guard_fit",
+            0.15,
+            1.00,
+            _hprc_loss_weights(
+                residual_l1=0.0,
+                residual_prox=0.0,
+                residual_recon_update=1.0,
+                score_protection_recon=3.0,
+                gain_l2=1e-4,
+            ),
+            "Spend training capacity on P18/P19 protected cells before rate pressure.",
+        ),
+        (
+            "gentle_native_rate_probe",
+            0.12,
+            0.80,
+            _hprc_loss_weights(
+                residual_l1=0.05 * final_l1,
+                residual_prox=0.05 * final_prox,
+                residual_recon_update=0.85,
+                score_protection_recon=3.0,
+                gain_l2=1e-4,
+            ),
+            "Introduce a small rate proxy while measuring whether protected cells move.",
+        ),
+        (
+            "native_rate_ramp",
+            0.18,
+            0.60,
+            _hprc_loss_weights(
+                residual_l1=0.35 * final_l1,
+                residual_prox=0.35 * final_prox,
+                residual_recon_update=0.65,
+                score_protection_recon=2.5,
+                gain_l2=1e-4,
+            ),
+            "Move toward compact tokens after the protected residual pathway is fit.",
+        ),
+        (
+            "protected_token_compaction",
+            0.15,
+            0.45,
+            _hprc_loss_weights(
+                residual_l1=0.70 * final_l1,
+                residual_prox=0.70 * final_prox,
+                residual_recon_update=0.45,
+                score_protection_recon=2.0,
+                gain_l2=1e-4,
+            ),
+            "Apply strong pressure to unprotected cells while retaining scorer-critical ones.",
+        ),
+        (
+            "byte_closed_polish",
+            0.12,
+            0.25,
+            _hprc_loss_weights(
+                residual_l1=final_l1,
+                residual_prox=final_prox,
+                residual_recon_update=0.30,
+                score_protection_recon=1.5,
+                gain_l2=1e-4,
+            ),
+            "Polish at the final archive-rate point before byte-closed export.",
+        ),
+        (
+            "pose_guard_repair_polish",
+            0.08,
+            0.15,
+            _hprc_loss_weights(
+                residual_l1=0.25 * final_l1,
+                residual_prox=0.25 * final_prox,
+                residual_recon_update=0.80,
+                score_protection_recon=4.0,
+                gain_l2=1e-4,
+            ),
+            "Final protected repair pass to avoid the high-rate-low-pose failure mode.",
+        ),
+    ]
+    spans = _epoch_spans(epochs, [stage[1] for stage in stages])
+    return tuple(
+        CurriculumStage(
+            name=name,
+            start_epoch=start,
+            end_epoch=end,
+            loss_weights=weights,
+            lr_scale=lr_scale,
+            notes=notes,
+        )
+        for (name, _fraction, lr_scale, weights, notes), (start, end) in zip(
+            stages,
+            spans,
+            strict=True,
+        )
+        if end > start
+    )
+
+
 def _hprc_loss_weights(
     *,
     residual_l1: float,
     residual_prox: float,
     residual_recon_update: float,
+    score_protection_recon: float = 0.0,
     gain_l2: float = 0.0,
 ) -> dict[str, float]:
     weights = {
@@ -310,6 +463,8 @@ def _hprc_loss_weights(
         "residual_rate_l1": max(0.0, float(residual_l1)),
         "residual_rate_prox": max(0.0, float(residual_prox)),
     }
+    if score_protection_recon > 0.0:
+        weights["score_protection_recon"] = float(score_protection_recon)
     if gain_l2 > 0.0:
         weights["gain_l2"] = float(gain_l2)
     return weights
@@ -419,6 +574,7 @@ def _load_residual_protection(
     args: argparse.Namespace,
     *,
     repo_root: Path,
+    expected_residual_shape: tuple[int, int, int, int],
 ) -> tuple[np.ndarray | None, dict[str, object] | None]:
     if args.rate_aware_residual_protection_npy is None:
         return None, None
@@ -429,6 +585,11 @@ def _load_residual_protection(
     if not path.is_file():
         raise ValueError(f"rate-aware residual protection missing: {path}")
     arr = np.load(path)
+    _validate_residual_protection_shape(
+        arr.shape,
+        expected_residual_shape=expected_residual_shape,
+        path=path,
+    )
     return arr, {
         "schema": "hprc_native_rate_residual_protection_input.v1",
         "path": path.as_posix(),
@@ -440,6 +601,30 @@ def _load_residual_protection(
         "score_claim": False,
         "promotion_eligible": False,
     }
+
+
+def _validate_residual_protection_shape(
+    shape: tuple[int, ...],
+    *,
+    expected_residual_shape: tuple[int, int, int, int],
+    path: Path,
+) -> None:
+    frames, grid_h, grid_w, channels = expected_residual_shape
+    allowed = {
+        (frames, grid_h, grid_w, channels),
+        (frames, grid_h, grid_w),
+        (frames, 1, 1, 1),
+        (frames, 1, 1),
+        (1, grid_h, grid_w, channels),
+        (1, grid_h, grid_w),
+    }
+    if tuple(int(v) for v in shape) not in allowed:
+        raise ValueError(
+            "rate-aware residual protection shape mismatch: "
+            f"{path} has shape {tuple(shape)}, but decode/residual config expects one of "
+            f"{sorted(allowed)}. Match --decode-pairs/--decode-max-pairs and "
+            "--residual-grid-h/--residual-grid-w, or rebuild the P18/P19 protection surface."
+        )
 
 
 def _resolve_output_dir(
