@@ -229,6 +229,7 @@ def adapt_pr95_mlx_report_to_spine(
     pr95_mlx_report_path: str | Path,
     output_dir: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
     hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -278,6 +279,7 @@ def adapt_pr95_mlx_report_to_spine(
     _write_json(acquisition_path, acquisition)
     runner_plan = build_spine_bounded_runner_plan(
         acquisition_report_path=acquisition_path,
+        mlx_profile_paths=mlx_profile_paths,
         hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
         repo_root=root,
     )
@@ -305,6 +307,9 @@ def adapt_pr95_mlx_report_to_spine(
             "projection_manifest_paths": [projection_manifest.as_posix()],
             "acquisition_report_path": acquisition_path.as_posix(),
             "bounded_runner_plan_path": runner_plan_path.as_posix(),
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+            ],
             "hprc_queue_followup_report_paths": [
                 _resolve(path, base=root).as_posix()
                 for path in hprc_queue_followup_report_paths
@@ -329,6 +334,7 @@ def adapt_pr95_stage8_report_to_spine(
     pr95_stage8_report_path: str | Path,
     output_dir: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
     hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     run_receiver_proof: bool = False,
     receiver_proof_runtime_dir: str | Path = DEFAULT_PR95_RECEIVER_RUNTIME_DIR,
@@ -402,6 +408,7 @@ def adapt_pr95_stage8_report_to_spine(
     _write_json(acquisition_path, acquisition)
     runner_plan = build_spine_bounded_runner_plan(
         acquisition_report_path=acquisition_path,
+        mlx_profile_paths=mlx_profile_paths,
         receiver_proof_report_paths=receiver_proof_paths,
         hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
         repo_root=root,
@@ -430,9 +437,10 @@ def adapt_pr95_stage8_report_to_spine(
     blockers: list[Any] = [
         *stage8_blockers,
         *runner_plan.get("blockers", []),
-        "full_video_mlx_scorer_replay_not_attached",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    if not mlx_profile_paths:
+        blockers.append("full_video_mlx_scorer_replay_not_attached")
     receiver_proof_passed = (
         receiver_proof_report is not None
         and (
@@ -474,6 +482,9 @@ def adapt_pr95_stage8_report_to_spine(
             "acquisition_report_path": acquisition_path.as_posix(),
             "bounded_runner_plan_path": runner_plan_path.as_posix(),
             "selected_runner_rows": runner_plan["selected_runner_rows"],
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+            ],
             "stage8_source_faithfulness": {
                 "schema": "pr95_stage8_source_faithfulness.v1",
                 "public_stage8_train_stage_called": public_stage8_train_called is True,
@@ -505,6 +516,7 @@ def execute_pr95_stage8_source_and_adapt(
     source_archive_zip: str | Path,
     source_video_path: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
     hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     stage8_epochs: int = 0,
     stage8_eval_every: int = 1,
@@ -557,6 +569,7 @@ def execute_pr95_stage8_source_and_adapt(
         pr95_stage8_report_path=stage8_report["report_path"],
         output_dir=out,
         hard_byte_ceilings=hard_byte_ceilings,
+        mlx_profile_paths=mlx_profile_paths,
         hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
         run_receiver_proof=run_receiver_proof,
         receiver_proof_runtime_dir=receiver_proof_runtime_dir,
@@ -607,6 +620,7 @@ def execute_pr95_mlx_smoke_and_adapt(
     training_loss_surface: str,
     source_video_path: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
     hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     latent_dim: int | None = None,
     base_channels: int | None = None,
@@ -674,6 +688,7 @@ def execute_pr95_mlx_smoke_and_adapt(
         pr95_mlx_report_path=pr95_report_path,
         output_dir=out / "spine_from_pr95_mlx_smoke",
         hard_byte_ceilings=hard_byte_ceilings,
+        mlx_profile_paths=mlx_profile_paths,
         hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
         allow_overwrite=allow_overwrite,
         repo_root=root,
@@ -690,6 +705,9 @@ def execute_pr95_mlx_smoke_and_adapt(
             "pr95_mlx_smoke_report_path": pr95_report_path.as_posix(),
             "pr95_mlx_smoke_report_sha256": _sha256_file(pr95_report_path),
             "adapted_report_path": adapted["report_path"],
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+            ],
             "adapted_blockers": adapted["blockers"],
             "blockers": adapted["blockers"],
         }
@@ -926,6 +944,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     source_video_path: str | Path,
     source_archive_zip: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
     hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     latent_dim: int = 28,
     base_channels: int = 36,
@@ -1048,6 +1067,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             _write_json(acquisition_path, acquisition)
             runner_plan = build_spine_bounded_runner_plan(
                 acquisition_report_path=acquisition_path,
+                mlx_profile_paths=mlx_profile_paths,
                 receiver_proof_report_paths=receiver_proof_paths,
                 hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
                 repo_root=root,
@@ -1062,9 +1082,10 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
         except Exception as exc:
             spine_projection_error = repr(exc)
     blockers: list[Any] = [
-        "full_video_mlx_scorer_replay_not_attached",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    if not mlx_profile_paths:
+        blockers.append("full_video_mlx_scorer_replay_not_attached")
     if receiver_proof_report is None:
         blockers.append("receiver_proof_not_executed")
     elif not receiver_proof_report.get("receiver_proof_valid"):
@@ -1116,6 +1137,9 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             ],
             "receiver_proof_report": receiver_proof_report,
             "spine_projection_error": spine_projection_error,
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+            ],
             "acquisition_report_path": (
                 acquisition_path.as_posix() if acquisition_path.is_file() else None
             ),
@@ -1353,6 +1377,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     learning_rate: float,
     source_video_path: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
     hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     latent_dim: int = 8,
     embed_dim: int = 8,
@@ -1435,9 +1460,10 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
     selected_runner_rows: list[dict[str, Any]] = []
     blockers: list[Any] = [
-        "full_video_mlx_scorer_replay_not_attached",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    if not mlx_profile_paths:
+        blockers.append("full_video_mlx_scorer_replay_not_attached")
     if projection_paths:
         acquisition = build_spine_acquisition_report(
             projection_manifest_paths=projection_paths,
@@ -1446,6 +1472,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
         _write_json(acquisition_path, acquisition)
         runner_plan = build_spine_bounded_runner_plan(
             acquisition_report_path=acquisition_path,
+            mlx_profile_paths=mlx_profile_paths,
             receiver_proof_report_paths=receiver_proof_paths,
             hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
             repo_root=root,
@@ -1494,6 +1521,9 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             "receiver_proof_report_paths": [
                 path.as_posix() for path in receiver_proof_paths
             ],
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+            ],
             "hprc_queue_followup_report_paths": [
                 _resolve(path, base=root).as_posix()
                 for path in hprc_queue_followup_report_paths
@@ -1522,6 +1552,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     learning_rate: float,
     source_video_path: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
     hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     latent_dim: int = 8,
     embed_dim: int = 8,
@@ -1608,9 +1639,10 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
     selected_runner_rows: list[dict[str, Any]] = []
     blockers: list[Any] = [
-        "full_video_mlx_scorer_replay_not_attached",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    if not mlx_profile_paths:
+        blockers.append("full_video_mlx_scorer_replay_not_attached")
     if int(num_pairs) < 600:
         blockers.append("partial_pair_coverage_not_promotion_comparable")
     if projection_paths:
@@ -1621,6 +1653,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
         _write_json(acquisition_path, acquisition)
         runner_plan = build_spine_bounded_runner_plan(
             acquisition_report_path=acquisition_path,
+            mlx_profile_paths=mlx_profile_paths,
             receiver_proof_report_paths=receiver_proof_paths,
             hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
             repo_root=root,
@@ -1679,6 +1712,9 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
             "receiver_proof_report_paths": [
                 path.as_posix() for path in receiver_proof_paths
+            ],
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
             ],
             "hprc_queue_followup_report_paths": [
                 _resolve(path, base=root).as_posix()
@@ -2471,6 +2507,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "bounded-runner posterior. Repeatable."
         ),
     )
+    parser.add_argument(
+        "--mlx-profile",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "HPRC MLX component-neutralization profile to attach to the "
+            "bounded runner for section value-per-byte routing. Repeatable."
+        ),
+    )
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
@@ -2501,6 +2547,7 @@ def main(argv: list[str] | None = None) -> int:
             training_loss_surface=args.training_loss_surface,
             source_video_path=args.source_video_path,
             hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             latent_dim=args.latent_dim,
             base_channels=args.base_channels,
@@ -2513,6 +2560,7 @@ def main(argv: list[str] | None = None) -> int:
             pr95_mlx_report_path=args.from_pr95_mlx_report,
             output_dir=output_dir,
             hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -2522,6 +2570,7 @@ def main(argv: list[str] | None = None) -> int:
             pr95_stage8_report_path=args.from_pr95_stage8_report,
             output_dir=output_dir,
             hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             run_receiver_proof=args.run_receiver_proof,
             receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
@@ -2536,6 +2585,7 @@ def main(argv: list[str] | None = None) -> int:
             source_archive_zip=args.pr95_source_archive,
             source_video_path=args.source_video_path,
             hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             stage8_epochs=args.stage8_epochs,
             stage8_eval_every=args.stage8_eval_every,
@@ -2561,6 +2611,7 @@ def main(argv: list[str] | None = None) -> int:
             source_video_path=args.source_video_path,
             source_archive_zip=args.pr95_source_archive,
             hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             latent_dim=args.latent_dim or 28,
             base_channels=args.base_channels or 36,
@@ -2590,6 +2641,7 @@ def main(argv: list[str] | None = None) -> int:
             learning_rate=args.learning_rate,
             source_video_path=args.source_video_path,
             hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             latent_dim=args.compact_latent_dim,
             embed_dim=args.compact_embed_dim,
@@ -2617,6 +2669,7 @@ def main(argv: list[str] | None = None) -> int:
             learning_rate=args.learning_rate,
             source_video_path=args.source_video_path,
             hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             latent_dim=args.compact_latent_dim,
             embed_dim=args.compact_embed_dim,

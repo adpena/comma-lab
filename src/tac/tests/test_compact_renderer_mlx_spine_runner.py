@@ -250,6 +250,8 @@ def test_selector_v4_execute_parser_exposes_real_family_controls() -> None:
             "0.2",
             "--pose-distillation-weight",
             "0.4",
+            "--mlx-profile",
+            "selector_section_value_profile.json",
         ]
     )
 
@@ -258,6 +260,7 @@ def test_selector_v4_execute_parser_exposes_real_family_controls() -> None:
     assert args.num_pairs == 600
     assert args.segnet_distillation_weight == 0.2
     assert args.pose_distillation_weight == 0.4
+    assert args.mlx_profile == [Path("selector_section_value_profile.json")]
 
 
 def test_pr95_hnerv_execute_parser_exposes_public_archive_seed() -> None:
@@ -650,6 +653,48 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
         "_run_pact_nerv_selector_v4_mlx_smoke",
         fake_train,
     )
+    projection_manifest_path = (
+        tmp_path
+        / "run"
+        / "pact_nerv_selector_v4_mlx_training"
+        / "hprc_representation_spine_pact_nerv_selector_v4_manifest.json"
+    )
+    mlx_profile_path = tmp_path / "selector_section_value_profile.json"
+    mlx_profile_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "family": "pact_nerv",
+                "max_pairs": 600,
+                "projection_manifest_path": projection_manifest_path.as_posix(),
+                "scope_status": {
+                    "full_video": True,
+                    "axis": "[macOS-MLX research-signal]",
+                },
+                "section_value_rows": [
+                    {
+                        "variant_id": "neutralize_decoder_qw",
+                        "neutralized_section": "decoder_qw",
+                        "archive_bytes_removed_vs_baseline": 60,
+                        "delta_nonrate_score": 0.25,
+                        "delta_total_mlx_score_advisory": 0.25,
+                        "family": "pact_nerv",
+                        "projection_manifest_path": (
+                            projection_manifest_path.as_posix()
+                        ),
+                        "marginal_status": "measured_full_video_mlx_advisory",
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     out = execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
         output_dir=tmp_path / "run",
@@ -663,6 +708,7 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
         embed_dim=8,
         selector_palette_size=16,
         decoder_channel=8,
+        mlx_profile_paths=(mlx_profile_path,),
         allow_overwrite=True,
         repo_root=REPO_ROOT,
     )
@@ -680,13 +726,20 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     ] == "25/uncompressed_total"
     assert out["projection_manifest_paths"]
     assert out["receiver_proof_report_paths"]
+    assert out["mlx_profile_paths"] == [mlx_profile_path.as_posix()]
     assert Path(out["acquisition_report_path"]).is_file()
     runner = json.loads(Path(out["bounded_runner_plan_path"]).read_text())
+    assert runner["mlx_profile_paths"] == [mlx_profile_path.as_posix()]
     row = runner["selected_runner_rows"][0]
     assert row["family"] == "pact_nerv"
     assert row["receiver_proof_observed"] is True
     assert row["receiver_proof_passed"] is True
-    assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
+    value_rows = {item["section_name"]: item for item in runner["section_value_rows"]}
+    assert value_rows["decoder_qw"]["evidence_status"] == "measured_mlx_advisory"
+    assert value_rows["decoder_qw"]["admission_status"] == (
+        "admit_section_bytes_for_receiver_proof"
+    )
+    assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
     assert "pact_nerv_selector_v4_spine_projection_manifest_missing" not in out[
         "blockers"
