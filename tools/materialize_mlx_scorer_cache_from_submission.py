@@ -11,9 +11,11 @@ response runners must opt in to the unaudited-cache contract explicitly.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 import zipfile
@@ -76,7 +78,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Use an already proven shell-inflate output directory instead of "
             "running inflate.sh again. The directory must contain raw files "
-            "matching --video-names-file and must not live inside --work-dir."
+            "or, with --allow-png-frame-tree-output, PNG frame trees matching "
+            "--video-names-file and must not live inside --work-dir."
+        ),
+    )
+    parser.add_argument(
+        "--preinflated-proof-manifest",
+        type=Path,
+        help=(
+            "Required with preinflated PNG frame trees. Must bind the "
+            "preinflated bytes to the archive/runtime proof that produced them."
+        ),
+    )
+    parser.add_argument(
+        "--allow-png-frame-tree-output",
+        action="store_true",
+        help=(
+            "Accept receiver-proof-style output_dir/<video>.raw/*.png frame "
+            "trees as an MLX advisory scorer-cache source. This never creates "
+            "score authority and exists for compact NeRV/PACT candidates whose "
+            "runtime emits PNG frame trees instead of contest-sized raw files."
         ),
     )
     parser.add_argument("--inflate-timeout", type=int, default=1800)
@@ -152,6 +173,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.preinflated_output_dir is not None
         else None
     )
+    preinflated_proof_manifest = (
+        args.preinflated_proof_manifest.resolve()
+        if args.preinflated_proof_manifest is not None
+        else None
+    )
     if preinflated_output_dir is not None:
         if args.hprc_direct_cache:
             raise SystemExit("--hprc-direct-cache cannot be combined with --preinflated-output-dir")
@@ -164,6 +190,17 @@ def main(argv: list[str] | None = None) -> int:
                 "--preinflated-output-dir must not be inside --work-dir; "
                 f"work-dir cleanup would destroy the source: {preinflated_output_dir}"
             )
+    if preinflated_proof_manifest is not None and not preinflated_proof_manifest.is_file():
+        raise SystemExit(f"--preinflated-proof-manifest missing: {preinflated_proof_manifest}")
+    if (
+        preinflated_output_dir is not None
+        and args.allow_png_frame_tree_output
+        and preinflated_proof_manifest is None
+    ):
+        raise SystemExit(
+            "--preinflated-proof-manifest is required when reusing "
+            "preinflated PNG frame trees"
+        )
     _prepare_owned_dir(work_dir, force=args.force, label="work_dir")
     _prepare_owned_dir(output_cache, force=args.force, label="output_cache_dir")
     if report_output.exists() and not args.force:
@@ -185,36 +222,59 @@ def main(argv: list[str] | None = None) -> int:
         if args.local_acquisition_max_pairs is not None
         else 1200
     )
+    archive_sha256 = _sha256(archive, prefix=0)
     direct_cache_report: dict[str, Any] | None = None
+    png_frame_count: int | None = None
+    inflated_surface_kind: str | None = None
+    png_tree_cache_blockers: list[str] = []
+    preinflated_proof = (
+        _load_preinflated_proof_manifest(preinflated_proof_manifest)
+        if preinflated_proof_manifest is not None
+        else None
+    )
     if args.hprc_direct_cache:
         _validate_archive_without_extracting(archive)
         inflate_elapsed = 0.0
     elif inflate_executed:
         members = _extract_archive(archive, extracted_dir)
         _validate_archive_members(members)
-        inflate_elapsed = _run_inflate(
-            inflate_sh,
-            extracted_dir,
-            inflated_dir,
-            video_names_file,
-            timeout=int(args.inflate_timeout),
-            extra_env=local_acquisition_env,
-            expected_num_frames=inflate_expected_frames,
-        )
+        if args.allow_png_frame_tree_output:
+            inflate_elapsed = _run_inflate_png_frame_tree_permitted(
+                inflate_sh,
+                extracted_dir,
+                inflated_dir,
+                video_names_file,
+                timeout=int(args.inflate_timeout),
+                extra_env=local_acquisition_env,
+            )
+        else:
+            inflate_elapsed = _run_inflate(
+                inflate_sh,
+                extracted_dir,
+                inflated_dir,
+                video_names_file,
+                timeout=int(args.inflate_timeout),
+                extra_env=local_acquisition_env,
+                expected_num_frames=inflate_expected_frames,
+            )
     else:
         _validate_archive_without_extracting(archive)
         inflated_dir = preinflated_output_dir
         inflate_elapsed = 0.0
     provenance: dict[str, Any] = {
-        "archive_sha256": _sha256(archive, prefix=0),
+        "archive_sha256": archive_sha256,
         "archive_size_bytes": archive.stat().st_size,
         "archive_path": str(archive),
         "submission_dir": str(submission_dir),
         "inflate_sh": str(inflate_sh),
         "video_names_file": str(video_names_file),
         "inflate_executed": inflate_executed,
+        "allow_png_frame_tree_output": bool(args.allow_png_frame_tree_output),
         "preinflated_output_dir": (
             str(preinflated_output_dir) if preinflated_output_dir is not None else None
+        ),
+        "preinflated_proof_manifest": (
+            None if preinflated_proof_manifest is None else str(preinflated_proof_manifest)
         ),
         **FALSE_AUTHORITY,
     }
@@ -243,15 +303,43 @@ def main(argv: list[str] | None = None) -> int:
         )
         cached_pair_count = int(manifest["pair_count"])
     else:
-        inflated_manifest = _record_inflated_output_artifacts(
-            provenance,
-            work_dir,
-            inflated_dir,
-            video_names_file,
-        )
-        raw_path = _single_raw_path(inflated_dir, video_names_file)
-        raw = load_raw_video_memmap(raw_path)
-        raw_pair_count = len(non_overlapping_pair_indices(raw.shape[0]))
+        raw_path = _single_inflated_surface_path(inflated_dir, video_names_file)
+        if raw_path.is_dir():
+            if not args.allow_png_frame_tree_output:
+                raise SystemExit(
+                    "inflated output is a PNG frame tree; pass "
+                    "--allow-png-frame-tree-output to materialize an MLX advisory cache"
+                )
+            png_paths = _png_frame_paths(raw_path)
+            png_frame_count = len(png_paths)
+            raw_pair_count = png_frame_count // 2
+            inflated_surface_kind = "png_frame_tree"
+            if preinflated_output_dir is not None:
+                assert preinflated_proof is not None
+                _validate_preinflated_png_tree_proof(
+                    preinflated_proof,
+                    archive_sha256=archive_sha256,
+                    video_names_file=video_names_file,
+                    frame_tree=raw_path,
+                )
+            inflated_manifest = _record_png_tree_inflated_output_artifacts(
+                provenance,
+                work_dir,
+                inflated_dir,
+                video_names_file,
+                raw_path,
+                png_paths,
+            )
+        else:
+            inflated_surface_kind = "raw_file"
+            inflated_manifest = _record_inflated_output_artifacts(
+                provenance,
+                work_dir,
+                inflated_dir,
+                video_names_file,
+            )
+            raw = load_raw_video_memmap(raw_path)
+            raw_pair_count = len(non_overlapping_pair_indices(raw.shape[0]))
         local_acquisition_partial_raw = _local_acquisition_is_partial_raw(
             raw_pair_count=raw_pair_count,
             local_acquisition_max_pairs=args.local_acquisition_max_pairs,
@@ -269,14 +357,61 @@ def main(argv: list[str] | None = None) -> int:
             "pass --allow-large-tensor-cache after confirming disk budget"
         )
     if not args.hprc_direct_cache:
-        manifest = write_scorer_input_cache_from_raw_file(
-            raw_path,
-            output_cache,
-            archive_sha256=provenance["archive_sha256"],
-            inflated_outputs_aggregate_sha256=str(inflated_manifest["aggregate_sha256"]),
-            max_pairs=args.max_pairs,
-            batch_pairs=int(args.batch_pairs),
-        )
+        if raw_path is not None and raw_path.is_dir():
+            assert png_frame_count is not None
+            png_paths = _png_frame_paths(raw_path)
+            selected_frame_paths = png_paths[: cached_pair_count * 2]
+            frame_shape_hwc = _png_frame_shape_hwc(selected_frame_paths[0])
+            png_tree_cache_blockers = _png_tree_cache_blockers(
+                frame_shape_hwc=frame_shape_hwc,
+                png_frame_count=png_frame_count,
+                cached_pair_count=cached_pair_count,
+                expected_full_frames=1200,
+            )
+            manifest = write_scorer_input_cache_from_pair_batches(
+                _iter_png_pair_batches(
+                    selected_frame_paths,
+                    pair_count=cached_pair_count,
+                    batch_pairs=int(args.batch_pairs),
+                    frame_shape_hwc=frame_shape_hwc,
+                ),
+                output_cache,
+                pair_count=cached_pair_count,
+                pair_indices=non_overlapping_pair_indices(cached_pair_count * 2),
+                frame_shape_hwc=frame_shape_hwc,
+                source=str(raw_path),
+                source_kind="png_frame_tree_inflate",
+                archive_sha256=provenance["archive_sha256"],
+                inflated_outputs_aggregate_sha256=str(
+                    inflated_manifest["aggregate_sha256"]
+                ),
+                batch_pairs=int(args.batch_pairs),
+                compute_raw_sha256=True,
+            )
+            manifest["png_frame_tree_contract"] = {
+                "schema": "png_frame_tree_mlx_cache_contract.v1",
+                "surface_kind": "png_frame_tree",
+                "contest_raw_geometry": frame_shape_hwc == (CAMERA_HW[0], CAMERA_HW[1], 3),
+                "full_contest_frame_count": png_frame_count == 1200,
+                "png_frame_count": int(png_frame_count),
+                "cached_pair_count": int(cached_pair_count),
+                "cache_blockers": png_tree_cache_blockers,
+                "preinflated_proof_manifest": (
+                    None
+                    if preinflated_proof_manifest is None
+                    else str(preinflated_proof_manifest)
+                ),
+                **FALSE_AUTHORITY,
+            }
+        else:
+            manifest = write_scorer_input_cache_from_raw_file(
+                raw_path,
+                output_cache,
+                archive_sha256=provenance["archive_sha256"],
+                inflated_outputs_aggregate_sha256=str(inflated_manifest["aggregate_sha256"]),
+                max_pairs=args.max_pairs,
+                batch_pairs=int(args.batch_pairs),
+            )
     manifest["eligible_for_local_mlx_transfer_calibration"] = False
     manifest["eligible_for_unaudited_mlx_candidate_generation"] = True
     manifest["unaudited_candidate_cache_contract"] = {
@@ -284,6 +419,7 @@ def main(argv: list[str] | None = None) -> int:
         "created_by": "tools/materialize_mlx_scorer_cache_from_submission.py",
         "allowed_use": "local_mlx_candidate_generation_prior_before_cpu_gate",
         "forbidden_use": "score_claim_or_promotion_or_rank_or_exact_dispatch",
+        "cache_blockers": png_tree_cache_blockers,
         **FALSE_AUTHORITY,
     }
     write_json(output_cache / "manifest.json", manifest)
@@ -317,12 +453,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "inflated_outputs_aggregate_sha256": inflated_manifest["aggregate_sha256"],
         "raw_path": str(raw_path) if raw_path is not None else None,
+        "inflated_surface_kind": inflated_surface_kind,
+        "png_frame_count": png_frame_count,
+        "png_tree_cache_blockers": png_tree_cache_blockers,
         "raw_sha256": manifest.get("raw_sha256"),
         "raw_pair_count": int(raw_pair_count),
         "cached_pair_count": int(manifest["pair_count"]),
         "pair_count": int(manifest["pair_count"]),
         "max_pairs": args.max_pairs,
         "local_acquisition_max_pairs": args.local_acquisition_max_pairs,
+        "allow_png_frame_tree_output": bool(args.allow_png_frame_tree_output),
         "local_acquisition_partial_raw": local_acquisition_partial_raw,
         "local_acquisition_full_raw_pair_floor": 600,
         "inflate_executed": inflate_executed,
@@ -330,6 +470,12 @@ def main(argv: list[str] | None = None) -> int:
         "hprc_direct_cache_report": direct_cache_report,
         "preinflated_output_dir": (
             str(preinflated_output_dir) if preinflated_output_dir is not None else None
+        ),
+        "preinflated_proof_manifest": (
+            None if preinflated_proof_manifest is None else str(preinflated_proof_manifest)
+        ),
+        "preinflated_proof_manifest_sha256": (
+            None if preinflated_proof is None else preinflated_proof["sha256"]
         ),
         "inflate_elapsed_seconds": float(inflate_elapsed),
         "elapsed_seconds": time.time() - started,
@@ -628,14 +774,303 @@ def _require_file(path: Path, label: str) -> None:
         raise SystemExit(f"{label} missing: {path}")
 
 
-def _single_raw_path(inflated_dir: Path, video_names_file: Path) -> Path:
+def _run_inflate_png_frame_tree_permitted(
+    inflate_sh: Path,
+    archive_dir: Path,
+    inflated_dir: Path,
+    video_names_file: Path,
+    *,
+    timeout: int,
+    extra_env: dict[str, str] | None,
+) -> float:
+    """Run inflate without contest-raw byte validation for advisory PNG-tree caches."""
+
+    inflated_dir.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "bash",
+        str(inflate_sh),
+        str(archive_dir),
+        str(inflated_dir),
+        str(video_names_file),
+    ]
+    env = {**os.environ}
+    env.setdefault("PYTHON", sys.executable)
+    env.setdefault("PYTHON_BIN", sys.executable)
+    env.setdefault("PACT_PYTHON_BIN", sys.executable)
+    env.setdefault("UV_PYTHON", sys.executable)
+    if extra_env:
+        env.update(extra_env)
+    t0 = time.monotonic()
+    try:
+        result = subprocess.run(cmd, timeout=timeout, check=False, env=env)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"[inflate/png-tree] TIMED OUT after {timeout}s while building an "
+            "MLX advisory frame-tree cache"
+        ) from exc
+    elapsed = time.monotonic() - t0
+    if result.returncode != 0:
+        raise RuntimeError(f"[inflate/png-tree] FAILED with returncode={result.returncode}")
+    return elapsed
+
+
+def _single_inflated_surface_path(inflated_dir: Path, video_names_file: Path) -> Path:
     names = [line.strip() for line in video_names_file.read_text().splitlines() if line.strip()]
     if len(names) != 1:
         raise SystemExit(f"expected exactly one video for MLX cache materialization, got {len(names)}")
     raw_path = inflated_dir / Path(names[0]).with_suffix(".raw")
-    if not raw_path.is_file():
-        raise SystemExit(f"inflated raw file missing: {raw_path}")
-    return raw_path
+    if raw_path.is_file() or raw_path.is_dir():
+        return raw_path
+    stem_dir = inflated_dir / Path(names[0]).stem
+    if stem_dir.is_dir():
+        return stem_dir
+    raise SystemExit(
+        "inflated surface missing; expected raw file or PNG frame tree at "
+        f"{raw_path} (or frame tree {stem_dir})"
+    )
+
+
+def _load_preinflated_proof_manifest(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise SystemExit(f"preinflated proof manifest is not a JSON object: {path}")
+    return {
+        "path": str(path),
+        "sha256": _sha256(path, prefix=0),
+        "payload": payload,
+    }
+
+
+def _validate_preinflated_png_tree_proof(
+    proof: dict[str, Any],
+    *,
+    archive_sha256: str,
+    video_names_file: Path,
+    frame_tree: Path,
+) -> None:
+    payload = proof["payload"]
+    proof_archive_sha = (
+        payload.get("archive_sha256")
+        or (payload.get("archive") or {}).get("sha256")
+        or (payload.get("archive") or {}).get("archive_sha256")
+    )
+    if proof_archive_sha != archive_sha256:
+        raise SystemExit(
+            "preinflated PNG tree proof archive SHA mismatch: "
+            f"{proof_archive_sha!r} != {archive_sha256!r}"
+        )
+    proof_passed = any(
+        payload.get(key) is True
+        for key in (
+            "runtime_consumption_proof_passed",
+            "receiver_contract_satisfied",
+            "preinflated_output_proof_passed",
+        )
+    )
+    if not proof_passed:
+        raise SystemExit(
+            "preinflated PNG tree proof must record a passing receiver/runtime proof"
+        )
+    proof_file_list = payload.get("file_list_path")
+    if proof_file_list is not None:
+        try:
+            if Path(str(proof_file_list)).resolve() != video_names_file.resolve():
+                raise SystemExit(
+                    "preinflated PNG tree proof file_list_path does not match "
+                    f"--video-names-file: {proof_file_list}"
+                )
+        except OSError as exc:
+            raise SystemExit(f"invalid proof file_list_path: {proof_file_list}") from exc
+    proof_output_path = payload.get("receiver_output_path") or payload.get("output_path")
+    if proof_output_path is not None:
+        try:
+            if Path(str(proof_output_path)).resolve() != frame_tree.resolve():
+                raise SystemExit(
+                    "preinflated PNG tree proof receiver_output_path does not "
+                    f"match frame tree: {proof_output_path}"
+                )
+        except OSError as exc:
+            raise SystemExit(f"invalid proof receiver_output_path: {proof_output_path}") from exc
+
+
+def _png_frame_paths(frame_tree: Path) -> list[Path]:
+    paths_by_index: dict[int, Path] = {}
+    unexpected: list[str] = []
+    for path in frame_tree.iterdir():
+        if not path.is_file() or path.suffix.lower() != ".png":
+            unexpected.append(path.name)
+            continue
+        try:
+            index = int(path.stem)
+        except ValueError as exc:
+            raise SystemExit(f"PNG frame name must be an integer stem: {path}") from exc
+        if index in paths_by_index:
+            raise SystemExit(f"duplicate PNG frame index {index} under {frame_tree}")
+        paths_by_index[index] = path
+    if unexpected:
+        preview = sorted(unexpected)[:8]
+        suffix = "" if len(unexpected) <= 8 else f" ... +{len(unexpected) - 8} more"
+        raise SystemExit(
+            f"PNG frame tree contains unexpected non-frame entries: {preview}{suffix}"
+        )
+    if not paths_by_index:
+        raise SystemExit(f"PNG frame tree contains no .png frames: {frame_tree}")
+    indices = sorted(paths_by_index)
+    expected = list(range(indices[-1] + 1))
+    if indices != expected:
+        missing = sorted(set(expected) - set(indices))
+        raise SystemExit(
+            f"PNG frame tree must be contiguous from 0; missing {missing[:8]}"
+        )
+    if len(indices) % 2:
+        raise SystemExit(
+            f"PNG frame tree has odd frame count {len(indices)}; cannot form full pairs"
+        )
+    return [paths_by_index[idx] for idx in indices]
+
+
+def _png_frame_shape_hwc(path: Path) -> tuple[int, int, int]:
+    from PIL import Image  # type: ignore[import-not-found]
+
+    with Image.open(path) as im:
+        if im.mode != "RGB":
+            raise SystemExit(f"PNG frame must be RGB, got mode={im.mode!r}: {path}")
+        width, height = im.size
+    return (int(height), int(width), 3)
+
+
+def _read_png_rgb(path: Path, *, frame_shape_hwc: tuple[int, int, int]) -> np.ndarray:
+    from PIL import Image  # type: ignore[import-not-found]
+
+    with Image.open(path) as im:
+        if im.mode != "RGB":
+            raise SystemExit(f"PNG frame must be RGB, got mode={im.mode!r}: {path}")
+        arr = np.asarray(im, dtype=np.uint8)
+    if tuple(int(v) for v in arr.shape) != frame_shape_hwc:
+        raise ValueError(
+            f"PNG frame shape mismatch for {path}: got {arr.shape}, "
+            f"expected {frame_shape_hwc}"
+        )
+    return arr
+
+
+def _iter_png_pair_batches(
+    frame_paths: list[Path],
+    *,
+    pair_count: int,
+    batch_pairs: int,
+    frame_shape_hwc: tuple[int, int, int],
+):
+    if len(frame_paths) != pair_count * 2:
+        raise ValueError(
+            f"expected {pair_count * 2} PNG frames for {pair_count} pairs, "
+            f"got {len(frame_paths)}"
+        )
+    for pair_start in range(0, pair_count, batch_pairs):
+        pair_end = min(pair_count, pair_start + batch_pairs)
+        pairs = []
+        for pair_idx in range(pair_start, pair_end):
+            first = _read_png_rgb(
+                frame_paths[2 * pair_idx],
+                frame_shape_hwc=frame_shape_hwc,
+            )
+            second = _read_png_rgb(
+                frame_paths[2 * pair_idx + 1],
+                frame_shape_hwc=frame_shape_hwc,
+            )
+            pairs.append(np.stack([first, second], axis=0))
+        yield np.stack(pairs, axis=0)
+
+
+def _png_tree_cache_blockers(
+    *,
+    frame_shape_hwc: tuple[int, int, int],
+    png_frame_count: int,
+    cached_pair_count: int,
+    expected_full_frames: int,
+) -> list[str]:
+    blockers: list[str] = []
+    if frame_shape_hwc != (CAMERA_HW[0], CAMERA_HW[1], 3):
+        blockers.append(
+            "png_frame_tree_noncontest_raw_geometry_"
+            f"{frame_shape_hwc[0]}x{frame_shape_hwc[1]}"
+        )
+    if int(png_frame_count) != int(expected_full_frames):
+        blockers.append(
+            f"png_frame_tree_frame_count_{png_frame_count}_not_{expected_full_frames}"
+        )
+    if int(cached_pair_count) * 2 != int(png_frame_count):
+        blockers.append("png_frame_tree_cache_prefix_subset")
+    return sorted(set(blockers))
+
+
+def _record_png_tree_inflated_output_artifacts(
+    prov: dict[str, Any],
+    work_dir: Path,
+    inflated_dir: Path,
+    video_names_file: Path,
+    frame_tree: Path,
+    frame_paths: list[Path],
+) -> dict[str, Any]:
+    names = [n.strip() for n in video_names_file.read_text().splitlines() if n.strip()]
+    rel_tree = frame_tree.relative_to(inflated_dir).as_posix()
+    files = []
+    for path in frame_paths:
+        h, w, c = _png_frame_shape_hwc(path)
+        files.append(
+            {
+                "relative_path": path.relative_to(inflated_dir).as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": _sha256(path, prefix=0),
+                "mode": "RGB",
+                "shape_hwc": [h, w, c],
+            }
+        )
+    aggregate_payload: dict[str, Any] = {
+        "schema": "mlx_advisory_png_frame_tree_inflated_output_manifest_v1",
+        "inflated_dir": str(inflated_dir),
+        "video_names_file": str(video_names_file),
+        "surface_kind": "png_frame_tree",
+        "video_count": len(names),
+        "frame_tree_relative_path": rel_tree,
+        "png_frame_count": len(frame_paths),
+        "raw_file_count": 0,
+        "total_bytes": sum(int(f["bytes"]) for f in files),
+        "files": files,
+        **FALSE_AUTHORITY,
+    }
+    aggregate_payload["aggregate_sha256"] = hashlib.sha256(
+        json.dumps(
+            {
+                "surface_kind": "png_frame_tree",
+                "frame_tree_relative_path": rel_tree,
+                "files": [
+                    {
+                        "relative_path": f["relative_path"],
+                        "bytes": f["bytes"],
+                        "sha256": f["sha256"],
+                    }
+                    for f in files
+                ],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    manifest_path = work_dir / "inflated_outputs_manifest.json"
+    manifest_path.write_text(json.dumps(aggregate_payload, indent=2, sort_keys=True) + "\n")
+    prov["inflated_output_manifest"] = {
+        "path": str(manifest_path),
+        "sha256": _sha256(manifest_path, prefix=0),
+        "payload": aggregate_payload,
+    }
+    (work_dir / "provenance.json").write_text(
+        json.dumps(prov, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return aggregate_payload
 
 
 if __name__ == "__main__":  # pragma: no cover

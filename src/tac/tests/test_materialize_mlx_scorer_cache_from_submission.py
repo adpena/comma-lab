@@ -133,6 +133,250 @@ def test_submission_mlx_cache_can_reuse_preinflated_receiver_output(
     assert not (work_dir / "inflated").exists()
 
 
+def test_submission_mlx_cache_can_reuse_preinflated_png_frame_tree(
+    tmp_path: Path,
+) -> None:
+    from PIL import Image  # type: ignore[import-not-found]
+
+    archive = tmp_path / "archive.zip"
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "echo should-not-run >&2\n"
+        "exit 99\n",
+        encoding="utf-8",
+    )
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    preinflated = tmp_path / "preinflated"
+    frame_tree = preinflated / "0.raw"
+    frame_tree.mkdir(parents=True)
+    for frame_idx in range(4):
+        frame = np.zeros((24, 32, 3), dtype=np.uint8)
+        frame[:, :, frame_idx % 3] = 17 + frame_idx
+        Image.fromarray(frame).save(frame_tree / f"{frame_idx}.png")
+    proof_manifest = tmp_path / "preinflated_png_proof.json"
+    proof_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "test_preinflated_png_tree_proof.v1",
+                "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                "file_list_path": str(video_names),
+                "receiver_output_path": str(frame_tree),
+                "runtime_consumption_proof_passed": True,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = tmp_path / "report.json"
+    cache_dir = tmp_path / "cache"
+    work_dir = tmp_path / "work"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--archive",
+            str(archive),
+            "--submission-dir",
+            str(submission),
+            "--upstream-dir",
+            str(upstream),
+            "--video-names-file",
+            str(video_names),
+            "--output-cache-dir",
+            str(cache_dir),
+            "--work-dir",
+            str(work_dir),
+            "--report-output",
+            str(report),
+            "--preinflated-output-dir",
+            str(preinflated),
+            "--preinflated-proof-manifest",
+            str(proof_manifest),
+            "--allow-png-frame-tree-output",
+            "--max-pairs",
+            "1",
+            "--batch-pairs",
+            "1",
+            "--allow-large-tensor-cache",
+            "--force",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    manifest = json.loads((cache_dir / "manifest.json").read_text(encoding="utf-8"))
+    inflated_manifest = json.loads(
+        (work_dir / "inflated_outputs_manifest.json").read_text(encoding="utf-8")
+    )
+
+    assert stdout["cached_pair_count"] == 1
+    assert payload["inflate_executed"] is False
+    assert payload["allow_png_frame_tree_output"] is True
+    assert payload["preinflated_output_dir"] == str(preinflated)
+    assert payload["preinflated_proof_manifest"] == str(proof_manifest)
+    assert payload["raw_path"] == str(frame_tree)
+    assert payload["inflated_surface_kind"] == "png_frame_tree"
+    assert payload["png_frame_count"] == 4
+    assert payload["png_tree_cache_blockers"] == [
+        "png_frame_tree_cache_prefix_subset",
+        "png_frame_tree_frame_count_4_not_1200",
+        "png_frame_tree_noncontest_raw_geometry_24x32",
+    ]
+    assert payload["raw_pair_count"] == 2
+    assert payload["cached_pair_count"] == 1
+    assert payload["score_claim"] is False
+    assert manifest["source"] == str(frame_tree)
+    assert manifest["source_kind"] == "png_frame_tree_inflate"
+    assert manifest["pair_count"] == 1
+    assert manifest["frame_shape_hwc"] == [24, 32, 3]
+    assert manifest["png_frame_tree_contract"]["cache_blockers"] == [
+        "png_frame_tree_cache_prefix_subset",
+        "png_frame_tree_frame_count_4_not_1200",
+        "png_frame_tree_noncontest_raw_geometry_24x32",
+    ]
+    assert manifest["raw_sha256_scope"] == "cached_pair_stream"
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert inflated_manifest["surface_kind"] == "png_frame_tree"
+    assert inflated_manifest["png_frame_count"] == 4
+    assert inflated_manifest["score_claim"] is False
+    assert not (work_dir / "inflated").exists()
+
+
+def test_submission_mlx_cache_rejects_png_frame_tree_without_explicit_opt_in(
+    tmp_path: Path,
+) -> None:
+    from PIL import Image  # type: ignore[import-not-found]
+
+    archive = tmp_path / "archive.zip"
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 99\n")
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    frame_tree = tmp_path / "preinflated" / "0.raw"
+    frame_tree.mkdir(parents=True)
+    for frame_idx in range(2):
+        Image.fromarray(np.zeros((8, 8, 3), dtype=np.uint8)).save(
+            frame_tree / f"{frame_idx}.png"
+        )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--archive",
+            str(archive),
+            "--submission-dir",
+            str(submission),
+            "--upstream-dir",
+            str(upstream),
+            "--video-names-file",
+            str(video_names),
+            "--output-cache-dir",
+            str(tmp_path / "cache"),
+            "--work-dir",
+            str(tmp_path / "work"),
+            "--report-output",
+            str(tmp_path / "report.json"),
+            "--preinflated-output-dir",
+            str(tmp_path / "preinflated"),
+            "--max-pairs",
+            "1",
+            "--batch-pairs",
+            "1",
+            "--allow-large-tensor-cache",
+            "--force",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "--allow-png-frame-tree-output" in result.stderr
+
+
+def test_submission_mlx_cache_rejects_preinflated_png_without_proof(
+    tmp_path: Path,
+) -> None:
+    from PIL import Image  # type: ignore[import-not-found]
+
+    archive = tmp_path / "archive.zip"
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 99\n")
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    frame_tree = tmp_path / "preinflated" / "0.raw"
+    frame_tree.mkdir(parents=True)
+    for frame_idx in range(2):
+        Image.fromarray(np.zeros((8, 8, 3), dtype=np.uint8)).save(
+            frame_tree / f"{frame_idx}.png"
+        )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--archive",
+            str(archive),
+            "--submission-dir",
+            str(submission),
+            "--upstream-dir",
+            str(upstream),
+            "--video-names-file",
+            str(video_names),
+            "--output-cache-dir",
+            str(tmp_path / "cache"),
+            "--work-dir",
+            str(tmp_path / "work"),
+            "--report-output",
+            str(tmp_path / "report.json"),
+            "--preinflated-output-dir",
+            str(tmp_path / "preinflated"),
+            "--allow-png-frame-tree-output",
+            "--max-pairs",
+            "1",
+            "--batch-pairs",
+            "1",
+            "--allow-large-tensor-cache",
+            "--force",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "--preinflated-proof-manifest is required" in result.stderr
+
+
 def test_submission_mlx_cache_can_render_hprc_direct_without_raw_scratch(
     tmp_path: Path,
 ) -> None:
