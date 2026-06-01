@@ -753,6 +753,10 @@ def test_hprc_incremental_runner_execution_report_preserves_cleanup_blocker(
         ),
         encoding="utf-8",
     )
+    (tmp_path / "mlx_incremental_cache_report.json").write_text(
+        json.dumps({"elapsed_seconds": 2.0, "cached_pair_count": 2}),
+        encoding="utf-8",
+    )
     retention = tmp_path / "retention.json"
     retention.write_text(
         json.dumps(
@@ -783,11 +787,19 @@ def test_hprc_incremental_runner_execution_report_preserves_cleanup_blocker(
             "incremental_command_argv": ["python", "tool.py"],
         },
         incremental_report_path=incremental,
+        incremental_elapsed_seconds=12.0,
         retention_plan_path=retention,
     )
 
     assert report["schema"] == HPRC_INCREMENTAL_RUNNER_EXECUTION_SCHEMA
     assert report["incremental_summary"]["changed_pair_count"] == 2
+    assert report["wall_clock_profile"]["measured_hot_path"] == "mlx_scorer_response"
+    assert report["wall_clock_profile"][
+        "mlx_scorer_response_elapsed_estimate_seconds"
+    ] == 10.0
+    assert report["wall_clock_profile"][
+        "scorer_response_seconds_per_changed_pair_estimate"
+    ] == 5.0
     assert report["receiver_proof_binding"]["status"] == "missing"
     assert report["cleanup"]["status"] == "blocked"
     assert "uncertified_mlx_cache_retained_cleanup_blocker" in report["exact_axis_gate"]["blockers"]
@@ -931,6 +943,11 @@ def test_hprc_incremental_exact_gate_bridge_blocks_uncertified_cleanup(
                 "incremental_summary": {
                     "delta_total_mlx_score_advisory": -1.0,
                 },
+                "wall_clock_profile": {
+                    "schema": "hprc_incremental_runner_wall_clock_profile.v1",
+                    "measured_hot_path": "mlx_scorer_response",
+                    "total_elapsed_seconds": 10.0,
+                },
                 "exact_axis_gate": {
                     "ready_for_exact_eval_dispatch": False,
                     "blockers": [
@@ -1023,6 +1040,11 @@ def test_hprc_incremental_exact_gate_bridge_emits_dispatchable_packet(
                 "incremental_summary": {
                     "delta_total_mlx_score_advisory": -1.0,
                 },
+                "wall_clock_profile": {
+                    "schema": "hprc_incremental_runner_wall_clock_profile.v1",
+                    "measured_hot_path": "mlx_scorer_response",
+                    "total_elapsed_seconds": 10.0,
+                },
                 "exact_axis_gate": {
                     "ready_for_exact_eval_dispatch": False,
                     "blockers": [
@@ -1047,6 +1069,9 @@ def test_hprc_incremental_exact_gate_bridge_emits_dispatchable_packet(
     assert bridge["exact_packet"]["packet_kind"] == "dispatchable_exact_packet"
     assert bridge["exact_packet"]["preclaim_blockers"] == []
     assert bridge["exact_packet"]["dispatchable_after_lane_claim"] is True
+    assert bridge["exact_packet"]["wall_clock_profile"]["measured_hot_path"] == (
+        "mlx_scorer_response"
+    )
     assert bridge["exact_dispatch_plan"]["dispatchable_after_lane_claim"] is True
     assert bridge["exact_dispatch_plan"]["source_packet_kind"] == "dispatchable_exact_packet"
     assert bridge["ready_for_exact_eval_dispatch"] is True

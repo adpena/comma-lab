@@ -172,6 +172,7 @@ def build_hprc_incremental_runner_execution_report(
 
     incremental_path = Path(incremental_report_path).expanduser()
     incremental_report = _load_json_object(incremental_path)
+    cache_report = _load_sibling_incremental_cache_report(incremental_path)
     cleanup = _cleanup_status(None if retention_plan_path is None else Path(retention_plan_path))
     proof_binding = _find_receiver_proof_binding(
         archive_sha256=str(prep.get("archive", {}).get("sha256") or ""),
@@ -202,6 +203,12 @@ def build_hprc_incremental_runner_execution_report(
             "stdout": incremental_stdout.strip(),
             "stderr_tail": incremental_stderr_tail[-4000:],
         },
+        "wall_clock_profile": _wall_clock_profile(
+            incremental_elapsed_seconds=incremental_elapsed_seconds,
+            cache_report=cache_report,
+            cleanup=cleanup,
+            incremental_report=incremental_report,
+        ),
         "incremental_summary": {
             "changed_pair_count": len(incremental_report.get("changed_pair_rows", [])),
             "full_video_pair_count": incremental_report.get("full_video_pair_count"),
@@ -463,6 +470,53 @@ def _load_incremental_cache_report(execution: dict[str, Any]) -> dict[str, Any]:
     incremental_path = Path(str(execution["incremental_report_path"]))
     candidate = incremental_path.with_name("mlx_incremental_cache_report.json")
     return _load_json_object(candidate) if candidate.is_file() else {}
+
+
+def _load_sibling_incremental_cache_report(incremental_path: Path) -> dict[str, Any]:
+    candidate = incremental_path.with_name("mlx_incremental_cache_report.json")
+    return _load_json_object(candidate) if candidate.is_file() else {}
+
+
+def _wall_clock_profile(
+    *,
+    incremental_elapsed_seconds: float | None,
+    cache_report: dict[str, Any],
+    cleanup: dict[str, Any],
+    incremental_report: dict[str, Any],
+) -> dict[str, Any]:
+    total_elapsed = _float_or_none(incremental_elapsed_seconds)
+    cache_elapsed = _float_or_none(cache_report.get("elapsed_seconds"))
+    scorer_elapsed = max(0.0, total_elapsed - cache_elapsed)
+    cache_pair_count = int(cache_report.get("cached_pair_count") or 0)
+    changed_pair_count = len(incremental_report.get("changed_pair_rows", []))
+    hot_path = (
+        "mlx_scorer_response"
+        if scorer_elapsed >= cache_elapsed
+        else "hprc_direct_cache_render"
+    )
+    return {
+        "schema": "hprc_incremental_runner_wall_clock_profile.v1",
+        "total_elapsed_seconds": total_elapsed,
+        "hprc_direct_cache_render_elapsed_seconds": cache_elapsed,
+        "mlx_scorer_response_elapsed_estimate_seconds": scorer_elapsed,
+        "cleanup_status": cleanup.get("status"),
+        "cleanup_reclaimable_bytes": int(cleanup.get("reclaimable_bytes") or 0),
+        "changed_pair_count": changed_pair_count,
+        "cached_pair_count": cache_pair_count,
+        "cache_render_seconds_per_changed_pair": (
+            cache_elapsed / cache_pair_count if cache_pair_count > 0 else None
+        ),
+        "scorer_response_seconds_per_changed_pair_estimate": (
+            scorer_elapsed / changed_pair_count if changed_pair_count > 0 else None
+        ),
+        "measured_hot_path": hot_path,
+        "native_lowering_candidate": hot_path == "mlx_scorer_response",
+        "notes": [
+            "cache_render_elapsed comes from materialize_mlx_scorer_cache_from_submission",
+            "scorer_response_elapsed is total incremental command minus cache render",
+            "native lowering is only justified after scorer graph/cache layout vectorization",
+        ],
+    }
 
 
 def _select_runner_row(plan: dict[str, Any], candidate_id: str) -> dict[str, Any]:

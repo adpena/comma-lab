@@ -82,6 +82,7 @@ def build_hprc_incremental_exact_gate_bridge(
         proof_checks=proof_checks,
         cleanup_checks=cleanup_checks,
         mlx_advisory_summary=report.get("incremental_summary"),
+        wall_clock_profile=report.get("wall_clock_profile"),
         preclaim_ready=preclaim_ready,
         preclaim_blockers=preclaim_blockers,
         score_authority_blockers=score_authority_blockers,
@@ -106,6 +107,7 @@ def build_hprc_incremental_exact_gate_bridge(
         "receiver_proof_custody": proof_checks,
         "cleanup_custody": cleanup_checks,
         "mlx_advisory_summary": report.get("incremental_summary"),
+        "wall_clock_profile": report.get("wall_clock_profile"),
         "source_exact_axis_gate": report.get("exact_axis_gate"),
         "exact_packet": exact_packet,
         "exact_dispatch_plan": {
@@ -288,6 +290,7 @@ def _exact_packet(
     proof_checks: dict[str, Any],
     cleanup_checks: dict[str, Any],
     mlx_advisory_summary: Any,
+    wall_clock_profile: Any,
     preclaim_ready: bool,
     preclaim_blockers: list[str],
     score_authority_blockers: list[str],
@@ -321,6 +324,7 @@ def _exact_packet(
         "preclaim_blockers": preclaim_blockers,
         "score_authority_blockers_before_promotion": score_authority_blockers,
         "mlx_advisory_summary": mlx_advisory_summary,
+        "wall_clock_profile": wall_clock_profile,
         "blocked": not preclaim_ready,
         "blocker_class": (
             "none_preclaim_ready"

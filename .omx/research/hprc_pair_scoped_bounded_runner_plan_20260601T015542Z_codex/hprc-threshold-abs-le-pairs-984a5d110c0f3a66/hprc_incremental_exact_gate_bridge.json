@@ -125,7 +125,7 @@
     "gpu_launched": false,
     "input_execution_report": {
       "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tstamp/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_incremental_runner_execution_report_receiver_bound.json",
-      "sha256": "c92c406f489eaf0477f537dc99ab0a3d47297f1a1ee7ddb4203cdc874de22122"
+      "sha256": "d8efc198fb5e4dc2d345c2dda029630cb62c9a5847b0204e3ea10bc325c3981d"
     },
     "mlx_advisory_summary": {
       "archive_bytes_removed_vs_baseline": 303937,
@@ -149,11 +149,30 @@
       "incremental_mlx_response_is_advisory_not_score_authority"
     ],
     "score_claim": false,
-    "score_claim_valid": false
+    "score_claim_valid": false,
+    "wall_clock_profile": {
+      "cache_render_seconds_per_changed_pair": 0.13956073640098035,
+      "cached_pair_count": 284,
+      "changed_pair_count": 284,
+      "cleanup_reclaimable_bytes": 1340098255,
+      "cleanup_status": "planned",
+      "hprc_direct_cache_render_elapsed_seconds": 39.63524913787842,
+      "measured_hot_path": "mlx_scorer_response",
+      "mlx_scorer_response_elapsed_estimate_seconds": 250.18791890144348,
+      "native_lowering_candidate": true,
+      "notes": [
+        "cache_render_elapsed comes from materialize_mlx_scorer_cache_from_submission",
+        "scorer_response_elapsed is total incremental command minus cache render",
+        "native lowering is only justified after scorer graph/cache layout vectorization"
+      ],
+      "schema": "hprc_incremental_runner_wall_clock_profile.v1",
+      "scorer_response_seconds_per_changed_pair_estimate": 0.8809433764135334,
+      "total_elapsed_seconds": 289.8231680393219
+    }
   },
   "execution_report_path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tstamp/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_incremental_runner_execution_report_receiver_bound.json",
-  "execution_report_sha256": "c92c406f489eaf0477f537dc99ab0a3d47297f1a1ee7ddb4203cdc874de22122",
-  "generated_at_utc": "20260601T035024Z",
+  "execution_report_sha256": "d8efc198fb5e4dc2d345c2dda029630cb62c9a5847b0204e3ea10bc325c3981d",
+  "generated_at_utc": "20260601T035730Z",
   "gpu_launched": false,
   "hprc_0bin_custody": {
     "actual_bytes": 3009628,
@@ -212,5 +231,24 @@
       "contest_cpu_cuda_exact_eval_not_executed"
     ],
     "ready_for_exact_eval_dispatch": false
+  },
+  "wall_clock_profile": {
+    "cache_render_seconds_per_changed_pair": 0.13956073640098035,
+    "cached_pair_count": 284,
+    "changed_pair_count": 284,
+    "cleanup_reclaimable_bytes": 1340098255,
+    "cleanup_status": "planned",
+    "hprc_direct_cache_render_elapsed_seconds": 39.63524913787842,
+    "measured_hot_path": "mlx_scorer_response",
+    "mlx_scorer_response_elapsed_estimate_seconds": 250.18791890144348,
+    "native_lowering_candidate": true,
+    "notes": [
+      "cache_render_elapsed comes from materialize_mlx_scorer_cache_from_submission",
+      "scorer_response_elapsed is total incremental command minus cache render",
+      "native lowering is only justified after scorer graph/cache layout vectorization"
+    ],
+    "schema": "hprc_incremental_runner_wall_clock_profile.v1",
+    "scorer_response_seconds_per_changed_pair_estimate": 0.8809433764135334,
+    "total_elapsed_seconds": 289.8231680393219
   }
 }
