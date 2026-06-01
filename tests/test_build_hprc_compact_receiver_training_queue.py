@@ -625,6 +625,8 @@ def test_hprc_campaign_queue_scales_with_mlx_prefilter_and_protected_pathway(
                 "32",
                 "--protected-residual-grid-w",
                 "32",
+                "--protected-residual-mask-top-fraction",
+                "0.05",
                 "--enable-hprc-mlx-prefilter-before-local-replay",
                 "--hprc-mlx-prefilter-max-score-for-local-replay",
                 "0.5",
@@ -656,10 +658,17 @@ def test_hprc_campaign_queue_scales_with_mlx_prefilter_and_protected_pathway(
     assert "--enable-protected-residual-pathway" in train_command
     assert train_command[train_command.index("--protected-residual-grid-h") + 1] == "32"
     assert train_command[train_command.index("--protected-residual-grid-w") + 1] == "32"
+    assert "--protected-residual-mask-top-fraction" in train_command
+    assert train_command[train_command.index("--protected-residual-mask-top-fraction") + 1] == "0.05"
     assert "--rate-aware-residual-protection-npy" in train_command
     assert train_step["requires"] == ["build_hprc_native_rate_residual_protection_surface"]
     assert any(
         condition.get("key") == "protected_highres_residual_pathway.enabled"
+        and condition.get("equals") is True
+        for condition in train_step["postconditions"]
+    )
+    assert any(
+        condition.get("key") == "protected_residual_mask_manifest.enabled"
         and condition.get("equals") is True
         for condition in train_step["postconditions"]
     )
@@ -675,6 +684,7 @@ def test_hprc_campaign_queue_scales_with_mlx_prefilter_and_protected_pathway(
     assert full_plan["candidate_params"]["protected_highres_residual_pathway_enabled"] is True
     assert full_plan["candidate_params"]["protected_residual_grid_h"] == 32
     assert full_plan["candidate_params"]["protected_residual_grid_w"] == 32
+    assert full_plan["candidate_params"]["protected_residual_mask_top_fraction"] == 0.05
 
 
 def test_archive_rate_gate_blocks_replay_when_rate_alone_loses() -> None:

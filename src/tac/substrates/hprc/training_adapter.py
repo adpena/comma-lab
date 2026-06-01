@@ -442,6 +442,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         rate_aware_residual_l1_weight: float = 0.0,
         rate_aware_residual_prox_weight: float = 0.0,
         residual_protection: np.ndarray | None = None,
+        protected_residual_mask: np.ndarray | None = None,
         enable_protected_residual_pathway: bool = False,
         protected_residual_grid_h: int | None = None,
         protected_residual_grid_w: int | None = None,
@@ -461,7 +462,15 @@ class HprcCompactReceiverLongTrainingAdapter:
             protected_residual_grid_w=protected_residual_grid_w
             if enable_protected_residual_pathway
             else None,
-            protected_residual_mask=residual_protection if enable_protected_residual_pathway else None,
+            protected_residual_mask=(
+                (
+                    protected_residual_mask
+                    if protected_residual_mask is not None
+                    else residual_protection
+                )
+                if enable_protected_residual_pathway
+                else None
+            ),
             source_manifest=source_manifest,
             initial_latent_gain=initial_latent_gain,
             initial_residual_gain=initial_residual_gain,
@@ -488,6 +497,10 @@ class HprcCompactReceiverLongTrainingAdapter:
         self.rate_aware_residual_prox_weight = max(0.0, float(rate_aware_residual_prox_weight))
         self.residual_protection = _normalize_residual_protection(
             residual_protection,
+            residual_shape=tuple(int(v) for v in self.model.residual.shape),
+        )
+        self.protected_residual_mask = _normalize_residual_protection(
+            protected_residual_mask,
             residual_shape=tuple(int(v) for v in self.model.residual.shape),
         )
         if self.native_rate_aware and (
@@ -1095,8 +1108,12 @@ class HprcCompactReceiverLongTrainingAdapter:
                 ),
                 "mask_source": (
                     "none"
-                    if self.residual_protection is None
+                    if self.model.protected_residual is None
+                    else "p18_p19_sparse_protected_mask"
+                    if self.protected_residual_mask is not None
                     else "p18_p19_residual_protection"
+                    if self.residual_protection is not None
+                    else "unmasked_highres_residual"
                 ),
                 "receiver_storage": "residual_rc_v2_int8_protected_sidecar",
                 "training_backend": self.effective_training_backend,

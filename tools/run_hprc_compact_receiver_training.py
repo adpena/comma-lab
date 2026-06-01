@@ -97,6 +97,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Grid width for the protected residual sidecar; defaults to residual-grid-w.",
     )
     parser.add_argument(
+        "--protected-residual-mask-threshold",
+        type=float,
+        help=(
+            "When a P18/P19 residual-protection surface is present, emit "
+            "high-res protected residual cells only where protection weight is "
+            "at least this value. The dense surface still guides the loss."
+        ),
+    )
+    parser.add_argument(
+        "--protected-residual-mask-top-fraction",
+        type=float,
+        help=(
+            "When a P18/P19 residual-protection surface is present, emit only "
+            "the highest-priority fraction of protected residual cells. Ties "
+            "are broken by a deterministic hash of cell index."
+        ),
+    )
+    parser.add_argument(
         "--training-backend",
         choices=("auto", "mlx", "numpy"),
         default="auto",
@@ -168,6 +186,10 @@ def main(argv: list[str] | None = None) -> int:
             3,
         ),
     )
+    protected_residual_mask, protected_residual_mask_manifest = _build_protected_residual_mask(
+        residual_protection,
+        args=args,
+    )
     external_storage_plan = _resolve_optional_path(args.storage_plan_path, repo_root=repo_root)
     storage_plan_for_result = storage_plan_path or external_storage_plan
     adapter = HprcCompactReceiverLongTrainingAdapter(
@@ -186,6 +208,7 @@ def main(argv: list[str] | None = None) -> int:
         rate_aware_residual_l1_weight=float(args.rate_aware_residual_l1_weight),
         rate_aware_residual_prox_weight=float(args.rate_aware_residual_prox_weight),
         residual_protection=residual_protection,
+        protected_residual_mask=protected_residual_mask,
         enable_protected_residual_pathway=bool(args.enable_protected_residual_pathway),
         protected_residual_grid_h=args.protected_residual_grid_h,
         protected_residual_grid_w=args.protected_residual_grid_w,
@@ -213,6 +236,7 @@ def main(argv: list[str] | None = None) -> int:
         else storage_plan_for_result.as_posix(),
         "source_manifest": source_manifest,
         "residual_protection_manifest": protection_manifest,
+        "protected_residual_mask_manifest": protected_residual_mask_manifest,
         "training_backend": {
             "requested": str(args.training_backend),
             "effective": adapter.effective_training_backend,
@@ -676,6 +700,87 @@ def _project_residual_protection_to_expected_shape(
         "--decode-pairs/--decode-max-pairs and --residual-grid-h/--residual-grid-w, "
         "or rebuild the P18/P19 protection surface."
     )
+
+
+def _build_protected_residual_mask(
+    residual_protection: np.ndarray | None,
+    *,
+    args: argparse.Namespace,
+) -> tuple[np.ndarray | None, dict[str, object] | None]:
+    if not bool(args.enable_protected_residual_pathway):
+        return None, None
+    threshold = args.protected_residual_mask_threshold
+    top_fraction = args.protected_residual_mask_top_fraction
+    if threshold is None and top_fraction is None:
+        return None, {
+            "schema": "hprc_protected_residual_mask.v1",
+            "enabled": False,
+            "reason": "protected_pathway_unmasked",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+    if residual_protection is None:
+        raise ValueError(
+            "protected residual mask sparsification requires "
+            "--rate-aware-residual-protection-npy"
+        )
+    arr = np.asarray(residual_protection, dtype=np.float32)
+    if arr.ndim != 4:
+        raise ValueError("protected residual mask source must be FxHxWxC after projection")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("protected residual mask source contains non-finite values")
+
+    candidate_mask = np.ones(arr.size, dtype=bool)
+    threshold_value: float | None = None
+    if threshold is not None:
+        threshold_value = float(threshold)
+        if threshold_value < 0.0:
+            raise ValueError("--protected-residual-mask-threshold must be non-negative")
+        candidate_mask &= arr.reshape(-1) >= threshold_value
+
+    if top_fraction is not None:
+        fraction = float(top_fraction)
+        if not 0.0 < fraction <= 1.0:
+            raise ValueError("--protected-residual-mask-top-fraction must be in (0, 1]")
+        candidates = np.flatnonzero(candidate_mask)
+        keep = min(len(candidates), max(1, int(np.ceil(arr.size * fraction))))
+        selected = np.array([], dtype=np.int64)
+        if keep:
+            scores = arr.reshape(-1)[candidates]
+            # Deterministic tie spreading prevents top-k ties from collapsing
+            # into the first frames/cells when coarse P18/P19 surfaces are binary.
+            tie = (
+                candidates.astype(np.uint64) * np.uint64(11400714819323198485)
+            ).astype(np.uint64)
+            order = np.lexsort((tie, -scores))
+            selected = candidates[order[:keep]]
+            threshold_value = float(np.min(scores[order[:keep]]))
+        sparse_mask = np.zeros(arr.size, dtype=bool)
+        sparse_mask[selected] = True
+        candidate_mask = sparse_mask
+
+    mask = candidate_mask.reshape(arr.shape).astype(np.float32)
+    active = int(np.count_nonzero(mask))
+    if active <= 0:
+        raise ValueError("protected residual mask sparsification selected no cells")
+    return mask, {
+        "schema": "hprc_protected_residual_mask.v1",
+        "enabled": True,
+        "source": "rate_aware_residual_protection",
+        "shape": [int(v) for v in mask.shape],
+        "active_cell_count": active,
+        "total_cell_count": int(mask.size),
+        "active_fraction": float(active / mask.size) if mask.size else 0.0,
+        "threshold": threshold_value,
+        "top_fraction": None if top_fraction is None else float(top_fraction),
+        "tie_breaker": "uint64_golden_ratio_hash_of_flat_cell_index",
+        "semantics": (
+            "1=emit_highres_protected_residual_cell,"
+            "0=let_coarse_receiver_or_fill_handle_cell"
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
 
 
 def _resolve_output_dir(

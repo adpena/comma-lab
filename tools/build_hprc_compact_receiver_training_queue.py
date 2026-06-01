@@ -101,6 +101,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Protected residual sidecar grid width; defaults to --residual-grid-w.",
     )
     parser.add_argument(
+        "--protected-residual-mask-threshold",
+        type=float,
+        help=(
+            "Emit high-res protected residual sidecar cells only where the "
+            "P18/P19 protection surface is at least this value."
+        ),
+    )
+    parser.add_argument(
+        "--protected-residual-mask-top-fraction",
+        type=float,
+        help=(
+            "Emit only the highest-priority fraction of P18/P19-protected cells "
+            "in the high-res sidecar; dense protection remains available to the loss."
+        ),
+    )
+    parser.add_argument(
         "--training-backend",
         choices=("auto", "mlx", "numpy"),
         default="auto",
@@ -352,6 +368,8 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 protected_residual_grid_h=args.protected_residual_grid_h,
                 protected_residual_grid_w=args.protected_residual_grid_w,
+                protected_residual_mask_threshold=args.protected_residual_mask_threshold,
+                protected_residual_mask_top_fraction=args.protected_residual_mask_top_fraction,
                 training_backend=str(args.training_backend),
                 native_rate_aware=bool(args.enable_native_rate_aware_hprc),
                 native_rate_residual_l1_weight=float(args.native_rate_residual_l1_weight),
@@ -457,6 +475,8 @@ def build_hprc_compact_receiver_training_plan(
     enable_protected_residual_pathway: bool,
     protected_residual_grid_h: int | None,
     protected_residual_grid_w: int | None,
+    protected_residual_mask_threshold: float | None,
+    protected_residual_mask_top_fraction: float | None,
     training_backend: str,
     native_rate_aware: bool,
     native_rate_residual_l1_weight: float,
@@ -514,6 +534,20 @@ def build_hprc_compact_receiver_training_plan(
                 [
                     "--protected-residual-grid-w",
                     str(int(protected_residual_grid_w)),
+                ]
+            )
+        if protected_residual_mask_threshold is not None:
+            command.extend(
+                [
+                    "--protected-residual-mask-threshold",
+                    repr(float(protected_residual_mask_threshold)),
+                ]
+            )
+        if protected_residual_mask_top_fraction is not None:
+            command.extend(
+                [
+                    "--protected-residual-mask-top-fraction",
+                    repr(float(protected_residual_mask_top_fraction)),
                 ]
             )
     if native_rate_aware:
@@ -623,6 +657,18 @@ def build_hprc_compact_receiver_training_plan(
                 "equals": True,
             }
         )
+        if (
+            protected_residual_mask_threshold is not None
+            or protected_residual_mask_top_fraction is not None
+        ):
+            extra_postconditions.append(
+                {
+                    "type": "json_equals",
+                    "path": output_manifest.as_posix(),
+                    "key": "protected_residual_mask_manifest.enabled",
+                    "equals": True,
+                }
+            )
     return {
         "schema": HPRC_TRAINING_PLAN_SCHEMA,
         "candidate_id": f"hprc_compact_receiver_{run_id}",
@@ -655,6 +701,16 @@ def build_hprc_compact_receiver_training_plan(
                 None
                 if protected_residual_grid_w is None
                 else int(protected_residual_grid_w)
+            ),
+            "protected_residual_mask_threshold": (
+                None
+                if protected_residual_mask_threshold is None
+                else float(protected_residual_mask_threshold)
+            ),
+            "protected_residual_mask_top_fraction": (
+                None
+                if protected_residual_mask_top_fraction is None
+                else float(protected_residual_mask_top_fraction)
             ),
             "training_backend": str(training_backend),
             "portable_runtime": "numpy",
