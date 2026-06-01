@@ -1,0 +1,31 @@
+{
+  "elapsed_seconds": 0.42223525047302246,
+  "files": [
+    {
+      "bytes": 4416,
+      "path": ".omx/research/hprc_baseline_reuse_smoke_20260601T014925Z_codex/baseline_reused_cache_report.json",
+      "sha256": "5371963adcf284bd19b18e1b742dc4927594d53bef67b1b28df8a8f139aebb48"
+    },
+    {
+      "bytes": 13308,
+      "path": ".omx/research/hprc_baseline_reuse_smoke_20260601T014925Z_codex/baseline_reused_mlx_response.json",
+      "sha256": "7a68cf582d7069a88323dc07b49a93e4ad0d22bcb34acc28576c4444ac87156f"
+    },
+    {
+      "bytes": 5755,
+      "path": ".omx/research/hprc_baseline_reuse_smoke_20260601T014925Z_codex/hprc_mlx_component_neutralization_profile.json",
+      "sha256": "32ea2fa120caba871dfa0b97ee23006257c6e27adbe4b82f10a698e8eab29f54"
+    },
+    {
+      "bytes": 1292,
+      "path": ".omx/research/hprc_baseline_reuse_smoke_20260601T014925Z_codex/hprc_scorer_ranked_residual_shrink_backlog.json",
+      "sha256": "a869bf78c8f9ac8786293b5464da0742db33cfb99a977237edbd215eb0b6715f"
+    }
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "hprc_baseline_reuse_smoke_manifest.v1",
+  "score_claim": false,
+  "source_profile_reused": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_mlx_component_neutralization_profile.json",
+  "source_run_dir": "/Volumes/VertigoDataTier/pact/hprc_baseline_reuse_smoke_20260601Tlocal"
+}

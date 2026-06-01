@@ -1,0 +1,121 @@
+{
+  "archive_byte_ceiling": {
+    "rate_price_score_per_byte": 6.658589531221714e-07,
+    "sub019_zero_distortion_archive_bytes": 285345
+  },
+  "baseline_reuse": {
+    "enabled": true,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "hprc_baseline_mlx_response_reuse_report.v1",
+    "score_claim": false,
+    "source_cache_dir": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_caches/baseline",
+    "source_cache_report": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_cache_reports/baseline.json",
+    "source_components_dir": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_components/baseline",
+    "source_profile": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_mlx_component_neutralization_profile.json",
+    "source_response": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_responses/baseline.json",
+    "validation": {
+      "component_artifacts_present": true,
+      "hprc_0bin_sha256_matched": true,
+      "max_pairs_matched": true,
+      "reference_cache_dir_matched": true
+    }
+  },
+  "blockers": [
+    "mlx_local_response_is_advisory_not_score_authority",
+    "class_region_boundary_scopes_require_logits_or_boundary_cache_extension",
+    "contest_cpu_cuda_exact_eval_not_executed"
+  ],
+  "cache_materialization_rows": {
+    "baseline": {
+      "argv": [],
+      "cache_dir": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_caches/baseline",
+      "report_output": "/Volumes/VertigoDataTier/pact/hprc_baseline_reuse_smoke_20260601Tlocal/mlx_cache_reports/baseline.json",
+      "reused_baseline_cache": true,
+      "reused_from_cache_report": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z/mlx_cache_reports/baseline.json",
+      "reused_from_profile": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_mlx_component_neutralization_profile.json",
+      "stderr_tail": "",
+      "stdout": "",
+      "work_dir": "/Volumes/VertigoDataTier/pact/hprc_baseline_reuse_smoke_20260601Tlocal/mlx_work/baseline"
+    }
+  },
+  "candidate_dir": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z",
+  "created_at_unix": 1780278551.238104,
+  "elapsed_seconds": 0.42223525047302246,
+  "max_pairs": 600,
+  "pair_value_rows": [],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_mode": "compact_numpy_receiver_v1",
+  "reference_cache_dir": "/Users/adpena/Projects/pact/experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema": "hprc_mlx_component_neutralization_profile.v1",
+  "scope_status": {
+    "batch": "window JSON emitted from MLX component arrays",
+    "boundary": "blocked_missing_boundary_surface_in_cache",
+    "class_region": "blocked_missing_segnet_class_logit_or_label_surface_in_cache",
+    "frame": "pair rows include frame indices; per-frame split awaits framewise scorer arrays",
+    "full_video": "executed",
+    "pair": "executed_from_mlx_component_arrays",
+    "section": "executed"
+  },
+  "score_claim": false,
+  "score_claim_valid": false,
+  "section_value_rows": [
+    {
+      "archive_bytes_removed_vs_baseline": 0,
+      "archive_zip_bytes": 1163860,
+      "delta_avg_posenet_dist": 0.0,
+      "delta_avg_segnet_dist": 0.0,
+      "delta_nonrate_score": 0.0,
+      "delta_rate_score": 0.0,
+      "delta_total_mlx_score_advisory": 0.0,
+      "marginal_status": "no_archive_byte_savings",
+      "neutralized_section": "none",
+      "nonrate_score_value_per_removed_archive_kib": null,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_price_score_per_kib": 0.0006818395679971035,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "variant_id": "baseline"
+    }
+  ],
+  "tool_argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "tools/profile_hprc_mlx_component_neutralization.py",
+    "--candidate-dir",
+    ".omx/research/hprc_compact_receiver_z8_reference_20260531T233001Z",
+    "--output-dir",
+    "/Volumes/VertigoDataTier/pact/hprc_baseline_reuse_smoke_20260601Tlocal",
+    "--sections",
+    "--reuse-baseline-profile",
+    ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_mlx_component_neutralization_profile.json",
+    "--max-pairs",
+    "600",
+    "--window-pairs",
+    "50",
+    "--device",
+    "cpu",
+    "--allow-large-tensor-cache",
+    "--force"
+  ],
+  "variant_rows": [
+    {
+      "archive_zip_bytes": 1163860,
+      "archive_zip_path": "/Volumes/VertigoDataTier/pact/hprc_baseline_reuse_smoke_20260601Tlocal/variants/baseline/archive.zip",
+      "archive_zip_sha256": "70033511c3b4beb976c9760a04535eb56011c982938e9f2e976a5f4379e79f9f",
+      "cache_report": "/Volumes/VertigoDataTier/pact/hprc_baseline_reuse_smoke_20260601Tlocal/mlx_cache_reports/baseline.json",
+      "hprc_0bin_path": "/Volumes/VertigoDataTier/pact/hprc_baseline_reuse_smoke_20260601Tlocal/variants/baseline/0.bin",
+      "hprc_0bin_sha256": "f8ad8b6b04fd46bb35459e147c865ee32978d95718f72f7f1c3f4f051f2a205b",
+      "mlx_response": "/Volumes/VertigoDataTier/pact/hprc_baseline_reuse_smoke_20260601Tlocal/mlx_responses/baseline.json",
+      "neutralized_section": null,
+      "variant_id": "baseline"
+    }
+  ],
+  "window_pairs": 50
+}

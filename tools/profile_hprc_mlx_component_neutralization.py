@@ -10,6 +10,7 @@ emits allocator rows. It deliberately refuses to create score authority.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import shutil
@@ -89,6 +90,18 @@ class VariantSpec:
     variant_dir: Path
 
 
+@dataclass(frozen=True)
+class BaselineReuse:
+    source_profile_path: Path
+    source_cache_report_path: Path
+    source_response_path: Path
+    source_components_dir: Path | None
+    source_cache_dir: Path | None
+    source_profile: dict[str, Any]
+    source_variant_row: dict[str, Any]
+    source_payload: dict[str, Any]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -129,6 +142,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-large-tensor-cache",
         action="store_true",
         help="Permit full-video scorer tensor caches after SSD/storage preflight.",
+    )
+    parser.add_argument(
+        "--reuse-baseline-profile",
+        type=Path,
+        help=(
+            "Reuse the baseline MLX response from a prior HPRC profile when the "
+            "baseline 0.bin SHA, reference cache, and requested pair count match. "
+            "This skips recomputing the unchanged baseline scorer pass."
+        ),
     )
     parser.add_argument(
         "--receiver-proof",
@@ -179,6 +201,16 @@ def main(argv: list[str] | None = None) -> int:
         skip_receiver_proof=(not bool(args.receiver_proof)) or bool(args.skip_receiver_proof),
         retain_receiver_proof_output=bool(args.retain_receiver_proof_output),
     )
+    baseline_reuse = _prepare_baseline_reuse(
+        profile_path=(
+            None
+            if args.reuse_baseline_profile is None
+            else _resolve(args.reuse_baseline_profile, base=repo_root)
+        ),
+        baseline_variant=variants[0],
+        reference_cache_dir=reference_cache_dir,
+        max_pairs=int(args.max_pairs),
+    )
     cache_rows = _materialize_mlx_caches(
         variants=variants,
         output_dir=output_dir,
@@ -187,6 +219,7 @@ def main(argv: list[str] | None = None) -> int:
         inflate_timeout=int(args.inflate_timeout),
         allow_large_tensor_cache=bool(args.allow_large_tensor_cache),
         cache_materialization_mode=str(args.cache_materialization_mode),
+        baseline_reuse=baseline_reuse,
     )
     payloads = _run_mlx_responses(
         variants=variants,
@@ -197,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
         window_pairs=int(args.window_pairs),
         device=str(args.device),
         progress_every=int(args.progress_every),
+        baseline_reuse=baseline_reuse,
     )
     report = _build_report(
         variants=variants,
@@ -209,6 +243,7 @@ def main(argv: list[str] | None = None) -> int:
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
         started=started,
+        baseline_reuse=baseline_reuse,
     )
     report_path = output_dir / "hprc_mlx_component_neutralization_profile.json"
     write_json(report_path, report)
@@ -361,6 +396,92 @@ def _variant_slug(value: str) -> str:
     return f"{slug[:63].rstrip('_')}_{digest}"
 
 
+def _prepare_baseline_reuse(
+    *,
+    profile_path: Path | None,
+    baseline_variant: VariantSpec,
+    reference_cache_dir: Path,
+    max_pairs: int,
+) -> BaselineReuse | None:
+    if profile_path is None:
+        return None
+    payload = _load_json_object(profile_path)
+    if payload.get("schema") != SCHEMA:
+        raise SystemExit(
+            f"baseline reuse profile has wrong schema: {payload.get('schema')!r}"
+        )
+    if int(payload.get("max_pairs") or 0) != int(max_pairs):
+        raise SystemExit(
+            "baseline reuse requires identical max_pairs: "
+            f"source={payload.get('max_pairs')} requested={max_pairs}"
+        )
+    source_reference = Path(str(payload.get("reference_cache_dir") or "")).expanduser()
+    if source_reference != reference_cache_dir:
+        raise SystemExit(
+            "baseline reuse requires identical reference cache: "
+            f"source={source_reference} requested={reference_cache_dir}"
+        )
+    variant_rows = payload.get("variant_rows")
+    if not isinstance(variant_rows, list):
+        raise SystemExit("baseline reuse profile is missing variant_rows")
+    baseline_rows = [
+        row
+        for row in variant_rows
+        if isinstance(row, dict) and row.get("variant_id") == "baseline"
+    ]
+    if len(baseline_rows) != 1:
+        raise SystemExit("baseline reuse profile must contain exactly one baseline row")
+    row = baseline_rows[0]
+    if row.get("hprc_0bin_sha256") != baseline_variant.hprc_0bin_sha256:
+        raise SystemExit(
+            "baseline reuse refused: hprc_0bin_sha256 mismatch "
+            f"source={row.get('hprc_0bin_sha256')} "
+            f"current={baseline_variant.hprc_0bin_sha256}"
+        )
+    source_response_path = Path(str(row.get("mlx_response") or ""))
+    source_cache_report_path = Path(str(row.get("cache_report") or ""))
+    if not source_response_path.is_file():
+        raise SystemExit(f"baseline reuse response missing: {source_response_path}")
+    if not source_cache_report_path.is_file():
+        raise SystemExit(f"baseline reuse cache report missing: {source_cache_report_path}")
+    source_payload = _load_json_object(source_response_path)
+    if int(source_payload.get("n_samples") or 0) != int(max_pairs):
+        raise SystemExit(
+            "baseline reuse response n_samples mismatch: "
+            f"source={source_payload.get('n_samples')} requested={max_pairs}"
+        )
+    components = source_payload.get("components", {})
+    artifacts = components.get("artifacts") if isinstance(components, dict) else None
+    source_components_dir: Path | None = None
+    if isinstance(artifacts, dict):
+        paths = [
+            Path(str(row.get("path")))
+            for row in artifacts.values()
+            if isinstance(row, dict) and row.get("path")
+        ]
+        for path in paths:
+            if not path.is_file():
+                raise SystemExit(f"baseline reuse component artifact missing: {path}")
+        if paths:
+            source_components_dir = paths[0].parent
+    cache_rows = payload.get("cache_materialization_rows")
+    source_cache_dir = None
+    if isinstance(cache_rows, dict):
+        baseline_cache = cache_rows.get("baseline")
+        if isinstance(baseline_cache, dict) and baseline_cache.get("cache_dir"):
+            source_cache_dir = Path(str(baseline_cache["cache_dir"]))
+    return BaselineReuse(
+        source_profile_path=profile_path,
+        source_cache_report_path=source_cache_report_path,
+        source_response_path=source_response_path,
+        source_components_dir=source_components_dir,
+        source_cache_dir=source_cache_dir,
+        source_profile=payload,
+        source_variant_row=row,
+        source_payload=source_payload,
+    )
+
+
 def _materialize_mlx_caches(
     *,
     variants: list[VariantSpec],
@@ -370,6 +491,7 @@ def _materialize_mlx_caches(
     inflate_timeout: int,
     allow_large_tensor_cache: bool,
     cache_materialization_mode: str,
+    baseline_reuse: BaselineReuse | None,
 ) -> dict[str, dict[str, Any]]:
     rows: dict[str, dict[str, Any]] = {}
     tool = repo_root / "tools" / "materialize_mlx_scorer_cache_from_submission.py"
@@ -377,6 +499,25 @@ def _materialize_mlx_caches(
         cache_dir = output_dir / "mlx_caches" / variant.variant_id
         work_dir = output_dir / "mlx_work" / variant.variant_id
         report_output = output_dir / "mlx_cache_reports" / f"{variant.variant_id}.json"
+        if variant.variant_id == "baseline" and baseline_reuse is not None:
+            report_output.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(baseline_reuse.source_cache_report_path, report_output)
+            rows[variant.variant_id] = {
+                "cache_dir": (
+                    str(baseline_reuse.source_cache_dir)
+                    if baseline_reuse.source_cache_dir is not None
+                    else str(cache_dir)
+                ),
+                "work_dir": str(work_dir),
+                "report_output": str(report_output),
+                "argv": [],
+                "stdout": "",
+                "stderr_tail": "",
+                "reused_from_profile": str(baseline_reuse.source_profile_path),
+                "reused_from_cache_report": str(baseline_reuse.source_cache_report_path),
+                "reused_baseline_cache": True,
+            }
+            continue
         cmd = _build_mlx_cache_materialization_command(
             tool=tool,
             variant=variant,
@@ -455,7 +596,20 @@ def _run_mlx_responses(
     window_pairs: int,
     device: str,
     progress_every: int,
+    baseline_reuse: BaselineReuse | None,
 ) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    job_variants: list[VariantSpec] = []
+    if baseline_reuse is not None:
+        baseline = variants[0]
+        out["baseline"] = _copy_reused_baseline_response(
+            baseline_reuse=baseline_reuse,
+            baseline_variant=baseline,
+            output_dir=output_dir,
+        )
+        job_variants = [variant for variant in variants if variant.variant_id != "baseline"]
+    else:
+        job_variants = list(variants)
     jobs = [
         MLXScorerResponseBatchJob(
             candidate_cache_dir=output_dir / "mlx_caches" / variant.variant_id,
@@ -464,22 +618,25 @@ def _run_mlx_responses(
             components_dir=output_dir / "mlx_components" / variant.variant_id,
             response_family=f"hprc_component_neutralization_{variant.variant_id}",
         )
-        for variant in variants
+        for variant in job_variants
     ]
-    payloads = build_mlx_scorer_response_payload_batch(
-        reference_cache_dir=reference_cache_dir,
-        jobs=jobs,
-        repo_root=repo_root,
-        batch_pairs=1,
-        device_type=device,
-        progress_every=progress_every,
-        max_pairs=max_pairs,
-        allow_gpu_research_signal=device == "gpu",
-        allow_unaudited_candidate_cache_debug=True,
-        cache_integrity_mode=MANIFEST_CACHE_INTEGRITY_MODE,
+    payloads = (
+        build_mlx_scorer_response_payload_batch(
+            reference_cache_dir=reference_cache_dir,
+            jobs=jobs,
+            repo_root=repo_root,
+            batch_pairs=1,
+            device_type=device,
+            progress_every=progress_every,
+            max_pairs=max_pairs,
+            allow_gpu_research_signal=device == "gpu",
+            allow_unaudited_candidate_cache_debug=True,
+            cache_integrity_mode=MANIFEST_CACHE_INTEGRITY_MODE,
+        )
+        if jobs
+        else []
     )
-    out: dict[str, dict[str, Any]] = {}
-    for variant, payload in zip(variants, payloads, strict=True):
+    for variant, payload in zip(job_variants, payloads, strict=True):
         path = output_dir / "mlx_responses" / f"{variant.variant_id}.json"
         write_mlx_scorer_response_payload(payload, path)
         if payload.get("components", {}).get("artifacts"):
@@ -491,6 +648,61 @@ def _run_mlx_responses(
             )
         out[variant.variant_id] = payload
     return out
+
+
+def _copy_reused_baseline_response(
+    *,
+    baseline_reuse: BaselineReuse,
+    baseline_variant: VariantSpec,
+    output_dir: Path,
+) -> dict[str, Any]:
+    payload = copy.deepcopy(baseline_reuse.source_payload)
+    source_archive_bytes = int(payload.get("archive_size_bytes") or 0)
+    _retarget_payload_archive_bytes(payload, archive_bytes=baseline_variant.archive_bytes)
+    artifacts = payload.get("components", {}).get("artifacts", {})
+    if isinstance(artifacts, dict):
+        component_dir = output_dir / "mlx_components" / "baseline"
+        component_dir.mkdir(parents=True, exist_ok=True)
+        for row in artifacts.values():
+            if not isinstance(row, dict) or not row.get("path"):
+                continue
+            source = Path(str(row["path"]))
+            target = component_dir / source.name
+            shutil.copy2(source, target)
+            row["path"] = str(target)
+            row["reused_from_path"] = str(source)
+            row["reused_from_profile"] = str(baseline_reuse.source_profile_path)
+    payload["baseline_reuse"] = {
+        "schema": "hprc_baseline_mlx_response_reuse.v1",
+        "source_profile": str(baseline_reuse.source_profile_path),
+        "source_response": str(baseline_reuse.source_response_path),
+        "source_cache_report": str(baseline_reuse.source_cache_report_path),
+        "source_archive_size_bytes": source_archive_bytes,
+        "current_archive_size_bytes": int(baseline_variant.archive_bytes),
+        "current_archive_sha256": baseline_variant.archive_sha256,
+        "hprc_0bin_sha256": baseline_variant.hprc_0bin_sha256,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    path = output_dir / "mlx_responses" / "baseline.json"
+    write_mlx_scorer_response_payload(payload, path)
+    return payload
+
+
+def _retarget_payload_archive_bytes(payload: dict[str, Any], *, archive_bytes: int) -> None:
+    archive_bytes_int = int(archive_bytes)
+    payload["archive_size_bytes"] = archive_bytes_int
+    payload["rate_unscaled"] = archive_bytes_int / ORIGINAL_VIDEO_BYTES
+    payload["score_rate_contribution"] = 25.0 * payload["rate_unscaled"]
+    score = contest_formula_score(
+        seg_dist=float(payload["avg_segnet_dist"]),
+        pose_dist=float(payload["avg_posenet_dist"]),
+        archive_bytes=archive_bytes_int,
+    )
+    payload["canonical_score"] = score
+    payload["score_recomputed_from_components"] = score
+    payload["canonical_score_source"] = "score_recomputed_from_components_retargeted_archive_bytes"
 
 
 def _write_window_splits(
@@ -527,6 +739,7 @@ def _build_report(
     max_pairs: int,
     window_pairs: int,
     started: float,
+    baseline_reuse: BaselineReuse | None,
 ) -> dict[str, Any]:
     baseline = payloads["baseline"]
     baseline_variant = variants[0]
@@ -564,6 +777,7 @@ def _build_report(
         "reference_cache_dir": str(reference_cache_dir),
         "tool_argv": [sys.executable, *sys.argv],
         "cache_materialization_rows": cache_rows,
+        "baseline_reuse": _baseline_reuse_report(baseline_reuse),
         "receiver_mode": COMPACT_RECEIVER_MODE,
         "max_pairs": int(max_pairs),
         "window_pairs": int(window_pairs),
@@ -620,11 +834,55 @@ def _build_report(
     }
 
 
+def _baseline_reuse_report(baseline_reuse: BaselineReuse | None) -> dict[str, Any]:
+    if baseline_reuse is None:
+        return {
+            "schema": "hprc_baseline_mlx_response_reuse_report.v1",
+            "enabled": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+    return {
+        "schema": "hprc_baseline_mlx_response_reuse_report.v1",
+        "enabled": True,
+        "source_profile": str(baseline_reuse.source_profile_path),
+        "source_response": str(baseline_reuse.source_response_path),
+        "source_cache_report": str(baseline_reuse.source_cache_report_path),
+        "source_components_dir": (
+            None
+            if baseline_reuse.source_components_dir is None
+            else str(baseline_reuse.source_components_dir)
+        ),
+        "source_cache_dir": (
+            None
+            if baseline_reuse.source_cache_dir is None
+            else str(baseline_reuse.source_cache_dir)
+        ),
+        "validation": {
+            "hprc_0bin_sha256_matched": True,
+            "reference_cache_dir_matched": True,
+            "max_pairs_matched": True,
+            "component_artifacts_present": True,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _load_cache_report(path: str | Path) -> dict[str, Any]:
     with Path(path).open(encoding="utf-8") as f:
         payload = json.load(f)
     if not isinstance(payload, dict):
         raise SystemExit(f"cache report must be a JSON object: {path}")
+    return payload
+
+
+def _load_json_object(path: str | Path) -> dict[str, Any]:
+    with Path(path).open(encoding="utf-8") as f:
+        payload = json.load(f)
+    if not isinstance(payload, dict):
+        raise SystemExit(f"JSON root must be an object: {path}")
     return payload
 
 
