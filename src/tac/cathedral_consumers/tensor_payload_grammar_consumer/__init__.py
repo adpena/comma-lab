@@ -59,6 +59,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         blockers.append("tensor_payload_grammar_schema_mismatch")
 
     byte_accounting = _mapping(candidate.get("byte_accounting"))
+    grouped_diagnostic = _mapping(candidate.get("grouped_brotli_order_diagnostic"))
     saturation = _mapping(candidate.get("saturation_diagnostic"))
     planner_feedback = _mapping(candidate.get("planner_feedback"))
     source_manifest = _mapping(candidate.get("source_payload_manifest"))
@@ -68,6 +69,23 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
             blockers.append(blocker)
 
     saved = max(0, _safe_int(byte_accounting.get("selected_saved_bytes_vs_baseline")))
+    grouped_saved = max(
+        0,
+        _safe_int(
+            grouped_diagnostic.get("grouped_saved_bytes_vs_selected_isolated")
+        ),
+    )
+    grouped_delta = _safe_int(
+        grouped_diagnostic.get("grouped_delta_bytes_vs_selected_isolated")
+    )
+    grouped_saved_vs_identity = max(
+        0,
+        _safe_int(grouped_diagnostic.get("grouped_saved_bytes_vs_identity")),
+    )
+    grouped_delta_vs_identity = _safe_int(
+        grouped_diagnostic.get("grouped_delta_bytes_vs_identity")
+    )
+    grouped_bytes = _safe_int(grouped_diagnostic.get("selected_grouped_brotli_bytes"))
     selected_bytes = _safe_int(byte_accounting.get("selected_isolated_tensor_bytes"))
     baseline_bytes = _safe_int(byte_accounting.get("baseline_isolated_tensor_bytes"))
     ratio = _optional_float(byte_accounting.get("selected_over_floor_ratio"))
@@ -76,9 +94,13 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     rate_positive_count = _safe_int(planner_feedback.get("rate_positive_hint_count"))
     tensor_count = _safe_int(candidate.get("tensor_count") or source_manifest.get("tensor_count"))
 
-    receiver_work_justified = status == _UNSATURATED_STATUS and saved > 0
-    demotion_recommended = status in _SATURATED_STATUSES
-    if receiver_work_justified:
+    isolated_receiver_work = status == _UNSATURATED_STATUS and saved > 0
+    grouped_receiver_work = grouped_saved > 0
+    receiver_work_justified = isolated_receiver_work or grouped_receiver_work
+    demotion_recommended = status in _SATURATED_STATUSES and not grouped_receiver_work
+    if grouped_receiver_work:
+        planner_action = "bind_substrate_receiver_and_materialize_grouped_brotli_archive"
+    elif receiver_work_justified:
         planner_action = "bind_substrate_receiver_and_materialize_byte_closed_archive"
     elif demotion_recommended:
         planner_action = "record_tensor_payload_saturation_and_demote_format_churn"
@@ -100,8 +122,17 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "baseline_isolated_tensor_bytes": baseline_bytes,
         "selected_saved_bytes_vs_baseline": saved,
         "rate_delta_score_if_components_unchanged": contest_rate_term(-saved),
+        "grouped_selected_brotli_bytes": grouped_bytes,
+        "grouped_saved_bytes_vs_identity": grouped_saved_vs_identity,
+        "grouped_delta_bytes_vs_identity": grouped_delta_vs_identity,
+        "grouped_saved_bytes_vs_selected_isolated": grouped_saved,
+        "grouped_delta_bytes_vs_selected_isolated": grouped_delta,
+        "grouped_rate_delta_score_if_components_unchanged": contest_rate_term(
+            grouped_delta
+        ),
         "operation_hint_count": operation_count,
         "rate_positive_hint_count": rate_positive_count,
+        "grouped_receiver_work_justified": grouped_receiver_work,
         "receiver_work_justified": receiver_work_justified,
         "demotion_recommended": demotion_recommended,
         "planner_action": planner_action,
@@ -109,6 +140,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "rationale": _rationale(
             status=status,
             saved=saved,
+            grouped_saved=grouped_saved,
             receiver_work_justified=receiver_work_justified,
             demotion_recommended=demotion_recommended,
         ),
@@ -165,9 +197,16 @@ def _rationale(
     *,
     status: str,
     saved: int,
+    grouped_saved: int,
     receiver_work_justified: bool,
     demotion_recommended: bool,
 ) -> str:
+    if grouped_saved > 0:
+        return (
+            "Generic tensor payload grammar found grouped Brotli ordering savings "
+            f"({grouped_saved} byte(s) versus selected isolated tensor payloads); "
+            "bind a substrate receiver/archive before replay."
+        )
     if receiver_work_justified:
         return (
             "Generic tensor payload grammar has an unsaturated entropy gap and "
@@ -193,4 +232,3 @@ __all__ = [
     "consume_candidate",
     "update_from_anchor",
 ]
-

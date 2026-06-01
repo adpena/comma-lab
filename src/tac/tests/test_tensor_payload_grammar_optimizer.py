@@ -86,9 +86,28 @@ def test_generic_tensor_payload_solver_emits_queue_consumable_signal() -> None:
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["byte_accounting"]["selected_isolated_tensor_bytes"] > 0
+    order_diag = report["grouped_brotli_order_diagnostic"]
+    assert order_diag["schema"] == "tensor_payload_grouped_brotli_order_diagnostic.v1"
+    assert order_diag["candidate_count"] >= 1
+    assert order_diag["selected_grouped_brotli_bytes"] > 0
+    assert "grouped_delta_bytes_vs_identity" in order_diag
+    assert "grouped_delta_bytes_vs_selected_isolated" in order_diag
     assert report["planner_feedback"]["operation_hint_count"] == 2
+    assert report["planner_feedback"]["grouped_brotli_order_hint"][
+        "selected_grouped_brotli_bytes"
+    ] == order_diag["selected_grouped_brotli_bytes"]
     assert queue["schema"] == TENSOR_PAYLOAD_GRAMMAR_QUEUE_SCHEMA
-    assert queue["candidate_count"] == 2
+    assert queue["candidate_count"] >= 2
+    if order_diag["grouped_saved_bytes_vs_selected_isolated"] > 0:
+        grouped_rows = [
+            row
+            for row in queue["candidates"]
+            if row["operation_family"] == "tensor_payload_grouped_brotli_order"
+        ]
+        assert len(grouped_rows) == 1
+        assert grouped_rows[0]["candidate_saved_bytes"] == order_diag[
+            "grouped_saved_bytes_vs_selected_isolated"
+        ]
     assert queue["ready_for_exact_eval_dispatch"] is False
     assert "generic_tensor_payload_receiver_not_bound" in queue["blockers"]
     assert surface["score_claim"] is False
@@ -141,5 +160,39 @@ def test_tensor_payload_optimizer_cli_reads_npz_and_writes_report(
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
     assert report["schema"] == TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA
     assert report["source_payload_manifest"]["source_path"] == npz_path.as_posix()
+    assert (
+        report["grouped_brotli_order_diagnostic"]["schema"]
+        == "tensor_payload_grouped_brotli_order_diagnostic.v1"
+    )
     assert {row["tensor_name"] for row in report["rows"]} == {"bias", "weight"}
     assert queue["schema"] == TENSOR_PAYLOAD_GRAMMAR_QUEUE_SCHEMA
+
+
+def test_grouped_brotli_order_savings_emit_queue_candidate() -> None:
+    report = {
+        "schema": TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA,
+        "campaign_id": "grouped_fixture",
+        "planner_feedback": {"operation_hints": []},
+        "grouped_brotli_order_diagnostic": {
+            "schema": "tensor_payload_grouped_brotli_order_diagnostic.v1",
+            "selected_order_label": "histogram_greedy",
+            "selected_tensor_order": ["b", "a"],
+            "selected_grouped_brotli_bytes": 83,
+            "selected_isolated_tensor_bytes": 100,
+            "identity_grouped_brotli_bytes": 100,
+            "grouped_delta_bytes_vs_identity": -17,
+            "grouped_saved_bytes_vs_identity": 17,
+            "grouped_delta_bytes_vs_selected_isolated": -17,
+            "grouped_saved_bytes_vs_selected_isolated": 17,
+        },
+    }
+
+    queue = build_tensor_payload_optimizer_queue(report)
+
+    assert queue["candidate_count"] == 1
+    assert queue["top_k"][0]["operation_family"] == "tensor_payload_grouped_brotli_order"
+    assert queue["top_k"][0]["candidate_saved_bytes"] == 17
+    assert queue["top_k"][0]["predicted_delta_bytes"] == -17
+    assert queue["top_k"][0]["operation_params"]["selected_tensor_order"] == ["b", "a"]
+    assert queue["score_claim"] is False
+    assert queue["ready_for_exact_eval_dispatch"] is False

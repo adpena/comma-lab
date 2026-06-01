@@ -226,6 +226,7 @@ def solve_tensor_payload_grammar(
     baseline_total = 0
     floor_total = 0.0
     source_rows: list[dict[str, Any]] = []
+    selected_transform_payloads: list[tuple[str, bytes]] = []
     for index, tensor in enumerate(normalized):
         candidates = measure_tensor_payload_candidates(
             tensor["q_i8"],
@@ -249,6 +250,15 @@ def solve_tensor_payload_grammar(
         selected_total += int(selected["charged_bytes"])
         baseline_total += int(baseline["charged_bytes"])
         floor_total += float(selected["empirical_shannon_floor_bytes"])
+        selected_transform_payloads.append(
+            (
+                str(tensor["name"]),
+                _payload_from_selected_tensor_candidate(
+                    tensor["q_i8"],
+                    selected,
+                ),
+            )
+        )
         source_rows.append(
             {
                 "tensor_index": index,
@@ -275,6 +285,11 @@ def solve_tensor_payload_grammar(
             }
         )
     ratio = None if floor_total <= 0.0 else selected_total / floor_total
+    grouped_brotli_order_diagnostic = _grouped_brotli_order_diagnostic(
+        selected_transform_payloads,
+        brotli_quality=brotli_quality,
+        selected_isolated_tensor_bytes=selected_total,
+    )
     blockers = [
         "generic_tensor_payload_receiver_not_bound",
         "byte_closed_archive_not_materialized",
@@ -311,8 +326,12 @@ def solve_tensor_payload_grammar(
                 selected_total
             ),
         },
+        "grouped_brotli_order_diagnostic": grouped_brotli_order_diagnostic,
         "saturation_diagnostic": payload_saturation_diagnostic(ratio),
-        "planner_feedback": _planner_feedback(rows),
+        "planner_feedback": _planner_feedback(
+            rows,
+            grouped_brotli_order_diagnostic=grouped_brotli_order_diagnostic,
+        ),
         "rows": rows,
         "blockers": blockers,
         "authority": {
@@ -389,6 +408,107 @@ def build_tensor_payload_optimizer_queue(
                 **FALSE_AUTHORITY_FIELDS,
             }
         )
+    grouped = report.get("grouped_brotli_order_diagnostic")
+    if isinstance(grouped, Mapping):
+        grouped_saved_vs_selected = max(
+            0,
+            int(grouped.get("grouped_saved_bytes_vs_selected_isolated") or 0),
+        )
+        grouped_delta_vs_selected = int(
+            grouped.get("grouped_delta_bytes_vs_selected_isolated") or 0
+        )
+        grouped_saved_vs_identity = max(
+            0,
+            int(grouped.get("grouped_saved_bytes_vs_identity") or 0),
+        )
+        grouped_delta_vs_identity = int(
+            grouped.get("grouped_delta_bytes_vs_identity") or 0
+        )
+        if grouped_saved_vs_selected > 0:
+            candidates.append(
+                {
+                    "schema": "optimizer_candidate_queue_row_v1",
+                    "candidate_id": f"{cid}:grouped_brotli_order",
+                    "candidate_kind": "planning_only_tensor_grouped_brotli_order",
+                    "status": "blocked_planning_signal_only",
+                    "target_kind": "tensor_payload_grammar",
+                    "operation_family": "tensor_payload_grouped_brotli_order",
+                    "operation_families": ["tensor_payload_grouped_brotli_order"],
+                    "operation_id": "grouped_brotli_order",
+                    "operation_params": {
+                        "schema": "tensor_payload_grouped_brotli_order_hint.v1",
+                        "selected_order_label": grouped.get("selected_order_label"),
+                        "selected_tensor_order": list(
+                            grouped.get("selected_tensor_order") or []
+                        ),
+                        "selected_grouped_brotli_bytes": grouped.get(
+                            "selected_grouped_brotli_bytes"
+                        ),
+                        "identity_grouped_brotli_bytes": grouped.get(
+                            "identity_grouped_brotli_bytes"
+                        ),
+                        "selected_isolated_tensor_bytes": grouped.get(
+                            "selected_isolated_tensor_bytes"
+                        ),
+                        "grouped_delta_bytes_vs_identity": grouped_delta_vs_identity,
+                        "grouped_delta_bytes_vs_selected_isolated": (
+                            grouped_delta_vs_selected
+                        ),
+                        "grouped_saved_bytes_vs_identity": grouped_saved_vs_identity,
+                        "grouped_saved_bytes_vs_selected_isolated": (
+                            grouped_saved_vs_selected
+                        ),
+                    },
+                    "selected_operations": [
+                        {
+                            "operation_family": "tensor_payload_grouped_brotli_order",
+                            "operation_id": "grouped_brotli_order",
+                            "selected_order_label": grouped.get(
+                                "selected_order_label"
+                            ),
+                            "selected_tensor_order": list(
+                                grouped.get("selected_tensor_order") or []
+                            ),
+                        }
+                    ],
+                    "candidate_saved_bytes": grouped_saved_vs_selected,
+                    "saved_bytes_scope": (
+                        "single_stream_grouped_brotli_diagnostic_not_archive_authority"
+                    ),
+                    "predicted_delta_bytes": grouped_delta_vs_selected,
+                    "predicted_delta_bytes_scope": (
+                        "single_stream_grouped_brotli_diagnostic_not_archive_authority"
+                    ),
+                    "runtime_consumption_status": (
+                        "generic_tensor_payload_receiver_required"
+                    ),
+                    "consumer_payload": {
+                        "selected_operations": [
+                            {
+                                "operation_family": (
+                                    "tensor_payload_grouped_brotli_order"
+                                ),
+                                "operation_id": "grouped_brotli_order",
+                                "selected_order_label": grouped.get(
+                                    "selected_order_label"
+                                ),
+                            }
+                        ],
+                        "byte_accounting_scope": (
+                            "single_stream_grouped_brotli_diagnostic_not_archive_authority"
+                        ),
+                    },
+                    "blockers": [
+                        "generic_tensor_payload_receiver_not_bound",
+                        "byte_closed_archive_not_materialized",
+                        "runtime_consumption_proof_missing",
+                        "full_frame_inflate_parity_missing",
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                    ],
+                    "axis_tag": "[planning-only byte-profile]",
+                    **FALSE_AUTHORITY_FIELDS,
+                }
+            )
     return {
         "schema": TENSOR_PAYLOAD_GRAMMAR_QUEUE_SCHEMA,
         "campaign_id": cid,
@@ -397,7 +517,11 @@ def build_tensor_payload_optimizer_queue(
         "proof_scope": "planning_only_generic_tensor_payload_grammar_no_dispatch",
         "candidate_count": len(candidates),
         "candidates": candidates,
-        "top_k": [row for row in candidates if int(row["candidate_saved_bytes"]) > 0],
+        "top_k": sorted(
+            [row for row in candidates if int(row["candidate_saved_bytes"]) > 0],
+            key=lambda row: int(row["candidate_saved_bytes"]),
+            reverse=True,
+        ),
         "blockers": [
             "generic_tensor_payload_receiver_not_bound",
             "byte_closed_archive_replay_not_run",
@@ -488,7 +612,11 @@ def _baseline_candidate(
     return out
 
 
-def _planner_feedback(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _planner_feedback(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    grouped_brotli_order_diagnostic: Mapping[str, Any],
+) -> dict[str, Any]:
     hints: list[dict[str, Any]] = []
     for row in rows:
         selected = row.get("selected")
@@ -538,7 +666,32 @@ def _planner_feedback(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "generic_tensor_entropy_gap_by_substrate",
             "generic_tensor_byte_map_coder_selection",
             "receiver_adapter_value_by_tensor_family",
+            "generic_tensor_grouped_brotli_order_by_payload_histogram",
         ],
+        "grouped_brotli_order_hint": {
+            "selected_order_label": grouped_brotli_order_diagnostic.get(
+                "selected_order_label"
+            ),
+            "selected_tensor_order": grouped_brotli_order_diagnostic.get(
+                "selected_tensor_order"
+            ),
+            "selected_grouped_brotli_bytes": grouped_brotli_order_diagnostic.get(
+                "selected_grouped_brotli_bytes"
+            ),
+            "grouped_delta_bytes_vs_identity": grouped_brotli_order_diagnostic.get(
+                "grouped_delta_bytes_vs_identity"
+            ),
+            "grouped_delta_bytes_vs_selected_isolated": (
+                grouped_brotli_order_diagnostic.get(
+                    "grouped_delta_bytes_vs_selected_isolated"
+                )
+            ),
+            "grouped_saved_bytes_vs_selected_isolated": (
+                grouped_brotli_order_diagnostic.get(
+                    "grouped_saved_bytes_vs_selected_isolated"
+                )
+            ),
+        },
         "consumer_surfaces": [
             "tac.optimization.byte_shaving_campaign.build_signal_surface_from_candidate_queue",
             "tac.cathedral_consumers.packetir_candidate_queue_consumer.consume_queue",
@@ -559,6 +712,146 @@ def _candidate_blockers(*, status: str) -> list[str]:
     if status != "ok":
         blockers.append("codec_candidate_not_usable")
     return blockers
+
+
+def _payload_from_selected_tensor_candidate(
+    q_i8: np.ndarray,
+    selected: Mapping[str, Any],
+) -> bytes:
+    byte_map = str(selected.get("byte_map") or "")
+    if byte_map not in VALID_BYTE_MAP_STRATEGIES:
+        raise ValueError(f"selected candidate has unknown byte_map: {byte_map!r}")
+    perm = _parse_perm_label(str(selected.get("storage_perm") or "identity"))
+    scale_dtype = str(selected.get("scale_dtype") or "fp16")
+    if scale_dtype not in {"fp16", "fp32"}:
+        raise ValueError(f"selected candidate has unknown scale_dtype: {scale_dtype!r}")
+    transformed = _apply_storage_perm(q_i8, perm).reshape(-1)
+    return encode_byte_map(
+        transformed.astype(np.int8, copy=False),
+        byte_map,
+    ) + _scale_tail_bytes(
+        float(selected.get("scale", 1.0)),
+        scale_dtype=scale_dtype,  # type: ignore[arg-type]
+    )
+
+
+def _grouped_brotli_order_diagnostic(
+    tensor_payloads: Sequence[tuple[str, bytes]],
+    *,
+    brotli_quality: int,
+    selected_isolated_tensor_bytes: int,
+) -> dict[str, Any]:
+    if not tensor_payloads:
+        raise ValueError("at least one tensor payload is required")
+    order_candidates = _grouped_order_candidates(tensor_payloads)
+    rows: list[dict[str, Any]] = []
+    for label, order in order_candidates:
+        payload = b"".join(tensor_payloads[idx][1] for idx in order)
+        measured = measure_payload_coder_candidate(
+            payload,
+            coder="brotli",
+            brotli_quality=brotli_quality,
+            brotli_lgwin_sweep=False,
+        )
+        rows.append(
+            {
+                "schema": "tensor_payload_grouped_brotli_order_candidate.v1",
+                "order_label": label,
+                "tensor_order": [tensor_payloads[idx][0] for idx in order],
+                "raw_bytes": len(payload),
+                "compressed_bytes": int(measured["charged_bytes"]),
+                "codec_payload_bytes": int(measured["codec_payload_bytes"]),
+                "roundtrip_exact": bool(measured["roundtrip_exact"]),
+            }
+        )
+    rows.sort(key=lambda row: (int(row["compressed_bytes"]), str(row["order_label"])))
+    selected = rows[0]
+    identity = next(
+        row for row in rows if str(row.get("order_label")) == "identity"
+    )
+    selected_bytes = int(selected["compressed_bytes"])
+    identity_bytes = int(identity["compressed_bytes"])
+    selected_isolated_bytes = int(selected_isolated_tensor_bytes)
+    return {
+        "schema": "tensor_payload_grouped_brotli_order_diagnostic.v1",
+        "selected_order_label": selected["order_label"],
+        "selected_tensor_order": selected["tensor_order"],
+        "selected_grouped_brotli_bytes": selected_bytes,
+        "identity_grouped_brotli_bytes": identity_bytes,
+        "selected_isolated_tensor_bytes": selected_isolated_bytes,
+        "grouped_delta_bytes_vs_identity": selected_bytes - identity_bytes,
+        "grouped_saved_bytes_vs_identity": max(0, identity_bytes - selected_bytes),
+        "grouped_delta_bytes_vs_selected_isolated": (
+            selected_bytes - selected_isolated_bytes
+        ),
+        "grouped_saved_bytes_vs_selected_isolated": max(
+            0,
+            selected_isolated_bytes - selected_bytes,
+        ),
+        "candidate_count": len(rows),
+        "candidates": rows,
+        "byte_accounting_scope": (
+            "single_stream_grouped_brotli_diagnostic_not_archive_authority"
+        ),
+    }
+
+
+def _grouped_order_candidates(
+    tensor_payloads: Sequence[tuple[str, bytes]],
+) -> tuple[tuple[str, tuple[int, ...]], ...]:
+    n = len(tensor_payloads)
+    identity = tuple(range(n))
+    size_desc = tuple(
+        sorted(range(n), key=lambda idx: (-len(tensor_payloads[idx][1]), idx))
+    )
+    histogram_greedy = _histogram_greedy_order(tensor_payloads)
+    candidates: list[tuple[str, tuple[int, ...]]] = [
+        ("identity", identity),
+        ("size_desc", size_desc),
+        ("histogram_greedy", histogram_greedy),
+    ]
+    deduped: list[tuple[str, tuple[int, ...]]] = []
+    seen: set[tuple[int, ...]] = set()
+    for label, order in candidates:
+        if order in seen:
+            continue
+        seen.add(order)
+        deduped.append((label, order))
+    return tuple(deduped)
+
+
+def _histogram_greedy_order(
+    tensor_payloads: Sequence[tuple[str, bytes]],
+) -> tuple[int, ...]:
+    histograms = [_byte_histogram(payload) for _, payload in tensor_payloads]
+    remaining = set(range(len(tensor_payloads)))
+    start = max(remaining, key=lambda idx: (len(tensor_payloads[idx][1]), -idx))
+    order = [start]
+    remaining.remove(start)
+    while remaining:
+        previous = order[-1]
+        nxt = min(
+            remaining,
+            key=lambda idx: (
+                _l1_histogram_distance(histograms[previous], histograms[idx]),
+                -len(tensor_payloads[idx][1]),
+                idx,
+            ),
+        )
+        order.append(nxt)
+        remaining.remove(nxt)
+    return tuple(order)
+
+
+def _byte_histogram(payload: bytes) -> np.ndarray:
+    if not payload:
+        return np.zeros(256, dtype=np.float64)
+    counts = np.bincount(np.frombuffer(payload, dtype=np.uint8), minlength=256)
+    return counts.astype(np.float64) / float(len(payload))
+
+
+def _l1_histogram_distance(left: np.ndarray, right: np.ndarray) -> float:
+    return float(np.sum(np.abs(left - right)))
 
 
 def _normalize_scale_dtypes(values: Sequence[ScaleDType]) -> tuple[ScaleDType, ...]:
@@ -662,6 +955,19 @@ def _perm_label(perm: tuple[int, ...] | None) -> str:
     if perm is None:
         return "identity"
     return ",".join(str(int(v)) for v in perm)
+
+
+def _parse_perm_label(label: str) -> tuple[int, ...] | None:
+    text = str(label).strip()
+    if text == "identity":
+        return None
+    try:
+        values = tuple(int(part) for part in text.split(","))
+    except ValueError as exc:
+        raise ValueError(f"invalid storage_perm label: {label!r}") from exc
+    if sorted(values) != list(range(len(values))):
+        raise ValueError(f"invalid storage_perm permutation: {label!r}")
+    return values
 
 
 __all__ = [
