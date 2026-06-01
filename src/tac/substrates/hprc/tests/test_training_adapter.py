@@ -157,3 +157,53 @@ def test_hprc_training_cli_materializes_storage_custody_result(
     assert payload["artifact"]["archive_path"]
     assert Path(payload["result_path"]).is_file()
     assert payload["score_claim"] is False
+
+
+def test_hprc_training_cli_decodes_real_video_source_via_canonical_helper(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    import torch
+
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    video_path = tmp_path / "0.mkv"
+    video_path.write_bytes(b"fake-video")
+
+    def fake_decode_real_pairs(video_path_arg, **kwargs):
+        assert Path(video_path_arg) == video_path
+        assert kwargs["substrate_tag"] == "hprc_compact_receiver"
+        values = torch.arange(2 * 2 * 3 * 4 * 5, dtype=torch.float32)
+        return values.reshape(2, 2, 3, 4, 5)
+
+    monkeypatch.setattr(hprc_training_tool, "decode_real_pairs", fake_decode_real_pairs)
+
+    exit_code = hprc_training_tool.main(
+        [
+            "--video-path",
+            video_path.as_posix(),
+            "--decode-pairs",
+            "2",
+            "--decode-height",
+            "4",
+            "--decode-width",
+            "5",
+            "--output-dir",
+            (tmp_path / "hprc_video_cli_out").as_posix(),
+            "--output-manifest",
+            (tmp_path / "hprc_video_cli_out" / "result.json").as_posix(),
+            "--epochs",
+            "1",
+            "--batch-pair-indices-per-step",
+            "2",
+            "--skip-runtime-consumption-proof",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["source_manifest"]["source_kind"] == "contest_video_decode"
+    assert payload["source_manifest"]["decoded_frame_count"] == 4
+    assert payload["source_manifest"]["frames_shape"] == [4, 4, 5, 3]
+    assert Path(payload["result_path"]).name == "result.json"
+    assert payload["score_claim"] is False

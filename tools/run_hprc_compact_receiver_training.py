@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -20,6 +21,7 @@ from comma_lab.storage_tiers import (
     require_selected_storage,
 )
 from tac.repo_io import ArtifactWriteError, sha256_file, write_json_artifact
+from tac.substrates._shared.trainer_skeleton import decode_real_pairs
 from tac.substrates.hprc.archive_candidate import (
     FALSE_AUTHORITY,
     HPRC_RECEIVER_PROOF_SCRATCH_BYTES,
@@ -42,10 +44,17 @@ DEFAULT_HPRC_LONG_TRAINING_EXPECTED_BYTES = HPRC_RECEIVER_PROOF_SCRATCH_BYTES
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--frames-npy", type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--frames-npy", type=Path)
+    source.add_argument("--video-path", type=Path)
     parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--output-manifest", type=Path)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--run-id")
+    parser.add_argument("--decode-pairs", type=int, default=8)
+    parser.add_argument("--decode-max-pairs", type=int)
+    parser.add_argument("--decode-height", type=int, default=96)
+    parser.add_argument("--decode-width", type=int, default=128)
     parser.add_argument("--epochs", type=int, default=8)
     parser.add_argument("--batch-pair-indices-per-step", type=int, default=16)
     parser.add_argument("--learning-rate", type=float, default=1e-2)
@@ -77,6 +86,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow local-disk fallback only by explicit opt-in.",
     )
+    parser.add_argument(
+        "--storage-plan-path",
+        type=Path,
+        help="Optional external storage-waterfall plan path to preserve in the result.",
+    )
     return parser
 
 
@@ -84,18 +98,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     repo_root = Path(args.repo_root).expanduser().resolve(strict=False)
     output_dir, storage_plan_path = _resolve_output_dir(args, repo_root=repo_root)
-    frames_path = Path(args.frames_npy).expanduser().resolve(strict=False)
-    frames = np.load(frames_path, mmap_mode="r")
-    source_manifest = {
-        "schema": "hprc_compact_receiver_training_source_frames.v1",
-        "frames_npy_path": frames_path.as_posix(),
-        "frames_npy_bytes": frames_path.stat().st_size,
-        "frames_npy_sha256": sha256_file(frames_path),
-        "frames_shape": [int(v) for v in frames.shape],
-        "frames_dtype": str(frames.dtype),
-        "score_claim": False,
-        "promotion_eligible": False,
-    }
+    frames, source_manifest = _load_source_frames(args, repo_root=repo_root)
+    external_storage_plan = _resolve_optional_path(args.storage_plan_path, repo_root=repo_root)
+    storage_plan_for_result = storage_plan_path or external_storage_plan
     adapter = HprcCompactReceiverLongTrainingAdapter(
         frames,
         basis_count=int(args.basis_count),
@@ -133,17 +138,97 @@ def main(argv: list[str] | None = None) -> int:
     result = {
         "schema": HPRC_LONG_TRAINING_RESULT_SCHEMA,
         "run_id": output_dir.name,
-        "storage_plan_path": None if storage_plan_path is None else storage_plan_path.as_posix(),
+        "storage_plan_path": None
+        if storage_plan_for_result is None
+        else storage_plan_for_result.as_posix(),
         "source_manifest": source_manifest,
         "artifact": artifact.as_dict(),
         "runtime_consumption_proof_requested": not bool(args.skip_runtime_consumption_proof),
         "exact_axis_blocker": "contest_cpu_cuda_exact_eval_not_executed",
         **FALSE_AUTHORITY,
     }
-    result_path = output_dir / "hprc_compact_receiver_training_run_result.json"
+    result_path = (
+        output_dir / "hprc_compact_receiver_training_run_result.json"
+        if args.output_manifest is None
+        else _resolve_optional_path(args.output_manifest, repo_root=repo_root)
+    )
+    if result_path is None:
+        raise ValueError("failed to resolve output manifest")
     _write_json_maybe_overwrite(result_path, result)
     print(json.dumps({**result, "result_path": result_path.as_posix()}, sort_keys=True))
     return 0
+
+
+def _load_source_frames(
+    args: argparse.Namespace,
+    *,
+    repo_root: Path,
+) -> tuple[np.ndarray, dict[str, object]]:
+    if args.frames_npy is not None:
+        frames_path = Path(args.frames_npy).expanduser().resolve(strict=False)
+        frames = np.load(frames_path, mmap_mode="r")
+        return frames, {
+            "schema": "hprc_compact_receiver_training_source_frames.v1",
+            "source_kind": "frames_npy",
+            "frames_npy_path": frames_path.as_posix(),
+            "frames_npy_bytes": frames_path.stat().st_size,
+            "frames_npy_sha256": sha256_file(frames_path),
+            "frames_shape": [int(v) for v in frames.shape],
+            "frames_dtype": str(frames.dtype),
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+
+    if int(args.decode_pairs) < 1:
+        raise ValueError("--decode-pairs must be >= 1")
+    if int(args.decode_height) < 1 or int(args.decode_width) < 1:
+        raise ValueError("--decode-height and --decode-width must be >= 1")
+    video_path = Path(args.video_path).expanduser()
+    if not video_path.is_absolute():
+        video_path = repo_root / video_path
+    video_path = video_path.resolve(strict=False)
+    pairs = decode_real_pairs(
+        video_path,
+        n_pairs=int(args.decode_pairs),
+        max_pairs=args.decode_max_pairs,
+        substrate_tag="hprc_compact_receiver",
+        repo_root=repo_root,
+    )
+    import torch.nn.functional as F
+
+    if pairs.ndim != 5 or int(pairs.shape[1]) != 2 or int(pairs.shape[2]) != 3:
+        raise ValueError("decode_real_pairs returned an unexpected tensor shape")
+    flat = pairs.reshape((-1, int(pairs.shape[2]), int(pairs.shape[3]), int(pairs.shape[4])))
+    if (int(flat.shape[2]), int(flat.shape[3])) != (
+        int(args.decode_height),
+        int(args.decode_width),
+    ):
+        flat = F.interpolate(
+            flat.float(),
+            size=(int(args.decode_height), int(args.decode_width)),
+            mode="bilinear",
+            align_corners=False,
+        )
+    frames = flat.permute(0, 2, 3, 1).contiguous().cpu().numpy().astype(np.float32)
+    frames_sha = hashlib.sha256(np.ascontiguousarray(frames).tobytes()).hexdigest()
+    return frames, {
+        "schema": "hprc_compact_receiver_training_source_frames.v1",
+        "source_kind": "contest_video_decode",
+        "video_path": video_path.as_posix(),
+        "video_bytes": video_path.stat().st_size,
+        "video_sha256": sha256_file(video_path),
+        "decode_pairs_requested": int(args.decode_pairs),
+        "decode_max_pairs": None if args.decode_max_pairs is None else int(args.decode_max_pairs),
+        "decoded_pairs": int(pairs.shape[0]),
+        "decoded_frame_count": int(frames.shape[0]),
+        "decoded_source_shape": [int(v) for v in pairs.shape],
+        "frames_shape": [int(v) for v in frames.shape],
+        "frames_dtype": str(frames.dtype),
+        "frames_sha256": frames_sha,
+        "resize_mode": "bilinear_align_corners_false",
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
 
 
 def _resolve_output_dir(
@@ -185,6 +270,13 @@ def _resolve_output_dir(
         },
     )
     return output_dir, storage_plan_path
+
+
+def _resolve_optional_path(path: Path | None, *, repo_root: Path) -> Path | None:
+    if path is None:
+        return None
+    out = Path(path).expanduser()
+    return out if out.is_absolute() else repo_root / out
 
 
 def _write_json_maybe_overwrite(path: Path, payload: object) -> None:

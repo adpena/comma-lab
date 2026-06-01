@@ -22,6 +22,7 @@ SUPPORTED_PLAN_SCHEMAS = frozenset(
         "pr95_local_training_probe_plan_v1",
         "pr95_mlx_long_training_plan.v1",
         "hinton_mlx_long_training_smoke_verdict.v1",
+        "hprc_compact_receiver_training_plan.v1",
     }
 )
 FALSE_AUTHORITY: dict[str, bool] = {
@@ -234,7 +235,7 @@ def _validate_command_writes_declared_outputs(
                 f"recommended_execution.output_manifest {execution.get('output_manifest')!r}"
             )
         matching_output = True
-    if output_dir_value is not None:
+    if output_dir_value is not None and not matching_output:
         output_dir = _resolve_command_path(output_dir_value, repo_root=repo_root)
         if not _same_path(output_dir / "manifest.json", output_manifest):
             raise ExperimentQueueError(

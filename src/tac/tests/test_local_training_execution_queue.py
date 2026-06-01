@@ -160,6 +160,73 @@ def test_local_training_queue_honors_explicit_scheduler_resource_kind(
     assert queue["experiments"][0]["steps"][0]["resources"]["kind"] == "local_cpu"
 
 
+def test_local_training_queue_compiles_hprc_compact_receiver_plan(tmp_path: Path) -> None:
+    output_dir = tmp_path / "hprc_run"
+    output_manifest = output_dir / "hprc_compact_receiver_training_run_result.json"
+    plan = {
+        "schema": "hprc_compact_receiver_training_plan.v1",
+        "candidate_id": "hprc_compact_receiver_unit",
+        "lane_id": "lane_hprc_compact_receiver_training",
+        "representation_family": "hprc",
+        "substrate_family": "hierarchical_predictive_coding",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "recommended_execution": {
+            "schema": "hprc_compact_receiver_training_recommended_execution.v1",
+            "tool": "tools/run_hprc_compact_receiver_training.py",
+            "training_backend": "local_numpy",
+            "device": "local_numpy",
+            "output_manifest": output_manifest.as_posix(),
+            "python_command_args": [
+                ".venv/bin/python",
+                "tools/run_hprc_compact_receiver_training.py",
+                "--video-path",
+                "upstream/videos/0.mkv",
+                "--output-dir",
+                output_dir.as_posix(),
+                "--output-manifest",
+                output_manifest.as_posix(),
+            ],
+            "extra_artifact_postconditions": [
+                {
+                    "type": "path_exists",
+                    "path": (output_dir / "training_artifact.json").as_posix(),
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    }
+
+    queue = build_local_training_execution_queue(
+        [plan],
+        queue_id="hprc_training_fixture",
+        repo_root=tmp_path,
+    )
+
+    experiment = queue["experiments"][0]
+    assert experiment["lane_id"] == "lane_hprc_compact_receiver_training"
+    assert experiment["metadata"]["source_plan_schema"] == (
+        "hprc_compact_receiver_training_plan.v1"
+    )
+    step = experiment["steps"][0]
+    assert step["resources"]["kind"] == "local_cpu"
+    assert any(
+        condition["type"] == "json_false_authority"
+        and condition["path"].endswith("hprc_compact_receiver_training_run_result.json")
+        for condition in step["postconditions"]
+    )
+    assert any(
+        condition["type"] == "path_exists"
+        and condition["path"].endswith("training_artifact.json")
+        for condition in step["postconditions"]
+    )
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

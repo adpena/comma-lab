@@ -1,0 +1,155 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "local_training_0000_hprc_compact_receiver_hprc_real_lowres_20260601t005227z",
+      "lane_id": "lane_hprc_compact_receiver_training",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "hprc_compact_receiver_hprc_real_lowres_20260601T005227Z",
+        "device": "local_numpy",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-06-01T00:52:28Z",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hprc",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_plan_schema": "hprc_compact_receiver_training_plan.v1",
+        "substrate_family": "hierarchical_predictive_coding",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "local_numpy"
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_hprc_compact_receiver_training.py",
+            "--video-path",
+            "upstream/videos/0.mkv",
+            "--decode-pairs",
+            "2",
+            "--decode-height",
+            "48",
+            "--decode-width",
+            "64",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z",
+            "--output-manifest",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_run_result.json",
+            "--storage-plan-path",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_storage_plan.json",
+            "--epochs",
+            "2",
+            "--batch-pair-indices-per-step",
+            "2",
+            "--learning-rate",
+            "0.01",
+            "--basis-count",
+            "3",
+            "--residual-grid-h",
+            "12",
+            "--residual-grid-w",
+            "16",
+            "--skip-runtime-consumption-proof"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_run_result.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_run_result.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/training_artifact.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/training_artifact.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_export.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "hprc_compact_receiver_training_run_result.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_run_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "contest_video_decode",
+              "key": "source_manifest.source_kind",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_run_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_run_result.json",
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/training_artifact.json",
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_real_lowres_20260601T005227Z/hprc_compact_receiver_training_export.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "upstream/videos/0.mkv"
+            ],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "hprc_compact_receiver_training_hprc_real_lowres_20260601T005227Z",
+  "schema": "experiment_queue.v1"
+}

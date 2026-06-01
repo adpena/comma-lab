@@ -450,9 +450,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             "state_dict": model.state_dict(),
             "receiver_proof_requested": bool(self.emit_archive_bound_candidate_package),
             "receiver_output_retained": bool(self.retain_receiver_proof_output),
-            "score_claim": False,
-            "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **hprc_archive_candidate.FALSE_AUTHORITY,
         }
         (output_dir / "hprc_compact_receiver_training_export.json").write_text(
             json.dumps(export_manifest, indent=2, sort_keys=True) + "\n",
