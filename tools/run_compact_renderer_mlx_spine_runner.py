@@ -369,10 +369,14 @@ class CompactRendererMlxSpineRunnerError(ValueError):
     """Raised when an MLX compact renderer row cannot enter the spine."""
 
 
-def _local_cpu_replay_enabled_by_default(num_pairs: int) -> bool:
+def _local_cpu_replay_enabled_by_default(
+    num_pairs: int,
+    *,
+    has_full_video_mlx_prefilter: bool = False,
+) -> bool:
     """Return whether local replay should run without an explicit CLI override."""
 
-    return int(num_pairs) >= 600
+    return int(num_pairs) >= 600 and bool(has_full_video_mlx_prefilter)
 
 
 def _run_compact_local_cpu_replay_gate(
@@ -383,6 +387,7 @@ def _run_compact_local_cpu_replay_gate(
     upstream_dir: str | Path,
     num_pairs: int,
     requested: bool | None,
+    has_full_video_mlx_prefilter: bool = False,
     keep_inflated: bool = False,
     cleanup_failed_scratch: bool = True,
     repo_root: str | Path = REPO_ROOT,
@@ -400,10 +405,15 @@ def _run_compact_local_cpu_replay_gate(
     should_run = (
         bool(requested)
         if requested is not None
-        else _local_cpu_replay_enabled_by_default(pairs)
+        else _local_cpu_replay_enabled_by_default(
+            pairs,
+            has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
+        )
     )
     if pairs < 600:
         return None, [], ["local_cpu_replay_not_run_partial_pair_coverage"]
+    if requested is None and not has_full_video_mlx_prefilter:
+        return None, [], ["local_cpu_replay_waiting_for_full_video_mlx_prefilter"]
     if not should_run:
         return None, [], ["local_cpu_replay_not_executed"]
     if archive_zip_path is None:
@@ -2116,6 +2126,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             upstream_dir=scorer_upstream,
             num_pairs=int(num_pairs),
             requested=run_local_cpu_replay,
+            has_full_video_mlx_prefilter=bool(mlx_profile_paths),
             keep_inflated=keep_local_replay_inflated,
             cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
             repo_root=root,
@@ -2205,8 +2216,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "schema": "compact_runner_local_cpu_replay_gate.v1",
                 "requested": run_local_cpu_replay,
                 "default_enabled_for_full_coverage": (
-                    _local_cpu_replay_enabled_by_default(int(num_pairs))
+                    _local_cpu_replay_enabled_by_default(
+                        int(num_pairs),
+                        has_full_video_mlx_prefilter=bool(mlx_profile_paths),
+                    )
                 ),
+                "has_full_video_mlx_prefilter": bool(mlx_profile_paths),
                 "coverage_valid_for_replay": int(num_pairs) >= 600,
                 "executed": local_cpu_replay_summary is not None,
                 "axis_tag": "[macOS-CPU advisory]",

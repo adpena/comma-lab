@@ -524,6 +524,7 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
         learning_rate=1e-3,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
         hard_byte_ceilings=(178_000,),
+        mlx_profile_paths=(tmp_path / "full_video_mlx_profile.json",),
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
@@ -538,6 +539,7 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert replay_calls
     assert out["local_cpu_replay_gate"]["executed"] is True
     assert out["local_cpu_replay_gate"]["default_enabled_for_full_coverage"] is True
+    assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is True
     assert out["local_cpu_replay_summary"]["axis_tag"] == "[macOS-CPU advisory]"
     assert out["local_cpu_replay_summary"]["score_claim"] is False
     assert out["local_cpu_replay_summary_paths"]
@@ -545,6 +547,48 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert "local_cpu_replay_not_executed" not in out["blockers"]
     assert "local_cpu_replay_not_run_partial_pair_coverage" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
+
+
+def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=600)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_gate",
+        num_pairs=600,
+        epochs=8,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["local_cpu_replay_gate"]["executed"] is False
+    assert out["local_cpu_replay_gate"]["default_enabled_for_full_coverage"] is False
+    assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is False
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out[
+        "blockers"
+    ]
 
 
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for HiNeRV adapter smoke")
