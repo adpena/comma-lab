@@ -144,7 +144,10 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     },
     "hi_nerv": {
         "canonical_family": "hi_nerv",
-        "backend_status": "archive_projection_available_trainer_actuator_pending",
+        "backend_status": (
+            "rate_axis_structural_win_archive_projection_available_"
+            "distortion_fit_actuator_pending"
+        ),
         "trainer_kind": "pytorch_l0_sketch_present_mlx_exporter_missing",
         "trainer_entrypoint": None,
         "archive_exporter": (
@@ -160,6 +163,14 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
             "primary compact carrier candidate; existing PyTorch sketch is not "
             "promotion-ready until trained MLX/portable artifacts, archive bytes, "
             "receiver proof, and exact gate exist"
+        ),
+        "rate_axis_evidence": (
+            "advisory HiNeRV HIV1 packets show super-small-rate-by-design is "
+            "structural; distortion remains the unsolved score-aware fit axis"
+        ),
+        "distortion_fit_blocker": (
+            "local per-pixel-MSE HiNeRV smokes remain far from scorer-faithful "
+            "SegNet/PoseNet distortion, so cheap bytes alone cannot promote"
         ),
         "stack_role": "primary_carrier",
         "carrier_priority": 10,
@@ -1930,6 +1941,8 @@ def _target_family_rows() -> list[dict[str, Any]]:
                 "enhancer_priority": backend.get("enhancer_priority", 0),
                 "architecture_priors": backend.get("architecture_priors", []),
                 "allowed_enhancers": backend.get("allowed_enhancers", []),
+                "rate_axis_evidence": backend.get("rate_axis_evidence"),
+                "distortion_fit_blocker": backend.get("distortion_fit_blocker"),
                 **FALSE_AUTHORITY,
             }
         )
@@ -1956,6 +1969,8 @@ def _compact_base_campaign_rows(
             elif status in {
                 "archive_exporter_available_trainer_actuator_pending",
                 "archive_projection_available_trainer_actuator_pending",
+                "rate_axis_structural_win_archive_projection_available_"
+                "distortion_fit_actuator_pending",
             }:
                 route_status = "trainer_actuator_migration_required"
             else:
@@ -1978,6 +1993,8 @@ def _compact_base_campaign_rows(
                     "enhancer_priority": backend.get("enhancer_priority", 0),
                     "architecture_priors": backend.get("architecture_priors", []),
                     "allowed_enhancers": backend.get("allowed_enhancers", []),
+                    "rate_axis_evidence": backend.get("rate_axis_evidence"),
+                    "distortion_fit_blocker": backend.get("distortion_fit_blocker"),
                     "execution_scope": backend["execution_scope"],
                     "byte_policy": (
                         "train/export only charged weights, latents, selectors, "

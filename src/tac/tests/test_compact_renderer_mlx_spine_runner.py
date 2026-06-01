@@ -162,9 +162,14 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     ]
     assert families["pvq_nerv"]["status"] == "executable_via_pact_nerv_vq_adapter"
     assert families["hi_nerv"]["status"] == (
-        "archive_projection_available_trainer_actuator_pending"
+        "rate_axis_structural_win_archive_projection_available_"
+        "distortion_fit_actuator_pending"
     )
     assert families["hi_nerv"]["stack_role"] == "primary_carrier"
+    assert "super-small-rate-by-design" in families["hi_nerv"]["rate_axis_evidence"]
+    assert "cheap bytes alone cannot promote" in families["hi_nerv"][
+        "distortion_fit_blocker"
+    ]
     assert families["snerv"]["status"] == "migration_required"
     assert families["snerv"]["stack_role"] == "primary_carrier"
     assert (
