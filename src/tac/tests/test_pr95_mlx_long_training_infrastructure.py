@@ -249,6 +249,64 @@ def test_long_training_plan_report_compiles_to_experiment_queue(
     assert queue["experiments"][0]["metadata"]["reproduction_equivalence"] is False
 
 
+def test_pr95_mlx_long_training_cli_can_emit_queue_owned_execute_plan(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "long_training_execute_plan.json"
+    telemetry_path = tmp_path / "telemetry.jsonl"
+    checkpoint_root = tmp_path / "checkpoints"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_long_training.py"),
+            "--output-report",
+            str(report_path),
+            "--source-video-path",
+            str(REPO_ROOT / "upstream" / "videos" / "0.mkv"),
+            "--checkpoint-root",
+            str(checkpoint_root),
+            "--telemetry-path",
+            str(telemetry_path),
+            "--training-loss-surface",
+            PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE,
+            "--curriculum-total-epochs",
+            "16",
+            "--checkpoint-every-epochs",
+            "8",
+            "--operator-run-label",
+            "queue_owned_unit",
+            "--dry-run-execute",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["mode"] == "plan_execute_local_mlx"
+    assert report["recommended_execution"]["resource_kind"] == "local_mlx"
+    command = report["recommended_execution"]["python_command_args"]
+    assert "--execute" in command
+    assert "--dry-run-execute" not in command
+    assert command[command.index("--output-report") + 1] == str(report_path)
+
+    queue = build_local_training_execution_queue(
+        [report],
+        queue_id="pr95_mlx_long_training_execute_fixture",
+        repo_root=REPO_ROOT,
+        local_mlx_concurrency=1,
+    )
+    step = queue["experiments"][0]["steps"][0]
+    assert step["resources"]["kind"] == "local_mlx"
+    assert "--execute" in step["command"]
+    assert step["command"][step["command"].index("--output-report") + 1] == str(
+        report_path
+    )
+
+
 def test_long_training_telemetry_header_persists_false_authority(
     tmp_path: Path,
 ) -> None:

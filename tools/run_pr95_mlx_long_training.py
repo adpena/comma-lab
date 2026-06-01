@@ -173,7 +173,43 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Without --smoke-mode this executes the full stage epoch counts."
         ),
     )
+    parser.add_argument(
+        "--dry-run-execute",
+        action="store_true",
+        help=(
+            "Do not run training now; emit a plan whose recommended_execution "
+            "is the same command with --execute. Use this to hand long runs to "
+            "experiment_queue instead of launching them ad hoc."
+        ),
+    )
+    parser.add_argument(
+        "--dry-run-execute-smoke",
+        action="store_true",
+        help=(
+            "Do not run training now; emit a plan whose recommended_execution "
+            "is the same command with --execute-smoke. Requires --smoke-mode."
+        ),
+    )
     return parser.parse_args(argv)
+
+
+def _recommended_command_args(raw_argv: list[str], args: argparse.Namespace) -> list[str]:
+    command_args = [
+        ".venv/bin/python",
+        "tools/run_pr95_mlx_long_training.py",
+        *raw_argv,
+    ]
+    if args.dry_run_execute:
+        command_args = [
+            item for item in command_args if item != "--dry-run-execute"
+        ]
+        command_args.append("--execute")
+    if args.dry_run_execute_smoke:
+        command_args = [
+            item for item in command_args if item != "--dry-run-execute-smoke"
+        ]
+        command_args.append("--execute-smoke")
+    return command_args
 
 
 def _config_from_args(args: argparse.Namespace) -> LongTrainingConfig:
@@ -201,8 +237,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(raw_argv)
     if args.execute_smoke and not args.smoke_mode:
         raise SystemExit("--execute-smoke requires --smoke-mode")
+    if args.dry_run_execute_smoke and not args.smoke_mode:
+        raise SystemExit("--dry-run-execute-smoke requires --smoke-mode")
     if args.execute and args.execute_smoke:
         raise SystemExit("pass only one of --execute or --execute-smoke")
+    dry_run_execute_count = int(args.dry_run_execute) + int(args.dry_run_execute_smoke)
+    if dry_run_execute_count > 1:
+        raise SystemExit("pass only one dry-run execution mode")
+    if dry_run_execute_count and (args.execute or args.execute_smoke):
+        raise SystemExit("dry-run execution planning cannot be combined with execution")
     if args.execute and args.smoke_mode:
         raise SystemExit("--execute runs the configured long curriculum; use --execute-smoke with --smoke-mode")
 
@@ -224,13 +267,14 @@ def main(argv: list[str] | None = None) -> int:
         source_frame_count = telemetry.source_video_frame_count
         checkpoint_artifacts = pipeline.checkpoint_artifacts
         mode = "executed_smoke" if config.smoke_mode else "executed_local_mlx"
+    elif args.dry_run_execute or args.dry_run_execute_smoke:
+        mode = (
+            "plan_execute_smoke"
+            if args.dry_run_execute_smoke
+            else "plan_execute_local_mlx"
+        )
 
     output_report = _repo_path(args.output_report)
-    queue_command = [
-        ".venv/bin/python",
-        "tools/run_pr95_mlx_long_training.py",
-        *raw_argv,
-    ]
     report = build_long_training_plan_report(
         config,
         mode=mode,
@@ -239,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
         source_video_frame_count=source_frame_count,
         telemetry_path=config.telemetry_path,
         checkpoint_artifacts=checkpoint_artifacts,
-        command=queue_command,
+        command=_recommended_command_args(raw_argv, args),
     )
     if telemetry is not None:
         report["telemetry_row_count"] = len(telemetry.rows)
