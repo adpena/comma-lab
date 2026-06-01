@@ -931,6 +931,7 @@ def build_pr101_optimal_grammar_campaign_summary(
             "consumer_surfaces": [
                 "tac.optimization.byte_shaving_campaign.build_signal_surface_from_candidate_queue",
                 "tac.cathedral_consumers.packetir_candidate_queue_consumer.consume_queue",
+                "tac.cathedral_consumers.pr101_optimal_grammar_campaign_consumer.consume_candidate",
                 "tools.operator_briefing._byte_shaving_acquisition_summary",
             ],
         },

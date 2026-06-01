@@ -307,6 +307,10 @@ def test_campaign_summary_demotes_grouped_zero_saturated_pr101_grammar() -> None
     assert summary["planner_feedback"]["receiver_adapter_work_justified"] is False
     assert summary["planner_feedback"]["grammar_payoff_is_substrate_conditional"] is True
     assert (
+        "tac.cathedral_consumers.pr101_optimal_grammar_campaign_consumer.consume_candidate"
+        in summary["planner_feedback"]["consumer_surfaces"]
+    )
+    assert (
         summary["rate_axis"]["grouped_saved_bytes_vs_current_stock"]
         == 0
     )
