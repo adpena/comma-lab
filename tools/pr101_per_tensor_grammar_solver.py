@@ -22,6 +22,7 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     build_u32_receiver_adapter_source_from_report,
+    build_u32_receiver_runtime_tree_from_report,
     default_state_dict_output_path_hint,
     materialize_grouped_archive_from_report,
     materialize_grouped_decoder_blob_from_report,
@@ -168,6 +169,39 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional receiver adapter source proof JSON.",
     )
     parser.add_argument(
+        "--source-runtime-dir",
+        type=Path,
+        default=None,
+        help=(
+            "PR101-family source runtime root containing src/model.py. Required "
+            "for --grouped-runtime-output-dir."
+        ),
+    )
+    parser.add_argument(
+        "--runtime-codec-source",
+        type=Path,
+        default=REPO_ROOT / "src" / "tac" / "pr101_split_brotli_codec.py",
+        help=(
+            "Override-aware codec.py source to vendor into grouped runtime trees. "
+            "Defaults to src/tac/pr101_split_brotli_codec.py."
+        ),
+    )
+    parser.add_argument(
+        "--grouped-runtime-output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Optional output directory for a self-contained u32 decoder-length "
+            "receiver runtime tree. Directory must be absent or empty."
+        ),
+    )
+    parser.add_argument(
+        "--grouped-runtime-proof-output",
+        type=Path,
+        default=None,
+        help="Optional runtime-tree materialization proof JSON.",
+    )
+    parser.add_argument(
         "--grouped-transform-mode",
         choices=("stock_pr101", "best_brotli_per_tensor"),
         default="best_brotli_per_tensor",
@@ -267,6 +301,8 @@ def main(argv: list[str] | None = None) -> int:
         or args.grouped_archive_proof_output is not None
         or args.grouped_receiver_adapter_output is not None
         or args.grouped_receiver_adapter_proof_output is not None
+        or args.grouped_runtime_output_dir is not None
+        or args.grouped_runtime_proof_output is not None
     ):
         exact_stream_count = (
             None
@@ -347,6 +383,27 @@ def main(argv: list[str] | None = None) -> int:
                     json.dumps(adapter_proof, indent=2, sort_keys=True, default=_json_default),
                     encoding="utf-8",
                 )
+        if args.grouped_runtime_output_dir is not None or args.grouped_runtime_proof_output is not None:
+            if args.source_runtime_dir is None:
+                raise SystemExit("--source-runtime-dir is required for grouped runtime materialization")
+            model_source = args.source_runtime_dir / "src" / "model.py"
+            if not model_source.is_file():
+                raise SystemExit(f"source runtime model.py not found: {model_source}")
+            if not args.runtime_codec_source.is_file():
+                raise SystemExit(f"runtime codec source not found: {args.runtime_codec_source}")
+            runtime_files, runtime_proof = build_u32_receiver_runtime_tree_from_report(
+                grouped_report,
+                codec_py_source=args.runtime_codec_source.read_bytes(),
+                model_py_source=model_source.read_bytes(),
+            )
+            if args.grouped_runtime_output_dir is not None:
+                _write_runtime_tree(args.grouped_runtime_output_dir, runtime_files)
+            if args.grouped_runtime_proof_output is not None:
+                args.grouped_runtime_proof_output.parent.mkdir(parents=True, exist_ok=True)
+                args.grouped_runtime_proof_output.write_text(
+                    json.dumps(runtime_proof, indent=2, sort_keys=True, default=_json_default),
+                    encoding="utf-8",
+                )
     bytes_ = report["byte_accounting"]
     print(f"Wrote PR101 per-tensor grammar report to {args.output}")
     if args.queue_output is not None:
@@ -370,6 +427,10 @@ def main(argv: list[str] | None = None) -> int:
             "Wrote grouped receiver adapter source proof to "
             f"{args.grouped_receiver_adapter_proof_output}"
         )
+    if args.grouped_runtime_output_dir is not None:
+        print(f"Wrote grouped receiver runtime tree to {args.grouped_runtime_output_dir}")
+    if args.grouped_runtime_proof_output is not None:
+        print(f"Wrote grouped receiver runtime tree proof to {args.grouped_runtime_proof_output}")
     print(
         "selected isolated bytes="
         f"{bytes_['selected_isolated_tensor_bytes']}; "
@@ -396,6 +457,18 @@ def main(argv: list[str] | None = None) -> int:
             f"runtime={grouped_report['runtime_consumption_status']}"
         )
     return 0
+
+
+def _write_runtime_tree(output_dir: Path, files: dict[str, bytes]) -> None:
+    if output_dir.exists() and any(output_dir.iterdir()):
+        raise SystemExit(f"runtime output directory is not empty: {output_dir}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for rel_path, data in files.items():
+        path = output_dir / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        if rel_path == "inflate.sh":
+            path.chmod(0o755)
 
 
 if __name__ == "__main__":

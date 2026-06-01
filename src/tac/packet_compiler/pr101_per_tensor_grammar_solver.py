@@ -65,6 +65,7 @@ PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA = (
     "pr101_grouped_archive_materialization.v1"
 )
 PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA = "pr101_u32_receiver_adapter_source.v1"
+PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA = "pr101_u32_runtime_tree_materialization.v1"
 PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 PR101_INNER_MEMBER_NAME = "x"
 FALSE_AUTHORITY_FIELDS = {
@@ -1133,6 +1134,54 @@ def parse_archive_u32_decoder_len(
     return source, manifest
 
 
+def build_u32_receiver_runtime_tree_from_report(
+    report: Mapping[str, Any],
+    *,
+    codec_py_source: bytes | str,
+    model_py_source: bytes | str,
+) -> tuple[dict[str, bytes], dict[str, Any]]:
+    """Build a self-contained PR101 u32-adapter submission runtime tree.
+
+    The returned mapping is ``rel_path -> bytes``.  It deliberately does not
+    write to disk so callers can enforce their own storage/preflight policy.
+    """
+
+    adapter_source, adapter_manifest = build_u32_receiver_adapter_source_from_report(report)
+    files = {
+        "inflate.sh": _generated_u32_inflate_sh().encode("utf-8"),
+        "inflate.py": _generated_u32_inflate_py().encode("utf-8"),
+        "pr101_u32_adapter.py": adapter_source.encode("utf-8"),
+        "src/codec.py": _source_bytes(codec_py_source),
+        "src/model.py": _source_bytes(model_py_source),
+    }
+    file_rows = [
+        {
+            "rel_path": rel_path,
+            "bytes": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "executable": rel_path == "inflate.sh",
+        }
+        for rel_path, data in sorted(files.items())
+    ]
+    manifest = {
+        "schema": PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA,
+        "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
+        "source_report_schema": report.get("schema"),
+        "archive_layout": "u32_decoder_len_adapter",
+        "file_count": len(file_rows),
+        "files": file_rows,
+        "receiver_adapter": adapter_manifest,
+        "runtime_consumption_status": "u32_receiver_runtime_tree_materialized",
+        "blockers": [
+            "full_frame_inflate_parity_missing",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        "axis_tag": "[receiver-runtime-tree-materialization-only]",
+        **FALSE_AUTHORITY_FIELDS,
+    }
+    return files, manifest
+
+
 def empirical_shannon_floor_bytes(payload: bytes | bytearray | memoryview) -> float:
     """Return the order-0 Shannon lower bound for a byte payload."""
 
@@ -1943,6 +1992,122 @@ def _write_single_stored_zip_member(member_name: str, payload: bytes) -> bytes:
     return buf.getvalue()
 
 
+def _source_bytes(source: bytes | str) -> bytes:
+    return source.encode("utf-8") if isinstance(source, str) else bytes(source)
+
+
+def _generated_u32_inflate_sh() -> str:
+    return """#!/usr/bin/env bash
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+DATA_DIR="$1"
+OUTPUT_DIR="$2"
+FILE_LIST="$3"
+
+mkdir -p "$OUTPUT_DIR"
+
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  BASE="${line%.*}"
+  SRC="${DATA_DIR}/x"
+  if [ ! -f "$SRC" ]; then
+    SRC="${DATA_DIR}/${BASE}.bin"
+  fi
+  DST="${OUTPUT_DIR}/${BASE}.raw"
+
+  [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
+
+  printf "Inflating %s ... " "$line"
+  python "$HERE/inflate.py" "$SRC" "$DST"
+done < "$FILE_LIST"
+"""
+
+
+def _generated_u32_inflate_py() -> str:
+    return '''#!/usr/bin/env python
+"""Inflate PR101-family u32 decoder-length archive to raw uint8 RGB frames."""
+import sys
+from pathlib import Path
+
+import torch
+import torch.nn.functional as F
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "src"))
+
+from codec import apply_latent_sidecar, decode_decoder_compact, decode_latents_compact
+from model import HNeRVDecoder
+from pr101_u32_adapter import parse_archive_u32_decoder_len
+
+
+CAMERA_H, CAMERA_W = 874, 1164
+
+
+def inflate(src_bin: str, dst_raw: str):
+    archive_bytes = Path(src_bin).read_bytes()
+    decoder_sd, latents, meta = parse_archive_u32_decoder_len(
+        archive_bytes,
+        decode_decoder_compact=decode_decoder_compact,
+        decode_latents_compact=decode_latents_compact,
+        apply_latent_sidecar=apply_latent_sidecar,
+    )
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    decoder = HNeRVDecoder(
+        latent_dim=meta["latent_dim"],
+        base_channels=meta["base_channels"],
+        eval_size=tuple(meta["eval_size"]),
+    ).to(device)
+    decoder.load_state_dict(decoder_sd)
+    decoder.eval()
+
+    latents = latents.to(device)
+    n_pairs = meta["n_pairs"]
+    eval_h, eval_w = meta["eval_size"]
+
+    n = 0
+    with torch.inference_mode(), open(dst_raw, "wb") as fout:
+        for i in range(0, n_pairs, 16):
+            j = min(i + 16, n_pairs)
+            batch = j - i
+            decoded = decoder(latents[i:j])
+            flat = decoded.reshape(batch * 2, 3, eval_h, eval_w)
+            up = F.interpolate(
+                flat,
+                size=(CAMERA_H, CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+            up = up.reshape(batch, 2, 3, CAMERA_H, CAMERA_W)
+            up[:, 0, 0].sub_(1.0)
+            up[:, 0, 2].sub_(1.0)
+            up[:, 1, 1].sub_(1.0)
+            frames = (
+                up.reshape(batch * 2, 3, CAMERA_H, CAMERA_W)
+                .clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(torch.uint8)
+                .cpu()
+                .numpy()
+            )
+            fout.write(frames.tobytes())
+            n += batch * 2
+
+    print(f"saved {n} frames")
+    return n
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        sys.exit("Usage: python inflate.py <src.bin> <dst.raw>")
+    inflate(sys.argv[1], sys.argv[2])
+'''
+
+
 def default_state_dict_output_path_hint() -> str:
     """Return the preferred bulky-output root for operator CLIs."""
 
@@ -1957,11 +2122,13 @@ __all__ = [
     "PR101_TENSOR_GRAMMAR_CANDIDATE_SCHEMA",
     "PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA",
     "PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA",
+    "PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA",
     "CoderName",
     "StoragePermMode",
     "build_grouped_optimizer_candidate_queue_from_report",
     "build_optimizer_candidate_queue_from_solver_report",
     "build_u32_receiver_adapter_source_from_report",
+    "build_u32_receiver_runtime_tree_from_report",
     "default_state_dict_output_path_hint",
     "empirical_shannon_floor_bytes",
     "materialize_grouped_archive_from_report",

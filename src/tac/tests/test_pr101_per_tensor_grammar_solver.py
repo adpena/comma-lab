@@ -17,9 +17,11 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
     PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA,
     PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA,
     PR101_U32_RECEIVER_ADAPTER_SOURCE_SCHEMA,
+    PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA,
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     build_u32_receiver_adapter_source_from_report,
+    build_u32_receiver_runtime_tree_from_report,
     empirical_shannon_floor_bytes,
     materialize_grouped_archive_from_report,
     materialize_grouped_decoder_blob_from_report,
@@ -423,6 +425,52 @@ def test_u32_receiver_adapter_source_is_executable_parser_glue() -> None:
     assert parsed[0] == {"ok": True}
     assert parsed[1] == (b"latents", sidecar_blob)
     assert parsed[2]["n_pairs"] == 600
+
+
+def test_u32_runtime_tree_materializer_emits_submission_runtime_files() -> None:
+    state_dict = _tiny_state_dict(seed=10)
+    report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=7,
+        max_streams=7,
+        brotli_quality=4,
+    )
+    codec_source = (
+        "def decode_decoder_compact(*args, **kwargs): pass\n"
+        "def decode_latents_compact(*args, **kwargs): pass\n"
+        "def apply_latent_sidecar(*args, **kwargs): pass\n"
+    )
+    model_source = "class HNeRVDecoder:\n    pass\n"
+
+    files, manifest = build_u32_receiver_runtime_tree_from_report(
+        report,
+        codec_py_source=codec_source,
+        model_py_source=model_source,
+    )
+
+    assert manifest["schema"] == PR101_U32_RUNTIME_TREE_MATERIALIZATION_SCHEMA
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["runtime_consumption_status"] == "u32_receiver_runtime_tree_materialized"
+    assert set(files) == {
+        "inflate.sh",
+        "inflate.py",
+        "pr101_u32_adapter.py",
+        "src/codec.py",
+        "src/model.py",
+    }
+    assert files["src/codec.py"] == codec_source.encode()
+    assert files["src/model.py"] == model_source.encode()
+    assert b"parse_archive_u32_decoder_len" in files["inflate.py"]
+    assert b"ADAPTER_PARAMS_JSON" in files["pr101_u32_adapter.py"]
+    assert files["inflate.sh"].startswith(b"#!/usr/bin/env bash\n")
+    compile(files["inflate.py"].decode(), "<generated_inflate.py>", "exec")
+    compile(files["pr101_u32_adapter.py"].decode(), "<generated_pr101_u32_adapter.py>", "exec")
+    rels = {row["rel_path"]: row for row in manifest["files"]}
+    assert rels["inflate.sh"]["executable"] is True
+    assert rels["inflate.py"]["bytes"] == len(files["inflate.py"])
+    assert "full_frame_inflate_parity_missing" in manifest["blockers"]
 
 
 def test_grouped_archive_materializer_rejects_multimember_source_zip() -> None:
