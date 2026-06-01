@@ -22,7 +22,7 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     adapt_pr95_mlx_report_to_spine,
     adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
-    execute_hi_nerv_mlx_archive_adapter_smoke_and_adapt,
+    execute_hi_nerv_mlx_scoreaware_and_adapt,
     execute_pact_nerv_selector_v4_mlx_smoke_and_adapt,
     execute_planner_gated_compact_family,
     execute_pr95_hnerv_mlx_scoreaware_and_adapt,
@@ -413,12 +413,16 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
 
 
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for HiNeRV adapter smoke")
-def test_hinerv_execute_runs_archive_adapter_smoke_and_receiver_proof(
+def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     tmp_path: Path,
 ) -> None:
-    out = execute_hi_nerv_mlx_archive_adapter_smoke_and_adapt(
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=tmp_path / "hinerv_gate",
         num_pairs=1,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
         hard_byte_ceilings=(178_000,),
         latent_dim=4,
         embed_dim=4,
@@ -426,10 +430,10 @@ def test_hinerv_execute_runs_archive_adapter_smoke_and_receiver_proof(
         repo_root=REPO_ROOT,
     )
 
-    assert out["mode"] == "executed_hi_nerv_mlx_archive_adapter_smoke"
+    assert out["mode"] == "executed_hi_nerv_mlx_scoreaware_and_exported"
     assert out["execute_family"] == "hi_nerv"
-    assert out["training_executed"] is False
-    assert out["adapter_smoke_only"] is True
+    assert out["training_executed"] is True
+    assert out["adapter_smoke_only"] is False
     assert out["score_claim"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
     assert Path(out["archive_path"]).is_file()
@@ -440,8 +444,12 @@ def test_hinerv_execute_runs_archive_adapter_smoke_and_receiver_proof(
     proof = json.loads(Path(out["receiver_proof_report_paths"][0]).read_text())
     assert proof["runtime_consumption_proof_ready"] is True
     assert proof["receiver_contract_satisfied"] is True
-    assert "hi_nerv_score_aware_training_not_executed" in out["blockers"]
-    assert "hi_nerv_initialized_adapter_smoke_not_score_fit" in out["blockers"]
+    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" in out[
+        "blockers"
+    ]
+    assert "hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs" in out[
+        "blockers"
+    ]
     assert "local_cpu_replay_not_executed" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
     assert Path(out["report_path"]).is_file()
