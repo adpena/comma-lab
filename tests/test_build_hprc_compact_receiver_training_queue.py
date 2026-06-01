@@ -4,8 +4,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tools import build_hprc_compact_receiver_training_queue as builder
 from tools.gate_archive_rate_for_local_replay import build_archive_rate_local_replay_gate
+from tools.gate_hprc_mlx_prefilter_for_local_replay import (
+    build_hprc_mlx_prefilter_local_replay_gate,
+)
 
 
 def test_hprc_campaign_queue_scales_and_gates_full_video(tmp_path: Path) -> None:
@@ -279,6 +284,139 @@ def test_hprc_rate_collapse_reuses_native_p18_p19_waterfill_by_default(tmp_path:
     assert command[command.index("--importance-protected-spec") + 1] == "dz0_qd1"
 
 
+def test_hprc_campaign_queue_refuses_missing_rate_artifacts_before_write(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+
+    with pytest.raises(ValueError, match="HPRC rate-collapse P19 PoseNet-null artifact"):
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--campaign-pairs",
+                "600",
+                "--hprc-rate-collapse-p19-posenet-null-pairs",
+                (repo_root / ".omx" / "research" / "missing_p19.json").as_posix(),
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+
+    assert not queue_path.exists()
+
+
+def test_hprc_campaign_queue_refuses_missing_native_protection_input(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+
+    with pytest.raises(ValueError, match="native rate residual protection npy"):
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--campaign-pairs",
+                "600",
+                "--enable-native-rate-aware-hprc",
+                "--native-rate-residual-protection-npy",
+                (repo_root / ".omx" / "research" / "missing_residual_protection.npy").as_posix(),
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+
+    assert not queue_path.exists()
+
+
+def test_hprc_campaign_queue_can_insert_mlx_prefilter_before_cpu_replay(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    reference_cache = repo_root / "mlx_reference_cache"
+    reference_cache.mkdir()
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+
+    assert (
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--campaign-pairs",
+                "600",
+                "--epochs",
+                "1",
+                "--auth-frontier-score",
+                "0.19",
+                "--enable-hprc-mlx-prefilter-before-local-replay",
+                "--hprc-mlx-prefilter-reference-cache-dir",
+                reference_cache.as_posix(),
+                "--hprc-mlx-prefilter-max-pairs",
+                "600",
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+        == 0
+    )
+
+    queue = json.loads(queue_path.read_text())
+    steps = queue["experiments"][0]["steps"]
+    step_ids = [step["id"] for step in steps]
+    assert "run_hprc_full_video_mlx_prefilter" in step_ids
+    assert "gate_hprc_mlx_prefilter_before_local_replay" in step_ids
+    prefilter = steps[step_ids.index("run_hprc_full_video_mlx_prefilter")]
+    gate = steps[step_ids.index("gate_hprc_mlx_prefilter_before_local_replay")]
+    replay = steps[step_ids.index("run_local_cpu_replay")]
+    assert prefilter["requires"] == ["prove_hprc_rate_collapsed_receiver"]
+    assert prefilter["resources"]["kind"] == "local_mlx"
+    assert "--no-sections" in prefilter["command"]
+    assert "--cache-materialization-mode" in prefilter["command"]
+    assert "hprc-direct" in prefilter["command"]
+    assert gate["requires"] == ["run_hprc_full_video_mlx_prefilter"]
+    assert gate["on_postcondition_failure"] == "skipped"
+    assert "--max-mlx-score-for-local-replay" in gate["command"]
+    assert gate["postconditions"][-1]["key"] == "local_replay_recommended"
+    assert replay["requires"] == ["gate_hprc_mlx_prefilter_before_local_replay"]
+
+
 def test_hprc_campaign_queue_binds_optional_z8_followups(tmp_path: Path) -> None:
     repo_root = tmp_path
     video_path = repo_root / "upstream" / "videos" / "0.mkv"
@@ -414,3 +552,86 @@ def test_archive_rate_gate_blocks_replay_when_rate_alone_loses() -> None:
     assert report["local_replay_recommended"] is False
     assert "archive_rate_term_not_below_target_before_distortion" in report["blockers"]
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hprc_mlx_prefilter_gate_blocks_cpu_replay_for_obvious_local_loser(
+    tmp_path: Path,
+) -> None:
+    response = tmp_path / "baseline_mlx_response.json"
+    response.write_text(
+        json.dumps(
+            {
+                "canonical_score": 25.59,
+                "axis_tag": "[macOS-MLX research-signal]",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    report = build_hprc_mlx_prefilter_local_replay_gate(
+        profile={
+            "schema": "hprc_mlx_component_neutralization_profile.v1",
+            "scorer_batch_pairs": 1,
+            "scope_status": {"full_video": "executed"},
+            "variant_rows": [
+                {
+                    "variant_id": "baseline",
+                    "mlx_response": response.as_posix(),
+                }
+            ],
+        },
+        profile_path=tmp_path / "profile.json",
+        auth_frontier_score=0.1919853363,
+        local_baseline_score=None,
+        min_local_improvement=0.0,
+    )
+
+    assert report["schema"] == "hprc_mlx_prefilter_local_replay_gate.v1"
+    assert report["local_replay_recommended"] is False
+    assert "mlx_score_not_below_target" in report["blockers"]
+    assert "mlx_score_above_hard_demote_threshold" in report["blockers"]
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hprc_campaign_queue_passes_native_rate_curriculum_preset(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+
+    assert (
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--campaign-pairs",
+                "32",
+                "--epochs",
+                "8",
+                "--curriculum-preset",
+                "hprc_native_rate_ramp_v1",
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+        == 0
+    )
+
+    queue = json.loads(queue_path.read_text())
+    train_command = queue["experiments"][0]["steps"][0]["command"]
+    assert "--curriculum-preset" in train_command
+    assert train_command[train_command.index("--curriculum-preset") + 1] == "hprc_native_rate_ramp_v1"

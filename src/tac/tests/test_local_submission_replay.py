@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import zipfile
 from pathlib import Path
 
@@ -96,6 +97,14 @@ def test_run_local_submission_replay_cleans_raw_scratch(tmp_path: Path, monkeypa
     assert summary.inflated_dir_cleanup == "deleted_after_success"
     assert not Path(summary.inflated_dir).exists()
     assert summary.archive_extract_dir_cleanup == "deleted_after_success"
+    cleanup_manifest = Path(summary.scratch_cleanup_manifest_path)
+    assert cleanup_manifest.is_file()
+    cleanup = json.loads(cleanup_manifest.read_text(encoding="utf-8"))
+    assert cleanup["schema"] == "local_submission_replay_scratch_cleanup_manifest.v1"
+    assert cleanup["cleanup_reason"] == "deleted_after_success"
+    assert cleanup["inflated_total_bytes"] == 3
+    assert cleanup["files"]["inflated"][0]["relative_path"] == "0.raw"
+    assert cleanup["files"]["inflated"][0]["sha256"]
     assert summary.local_score_estimate is not None
     assert summary.axis_tag == "[macOS-CPU advisory]"
     assert summary.score_claim is False
@@ -136,3 +145,8 @@ def test_run_local_submission_replay_cleans_raw_scratch_after_failure(
     assert summary.inflated_dir_cleanup == "deleted_after_failed_replay"
     assert not Path(summary.inflated_dir).exists()
     assert summary.archive_extract_dir_cleanup == "deleted_after_failed_replay"
+    cleanup_manifest = Path(summary.scratch_cleanup_manifest_path)
+    assert cleanup_manifest.is_file()
+    cleanup = json.loads(cleanup_manifest.read_text(encoding="utf-8"))
+    assert cleanup["cleanup_reason"] == "deleted_after_failed_replay"
+    assert cleanup["returncode"] == 17

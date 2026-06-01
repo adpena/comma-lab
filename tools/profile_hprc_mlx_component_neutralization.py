@@ -113,7 +113,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--reference-cache-dir", type=Path, default=DEFAULT_REFERENCE_CACHE)
-    parser.add_argument("--sections", nargs="*", default=list(DEFAULT_SECTIONS))
+    parser.add_argument("--sections", nargs="+", default=None)
+    parser.add_argument(
+        "--no-sections",
+        action="store_true",
+        help=(
+            "Score only the baseline and residual transforms. This avoids the old "
+            "bare --sections footgun where nargs='*' silently meant no sections."
+        ),
+    )
     parser.add_argument(
         "--residual-transforms",
         nargs="*",
@@ -159,6 +167,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-large-tensor-cache",
         action="store_true",
         help="Permit full-video scorer tensor caches after SSD/storage preflight.",
+    )
+    parser.add_argument(
+        "--retain-large-tensor-cache",
+        action="store_true",
+        help=(
+            "Keep full-video scorer tensor caches after MLX scoring. Default "
+            "certifies and deletes owned caches because they are rebuildable "
+            "from the candidate archive plus cache materialization command."
+        ),
     )
     parser.add_argument(
         "--reuse-baseline-profile",
@@ -211,7 +228,10 @@ def main(argv: list[str] | None = None) -> int:
     packet_path = _require_file(candidate_dir / "0.bin", "candidate 0.bin")
     packet = parse_hprc_packet(packet_path.read_bytes())
     decode_compact_receiver_packet(packet)
-    section_kinds = [_section_kind(name) for name in args.sections]
+    if bool(args.no_sections) and args.sections is not None:
+        raise SystemExit("--no-sections cannot be combined with --sections")
+    section_names = [] if bool(args.no_sections) else list(args.sections or DEFAULT_SECTIONS)
+    section_kinds = [_section_kind(name) for name in section_names]
     variants = _materialize_variants(
         packet_path=packet_path,
         packet_bytes=packet_path.read_bytes(),
@@ -258,6 +278,11 @@ def main(argv: list[str] | None = None) -> int:
         baseline_reuse=baseline_reuse,
         allow_batch_shape_research_signal=bool(args.allow_batch_shape_research_signal),
     )
+    cache_cleanup = _cleanup_large_tensor_cache_after_scoring(
+        output_dir=output_dir,
+        cache_rows=cache_rows,
+        retain=bool(args.retain_large_tensor_cache),
+    )
     report = _build_report(
         variants=variants,
         cache_rows=cache_rows,
@@ -271,6 +296,7 @@ def main(argv: list[str] | None = None) -> int:
         scorer_batch_pairs=int(args.scorer_batch_pairs),
         started=started,
         baseline_reuse=baseline_reuse,
+        cache_cleanup=cache_cleanup,
     )
     report_path = output_dir / "hprc_mlx_component_neutralization_profile.json"
     write_json(report_path, report)
@@ -779,6 +805,7 @@ def _build_report(
     scorer_batch_pairs: int,
     started: float,
     baseline_reuse: BaselineReuse | None,
+    cache_cleanup: dict[str, Any],
 ) -> dict[str, Any]:
     baseline = payloads["baseline"]
     baseline_variant = variants[0]
@@ -816,6 +843,7 @@ def _build_report(
         "reference_cache_dir": str(reference_cache_dir),
         "tool_argv": [sys.executable, *sys.argv],
         "cache_materialization_rows": cache_rows,
+        "cache_cleanup": cache_cleanup,
         "baseline_reuse": _baseline_reuse_report(baseline_reuse),
         "receiver_mode": COMPACT_RECEIVER_MODE,
         "max_pairs": int(max_pairs),
@@ -939,6 +967,141 @@ def _load_json_object(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise SystemExit(f"JSON root must be an object: {path}")
     return payload
+
+
+def _cleanup_large_tensor_cache_after_scoring(
+    *,
+    output_dir: Path,
+    cache_rows: dict[str, dict[str, Any]],
+    retain: bool,
+) -> dict[str, Any]:
+    manifest_path = output_dir / "hprc_mlx_large_tensor_cache_cleanup_manifest.json"
+    rows: list[dict[str, Any]] = []
+    for variant_id, row in sorted(cache_rows.items()):
+        cache_report_path = Path(str(row.get("report_output") or ""))
+        cache_report = _load_json_object(cache_report_path) if cache_report_path.is_file() else {}
+        for role in ("cache_dir", "work_dir"):
+            raw_path = row.get(role)
+            if not raw_path:
+                continue
+            path = Path(str(raw_path))
+            rows.append(
+                _cleanup_cache_path_row(
+                    path=path,
+                    role=role,
+                    variant_id=variant_id,
+                    output_dir=output_dir,
+                    cache_report_path=cache_report_path,
+                    cache_report=cache_report,
+                    retain=retain,
+                    reused_from_profile=bool(row.get("reused_baseline_cache")),
+                )
+            )
+    payload = {
+        "schema": "hprc_mlx_large_tensor_cache_cleanup_manifest.v1",
+        "cleanup_policy": (
+            "retain_requested"
+            if retain
+            else "delete_owned_rebuildable_tensor_caches_after_scoring"
+        ),
+        "output_dir": str(output_dir),
+        "manifest_path": str(manifest_path),
+        "rows": rows,
+        "deleted_bytes": int(sum(int(row.get("bytes_before") or 0) for row in rows if row.get("deleted"))),
+        "retained_bytes": int(
+            sum(
+                int(row.get("bytes_before") or 0)
+                for row in rows
+                if row.get("exists_before") and not row.get("deleted")
+            )
+        ),
+        **FALSE_AUTHORITY,
+    }
+    write_json(manifest_path, payload)
+    return payload
+
+
+def _cleanup_cache_path_row(
+    *,
+    path: Path,
+    role: str,
+    variant_id: str,
+    output_dir: Path,
+    cache_report_path: Path,
+    cache_report: dict[str, Any],
+    retain: bool,
+    reused_from_profile: bool,
+) -> dict[str, Any]:
+    exists_before = path.exists()
+    size_row = _path_size_row(path) if exists_before else {"bytes": 0, "entry_count": 0}
+    blockers: list[str] = []
+    if reused_from_profile:
+        blockers.append("external_reused_baseline_cache_not_owned")
+    if not _is_relative_to(path, output_dir):
+        blockers.append("path_not_under_owned_output_dir")
+    if retain:
+        blockers.append("retain_large_tensor_cache_requested")
+    deleted = False
+    if exists_before and not blockers:
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+        deleted = True
+    artifact_bytes = cache_report.get("artifact_bytes") if role == "cache_dir" else None
+    artifact_sha256 = cache_report.get("artifact_sha256") if role == "cache_dir" else None
+    return {
+        "variant_id": variant_id,
+        "role": role,
+        "path": str(path),
+        "exists_before": bool(exists_before),
+        "bytes_before": int(size_row["bytes"]),
+        "entry_count_before": int(size_row["entry_count"]),
+        "deleted": bool(deleted),
+        "retained": bool(exists_before and not deleted),
+        "blockers": blockers,
+        "disposition": (
+            "deleted_certified_rebuildable"
+            if deleted
+            else "retained"
+            if exists_before
+            else "missing_noop"
+        ),
+        "rebuildable_from": {
+            "cache_report_path": str(cache_report_path),
+            "cache_report_sha256": sha256_file(cache_report_path)
+            if cache_report_path.is_file()
+            else None,
+            "cache_materialization_report_schema": cache_report.get("schema"),
+            "cache_materialization_argv": cache_report.get("argv"),
+            "cache_artifact_bytes": artifact_bytes,
+            "cache_artifact_sha256": artifact_sha256,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def _path_size_row(path: Path) -> dict[str, int]:
+    if path.is_file():
+        return {"bytes": int(path.stat().st_size), "entry_count": 1}
+    total = 0
+    entries = 0
+    for child in path.rglob("*"):
+        entries += 1
+        if child.is_file() or child.is_symlink():
+            try:
+                total += int(child.lstat().st_size)
+            except FileNotFoundError:  # pragma: no cover - concurrent cleanup guard
+                continue
+    return {"bytes": total, "entry_count": entries}
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(parent.resolve(strict=False))
+        return True
+    except ValueError:
+        return False
 
 
 def _full_video_mlx_response_executed(*, cache_report: dict[str, Any], max_pairs: int) -> bool:

@@ -67,6 +67,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=8)
     parser.add_argument("--batch-pair-indices-per-step", type=int, default=16)
     parser.add_argument("--learning-rate", type=float, default=1e-2)
+    parser.add_argument(
+        "--curriculum-preset",
+        choices=("single_stage", "hprc_native_rate_ramp_v1"),
+        default="single_stage",
+    )
     parser.add_argument("--basis-count", type=int, default=3)
     parser.add_argument("--residual-grid-h", type=int, default=24)
     parser.add_argument("--residual-grid-w", type=int, default=32)
@@ -126,6 +131,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Default keeps the queue mathematically fail-closed and avoids wasting CPU."
         ),
     )
+    parser.add_argument(
+        "--enable-hprc-mlx-prefilter-before-local-replay",
+        action="store_true",
+        help=(
+            "Run a full-video HPRC-direct MLX/Metal scorer-response prefilter before "
+            "the expensive local CPU replay. The MLX row is advisory only; CPU replay "
+            "remains the local contest-faithful gate for survivors."
+        ),
+    )
+    parser.add_argument("--hprc-mlx-prefilter-reference-cache-dir", type=Path)
+    parser.add_argument("--hprc-mlx-prefilter-max-pairs", type=int)
+    parser.add_argument("--hprc-mlx-prefilter-window-pairs", type=int, default=1)
+    parser.add_argument("--hprc-mlx-prefilter-scorer-batch-pairs", type=int, default=1)
+    parser.add_argument("--hprc-mlx-prefilter-device", choices=("cpu", "gpu"), default="gpu")
+    parser.add_argument("--hprc-mlx-prefilter-progress-every", type=int, default=0)
+    parser.add_argument("--hprc-mlx-prefilter-max-score-for-local-replay", type=float, default=0.5)
     parser.add_argument(
         "--disable-hprc-rate-collapse",
         action="store_true",
@@ -252,6 +273,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     repo_root = Path(args.repo_root).expanduser().resolve(strict=False)
+    _validate_input_artifact_paths(args, repo_root=repo_root)
     run_id = args.run_id or _utc_run_id()
     run_root, storage_plan_path = _select_output_dir(args, repo_root=repo_root, run_id=run_id)
     campaign_pairs = _campaign_pairs(args)
@@ -296,6 +318,7 @@ def main(argv: list[str] | None = None) -> int:
                 epochs=int(args.epochs),
                 batch_pair_indices_per_step=int(args.batch_pair_indices_per_step),
                 learning_rate=float(args.learning_rate),
+                curriculum_preset=str(args.curriculum_preset),
                 basis_count=int(args.basis_count),
                 residual_grid_h=int(args.residual_grid_h),
                 residual_grid_w=int(args.residual_grid_w),
@@ -397,6 +420,7 @@ def build_hprc_compact_receiver_training_plan(
     epochs: int,
     batch_pair_indices_per_step: int,
     learning_rate: float,
+    curriculum_preset: str,
     basis_count: int,
     residual_grid_h: int,
     residual_grid_w: int,
@@ -432,6 +456,8 @@ def build_hprc_compact_receiver_training_plan(
         str(int(batch_pair_indices_per_step)),
         "--learning-rate",
         repr(float(learning_rate)),
+        "--curriculum-preset",
+        str(curriculum_preset),
         "--basis-count",
         str(int(basis_count)),
         "--residual-grid-h",
@@ -553,6 +579,7 @@ def build_hprc_compact_receiver_training_plan(
             "decode_height": int(decode_height),
             "decode_width": int(decode_width),
             "epochs": int(epochs),
+            "curriculum_preset": str(curriculum_preset),
             "basis_count": int(basis_count),
             "residual_grid_h": int(residual_grid_h),
             "residual_grid_w": int(residual_grid_w),
@@ -714,6 +741,35 @@ def _append_campaign_followup_steps(
                 replay_requires = ["prove_hprc_rate_collapsed_receiver"]
             else:
                 replay_requires = proof_requires
+            if bool(args.enable_hprc_mlx_prefilter_before_local_replay):
+                profile_json = (
+                    output_dir
+                    / "hprc_mlx_prefilter"
+                    / "hprc_mlx_component_neutralization_profile.json"
+                )
+                mlx_gate_json = output_dir / "hprc_mlx_prefilter_local_replay_gate.json"
+                experiment["steps"].append(
+                    _hprc_mlx_prefilter_step(
+                        output_dir=output_dir,
+                        candidate_export_dir=candidate_export_dir,
+                        profile_json=profile_json,
+                        args=args,
+                        timeout_seconds=timeout_seconds,
+                        decode_pairs=decode_pairs,
+                        repo_root=repo_root,
+                        requires=replay_requires,
+                    )
+                )
+                experiment["steps"].append(
+                    _hprc_mlx_prefilter_gate_step(
+                        profile_json=profile_json,
+                        gate_json=mlx_gate_json,
+                        args=args,
+                        timeout_seconds=timeout_seconds,
+                        requires=["run_hprc_full_video_mlx_prefilter"],
+                    )
+                )
+                replay_requires = ["gate_hprc_mlx_prefilter_before_local_replay"]
             experiment["steps"].append(
                 _local_replay_step(
                     output_dir=output_dir,
@@ -781,7 +837,11 @@ def _native_rate_protection_npy_for_plan(
     if not bool(args.enable_native_rate_aware_hprc):
         return None
     if args.native_rate_residual_protection_npy is not None:
-        return _resolve_path(args.native_rate_residual_protection_npy, repo_root=repo_root)
+        return _require_existing_file(
+            args.native_rate_residual_protection_npy,
+            repo_root=repo_root,
+            label="native rate residual protection npy",
+        )
     if args.native_rate_p19_posenet_null_pairs is not None:
         return output_dir / "hprc_native_rate_surface" / "residual_protection.npy"
     return None
@@ -811,7 +871,11 @@ def _native_rate_surface_step_config(
         "tools/build_hprc_native_rate_surface.py",
         "--p19-posenet-null-pairs",
         _repo_rel_or_abs(
-            _resolve_path(args.native_rate_p19_posenet_null_pairs, repo_root=repo_root),
+            _require_existing_file(
+                args.native_rate_p19_posenet_null_pairs,
+                repo_root=repo_root,
+                label="native rate P19 PoseNet-null artifact",
+            ),
             repo_root,
         ),
         "--frames",
@@ -841,7 +905,11 @@ def _native_rate_surface_step_config(
             [
                 "--p18-segnet-region-waterfill",
                 _repo_rel_or_abs(
-                    _resolve_path(args.native_rate_p18_segnet_region_waterfill, repo_root=repo_root),
+                    _require_existing_file(
+                        args.native_rate_p18_segnet_region_waterfill,
+                        repo_root=repo_root,
+                        label="native rate P18 SegNet-region artifact",
+                    ),
                     repo_root,
                 ),
             ]
@@ -946,6 +1014,140 @@ def _local_replay_step(
     }
 
 
+def _hprc_mlx_prefilter_step(
+    *,
+    output_dir: Path,
+    candidate_export_dir: Path,
+    profile_json: Path,
+    args: argparse.Namespace,
+    timeout_seconds: int,
+    decode_pairs: int,
+    repo_root: Path,
+    requires: list[str],
+) -> dict[str, Any]:
+    prefilter_dir = output_dir / "hprc_mlx_prefilter"
+    max_pairs = (
+        int(args.hprc_mlx_prefilter_max_pairs)
+        if args.hprc_mlx_prefilter_max_pairs is not None
+        else int(decode_pairs)
+    )
+    reference_cache = (
+        _resolve_path(args.hprc_mlx_prefilter_reference_cache_dir, repo_root=repo_root)
+        if args.hprc_mlx_prefilter_reference_cache_dir is not None
+        else None
+    )
+    command = [
+        ".venv/bin/python",
+        "tools/profile_hprc_mlx_component_neutralization.py",
+        "--candidate-dir",
+        candidate_export_dir.as_posix(),
+        "--output-dir",
+        prefilter_dir.as_posix(),
+        "--repo-root",
+        repo_root.as_posix(),
+        "--no-sections",
+        "--max-pairs",
+        str(max_pairs),
+        "--window-pairs",
+        str(int(args.hprc_mlx_prefilter_window_pairs)),
+        "--scorer-batch-pairs",
+        str(int(args.hprc_mlx_prefilter_scorer_batch_pairs)),
+        "--device",
+        str(args.hprc_mlx_prefilter_device),
+        "--cache-materialization-mode",
+        "hprc-direct",
+        "--allow-large-tensor-cache",
+        "--progress-every",
+        str(int(args.hprc_mlx_prefilter_progress_every)),
+        "--force",
+    ]
+    if reference_cache is not None:
+        command.extend(["--reference-cache-dir", reference_cache.as_posix()])
+    if int(args.hprc_mlx_prefilter_scorer_batch_pairs) != 1:
+        command.append("--allow-batch-shape-research-signal")
+    return {
+        "id": "run_hprc_full_video_mlx_prefilter",
+        "kind": "command",
+        "requires": requires,
+        "command": command,
+        "resources": {"kind": "local_mlx"},
+        "timeout_seconds": timeout_seconds,
+        "postconditions": [
+            {"type": "path_exists", "path": profile_json.as_posix()},
+            {"type": "json_false_authority", "path": profile_json.as_posix()},
+            {
+                "type": "json_equals",
+                "path": profile_json.as_posix(),
+                "key": "schema",
+                "equals": "hprc_mlx_component_neutralization_profile.v1",
+            },
+        ],
+        "telemetry": {
+            "artifact_paths": [profile_json.as_posix()],
+            "input_artifact_paths": [(candidate_export_dir / "archive.zip").as_posix()],
+            "recursive": True,
+            "max_recursive_entries": 256,
+        },
+    }
+
+
+def _hprc_mlx_prefilter_gate_step(
+    *,
+    profile_json: Path,
+    gate_json: Path,
+    args: argparse.Namespace,
+    timeout_seconds: int,
+    requires: list[str],
+) -> dict[str, Any]:
+    command = [
+        ".venv/bin/python",
+        "tools/gate_hprc_mlx_prefilter_for_local_replay.py",
+        "--profile-json",
+        profile_json.as_posix(),
+        "--min-local-improvement",
+        repr(float(args.min_local_improvement)),
+        "--max-mlx-score-for-local-replay",
+        repr(float(args.hprc_mlx_prefilter_max_score_for_local_replay)),
+        "--out-json",
+        gate_json.as_posix(),
+        "--allow-overwrite",
+        "--success-on-blocked",
+    ]
+    if args.auth_frontier_score is not None:
+        command.extend(["--auth-frontier-score", repr(float(args.auth_frontier_score))])
+    if args.local_baseline_score is not None:
+        command.extend(["--local-baseline-score", repr(float(args.local_baseline_score))])
+    return {
+        "id": "gate_hprc_mlx_prefilter_before_local_replay",
+        "kind": "command",
+        "requires": requires,
+        "command": command,
+        "resources": {"kind": "local_cpu"},
+        "timeout_seconds": timeout_seconds,
+        "on_postcondition_failure": "skipped",
+        "postconditions": [
+            {"type": "path_exists", "path": gate_json.as_posix()},
+            {"type": "json_false_authority", "path": gate_json.as_posix()},
+            {
+                "type": "json_equals",
+                "path": gate_json.as_posix(),
+                "key": "schema",
+                "equals": "hprc_mlx_prefilter_local_replay_gate.v1",
+            },
+            {
+                "type": "json_equals",
+                "path": gate_json.as_posix(),
+                "key": "local_replay_recommended",
+                "equals": True,
+            },
+        ],
+        "telemetry": {
+            "artifact_paths": [gate_json.as_posix()],
+            "input_artifact_paths": [profile_json.as_posix()],
+        },
+    }
+
+
 def _archive_rate_gate_step(
     *,
     training_result: Path,
@@ -1045,9 +1247,10 @@ def _hprc_rate_collapse_step(
     if _rate_collapse_requests_lossy_residual(args):
         command.append("--enable-lossy-residual-collapse")
     if args.hprc_rate_collapse_residual_importance_npy is not None:
-        importance_npy = _resolve_path(
+        importance_npy = _require_existing_file(
             args.hprc_rate_collapse_residual_importance_npy,
             repo_root=repo_root,
+            label="HPRC rate-collapse residual importance npy",
         )
         command.extend(
             [
@@ -1057,9 +1260,10 @@ def _hprc_rate_collapse_step(
         )
     p19_posenet_null_pairs = _rate_collapse_p19_posenet_null_pairs(args)
     if p19_posenet_null_pairs is not None:
-        p19_path = _resolve_path(
+        p19_path = _require_existing_file(
             p19_posenet_null_pairs,
             repo_root=repo_root,
+            label="HPRC rate-collapse P19 PoseNet-null artifact",
         )
         command.extend(
             [
@@ -1069,9 +1273,10 @@ def _hprc_rate_collapse_step(
         )
     p18_segnet_region_waterfill = _rate_collapse_p18_segnet_region_waterfill(args)
     if p18_segnet_region_waterfill is not None:
-        p18_path = _resolve_path(
+        p18_path = _require_existing_file(
             p18_segnet_region_waterfill,
             repo_root=repo_root,
+            label="HPRC rate-collapse P18 SegNet-region artifact",
         )
         command.extend(
             [
@@ -1504,6 +1709,43 @@ def _select_output_dir(
 def _resolve_path(path: Path, *, repo_root: Path) -> Path:
     out = Path(path).expanduser()
     return out if out.is_absolute() else repo_root / out
+
+
+def _validate_input_artifact_paths(args: argparse.Namespace, *, repo_root: Path) -> None:
+    for attr, label in (
+        ("native_rate_residual_protection_npy", "native rate residual protection npy"),
+        ("native_rate_p19_posenet_null_pairs", "native rate P19 PoseNet-null artifact"),
+        ("native_rate_p18_segnet_region_waterfill", "native rate P18 SegNet-region artifact"),
+        ("hprc_mlx_prefilter_reference_cache_dir", "HPRC MLX prefilter reference cache dir"),
+        ("hprc_rate_collapse_residual_importance_npy", "HPRC rate-collapse residual importance npy"),
+        ("hprc_rate_collapse_p19_posenet_null_pairs", "HPRC rate-collapse P19 PoseNet-null artifact"),
+        ("hprc_rate_collapse_p18_segnet_region_waterfill", "HPRC rate-collapse P18 SegNet-region artifact"),
+        ("z8_archive_bin", "Z8 archive bin"),
+        ("z8_surface", "Z8 P18/P19 surface"),
+        ("z8_reference_pairs_npy", "Z8 reference pairs npy"),
+    ):
+        value = getattr(args, attr, None)
+        if value is None:
+            continue
+        resolved = _resolve_path(value, repo_root=repo_root)
+        if attr == "hprc_mlx_prefilter_reference_cache_dir":
+            if not resolved.is_dir():
+                raise ValueError(
+                    f"{label} does not exist or is not a directory: {value} "
+                    f"(resolved: {resolved})"
+                )
+            continue
+        _require_existing_file(value, repo_root=repo_root, label=label)
+
+
+def _require_existing_file(path: Path, *, repo_root: Path, label: str) -> Path:
+    resolved = _resolve_path(path, repo_root=repo_root)
+    if not resolved.is_file():
+        raise ValueError(
+            f"{label} does not exist or is not a file: {path} "
+            f"(resolved: {resolved})"
+        )
+    return resolved
 
 
 def _repo_rel_or_abs(path: Path, repo_root: Path) -> str:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -50,6 +51,7 @@ class LocalSubmissionReplaySummary:
     inflated_dir: str
     inflated_dir_cleanup: str
     archive_extract_dir_cleanup: str
+    scratch_cleanup_manifest_path: str
     blockers: list[str]
     axis_tag: str
     score_claim: bool
@@ -61,6 +63,106 @@ class LocalSubmissionReplaySummary:
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, sort_keys=True)
+
+
+def _utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _tree_records(root: Path) -> tuple[list[dict[str, object]], int]:
+    if not root.exists():
+        return [], 0
+    records: list[dict[str, object]] = []
+    total_bytes = 0
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+        size = path.stat().st_size
+        total_bytes += size
+        records.append(
+            {
+                "path": str(path),
+                "relative_path": path.relative_to(root).as_posix(),
+                "bytes": int(size),
+                "sha256": _sha256_file(path),
+            }
+        )
+    return records, total_bytes
+
+
+def _write_scratch_cleanup_manifest(
+    *,
+    output_path: Path,
+    submission_dir: Path,
+    source_runtime_submission_dir: Path,
+    archive_zip_path: Path,
+    upstream_root: Path,
+    video_names_file: Path,
+    device: str,
+    command: list[str],
+    returncode: int,
+    evaluation_passed: bool,
+    inflated_dir: Path,
+    archive_extract_dir: Path,
+    cleanup_reason: str,
+) -> Path:
+    inflated_records, inflated_bytes = _tree_records(inflated_dir)
+    archive_records, archive_bytes = _tree_records(archive_extract_dir)
+    tree_hash = hashlib.sha256()
+    for section, records in (("inflated", inflated_records), ("archive_extract", archive_records)):
+        for rec in records:
+            tree_hash.update(section.encode("utf-8"))
+            tree_hash.update(b"\0")
+            tree_hash.update(str(rec["relative_path"]).encode("utf-8"))
+            tree_hash.update(b"\0")
+            tree_hash.update(str(rec["bytes"]).encode("ascii"))
+            tree_hash.update(b"\0")
+            tree_hash.update(str(rec["sha256"]).encode("ascii"))
+            tree_hash.update(b"\0")
+    manifest = {
+        "schema": "local_submission_replay_scratch_cleanup_manifest.v1",
+        "created_at_utc": _utc_now(),
+        "submission_dir": str(submission_dir),
+        "source_runtime_submission_dir": str(source_runtime_submission_dir),
+        "archive_zip_path": str(archive_zip_path),
+        "archive_zip_bytes": archive_zip_path.stat().st_size if archive_zip_path.exists() else None,
+        "archive_zip_sha256": _sha256_file(archive_zip_path) if archive_zip_path.exists() else None,
+        "upstream_root": str(upstream_root),
+        "video_names_file": str(video_names_file),
+        "device": device,
+        "command": command,
+        "returncode": int(returncode),
+        "evaluation_passed": bool(evaluation_passed),
+        "cleanup_reason": cleanup_reason,
+        "rebuildable_from": {
+            "archive_zip_path": str(archive_zip_path),
+            "runtime_submission_dir": str(source_runtime_submission_dir),
+            "upstream_root": str(upstream_root),
+            "video_names_file": str(video_names_file),
+            "device": device,
+        },
+        "deleted_after_manifest": True,
+        "inflated_dir": str(inflated_dir),
+        "inflated_file_count": len(inflated_records),
+        "inflated_total_bytes": int(inflated_bytes),
+        "archive_extract_dir": str(archive_extract_dir),
+        "archive_extract_file_count": len(archive_records),
+        "archive_extract_total_bytes": int(archive_bytes),
+        "scratch_tree_sha256": tree_hash.hexdigest(),
+        "files": {
+            "inflated": inflated_records,
+            "archive_extract": archive_records,
+        },
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return output_path
 
 
 def stage_local_replay_submission(
@@ -132,19 +234,20 @@ def run_local_submission_replay(
     evaluate_sh = upstream_root / "evaluate.sh"
     env = _upstream_env(upstream_root)
     env["PYTHON"] = sys.executable
+    command = [
+        "bash",
+        str(evaluate_sh),
+        "--submission-dir",
+        str(submission_dir),
+        "--video-names-file",
+        str(video_names_file),
+        "--device",
+        device,
+    ]
     start = time.time()
     with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open("w", encoding="utf-8") as stderr:
         proc = subprocess.run(
-            [
-                "bash",
-                str(evaluate_sh),
-                "--submission-dir",
-                str(submission_dir),
-                "--video-names-file",
-                str(video_names_file),
-                "--device",
-                device,
-            ],
+            command,
             cwd=root,
             env=env,
             text=True,
@@ -181,11 +284,28 @@ def run_local_submission_replay(
     if keep_inflated:
         inflated_cleanup = "retained_by_request"
         archive_cleanup = "retained_by_request"
+        scratch_cleanup_manifest_path = None
     else:
+        cleanup_reason = "deleted_after_success" if passed else "deleted_after_failed_replay"
+        scratch_cleanup_manifest_path = _write_scratch_cleanup_manifest(
+            output_path=submission_dir.parent / "scratch_cleanup_manifest.json",
+            submission_dir=submission_dir,
+            source_runtime_submission_dir=source_runtime_submission_dir,
+            archive_zip_path=archive_zip_path,
+            upstream_root=upstream_root,
+            video_names_file=video_names_file,
+            device=device,
+            command=command,
+            returncode=int(proc.returncode),
+            evaluation_passed=passed,
+            inflated_dir=inflated_dir,
+            archive_extract_dir=archive_extract_dir,
+            cleanup_reason=cleanup_reason,
+        )
         shutil.rmtree(inflated_dir, ignore_errors=True)
         shutil.rmtree(archive_extract_dir, ignore_errors=True)
-        inflated_cleanup = "deleted_after_success" if passed else "deleted_after_failed_replay"
-        archive_cleanup = "deleted_after_success" if passed else "deleted_after_failed_replay"
+        inflated_cleanup = cleanup_reason
+        archive_cleanup = cleanup_reason
 
     return LocalSubmissionReplaySummary(
         schema="local_submission_replay.v1",
@@ -209,6 +329,7 @@ def run_local_submission_replay(
         inflated_dir=str(inflated_dir),
         inflated_dir_cleanup=inflated_cleanup,
         archive_extract_dir_cleanup=archive_cleanup,
+        scratch_cleanup_manifest_path=str(scratch_cleanup_manifest_path) if scratch_cleanup_manifest_path else "",
         blockers=blockers,
         axis_tag=_local_axis_tag(device),
         **FALSE_AUTHORITY,

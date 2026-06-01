@@ -171,6 +171,96 @@ def test_hprc_profile_defaults_to_direct_cache_materialization() -> None:
     assert "--hprc-direct-cache" not in shell_cmd
 
 
+def test_sections_flag_no_longer_silently_means_baseline_only() -> None:
+    module = _load_tool_module()
+    parser = module.build_parser()
+
+    try:
+        parser.parse_args(["--output-dir", "out", "--sections"])
+    except SystemExit as exc:
+        assert exc.code != 0
+    else:  # pragma: no cover
+        raise AssertionError("bare --sections must fail instead of disabling sections")
+
+    parsed = parser.parse_args(["--output-dir", "out", "--no-sections"])
+    assert parsed.no_sections is True
+    assert parsed.sections is None
+    assert parsed.retain_large_tensor_cache is False
+
+
+def test_large_tensor_cache_cleanup_certifies_and_deletes_owned_dirs(tmp_path: Path) -> None:
+    module = _load_tool_module()
+    output_dir = tmp_path / "profile"
+    cache_dir = output_dir / "mlx_caches" / "baseline"
+    work_dir = output_dir / "mlx_work" / "baseline"
+    report_dir = output_dir / "mlx_cache_reports"
+    cache_dir.mkdir(parents=True)
+    work_dir.mkdir(parents=True)
+    report_dir.mkdir(parents=True)
+    (cache_dir / "segnet_last_rgb.npy").write_bytes(b"seg")
+    (cache_dir / "posenet_yuv6_pair.npy").write_bytes(b"pose")
+    (work_dir / "scratch.raw").write_bytes(b"raw")
+    report_path = report_dir / "baseline.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_scorer_cache_from_submission.v1",
+                "argv": ["materialize"],
+                "artifact_bytes": {"segnet_last_rgb": 3, "posenet_yuv6_pair": 4},
+                "artifact_sha256": {"segnet_last_rgb": "seg-sha", "posenet_yuv6_pair": "pose-sha"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = module._cleanup_large_tensor_cache_after_scoring(  # pyright: ignore[reportPrivateUsage]
+        output_dir=output_dir,
+        cache_rows={
+            "baseline": {
+                "cache_dir": cache_dir.as_posix(),
+                "work_dir": work_dir.as_posix(),
+                "report_output": report_path.as_posix(),
+            }
+        },
+        retain=False,
+    )
+
+    assert not cache_dir.exists()
+    assert not work_dir.exists()
+    assert manifest["deleted_bytes"] == len(b"seg") + len(b"pose") + len(b"raw")
+    assert Path(manifest["manifest_path"]).is_file()
+    assert all(row["deleted"] for row in manifest["rows"])
+    assert manifest["rows"][0]["rebuildable_from"]["cache_report_sha256"]
+
+
+def test_large_tensor_cache_cleanup_retains_external_reused_cache(tmp_path: Path) -> None:
+    module = _load_tool_module()
+    output_dir = tmp_path / "profile"
+    output_dir.mkdir()
+    external_cache = tmp_path / "external_cache"
+    external_cache.mkdir()
+    (external_cache / "segnet_last_rgb.npy").write_bytes(b"seg")
+    report_path = output_dir / "baseline_cache_report.json"
+    report_path.write_text('{"schema": "cache.report"}', encoding="utf-8")
+
+    manifest = module._cleanup_large_tensor_cache_after_scoring(  # pyright: ignore[reportPrivateUsage]
+        output_dir=output_dir,
+        cache_rows={
+            "baseline": {
+                "cache_dir": external_cache.as_posix(),
+                "report_output": report_path.as_posix(),
+                "reused_baseline_cache": True,
+            }
+        },
+        retain=False,
+    )
+
+    assert external_cache.exists()
+    row = manifest["rows"][0]
+    assert row["retained"] is True
+    assert "external_reused_baseline_cache_not_owned" in row["blockers"]
+
+
 def test_variant_slug_is_bounded_and_deterministic_for_pair_scoped_plans() -> None:
     module = _load_tool_module()
     raw = "threshold_abs_le_pairs=3@" + ",".join(str(i) for i in range(600))

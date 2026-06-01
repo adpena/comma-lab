@@ -189,6 +189,37 @@ def test_hprc_native_rate_protection_blocks_residual_shrink() -> None:
     np.testing.assert_allclose(adapter.model.residual, before)
 
 
+def test_hprc_residual_recon_update_works_without_rate_pressure() -> None:
+    adapter = HprcCompactReceiverLongTrainingAdapter(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        initial_latent_gain=0.0,
+        initial_residual_gain=1.0,
+        initial_receiver_state_gain=0.0,
+        emit_archive_bound_candidate_package=False,
+    )
+    batch = {"frame_indices": np.arange(6, dtype=np.int32)}
+    adapter.model.residual[:] = 0.0
+    before_residual = adapter.model.residual.copy()
+    before_loss = adapter.loss_fn(adapter.model, batch, {"recon": 1.0})["total"]
+
+    metrics = adapter.train_step(
+        batch,
+        learning_rate=0.01,
+        loss_weights={"recon": 1.0, "residual_recon_update": 1.0},
+    )
+
+    after_loss = adapter.loss_fn(adapter.model, batch, {"recon": 1.0})["total"]
+    assert metrics["native_rate_residual_recon_update_weight"] == 1.0
+    assert metrics["native_rate_residual_update_l1_weight"] == 0.0
+    assert metrics["native_rate_residual_update_prox_weight"] == 0.0
+    assert metrics["native_rate_residual_mean_abs_delta"] > 0.0
+    assert not np.array_equal(adapter.model.residual, before_residual)
+    assert after_loss < before_loss
+
+
 def test_hprc_mlx_training_backend_exports_numpy_portable_packet() -> None:
     pytest.importorskip("mlx.core")
     adapter = HprcCompactReceiverLongTrainingAdapter(
@@ -221,6 +252,60 @@ def test_hprc_mlx_training_backend_exports_numpy_portable_packet() -> None:
     assert compact.manifest["training_backend"]["effective_training_backend"] == "mlx"
     assert compact.manifest["training_backend"]["contest_runtime_requires_mlx"] is False
     assert compact.rdo_plan["training_backend"]["portable_runtime"] == "numpy"
+
+
+def test_hprc_training_cli_emits_native_rate_ramp_curriculum(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    monkeypatch.setattr(hprc_archive_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    frames_path = tmp_path / "frames.npy"
+    protection_path = tmp_path / "protection.npy"
+    np.save(frames_path, _frames())
+    np.save(protection_path, np.zeros((6, 4, 5, 3), dtype=np.float32))
+
+    exit_code = hprc_training_tool.main(
+        [
+            "--frames-npy",
+            frames_path.as_posix(),
+            "--output-dir",
+            (tmp_path / "hprc_cli_curriculum_out").as_posix(),
+            "--epochs",
+            "8",
+            "--batch-pair-indices-per-step",
+            "3",
+            "--learning-rate",
+            "0.01",
+            "--training-backend",
+            "numpy",
+            "--residual-grid-h",
+            "4",
+            "--residual-grid-w",
+            "5",
+            "--native-rate-aware",
+            "--rate-aware-residual-prox-weight",
+            "0.5",
+            "--rate-aware-residual-protection-npy",
+            protection_path.as_posix(),
+            "--curriculum-preset",
+            "hprc_native_rate_ramp_v1",
+            "--skip-runtime-consumption-proof",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["curriculum_preset"] == "hprc_native_rate_ramp_v1"
+    stage_names = [stage["name"] for stage in payload["curriculum_stages"]]
+    assert stage_names == [
+        "rdo_gain_and_residual_recon_warmup",
+        "protected_residual_recon_fit",
+        "native_rate_ramp",
+        "byte_closed_polish",
+    ]
+    assert payload["curriculum_stages"][0]["loss_weights"]["residual_recon_update"] == 1.0
+    assert payload["curriculum_stages"][-1]["loss_weights"]["residual_rate_prox"] == 0.5
 
 
 def test_hprc_gain_l2_gradient_matches_reweighted_loss() -> None:

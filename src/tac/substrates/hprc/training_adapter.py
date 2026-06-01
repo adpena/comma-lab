@@ -700,6 +700,9 @@ class HprcCompactReceiverLongTrainingAdapter:
             return 0.0
         return self.rate_aware_residual_prox_weight
 
+    def _residual_recon_update_weight(self, loss_weights: Mapping[str, float]) -> float:
+        return max(0.0, float(loss_weights.get("residual_recon_update", 0.0)))
+
     def _residual_rate_pressure(self) -> np.ndarray:
         if self.residual_protection is None:
             return np.ones_like(self.model.residual, dtype=np.float32)
@@ -719,8 +722,10 @@ class HprcCompactReceiverLongTrainingAdapter:
     ) -> dict[str, float]:
         l1_weight = self._residual_l1_weight(loss_weights)
         prox_weight = self._residual_prox_weight(loss_weights)
-        if l1_weight <= 0.0 and prox_weight <= 0.0:
+        residual_recon_weight = self._residual_recon_update_weight(loss_weights)
+        if l1_weight <= 0.0 and prox_weight <= 0.0 and residual_recon_weight <= 0.0:
             return {
+                "native_rate_residual_recon_update_weight": 0.0,
                 "native_rate_residual_update_l1_weight": 0.0,
                 "native_rate_residual_update_prox_weight": 0.0,
                 "native_rate_residual_mean_abs_delta": 0.0,
@@ -729,6 +734,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
         if frame_indices.size == 0:
             return {
+                "native_rate_residual_recon_update_weight": float(residual_recon_weight),
                 "native_rate_residual_update_l1_weight": float(l1_weight),
                 "native_rate_residual_update_prox_weight": float(prox_weight),
                 "native_rate_residual_mean_abs_delta": 0.0,
@@ -736,7 +742,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             }
         before = self.model.residual[frame_indices].copy()
         pressure_all = self._residual_rate_pressure()
-        recon_weight = float(loss_weights.get("recon", 1.0))
+        recon_weight = float(residual_recon_weight)
         grid_h, grid_w = int(self.model.residual.shape[1]), int(self.model.residual.shape[2])
         for frame_index in frame_indices:
             idx = int(frame_index)
@@ -764,6 +770,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             self.model.residual[idx] = np.nan_to_num(updated, copy=False).astype(np.float32)
         after = self.model.residual[frame_indices]
         return {
+            "native_rate_residual_recon_update_weight": float(residual_recon_weight),
             "native_rate_residual_update_l1_weight": float(l1_weight),
             "native_rate_residual_update_prox_weight": float(prox_weight),
             "native_rate_residual_mean_abs_delta": float(np.mean(np.abs(after - before))),
@@ -779,8 +786,10 @@ class HprcCompactReceiverLongTrainingAdapter:
     ) -> dict[str, float]:
         l1_weight = self._residual_l1_weight(loss_weights)
         prox_weight = self._residual_prox_weight(loss_weights)
-        if l1_weight <= 0.0 and prox_weight <= 0.0:
+        residual_recon_weight = self._residual_recon_update_weight(loss_weights)
+        if l1_weight <= 0.0 and prox_weight <= 0.0 and residual_recon_weight <= 0.0:
             return {
+                "native_rate_residual_recon_update_weight": 0.0,
                 "native_rate_residual_update_l1_weight": 0.0,
                 "native_rate_residual_update_prox_weight": 0.0,
                 "native_rate_residual_mean_abs_delta": 0.0,
@@ -789,6 +798,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
         if frame_indices.size == 0:
             return {
+                "native_rate_residual_recon_update_weight": float(residual_recon_weight),
                 "native_rate_residual_update_l1_weight": float(l1_weight),
                 "native_rate_residual_update_prox_weight": float(prox_weight),
                 "native_rate_residual_mean_abs_delta": 0.0,
@@ -799,7 +809,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         common = self._mlx_common_tensors(self.model, frame_indices)
         residual_batch = mx.array(before.astype(np.float32, copy=False))
         pressure = mx.array(self._residual_rate_pressure()[frame_indices].astype(np.float32, copy=False))
-        recon_weight = float(loss_weights.get("recon", 1.0))
+        recon_weight = float(residual_recon_weight)
 
         def residual_objective(residual_value: Any) -> Any:
             pred, _residual_component = self._mlx_prediction_from_residual(
@@ -822,6 +832,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         self.model.residual[frame_indices] = updated_np
         after = self.model.residual[frame_indices]
         return {
+            "native_rate_residual_recon_update_weight": float(residual_recon_weight),
             "native_rate_residual_update_l1_weight": float(l1_weight),
             "native_rate_residual_update_prox_weight": float(prox_weight),
             "native_rate_residual_mean_abs_delta": float(np.mean(np.abs(after - before))),

@@ -58,6 +58,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--epochs", type=int, default=8)
     parser.add_argument("--batch-pair-indices-per-step", type=int, default=16)
     parser.add_argument("--learning-rate", type=float, default=1e-2)
+    parser.add_argument(
+        "--curriculum-preset",
+        choices=("single_stage", "hprc_native_rate_ramp_v1"),
+        default="single_stage",
+        help=(
+            "Training schedule. hprc_native_rate_ramp_v1 adds residual-recon "
+            "warmup, protected rate ramp, and low-LR polish before archive export."
+        ),
+    )
     parser.add_argument("--basis-count", type=int, default=3)
     parser.add_argument("--residual-grid-h", type=int, default=24)
     parser.add_argument("--residual-grid-w", type=int, default=32)
@@ -144,31 +153,13 @@ def main(argv: list[str] | None = None) -> int:
         residual_protection=residual_protection,
         training_backend=str(args.training_backend),
     )
-    loss_weights = {"recon": 1.0}
-    if bool(args.native_rate_aware):
-        loss_weights.update(
-            {
-                "residual_rate_l1": float(args.rate_aware_residual_l1_weight),
-                "residual_rate_prox": float(args.rate_aware_residual_prox_weight),
-            }
-        )
+    curriculum_stages = _build_curriculum_stages(args)
     config = LongTrainingConfig(
         substrate_id=HPRC_LONG_TRAINING_SUBSTRATE_ID,
         lane_id="lane_hprc_compact_receiver_training",
         epochs=int(args.epochs),
         batch_pair_indices_per_step=int(args.batch_pair_indices_per_step),
-        curriculum_stages=(
-            CurriculumStage(
-                name="compact_receiver_gain_fit",
-                start_epoch=0,
-                end_epoch=int(args.epochs),
-                loss_weights=loss_weights,
-                notes=(
-                    "Fit HPRC compact receiver decode RDO gains and, when enabled, "
-                    "native residual-token rate pressure before archive export."
-                ),
-            ),
-        ),
+        curriculum_stages=curriculum_stages,
         checkpoint_interval_epochs=max(1, min(int(args.epochs), 10)),
         early_stopping_patience=max(2, int(args.epochs) * 2),
         learning_rate=float(args.learning_rate),
@@ -191,6 +182,8 @@ def main(argv: list[str] | None = None) -> int:
             "contest_runtime_requires_mlx": False,
             "contest_runtime_requires_torch": False,
         },
+        "curriculum_preset": str(args.curriculum_preset),
+        "curriculum_stages": [stage.as_dict() for stage in curriculum_stages],
         "artifact": artifact.as_dict(),
         "runtime_consumption_proof_requested": not bool(args.skip_runtime_consumption_proof),
         "exact_axis_blocker": "contest_cpu_cuda_exact_eval_not_executed",
@@ -206,6 +199,148 @@ def main(argv: list[str] | None = None) -> int:
     _write_json_maybe_overwrite(result_path, result)
     print(json.dumps({**result, "result_path": result_path.as_posix()}, sort_keys=True))
     return 0
+
+
+def _build_curriculum_stages(args: argparse.Namespace) -> tuple[CurriculumStage, ...]:
+    epochs = int(args.epochs)
+    if epochs < 1:
+        raise ValueError("--epochs must be >= 1")
+    final_l1 = float(args.rate_aware_residual_l1_weight) if bool(args.native_rate_aware) else 0.0
+    final_prox = float(args.rate_aware_residual_prox_weight) if bool(args.native_rate_aware) else 0.0
+    if str(args.curriculum_preset) == "single_stage":
+        weights = _hprc_loss_weights(
+            residual_l1=final_l1,
+            residual_prox=final_prox,
+            residual_recon_update=1.0 if bool(args.native_rate_aware) else 0.0,
+        )
+        return (
+            CurriculumStage(
+                name="compact_receiver_gain_fit",
+                start_epoch=0,
+                end_epoch=epochs,
+                loss_weights=weights,
+                notes=(
+                    "Fit HPRC compact receiver decode RDO gains and, when enabled, "
+                    "native residual-token rate pressure before archive export."
+                ),
+            ),
+        )
+    if str(args.curriculum_preset) != "hprc_native_rate_ramp_v1":
+        raise ValueError(f"unknown curriculum preset: {args.curriculum_preset!r}")
+
+    stages = [
+        (
+            "rdo_gain_and_residual_recon_warmup",
+            0.20,
+            1.0,
+            _hprc_loss_weights(
+                residual_l1=0.0,
+                residual_prox=0.0,
+                residual_recon_update=1.0,
+                gain_l2=1e-4,
+            ),
+            "Improve residual fidelity before asking the archive-rate proxy to shrink tokens.",
+        ),
+        (
+            "protected_residual_recon_fit",
+            0.30,
+            0.8,
+            _hprc_loss_weights(
+                residual_l1=0.10 * final_l1,
+                residual_prox=0.10 * final_prox,
+                residual_recon_update=1.0,
+                gain_l2=1e-4,
+            ),
+            "Start gentle rate pressure while preserving P18/P19-protected cells.",
+        ),
+        (
+            "native_rate_ramp",
+            0.30,
+            0.5,
+            _hprc_loss_weights(
+                residual_l1=0.60 * final_l1,
+                residual_prox=0.60 * final_prox,
+                residual_recon_update=0.75,
+                gain_l2=1e-4,
+            ),
+            "Move toward compact residual tokens under the native HPRC rate proxy.",
+        ),
+        (
+            "byte_closed_polish",
+            0.20,
+            0.25,
+            _hprc_loss_weights(
+                residual_l1=final_l1,
+                residual_prox=final_prox,
+                residual_recon_update=0.35,
+                gain_l2=1e-4,
+            ),
+            "Low-LR polish at the final archive-rate operating point.",
+        ),
+    ]
+    spans = _epoch_spans(epochs, [stage[1] for stage in stages])
+    return tuple(
+        CurriculumStage(
+            name=name,
+            start_epoch=start,
+            end_epoch=end,
+            loss_weights=weights,
+            lr_scale=lr_scale,
+            notes=notes,
+        )
+        for (name, _fraction, lr_scale, weights, notes), (start, end) in zip(
+            stages,
+            spans,
+            strict=True,
+        )
+        if end > start
+    )
+
+
+def _hprc_loss_weights(
+    *,
+    residual_l1: float,
+    residual_prox: float,
+    residual_recon_update: float,
+    gain_l2: float = 0.0,
+) -> dict[str, float]:
+    weights = {
+        "recon": 1.0,
+        "residual_recon_update": max(0.0, float(residual_recon_update)),
+        "residual_rate_l1": max(0.0, float(residual_l1)),
+        "residual_rate_prox": max(0.0, float(residual_prox)),
+    }
+    if gain_l2 > 0.0:
+        weights["gain_l2"] = float(gain_l2)
+    return weights
+
+
+def _epoch_spans(epochs: int, fractions: list[float]) -> list[tuple[int, int]]:
+    if epochs < 1:
+        raise ValueError("epochs must be >= 1")
+    if len(fractions) < 1:
+        raise ValueError("fractions must be non-empty")
+    active = min(epochs, len(fractions))
+    selected = fractions[:active]
+    total = sum(float(v) for v in selected)
+    raw = [float(v) / total * epochs for v in selected]
+    lengths = [max(1, int(v)) for v in raw]
+    while sum(lengths) > epochs:
+        index = max(range(len(lengths)), key=lambda i: lengths[i])
+        if lengths[index] == 1:
+            break
+        lengths[index] -= 1
+    while sum(lengths) < epochs:
+        deficits = [raw[i] - lengths[i] for i in range(len(lengths))]
+        index = max(range(len(lengths)), key=lambda i: deficits[i])
+        lengths[index] += 1
+    spans: list[tuple[int, int]] = []
+    start = 0
+    for length in lengths:
+        end = start + int(length)
+        spans.append((start, end))
+        start = end
+    return spans
 
 
 def _load_source_frames(
