@@ -384,62 +384,89 @@ def run_pr95_stage8_from_public_archive(
             shutil.rmtree(stage_dir)
         stage_dir.mkdir(parents=True, exist_ok=True)
 
-        src_dir = Path(public_submission_root) / "src"
-        stage8_file = src_dir / "stages/stage8_muon_finetune.py"
-        if not stage8_file.is_file():
-            raise FileNotFoundError(f"public PR95 Stage-8 source missing: {stage8_file}")
-        if not Path(source_video_path).is_file():
-            raise FileNotFoundError(f"source video missing: {source_video_path}")
+        if int(epochs) <= 0:
+            selected_device = device
+            result = {
+                "status": "source_seed_packaged_without_training",
+                "public_stage8_train_stage_called": False,
+                "reason": "epochs<=0 avoids public scheduler division by zero and proves custody only",
+            }
+            local_training_result = {
+                "schema": "pr95_public_stage8_training_result.v1",
+                "stage_dir": stage_dir.as_posix(),
+                "device": selected_device,
+                "epochs": int(epochs),
+                "eval_every": int(eval_every),
+                "batch_size": int(batch_size),
+                "raw_result": result,
+                "best_meta": None,
+                "score_axis": "[macOS-CPU advisory]",
+                **FALSE_AUTHORITY,
+            }
+            best_decoder = seed.decoder_pt
+            best_latents = seed.latents_pt
+            blockers.append("stage8_zero_epoch_source_seed_packaged_no_training")
+        else:
+            src_dir = Path(public_submission_root) / "src"
+            stage8_file = src_dir / "stages/stage8_muon_finetune.py"
+            if not stage8_file.is_file():
+                raise FileNotFoundError(
+                    f"public PR95 Stage-8 source missing: {stage8_file}"
+                )
+            if not Path(source_video_path).is_file():
+                raise FileNotFoundError(f"source video missing: {source_video_path}")
 
-        os.environ["COMMA_CHALLENGE_ROOT"] = str(Path(challenge_root))
-        _clean_public_modules()
-        sys.path.insert(0, str(src_dir))
-        try:
-            stage8 = importlib.import_module("stages.stage8_muon_finetune")
-            common = importlib.import_module("stages.common")
-            selected_device = _select_torch_device(device)
-            import torch
-
-            cfg = stage8.make_config(
-                seed.seed_dir,
-                stage_dir,
-                epochs=int(epochs),
-                muon_weight_decay=float(muon_weight_decay),
-            )
-            cfg.eval_every = int(eval_every)
-            cfg.batch_size = int(batch_size)
-            result = common.train_stage(
-                cfg,
-                torch.device(selected_device),
-                video_path=str(source_video_path),
-                shared_state={},
-            )
-        finally:
+            os.environ["COMMA_CHALLENGE_ROOT"] = str(Path(challenge_root))
+            _clean_public_modules()
+            sys.path.insert(0, str(src_dir))
             try:
-                sys.path.remove(str(src_dir))
-            except ValueError:
-                pass
+                stage8 = importlib.import_module("stages.stage8_muon_finetune")
+                common = importlib.import_module("stages.common")
+                selected_device = _select_torch_device(device)
+                import torch
 
-        stage_best_meta = _load_best_meta(stage_dir / "best_meta.json")
-        local_training_result = {
-            "schema": "pr95_public_stage8_training_result.v1",
-            "stage_dir": stage_dir.as_posix(),
-            "device": selected_device,
-            "epochs": int(epochs),
-            "eval_every": int(eval_every),
-            "batch_size": int(batch_size),
-            "raw_result": result,
-            "best_meta": stage_best_meta,
-            "score_axis": "[macOS-CPU advisory]",
-            **FALSE_AUTHORITY,
-        }
+                cfg = stage8.make_config(
+                    seed.seed_dir,
+                    stage_dir,
+                    epochs=int(epochs),
+                    muon_weight_decay=float(muon_weight_decay),
+                )
+                cfg.eval_every = int(eval_every)
+                cfg.batch_size = int(batch_size)
+                result = common.train_stage(
+                    cfg,
+                    torch.device(selected_device),
+                    video_path=str(source_video_path),
+                    shared_state={},
+                )
+            finally:
+                try:
+                    sys.path.remove(str(src_dir))
+                except ValueError:
+                    pass
 
-        best_decoder = stage_dir / "decoder_f32.pt"
-        best_latents = stage_dir / "latents_f32.pt"
-        if not best_decoder.is_file() or not best_latents.is_file():
-            best_decoder = stage_dir / "final_decoder.pt"
-            best_latents = stage_dir / "final_latents.pt"
-            blockers.append("stage8_best_checkpoint_missing_packaged_final_checkpoint")
+            stage_best_meta = _load_best_meta(stage_dir / "best_meta.json")
+            local_training_result = {
+                "schema": "pr95_public_stage8_training_result.v1",
+                "stage_dir": stage_dir.as_posix(),
+                "device": selected_device,
+                "epochs": int(epochs),
+                "eval_every": int(eval_every),
+                "batch_size": int(batch_size),
+                "raw_result": result,
+                "best_meta": stage_best_meta,
+                "score_axis": "[macOS-CPU advisory]",
+                **FALSE_AUTHORITY,
+            }
+
+            best_decoder = stage_dir / "decoder_f32.pt"
+            best_latents = stage_dir / "latents_f32.pt"
+            if not best_decoder.is_file() or not best_latents.is_file():
+                best_decoder = stage_dir / "final_decoder.pt"
+                best_latents = stage_dir / "final_latents.pt"
+                blockers.append(
+                    "stage8_best_checkpoint_missing_packaged_final_checkpoint"
+                )
         survivor_bundle = _write_combined_checkpoint(
             decoder_pt=best_decoder,
             latents_pt=best_latents,

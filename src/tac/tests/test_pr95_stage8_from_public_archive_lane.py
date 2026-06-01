@@ -17,6 +17,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     write_pr95_public_archive_zip,
 )
 from tools.run_pr95_stage8_from_public_archive import (  # noqa: E402
+    DEFAULT_PUBLIC_SUBMISSION_ROOT,
     LANE_ID,
     PR95_STAGE8_COMPARISON_SCHEMA,
     PR95_STAGE8_LANE_SCHEMA,
@@ -119,6 +120,38 @@ def test_plan_only_lane_report_blocks_proxy_promotion_and_writes_comparison_spin
     assert all(row["proxy_promotion_allowed"] is False for row in comparison["families"])
     assert any(row["family"] == "rnerv" for row in comparison["families"])
     assert any(row["family"] == "rt_vq_nerv" for row in comparison["families"])
+
+
+def test_execute_zero_epochs_packages_source_seed_without_public_scheduler(
+    tmp_path: Path,
+) -> None:
+    source_archive_zip = _write_synthetic_pr95_archive(tmp_path)
+
+    report = run_pr95_stage8_from_public_archive(
+        source_archive_zip=source_archive_zip,
+        public_submission_root=DEFAULT_PUBLIC_SUBMISSION_ROOT,
+        challenge_root=tmp_path / "challenge",
+        source_video_path=tmp_path / "challenge/videos/0.mkv",
+        output_dir=tmp_path / "run",
+        epochs=0,
+        eval_every=1,
+        batch_size=1,
+        muon_weight_decay=5e-4,
+        device="cpu",
+        execute=True,
+        overwrite=True,
+    )
+
+    assert report["mode"] == "execute"
+    assert report["package_report"]["latents_source"] == "checkpoint_pt"
+    assert Path(report["candidate_archive_zip_path"]).is_file()
+    assert report["local_training_result"]["raw_result"][
+        "public_stage8_train_stage_called"
+    ] is False
+    assert "stage8_zero_epoch_source_seed_packaged_no_training" in report[
+        "exact_gate"
+    ]["blockers"]
+    assert report["score_claim"] is False
 
 
 def test_compact_byte_grammar_reference_requires_runtime_custody() -> None:
