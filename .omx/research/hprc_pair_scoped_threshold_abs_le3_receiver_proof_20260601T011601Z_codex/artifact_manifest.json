@@ -1,0 +1,68 @@
+{
+  "bulk_cache_disposition": "kept_on_ssd_not_committed",
+  "bulk_cache_location": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z",
+  "files": [
+    {
+      "bytes": 3009628,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/0.bin",
+      "sha256": "3b42cb2039cc4d3d030bbd3316454acfcc810936060cb0f2dc2687725141ddae"
+    },
+    {
+      "bytes": 859923,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/archive.zip",
+      "sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3"
+    },
+    {
+      "bytes": 214893,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/archive_bound_candidate_adapter_package.json",
+      "sha256": "0ef90d787e0d8648d2aee1af36328fe75959c867b4a960a1dfca5a2693a388c8"
+    },
+    {
+      "bytes": 2927,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/artifact_manifest.json",
+      "sha256": "a4811313db1f84bb8255a10d56b16a56ac810b9177ce0ce4017205b9b966bbf9"
+    },
+    {
+      "bytes": 1063,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/exact_axis_gate_blocker.json",
+      "sha256": "60295628923c454d62d85556495598409eff45e4a70045a84ad3bd57f82ded47"
+    },
+    {
+      "bytes": 615,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_archive_byte_ledger.json",
+      "sha256": "8a481c9c1bcddb779b6f248e3243f49bdb84d1982322ff1fb8ffdc9a067436d9"
+    },
+    {
+      "bytes": 372005,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_mlx_component_neutralization_profile.json",
+      "sha256": "3e45297018dba88fb2428f4e09d14abd6cf47b110f660cca63056233f589869a"
+    },
+    {
+      "bytes": 2495,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_packet_manifest.json",
+      "sha256": "4c057e452d3d1e954f83546e63bb38b038b6b359703a636e3da999126aa14961"
+    },
+    {
+      "bytes": 2134,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_scorer_ranked_residual_shrink_backlog.json",
+      "sha256": "4f088b50776b9bd883a74c964f5511f97803f61e8e3d806cb4b9fb7c05be9067"
+    },
+    {
+      "bytes": 5028,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/hprc_section_semantic_mutation_proof.json",
+      "sha256": "380603f7d050c167068c10394012f901e83bedfebdf5ead1fb8ff268f7ece61b"
+    },
+    {
+      "bytes": 2780,
+      "path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/receiver_proof/hprc_receiver_proof.json",
+      "sha256": "fde16ee06cb7daaeb6ca2fe8ebd269f50754451f1cd07754432ae9760fdf4543"
+    }
+  ],
+  "promotion_eligible": false,
+  "raw_receiver_output_retained": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "hprc_pair_scoped_threshold_abs_le3_artifact_manifest.v1",
+  "score_claim": false,
+  "source_profile_dir": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_residual_full600_20260601T011601Z",
+  "source_receiver_proof_dir": "/Volumes/VertigoDataTier/pact/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z"
+}

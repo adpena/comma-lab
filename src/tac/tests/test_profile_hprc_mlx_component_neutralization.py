@@ -85,6 +85,50 @@ def test_shrink_backlog_prioritizes_distortion_nonworse_byte_cuts() -> None:
     )
 
 
+def test_shrink_backlog_emits_executable_pair_scoped_residual_candidate() -> None:
+    module = _load_tool_module()
+    backlog = module._build_shrink_backlog(  # pyright: ignore[reportPrivateUsage]
+        {
+            "schema": "profile.test",
+            "archive_byte_ceiling": {"rate_price_score_per_byte": 0.01},
+            "section_value_rows": [
+                {
+                    "neutralized_section": "residual_rc",
+                    "variant_id": "residual_transform_threshold_abs_le_3",
+                    "marginal_status": "cut_candidate_value_below_rate_price",
+                    "archive_bytes_removed_vs_baseline": 300,
+                    "delta_nonrate_score": 0.0,
+                    "delta_total_mlx_score_advisory": 0.0,
+                },
+            ],
+            "pair_value_rows": [
+                {
+                    "variant_id": "residual_transform_threshold_abs_le_3",
+                    "pair_row": 0,
+                    "delta_nonrate_score_pair_local": -0.1,
+                },
+                {
+                    "variant_id": "residual_transform_threshold_abs_le_3",
+                    "pair_row": 1,
+                    "delta_nonrate_score_pair_local": 10.0,
+                },
+                {
+                    "variant_id": "residual_transform_threshold_abs_le_3",
+                    "pair_row": 2,
+                    "delta_nonrate_score_pair_local": 0.0,
+                },
+            ],
+        }
+    )
+
+    rows = backlog["pair_scoped_residual_candidate_rows"]
+    assert len(rows) == 1
+    assert rows[0]["residual_transform"] == "threshold_abs_le_pairs=3@0,2"
+    assert rows[0]["selected_pair_count"] == 2
+    assert rows[0]["protected_pair_count"] == 1
+    assert rows[0]["score_claim"] is False
+
+
 def test_hprc_profile_defaults_to_direct_cache_materialization() -> None:
     module = _load_tool_module()
     variant = module.VariantSpec(  # pyright: ignore[reportPrivateUsage]
@@ -122,3 +166,14 @@ def test_hprc_profile_defaults_to_direct_cache_materialization() -> None:
 
     assert "--hprc-direct-cache" in direct_cmd
     assert "--hprc-direct-cache" not in shell_cmd
+
+
+def test_variant_slug_is_bounded_and_deterministic_for_pair_scoped_plans() -> None:
+    module = _load_tool_module()
+    raw = "threshold_abs_le_pairs=3@" + ",".join(str(i) for i in range(600))
+    slug_a = module._variant_slug(raw)  # pyright: ignore[reportPrivateUsage]
+    slug_b = module._variant_slug(raw)  # pyright: ignore[reportPrivateUsage]
+
+    assert slug_a == slug_b
+    assert len(slug_a) <= 80
+    assert slug_a.startswith("threshold_abs_le_pairs_3")

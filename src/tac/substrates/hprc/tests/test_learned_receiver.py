@@ -215,6 +215,31 @@ def test_compact_receiver_residual_transform_is_valid_and_charged() -> None:
     assert hprc_preview_digest(transformed) != hprc_preview_digest(packet_bytes)
 
 
+def test_compact_receiver_pair_scoped_residual_transform_preserves_protected_pairs() -> None:
+    packet_bytes = build_compact_receiver_packet_from_lowres_frames(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+    packet = parse_hprc_packet(packet_bytes)
+    original = decode_compact_receiver_packet(packet).residual.q.copy()
+
+    transformed = transform_compact_receiver_residual(
+        packet,
+        transform="threshold_abs_le_pairs=127@0",
+    )
+    compact = decode_compact_receiver_packet(parse_hprc_packet(transformed))
+    rdo_payload = parse_hprc_packet(transformed).section_map()[HprcSectionKind.RDO_PLAN]
+    rdo = json.loads(rdo_payload)
+
+    assert np.count_nonzero(compact.residual.q[:2]) == 0
+    np.testing.assert_array_equal(compact.residual.q[2:], original[2:])
+    assert rdo["residual_token_transform"]["kind"] == "threshold_abs_le_pairs"
+    assert rdo["residual_token_transform"]["pair_ranges"] == [[0, 0]]
+    assert rdo["residual_token_transform"]["realized_frame_count"] == 2
+
+
 def test_compact_receiver_local_acquisition_frame_cap(tmp_path: Path, monkeypatch) -> None:
     packet_bytes = build_compact_receiver_packet_from_lowres_frames(
         _frames(),

@@ -873,7 +873,7 @@ def transform_compact_receiver_residual(
     compact = decode_compact_receiver_packet(packet)
     q = np.array(compact.residual.q, dtype=np.int16, copy=True)
     residual_transform = _parse_residual_transform(transform)
-    q = _apply_residual_transform(q, residual_transform)
+    q = _apply_residual_transform(q, residual_transform, gop_size=packet.config.gop_size)
     section_map = dict(packet.section_map())
     section_map[HprcSectionKind.RESIDUAL_RC] = pack_compact_residual_quantized(
         q,
@@ -908,10 +908,27 @@ def _parse_residual_transform(transform: str) -> dict[str, Any]:
         if not (0.0 < value <= 1.0):
             raise HprcCompactReceiverError("keep_top_fraction must be in (0, 1]")
         return {"kind": key, "fraction": value}
+    if key == "threshold_abs_le_pairs":
+        threshold_raw, sep, pair_spec = raw_value.partition("@")
+        if not sep:
+            raise HprcCompactReceiverError(
+                "threshold_abs_le_pairs must be threshold@pair-ranges, "
+                "e.g. threshold_abs_le_pairs=3@0-4,8"
+            )
+        threshold = int(threshold_raw)
+        if threshold < 0:
+            raise HprcCompactReceiverError("threshold_abs_le_pairs threshold must be >= 0")
+        pair_ranges = _parse_index_ranges(pair_spec, label="pair")
+        return {"kind": key, "threshold": threshold, "pair_ranges": pair_ranges}
     raise HprcCompactReceiverError(f"unknown residual transform: {key!r}")
 
 
-def _apply_residual_transform(q: np.ndarray, transform: dict[str, Any]) -> np.ndarray:
+def _apply_residual_transform(
+    q: np.ndarray,
+    transform: dict[str, Any],
+    *,
+    gop_size: int = 2,
+) -> np.ndarray:
     kind = str(transform["kind"])
     if kind == "threshold_abs_le":
         out = np.array(q, copy=True)
@@ -931,7 +948,79 @@ def _apply_residual_transform(q: np.ndarray, transform: dict[str, Any]) -> np.nd
         transform["realized_threshold_abs_ge"] = threshold
         transform["realized_keep_count"] = int(np.count_nonzero(out))
         return out
+    if kind == "threshold_abs_le_pairs":
+        out = np.array(q, copy=True)
+        frame_indices = _frame_indices_for_pair_ranges(
+            transform.get("pair_ranges", []),
+            frame_count=int(out.shape[0]),
+            gop_size=gop_size,
+        )
+        if not frame_indices:
+            transform["realized_frame_count"] = 0
+            transform["realized_nonzero_count_after"] = int(np.count_nonzero(out))
+            return out
+        view = out[np.asarray(frame_indices, dtype=np.int64)]
+        view[np.abs(view) <= int(transform["threshold"])] = 0
+        out[np.asarray(frame_indices, dtype=np.int64)] = view
+        transform["realized_frame_count"] = len(frame_indices)
+        transform["realized_nonzero_count_after"] = int(np.count_nonzero(out))
+        return out
     raise HprcCompactReceiverError(f"unknown parsed residual transform: {kind!r}")
+
+
+def _parse_index_ranges(spec: str, *, label: str) -> list[list[int]]:
+    ranges: list[tuple[int, int]] = []
+    for raw_part in spec.split(","):
+        part = raw_part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            raw_start, raw_end = part.split("-", 1)
+            start = int(raw_start)
+            end = int(raw_end)
+        else:
+            start = end = int(part)
+        if start < 0 or end < start:
+            raise HprcCompactReceiverError(f"invalid {label} range: {part!r}")
+        ranges.append((start, end))
+    if not ranges:
+        raise HprcCompactReceiverError(f"{label} range list must not be empty")
+    ranges.sort()
+    merged: list[tuple[int, int]] = []
+    for start, end in ranges:
+        if not merged or start > merged[-1][1] + 1:
+            merged.append((start, end))
+        else:
+            prev_start, prev_end = merged[-1]
+            merged[-1] = (prev_start, max(prev_end, end))
+    return [[start, end] for start, end in merged]
+
+
+def _frame_indices_for_pair_ranges(
+    pair_ranges: Any,
+    *,
+    frame_count: int,
+    gop_size: int,
+) -> list[int]:
+    if gop_size <= 0:
+        raise HprcCompactReceiverError("gop_size must be positive for pair-scoped transforms")
+    indices: list[int] = []
+    for raw_range in pair_ranges:
+        if (
+            not isinstance(raw_range, list | tuple)
+            or len(raw_range) != 2
+        ):
+            raise HprcCompactReceiverError(f"invalid pair range row: {raw_range!r}")
+        start_pair = int(raw_range[0])
+        end_pair = int(raw_range[1])
+        if start_pair < 0 or end_pair < start_pair:
+            raise HprcCompactReceiverError(f"invalid pair range row: {raw_range!r}")
+        start_frame = start_pair * gop_size
+        end_frame_exclusive = min((end_pair + 1) * gop_size, frame_count)
+        if start_frame >= frame_count:
+            continue
+        indices.extend(range(start_frame, end_frame_exclusive))
+    return indices
 
 
 def _make_basis(height: int, width: int, channels: int, basis_count: int) -> np.ndarray:

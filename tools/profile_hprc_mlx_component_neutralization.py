@@ -10,6 +10,7 @@ emits allocator rows. It deliberately refuses to create score authority.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import subprocess
@@ -353,7 +354,11 @@ def _materialize_variants(
 
 
 def _variant_slug(value: str) -> str:
-    return "".join(ch.lower() if ch.isalnum() else "_" for ch in value).strip("_")
+    slug = "".join(ch.lower() if ch.isalnum() else "_" for ch in value).strip("_")
+    if len(slug) <= 80:
+        return slug
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+    return f"{slug[:63].rstrip('_')}_{digest}"
 
 
 def _materialize_mlx_caches(
@@ -784,12 +789,14 @@ def _build_shrink_backlog(report: dict[str, Any]) -> dict[str, Any]:
             -int(item.get("archive_bytes_removed_vs_baseline") or 0),
         )
     )
+    pair_scoped_candidates = _build_pair_scoped_residual_candidates(report)
     return {
         "schema": BACKLOG_SCHEMA,
         "source_profile_schema": report.get("schema"),
         "source_scope_status": report.get("scope_status"),
         "hard_archive_byte_ceiling": report.get("archive_byte_ceiling"),
         "rows": rows,
+        "pair_scoped_residual_candidate_rows": pair_scoped_candidates,
         "allocator_rule": (
             "cut or recode bytes whose MLX/exact nonrate marginal is below "
             "25/original_video_bytes; promote only after receiver proof plus exact CPU/CUDA gate"
@@ -800,6 +807,121 @@ def _build_shrink_backlog(report: dict[str, Any]) -> dict[str, Any]:
         ),
         **FALSE_AUTHORITY,
     }
+
+
+def _build_pair_scoped_residual_candidates(report: dict[str, Any]) -> list[dict[str, Any]]:
+    rate_price = float(
+        report.get("archive_byte_ceiling", {}).get("rate_price_score_per_byte")
+        or 25.0 / ORIGINAL_VIDEO_BYTES
+    )
+    section_rows = {
+        str(row.get("variant_id")): row
+        for row in report.get("section_value_rows", [])
+        if row.get("variant_id")
+    }
+    pairs_by_variant: dict[str, list[dict[str, Any]]] = {}
+    for row in report.get("pair_value_rows", []):
+        variant_id = str(row.get("variant_id"))
+        if not variant_id.startswith("residual_transform_threshold_abs_le_"):
+            continue
+        pairs_by_variant.setdefault(variant_id, []).append(row)
+
+    out: list[dict[str, Any]] = []
+    for variant_id, pair_rows in pairs_by_variant.items():
+        threshold = _threshold_from_threshold_variant_id(variant_id)
+        section_row = section_rows.get(variant_id)
+        if threshold is None or section_row is None or not pair_rows:
+            continue
+        bytes_removed = int(section_row.get("archive_bytes_removed_vs_baseline") or 0)
+        if bytes_removed <= 0:
+            continue
+        pair_rows = sorted(pair_rows, key=lambda row: int(row.get("pair_row") or 0))
+        per_pair_bytes = bytes_removed / max(len(pair_rows), 1)
+        per_pair_rate_price = per_pair_bytes * rate_price
+        selected = [
+            row
+            for row in pair_rows
+            if float(row.get("delta_nonrate_score_pair_local") or 0.0)
+            <= per_pair_rate_price
+        ]
+        if not selected:
+            continue
+        selected_indices = sorted(int(row["pair_row"]) for row in selected)
+        pair_ranges = _compress_int_ranges(selected_indices)
+        transform = (
+            f"threshold_abs_le_pairs={threshold}@{_format_int_ranges(pair_ranges)}"
+        )
+        estimated_bytes_removed = per_pair_bytes * len(selected)
+        estimated_nonrate_delta = sum(
+            float(row.get("delta_nonrate_score_pair_local") or 0.0)
+            for row in selected
+        )
+        out.append(
+            {
+                "family": "hprc_compact_receiver",
+                "stage": "pre_entropy_residual_tokens",
+                "scope": "pair",
+                "source_variant_id": variant_id,
+                "residual_transform": transform,
+                "threshold_abs_le": int(threshold),
+                "selected_pair_count": len(selected),
+                "protected_pair_count": len(pair_rows) - len(selected),
+                "pair_ranges": [[int(start), int(end)] for start, end in pair_ranges],
+                "estimated_archive_bytes_removed_vs_baseline": round(estimated_bytes_removed),
+                "estimated_delta_nonrate_pair_local_sum": float(estimated_nonrate_delta),
+                "estimated_delta_rate_score": float(-estimated_bytes_removed * rate_price),
+                "selection_rule": (
+                    "apply residual shrink only where pair-local MLX nonrate delta "
+                    "is <= the uniform per-pair archive-rate price"
+                ),
+                "next_materializer_task": (
+                    "rerun profile_hprc_mlx_component_neutralization.py with "
+                    f"--residual-transforms {transform} and full-video direct HPRC cache"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+    out.sort(
+        key=lambda row: (
+            -int(row["estimated_archive_bytes_removed_vs_baseline"]),
+            int(row["protected_pair_count"]),
+            str(row["source_variant_id"]),
+        )
+    )
+    return out
+
+
+def _threshold_from_threshold_variant_id(variant_id: str) -> int | None:
+    prefix = "residual_transform_threshold_abs_le_"
+    if not variant_id.startswith(prefix):
+        return None
+    try:
+        return int(variant_id[len(prefix) :])
+    except ValueError:
+        return None
+
+
+def _compress_int_ranges(indices: list[int]) -> list[tuple[int, int]]:
+    if not indices:
+        return []
+    sorted_unique = sorted({int(idx) for idx in indices})
+    ranges: list[tuple[int, int]] = []
+    start = prev = sorted_unique[0]
+    for idx in sorted_unique[1:]:
+        if idx == prev + 1:
+            prev = idx
+            continue
+        ranges.append((start, prev))
+        start = prev = idx
+    ranges.append((start, prev))
+    return ranges
+
+
+def _format_int_ranges(ranges: list[tuple[int, int]]) -> str:
+    return ",".join(
+        str(start) if start == end else f"{start}-{end}"
+        for start, end in ranges
+    )
 
 
 def _marginal_priority(status: str) -> int:

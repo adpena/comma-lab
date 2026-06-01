@@ -1,0 +1,46 @@
+{
+  "allocator_rule": "cut or recode bytes whose MLX/exact nonrate marginal is below 25/original_video_bytes; promote only after receiver proof plus exact CPU/CUDA gate",
+  "hard_archive_byte_ceiling": {
+    "rate_price_score_per_byte": 6.658589531221714e-07,
+    "sub019_zero_distortion_archive_bytes": 285345
+  },
+  "pair_scoped_residual_candidate_rows": [],
+  "priority_note": "residual_rc remains the first production shrink target unless scorer value exceeds the rate price on full-video exact-reduced replay",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "archive_bytes_removed_vs_baseline": 303937,
+      "delta_nonrate_score": -1.949817179715751,
+      "delta_total_mlx_score_advisory": -2.152196352350849,
+      "family": "hprc_compact_receiver",
+      "marginal_status": "cut_candidate_distortion_nonworse",
+      "next_materializer_task": "replace_raw_residual_grid_with_scorer_ranked_significance_and_learned_prior_coder",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "scope": "section",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section": "residual_rc",
+      "stage": "pre_entropy_residual_or_receiver_section",
+      "variant_id": "residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66"
+    }
+  ],
+  "schema": "hprc_scorer_ranked_residual_shrink_backlog.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_profile_schema": "hprc_mlx_component_neutralization_profile.v1",
+  "source_scope_status": {
+    "batch": "window JSON emitted from MLX component arrays",
+    "boundary": "blocked_missing_boundary_surface_in_cache",
+    "class_region": "blocked_missing_segnet_class_logit_or_label_surface_in_cache",
+    "frame": "pair rows include frame indices; per-frame split awaits framewise scorer arrays",
+    "full_video": "executed",
+    "pair": "executed_from_mlx_component_arrays",
+    "section": "executed"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "blockers": [
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "mlx_local_response_is_advisory_not_score_authority",
+    "lane_claim_and_exact_dispatch_packet_not_created_in_this_slice"
+  ],
+  "candidate_archive_zip_bytes": 859923,
+  "candidate_archive_zip_path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/archive.zip",
+  "candidate_archive_zip_sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3",
+  "exact_cpu_cuda_executed": false,
+  "mlx_local_advisory_delta_total": -2.152196352350849,
+  "next_dispatch_action": "claim hprc_pair_scoped_threshold_abs_le3_exact_eval and run contest CPU/CUDA auth eval against the receiver-proven archive/runtime packet",
+  "promotion_eligible": false,
+  "ready_for_score_claim": false,
+  "receiver_proof_passed": true,
+  "receiver_proof_path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/receiver_proof/hprc_receiver_proof.json",
+  "schema": "hprc_pair_scoped_exact_axis_gate.v1",
+  "score_claim": false
+}
