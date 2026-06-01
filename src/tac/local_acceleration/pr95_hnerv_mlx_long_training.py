@@ -189,8 +189,20 @@ PR95_MLX_LONG_TRAINING_FIDELITY_CLASS = "rgb_frame_mse_local_mlx_research_mvp"
 PR95_MLX_LONG_TRAINING_FIDELITY_STATUS = (
     "local_rgb_frame_mse_mvp_not_segnet_posenet_scorer_faithful"
 )
+PR95_MLX_LONG_TRAINING_FIDELITY_CLASS_RGB_YUV6 = (
+    "rgb_yuv6_preprocess_local_mlx_research_mvp"
+)
+PR95_MLX_LONG_TRAINING_FIDELITY_STATUS_RGB_YUV6 = (
+    "local_rgb_plus_yuv6_preprocess_mvp_not_segnet_posenet_scorer_faithful"
+)
 PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS = (
     "not_pr95_1to1_rgb_mse_mvp"
+)
+PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE = "rgb_mse"
+PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE = "rgb_yuv6_mse"
+PR95_MLX_LONG_TRAINING_LOSS_SURFACES: tuple[str, ...] = (
+    PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE,
+    PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE,
 )
 PR95_MLX_LONG_TRAINING_EXACT_READINESS_BLOCKERS: tuple[str, ...] = (
     "local_mlx_long_training_is_research_signal_not_contest_auth_eval",
@@ -395,6 +407,11 @@ class LongTrainingConfig:
     # #305 observability + deterministic-reproducibility (9-dim Dim 7).
     random_seed: int = 0
 
+    # Local training objective. ``rgb_yuv6_mse`` trains through PR95's
+    # score-relevant YUV6 preprocessing, but it is still not full
+    # SegNet/PoseNet scorer authority.
+    training_loss_surface: str = PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE
+
     # Provenance fields per Catalog #229 + #323 canonical Provenance.
     lane_id: str = (
         "lane_pr95_mlx_long_training_infrastructure_and_substrate_class_shift_candidate_validation_pipeline_20260525"
@@ -403,6 +420,14 @@ class LongTrainingConfig:
         ".omx/research/pr95_8stage_curriculum_forensic_20260513.md"
     )
     operator_run_label: str = ""
+
+    def __post_init__(self) -> None:
+        if self.training_loss_surface not in PR95_MLX_LONG_TRAINING_LOSS_SURFACES:
+            raise ValueError(
+                "training_loss_surface must be one of "
+                f"{', '.join(PR95_MLX_LONG_TRAINING_LOSS_SURFACES)}; "
+                f"got {self.training_loss_surface!r}"
+            )
 
     def total_epochs(self) -> int:
         """Effective total epochs across all stages (smoke-aware)."""
@@ -725,6 +750,9 @@ class TrainingTelemetry:
     source_video_frame_count: int | None = None
     source_video_frame_count_scope: str = "not_decoded"
     max_frames: int | None = None
+    training_fidelity_class: str = PR95_MLX_LONG_TRAINING_FIDELITY_CLASS
+    training_fidelity_status: str = PR95_MLX_LONG_TRAINING_FIDELITY_STATUS
+    training_loss_surface: str = PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE
     canonical_citation: str = ""
     run_started_utc: str = ""
     run_completed_utc: str = ""
@@ -755,8 +783,9 @@ class TrainingTelemetry:
             "source_video_frame_count": self.source_video_frame_count,
             "source_video_frame_count_scope": self.source_video_frame_count_scope,
             "max_frames": self.max_frames,
-            "training_fidelity_class": PR95_MLX_LONG_TRAINING_FIDELITY_CLASS,
-            "training_fidelity_status": PR95_MLX_LONG_TRAINING_FIDELITY_STATUS,
+            "training_fidelity_class": self.training_fidelity_class,
+            "training_fidelity_status": self.training_fidelity_status,
+            "training_loss_surface": self.training_loss_surface,
             "reproduction_equivalence_class": PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS,
             "canonical_citation": self.canonical_citation,
             "run_started_utc": self.run_started_utc,
@@ -793,6 +822,9 @@ class CheckpointArtifact:
     pytorch_export_forward_parity_established: bool = False
     runtime_consumption_proof_established: bool = False
     trained_latents_exported: bool = False
+    training_fidelity_class: str = PR95_MLX_LONG_TRAINING_FIDELITY_CLASS
+    training_fidelity_status: str = PR95_MLX_LONG_TRAINING_FIDELITY_STATUS
+    training_loss_surface: str = PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE
     evidence_grade: str = MLX_LONG_TRAINING_EVIDENCE_GRADE
     evidence_tag: str = MLX_LONG_TRAINING_EVIDENCE_TAG
     score_claim: bool = False
@@ -821,8 +853,9 @@ class CheckpointArtifact:
             if self.pytorch_export_manifest_path is None
             else str(self.pytorch_export_manifest_path)
         )
-        d["training_fidelity_class"] = PR95_MLX_LONG_TRAINING_FIDELITY_CLASS
-        d["training_fidelity_status"] = PR95_MLX_LONG_TRAINING_FIDELITY_STATUS
+        d["training_fidelity_class"] = self.training_fidelity_class
+        d["training_fidelity_status"] = self.training_fidelity_status
+        d["training_loss_surface"] = self.training_loss_surface
         d["reproduction_equivalence_class"] = PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS
         d.update(PR95_MLX_LONG_TRAINING_FALSE_AUTHORITY)
         d["exact_readiness_refusal"] = {
@@ -859,6 +892,32 @@ def _source_video_frame_count_scope(
     return "full_video_decode"
 
 
+def _training_fidelity_class(config: LongTrainingConfig) -> str:
+    if config.training_loss_surface == PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE:
+        return PR95_MLX_LONG_TRAINING_FIDELITY_CLASS_RGB_YUV6
+    return PR95_MLX_LONG_TRAINING_FIDELITY_CLASS
+
+
+def _training_fidelity_status(config: LongTrainingConfig) -> str:
+    if config.training_loss_surface == PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE:
+        return PR95_MLX_LONG_TRAINING_FIDELITY_STATUS_RGB_YUV6
+    return PR95_MLX_LONG_TRAINING_FIDELITY_STATUS
+
+
+def _exact_readiness_blockers(config: LongTrainingConfig) -> list[str]:
+    if config.training_loss_surface == PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE:
+        return list(PR95_MLX_LONG_TRAINING_EXACT_READINESS_BLOCKERS)
+    blockers = [
+        blocker
+        for blocker in PR95_MLX_LONG_TRAINING_EXACT_READINESS_BLOCKERS
+        if blocker != "rgb_frame_mse_is_not_segnet_posenet_contest_scorer_loss"
+    ]
+    blockers.append(
+        "rgb_yuv6_preprocess_loss_is_not_segnet_posenet_contest_scorer_loss"
+    )
+    return list(dict.fromkeys(blockers))
+
+
 def register_canonical_provenance(
     config: LongTrainingConfig,
     source_video_sha256: str,
@@ -876,8 +935,9 @@ def register_canonical_provenance(
     return {
         "schema": "pr95_mlx_long_training_provenance.v1",
         "kind": "macos_mlx_research_signal",
-        "training_fidelity_class": PR95_MLX_LONG_TRAINING_FIDELITY_CLASS,
-        "training_fidelity_status": PR95_MLX_LONG_TRAINING_FIDELITY_STATUS,
+        "training_fidelity_class": _training_fidelity_class(config),
+        "training_fidelity_status": _training_fidelity_status(config),
+        "training_loss_surface": config.training_loss_surface,
         "reproduction_equivalence_class": PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS,
         "evidence_grade": MLX_LONG_TRAINING_EVIDENCE_GRADE,
         "evidence_tag": MLX_LONG_TRAINING_EVIDENCE_TAG,
@@ -921,7 +981,7 @@ def register_canonical_provenance(
         "exact_readiness_refusal": {
             "schema": "exact_readiness_refusal.v1",
             "ready": False,
-            "blockers": list(PR95_MLX_LONG_TRAINING_EXACT_READINESS_BLOCKERS),
+            "blockers": _exact_readiness_blockers(config),
         },
     }
 
@@ -963,7 +1023,9 @@ def build_long_training_plan_report(
         recommended_execution = {
             "tool": "tools/run_pr95_mlx_long_training.py",
             "resource_kind": (
-                "local_mlx" if "--execute-smoke" in command_args else "local_cpu"
+                "local_mlx"
+                if "--execute" in command_args or "--execute-smoke" in command_args
+                else "local_cpu"
             ),
             "authority_kind": "macos_mlx_research_signal",
             "output_manifest": output_report,
@@ -988,7 +1050,7 @@ def build_long_training_plan_report(
                     "type": "json_equals",
                     "path": output_report,
                     "key": "training_fidelity_class",
-                    "equals": PR95_MLX_LONG_TRAINING_FIDELITY_CLASS,
+                    "equals": _training_fidelity_class(config),
                 },
                 {
                     "type": "json_equals",
@@ -1014,8 +1076,9 @@ def build_long_training_plan_report(
         "mode": mode,
         "lane_id": config.lane_id,
         "source_video_path": config.source_video_path.as_posix(),
-        "training_fidelity_class": PR95_MLX_LONG_TRAINING_FIDELITY_CLASS,
-        "training_fidelity_status": PR95_MLX_LONG_TRAINING_FIDELITY_STATUS,
+        "training_fidelity_class": _training_fidelity_class(config),
+        "training_fidelity_status": _training_fidelity_status(config),
+        "training_loss_surface": config.training_loss_surface,
         "reproduction_equivalence_class": PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS,
         "source_video_exists": config.source_video_path.exists(),
         "source_video_sha256": source_video_sha256,
@@ -1046,11 +1109,11 @@ def build_long_training_plan_report(
         "evidence_tag": MLX_LONG_TRAINING_EVIDENCE_TAG,
         "axis_tag": MLX_LONG_TRAINING_EVIDENCE_TAG,
         "score_axis": MLX_LONG_TRAINING_EVIDENCE_TAG,
-        "readiness_blockers": list(PR95_MLX_LONG_TRAINING_EXACT_READINESS_BLOCKERS),
+        "readiness_blockers": _exact_readiness_blockers(config),
         "exact_readiness_refusal": {
             "schema": "exact_readiness_refusal.v1",
             "ready": False,
-            "blockers": list(PR95_MLX_LONG_TRAINING_EXACT_READINESS_BLOCKERS),
+            "blockers": _exact_readiness_blockers(config),
         },
         "canonical_provenance": provenance,
         "command": command_args,
@@ -1162,6 +1225,13 @@ class MLXLongTrainingPipeline:
             )
         )
         self._telemetry.max_frames = self.config.max_frames
+        self._telemetry.training_fidelity_class = _training_fidelity_class(
+            self.config
+        )
+        self._telemetry.training_fidelity_status = _training_fidelity_status(
+            self.config
+        )
+        self._telemetry.training_loss_surface = self.config.training_loss_surface
         self._telemetry.run_started_utc = _utc_now_iso()
 
     def loss_fn(
@@ -1191,8 +1261,20 @@ class MLXLongTrainingPipeline:
         decoded_pair = decoded / 255.0  # (B, 2, 3, H, W) normalized
         decoded_b2hwc = mx.transpose(decoded_pair, (0, 1, 3, 4, 2))
         diff = decoded_b2hwc - targets_batch
-        loss = mx.mean(diff * diff)
-        return loss
+        rgb_loss = mx.mean(diff * diff)
+        if (
+            self.config.training_loss_surface
+            == PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE
+        ):
+            return rgb_loss
+
+        from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+        pred_yuv6 = rgb_to_yuv6_mlx(decoded_b2hwc * 255.0)
+        target_yuv6 = rgb_to_yuv6_mlx(targets_batch * 255.0)
+        yuv6_residual = (pred_yuv6 - target_yuv6) / 255.0
+        yuv6_loss = mx.mean(yuv6_residual * yuv6_residual)
+        return 0.5 * rgb_loss + 0.5 * yuv6_loss
 
     def training_step(
         self,
@@ -1380,8 +1462,13 @@ class MLXLongTrainingPipeline:
                         "pytorch_export_succeeded": pytorch_export_succeeded,
                         "pytorch_export_forward_parity_established": False,
                         "runtime_consumption_proof_established": False,
-                        "training_fidelity_class": PR95_MLX_LONG_TRAINING_FIDELITY_CLASS,
-                        "training_fidelity_status": PR95_MLX_LONG_TRAINING_FIDELITY_STATUS,
+                        "training_fidelity_class": _training_fidelity_class(
+                            self.config
+                        ),
+                        "training_fidelity_status": _training_fidelity_status(
+                            self.config
+                        ),
+                        "training_loss_surface": self.config.training_loss_surface,
                         "reproduction_equivalence_class": (
                             PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS
                         ),
@@ -1426,8 +1513,9 @@ class MLXLongTrainingPipeline:
                 "evidence_grade": MLX_LONG_TRAINING_EVIDENCE_GRADE,
                 "evidence_tag": MLX_LONG_TRAINING_EVIDENCE_TAG,
                 "axis_tag": MLX_LONG_TRAINING_EVIDENCE_TAG,
-                "training_fidelity_class": PR95_MLX_LONG_TRAINING_FIDELITY_CLASS,
-                "training_fidelity_status": PR95_MLX_LONG_TRAINING_FIDELITY_STATUS,
+                "training_fidelity_class": _training_fidelity_class(self.config),
+                "training_fidelity_status": _training_fidelity_status(self.config),
+                "training_loss_surface": self.config.training_loss_surface,
                 "reproduction_equivalence_class": (
                     PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS
                 ),
@@ -1455,6 +1543,9 @@ class MLXLongTrainingPipeline:
             pytorch_export_deferred_path=pytorch_export_deferred_path,
             pytorch_export_manifest_path=pytorch_export_manifest_path,
             trained_latents_exported=latents_path.exists() and pytorch_export_succeeded,
+            training_fidelity_class=_training_fidelity_class(self.config),
+            training_fidelity_status=_training_fidelity_status(self.config),
+            training_loss_surface=self.config.training_loss_surface,
         )
         self._checkpoint_artifacts.append(artifact)
         return artifact

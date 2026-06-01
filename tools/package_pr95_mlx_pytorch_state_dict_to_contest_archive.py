@@ -131,6 +131,7 @@ def _resolve_latents_and_meta(
     source_archive_zip: Path,
     latents_from_pt: bool,
     latents_npy: Path | None,
+    allow_source_archive_latents: bool,
     pt_state_dict: dict[str, Any],
 ) -> tuple[Any, dict[str, Any], dict[str, Any]]:
     """Resolve (latents, meta, source_custody) from source archive (default) or .pt."""
@@ -166,6 +167,20 @@ def _resolve_latents_and_meta(
             )
         latents = pt_state_dict.pop("latents")
         return latents, dict(packet.meta), source_custody
+    if "latents" in pt_state_dict and not allow_source_archive_latents:
+        raise Pr95MlxPackageError(
+            "pt_contains_latents_but_source_archive_latents_requested: the input "
+            ".pt contains a trained 'latents' tensor, but neither --latents-from-pt "
+            "nor --latents-npy was supplied. Refusing to silently pair a trained "
+            "decoder with source-archive latents. Pass --latents-from-pt, "
+            "--latents-npy, or explicit --allow-source-archive-latents."
+        )
+    if allow_source_archive_latents:
+        source_custody = {
+            **source_custody,
+            "latents_source_override": "explicit_allow_source_archive_latents",
+            "pt_contains_latents": "latents" in pt_state_dict,
+        }
     return packet.latents, dict(packet.meta), source_custody
 
 
@@ -581,6 +596,7 @@ def package_pytorch_state_dict_to_contest_archive(
     archive_bound_package_dir: Path | None = None,
     latents_from_pt: bool = False,
     latents_npy: Path | None = None,
+    allow_source_archive_latents: bool = False,
     overwrite: bool = True,
     report_out: Path | None = None,
 ) -> dict[str, Any]:
@@ -606,6 +622,7 @@ def package_pytorch_state_dict_to_contest_archive(
         source_archive_zip=source_archive_zip,
         latents_from_pt=latents_from_pt,
         latents_npy=latents_npy,
+        allow_source_archive_latents=allow_source_archive_latents,
         pt_state_dict=pt_state_dict,
     )
     latents_source_label = (
@@ -711,6 +728,8 @@ def package_pytorch_state_dict_to_contest_archive(
         "source_archive_zip_sha256": source_custody["archive_zip_sha256"],
         "source_archive_member_sha256": source_custody["member_sha256"],
         "latents_source": report_latents_source,
+        "latents_source_override": source_custody.get("latents_source_override"),
+        "input_pt_contains_latents": source_custody.get("pt_contains_latents"),
         "latents_npy_path": source_custody.get("latents_npy_path"),
         "latents_npy_sha256": source_custody.get("latents_npy_sha256"),
         "latents_npy_bytes": source_custody.get("latents_npy_bytes"),
@@ -835,6 +854,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--allow-source-archive-latents",
+        action="store_true",
+        help=(
+            "Explicitly allow packaging source-archive latents even when the "
+            "input .pt contains a trained 'latents' tensor. This is for "
+            "decoder-only ablations; default behavior fails closed to prevent "
+            "silently pairing a trained decoder with stale PR95 latents."
+        ),
+    )
+    parser.add_argument(
         "--report-out",
         type=Path,
         help="Optional path to write a canonical packaging report JSON.",
@@ -863,6 +892,7 @@ def main(argv: list[str] | None = None) -> int:
             source_submission_root=args.source_submission_root,
             latents_from_pt=args.latents_from_pt,
             latents_npy=args.latents_npy,
+            allow_source_archive_latents=args.allow_source_archive_latents,
             overwrite=not args.no_overwrite,
             report_out=args.report_out,
         )

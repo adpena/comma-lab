@@ -16,7 +16,10 @@ from tac.local_acceleration.pr95_hnerv_mlx_long_training import (
     PR95_MLX_LONG_TRAINING_EXPORT_PLACEHOLDER_SCHEMA,
     PR95_MLX_LONG_TRAINING_FALSE_AUTHORITY,
     PR95_MLX_LONG_TRAINING_FIDELITY_CLASS,
+    PR95_MLX_LONG_TRAINING_FIDELITY_CLASS_RGB_YUV6,
     PR95_MLX_LONG_TRAINING_FIDELITY_STATUS,
+    PR95_MLX_LONG_TRAINING_FIDELITY_STATUS_RGB_YUV6,
+    PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE,
     PR95_MLX_LONG_TRAINING_PLAN_SCHEMA,
     PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS,
     PR95_MLX_LONG_TRAINING_TELEMETRY_SCHEMA,
@@ -148,6 +151,44 @@ def test_long_training_plan_report_marks_unknown_frame_count() -> None:
         report["canonical_provenance"]["source_video_frame_count_scope"]
         == "not_decoded"
     )
+
+
+def test_long_training_yuv6_loss_surface_remains_fail_closed() -> None:
+    config = LongTrainingConfig(
+        source_video_path=Path("upstream/videos/0.mkv"),
+        smoke_mode=True,
+        smoke_epochs_per_stage=1,
+        checkpoint_every_epochs=1,
+        training_loss_surface=PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE,
+    )
+
+    provenance = register_canonical_provenance(
+        config,
+        source_video_sha256="d" * 64,
+        source_video_frame_count=1200,
+    )
+    report = build_long_training_plan_report(
+        config,
+        output_report_path=Path(".omx/research/pr95_mlx_yuv6_test_plan.json"),
+        source_video_sha256="d" * 64,
+        source_video_frame_count=1200,
+        command=["tools/run_pr95_mlx_long_training.py"],
+    )
+
+    assert report["training_loss_surface"] == PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE
+    assert report["training_fidelity_class"] == PR95_MLX_LONG_TRAINING_FIDELITY_CLASS_RGB_YUV6
+    assert report["training_fidelity_status"] == PR95_MLX_LONG_TRAINING_FIDELITY_STATUS_RGB_YUV6
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert "rgb_yuv6_preprocess_loss_is_not_segnet_posenet_contest_scorer_loss" in report[
+        "readiness_blockers"
+    ]
+    assert "rgb_frame_mse_is_not_segnet_posenet_contest_scorer_loss" not in report[
+        "readiness_blockers"
+    ]
+    assert provenance["training_loss_surface"] == report["training_loss_surface"]
+    assert provenance["exact_readiness_refusal"]["blockers"] == report[
+        "readiness_blockers"
+    ]
 
 
 def test_long_training_plan_report_compiles_to_experiment_queue(
@@ -552,6 +593,33 @@ def test_run_pr95_mlx_long_training_cli_has_explicit_full_execute_mode(
     )
     assert conflict.returncode != 0
     assert "pass only one of --execute or --execute-smoke" in conflict.stderr
+
+    yuv6_scaled = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_long_training.py"),
+            "--output-report",
+            str(tmp_path / "yuv6_scaled.json"),
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--training-loss-surface",
+            PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE,
+            "--curriculum-total-epochs",
+            "29650",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+    assert yuv6_scaled.returncode == 0, yuv6_scaled.stderr
+    yuv6_report = json.loads((tmp_path / "yuv6_scaled.json").read_text())
+    assert yuv6_report["total_epochs"] == 29650
+    assert yuv6_report["training_loss_surface"] == (
+        PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_YUV6_MSE
+    )
+    assert yuv6_report["recommended_execution"]["resource_kind"] == "local_cpu"
 
     ambiguous_smoke = subprocess.run(
         [

@@ -18,12 +18,16 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.local_acceleration.pr95_hnerv_mlx_long_training import (  # noqa: E402
+    CANONICAL_8STAGE_CURRICULUM,
     CANONICAL_BASE_CHANNELS,
     CANONICAL_CONTEST_VIDEO_PATH,
     CANONICAL_EVAL_SIZE,
     CANONICAL_LATENT_DIM,
+    PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE,
+    PR95_MLX_LONG_TRAINING_LOSS_SURFACES,
     LongTrainingConfig,
     MLXLongTrainingPipeline,
+    StageHyperparameters,
     build_long_training_plan_report,
     compute_video_sha256,
 )
@@ -44,6 +48,58 @@ def _parse_eval_size(raw: str) -> tuple[int, int]:
     if height < 1 or width < 1:
         raise argparse.ArgumentTypeError("eval size dimensions must be positive")
     return height, width
+
+
+def _scaled_curriculum(total_epochs: int | None) -> tuple[StageHyperparameters, ...]:
+    """Return canonical PR95 stages, optionally scaled to an exact epoch budget."""
+
+    if total_epochs is None:
+        return CANONICAL_8STAGE_CURRICULUM
+    total = int(total_epochs)
+    if total < len(CANONICAL_8STAGE_CURRICULUM):
+        raise argparse.ArgumentTypeError(
+            "curriculum total epochs must be at least the 8 canonical stages"
+        )
+    base_total = sum(stage.epochs for stage in CANONICAL_8STAGE_CURRICULUM)
+    raw = [
+        (stage.epochs / base_total) * total
+        for stage in CANONICAL_8STAGE_CURRICULUM
+    ]
+    epochs = [max(1, int(value)) for value in raw]
+    remainder = total - sum(epochs)
+    order = sorted(
+        range(len(raw)),
+        key=lambda idx: raw[idx] - int(raw[idx]),
+        reverse=remainder >= 0,
+    )
+    step = 1 if remainder >= 0 else -1
+    cursor = 0
+    while remainder != 0:
+        idx = order[cursor % len(order)]
+        if step < 0 and epochs[idx] <= 1:
+            cursor += 1
+            continue
+        epochs[idx] += step
+        remainder -= step
+        cursor += 1
+    return tuple(
+        StageHyperparameters(
+            stage_index=stage.stage_index,
+            name=stage.name,
+            epochs=epoch_count,
+            learning_rate=stage.learning_rate,
+            batch_size=stage.batch_size,
+            notes=(
+                f"{stage.notes} Epoch count proportionally scaled from "
+                f"{stage.epochs} to {epoch_count} for requested total {total}."
+            ),
+        )
+        for stage, epoch_count in zip(
+            CANONICAL_8STAGE_CURRICULUM,
+            epochs,
+            strict=True,
+        )
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -77,6 +133,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--max-frames", type=int)
     parser.add_argument("--random-seed", default=0, type=int)
+    parser.add_argument(
+        "--training-loss-surface",
+        choices=PR95_MLX_LONG_TRAINING_LOSS_SURFACES,
+        default=PR95_MLX_LONG_TRAINING_LOSS_SURFACE_RGB_MSE,
+        help=(
+            "Local MLX loss surface. rgb_yuv6_mse adds PR95's differentiable "
+            "YUV6 scorer-preprocess term but remains advisory until exact "
+            "CPU/CUDA scoring."
+        ),
+    )
+    parser.add_argument(
+        "--curriculum-total-epochs",
+        type=int,
+        default=None,
+        help=(
+            "Proportionally scale the canonical 8-stage PR95 curriculum to an "
+            "exact total epoch count, e.g. 29650 for PR95-scale long training."
+        ),
+    )
     parser.add_argument("--smoke-mode", action="store_true")
     parser.add_argument("--smoke-epochs-per-stage", default=1, type=int)
     parser.add_argument("--checkpoint-every-epochs", default=1, type=int)
@@ -107,6 +182,7 @@ def _config_from_args(args: argparse.Namespace) -> LongTrainingConfig:
         latent_dim=args.latent_dim,
         base_channels=args.base_channels,
         eval_size=args.eval_size,
+        curriculum=_scaled_curriculum(args.curriculum_total_epochs),
         checkpoint_root=args.checkpoint_root,
         telemetry_path=args.telemetry_path,
         smoke_mode=bool(args.smoke_mode),
@@ -114,6 +190,7 @@ def _config_from_args(args: argparse.Namespace) -> LongTrainingConfig:
         checkpoint_every_epochs=args.checkpoint_every_epochs,
         max_frames=args.max_frames,
         random_seed=args.random_seed,
+        training_loss_surface=args.training_loss_surface,
         lane_id=args.lane_id,
         operator_run_label=args.operator_run_label,
     )

@@ -155,6 +155,85 @@ def test_package_pr95_latents_from_pt_fails_before_output_on_count_mismatch(
     assert not submission_dir.exists()
 
 
+def test_package_pr95_refuses_stale_source_latents_when_pt_contains_latents(
+    tmp_path: Path,
+) -> None:
+    import torch
+
+    bundle = HNeRVSyntheticTrainingBundleMLX(
+        latent_count=2,
+        latent_dim=28,
+        base_channels=8,
+        seed=29,
+    )
+    source_archive_zip = tmp_path / "source_archive.zip"
+    write_pr95_public_archive_zip(
+        pytorch_state_dict_from_mlx(bundle.decoder),
+        bundle.latents,
+        meta={"latent_dim": 28, "base_channels": 8, "eval_size": [384, 512]},
+        output_zip_path=source_archive_zip,
+    )
+
+    input_pt = tmp_path / "state_dict_with_latents.pt"
+    state_dict = pytorch_state_dict_from_mlx(bundle.decoder, as_torch=True)
+    state_dict["latents"] = torch.ones((2, 28), dtype=torch.float32)
+    torch.save(state_dict, input_pt)
+
+    submission_dir = tmp_path / "submission"
+    with pytest.raises(
+        Pr95MlxPackageError,
+        match="pt_contains_latents_but_source_archive_latents_requested",
+    ):
+        package_pytorch_state_dict_to_contest_archive(
+            input_pt=input_pt,
+            source_archive_zip=source_archive_zip,
+            output_submission_dir=submission_dir,
+        )
+
+    assert not submission_dir.exists()
+
+
+def test_package_pr95_allows_source_latents_with_explicit_override(
+    tmp_path: Path,
+) -> None:
+    import torch
+
+    bundle = HNeRVSyntheticTrainingBundleMLX(
+        latent_count=2,
+        latent_dim=28,
+        base_channels=8,
+        seed=30,
+    )
+    source_archive_zip = tmp_path / "source_archive.zip"
+    write_pr95_public_archive_zip(
+        pytorch_state_dict_from_mlx(bundle.decoder),
+        bundle.latents,
+        meta={"latent_dim": 28, "base_channels": 8, "eval_size": [384, 512]},
+        output_zip_path=source_archive_zip,
+    )
+
+    input_pt = tmp_path / "state_dict_with_latents.pt"
+    state_dict = pytorch_state_dict_from_mlx(bundle.decoder, as_torch=True)
+    state_dict["latents"] = torch.ones((2, 28), dtype=torch.float32)
+    torch.save(state_dict, input_pt)
+
+    submission_dir = tmp_path / "submission"
+    report = package_pytorch_state_dict_to_contest_archive(
+        input_pt=input_pt,
+        source_archive_zip=source_archive_zip,
+        output_submission_dir=submission_dir,
+        allow_source_archive_latents=True,
+    )
+
+    assert report["latents_source"] == "source_archive"
+    assert report["latents_source_override"] == (
+        "explicit_allow_source_archive_latents"
+    )
+    assert report["input_pt_contains_latents"] is True
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert (submission_dir / "archive.zip").is_file()
+
+
 def test_package_pr95_latents_from_pt_accepts_matching_trained_latents(
     tmp_path: Path,
 ) -> None:

@@ -274,11 +274,11 @@ def _full_main(args: argparse.Namespace) -> int:
         build_learnable_pose_student_head,
         build_learnable_student_head,
     )
-    from tac.substrates.pact_nerv_selector_v3.archive import (
-        DECODER_QUANTIZATION_KINDS,
-    )
     from tac.substrates.pact_nerv_selector_v3.architecture import (
         PactNervSelectorV3Config,
+    )
+    from tac.substrates.pact_nerv_selector_v3.archive import (
+        DECODER_QUANTIZATION_KINDS,
     )
     from tac.substrates.pact_nerv_selector_v3.archive_candidate import (
         export_pact_nerv_selector_v3_mlx_archive,
@@ -397,6 +397,32 @@ def _full_main(args: argparse.Namespace) -> int:
         batch_pair_indices_per_step=min(int(args.num_pairs), 8),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
+        checkpoint_interval_epochs=int(args.checkpoint_interval_epochs),
+        early_stopping_patience=(
+            None
+            if args.early_stopping_patience is None
+            else int(args.early_stopping_patience)
+        ),
+        pr95_faithful_curriculum_enabled=bool(args.pr95_faithful_curriculum),
+        pr95_curriculum_total_epochs=(
+            None
+            if args.pr95_curriculum_total_epochs is None
+            else int(args.pr95_curriculum_total_epochs)
+        ),
+        grad_clip_max_norm=(
+            None if args.grad_clip_max_norm is None else float(args.grad_clip_max_norm)
+        ),
+        warmup_epochs=int(args.warmup_epochs),
+        warmup_steps_per_epoch=int(args.warmup_steps_per_epoch),
+        weight_decay=None if args.weight_decay is None else float(args.weight_decay),
+        optimizer_kind=str(args.optimizer_kind),
+        cosine_decay_enabled=bool(args.cosine_decay_enabled),
+        cosine_decay_total_epochs=(
+            None
+            if args.cosine_decay_total_epochs is None
+            else int(args.cosine_decay_total_epochs)
+        ),
+        cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         notes=(
             "PACT-NeRV-SELECTOR-V3 MLX-first score-aware LONG-RUN training "
             "via canonical mlx_score_aware harness; real contest video + "
@@ -413,7 +439,10 @@ def _full_main(args: argparse.Namespace) -> int:
             f"decoder_quantization={decoder_quant} (Slot 2 DECODER-COMPRESSION-"
             "INT8-PER-CHANNEL work 2026-05-28; default fp16_brotli_q9 preserves "
             "V3 baseline; int8_per_channel_brotli_q11 is the empirical TOP-1 "
-            "sub-0.18 candidate per parent decoder compression analysis)."
+            "sub-0.18 candidate per parent decoder compression analysis). "
+            f"pr95_faithful_curriculum={bool(args.pr95_faithful_curriculum)} "
+            f"checkpoint_interval_epochs={int(args.checkpoint_interval_epochs)} "
+            f"optimizer_kind={args.optimizer_kind}."
         ),
     )
     print(
@@ -592,6 +621,91 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--full-lr", type=float, default=1e-3)
     p.add_argument(
+        "--checkpoint-interval-epochs",
+        type=int,
+        default=10,
+        help=(
+            "Emit checkpoints every N epochs. Keep the legacy default 10 for "
+            "short runs; set 500-2000 for PR95-scale 30k epoch runs to avoid "
+            "local/SSD checkpoint spray while preserving deterministic final "
+            "state and telemetry."
+        ),
+    )
+    p.add_argument(
+        "--early-stopping-patience",
+        type=int,
+        default=None,
+        help=(
+            "Optional canonical long-training early-stopping patience. Omit for "
+            "the harness default, which disables early stopping for cheap MLX "
+            "long runs."
+        ),
+    )
+    p.add_argument(
+        "--pr95-faithful-curriculum",
+        action="store_true",
+        help=(
+            "Route optimizer scheduling through the canonical PR95-faithful "
+            "curriculum factory instead of the legacy single-stage AdamW path."
+        ),
+    )
+    p.add_argument(
+        "--pr95-curriculum-total-epochs",
+        type=int,
+        default=None,
+        help=(
+            "Total epoch budget used to scale the PR95-faithful curriculum. "
+            "Defaults to the canonical helper's PR95 epoch count when omitted."
+        ),
+    )
+    p.add_argument(
+        "--grad-clip-max-norm",
+        type=float,
+        default=None,
+        help="Optional MLX optimizer gradient clipping max norm.",
+    )
+    p.add_argument(
+        "--warmup-epochs",
+        type=int,
+        default=0,
+        help="Optional MLX learning-rate warmup epochs for long-run stability.",
+    )
+    p.add_argument(
+        "--warmup-steps-per-epoch",
+        type=int,
+        default=1,
+        help="Steps per epoch used to convert warmup epochs into scheduler steps.",
+    )
+    p.add_argument(
+        "--weight-decay",
+        type=float,
+        default=None,
+        help="Optional optimizer weight decay forwarded to the MLX harness.",
+    )
+    p.add_argument(
+        "--optimizer-kind",
+        choices=["adamw", "rmsprop"],
+        default="adamw",
+        help="MLX optimizer kind supported by the shared score-aware adapter.",
+    )
+    p.add_argument(
+        "--cosine-decay-enabled",
+        action="store_true",
+        help="Enable warmup plus cosine decay in the shared MLX optimizer.",
+    )
+    p.add_argument(
+        "--cosine-decay-total-epochs",
+        type=int,
+        default=None,
+        help="Total epochs for cosine decay; must exceed warmup epochs when enabled.",
+    )
+    p.add_argument(
+        "--cosine-decay-min-lr-ratio",
+        type=float,
+        default=1e-2,
+        help="Minimum LR ratio for cosine decay.",
+    )
+    p.add_argument(
         "--distillation-weight",
         type=float,
         default=0.0,
@@ -654,9 +768,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "WAVE-N+2 SLOT 1 Compound C 2026-05-28). "
             "Default 'fp16_brotli_q9' preserves V3 baseline (sha256 "
             "ef5a087ff6301dbf). 'int8_per_channel_brotli_q11' emits the "
-            "Slot 2 empirical -43.7% baseline. 'heterogeneous_per_tensor' "
+            "Slot 2 empirical -43.7%% baseline. 'heterogeneous_per_tensor' "
             "emits the Wave N+2 Slot 1 Compound C variant: top-3 tensors "
-            "(70.31% of decoder cost) FP4-QAT + mid-byte int8-per-channel "
+            "(70.31%% of decoder cost) FP4-QAT + mid-byte int8-per-channel "
             "+ tail int4-groupwise NF4. Predicted additional -0.005 to "
             "-0.010 over Slot 2 int8 baseline → score floor 0.158-0.163. "
             "Per Catalog #192/#317/#341 non-promotable [macOS-MLX "
@@ -681,7 +795,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=3,
         help=(
             "WAVE-N+2 SLOT 1 Compound C: number of top-K tensors routed to "
-            "FP4-QAT. Default 3 (parent memo: top-3 cover 70.31% of decoder "
+            "FP4-QAT. Default 3 (parent memo: top-3 cover 70.31%% of decoder "
             "byte cost)."
         ),
     )
