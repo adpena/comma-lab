@@ -383,6 +383,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     embed_dim: int = 8,
     codebook_size: int = 16,
     decoder_channel: int = 8,
+    ema_decay: float = 0.9,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -408,6 +409,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             embed_dim=embed_dim,
             codebook_size=codebook_size,
             decoder_channel=decoder_channel,
+            ema_decay=ema_decay,
             random_seed=random_seed,
             repo_root=root,
         )
@@ -483,6 +485,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             "archive_path": archive_path,
             "archive_bytes": artifact_dict.get("archive_bytes"),
             "archive_sha256": artifact_dict.get("archive_sha256"),
+            "ema_decay": float(ema_decay),
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
             "receiver_proof_report_paths": [
                 path.as_posix() for path in receiver_proof_paths
@@ -634,6 +637,7 @@ def _run_pact_nerv_vq_mlx_smoke(
     embed_dim: int,
     codebook_size: int,
     decoder_channel: int,
+    ema_decay: float,
     random_seed: int,
     repo_root: Path,
 ) -> Any:
@@ -717,6 +721,7 @@ def _run_pact_nerv_vq_mlx_smoke(
         epochs=int(epochs),
         batch_pair_indices_per_step=max(1, int(batch_pair_indices_per_step)),
         learning_rate=float(learning_rate),
+        ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=max(1, int(epochs)),
         notes=(
@@ -846,6 +851,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--compact-embed-dim", default=8, type=int)
     parser.add_argument("--compact-codebook-size", default=16, type=int)
     parser.add_argument("--compact-decoder-channel", default=8, type=int)
+    parser.add_argument(
+        "--compact-ema-decay",
+        default=0.9,
+        type=float,
+        help=(
+            "Weight EMA decay for compact MLX archive export. Short byte-ceiling "
+            "sweeps use a faster shadow than the long-run canonical 0.997 so "
+            "receiver-proven archives do not export near-initial gray frames."
+        ),
+    )
     parser.add_argument("--smoke-epochs-per-stage", default=1, type=int)
     parser.add_argument(
         "--training-loss-surface",
@@ -910,6 +925,7 @@ def main(argv: list[str] | None = None) -> int:
             embed_dim=args.compact_embed_dim,
             codebook_size=args.compact_codebook_size,
             decoder_channel=args.compact_decoder_channel,
+            ema_decay=args.compact_ema_decay,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
