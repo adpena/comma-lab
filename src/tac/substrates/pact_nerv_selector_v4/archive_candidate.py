@@ -92,6 +92,7 @@ def pack_archive_from_exported_state_dict(
     exported_state_dict: dict[str, np.ndarray],
     cfg: PactNervSelectorV4Config,
     selectors: np.ndarray | None = None,
+    decoder_codec: str = "int8_mixed",
 ) -> bytes:
     """Pack a PyTorch-layout exported MLX state dict into PSV4 ``0.bin`` bytes."""
 
@@ -124,6 +125,7 @@ def pack_archive_from_exported_state_dict(
         selector_bytes,
         selector_v4_meta_from_config(cfg),
         palette_size=int(cfg.selector_palette_size),
+        decoder_codec=decoder_codec,
     )
 
 
@@ -135,6 +137,7 @@ def export_pact_nerv_selector_v4_mlx_archive(
     emit_archive_bound_candidate_package: bool = True,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
+    decoder_codec: str = "int8_mixed",
 ) -> tuple[Path, str, int]:
     """Export an MLX SELECTOR-V4 model as a contest-shaped ``archive.zip``."""
 
@@ -153,6 +156,7 @@ def export_pact_nerv_selector_v4_mlx_archive(
         exported_state_dict=model.export_state_dict(),
         cfg=cfg,
         selectors=getattr(model, "selectors", None),
+        decoder_codec=decoder_codec,
     )
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
@@ -195,6 +199,7 @@ def export_pact_nerv_selector_v4_mlx_archive(
                 "num_frames": int(cfg.num_pairs) * 2,
                 "coverage_source": "pact_nerv_selector_v4_mlx_config",
                 "selector_codec": "run_length_varint_selector",
+                "decoder_codec": decoder_codec,
                 "archive_bytes_are_authority_for_rate": True,
             },
         ),
@@ -226,6 +231,7 @@ def export_pact_nerv_selector_v4_mlx_archive(
                 "selector_codec": "run_length_varint_selector",
                 "selector_palette_size": int(cfg.selector_palette_size),
                 "num_pairs": int(cfg.num_pairs),
+                "decoder_codec": decoder_codec,
             },
             candidate_row_schema="pact_nerv_selector_v4_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=PACT_NERV_SELECTOR_V4_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
@@ -241,6 +247,7 @@ def export_pact_nerv_selector_v4_mlx_archive_bound_candidate_package(
     repo_root: str | Path | None = None,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
+    decoder_codec: str = "int8_mixed",
 ) -> dict[str, Any]:
     """Export Selector-V4 MLX bytes and emit the shared package."""
 
@@ -250,6 +257,7 @@ def export_pact_nerv_selector_v4_mlx_archive_bound_candidate_package(
             output_dir,
             repo_root=repo_root,
             emit_archive_bound_candidate_package=False,
+            decoder_codec=decoder_codec,
         )
     )
     root = (
@@ -286,6 +294,7 @@ def export_pact_nerv_selector_v4_mlx_archive_bound_candidate_package(
             "selector_codec": "run_length_varint_selector",
             "selector_palette_size": int(cfg.selector_palette_size),
             "num_pairs": int(cfg.num_pairs),
+            "decoder_codec": decoder_codec,
         },
         candidate_row_schema="pact_nerv_selector_v4_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=PACT_NERV_SELECTOR_V4_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,

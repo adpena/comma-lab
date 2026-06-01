@@ -465,9 +465,21 @@ def write_contest_runtime(
         shared_pkg = submission_dir / "src" / "tac" / "substrates" / "_shared"
         shared_pkg.mkdir(parents=True, exist_ok=True)
         (shared_pkg / "__init__.py").write_text("", encoding="utf-8")
-        shared_src = repo_root / "src" / "tac" / "substrates" / "_shared" / "inflate_runtime.py"
-        if shared_src.is_file():
-            shutil.copy2(shared_src, shared_pkg / "inflate_runtime.py")
+        for shared_name in (
+            "inflate_runtime.py",
+            "decoder_state_codec.py",
+            "int_stream_codec.py",
+        ):
+            shared_src = (
+                repo_root
+                / "src"
+                / "tac"
+                / "substrates"
+                / "_shared"
+                / shared_name
+            )
+            if shared_src.is_file():
+                shutil.copy2(shared_src, shared_pkg / shared_name)
 
     if vendor_extra_substrate_packages:
         for pkg_name, files in vendor_extra_substrate_packages:

@@ -122,6 +122,30 @@ def test_archive_pack_then_parse_roundtrip() -> None:
     assert arc.selector_bytes == selector_bytes
 
 
+def test_archive_pack_int8_decoder_roundtrip() -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(5)
+    model = PactNervSelectorV4Substrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents", "selectors")}
+    latents = sd["latents"].clone()
+    selector_bytes = b"\x00\x05\x05"
+
+    blob = pack_archive(
+        decoder_sd,
+        latents,
+        selector_bytes,
+        _smoke_meta(cfg),
+        palette_size=16,
+        decoder_codec="int8_mixed",
+    )
+    arc = parse_archive(blob)
+
+    assert arc.decoder_state_dict.keys() == decoder_sd.keys()
+    assert arc.meta["_decoder_state_codec"]["codec"] == "int8_mixed"
+    assert arc.selector_bytes == selector_bytes
+
+
 def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> None:
     import json
 
@@ -159,6 +183,16 @@ def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> 
     assert archive_path.is_file()
     assert len(archive_sha) == 64
     assert archive_bytes > 0
+    assert (
+        tmp_path
+        / "export"
+        / "submission"
+        / "src"
+        / "tac"
+        / "substrates"
+        / "_shared"
+        / "decoder_state_codec.py"
+    ).is_file()
     assert payload["family"] == "pact_nerv"
     spine = payload["manifest"]["representation_spine"]
     assert spine["source"]["bytes"] == archive_bytes

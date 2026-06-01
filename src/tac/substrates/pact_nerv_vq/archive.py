@@ -24,14 +24,111 @@ sizes up to 65535 supported).
 
 from __future__ import annotations
 
-import io
 import json
-import pickle
 import struct
 from dataclasses import dataclass
 
-import brotli  # type: ignore[import-not-found]
 import torch
+
+try:
+    from tac.substrates._shared.decoder_state_codec import (
+        decoder_state_codec_stats,
+        deserialize_decoder_state_dict,
+        serialize_decoder_state_dict,
+    )
+    from tac.substrates._shared.int_stream_codec import (
+        decode_uint_stream,
+        encode_uint_stream,
+        int_stream_codec_stats,
+    )
+except ModuleNotFoundError:  # pragma: no cover - protects older vendored runtimes.
+    import io
+    import pickle
+
+    import brotli  # type: ignore[import-not-found]
+    import numpy as np
+
+    class _FallbackStats:
+        def __init__(self, *, mode: str, size: int) -> None:
+            self.mode = mode
+            self.size = size
+
+        def as_dict(self) -> dict[str, object]:
+            return {
+                "codec": self.mode,
+                "mode": self.mode,
+                "payload_bytes": self.size,
+                "envelope_bytes": 0,
+                "legacy_fallback": True,
+            }
+
+    def serialize_decoder_state_dict(
+        state_dict: dict[str, torch.Tensor],
+        *,
+        codec: str = "fp16_brotli_legacy",
+    ) -> bytes:
+        if codec not in {"fp16_brotli_legacy", "legacy"}:
+            raise RuntimeError(
+                "vendored runtime lacks decoder_state_codec.py; only legacy "
+                "fp16_brotli archives can be written"
+            )
+        buf = io.BytesIO()
+        pickle.dump(
+            {
+                name: tensor.detach().to("cpu", dtype=torch.float16).contiguous()
+                for name, tensor in state_dict.items()
+            },
+            buf,
+            protocol=4,
+        )
+        return bytes(brotli.compress(buf.getvalue(), quality=9))
+
+    def deserialize_decoder_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+        sd = pickle.loads(brotli.decompress(blob))
+        if not isinstance(sd, dict):
+            raise ValueError("decoder_state_dict legacy blob did not unpickle to a dict")
+        return sd
+
+    def decoder_state_codec_stats(blob: bytes) -> _FallbackStats:
+        return _FallbackStats(mode="fp16_brotli_legacy", size=len(blob))
+
+    def encode_uint_stream(
+        values: object,
+        *,
+        mode: str = "raw_uint16_legacy",
+        max_value: int | None = None,
+    ) -> bytes:
+        if mode not in {"raw_u16_legacy", "raw_uint16_legacy", "u16_legacy"}:
+            raise RuntimeError(
+                "vendored runtime lacks int_stream_codec.py; only raw_uint16 "
+                "legacy streams can be written"
+            )
+        arr = np.asarray(values, dtype=np.int64)
+        if arr.size and int(arr.min()) < 0:
+            raise ValueError("integer stream contains negative values")
+        if arr.size and int(arr.max()) > 0xFFFF:
+            raise ValueError("raw_uint16 legacy stream cannot encode > 65535")
+        if max_value is not None and arr.size and int(arr.max()) > int(max_value):
+            raise ValueError("integer stream exceeds declared max_value")
+        return arr.astype(np.uint16).tobytes()
+
+    def decode_uint_stream(
+        blob: bytes,
+        *,
+        count: int | None = None,
+        max_value: int | None = None,
+    ) -> np.ndarray:
+        if count is None:
+            raise ValueError("raw_uint16 legacy stream decode requires count")
+        arr = np.frombuffer(blob, dtype=np.uint16).astype(np.int64)
+        if int(arr.size) != int(count):
+            raise ValueError(f"decoded integer stream count {arr.size} != {count}")
+        if max_value is not None and arr.size and int(arr.max()) > int(max_value):
+            raise ValueError("decoded integer stream exceeds declared max_value")
+        return arr
+
+    def int_stream_codec_stats(blob: bytes, *, count: int | None = None) -> _FallbackStats:
+        return _FallbackStats(mode="raw_uint16_legacy", size=len(blob))
 
 PVQ_MAGIC: bytes = b"PVQ\x00"
 PVQ_SCHEMA_VERSION: int = 1
@@ -39,9 +136,6 @@ PVQ_SCHEMA_VERSION: int = 1
 PVQ_HEADER_FMT: str = "<4sBHHHIIII"
 PVQ_HEADER_SIZE: int = struct.calcsize(PVQ_HEADER_FMT)
 assert PVQ_HEADER_SIZE == 27, "PVQ header size invariant"
-
-BROTLI_QUALITY: int = 9
-
 
 @dataclass(frozen=True)
 class PactNervVqArchive:
@@ -54,24 +148,19 @@ class PactNervVqArchive:
     """(num_pairs,) uint16 codebook indices."""
     meta: dict[str, object]
     schema_version: int
+    indices_codec: str = "raw_uint16_legacy"
 
 
-def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
-    buf = io.BytesIO()
-    sd_cpu = {
-        k: v.detach().to("cpu", dtype=torch.float16).contiguous()
-        for k, v in sd.items()
-    }
-    pickle.dump(sd_cpu, buf, protocol=4)
-    return bytes(brotli.compress(buf.getvalue(), quality=BROTLI_QUALITY))
+def _serialize_state_dict(
+    sd: dict[str, torch.Tensor],
+    *,
+    codec: str = "fp16_brotli_legacy",
+) -> bytes:
+    return serialize_decoder_state_dict(sd, codec=codec)
 
 
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
-    raw = brotli.decompress(blob)
-    sd = pickle.loads(raw)
-    if not isinstance(sd, dict):
-        raise ValueError("decoder_state_dict blob did not unpickle to a dict")
-    return sd
+    return deserialize_decoder_state_dict(blob)
 
 
 def _quantize_tensor_to_int16(
@@ -103,6 +192,8 @@ def pack_archive(
     meta: dict[str, object],
     *,
     schema_version: int = PVQ_SCHEMA_VERSION,
+    decoder_codec: str = "fp16_brotli_legacy",
+    indices_codec: str = "raw_uint16_legacy",
 ) -> bytes:
     if schema_version != PVQ_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {schema_version}")
@@ -129,14 +220,25 @@ def pack_archive(
     q_codebook, cb_scale, cb_zp = _quantize_tensor_to_int16(codebook)
     codebook_bytes = q_codebook.contiguous().numpy().tobytes()
 
-    indices_uint16 = indices.to(torch.int64).clamp(0, 0xFFFF).numpy().astype("uint16")
-    indices_bytes = indices_uint16.tobytes()
+    indices_values = indices.to(torch.int64).cpu().numpy()
+    indices_bytes = encode_uint_stream(
+        indices_values,
+        mode=indices_codec,
+        max_value=codebook_size - 1,
+    )
 
-    decoder_blob = _serialize_state_dict(decoder_state_dict)
+    decoder_blob = _serialize_state_dict(decoder_state_dict, codec=decoder_codec)
 
     meta_with_quant = dict(meta)
     meta_with_quant["_codebook_quant_scale"] = float(cb_scale)
     meta_with_quant["_codebook_quant_zero_point"] = float(cb_zp)
+    meta_with_quant["_decoder_state_codec"] = decoder_state_codec_stats(
+        decoder_blob
+    ).as_dict()
+    meta_with_quant["_indices_codec"] = int_stream_codec_stats(
+        indices_bytes,
+        count=num_pairs,
+    ).as_dict()
     meta_bytes = json.dumps(
         meta_with_quant, separators=(",", ":"), sort_keys=True
     ).encode("utf-8")
@@ -182,12 +284,6 @@ def parse_archive(blob: bytes) -> PactNervVqArchive:
         raise ValueError(
             f"codebook_len {codebook_len} != codebook_size*latent_dim*2 = {expected_codebook_bytes}"
         )
-    expected_indices_bytes = num_pairs * 2
-    if indices_len != expected_indices_bytes:
-        raise ValueError(
-            f"indices_len {indices_len} != num_pairs*2 = {expected_indices_bytes}"
-        )
-
     end_header = PVQ_HEADER_SIZE
     end_decoder = end_header + decoder_len
     end_codebook = end_decoder + codebook_len
@@ -210,12 +306,22 @@ def parse_archive(blob: bytes) -> PactNervVqArchive:
     q_codebook = torch.from_numpy(
         np.frombuffer(codebook_blob, dtype=np.int16).copy()
     ).view(codebook_size, latent_dim)
-    indices = torch.from_numpy(
-        np.frombuffer(indices_blob, dtype=np.uint16).copy().astype("int64")
-    ).view(num_pairs).to(torch.long)
 
     cb_scale = float(meta.pop("_codebook_quant_scale"))
     cb_zp = float(meta.pop("_codebook_quant_zero_point"))
+    indices_codec_meta = meta.pop("_indices_codec", None)
+    indices_codec = (
+        str(indices_codec_meta.get("mode", "raw_uint16_legacy"))
+        if isinstance(indices_codec_meta, dict)
+        else "raw_uint16_legacy"
+    )
+    indices = torch.from_numpy(
+        decode_uint_stream(
+            indices_blob,
+            count=num_pairs,
+            max_value=codebook_size - 1,
+        ).astype("int64")
+    ).view(num_pairs).to(torch.long)
     codebook = _dequantize_tensor(q_codebook, cb_scale, cb_zp)
 
     return PactNervVqArchive(
@@ -224,4 +330,5 @@ def parse_archive(blob: bytes) -> PactNervVqArchive:
         indices=indices,
         meta=meta,
         schema_version=int(version),
+        indices_codec=indices_codec,
     )

@@ -221,6 +221,20 @@ def test_write_contest_runtime_emits_compliant_pair(tmp_path):
     assert (sub / "src" / "tac" / "substrates" / "pact_nerv_ia3" / "inflate.py").is_file()
 
 
+def test_write_contest_runtime_vendors_shared_codec_helpers(tmp_path):
+    sub = tmp_path / "submission"
+    write_contest_runtime(
+        sub,
+        substrate_pkg_name="pact_nerv_vq",
+        repo_root=__import__("pathlib").Path(__file__).resolve().parents[5],
+        vendor_shared_inflate_runtime=True,
+    )
+    shared = sub / "src" / "tac" / "substrates" / "_shared"
+    assert (shared / "inflate_runtime.py").is_file()
+    assert (shared / "decoder_state_codec.py").is_file()
+    assert (shared / "int_stream_codec.py").is_file()
+
+
 def test_build_archive_zip_deterministic(tmp_path):
     sub = tmp_path / "submission"
     write_contest_runtime(
