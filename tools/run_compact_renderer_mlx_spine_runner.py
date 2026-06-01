@@ -33,6 +33,9 @@ ensure_repo_imports(REPO_ROOT)
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
 )
+from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (  # noqa: E402
+    build_score_aware_carrier_training_plan,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
 from tac.substrates.hprc.representation_spine import (  # noqa: E402
     build_pr95_hnerv_spine_from_archive,
@@ -168,6 +171,20 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
             "advisory HiNeRV HIV1 packets show super-small-rate-by-design is "
             "structural; distortion remains the unsolved score-aware fit axis"
         ),
+        "score_aware_training_evidence": {
+            "schema": "compact_carrier_advisory_evidence.v1",
+            "archive_bytes": 40_491,
+            "archive_pair_count": 2,
+            "projected_archive_bytes_600pair": 36_000,
+            "d_seg": 0.508,
+            "advisory_score": 92.84,
+            "g3_adjoint_exact": True,
+            "latent_jvp_norm_max": 1.0e-4,
+            "linf_delta_vs_l2": 0.31,
+            "modelsize_knob_present": True,
+            "evidence_axis": "[macOS-MLX research-signal]",
+            "authority": "advisory_planning_only",
+        },
         "distortion_fit_blocker": (
             "local per-pixel-MSE HiNeRV smokes remain far from scorer-faithful "
             "SegNet/PoseNet distortion, so cheap bytes alone cannot promote"
@@ -309,6 +326,21 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "next_action": "implement_residual_token_vq_as_charged_section_not_hidden_sidecar",
         "execution_scope": "not executable until residual-token adapter lands",
     },
+}
+
+_SCORE_AWARE_STACK_READINESS_FALSE: dict[str, bool] = {
+    "real_segnet_teacher_ready": False,
+    "real_posenet_teacher_ready": False,
+    "eval_roundtrip_ready": False,
+    "ema_ready": False,
+    "pr95_curriculum_ready": False,
+    "adamw_ready": False,
+    "muon_ready": False,
+    "coder_aware_regularization_ready": False,
+    "sigma_noise_qat_ready": False,
+    "quant_noise_qat_ready": False,
+    "nvrc_learned_quant_ready": False,
+    "byte_closed_archive_export_ready": False,
 }
 
 PR95_HNERV_CONTROL_ARM_EXACT_BLOCKERS: tuple[str, ...] = (
@@ -1943,6 +1975,9 @@ def _target_family_rows() -> list[dict[str, Any]]:
                 "allowed_enhancers": backend.get("allowed_enhancers", []),
                 "rate_axis_evidence": backend.get("rate_axis_evidence"),
                 "distortion_fit_blocker": backend.get("distortion_fit_blocker"),
+                "score_aware_carrier_training_plan": (
+                    _score_aware_carrier_training_plan(family, backend)
+                ),
                 **FALSE_AUTHORITY,
             }
         )
@@ -1995,6 +2030,9 @@ def _compact_base_campaign_rows(
                     "allowed_enhancers": backend.get("allowed_enhancers", []),
                     "rate_axis_evidence": backend.get("rate_axis_evidence"),
                     "distortion_fit_blocker": backend.get("distortion_fit_blocker"),
+                    "score_aware_carrier_training_plan": (
+                        _score_aware_carrier_training_plan(family, backend)
+                    ),
                     "execution_scope": backend["execution_scope"],
                     "byte_policy": (
                         "train/export only charged weights, latents, selectors, "
@@ -2013,6 +2051,22 @@ def _compact_base_campaign_rows(
                 }
             )
     return rows
+
+
+def _score_aware_carrier_training_plan(
+    family: str,
+    backend: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the fail-closed score-aware route consumed by compact queues."""
+
+    evidence = dict(_SCORE_AWARE_STACK_READINESS_FALSE)
+    evidence.update(backend.get("score_aware_training_evidence") or {})
+    evidence.update(backend.get("score_aware_training_readiness") or {})
+    return build_score_aware_carrier_training_plan(
+        evidence,
+        carrier_id=family,
+        baseline_id="pr95_hnerv",
+    )
 
 
 def _run_pact_nerv_vq_mlx_smoke(

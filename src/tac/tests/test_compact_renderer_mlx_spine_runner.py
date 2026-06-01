@@ -170,8 +170,27 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert "cheap bytes alone cannot promote" in families["hi_nerv"][
         "distortion_fit_blocker"
     ]
+    hinerv_plan = families["hi_nerv"]["score_aware_carrier_training_plan"]
+    assert hinerv_plan["planner_action"] == (
+        "run_score_aware_decoder_weight_training_full_main"
+    )
+    assert hinerv_plan["carrier_fit_status"] == "unusable"
+    assert hinerv_plan["allocator_target_surface"] == "decoder_weights"
+    assert hinerv_plan["score_claim"] is False
+    assert hinerv_plan["ready_for_exact_eval_dispatch"] is False
+    assert "carrier_fit_unusable_d_seg" in hinerv_plan["dispatch_blockers"]
+    assert (
+        "latent_posthoc_allocator_demoted_low_leverage"
+        in hinerv_plan["dispatch_blockers"]
+    )
     assert families["snerv"]["status"] == "migration_required"
     assert families["snerv"]["stack_role"] == "primary_carrier"
+    assert families["snerv"]["score_aware_carrier_training_plan"][
+        "score_aware_training_ready"
+    ] is False
+    assert "missing_training_stack:real_segnet_teacher" in families["snerv"][
+        "score_aware_carrier_training_plan"
+    ]["dispatch_blockers"]
     assert (
         "sr_nerv_lowres_encode_superresolve_resolution_deadzone"
         in families["snerv"]["allowed_enhancers"]
@@ -225,6 +244,14 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     assert "build_hi_nerv_spine_from_archive" in rows[("hi_nerv", 178_000)][
         "archive_exporter"
     ]
+    campaign_plan = rows[("hi_nerv", 178_000)][
+        "score_aware_carrier_training_plan"
+    ]
+    assert campaign_plan["planner_action"] == (
+        "run_score_aware_decoder_weight_training_full_main"
+    )
+    assert campaign_plan["linf_latent_posthoc_status"] == "demoted"
+    assert campaign_plan["promotion_eligible"] is False
     assert rows[("snerv", 178_000)]["route_status"] == (
         "migration_required_before_runner_execution"
     )
