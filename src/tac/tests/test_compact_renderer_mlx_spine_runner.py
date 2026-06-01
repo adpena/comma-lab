@@ -20,6 +20,7 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     adapt_pr95_mlx_report_to_spine,
     adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
+    execute_pact_nerv_selector_v4_mlx_smoke_and_adapt,
     execute_pr95_hnerv_mlx_scoreaware_and_adapt,
 )
 
@@ -148,6 +149,12 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         "execution_scope"
     ]
     assert families["pact_nerv_vq"]["status"] == "executable_mlx_backend_available"
+    assert families["pact_nerv_selector_v4"]["status"] == (
+        "executable_mlx_backend_available"
+    )
+    assert "pact_nerv_selector_v4" in families["pact_nerv_selector_v4"][
+        "trainer_entrypoint"
+    ]
     assert families["pvq_nerv"]["status"] == "executable_via_pact_nerv_vq_adapter"
     assert families["rnerv"]["status"] == "migration_required"
     assert report["promotion_eligible"] is False
@@ -178,7 +185,7 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         "queued_for_mlx_training_archive_export_receiver_proof"
     )
     assert rows[("pact_nerv_selector_v4", 178_000)]["route_status"] == (
-        "trainer_actuator_migration_required"
+        "queued_for_mlx_training_archive_export_receiver_proof"
     )
     assert rows[("boostnerv", 178_000)]["route_status"] == (
         "migration_required_before_runner_execution"
@@ -186,6 +193,11 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     assert rows[("rnerv", 178_000)]["trainer_entrypoint"] is None
     assert rows[("pact_nerv_vq", 178_000)]["score_claim"] is False
     assert rows[("pact_nerv_vq", 178_000)]["ready_for_exact_eval_dispatch"] is False
+    assert rows[("pact_nerv_selector_v4", 178_000)]["score_claim"] is False
+    assert (
+        rows[("pact_nerv_selector_v4", 178_000)]["ready_for_exact_eval_dispatch"]
+        is False
+    )
 
 
 def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
@@ -223,6 +235,29 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
         Path("hprc_queue_followup_report.json")
     ]
     assert args.allow_segnet_only_research is False
+
+
+def test_selector_v4_execute_parser_exposes_real_family_controls() -> None:
+    args = _parse_args(
+        [
+            "--execute-family",
+            "pact_nerv_selector_v4",
+            "--compact-selector-palette-size",
+            "32",
+            "--num-pairs",
+            "600",
+            "--segnet-distillation-weight",
+            "0.2",
+            "--pose-distillation-weight",
+            "0.4",
+        ]
+    )
+
+    assert args.execute_family == "pact_nerv_selector_v4"
+    assert args.compact_selector_palette_size == 32
+    assert args.num_pairs == 600
+    assert args.segnet_distillation_weight == 0.2
+    assert args.pose_distillation_weight == 0.4
 
 
 def test_pr95_hnerv_execute_parser_exposes_public_archive_seed() -> None:
@@ -512,3 +547,147 @@ def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(
         in out["blockers"]
     )
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in out["blockers"]
+
+
+def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive)
+        archive_sha = runner_mod._sha256_file(archive)
+        archive_bytes = archive.stat().st_size
+        receiver_dir = out / "receiver_proof"
+        receiver_dir.mkdir(parents=True, exist_ok=True)
+        receiver_proof = {
+            "schema": "pact_nerv_selector_v4_mlx_generated_receiver_proof.v1",
+            "proof_path": (
+                receiver_dir / "pact_nerv_selector_v4_mlx_receiver_proof.json"
+            ).as_posix(),
+            "archive_path": archive.as_posix(),
+            "archive_zip_path": archive.as_posix(),
+            "archive_sha256": archive_sha,
+            "archive_zip_sha256": archive_sha,
+            "runtime_consumption_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "receiver_proof_valid": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "exact_readiness_refusal": {
+                "schema": "exact_readiness_refusal.v1",
+                "ready": False,
+                "blockers": ["runtime_consumption_smoke_is_not_score_authority"],
+            },
+        }
+        Path(receiver_proof["proof_path"]).write_text(
+            json.dumps(receiver_proof, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        projection = {
+            "schema": "hprc_representation_spine_projection.v1",
+            "family": "pact_nerv",
+            "hprc_bin_bytes": 100,
+            "manifest": {
+                "representation_spine": {
+                    "schema": "hprc_representation_spine_manifest.v1",
+                    "family": "pact_nerv",
+                    "hprc_bin_bytes": 100,
+                    "source": {
+                        "kind": "pact_nerv_selector_v4_export_payload",
+                        "archive_zip_path": archive.as_posix(),
+                        "archive_zip_sha256": archive_sha,
+                        "bytes": archive_bytes,
+                        "sha256": archive_sha,
+                    },
+                    "manifest_extra": {
+                        "emitted_by": "export_pact_nerv_selector_v4_mlx_archive",
+                        "num_pairs": 600,
+                        "num_frames": 1200,
+                        "coverage_source": "test_selector_v4_execute_arm",
+                        "selector_codec": "run_length_varint_selector",
+                    },
+                    "sections": [
+                        {
+                            "name": "decoder_qw",
+                            "role": "charged_decoder_or_program_weights",
+                            "bytes": 60,
+                            "sha256": "a" * 64,
+                        },
+                        {
+                            "name": "latents_rc",
+                            "role": "charged_per_pair_latents",
+                            "bytes": 40,
+                            "sha256": "b" * 64,
+                        },
+                    ],
+                }
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        manifest = (
+            out / "hprc_representation_spine_pact_nerv_selector_v4_manifest.json"
+        )
+        runner_mod._write_json(manifest, projection)
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive_bytes,
+            "archive_sha256": archive_sha,
+            "substrate_artifact_metadata": {
+                "family": "pact_nerv_selector_v4",
+                "selector_codec": "run_length_varint_selector",
+            },
+        }
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_run_pact_nerv_selector_v4_mlx_smoke",
+        fake_train,
+    )
+
+    out = execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
+        output_dir=tmp_path / "run",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-5,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=8,
+        embed_dim=8,
+        selector_palette_size=16,
+        decoder_channel=8,
+        allow_overwrite=True,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "executed_pact_nerv_selector_v4_mlx_smoke_and_exported"
+    assert out["execute_family"] == "pact_nerv_selector_v4"
+    assert out["score_claim"] is False
+    assert out["promotion_eligible"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert out["selector_v4_archive_surface"]["selector_codec"] == (
+        "run_length_varint_selector"
+    )
+    assert out["score_aware_training"]["scorer_coupled_rd"][
+        "fixed_marginal_byte_price"
+    ] == "25/uncompressed_total"
+    assert out["projection_manifest_paths"]
+    assert out["receiver_proof_report_paths"]
+    assert Path(out["acquisition_report_path"]).is_file()
+    runner = json.loads(Path(out["bounded_runner_plan_path"]).read_text())
+    row = runner["selected_runner_rows"][0]
+    assert row["family"] == "pact_nerv"
+    assert row["receiver_proof_observed"] is True
+    assert row["receiver_proof_passed"] is True
+    assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
+    assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
+    assert "pact_nerv_selector_v4_spine_projection_manifest_missing" not in out[
+        "blockers"
+    ]

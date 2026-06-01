@@ -75,7 +75,7 @@ TARGET_FAMILIES = (
     "pact_nerv_selector_v4",
     "pact_nerv_vq",
 )
-EXECUTABLE_FAMILIES = ("pr95_hnerv", "pact_nerv_vq")
+EXECUTABLE_FAMILIES = ("pr95_hnerv", "pact_nerv_selector_v4", "pact_nerv_vq")
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
         "canonical_family": "pr95_hnerv",
@@ -119,16 +119,20 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     },
     "pact_nerv_selector_v4": {
         "canonical_family": "pact_nerv",
-        "backend_status": "archive_exporter_available_trainer_actuator_pending",
-        "trainer_kind": "selector_v4_mlx_renderer_available",
-        "trainer_entrypoint": "pending_runner_execute_family_pact_nerv_selector_v4",
+        "backend_status": "executable_mlx_backend_available",
+        "trainer_kind": "selector_v4_mlx_score_aware_harness",
+        "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family pact_nerv_selector_v4",
         "archive_exporter": (
             "tac.substrates.pact_nerv_selector_v4.archive_candidate."
             "export_pact_nerv_selector_v4_mlx_archive"
         ),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
-        "next_action": "wire_selector_v4_bundle_into_this_runner_or_import_existing_training_artifact",
-        "execution_scope": "archive exporter exists; trainer actuator migration pending",
+        "next_action": "train_mlx_export_psv4_archive_spine_receiver_proof_then_full_video_replay",
+        "execution_scope": (
+            "MLX advisory train/export/archive candidate lane; PSV4 selector "
+            "primitive is charged at archive encode time and remains "
+            "false-authority until full replay plus exact CPU/CUDA gates close"
+        ),
     },
     "rnerv": {
         "canonical_family": "rnerv",
@@ -184,6 +188,40 @@ PR95_HNERV_CONTROL_ARM_EXACT_BLOCKERS: tuple[str, ...] = (
 
 class CompactRendererMlxSpineRunnerError(ValueError):
     """Raised when an MLX compact renderer row cannot enter the spine."""
+
+
+def _scorer_coupled_rd_metadata() -> dict[str, Any]:
+    """Return durable scorer-domain facts for advisory compact-run metadata."""
+
+    return {
+        "schema": "contest_scorer_coupled_rd_allocation_facts.v1",
+        "score_formula": (
+            "100*d_seg + sqrt(10*d_pose) + "
+            "25*(archive_zip_bytes/uncompressed_total)"
+        ),
+        "fixed_marginal_byte_price": "25/uncompressed_total",
+        "segnet_domain": {
+            "pair_frame": 1,
+            "domain": "last_frame_only",
+            "num_classes": 5,
+            "input_size": [384, 512],
+        },
+        "posenet_domain": {
+            "pair_frames": [0, 1],
+            "pose_dims_scored": 6,
+            "input_kind": "yuv6_pair",
+            "input_size": [384, 512],
+        },
+        "gradient_note": (
+            "Pose Jacobian probes must use differentiable rgb_to_yuv6 "
+            "roundtrip; upstream clamp is scorer-forward authority only."
+        ),
+        "allocation_rule": (
+            "spend a charged bit only when measured scorer-value-per-bit "
+            "exceeds fixed_marginal_byte_price"
+        ),
+        "authority": "planning_metadata_only_not_score_authority",
+    }
 
 
 def adapt_pr95_mlx_report_to_spine(
@@ -1475,6 +1513,192 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     return {**final, "report_path": path.as_posix()}
 
 
+def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
+    *,
+    output_dir: str | Path,
+    num_pairs: int,
+    epochs: int,
+    batch_pair_indices_per_step: int,
+    learning_rate: float,
+    source_video_path: str | Path,
+    hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
+    latent_dim: int = 8,
+    embed_dim: int = 8,
+    selector_palette_size: int = 16,
+    decoder_channel: int = 8,
+    ema_decay: float = 0.9,
+    segnet_distillation_weight: float = 0.0,
+    pose_distillation_weight: float = 0.0,
+    segnet_distillation_objective: str = "kl_t2",
+    distillation_temperature: float = 2.0,
+    segnet_tau_boundary: float = 1.0,
+    segnet_hinge_margin: float = 1.0,
+    distillation_device: str = "cpu",
+    allow_segnet_only_research: bool = False,
+    random_seed: int = 0,
+    allow_overwrite: bool = False,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Train/export a tiny real-video PACT-NeRV-SELECTOR-V4 candidate."""
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+        raise CompactRendererMlxSpineRunnerError(
+            f"output dir is non-empty; pass --overwrite: {out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+    try:
+        artifact = _run_pact_nerv_selector_v4_mlx_smoke(
+            output_dir=out / "pact_nerv_selector_v4_mlx_training",
+            num_pairs=num_pairs,
+            epochs=epochs,
+            batch_pair_indices_per_step=batch_pair_indices_per_step,
+            learning_rate=learning_rate,
+            source_video_path=source_video_path,
+            latent_dim=latent_dim,
+            embed_dim=embed_dim,
+            selector_palette_size=selector_palette_size,
+            decoder_channel=decoder_channel,
+            ema_decay=ema_decay,
+            segnet_distillation_weight=segnet_distillation_weight,
+            pose_distillation_weight=pose_distillation_weight,
+            segnet_distillation_objective=segnet_distillation_objective,
+            distillation_temperature=distillation_temperature,
+            segnet_tau_boundary=segnet_tau_boundary,
+            segnet_hinge_margin=segnet_hinge_margin,
+            distillation_device=distillation_device,
+            allow_segnet_only_research=allow_segnet_only_research,
+            random_seed=random_seed,
+            repo_root=root,
+        )
+    except Exception as exc:
+        blocker_report = _base_report(
+            output_dir=out,
+            mode="pact_nerv_selector_v4_mlx_smoke_failed",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        blocker_report.update(
+            {
+                "execute_family": "pact_nerv_selector_v4",
+                "failure": repr(exc),
+                "blockers": ["pact_nerv_selector_v4_mlx_smoke_or_export_failed"],
+            }
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, blocker_report)
+        return {**blocker_report, "report_path": path.as_posix()}
+
+    artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
+    archive_path = artifact_dict.get("archive_path")
+    training_dir = out / "pact_nerv_selector_v4_mlx_training"
+    spine_manifest = (
+        training_dir / "hprc_representation_spine_pact_nerv_selector_v4_manifest.json"
+    )
+    receiver_proof_path = (
+        training_dir
+        / "receiver_proof"
+        / "pact_nerv_selector_v4_mlx_receiver_proof.json"
+    )
+    projection_paths = [spine_manifest] if spine_manifest.is_file() else []
+    receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
+    acquisition_path = out / "hprc_spine_acquisition_report.json"
+    runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
+    selected_runner_rows: list[dict[str, Any]] = []
+    blockers: list[Any] = [
+        "full_video_mlx_scorer_replay_not_attached",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    if int(num_pairs) < 600:
+        blockers.append("partial_pair_coverage_not_promotion_comparable")
+    if projection_paths:
+        acquisition = build_spine_acquisition_report(
+            projection_manifest_paths=projection_paths,
+            hard_byte_ceilings=hard_byte_ceilings,
+        )
+        _write_json(acquisition_path, acquisition)
+        runner_plan = build_spine_bounded_runner_plan(
+            acquisition_report_path=acquisition_path,
+            receiver_proof_report_paths=receiver_proof_paths,
+            hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
+            repo_root=root,
+        )
+        write_spine_bounded_runner_plan(
+            output_path=runner_plan_path,
+            plan=runner_plan,
+            allow_overwrite=True,
+        )
+        selected_runner_rows = list(runner_plan.get("selected_runner_rows") or [])
+        blockers.extend(runner_plan.get("blockers") or [])
+    else:
+        blockers.append("pact_nerv_selector_v4_spine_projection_manifest_missing")
+    if archive_path is None:
+        blockers.append("pact_nerv_selector_v4_archive_export_missing")
+
+    final = _base_report(
+        output_dir=out,
+        mode="executed_pact_nerv_selector_v4_mlx_smoke_and_exported",
+        hard_byte_ceilings=hard_byte_ceilings,
+        repo_root=root,
+    )
+    final.update(
+        {
+            "execute_family": "pact_nerv_selector_v4",
+            "num_pairs": int(num_pairs),
+            "coverage_valid_for_base_comparison": int(num_pairs) >= 600,
+            "training_artifact": artifact_dict,
+            "archive_path": archive_path,
+            "archive_bytes": artifact_dict.get("archive_bytes"),
+            "archive_sha256": artifact_dict.get("archive_sha256"),
+            "ema_decay": float(ema_decay),
+            "score_aware_training": {
+                "schema": "compact_pact_nerv_selector_v4_score_aware_training.v1",
+                "segnet_distillation_weight": float(segnet_distillation_weight),
+                "pose_distillation_weight": float(pose_distillation_weight),
+                "segnet_distillation_objective": segnet_distillation_objective,
+                "distillation_temperature": float(distillation_temperature),
+                "segnet_tau_boundary": float(segnet_tau_boundary),
+                "segnet_hinge_margin": float(segnet_hinge_margin),
+                "distillation_device": distillation_device,
+                "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            "selector_v4_archive_surface": {
+                "schema": "pact_nerv_selector_v4_archive_surface.v1",
+                "selector_codec": "run_length_varint_selector",
+                "selector_palette_size": int(selector_palette_size),
+                "archive_exporter": (
+                    "tac.substrates.pact_nerv_selector_v4.archive_candidate."
+                    "export_pact_nerv_selector_v4_mlx_archive"
+                ),
+                "primitive_timing": "archive_encode_time_not_training_forward_pass",
+            },
+            "projection_manifest_paths": [path.as_posix() for path in projection_paths],
+            "receiver_proof_report_paths": [
+                path.as_posix() for path in receiver_proof_paths
+            ],
+            "hprc_queue_followup_report_paths": [
+                _resolve(path, base=root).as_posix()
+                for path in hprc_queue_followup_report_paths
+            ],
+            "acquisition_report_path": (
+                acquisition_path.as_posix() if acquisition_path.is_file() else None
+            ),
+            "bounded_runner_plan_path": (
+                runner_plan_path.as_posix() if runner_plan_path.is_file() else None
+            ),
+            "selected_runner_rows": selected_runner_rows,
+            "blockers": _dedupe(blockers),
+        }
+    )
+    path = out / "compact_renderer_mlx_spine_runner_report.json"
+    _write_json(path, final)
+    return {**final, "report_path": path.as_posix()}
+
+
 def _base_report(
     *,
     output_dir: Path,
@@ -1794,6 +2018,209 @@ def _run_pact_nerv_vq_mlx_smoke(
     )
 
 
+def _run_pact_nerv_selector_v4_mlx_smoke(
+    *,
+    output_dir: Path,
+    num_pairs: int,
+    epochs: int,
+    batch_pair_indices_per_step: int,
+    learning_rate: float,
+    source_video_path: str | Path,
+    latent_dim: int,
+    embed_dim: int,
+    selector_palette_size: int,
+    decoder_channel: int,
+    ema_decay: float,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    segnet_distillation_objective: str,
+    distillation_temperature: float,
+    segnet_tau_boundary: float,
+    segnet_hinge_margin: float,
+    distillation_device: str,
+    allow_segnet_only_research: bool,
+    random_seed: int,
+    repo_root: Path,
+) -> Any:
+    from tac.substrates._shared.mlx_score_aware import (
+        RendererBundle,
+        build_mlx_posenet_pair_teacher,
+        build_mlx_segnet_pair_teacher,
+        decode_mlx_targets,
+        run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
+    )
+    from tac.substrates.pact_nerv_selector_v4.architecture import (
+        PactNervSelectorV4Config,
+    )
+    from tac.substrates.pact_nerv_selector_v4.archive_candidate import (
+        export_pact_nerv_selector_v4_mlx_archive,
+    )
+    from tac.substrates.pact_nerv_selector_v4.mlx_renderer import (
+        PactNervSelectorV4SubstrateMLX,
+    )
+
+    pairs = int(num_pairs)
+    if pairs < 1:
+        raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
+    if int(selector_palette_size) < 2:
+        raise CompactRendererMlxSpineRunnerError(
+            "selector_palette_size must be >= 2"
+        )
+    if segnet_distillation_weight < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "segnet_distillation_weight must be >= 0"
+        )
+    if pose_distillation_weight < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_weight must be >= 0"
+        )
+    if (
+        segnet_distillation_weight > 0.0
+        and pose_distillation_weight <= 0.0
+        and not allow_segnet_only_research
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "SegNet-bound selector-v4 compact training must also bind PoseNet. "
+            "Pass --pose-distillation-weight > 0, or explicitly pass "
+            "--allow-segnet-only-research for a false-authority SegNet-axis probe."
+        )
+    cfg = PactNervSelectorV4Config(
+        latent_dim=int(latent_dim),
+        embed_dim=int(embed_dim),
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=tuple([int(decoder_channel)] * 7),
+        num_upsample_blocks=7,
+        num_pairs=pairs,
+        output_height=384,
+        output_width=512,
+        selector_palette_size=int(selector_palette_size),
+    )
+    target_rgb_0, target_rgb_1 = decode_mlx_targets(
+        source_video_path,
+        num_pairs=pairs,
+        output_height=int(cfg.output_height),
+        output_width=int(cfg.output_width),
+    )
+    model = PactNervSelectorV4SubstrateMLX(cfg)
+
+    def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
+        return export_pact_nerv_selector_v4_mlx_archive(
+            model_obj,
+            archive_output_dir,
+            repo_root=repo_root,
+            emit_archive_bound_candidate_package=True,
+            retain_receiver_proof_output=False,
+            mlx_triage_argv=[
+                "tools/run_compact_renderer_mlx_spine_runner.py",
+                "--execute-family",
+                "pact_nerv_selector_v4",
+            ],
+        )
+
+    artifact_metadata = {
+        "schema": "compact_renderer_pact_nerv_selector_v4_mlx_runner_metadata.v1",
+        "family": "pact_nerv_selector_v4",
+        "num_pairs": pairs,
+        "full_video_pairs_required_for_promotion": 600,
+        "archive_exporter": (
+            "tac.substrates.pact_nerv_selector_v4.archive_candidate."
+            "export_pact_nerv_selector_v4_mlx_archive"
+        ),
+        "selector_codec": "run_length_varint_selector",
+        "selector_palette_size": int(selector_palette_size),
+        "primitive_timing": "archive_encode_time_not_training_forward_pass",
+        "score_aware_training": {
+            "schema": "compact_pact_nerv_selector_v4_score_aware_training.v1",
+            "segnet_distillation_weight": float(segnet_distillation_weight),
+            "pose_distillation_weight": float(pose_distillation_weight),
+            "segnet_distillation_objective": segnet_distillation_objective,
+            "distillation_temperature": float(distillation_temperature),
+            "segnet_tau_boundary": float(segnet_tau_boundary),
+            "segnet_hinge_margin": float(segnet_hinge_margin),
+            "distillation_device": distillation_device,
+            "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
+        },
+        "score_authority": "false_macos_mlx_research_signal",
+    }
+    bundle_kwargs: dict[str, Any] = {
+        "model": model,
+        "target_rgb_0": target_rgb_0,
+        "target_rgb_1": target_rgb_1,
+        "num_pairs": pairs,
+        "forward_convention": "call_b2chw_255",
+        "export_archive_fn": _export_archive,
+        "substrate_artifact_metadata": artifact_metadata,
+    }
+    teacher_probe_bundle = RendererBundle(**bundle_kwargs)
+    scorer_teacher = None
+    learnable_student_head = None
+    pose_scorer_teacher = None
+    learnable_pose_student_head = None
+    if segnet_distillation_weight > 0.0:
+        scorer_teacher = build_mlx_segnet_pair_teacher(
+            teacher_probe_bundle,
+            upstream_dir=repo_root / "upstream",
+            device=distillation_device,
+        )
+        learnable_student_head = build_learnable_student_head(
+            num_classes=int(scorer_teacher.num_classes),
+            seed=int(random_seed),
+        )
+    if pose_distillation_weight > 0.0:
+        pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+            teacher_probe_bundle,
+            upstream_dir=repo_root / "upstream",
+            device=distillation_device,
+        )
+        learnable_pose_student_head = build_learnable_pose_student_head(
+            pose_dims=int(pose_scorer_teacher.pose_dims),
+            seed=int(random_seed) + 1,
+        )
+    bundle = RendererBundle(
+        **bundle_kwargs,
+        distillation_weight=float(segnet_distillation_weight),
+        scorer_teacher=scorer_teacher,
+        learnable_student_head=learnable_student_head,
+        distillation_temperature=float(distillation_temperature),
+        segnet_distillation_objective=segnet_distillation_objective,
+        segnet_tau_boundary=float(segnet_tau_boundary),
+        segnet_hinge_margin=float(segnet_hinge_margin),
+        distillation_num_classes=(
+            int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
+        ),
+        pose_distillation_weight=float(pose_distillation_weight),
+        pose_scorer_teacher=pose_scorer_teacher,
+        learnable_pose_student_head=learnable_pose_student_head,
+        pose_dims=int(pose_scorer_teacher.pose_dims)
+        if pose_scorer_teacher is not None
+        else 6,
+        allow_segnet_only_research=bool(allow_segnet_only_research),
+    )
+    return run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="compact_runner_pact_nerv_selector_v4_mlx",
+        lane_id="lane_compact_renderer_mlx_spine_runner_selector_v4_20260601",
+        output_dir=output_dir,
+        epochs=int(epochs),
+        batch_pair_indices_per_step=max(1, int(batch_pair_indices_per_step)),
+        learning_rate=float(learning_rate),
+        ema_decay=float(ema_decay),
+        seed=int(random_seed),
+        checkpoint_interval_epochs=max(1, int(epochs)),
+        notes=(
+            "Compact renderer MLX spine runner PACT-NeRV-SELECTOR-V4 smoke "
+            "using real contest video targets, selector-v4 PSV4 archive export, "
+            "receiver proof, and false-authority MLX evidence only."
+        ),
+    )
+
+
 def _coverage_manifest_extra(report: dict[str, Any]) -> dict[str, Any]:
     frames = _positive_int(report.get("source_video_frame_count"))
     if frames is None:
@@ -1952,6 +2379,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--compact-latent-dim", default=8, type=int)
     parser.add_argument("--compact-embed-dim", default=8, type=int)
     parser.add_argument("--compact-codebook-size", default=16, type=int)
+    parser.add_argument("--compact-selector-palette-size", default=16, type=int)
     parser.add_argument("--compact-decoder-channel", default=8, type=int)
     parser.add_argument(
         "--compact-ema-decay",
@@ -2166,6 +2594,33 @@ def main(argv: list[str] | None = None) -> int:
             latent_dim=args.compact_latent_dim,
             embed_dim=args.compact_embed_dim,
             codebook_size=args.compact_codebook_size,
+            decoder_channel=args.compact_decoder_channel,
+            ema_decay=args.compact_ema_decay,
+            segnet_distillation_weight=args.segnet_distillation_weight,
+            pose_distillation_weight=args.pose_distillation_weight,
+            segnet_distillation_objective=args.segnet_distillation_objective,
+            distillation_temperature=args.distillation_temperature,
+            segnet_tau_boundary=args.segnet_tau_boundary,
+            segnet_hinge_margin=args.segnet_hinge_margin,
+            distillation_device=args.distillation_device,
+            allow_segnet_only_research=args.allow_segnet_only_research,
+            random_seed=args.random_seed,
+            allow_overwrite=args.overwrite,
+            repo_root=args.repo_root,
+        )
+    elif args.execute_family == "pact_nerv_selector_v4":
+        report = execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
+            output_dir=output_dir,
+            num_pairs=args.num_pairs,
+            epochs=args.epochs,
+            batch_pair_indices_per_step=args.batch_pairs,
+            learning_rate=args.learning_rate,
+            source_video_path=args.source_video_path,
+            hard_byte_ceilings=ceilings,
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            latent_dim=args.compact_latent_dim,
+            embed_dim=args.compact_embed_dim,
+            selector_palette_size=args.compact_selector_palette_size,
             decoder_channel=args.compact_decoder_channel,
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,

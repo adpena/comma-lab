@@ -160,9 +160,15 @@ def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> 
     assert len(archive_sha) == 64
     assert archive_bytes > 0
     assert payload["family"] == "pact_nerv"
-    assert payload["manifest"]["representation_spine"]["manifest_extra"][
-        "source_payload_kind"
-    ] == "pact_nerv_selector_v4_psv4"
+    spine = payload["manifest"]["representation_spine"]
+    assert spine["source"]["bytes"] == archive_bytes
+    assert spine["source"]["sha256"] == archive_sha
+    assert spine["source"]["archive_zip_bytes"] == archive_bytes
+    manifest_extra = spine["manifest_extra"]
+    assert manifest_extra["source_payload_kind"] == "pact_nerv_selector_v4_psv4"
+    assert manifest_extra["num_pairs"] == cfg.num_pairs
+    assert manifest_extra["num_frames"] == cfg.num_pairs * 2
+    assert manifest_extra["coverage_source"] == "pact_nerv_selector_v4_mlx_config"
 
 
 def test_archive_header_size_invariant_is_26_bytes() -> None:
