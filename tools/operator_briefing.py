@@ -99,6 +99,8 @@ PR95_MLX_MATRIX_MANIFEST_NAME = "matrix_manifest.json"
 TENSOR_PAYLOAD_GRAMMAR_REPORT_GLOB = "*tensor_payload*report*.json"
 TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA = "tensor_payload_grammar_optimizer.v1"
 TENSOR_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA = "tensor_payload_grammar_consumer_result.v1"
+OPTIMAL_GRAMMAR_CAMPAIGN_REPORT_NAME = "campaign_summary.json"
+PR101_OPTIMAL_GRAMMAR_CAMPAIGN_SCHEMA = "pr101_optimal_grammar_campaign_summary.v1"
 DISTORTION_AXIS_PROBE_VERDICT_GLOB = "probe_*_verdict.json"
 DISTORTION_AXIS_LEARNED_SWEEP_PAYLOAD_GLOB = (
     "distortion_axis_probe_learned_sweep_candidates*.json"
@@ -5257,6 +5259,164 @@ def _format_tensor_payload_grammar_summary() -> str:
     return "\n".join(lines)
 
 
+def _optimal_grammar_campaign_artifact_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+    *,
+    max_depth: int = 4,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
+    patterns = tuple(
+        f"{'*/' * depth}{OPTIMAL_GRAMMAR_CAMPAIGN_REPORT_NAME}"
+        for depth in range(max_depth + 1)
+    )
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                resolved = path.resolve(strict=False)
+                if resolved in seen or not path.is_file():
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime if item.exists() else 0.0,
+        reverse=True,
+    )
+
+
+def _optimal_grammar_campaign_row(path: Path) -> dict[str, object] | None:
+    payload = _load_json_file(path)
+    if payload.get("schema") != PR101_OPTIMAL_GRAMMAR_CAMPAIGN_SCHEMA:
+        return None
+    rate_axis = payload.get("rate_axis")
+    if not isinstance(rate_axis, dict):
+        rate_axis = {}
+    planner = payload.get("planner_feedback")
+    if not isinstance(planner, dict):
+        planner = {}
+    artifact_status = payload.get("artifact_status")
+    if not isinstance(artifact_status, dict):
+        artifact_status = {}
+    return {
+        "path": _repo_rel(path),
+        "schema": payload.get("schema"),
+        "campaign_id": str(payload.get("campaign_id") or ""),
+        "verdict": str(payload.get("verdict") or "unknown"),
+        "next_action": str(payload.get("next_action") or ""),
+        "grouped_saved_bytes_vs_current_stock": _safe_int(
+            rate_axis.get("grouped_saved_bytes_vs_current_stock")
+        ),
+        "grouped_delta_bytes_vs_current_stock": _safe_int(
+            rate_axis.get("grouped_delta_bytes_vs_current_stock")
+        ),
+        "archive_zip_delta_bytes": rate_axis.get("archive_zip_delta_bytes"),
+        "receiver_adapter_work_justified": (
+            planner.get("receiver_adapter_work_justified") is True
+        ),
+        "exact_auth_work_justified": planner.get("exact_auth_work_justified") is True,
+        "local_replay_passed": artifact_status.get("local_replay_passed") is True,
+        "full_frame_inflate_parity_passed": (
+            artifact_status.get("full_frame_inflate_parity_passed") is True
+        ),
+        "blocker_count": len(payload.get("blockers"))
+        if isinstance(payload.get("blockers"), list)
+        else 0,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "mtime": path.stat().st_mtime if path.exists() else 0.0,
+    }
+
+
+def _optimal_grammar_campaign_summary() -> dict[str, object]:
+    rows = [
+        row
+        for path in _optimal_grammar_campaign_artifact_paths()
+        if (row := _optimal_grammar_campaign_row(path)) is not None
+    ]
+    receiver_rows = [
+        row for row in rows if row.get("receiver_adapter_work_justified") is True
+    ]
+    exact_rows = [row for row in rows if row.get("exact_auth_work_justified") is True]
+    if not rows:
+        status = "PENDING"
+        reason = "no schema-valid optimal grammar campaign summaries found"
+    elif exact_rows:
+        status = "READY_EXACT_GATE_BLOCKED"
+        reason = (
+            f"{len(exact_rows)} grammar campaign(s) passed local replay but still "
+            "require lane claim plus exact CPU/CUDA auth gates"
+        )
+    elif receiver_rows:
+        status = "NEEDS_RECEIVER_BINDING"
+        reason = (
+            f"{len(receiver_rows)} grouped grammar campaign(s) have positive "
+            "packet savings but need receiver/archive binding"
+        )
+    elif all(
+        str(row.get("verdict")) == "current_substrate_grammar_saturated"
+        for row in rows
+    ):
+        status = "SATURATED"
+        reason = "all optimal grammar campaign summaries demote current-substrate churn"
+    else:
+        status = "TRACKED"
+        reason = "optimal grammar campaign summaries are visible with no exact gate yet"
+
+    return {
+        "schema": "pact.optimal_grammar_campaign_summary.v1",
+        "scan_roots": [_repo_rel(root) for root in TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS],
+        "status": status,
+        "reason": reason,
+        "campaign_count": len(rows),
+        "receiver_adapter_work_justified_count": len(receiver_rows),
+        "exact_auth_work_justified_count": len(exact_rows),
+        "total_grouped_saved_bytes": sum(
+            _safe_int(row.get("grouped_saved_bytes_vs_current_stock"))
+            for row in rows
+        ),
+        "latest_rows": rows[:5],
+        **_false_authority_fields(),
+    }
+
+
+def _format_optimal_grammar_campaign_summary() -> str:
+    payload = _optimal_grammar_campaign_summary()
+    lines = [
+        "PR101/fec6 optimal-grammar campaign summaries. "
+        "This captures grouped stream/order effects after isolated tensor pricing.",
+        f"status: {payload['status']} — {payload['reason']}",
+        (
+            "campaigns: "
+            f"{payload['campaign_count']} "
+            f"receiver_work={payload['receiver_adapter_work_justified_count']} "
+            f"exact_work={payload['exact_auth_work_justified_count']} "
+            f"grouped_saved_bytes={payload['total_grouped_saved_bytes']}"
+        ),
+        f"score_claim: {payload['score_claim']}",
+        f"ready_for_exact_eval_dispatch: {payload['ready_for_exact_eval_dispatch']}",
+    ]
+    latest_rows = payload.get("latest_rows")
+    if isinstance(latest_rows, list) and latest_rows:
+        lines.append("latest optimal grammar campaign rows:")
+        for row in latest_rows[:5]:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                "  - "
+                f"{row.get('path')} verdict={row.get('verdict')} "
+                f"grouped_saved={row.get('grouped_saved_bytes_vs_current_stock', 0)} "
+                f"receiver_work={row.get('receiver_adapter_work_justified') is True} "
+                f"exact_work={row.get('exact_auth_work_justified') is True} "
+                f"next={row.get('next_action') or '<none>'}"
+            )
+    return "\n".join(lines)
+
+
 def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
     readiness = _run_json(PR91_HPM1_READINESS)
     runtime = _run_json(PR91_HPM1_RUNTIME_CONTRACT)
@@ -7071,6 +7231,7 @@ def _dispatch_readiness() -> dict[str, object]:
     distortion_learned_sweep = _distortion_axis_learned_sweep_summary()
     dqs1_drop_many_greedy = _dqs1_drop_many_greedy_summary()
     tensor_payload_grammar = _tensor_payload_grammar_summary()
+    optimal_grammar_campaign = _optimal_grammar_campaign_summary()
     archive_contract_hygiene = _archive_bound_contract_hygiene_summary()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
@@ -7195,6 +7356,22 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "max_selected_over_floor_ratio": tensor_payload_grammar[
                 "max_selected_over_floor_ratio"
+            ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
+        "phase_6c_optimal_grammar_campaign": {
+            "status": optimal_grammar_campaign["status"],
+            "reason": optimal_grammar_campaign["reason"],
+            "campaign_count": optimal_grammar_campaign["campaign_count"],
+            "receiver_adapter_work_justified_count": optimal_grammar_campaign[
+                "receiver_adapter_work_justified_count"
+            ],
+            "exact_auth_work_justified_count": optimal_grammar_campaign[
+                "exact_auth_work_justified_count"
+            ],
+            "total_grouped_saved_bytes": optimal_grammar_campaign[
+                "total_grouped_saved_bytes"
             ],
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
@@ -7522,6 +7699,7 @@ def main(argv: list[str] | None = None) -> int:
             "public_submission_audit": _public_submission_audit_status(),
             "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
             "tensor_payload_grammar": _tensor_payload_grammar_summary(),
+            "optimal_grammar_campaign": _optimal_grammar_campaign_summary(),
             "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
             "pr95_mlx_control_profiles": _pr95_mlx_control_profile_summary(),
             "distortion_axis_probe_signals": _distortion_axis_probe_summary(),
@@ -7681,6 +7859,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6c.1 — Generic tensor payload grammar",
         _format_tensor_payload_grammar_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6c.2 — PR101 grouped optimal-grammar campaign",
+        _format_optimal_grammar_campaign_summary(),
     ))
     parts.append(_section(
         "Phase 6d — Frontier feedback cycle autopolicy",

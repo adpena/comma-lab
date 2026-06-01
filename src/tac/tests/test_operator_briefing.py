@@ -146,6 +146,55 @@ def test_operator_briefing_routes_unsaturated_tensor_payload_to_receiver_binding
     assert "receiver_work=True" in text
 
 
+def test_operator_briefing_surfaces_grouped_optimal_grammar_campaign(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "grammar"
+    _write_json(
+        root / "pr101_grouped" / "campaign_summary.json",
+        {
+            "schema": "pr101_optimal_grammar_campaign_summary.v1",
+            "campaign_id": "pr101_grouped",
+            "verdict": "grouped_positive_build_receiver_adapter",
+            "next_action": "materialize_archive_and_receiver_runtime_for_grouped_positive_candidate",
+            "rate_axis": {
+                "grouped_delta_bytes_vs_current_stock": -12,
+                "grouped_saved_bytes_vs_current_stock": 12,
+                "archive_zip_delta_bytes": None,
+            },
+            "artifact_status": {
+                "local_replay_passed": False,
+                "full_frame_inflate_parity_passed": False,
+            },
+            "planner_feedback": {
+                "receiver_adapter_work_justified": True,
+                "exact_auth_work_justified": False,
+            },
+            "blockers": [
+                "byte_closed_archive_not_materialized",
+                "runtime_consumption_proof_missing",
+            ],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS", (root,))
+
+    summary = mod._optimal_grammar_campaign_summary()
+    text = mod._format_optimal_grammar_campaign_summary()
+
+    assert summary["status"] == "NEEDS_RECEIVER_BINDING"
+    assert summary["campaign_count"] == 1
+    assert summary["receiver_adapter_work_justified_count"] == 1
+    assert summary["exact_auth_work_justified_count"] == 0
+    assert summary["total_grouped_saved_bytes"] == 12
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert "grouped_saved=12" in text
+    assert "receiver_work=True" in text
+
+
 def test_briefing_delegates_to_repo_venv_when_available(monkeypatch):
     module = _load_briefing_module()
     calls = []
