@@ -24,6 +24,10 @@ from tac.substrates.hprc.campaign import (  # noqa: E402
     HPRC_EXACT_READINESS_REFUSAL_SCHEMA,
     materialize_minimal_hprc_campaign,
 )
+from tac.substrates.hprc.exact_gate import (  # noqa: E402
+    HPRC_INCREMENTAL_EXACT_GATE_BRIDGE_SCHEMA,
+    build_hprc_incremental_exact_gate_bridge,
+)
 from tac.substrates.hprc.incremental_pair_response import (  # noqa: E402
     HPRC_INCREMENTAL_PAIR_RESPONSE_SCHEMA,
     build_hprc_incremental_pair_response_report,
@@ -874,6 +878,85 @@ def test_hprc_incremental_runner_execution_comparison_keeps_slow_batch_research_
     assert comparison["score_claim"] is False
 
 
+def test_hprc_incremental_exact_gate_bridge_blocks_uncertified_cleanup(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    hprc_0bin = tmp_path / "0.bin"
+    hprc_0bin.write_bytes(b"hprc")
+    proof_dir = tmp_path / "proof"
+    proof_dir.mkdir()
+    proof = proof_dir / "hprc_receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "archive_sha256": _sha256(archive),
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_ready": True,
+                "receiver_output_sha256": "b" * 64,
+                "receiver_output_bytes": 123,
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = tmp_path / "execution_report.json"
+    report.write_text(
+        json.dumps(
+            {
+                "candidate_id": "candidate-a",
+                "candidate_variant_id": "variant-a",
+                "archive": {
+                    "path": archive.as_posix(),
+                    "bytes": archive.stat().st_size,
+                    "sha256": _sha256(archive),
+                    "hprc_0bin_path": hprc_0bin.as_posix(),
+                    "hprc_0bin_sha256": _sha256(hprc_0bin),
+                },
+                "receiver_proof_binding": {
+                    "status": "linked_by_archive_sha256",
+                    "proof_path": proof.as_posix(),
+                    "archive_sha256": _sha256(archive),
+                    "receiver_contract_satisfied": True,
+                    "runtime_consumption_proof_ready": True,
+                    "receiver_output_sha256": "b" * 64,
+                    "receiver_output_bytes": 123,
+                    "blockers": [],
+                },
+                "cleanup": {
+                    "status": "blocked",
+                    "blocked_bytes_retained": 100,
+                    "blockers": ["mlx_cache_identity_audit_stamp_missing"],
+                },
+                "incremental_summary": {
+                    "delta_total_mlx_score_advisory": -1.0,
+                },
+                "exact_axis_gate": {
+                    "ready_for_exact_eval_dispatch": False,
+                    "blockers": [
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                        "mlx_local_response_is_advisory_not_score_authority",
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    bridge = build_hprc_incremental_exact_gate_bridge(
+        execution_report_path=report,
+        repo_root=tmp_path,
+    )
+
+    assert bridge["schema"] == HPRC_INCREMENTAL_EXACT_GATE_BRIDGE_SCHEMA
+    assert bridge["archive_custody"]["verified"] is True
+    assert bridge["receiver_proof_custody"]["verified"] is True
+    assert bridge["cleanup_custody"]["verified"] is False
+    assert bridge["exact_dispatch_plan"]["dispatchable_after_lane_claim"] is False
+    assert "mlx_cache_identity_audit_stamp_missing" in bridge["exact_axis_gate"]["blockers"]
+    assert bridge["score_claim"] is False
+
+
 def _write_batch_compare_fixture(repo: Path) -> tuple[Path, Path]:
     singleton_dir = repo / "singleton"
     batched_dir = repo / "batched"
@@ -997,6 +1080,14 @@ def _response_with_components(component_dir: Path) -> dict:
             }
         }
     }
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    h = hashlib.sha256()
+    h.update(path.read_bytes())
+    return h.hexdigest()
 
 
 def _compare_profile_payload(

@@ -35,6 +35,11 @@ from tac.substrates.hprc.campaign import (
     build_hprc_exact_readiness_refusal,
     materialize_minimal_hprc_campaign,
 )
+from tac.substrates.hprc.exact_gate import (
+    HPRC_INCREMENTAL_EXACT_GATE_BRIDGE_SCHEMA,
+    build_hprc_incremental_exact_gate_bridge,
+    write_hprc_incremental_exact_gate_bridge,
+)
 from tac.substrates.hprc.lineage import (
     HPRC_FAMILY_BINDINGS,
     HPRC_OPTIMIZATION_LEVERS,
@@ -79,6 +84,7 @@ __all__ = [
     "HPRC_CAMPAIGN_MANIFEST_SCHEMA",
     "HPRC_EXACT_READINESS_REFUSAL_SCHEMA",
     "HPRC_FAMILY_BINDINGS",
+    "HPRC_INCREMENTAL_EXACT_GATE_BRIDGE_SCHEMA",
     "HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA",
     "HPRC_LONG_TRAINING_SUBSTRATE_ID",
     "HPRC_MAGIC",
@@ -105,6 +111,7 @@ __all__ = [
     "Pr95HprcControlPacket",
     "build_hprc_campaign_manifest",
     "build_hprc_exact_readiness_refusal",
+    "build_hprc_incremental_exact_gate_bridge",
     "build_hprc_section_mutation_proof",
     "build_minimal_hprc_v0_packet",
     "build_pr95_hprc_control_packet",
@@ -118,4 +125,5 @@ __all__ = [
     "parse_pr95_hnerv_payload",
     "primary_rate_collapse_candidates",
     "residual_sidecar_candidates",
+    "write_hprc_incremental_exact_gate_bridge",
 ]
