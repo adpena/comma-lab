@@ -1,0 +1,42 @@
+{
+  "n_pairs": 4,
+  "levels": 3,
+  "wavelet": "db2",
+  "carrier_hw": [
+    874,
+    1164
+  ],
+  "lf_coeff_count_total": 385440,
+  "decoder_bytes": 224,
+  "metadata_bytes": 192,
+  "lf_payload_bytes": 150260,
+  "linf_steps_payload_bytes": 122624,
+  "archive_bytes_total": 273300,
+  "rate_term": 0.18197925188828945,
+  "d_seg_mean_linf": 0.009864806896075606,
+  "d_pose_mean_linf": 0.08289374620653689,
+  "score_linf": 2.078919969210065,
+  "d_seg_mean_l2": 0.008725484134629369,
+  "d_pose_mean_l2": 0.19650906417518854,
+  "score_l2": 2.4563445727082054,
+  "adjoint_rel_residual": 0.0,
+  "lf_seg_mass_mean": 0.08394135888004117,
+  "lf_pose_mass_mean": 0.09837624303020508,
+  "z8_disease_detail_store_frac": 0.9787836453501172,
+  "z8_falsification_verdict": "FAIL: SNeRV archive 273300 >= frontier 178493 (LF store + decoder do not beat the frontier grammar at this operating point)",
+  "pr101_frontier_bytes": 178493,
+  "pr101_frontier_rate": 0.11885116211963574,
+  "beats_frontier_rate": false,
+  "axis_tag": "[macOS-CPU advisory]",
+  "promotable": false,
+  "score_claim": false,
+  "archive_byte_closure_blockers": [
+    "receiver_runtime_does_not_yet_parse_linf_step_maps",
+    "full_600_pair_receiver_replay_missing",
+    "paired_contest_cpu_cuda_auth_eval_missing"
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "wall_seconds": 144.50654697418213,
+  "notes": "NON-PROMOTABLE advisory per Catalog #341/#192/#127/#323. n_pairs subset of 600; full-video + paired CPU+CUDA reserved for operator auth. The score numbers are advisory-only; L-inf step maps are charged but not yet consumed by a contest receiver runtime."
+}
