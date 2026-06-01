@@ -264,6 +264,97 @@ def test_hprc_residual_recon_update_works_without_rate_pressure() -> None:
     assert after_loss < before_loss
 
 
+def test_hprc_protected_residual_gain_is_trainable_and_exported() -> None:
+    adapter = HprcCompactReceiverLongTrainingAdapter(
+        np.zeros_like(_frames()),
+        basis_count=3,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        protected_residual_grid_h=8,
+        protected_residual_grid_w=10,
+        enable_protected_residual_pathway=True,
+        initial_latent_gain=0.0,
+        initial_residual_gain=1.0,
+        initial_protected_residual_gain=0.0,
+        initial_receiver_state_gain=0.0,
+        emit_archive_bound_candidate_package=False,
+    )
+    assert adapter.model.protected_residual is not None
+    adapter.model.target_frames[:] = 100.0
+    adapter.model.mean[:] = 0
+    adapter.model.latents[:] = 0.0
+    adapter.model.receiver_state[:] = 0.0
+    adapter.model.selectors[:] = 1.0
+    adapter.model.residual[:] = 0.0
+    adapter.model.protected_residual[:] = 10.0
+    batch = {"frame_indices": np.arange(6, dtype=np.int32)}
+    before_loss = adapter.loss_fn(adapter.model, batch, {"recon": 1.0})["total"]
+    before_residual = adapter.model.protected_residual.copy()
+
+    metrics = adapter.train_step(
+        batch,
+        learning_rate=0.01,
+        loss_weights={"recon": 1.0},
+    )
+
+    after_loss = adapter.loss_fn(adapter.model, batch, {"recon": 1.0})["total"]
+    assert metrics["protected_residual_gain_grad"] < 0.0
+    assert adapter.model.protected_residual_gain > 0.0
+    assert after_loss < before_loss
+    np.testing.assert_allclose(adapter.model.protected_residual, before_residual)
+    packet = parse_hprc_packet(adapter.model.packet_bytes())
+    compact = decode_compact_receiver_packet(packet)
+    assert compact.rdo_plan["protected_residual_gain"] == pytest.approx(
+        adapter.model.protected_residual_gain
+    )
+    assert compact.manifest["training_backend"]["contest_runtime_requires_mlx"] is False
+
+
+def test_hprc_training_state_npz_round_trips_mutated_residuals(tmp_path: Path) -> None:
+    adapter = HprcCompactReceiverLongTrainingAdapter(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        protected_residual_grid_h=8,
+        protected_residual_grid_w=10,
+        enable_protected_residual_pathway=True,
+        emit_archive_bound_candidate_package=False,
+    )
+    assert adapter.model.protected_residual is not None
+    adapter.model.latent_gain = 0.2
+    adapter.model.residual_gain = 0.3
+    adapter.model.protected_residual_gain = 0.4
+    adapter.model.receiver_state_gain = 0.5
+    adapter.model.residual[:] = 0.25
+    adapter.model.protected_residual[:] = -0.5
+    adapter.model.train_steps = 7
+    requested = tmp_path / "hprc_state.state"
+
+    adapter.export_state_dict(adapter.model, requested)
+
+    state_path = requested.with_suffix(requested.suffix + ".npz")
+    assert state_path.is_file()
+    fresh = HprcCompactReceiverLongTrainingAdapter(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        protected_residual_grid_h=8,
+        protected_residual_grid_w=10,
+        enable_protected_residual_pathway=True,
+        emit_archive_bound_candidate_package=False,
+    )
+    fresh.import_state_dict(fresh.model, state_path)
+    assert fresh.model.train_steps == 7
+    assert fresh.model.latent_gain == pytest.approx(0.2)
+    assert fresh.model.residual_gain == pytest.approx(0.3)
+    assert fresh.model.protected_residual_gain == pytest.approx(0.4)
+    assert fresh.model.receiver_state_gain == pytest.approx(0.5)
+    np.testing.assert_allclose(fresh.model.residual, adapter.model.residual)
+    np.testing.assert_allclose(fresh.model.protected_residual, adapter.model.protected_residual)
+
+
 def test_hprc_mlx_training_backend_exports_numpy_portable_packet() -> None:
     pytest.importorskip("mlx.core")
     adapter = HprcCompactReceiverLongTrainingAdapter(

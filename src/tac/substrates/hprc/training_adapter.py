@@ -54,6 +54,28 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _ndarray_sha256(value: np.ndarray) -> str:
+    arr = np.ascontiguousarray(np.asarray(value))
+    return _sha256_bytes(arr.tobytes(order="C"))
+
+
+def _state_dict_summary(state: Mapping[str, Any]) -> dict[str, Any]:
+    summary: dict[str, Any] = {}
+    for key, value in state.items():
+        if isinstance(value, np.ndarray):
+            arr = np.ascontiguousarray(value)
+            summary[key] = {
+                "kind": "ndarray",
+                "shape": [int(v) for v in arr.shape],
+                "dtype": str(arr.dtype),
+                "bytes": int(arr.nbytes),
+                "sha256": _ndarray_sha256(arr),
+            }
+        else:
+            summary[key] = value
+    return summary
+
+
 def _nearest_resize(frame: np.ndarray, height: int, width: int) -> np.ndarray:
     src_h, src_w = int(frame.shape[0]), int(frame.shape[1])
     y_idx = (np.arange(height, dtype=np.int64) * src_h // height).clip(0, src_h - 1)
@@ -175,6 +197,7 @@ class HprcGainBounds:
     latent: tuple[float, float] = (-4.0, 4.0)
     residual: tuple[float, float] = (-4.0, 4.0)
     receiver_state: tuple[float, float] = (-4.0, 4.0)
+    protected_residual: tuple[float, float] = (-4.0, 4.0)
 
     def clamp(self, *, latent: float, residual: float, receiver_state: float) -> tuple[float, float, float]:
         return (
@@ -183,12 +206,15 @@ class HprcGainBounds:
             float(np.clip(receiver_state, self.receiver_state[0], self.receiver_state[1])),
         )
 
+    def clamp_protected_residual(self, value: float) -> float:
+        return float(np.clip(float(value), self.protected_residual[0], self.protected_residual[1]))
+
 
 class HprcCompactReceiverTrainingModel:
     """Small trainable state for a compact HPRC receiver.
 
     The heavy tensor fields are fixed archive components.  The trainable state is
-    the RDO gain triple consumed by the decode-only receiver runtime.
+    the RDO gain tuple consumed by the decode-only receiver runtime.
     """
 
     def __init__(
@@ -204,6 +230,7 @@ class HprcCompactReceiverTrainingModel:
         source_manifest: Mapping[str, Any] | None = None,
         initial_latent_gain: float = 1.0,
         initial_residual_gain: float = 1.0,
+        initial_protected_residual_gain: float = 1.0,
         initial_receiver_state_gain: float = 0.25,
         gain_bounds: HprcGainBounds | None = None,
     ) -> None:
@@ -253,6 +280,9 @@ class HprcCompactReceiverTrainingModel:
             residual=float(initial_residual_gain),
             receiver_state=float(initial_receiver_state_gain),
         )
+        self.protected_residual_gain = self.gain_bounds.clamp_protected_residual(
+            float(initial_protected_residual_gain)
+        )
         self.training_backend_lineage: dict[str, Any] = {
             "schema": HPRC_MLX_TRAIN_NUMPY_PORTABLE_SCHEMA,
             "requested_training_backend": "numpy",
@@ -271,16 +301,30 @@ class HprcCompactReceiverTrainingModel:
     def pair_count(self) -> int:
         return math.ceil(self.frame_count / max(int(self.packet_config.gop_size), 1))
 
-    def state_dict(self) -> dict[str, list[float]]:
-        return {
+    def state_dict(self) -> dict[str, Any]:
+        state: dict[str, Any] = {
             "latent_gain": [float(self.latent_gain)],
             "residual_gain": [float(self.residual_gain)],
+            "protected_residual_gain": [float(self.protected_residual_gain)],
             "receiver_state_gain": [float(self.receiver_state_gain)],
+            "residual": self.residual.astype(np.float32, copy=True),
         }
+        if self.protected_residual is not None:
+            state["protected_residual"] = self.protected_residual.astype(np.float32, copy=True)
+        return state
 
     def load_state_dict(self, state: Mapping[str, Any]) -> None:
+        if isinstance(state.get("state_dict"), Mapping):
+            wrapper = state
+            state = wrapper["state_dict"]
+            self.train_steps = int(wrapper.get("train_steps", self.train_steps))
         self.latent_gain = _state_scalar(state, "latent_gain", self.latent_gain)
         self.residual_gain = _state_scalar(state, "residual_gain", self.residual_gain)
+        self.protected_residual_gain = _state_scalar(
+            state,
+            "protected_residual_gain",
+            self.protected_residual_gain,
+        )
         self.receiver_state_gain = _state_scalar(
             state, "receiver_state_gain", self.receiver_state_gain
         )
@@ -289,8 +333,31 @@ class HprcCompactReceiverTrainingModel:
             residual=self.residual_gain,
             receiver_state=self.receiver_state_gain,
         )
+        self.protected_residual_gain = self.gain_bounds.clamp_protected_residual(
+            self.protected_residual_gain
+        )
+        if "residual" in state:
+            residual = np.asarray(state["residual"], dtype=np.float32)
+            if tuple(residual.shape) != tuple(self.residual.shape):
+                raise ValueError(
+                    f"residual checkpoint shape {residual.shape} != model shape {self.residual.shape}"
+                )
+            self.residual = residual.copy()
+        if "protected_residual" in state:
+            if self.protected_residual is None:
+                raise ValueError("checkpoint contains protected_residual but model has no pathway")
+            protected = np.asarray(state["protected_residual"], dtype=np.float32)
+            if tuple(protected.shape) != tuple(self.protected_residual.shape):
+                raise ValueError(
+                    "protected_residual checkpoint shape "
+                    f"{protected.shape} != model shape {self.protected_residual.shape}"
+                )
+            self.protected_residual = protected.copy()
 
-    def render_continuous(self, frame_index: int) -> tuple[np.ndarray, tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    def render_continuous(
+        self,
+        frame_index: int,
+    ) -> tuple[np.ndarray, tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         frame = self.mean.astype(np.float32).copy()
         latent_component = np.tensordot(
             self.latents[frame_index],
@@ -305,14 +372,18 @@ class HprcCompactReceiverTrainingModel:
                 int(self.packet_config.width),
             )
         )
+        protected_component = np.zeros_like(residual_component, dtype=np.float32)
         if self.protected_residual is not None:
-            residual_component = residual_component + (
+            protected_component = (
                 float(self.selectors[frame_index])
                 * _nearest_resize(
                     self.protected_residual[frame_index],
                     int(self.packet_config.height),
                     int(self.packet_config.width),
                 )
+            )
+            residual_component = residual_component + (
+                float(self.protected_residual_gain) * protected_component
             )
         pair_index = min(
             self.receiver_state.shape[0] - 1,
@@ -328,7 +399,13 @@ class HprcCompactReceiverTrainingModel:
             + self.residual_gain * residual_component
             + self.receiver_state_gain * state_component
         )
-        return frame, (latent_component, residual_component, state_component)
+        protected_gain_component = float(self.residual_gain) * protected_component
+        return frame, (
+            latent_component,
+            residual_component,
+            state_component,
+            protected_gain_component,
+        )
 
     def packet_bytes(self) -> bytes:
         rdo_plan = {
@@ -337,6 +414,7 @@ class HprcCompactReceiverTrainingModel:
             "training_adapter": HPRC_LONG_TRAINING_SUBSTRATE_ID,
             "latent_gain": float(self.latent_gain),
             "residual_gain": float(self.residual_gain),
+            "protected_residual_gain": float(self.protected_residual_gain),
             "receiver_state_gain": float(self.receiver_state_gain),
             "basis_count": int(self.basis.shape[0]),
             "residual_grid_h": int(self.residual.shape[1]),
@@ -433,6 +511,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         source_manifest: Mapping[str, Any] | None = None,
         initial_latent_gain: float = 1.0,
         initial_residual_gain: float = 1.0,
+        initial_protected_residual_gain: float = 1.0,
         initial_receiver_state_gain: float = 0.25,
         gain_bounds: HprcGainBounds | None = None,
         repo_root: str | Path | None = None,
@@ -474,6 +553,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             source_manifest=source_manifest,
             initial_latent_gain=initial_latent_gain,
             initial_residual_gain=initial_residual_gain,
+            initial_protected_residual_gain=initial_protected_residual_gain,
             initial_receiver_state_gain=initial_receiver_state_gain,
             gain_bounds=gain_bounds,
         )
@@ -539,6 +619,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             "latent_gain_grad": float(grads[0]),
             "residual_gain_grad": float(grads[1]),
             "receiver_state_gain_grad": float(grads[2]),
+            "protected_residual_gain_grad": float(grads[3]),
         }
 
     def optimizer_step(self, model: Any, loss: Any, learning_rate: float) -> None:
@@ -560,12 +641,16 @@ class HprcCompactReceiverLongTrainingAdapter:
         latent = self.model.latent_gain - float(learning_rate) * grads[0]
         residual = self.model.residual_gain - float(learning_rate) * grads[1]
         state = self.model.receiver_state_gain - float(learning_rate) * grads[2]
+        protected = self.model.protected_residual_gain - float(learning_rate) * grads[3]
         self.model.latent_gain, self.model.residual_gain, self.model.receiver_state_gain = (
             self.model.gain_bounds.clamp(
                 latent=latent,
                 residual=residual,
                 receiver_state=state,
             )
+        )
+        self.model.protected_residual_gain = (
+            self.model.gain_bounds.clamp_protected_residual(protected)
         )
         if self.effective_training_backend == "mlx":
             rate_update = self._apply_native_residual_rate_step_mlx(
@@ -586,6 +671,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             "latent_gain_grad": float(grads[0]),
             "residual_gain_grad": float(grads[1]),
             "receiver_state_gain_grad": float(grads[2]),
+            "protected_residual_gain_grad": float(grads[3]),
             **rate_update,
         }
 
@@ -594,7 +680,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         model: HprcCompactReceiverTrainingModel,
         batch: Mapping[str, Any],
         loss_weights: Mapping[str, float],
-    ) -> tuple[float, tuple[float, float, float], dict[str, float]]:
+    ) -> tuple[float, tuple[float, float, float, float], dict[str, float]]:
         frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
         if frame_indices.size == 0:
             raise ValueError("HPRC training batch contains no frames")
@@ -604,7 +690,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         score_protection_recon_weight = self._score_protection_recon_weight(loss_weights)
         sse = 0.0
         count = 0
-        grad = np.zeros((3,), dtype=np.float64)
+        grad = np.zeros((4,), dtype=np.float64)
         for frame_index in frame_indices:
             pred, components = model.render_continuous(int(frame_index))
             target = model.target_frames[int(frame_index)]
@@ -624,12 +710,13 @@ class HprcCompactReceiverLongTrainingAdapter:
         recon_objective = float(mse)
         grad /= float(frame_indices.size)
         if gain_l2_weight:
-            defaults = np.array([1.0, 1.0, 0.25], dtype=np.float64)
+            defaults = np.array([1.0, 1.0, 0.25, 1.0], dtype=np.float64)
             gains = np.array(
                 [
                     model.latent_gain,
                     model.residual_gain,
                     model.receiver_state_gain,
+                    model.protected_residual_gain,
                 ],
                 dtype=np.float64,
             )
@@ -638,7 +725,12 @@ class HprcCompactReceiverLongTrainingAdapter:
             grad += 2.0 * gain_l2_weight * delta
         grad *= recon_weight
         total_loss = recon_weight * recon_objective + residual_l1_weight * residual_rate_l1
-        return total_loss, (float(grad[0]), float(grad[1]), float(grad[2])), {
+        return total_loss, (
+            float(grad[0]),
+            float(grad[1]),
+            float(grad[2]),
+            float(grad[3]),
+        ), {
             "recon": float(mse),
             "residual_rate_l1_proxy": float(residual_rate_l1),
             "residual_rate_l1_weight": float(residual_l1_weight),
@@ -647,6 +739,7 @@ class HprcCompactReceiverLongTrainingAdapter:
                 score_protection_recon_weight > 0.0 and self.residual_protection is not None
             ),
             "residual_nonzero_fraction": float(np.count_nonzero(model.residual) / model.residual.size),
+            "protected_residual_gain": float(model.protected_residual_gain),
         }
 
     def _mlx_common_tensors(
@@ -721,7 +814,9 @@ class HprcCompactReceiverLongTrainingAdapter:
             int(common["height"]),
             int(common["width"]),
         )
-        residual_component = residual_component + common["protected_residual_component"]
+        residual_component = residual_component + (
+            float(model.protected_residual_gain) * common["protected_residual_component"]
+        )
         pred = (
             common["mean"]
             + float(model.latent_gain) * common["latent_component"]
@@ -735,7 +830,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         model: HprcCompactReceiverTrainingModel,
         batch: Mapping[str, Any],
         loss_weights: Mapping[str, float],
-    ) -> tuple[float, tuple[float, float, float], dict[str, float]]:
+    ) -> tuple[float, tuple[float, float, float, float], dict[str, float]]:
         frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
         if frame_indices.size == 0:
             raise ValueError("HPRC training batch contains no frames")
@@ -755,11 +850,23 @@ class HprcCompactReceiverLongTrainingAdapter:
         grad_latent = mx.sum(weighted_diff * common["latent_component"]) * grad_scale
         grad_residual = mx.sum(weighted_diff * residual_component) * grad_scale
         grad_state = mx.sum(weighted_diff * common["state_component"]) * grad_scale
+        grad_protected = (
+            mx.sum(
+                weighted_diff
+                * (float(model.residual_gain) * common["protected_residual_component"])
+            )
+            * grad_scale
+        )
         recon_objective = mse
         if gain_l2_weight:
-            defaults = mx.array([1.0, 1.0, 0.25], dtype=mx.float32)
+            defaults = mx.array([1.0, 1.0, 0.25, 1.0], dtype=mx.float32)
             gains = mx.array(
-                [model.latent_gain, model.residual_gain, model.receiver_state_gain],
+                [
+                    model.latent_gain,
+                    model.residual_gain,
+                    model.receiver_state_gain,
+                    model.protected_residual_gain,
+                ],
                 dtype=mx.float32,
             )
             delta = gains - defaults
@@ -768,6 +875,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             grad_latent = grad_latent + grad_l2[0]
             grad_residual = grad_residual + grad_l2[1]
             grad_state = grad_state + grad_l2[2]
+            grad_protected = grad_protected + grad_l2[3]
         pressure = mx.array(self._residual_rate_pressure()[frame_indices].astype(np.float32, copy=False))
         residual_rate_l1 = mx.mean(mx.abs(residual_batch) * pressure)
         total_loss = float(recon_weight) * recon_objective + float(residual_l1_weight) * residual_rate_l1
@@ -775,6 +883,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             float(recon_weight) * grad_latent,
             float(recon_weight) * grad_residual,
             float(recon_weight) * grad_state,
+            float(recon_weight) * grad_protected,
         )
         mx.eval(total_loss, mse, residual_rate_l1, *grads)
         return _mx_scalar(total_loss), tuple(_mx_scalar(g) for g in grads), {
@@ -786,6 +895,7 @@ class HprcCompactReceiverLongTrainingAdapter:
                 score_protection_recon_weight > 0.0 and self.residual_protection is not None
             ),
             "residual_nonzero_fraction": float(np.count_nonzero(model.residual) / model.residual.size),
+            "protected_residual_gain": float(model.protected_residual_gain),
             "loss_backend_is_mlx": 1.0,
         }
 
@@ -991,10 +1101,12 @@ class HprcCompactReceiverLongTrainingAdapter:
 
     def export_state_dict(self, model: HprcCompactReceiverTrainingModel, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
+        state = model.state_dict()
+        metadata = {
             "schema": "hprc_compact_receiver_training_state.v1",
             "substrate_id": self.substrate_id,
-            "state_dict": model.state_dict(),
+            "state_format": "npz",
+            "state_dict_summary": _state_dict_summary(state),
             "train_steps": int(model.train_steps),
             "frame_count": int(model.frame_count),
             "height": int(model.packet_config.height),
@@ -1003,7 +1115,47 @@ class HprcCompactReceiverLongTrainingAdapter:
             "score_claim": False,
             "promotion_eligible": False,
         }
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        arrays: dict[str, np.ndarray] = {
+            "__metadata_json_utf8": np.frombuffer(
+                json.dumps(metadata, sort_keys=True, separators=(",", ":")).encode("utf-8"),
+                dtype=np.uint8,
+            ),
+            "latent_gain": np.array([model.latent_gain], dtype=np.float64),
+            "residual_gain": np.array([model.residual_gain], dtype=np.float64),
+            "protected_residual_gain": np.array(
+                [model.protected_residual_gain],
+                dtype=np.float64,
+            ),
+            "receiver_state_gain": np.array([model.receiver_state_gain], dtype=np.float64),
+            "residual": np.asarray(model.residual, dtype=np.float32),
+        }
+        if model.protected_residual is not None:
+            arrays["protected_residual"] = np.asarray(model.protected_residual, dtype=np.float32)
+        np.savez_compressed(path.with_suffix(path.suffix + ".npz"), **arrays)
+
+    def import_state_dict(self, model: HprcCompactReceiverTrainingModel, path: Path) -> None:
+        with np.load(path, allow_pickle=False) as data:
+            metadata = json.loads(bytes(data["__metadata_json_utf8"].tolist()).decode("utf-8"))
+            state: dict[str, Any] = {
+                "latent_gain": [float(data["latent_gain"].reshape(-1)[0])],
+                "residual_gain": [float(data["residual_gain"].reshape(-1)[0])],
+                "protected_residual_gain": [
+                    float(data["protected_residual_gain"].reshape(-1)[0])
+                ],
+                "receiver_state_gain": [float(data["receiver_state_gain"].reshape(-1)[0])],
+                "residual": np.asarray(data["residual"], dtype=np.float32),
+            }
+            if "protected_residual" in data.files:
+                state["protected_residual"] = np.asarray(
+                    data["protected_residual"],
+                    dtype=np.float32,
+                )
+        model.load_state_dict(
+            {
+                "state_dict": state,
+                "train_steps": int(metadata.get("train_steps", model.train_steps)),
+            }
+        )
 
     def export_archive(
         self,
@@ -1026,7 +1178,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             "archive_zip_sha256": archive_sha256,
             "archive_zip_bytes": int(archive_bytes),
             "hprc_packet_sha256": _sha256_bytes(packet),
-            "state_dict": model.state_dict(),
+            "state_dict_summary": _state_dict_summary(model.state_dict()),
             "receiver_proof_requested": bool(self.emit_archive_bound_candidate_package),
             "receiver_output_retained": bool(self.retain_receiver_proof_output),
             **hprc_archive_candidate.FALSE_AUTHORITY,
@@ -1048,6 +1200,7 @@ class HprcCompactReceiverLongTrainingAdapter:
             "archive_rate_term_advisory": 0.0,
             "native_rate_aware_training_enabled": bool(self.native_rate_aware),
             "protected_highres_residual_pathway_enabled": self.model.protected_residual is not None,
+            "protected_residual_gain": float(self.model.protected_residual_gain),
             "native_residual_nonzero_fraction": float(
                 np.count_nonzero(model.residual) / model.residual.size
             ),
@@ -1068,7 +1221,7 @@ class HprcCompactReceiverLongTrainingAdapter:
                 "contest_runtime_requires_mlx": False,
                 "contest_runtime_requires_torch": False,
             },
-            "training_surface": "rdo_gain_projection_over_fixed_compact_components",
+            "training_surface": "rdo_gain_projection_with_trainable_protected_pose_gain",
             "native_rate_aware_training": {
                 "schema": HPRC_NATIVE_RATE_AWARE_TRAINING_SCHEMA,
                 "enabled": bool(self.native_rate_aware),
@@ -1116,6 +1269,8 @@ class HprcCompactReceiverLongTrainingAdapter:
                     else "unmasked_highres_residual"
                 ),
                 "receiver_storage": "residual_rc_v2_dense_or_v3_sparse_int8_protected_sidecar",
+                "trainable_gain": True,
+                "protected_residual_gain": float(self.model.protected_residual_gain),
                 "training_backend": self.effective_training_backend,
                 "portable_runtime": "numpy",
             },
