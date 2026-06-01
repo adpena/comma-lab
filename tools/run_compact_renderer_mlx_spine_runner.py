@@ -151,6 +151,7 @@ def adapt_pr95_mlx_report_to_spine(
     pr95_mlx_report_path: str | Path,
     output_dir: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
 ) -> dict[str, Any]:
@@ -199,6 +200,7 @@ def adapt_pr95_mlx_report_to_spine(
     _write_json(acquisition_path, acquisition)
     runner_plan = build_spine_bounded_runner_plan(
         acquisition_report_path=acquisition_path,
+        hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
         repo_root=root,
     )
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
@@ -225,6 +227,10 @@ def adapt_pr95_mlx_report_to_spine(
             "projection_manifest_paths": [projection_manifest.as_posix()],
             "acquisition_report_path": acquisition_path.as_posix(),
             "bounded_runner_plan_path": runner_plan_path.as_posix(),
+            "hprc_queue_followup_report_paths": [
+                _resolve(path, base=root).as_posix()
+                for path in hprc_queue_followup_report_paths
+            ],
             "selected_runner_rows": runner_plan["selected_runner_rows"],
             "blockers": _dedupe(
                 [
@@ -280,6 +286,7 @@ def execute_pr95_mlx_smoke_and_adapt(
     training_loss_surface: str,
     source_video_path: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     latent_dim: int | None = None,
     base_channels: int | None = None,
     random_seed: int = 0,
@@ -346,6 +353,7 @@ def execute_pr95_mlx_smoke_and_adapt(
         pr95_mlx_report_path=pr95_report_path,
         output_dir=out / "spine_from_pr95_mlx_smoke",
         hard_byte_ceilings=hard_byte_ceilings,
+        hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
         allow_overwrite=allow_overwrite,
         repo_root=root,
     )
@@ -379,6 +387,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     learning_rate: float,
     source_video_path: str | Path,
     hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
     latent_dim: int = 8,
     embed_dim: int = 8,
     codebook_size: int = 16,
@@ -472,6 +481,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
         runner_plan = build_spine_bounded_runner_plan(
             acquisition_report_path=acquisition_path,
             receiver_proof_report_paths=receiver_proof_paths,
+            hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
             repo_root=root,
         )
         write_spine_bounded_runner_plan(
@@ -517,6 +527,10 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
             "receiver_proof_report_paths": [
                 path.as_posix() for path in receiver_proof_paths
+            ],
+            "hprc_queue_followup_report_paths": [
+                _resolve(path, base=root).as_posix()
+                for path in hprc_queue_followup_report_paths
             ],
             "acquisition_report_path": (
                 acquisition_path.as_posix() if acquisition_path.is_file() else None
@@ -1033,6 +1047,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--base-channels", type=int)
     parser.add_argument("--random-seed", default=0, type=int)
     parser.add_argument("--hard-byte-ceiling", action="append", type=int)
+    parser.add_argument(
+        "--hprc-queue-followup-report",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Existing HPRC queue followup report to feed into the spine "
+            "bounded-runner posterior. Repeatable."
+        ),
+    )
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
@@ -1060,6 +1084,7 @@ def main(argv: list[str] | None = None) -> int:
             training_loss_surface=args.training_loss_surface,
             source_video_path=args.source_video_path,
             hard_byte_ceilings=ceilings,
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             latent_dim=args.latent_dim,
             base_channels=args.base_channels,
             random_seed=args.random_seed,
@@ -1071,6 +1096,7 @@ def main(argv: list[str] | None = None) -> int:
             pr95_mlx_report_path=args.from_pr95_mlx_report,
             output_dir=output_dir,
             hard_byte_ceilings=ceilings,
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
         )
@@ -1083,6 +1109,7 @@ def main(argv: list[str] | None = None) -> int:
             learning_rate=args.learning_rate,
             source_video_path=args.source_video_path,
             hard_byte_ceilings=ceilings,
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             latent_dim=args.compact_latent_dim,
             embed_dim=args.compact_embed_dim,
             codebook_size=args.compact_codebook_size,

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from tac.archive_byte_profile import contest_rate_term
+from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
 from tac.substrates.hprc.representation_spine import (
     HprcRepresentationFamily,
     build_generic_neural_spine_packet,
@@ -181,6 +182,113 @@ def test_section_value_admission_demotes_bad_residual_tokens(tmp_path: Path) -> 
     assert any(hook["status"] == "demote_from_measured_value_per_byte" for hook in plan["posterior_update_hooks"])
 
 
+def test_spine_bounded_runner_consumes_queue_followup_demotion(
+    tmp_path: Path,
+) -> None:
+    manifest = _projection(
+        tmp_path / "hprc",
+        family=HprcRepresentationFamily.RNERV,
+        decoder=b"d" * 20,
+        latents=b"l" * 8,
+        manifest_extra={"num_pairs": 600},
+    )
+    archive_path = tmp_path / "archive.zip"
+    archive_path.write_bytes(b"archive")
+    archive_sha = "d" * 64
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["manifest"]["representation_spine"]["source"].update(
+        {
+            "archive_zip_path": archive_path.as_posix(),
+            "archive_zip_sha256": archive_sha,
+            "archive_zip_bytes": archive_path.stat().st_size,
+        }
+    )
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    followup_path = tmp_path / "hprc_queue_followup_report.json"
+    followup_path.write_text(
+        json.dumps(
+            {
+                "schema": HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA,
+                "training_result_path": "hprc_rate_collapse_report.json",
+                "archive": {
+                    "archive_zip_path": archive_path.as_posix(),
+                    "archive_zip_sha256": archive_sha,
+                    "archive_zip_bytes": archive_path.stat().st_size,
+                    "byte_intelligence": {
+                        "resolution_rate_feasibility": {
+                            "schema": "hprc_resolution_rate_feasibility.v1",
+                            "status": (
+                                "rate_feasible_but_distortion_bound_resolution_risk"
+                            ),
+                            "decoder_pixels_per_scorer_pixel": 0.0625,
+                        }
+                    },
+                },
+                "local_replay_gate": {
+                    "required": True,
+                    "evaluation_passed": False,
+                    "blockers": [
+                        "mlx_prefilter_rejected_candidate_before_cpu_replay"
+                    ],
+                },
+                "promotion_gate": {
+                    "ready_for_exact_eval_dispatch": False,
+                    "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                },
+                "planner_learning_signals": [
+                    {
+                        "schema": "hprc_planner_learning_signal.v1",
+                        "signal_id": (
+                            "hprc_rate_feasible_but_resolution_distortion_bound"
+                        ),
+                        "status": "route_to_pose_geometry_or_predictive_redesign",
+                        "metric_name": "decoder_pixels_per_scorer_pixel",
+                        "metric_value": 0.0625,
+                        "next_architecture_priorities": [
+                            "native_scorer_aware_training_at_compress_time",
+                            "sparse_procedural_pose_geometry_tokens",
+                        ],
+                        "reactivation_criteria": [
+                            "decoder_or_protected_pose_pathway_preserves_full600_mlx_pose"
+                        ],
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        hprc_queue_followup_report_paths=[followup_path],
+    )
+
+    row = plan["compact_base_sweep_rows"][0]
+    assert row["route_status"] == "demoted_by_hprc_queue_followup"
+    assert row["requires_architecture_redesign_before_replay"] is True
+    assert row["hprc_queue_followup_observed"] is True
+    assert "hprc_rate_feasible_but_resolution_distortion_bound" in row["blockers"]
+    assert "mlx_prefilter_rejected_candidate_before_cpu_replay" in row["blockers"]
+    assert plan["hprc_queue_followup_signal_rows"][0]["signal_id"] == (
+        "hprc_rate_feasible_but_resolution_distortion_bound"
+    )
+    assert "hprc_queue_followup_demoted_candidate_before_replay" in plan["blockers"]
+    assert any(
+        hook["status"] == "demote_from_queue_followup_signal"
+        for hook in plan["posterior_update_hooks"]
+    )
+
+
 def test_projection_metadata_and_short_coverage_do_not_force_mlx_value_replay(
     tmp_path: Path,
 ) -> None:
@@ -231,6 +339,21 @@ def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:
     acquisition_path = tmp_path / "acquisition.json"
     acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
     output = tmp_path / "runner.json"
+    followup_path = tmp_path / "unused_followup.json"
+    followup_path.write_text(
+        json.dumps(
+            {
+                "schema": HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA,
+                "training_result_path": "unused.json",
+                "archive": {},
+                "planner_learning_signals": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
 
     rc = tool.main(
         [
@@ -240,6 +363,8 @@ def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:
             output.as_posix(),
             "--repo-root",
             REPO.as_posix(),
+            "--queue-followup-report",
+            followup_path.as_posix(),
         ]
     )
 

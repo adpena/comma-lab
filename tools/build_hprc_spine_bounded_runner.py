@@ -48,6 +48,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Generated inflate receiver proof JSON to attach when available. Repeatable.",
     )
+    parser.add_argument(
+        "--queue-followup-report",
+        action="append",
+        default=[],
+        type=Path,
+        help="HPRC queue followup report JSON. Repeatable.",
+    )
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
     parser.add_argument("--force", action="store_true")
@@ -62,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         mlx_profile_paths=args.mlx_profile,
         receiver_proof_report_paths=args.receiver_proof,
         exact_gate_report_paths=args.exact_gate_report,
+        hprc_queue_followup_report_paths=args.queue_followup_report,
     )
     out = _resolve(args.output, base=args.repo_root)
     write_spine_bounded_runner_plan(
@@ -77,6 +85,9 @@ def main(argv: list[str] | None = None) -> int:
                 "compact_base_sweep_rows": len(plan["compact_base_sweep_rows"]),
                 "section_value_rows": len(plan["section_value_rows"]),
                 "selected_runner_rows": len(plan["selected_runner_rows"]),
+                "hprc_queue_followup_signal_rows": len(
+                    plan["hprc_queue_followup_signal_rows"]
+                ),
                 "blockers": plan["blockers"],
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,

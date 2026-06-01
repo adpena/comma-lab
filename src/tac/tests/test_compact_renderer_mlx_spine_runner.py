@@ -56,11 +56,38 @@ def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
         ),
         encoding="utf-8",
     )
+    followup_path = tmp_path / "hprc_queue_followup_report.json"
+    followup_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_queue_followup_report.v1",
+                "training_result_path": "prior_hprc_rate_collapse.json",
+                "archive": {
+                    "archive_zip_sha256": "f" * 64,
+                    "archive_zip_bytes": 217365,
+                },
+                "planner_learning_signals": [
+                    {
+                        "schema": "hprc_planner_learning_signal.v1",
+                        "signal_id": (
+                            "hprc_rate_feasible_but_resolution_distortion_bound"
+                        ),
+                        "status": "route_to_pose_geometry_or_predictive_redesign",
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
 
     out = adapt_pr95_mlx_report_to_spine(
         pr95_mlx_report_path=report_path,
         output_dir=tmp_path / "out",
         hard_byte_ceilings=(178_000,),
+        hprc_queue_followup_report_paths=(followup_path,),
         repo_root=REPO_ROOT,
     )
 
@@ -75,6 +102,10 @@ def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
     runner = json.loads(Path(out["bounded_runner_plan_path"]).read_text())
     assert runner["selected_runner_rows"][0]["family"] == "pr95_hnerv"
     assert runner["selected_runner_rows"][0]["coverage_valid_for_base_comparison"] is False
+    assert runner["hprc_queue_followup_signal_rows"][0]["signal_id"] == (
+        "hprc_rate_feasible_but_resolution_distortion_bound"
+    )
+    assert out["hprc_queue_followup_report_paths"] == [followup_path.as_posix()]
     assert "mlx_local_report_is_advisory_not_score_authority" in out["blockers"]
 
 
@@ -153,6 +184,8 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
             "1.25",
             "--distillation-device",
             "cpu",
+            "--hprc-queue-followup-report",
+            "hprc_queue_followup_report.json",
         ]
     )
 
@@ -163,4 +196,7 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.segnet_tau_boundary == 0.8
     assert args.segnet_hinge_margin == 1.25
     assert args.distillation_device == "cpu"
+    assert args.hprc_queue_followup_report == [
+        Path("hprc_queue_followup_report.json")
+    ]
     assert args.allow_segnet_only_research is False

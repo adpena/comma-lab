@@ -11,6 +11,7 @@ from typing import Any
 
 from tac.archive_byte_profile import contest_rate_term
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
+from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
 from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
 from tac.substrates.hprc.spine_acquisition import HPRC_SPINE_ACQUISITION_REPORT_SCHEMA
 
@@ -27,6 +28,7 @@ def build_spine_bounded_runner_plan(
     mlx_profile_paths: list[str | Path] | tuple[str | Path, ...] = (),
     receiver_proof_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
     exact_gate_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
+    hprc_queue_followup_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
 ) -> dict[str, Any]:
     """Build the one-contract runner plan for compact-base and residual work.
 
@@ -49,15 +51,21 @@ def build_spine_bounded_runner_plan(
         _load_receiver_proof(path, root=root) for path in receiver_proof_report_paths
     ]
     exact_reports = [_load_exact_report(path, root=root) for path in exact_gate_report_paths]
+    hprc_queue_followups = [
+        _load_hprc_queue_followup(path, root=root)
+        for path in hprc_queue_followup_report_paths
+    ]
     section_evidence = _index_section_evidence(mlx_profiles)
     receiver_proof_index = _index_receiver_proofs(receiver_proofs)
     exact_index = _index_exact_reports(exact_reports)
+    hprc_queue_followup_index = _index_hprc_queue_followups(hprc_queue_followups)
     compact_base_rows = [
         _compact_base_sweep_row(
             acquisition_row=row,
             ceiling_result=ceiling_result,
             receiver_proof_index=receiver_proof_index,
             exact_index=exact_index,
+            hprc_queue_followup_index=hprc_queue_followup_index,
         )
         for row in _rows(acquisition_report, "rows")
         for ceiling_result in _rows(row, "ceiling_results")
@@ -94,6 +102,12 @@ def build_spine_bounded_runner_plan(
         "mlx_profile_paths": [item["path"] for item in mlx_profiles],
         "receiver_proof_report_paths": [item["path"] for item in receiver_proofs],
         "exact_gate_report_paths": [item["path"] for item in exact_reports],
+        "hprc_queue_followup_report_paths": [
+            item["path"] for item in hprc_queue_followups
+        ],
+        "hprc_queue_followup_signal_rows": _hprc_queue_followup_signal_rows(
+            hprc_queue_followups
+        ),
         "compact_base_sweep_rows": compact_base_rows,
         "section_value_rows": section_value_rows,
         "residual_token_admission_rows": [*residual_rows, *residual_candidate_rows],
@@ -156,6 +170,7 @@ def _compact_base_sweep_row(
     ceiling_result: dict[str, Any],
     receiver_proof_index: dict[str, dict[str, Any]],
     exact_index: dict[str, dict[str, Any]],
+    hprc_queue_followup_index: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     family = str(acquisition_row.get("family") or "unknown")
     ceiling = int(ceiling_result.get("ceiling_bytes") or 0)
@@ -177,6 +192,12 @@ def _compact_base_sweep_row(
         and receiver_proof.get("runtime_consumption_proof_passed") is True
     )
     exact_report = exact_index.get(str(acquisition_row.get("projection_manifest_path") or ""))
+    hprc_followup = _lookup_hprc_queue_followup(
+        acquisition_row=acquisition_row,
+        source=source,
+        hprc_queue_followup_index=hprc_queue_followup_index,
+    )
+    hprc_followup_blockers = _hprc_queue_followup_demoting_blockers(hprc_followup)
     if not coverage_valid:
         action = "train_or_scale_to_full_coverage_emit_spine_then_receiver_proof"
         route_status = "blocked_until_full_video_coverage"
@@ -188,6 +209,12 @@ def _compact_base_sweep_row(
         route_status = "queued_for_receiver_proof_and_replay"
     if exact_report is not None and exact_report.get("ready_for_exact_eval_dispatch") is True:
         route_status = "exact_dispatchable_after_lane_claim"
+    if hprc_followup_blockers:
+        action = (
+            "route_to_native_pose_geometry_or_predictive_hprc_redesign_"
+            "before_cpu_replay"
+        )
+        route_status = "demoted_by_hprc_queue_followup"
     return {
         "schema": HPRC_SPINE_COMPACT_BASE_SWEEP_ROW_SCHEMA,
         "runner_row_id": f"{family}:{ceiling}",
@@ -213,10 +240,14 @@ def _compact_base_sweep_row(
         "requires_exact_gate": True,
         "exact_gate_observed": exact_report is not None,
         "exact_gate_summary": None if exact_report is None else exact_report.get("exact_axis_gate"),
+        "hprc_queue_followup_observed": hprc_followup is not None,
+        "hprc_queue_followup_summary": _hprc_queue_followup_summary(hprc_followup),
+        "requires_architecture_redesign_before_replay": bool(hprc_followup_blockers),
         "blockers": _dedupe(
             [
                 *([] if coverage_valid else ["declared_pair_coverage_below_full_video"]),
                 *([] if fits_ceiling else ["candidate_exceeds_hard_byte_ceiling"]),
+                *hprc_followup_blockers,
                 *(
                     []
                     if receiver_proof_passed
@@ -331,22 +362,28 @@ def _section_value_row(
 
 
 def _choose_runner_rows(*, compact_base_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    readyish = [
+    non_demoted_rows = [
         row
         for row in compact_base_rows
+        if row.get("route_status") != "demoted_by_hprc_queue_followup"
+    ]
+    candidate_rows = non_demoted_rows or compact_base_rows
+    readyish = [
+        row
+        for row in candidate_rows
         if row["coverage_valid_for_base_comparison"] and row["fits_ceiling"]
     ]
     readyish.sort(key=lambda row: (int(row["ceiling_bytes"]), int(row["effective_archive_bytes"] or 0)))
     if readyish:
         return readyish[:3]
     shrink = [
-        row for row in compact_base_rows if row["coverage_valid_for_base_comparison"]
+        row for row in candidate_rows if row["coverage_valid_for_base_comparison"]
     ]
     shrink.sort(key=lambda row: (int(row["excess_bytes"] or 0), int(row["ceiling_bytes"])))
     if shrink:
         return shrink[:3]
     blocked = sorted(
-        compact_base_rows,
+        candidate_rows,
         key=lambda row: (
             int(row["ceiling_bytes"]),
             int(row["effective_archive_bytes"] or 0),
@@ -537,6 +574,24 @@ def _index_exact_reports(reports: list[dict[str, Any]]) -> dict[str, dict[str, A
     return index
 
 
+def _index_hprc_queue_followups(
+    reports: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for item in reports:
+        payload = item["payload"]
+        archive = payload.get("archive") if isinstance(payload.get("archive"), dict) else {}
+        keys = (
+            archive.get("archive_zip_path"),
+            archive.get("archive_zip_sha256"),
+            payload.get("training_result_path"),
+        )
+        for key in keys:
+            if isinstance(key, str) and key:
+                index[key] = payload
+    return index
+
+
 def _index_receiver_proofs(reports: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     index: dict[str, dict[str, Any]] = {}
     for item in reports:
@@ -549,6 +604,26 @@ def _index_receiver_proofs(reports: list[dict[str, Any]]) -> dict[str, dict[str,
             if isinstance(key, str) and key:
                 index[key] = payload
     return index
+
+
+def _lookup_hprc_queue_followup(
+    *,
+    acquisition_row: dict[str, Any],
+    source: dict[str, Any],
+    hprc_queue_followup_index: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    keys = (
+        source.get("archive_zip_path"),
+        source.get("archive_path"),
+        source.get("path"),
+        source.get("archive_zip_sha256"),
+        source.get("sha256"),
+        acquisition_row.get("projection_manifest_path"),
+    )
+    for key in keys:
+        if isinstance(key, str) and key in hprc_queue_followup_index:
+            return hprc_queue_followup_index[key]
+    return None
 
 
 def _lookup_receiver_proof(
@@ -569,6 +644,125 @@ def _lookup_receiver_proof(
         if isinstance(key, str) and key in receiver_proof_index:
             return receiver_proof_index[key]
     return None
+
+
+def _hprc_queue_followup_summary(followup: dict[str, Any] | None) -> dict[str, Any] | None:
+    if followup is None:
+        return None
+    archive = followup.get("archive") if isinstance(followup.get("archive"), dict) else {}
+    byte_intelligence = (
+        archive.get("byte_intelligence")
+        if isinstance(archive.get("byte_intelligence"), dict)
+        else {}
+    )
+    replay_gate = (
+        followup.get("local_replay_gate")
+        if isinstance(followup.get("local_replay_gate"), dict)
+        else {}
+    )
+    promotion_gate = (
+        followup.get("promotion_gate")
+        if isinstance(followup.get("promotion_gate"), dict)
+        else {}
+    )
+    return {
+        "schema": "hprc_queue_followup_compact_summary.v1",
+        "training_result_path": followup.get("training_result_path"),
+        "archive_zip_path": archive.get("archive_zip_path"),
+        "archive_zip_sha256": archive.get("archive_zip_sha256"),
+        "archive_zip_bytes": archive.get("archive_zip_bytes"),
+        "resolution_rate_feasibility": byte_intelligence.get(
+            "resolution_rate_feasibility"
+        ),
+        "local_replay_gate": {
+            "required": replay_gate.get("required"),
+            "evaluation_passed": replay_gate.get("evaluation_passed"),
+            "blockers": replay_gate.get("blockers"),
+        },
+        "promotion_gate": {
+            "ready_for_exact_eval_dispatch": promotion_gate.get(
+                "ready_for_exact_eval_dispatch"
+            ),
+            "blockers": promotion_gate.get("blockers"),
+        },
+        "planner_learning_signals": [
+            {
+                "signal_id": signal.get("signal_id"),
+                "status": signal.get("status"),
+                "metric_name": signal.get("metric_name"),
+                "metric_value": signal.get("metric_value"),
+                "next_architecture_priorities": signal.get(
+                    "next_architecture_priorities"
+                ),
+                "reactivation_criteria": signal.get("reactivation_criteria"),
+            }
+            for signal in _rows(followup, "planner_learning_signals")
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hprc_queue_followup_demoting_blockers(
+    followup: dict[str, Any] | None,
+) -> list[str]:
+    if followup is None:
+        return []
+    blockers: list[str] = []
+    local_gate = (
+        followup.get("local_replay_gate")
+        if isinstance(followup.get("local_replay_gate"), dict)
+        else {}
+    )
+    for blocker in local_gate.get("blockers") or []:
+        if isinstance(blocker, str) and blocker:
+            blockers.append(blocker)
+    for signal in _rows(followup, "planner_learning_signals"):
+        signal_id = str(signal.get("signal_id") or "")
+        if signal_id in {
+            "defer_lowres_dense_residual_collapse_until_mlx_distortion_recovers",
+            "hprc_rate_feasible_but_resolution_distortion_bound",
+            "hprc_rate_bound_before_distortion_gate",
+        }:
+            blockers.append(signal_id)
+    return _dedupe(blockers)
+
+
+def _hprc_queue_followup_signal_rows(
+    reports: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in reports:
+        payload = item["payload"]
+        archive = payload.get("archive") if isinstance(payload.get("archive"), dict) else {}
+        for signal in _rows(payload, "planner_learning_signals"):
+            rows.append(
+                {
+                    "schema": "hprc_queue_followup_signal_row.v1",
+                    "report_path": item["path"],
+                    "report_sha256": item["sha256"],
+                    "archive_zip_path": archive.get("archive_zip_path"),
+                    "archive_zip_sha256": archive.get("archive_zip_sha256"),
+                    "archive_zip_bytes": archive.get("archive_zip_bytes"),
+                    "signal_id": signal.get("signal_id"),
+                    "status": signal.get("status"),
+                    "metric_name": signal.get("metric_name"),
+                    "metric_value": signal.get("metric_value"),
+                    "blockers": signal.get("blockers"),
+                    "next_architecture_priorities": signal.get(
+                        "next_architecture_priorities"
+                    ),
+                    "reactivation_criteria": signal.get("reactivation_criteria"),
+                    **FALSE_AUTHORITY,
+                }
+            )
+    rows.sort(
+        key=lambda row: (
+            str(row.get("archive_zip_sha256") or ""),
+            str(row.get("signal_id") or ""),
+            str(row.get("report_path") or ""),
+        )
+    )
+    return rows
 
 
 def _receiver_proof_summary(proof: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -606,6 +800,28 @@ def _posterior_update_hooks(
                 "record_positive_after_exact_axis_only": True,
             }
         )
+        if row.get("route_status") == "demoted_by_hprc_queue_followup":
+            summary = row.get("hprc_queue_followup_summary")
+            signals = (
+                summary.get("planner_learning_signals")
+                if isinstance(summary, dict)
+                else []
+            )
+            hooks.append(
+                {
+                    "schema": "hprc_spine_posterior_update_hook.v1",
+                    "family": row["family"],
+                    "stage": "hprc_queue_followup_demotion",
+                    "scope": "compact_base_full_video_candidate",
+                    "status": "demote_from_queue_followup_signal",
+                    "signal_ids": [
+                        signal.get("signal_id")
+                        for signal in signals
+                        if isinstance(signal, dict)
+                    ],
+                    "record_negative_now": True,
+                }
+            )
     for row in section_value_rows:
         if row["admission_status"].startswith("demote"):
             hooks.append(
@@ -637,6 +853,11 @@ def _plan_blockers(
         blockers.append("no_full_coverage_candidate_under_any_hard_ceiling")
     if any(row["evidence_status"] == "missing" for row in section_value_rows):
         blockers.append("some_sections_missing_value_per_byte_measurement")
+    if any(
+        row.get("route_status") == "demoted_by_hprc_queue_followup"
+        for row in compact_base_rows
+    ):
+        blockers.append("hprc_queue_followup_demoted_candidate_before_replay")
     return _dedupe(blockers)
 
 
@@ -657,6 +878,14 @@ def _load_receiver_proof(path: str | Path, *, root: Path) -> dict[str, Any]:
 def _load_exact_report(path: str | Path, *, root: Path) -> dict[str, Any]:
     resolved = _resolve(path, base=root)
     payload = _load_json_object(resolved)
+    return {"path": resolved.as_posix(), "sha256": _sha256_file(resolved), "payload": payload}
+
+
+def _load_hprc_queue_followup(path: str | Path, *, root: Path) -> dict[str, Any]:
+    resolved = _resolve(path, base=root)
+    payload = _load_json_object(resolved)
+    if payload.get("schema") != HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA:
+        raise ValueError(f"HPRC queue followup has unexpected schema: {resolved}")
     return {"path": resolved.as_posix(), "sha256": _sha256_file(resolved), "payload": payload}
 
 
