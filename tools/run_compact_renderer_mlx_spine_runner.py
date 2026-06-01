@@ -376,11 +376,13 @@ class CompactRendererMlxSpineRunnerError(ValueError):
 def _local_cpu_replay_enabled_by_default(
     num_pairs: int,
     *,
-    has_full_video_mlx_prefilter: bool = False,
+    mlx_prefilter_local_replay_passed: bool = False,
 ) -> bool:
     """Return whether local replay should run without an explicit CLI override."""
 
-    return int(num_pairs) >= CONTEST_PAIR_COUNT and bool(has_full_video_mlx_prefilter)
+    return int(num_pairs) >= CONTEST_PAIR_COUNT and bool(
+        mlx_prefilter_local_replay_passed
+    )
 
 
 def _run_compact_local_cpu_replay_gate(
@@ -392,6 +394,7 @@ def _run_compact_local_cpu_replay_gate(
     num_pairs: int,
     requested: bool | None,
     has_full_video_mlx_prefilter: bool = False,
+    mlx_prefilter_local_replay_passed: bool = False,
     keep_inflated: bool = False,
     cleanup_failed_scratch: bool = True,
     repo_root: str | Path = REPO_ROOT,
@@ -411,13 +414,15 @@ def _run_compact_local_cpu_replay_gate(
         if requested is not None
         else _local_cpu_replay_enabled_by_default(
             pairs,
-            has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
+            mlx_prefilter_local_replay_passed=mlx_prefilter_local_replay_passed,
         )
     )
     if pairs < CONTEST_PAIR_COUNT:
         return None, [], ["local_cpu_replay_not_run_partial_pair_coverage"]
-    if requested is None and not has_full_video_mlx_prefilter:
+    if (requested is None or requested is True) and not has_full_video_mlx_prefilter:
         return None, [], ["local_cpu_replay_waiting_for_full_video_mlx_prefilter"]
+    if (requested is None or requested is True) and not mlx_prefilter_local_replay_passed:
+        return None, [], ["local_cpu_replay_blocked_by_mlx_prefilter_score"]
     if not should_run:
         return None, [], ["local_cpu_replay_not_executed"]
     if archive_zip_path is None:
@@ -2132,6 +2137,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     has_full_video_mlx_prefilter = bool(
         mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
     )
+    mlx_prefilter_local_replay_passed = bool(
+        mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"]
+    )
     local_cpu_replay_summary: dict[str, Any] | None = None
     local_cpu_replay_paths: list[Path] = []
     local_cpu_replay_blockers: list[str] = []
@@ -2148,6 +2156,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             num_pairs=int(num_pairs),
             requested=run_local_cpu_replay,
             has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
+            mlx_prefilter_local_replay_passed=mlx_prefilter_local_replay_passed,
             keep_inflated=keep_local_replay_inflated,
             cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
             repo_root=root,
@@ -2239,10 +2248,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "default_enabled_for_full_coverage": (
                     _local_cpu_replay_enabled_by_default(
                         int(num_pairs),
-                        has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
+                        mlx_prefilter_local_replay_passed=(
+                            mlx_prefilter_local_replay_passed
+                        ),
                     )
                 ),
                 "has_full_video_mlx_prefilter": has_full_video_mlx_prefilter,
+                "local_replay_mlx_prefilter_passed": (
+                    mlx_prefilter_local_replay_passed
+                ),
                 "coverage_valid_for_replay": int(num_pairs) >= CONTEST_PAIR_COUNT,
                 "executed": local_cpu_replay_summary is not None,
                 "axis_tag": "[macOS-CPU advisory]",

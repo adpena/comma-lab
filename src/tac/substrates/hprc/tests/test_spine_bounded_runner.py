@@ -138,6 +138,7 @@ def test_section_value_admission_demotes_bad_residual_tokens(tmp_path: Path) -> 
             {
                 "schema": "hprc_mlx_component_neutralization_profile.v1",
                 "max_pairs": 600,
+                "scorer_batch_pairs": 1,
                 "scope_status": {"full_video": True},
                 "section_value_rows": [
                     {"variant_id": "baseline", "neutralized_section": "none"},
@@ -424,6 +425,7 @@ def test_sampled_section_value_profile_opens_full_video_work_order(
             {
                 "schema": "hprc_mlx_component_neutralization_profile.v1",
                 "max_pairs": 32,
+                "scorer_batch_pairs": 1,
                 "scope_status": {"full_video": "sampled_prefix_requires_full_video_rerun"},
                 "section_value_rows": [
                     {
@@ -500,6 +502,7 @@ def test_full_video_section_value_profile_satisfies_work_order(
             {
                 "schema": "hprc_mlx_component_neutralization_profile.v1",
                 "max_pairs": 600,
+                "scorer_batch_pairs": 1,
                 "scope_status": {"full_video": "executed"},
                 "section_value_rows": [
                     {
@@ -566,6 +569,7 @@ def test_full_video_section_value_profile_marks_cut_candidates(
                 "schema": "hprc_mlx_component_neutralization_profile.v1",
                 "family": "pact_nerv",
                 "max_pairs": 600,
+                "scorer_batch_pairs": 1,
                 "scope_status": {"full_video": "executed"},
                 "section_value_rows": [
                     {

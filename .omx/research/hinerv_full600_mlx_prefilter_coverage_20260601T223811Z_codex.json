@@ -1,0 +1,35 @@
+{
+  "best_full_video_mlx_score": 90.72321618617728,
+  "blockers": [
+    "mlx_prefilter_score_not_below_local_replay_threshold",
+    "mlx_score_above_hard_demote_threshold"
+  ],
+  "full_video_profile_paths": [
+    "/Volumes/VertigoDataTier/pact/experiments/results/codex_hi_nerv_full600_direct_mlx_prefilter_20260601T2228Z/hprc_mlx_component_neutralization_profile.json"
+  ],
+  "has_full_video_mlx_prefilter": true,
+  "local_replay_mlx_prefilter_passed": false,
+  "max_mlx_score_for_local_replay": 0.5,
+  "profile_count": 1,
+  "profile_records": [
+    {
+      "batch_pairs": 1,
+      "blockers": [],
+      "bytes": 19962,
+      "exists": true,
+      "full_video_prefilter": true,
+      "full_video_scope": "executed",
+      "mlx_score_estimate": 90.72321618617728,
+      "pair_count": 600,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/codex_hi_nerv_full600_direct_mlx_prefilter_20260601T2228Z/hprc_mlx_component_neutralization_profile.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_pairs": 600,
+      "schema_name": "hprc_mlx_component_neutralization_profile.v1",
+      "score_claim": false,
+      "sha256": "78b839c7e2fe8392919fd2b33cea0c0c723cd6663b12f08e052dc1511e799300"
+    }
+  ],
+  "required_pairs": 600,
+  "schema": "hprc_mlx_prefilter_coverage.v1"
+}

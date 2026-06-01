@@ -18,6 +18,7 @@ def test_nested_mlx_response_summary_counts_for_full_video_coverage() -> None:
         "schema": "hprc_mlx_component_neutralization_profile.v1",
         "scope_status": {"full_video": "executed"},
         "mlx_response_summary": {
+            "batch_pairs": 1,
             "max_pairs": 600,
             "n_samples": 600,
             "candidate_cache_pairs": 600,
@@ -37,7 +38,11 @@ def test_sampled_profile_path_is_not_full_video_prefilter(tmp_path: Path) -> Non
                 "scope_status": {
                     "full_video": "sampled_prefix_requires_full_video_rerun"
                 },
-                "mlx_response_summary": {"max_pairs": 128, "n_samples": 128},
+                "mlx_response_summary": {
+                    "batch_pairs": 1,
+                    "max_pairs": 128,
+                    "n_samples": 128,
+                },
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -57,3 +62,33 @@ def test_sampled_profile_path_is_not_full_video_prefilter(tmp_path: Path) -> Non
     assert coverage["profile_records"][0]["full_video_prefilter"] is False
     assert "full_video_mlx_scorer_replay_not_attached" in coverage["blockers"]
     assert "sampled_mlx_prefilter_requires_full_video_rerun" in coverage["blockers"]
+
+
+def test_batched_full_video_profile_is_not_singleton_prefilter(
+    tmp_path: Path,
+) -> None:
+    profile_path = tmp_path / "batched_profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "scope_status": {"full_video": "executed"},
+                "mlx_response_summary": {
+                    "batch_pairs": 8,
+                    "max_pairs": 600,
+                    "n_samples": 600,
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    coverage = summarize_mlx_prefilter_coverage(
+        (profile_path,),
+        root=tmp_path,
+    )
+
+    assert coverage["has_full_video_mlx_prefilter"] is False
+    assert coverage["profile_records"][0]["batch_pairs"] == 8
+    assert "mlx_profile_batch_pairs_not_singleton" in coverage["blockers"]
