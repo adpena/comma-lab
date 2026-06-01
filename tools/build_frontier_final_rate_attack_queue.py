@@ -295,6 +295,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--post-feedback-child-queue-max-steps", type=int, default=8)
     parser.add_argument("--post-feedback-child-queue-max-parallel", type=int, default=1)
     parser.add_argument(
+        "--allow-unwired-post-feedback-storage-preflight",
+        action="store_true",
+        help=(
+            "Allow bounded smoke execution of generated post-feedback queues whose "
+            "metadata explicitly says scheduler storage preflight is not wired. "
+            "Default is fail-closed."
+        ),
+    )
+    parser.add_argument(
         "--require-post-feedback-portfolio-coverage",
         dest="require_post_feedback_portfolio_coverage",
         action="store_true",
@@ -890,6 +899,9 @@ def main(argv: list[str] | None = None) -> int:
                                     max_idle_cycles=args.max_idle_cycles,
                                     require_portfolio_coverage=(
                                         args.require_post_feedback_portfolio_coverage
+                                    ),
+                                    allow_unwired_storage_preflight=(
+                                        args.allow_unwired_post_feedback_storage_preflight
                                     ),
                                 )
                                 execution_report["post_execute_feedback_child_queues"] = (

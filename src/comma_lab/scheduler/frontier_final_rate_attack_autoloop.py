@@ -51,6 +51,10 @@ POST_FEEDBACK_PORTFOLIO_REQUIRED_DEFERRED_TARGET_KINDS = (
     "dqs1_pairset_drop_pair",
     "inverse_scorer_cell_candidate_v1",
 )
+UNWIRED_STORAGE_PREFLIGHT_STATUS = "not_wired_smoke_bounded"
+UNWIRED_STORAGE_PREFLIGHT_BLOCKER = (
+    "post_feedback_child_queue_storage_preflight_not_wired"
+)
 
 POST_FEEDBACK_CHILD_QUEUE_PRIORITY = (
     "operation_materializer_execution_queue",
@@ -302,6 +306,32 @@ def _queue_definition_status_counts(queue_payload: Mapping[str, Any]) -> dict[st
     return dict(sorted(counts.items()))
 
 
+def _queue_storage_preflight_blockers(
+    queue_payload: Mapping[str, Any],
+) -> list[dict[str, str]]:
+    blockers: list[dict[str, str]] = []
+    for experiment in queue_payload.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, Mapping):
+            continue
+        status = str(metadata.get("storage_preflight_status") or "")
+        if status != UNWIRED_STORAGE_PREFLIGHT_STATUS:
+            continue
+        blockers.append(
+            {
+                "experiment_id": str(experiment.get("id") or ""),
+                "storage_preflight_status": status,
+                "storage_preflight_blocker": str(
+                    metadata.get("storage_preflight_blocker")
+                    or UNWIRED_STORAGE_PREFLIGHT_BLOCKER
+                ),
+            }
+        )
+    return blockers
+
+
 def _queue_selection_rank(status_counts: Mapping[str, Any]) -> int:
     """Prefer runnable child queues over empty/frozen advisory queues."""
 
@@ -333,6 +363,7 @@ def _child_queue_artifact_candidates(
         if queue_payload.get("schema") != "experiment_queue.v1":
             continue
         status_counts = _queue_definition_status_counts(queue_payload)
+        storage_preflight_blockers = _queue_storage_preflight_blockers(queue_payload)
         candidates.append(
             {
                 "artifact_key": artifact_key,
@@ -340,6 +371,8 @@ def _child_queue_artifact_candidates(
                 "priority_index": priority_index,
                 "selection_rank": _queue_selection_rank(status_counts),
                 "definition_status_counts": status_counts,
+                "storage_preflight_blockers": storage_preflight_blockers,
+                "storage_preflight_blocker_count": len(storage_preflight_blockers),
             }
         )
     candidates.sort(
@@ -983,6 +1016,7 @@ def execute_post_feedback_child_queues(
     max_idle_cycles: int = 1,
     run_command: RunCommand | None = None,
     require_portfolio_coverage: bool = False,
+    allow_unwired_storage_preflight: bool = False,
 ) -> dict[str, Any]:
     """Run selected post-feedback queues and persist a single custody report."""
 
@@ -994,9 +1028,28 @@ def execute_post_feedback_child_queues(
         require=require_portfolio_coverage,
     )
     candidates = _child_queue_artifact_candidates(feedback_artifacts, repo_root=repo)
-    preflight_blocks_execution = (
+    selection_window = candidates[:limit]
+    storage_blocked_queues = [
+        {
+            "artifact_key": str(row["artifact_key"]),
+            "queue_path": str(row["queue_path"]),
+            "storage_preflight_blocker_count": int(
+                row.get("storage_preflight_blocker_count") or 0
+            ),
+            "storage_preflight_blockers": list(
+                row.get("storage_preflight_blockers") or []
+            ),
+        }
+        for row in selection_window
+        if int(row.get("storage_preflight_blocker_count") or 0) > 0
+    ]
+    portfolio_blocks_execution = (
         require_portfolio_coverage and portfolio_preflight["valid"] is not True
     )
+    storage_blocks_execution = (
+        bool(storage_blocked_queues) and not allow_unwired_storage_preflight
+    )
+    preflight_blocks_execution = portfolio_blocks_execution or storage_blocks_execution
     selected = (
         []
         if preflight_blocks_execution
@@ -1101,6 +1154,14 @@ def execute_post_feedback_child_queues(
         "portfolio_coverage_preflight_blocker_count": len(
             portfolio_preflight["blockers"]
         ),
+        "storage_preflight_required": not allow_unwired_storage_preflight,
+        "allow_unwired_storage_preflight": bool(allow_unwired_storage_preflight),
+        "storage_preflight_blocked_execution": storage_blocks_execution,
+        "storage_preflight_blocker_count": sum(
+            int(row["storage_preflight_blocker_count"])
+            for row in storage_blocked_queues
+        ),
+        "storage_preflight_blocked_queues": storage_blocked_queues,
         "preflight_blocked_execution": preflight_blocks_execution,
         "candidate_queue_count": len(candidates),
         "selected_queue_count": len(selected),

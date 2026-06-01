@@ -1362,6 +1362,143 @@ def test_post_feedback_child_queue_execution_refuses_missing_required_portfolio_
     assert (tmp_path / report["artifact_path"]).exists()
 
 
+def test_post_feedback_child_queue_execution_refuses_unwired_storage_preflight(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "operation_materializer_execution_queue.json"
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_unwired_storage_preflight",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [
+            {
+                "id": "materializer_smoke",
+                "status": "queued",
+                "metadata": {
+                    "storage_preflight_status": "not_wired_smoke_bounded",
+                    "storage_preflight_blocker": (
+                        "autonomous_child_materializer_execution_queue_omits_"
+                        "scheduler_storage_preflight_parameters"
+                    ),
+                },
+                "steps": [],
+            }
+        ],
+    }
+    _write_json(queue, queue_payload)
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        commands.append(command)
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": "",
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={"operation_materializer_execution_queue": str(queue)},
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+    )
+
+    assert commands == []
+    assert report["candidate_queue_count"] == 1
+    assert report["selected_queue_count"] == 0
+    assert report["executed_queue_count"] == 0
+    assert report["preflight_blocked_execution"] is True
+    assert report["storage_preflight_required"] is True
+    assert report["storage_preflight_blocked_execution"] is True
+    assert report["storage_preflight_blocker_count"] == 1
+    assert report["storage_preflight_blocked_queues"][0]["artifact_key"] == (
+        "operation_materializer_execution_queue"
+    )
+    _assert_false_authority(report)
+
+
+def test_post_feedback_child_queue_execution_allows_unwired_storage_preflight_override(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "operation_materializer_execution_queue.json"
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "child_queue_unwired_storage_preflight_override",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [
+            {
+                "id": "materializer_smoke",
+                "status": "queued",
+                "metadata": {
+                    "storage_preflight_status": "not_wired_smoke_bounded",
+                },
+                "steps": [],
+            }
+        ],
+    }
+    _write_json(queue, queue_payload)
+
+    def fake_run(command: list[str]) -> dict[str, object]:
+        stdout = ""
+        if "run-worker" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_worker_result.v1",
+                    "steps_started": 1,
+                    "success_count": 1,
+                    "failure_count": 0,
+                }
+            )
+        elif "observe" in command:
+            stdout = json.dumps(
+                {
+                    "schema": "experiment_queue_observation.v1",
+                    "queue_id": "child_queue_unwired_storage_preflight_override",
+                    "queue_sha256": stable_json_sha256(queue_payload),
+                    "observe_read_only": True,
+                    "healthy": True,
+                    "status_counts": {"succeeded": 1},
+                    "blockers": [],
+                }
+            )
+        return {
+            "command": command,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout": stdout,
+            "stderr": "",
+        }
+
+    report = execute_post_feedback_child_queues(
+        repo_root=tmp_path,
+        feedback_artifacts={"operation_materializer_execution_queue": str(queue)},
+        output_dir=tmp_path / "out",
+        max_steps=3,
+        max_parallel=1,
+        limit=4,
+        run_command=fake_run,
+        allow_unwired_storage_preflight=True,
+    )
+
+    assert report["allow_unwired_storage_preflight"] is True
+    assert report["storage_preflight_blocked_execution"] is False
+    assert report["storage_preflight_blocker_count"] == 1
+    assert report["selected_queue_count"] == 1
+    assert report["executed_queue_count"] == 1
+    assert report["queue_runs"][0]["observer_revalidation_valid"] is True
+
+
 def test_post_feedback_child_queue_execution_accepts_required_portfolio_coverage(
     tmp_path: Path,
 ) -> None:

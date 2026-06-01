@@ -106,16 +106,25 @@ def _write_scratch_cleanup_manifest(
     video_names_file: Path,
     device: str,
     command: list[str],
+    selected_env: dict[str, str],
+    stdout_path: Path,
+    stderr_path: Path,
     returncode: int,
     evaluation_passed: bool,
     inflated_dir: Path,
     archive_extract_dir: Path,
     cleanup_reason: str,
+    deleted_after_manifest: bool,
 ) -> Path:
     inflated_records, inflated_bytes = _tree_records(inflated_dir)
     archive_records, archive_bytes = _tree_records(archive_extract_dir)
+    source_runtime_records, source_runtime_bytes = _tree_records(source_runtime_submission_dir)
     tree_hash = hashlib.sha256()
-    for section, records in (("inflated", inflated_records), ("archive_extract", archive_records)):
+    for section, records in (
+        ("inflated", inflated_records),
+        ("archive_extract", archive_records),
+        ("source_runtime", source_runtime_records),
+    ):
         for rec in records:
             tree_hash.update(section.encode("utf-8"))
             tree_hash.update(b"\0")
@@ -125,6 +134,8 @@ def _write_scratch_cleanup_manifest(
             tree_hash.update(b"\0")
             tree_hash.update(str(rec["sha256"]).encode("ascii"))
             tree_hash.update(b"\0")
+    stdout_record = _file_record(stdout_path)
+    stderr_record = _file_record(stderr_path)
     manifest = {
         "schema": "local_submission_replay_scratch_cleanup_manifest.v1",
         "created_at_utc": _utc_now(),
@@ -137,6 +148,8 @@ def _write_scratch_cleanup_manifest(
         "video_names_file": str(video_names_file),
         "device": device,
         "command": command,
+        "rebuild_command": command,
+        "selected_replay_env": selected_env,
         "returncode": int(returncode),
         "evaluation_passed": bool(evaluation_passed),
         "cleanup_reason": cleanup_reason,
@@ -147,22 +160,48 @@ def _write_scratch_cleanup_manifest(
             "video_names_file": str(video_names_file),
             "device": device,
         },
-        "deleted_after_manifest": True,
+        "deleted_after_manifest": bool(deleted_after_manifest),
+        "stdout": stdout_record,
+        "stderr": stderr_record,
         "inflated_dir": str(inflated_dir),
         "inflated_file_count": len(inflated_records),
         "inflated_total_bytes": int(inflated_bytes),
         "archive_extract_dir": str(archive_extract_dir),
         "archive_extract_file_count": len(archive_records),
         "archive_extract_total_bytes": int(archive_bytes),
+        "source_runtime_file_count": len(source_runtime_records),
+        "source_runtime_total_bytes": int(source_runtime_bytes),
         "scratch_tree_sha256": tree_hash.hexdigest(),
         "files": {
             "inflated": inflated_records,
             "archive_extract": archive_records,
+            "source_runtime": source_runtime_records,
         },
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output_path
+
+
+def _file_record(path: Path) -> dict[str, object]:
+    if not path.is_file():
+        return {
+            "path": str(path),
+            "exists": False,
+            "bytes": None,
+            "sha256": None,
+        }
+    return {
+        "path": str(path),
+        "exists": True,
+        "bytes": int(path.stat().st_size),
+        "sha256": _sha256_file(path),
+    }
+
+
+def _selected_replay_env(env: dict[str, str]) -> dict[str, str]:
+    keys = ("COMMA_CHALLENGE_ROOT", "PATH", "PYTHON", "VIRTUAL_ENV")
+    return {key: env[key] for key in keys if key in env}
 
 
 def stage_local_replay_submission(
@@ -202,6 +241,8 @@ def run_local_submission_replay(
     upstream_root: Path | None = None,
     video_names_file: Path | None = None,
     keep_inflated: bool = False,
+    cleanup_failed_scratch: bool = False,
+    certify_failed_scratch_rebuildable: bool = False,
 ) -> LocalSubmissionReplaySummary:
     """Run upstream evaluate.sh for an arbitrary staged submission and clean raw scratch."""
 
@@ -221,6 +262,10 @@ def run_local_submission_replay(
         raise FileNotFoundError(f"staged archive.zip missing: {archive_zip}")
     if not inflate_sh.is_file():
         raise FileNotFoundError(f"staged inflate.sh missing: {inflate_sh}")
+    if cleanup_failed_scratch and not certify_failed_scratch_rebuildable:
+        raise ValueError(
+            "cleanup_failed_scratch requires certify_failed_scratch_rebuildable=True"
+        )
 
     inflated_dir = submission_dir / "inflated"
     archive_extract_dir = submission_dir / "archive"
@@ -286,7 +331,15 @@ def run_local_submission_replay(
         archive_cleanup = "retained_by_request"
         scratch_cleanup_manifest_path = None
     else:
-        cleanup_reason = "deleted_after_success" if passed else "deleted_after_failed_replay"
+        if passed:
+            cleanup_reason = "deleted_after_success"
+            deleted_after_manifest = True
+        elif cleanup_failed_scratch:
+            cleanup_reason = "deleted_after_failed_replay_certified_rebuildable"
+            deleted_after_manifest = True
+        else:
+            cleanup_reason = "retained_after_failed_replay"
+            deleted_after_manifest = False
         scratch_cleanup_manifest_path = _write_scratch_cleanup_manifest(
             output_path=submission_dir.parent / "scratch_cleanup_manifest.json",
             submission_dir=submission_dir,
@@ -296,14 +349,19 @@ def run_local_submission_replay(
             video_names_file=video_names_file,
             device=device,
             command=command,
+            selected_env=_selected_replay_env(env),
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
             returncode=int(proc.returncode),
             evaluation_passed=passed,
             inflated_dir=inflated_dir,
             archive_extract_dir=archive_extract_dir,
             cleanup_reason=cleanup_reason,
+            deleted_after_manifest=deleted_after_manifest,
         )
-        shutil.rmtree(inflated_dir, ignore_errors=True)
-        shutil.rmtree(archive_extract_dir, ignore_errors=True)
+        if deleted_after_manifest:
+            shutil.rmtree(inflated_dir, ignore_errors=True)
+            shutil.rmtree(archive_extract_dir, ignore_errors=True)
         inflated_cleanup = cleanup_reason
         archive_cleanup = cleanup_reason
 

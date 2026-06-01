@@ -22,6 +22,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--upstream-root", type=Path, default=None)
     parser.add_argument("--video-names-file", type=Path, default=None)
     parser.add_argument("--keep-inflated", action="store_true")
+    parser.add_argument(
+        "--cleanup-failed-scratch",
+        action="store_true",
+        help=(
+            "delete failed replay scratch only when paired with "
+            "--certify-failed-scratch-rebuildable"
+        ),
+    )
+    parser.add_argument(
+        "--certify-failed-scratch-rebuildable",
+        action="store_true",
+        help="certify failed replay scratch can be regenerated from manifest inputs",
+    )
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--summary-json", type=Path, default=None)
     return parser
@@ -43,6 +56,10 @@ def main() -> int:
         upstream_root=args.upstream_root,
         video_names_file=args.video_names_file,
         keep_inflated=bool(args.keep_inflated),
+        cleanup_failed_scratch=bool(args.cleanup_failed_scratch),
+        certify_failed_scratch_rebuildable=bool(
+            args.certify_failed_scratch_rebuildable
+        ),
     )
     out = args.summary_json or (args.output_dir / "local_submission_replay_summary.json")
     out.parent.mkdir(parents=True, exist_ok=True)
