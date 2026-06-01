@@ -55,6 +55,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--projection-manifest", type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
+    parser.add_argument(
+        "--upstream-dir",
+        type=Path,
+        default=REPO_ROOT / "upstream",
+        help=(
+            "Pinned contest upstream snapshot consumed by inflate/cache "
+            "materialization. Keep separate from --repo-root when running from "
+            "an SSD code worktree."
+        ),
+    )
+    parser.add_argument(
+        "--video-names-file",
+        type=Path,
+        help=(
+            "Optional file_list override for cache materialization; defaults "
+            "to <upstream-dir>/public_test_video_names.txt."
+        ),
+    )
     parser.add_argument("--reference-cache-dir", type=Path, default=DEFAULT_REFERENCE_CACHE)
     parser.add_argument("--sections", nargs="*", default=list(DEFAULT_SECTIONS))
     parser.add_argument("--max-pairs", type=int, default=600)
@@ -75,6 +93,12 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = _resolve(args.repo_root, base=REPO_ROOT)
     archive = _resolve(args.archive, base=repo_root)
     output_dir = _resolve(args.output_dir, base=repo_root)
+    upstream_dir = _resolve(args.upstream_dir, base=repo_root)
+    video_names_file = (
+        None
+        if args.video_names_file is None
+        else _resolve(args.video_names_file, base=repo_root)
+    )
     reference_cache_dir = _resolve(args.reference_cache_dir, base=repo_root)
     projection_manifest = (
         None
@@ -106,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
         variants=variants,
         output_dir=output_dir,
         repo_root=repo_root,
+        upstream_dir=upstream_dir,
+        video_names_file=video_names_file,
         max_pairs=int(args.max_pairs),
         inflate_timeout=int(args.inflate_timeout),
         allow_large_tensor_cache=bool(args.allow_large_tensor_cache),
@@ -132,6 +158,8 @@ def main(argv: list[str] | None = None) -> int:
         layout=layout,
         output_dir=output_dir,
         repo_root=repo_root,
+        upstream_dir=upstream_dir,
+        video_names_file=video_names_file,
         archive=archive,
         projection_manifest=projection_manifest,
         reference_cache_dir=reference_cache_dir,

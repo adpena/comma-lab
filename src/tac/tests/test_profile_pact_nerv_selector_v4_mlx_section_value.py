@@ -69,8 +69,14 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
     archive = _archive(tmp_path / "archive.zip")
     projection = tmp_path / "projection.json"
     projection.write_text('{"schema":"projection_fixture.v1"}\n', encoding="utf-8")
+    upstream_dir = tmp_path / "upstream"
+    upstream_dir.mkdir()
+    video_names_file = tmp_path / "video_names.txt"
+    video_names_file.write_text("0.raw\n", encoding="utf-8")
 
     def fake_materialize_caches(**kwargs):
+        assert Path(kwargs["upstream_dir"]) == upstream_dir
+        assert Path(kwargs["video_names_file"]) == video_names_file
         output_dir = Path(kwargs["output_dir"])
         rows = {}
         for variant in kwargs["variants"]:
@@ -129,6 +135,10 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
             projection.as_posix(),
             "--output-dir",
             (tmp_path / "profile").as_posix(),
+            "--upstream-dir",
+            upstream_dir.as_posix(),
+            "--video-names-file",
+            video_names_file.as_posix(),
             "--sections",
             "decoder_qw",
             "latents_rc",
@@ -151,6 +161,8 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
     assert profile == compat
     assert profile["schema"] == "hprc_mlx_component_neutralization_profile.v1"
     assert profile["source_schema"] == "pact_nerv_selector_v4_section_value_profile.v1"
+    assert profile["upstream_dir"] == upstream_dir.as_posix()
+    assert profile["video_names_file"] == video_names_file.as_posix()
     assert "psv4_section_layout" in profile
     assert "psv3_section_layout" not in profile
     assert profile["residual_admission_policy"]["schema"] == (

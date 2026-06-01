@@ -72,8 +72,14 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
 ) -> None:
     archive = _archive(tmp_path / "archive.zip")
     projection = _projection(tmp_path, archive)
+    upstream_dir = tmp_path / "upstream"
+    upstream_dir.mkdir()
+    video_names_file = tmp_path / "video_names.txt"
+    video_names_file.write_text("0.raw\n", encoding="utf-8")
 
     def fake_materialize_caches(**kwargs):
+        assert Path(kwargs["upstream_dir"]) == upstream_dir
+        assert Path(kwargs["video_names_file"]) == video_names_file
         output_dir = Path(kwargs["output_dir"])
         rows = {}
         for variant in kwargs["variants"]:
@@ -132,6 +138,10 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
             projection.as_posix(),
             "--output-dir",
             (tmp_path / "profile").as_posix(),
+            "--upstream-dir",
+            upstream_dir.as_posix(),
+            "--video-names-file",
+            video_names_file.as_posix(),
             "--sections",
             "decoder_qw",
             "codebooks_q",
@@ -153,6 +163,8 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     assert profile["schema"] == "hprc_mlx_component_neutralization_profile.v1"
     assert profile["source_schema"] == "pact_nerv_vq_section_value_profile.v1"
     assert profile["family"] == "pact_nerv_vq"
+    assert profile["upstream_dir"] == upstream_dir.as_posix()
+    assert profile["video_names_file"] == video_names_file.as_posix()
     assert "pvq_section_layout" in profile
     rows = {row["variant_id"]: row for row in profile["section_value_rows"]}
     assert set(rows) == {

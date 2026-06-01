@@ -51,6 +51,7 @@ OWNED_MARKER = ".pact_nerv_selector_v3_mlx_section_value_owned.json"
 DEFAULT_REFERENCE_CACHE = (
     REPO_ROOT / "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
 )
+DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
 DEFAULT_SECTIONS = ("decoder_qw", "latents_rc", "selectors_rc", "residual_rc")
 
 
@@ -73,6 +74,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--projection-manifest", type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
+    parser.add_argument(
+        "--upstream-dir",
+        type=Path,
+        default=DEFAULT_UPSTREAM_DIR,
+        help=(
+            "Pinned contest upstream snapshot consumed by inflate/cache "
+            "materialization. Keep separate from --repo-root when running from "
+            "an SSD code worktree."
+        ),
+    )
+    parser.add_argument(
+        "--video-names-file",
+        type=Path,
+        help=(
+            "Optional file_list override for cache materialization; defaults "
+            "to <upstream-dir>/public_test_video_names.txt."
+        ),
+    )
     parser.add_argument("--reference-cache-dir", type=Path, default=DEFAULT_REFERENCE_CACHE)
     parser.add_argument("--sections", nargs="*", default=list(DEFAULT_SECTIONS))
     parser.add_argument("--max-pairs", type=int, default=600)
@@ -93,6 +112,12 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = _resolve(args.repo_root, base=REPO_ROOT)
     archive = _resolve(args.archive, base=repo_root)
     output_dir = _resolve(args.output_dir, base=repo_root)
+    upstream_dir = _resolve(args.upstream_dir, base=repo_root)
+    video_names_file = (
+        None
+        if args.video_names_file is None
+        else _resolve(args.video_names_file, base=repo_root)
+    )
     reference_cache_dir = _resolve(args.reference_cache_dir, base=repo_root)
     projection_manifest = (
         None
@@ -124,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
         variants=variants,
         output_dir=output_dir,
         repo_root=repo_root,
+        upstream_dir=upstream_dir,
+        video_names_file=video_names_file,
         max_pairs=int(args.max_pairs),
         inflate_timeout=int(args.inflate_timeout),
         allow_large_tensor_cache=bool(args.allow_large_tensor_cache),
@@ -149,6 +176,8 @@ def main(argv: list[str] | None = None) -> int:
         layout=layout,
         output_dir=output_dir,
         repo_root=repo_root,
+        upstream_dir=upstream_dir,
+        video_names_file=video_names_file,
         archive=archive,
         projection_manifest=projection_manifest,
         reference_cache_dir=reference_cache_dir,
@@ -292,6 +321,8 @@ def _materialize_caches(
     variants: list[VariantSpec],
     output_dir: Path,
     repo_root: Path,
+    upstream_dir: Path,
+    video_names_file: Path | None,
     max_pairs: int,
     inflate_timeout: int,
     allow_large_tensor_cache: bool,
@@ -315,12 +346,16 @@ def _materialize_caches(
             work_dir.as_posix(),
             "--report-output",
             report_output.as_posix(),
+            "--upstream-dir",
+            upstream_dir.as_posix(),
             "--max-pairs",
             str(max_pairs),
             "--inflate-timeout",
             str(inflate_timeout),
             "--force",
         ]
+        if video_names_file is not None:
+            cmd.extend(["--video-names-file", video_names_file.as_posix()])
         if allow_large_tensor_cache:
             cmd.append("--allow-large-tensor-cache")
         completed = subprocess.run(cmd, cwd=repo_root, text=True, capture_output=True)
@@ -334,6 +369,10 @@ def _materialize_caches(
             "work_dir": work_dir.as_posix(),
             "report_output": report_output.as_posix(),
             "argv": cmd,
+            "upstream_dir": upstream_dir.as_posix(),
+            "video_names_file": (
+                None if video_names_file is None else video_names_file.as_posix()
+            ),
             "stdout": completed.stdout.strip(),
             "stderr_tail": completed.stderr.strip()[-4000:],
         }
@@ -402,6 +441,8 @@ def _build_report(
     layout: dict[str, Any],
     output_dir: Path,
     repo_root: Path,
+    upstream_dir: Path,
+    video_names_file: Path | None,
     archive: Path,
     projection_manifest: Path | None,
     reference_cache_dir: Path,
@@ -455,6 +496,8 @@ def _build_report(
         "created_at_unix": time.time(),
         "elapsed_seconds": time.time() - started,
         "repo_root": repo_root.as_posix(),
+        "upstream_dir": upstream_dir.as_posix(),
+        "video_names_file": None if video_names_file is None else video_names_file.as_posix(),
         "tool_argv": [
             sys.executable,
             str((tool_path or Path(__file__)).resolve()),
