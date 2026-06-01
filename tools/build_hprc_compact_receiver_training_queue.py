@@ -93,6 +93,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--disable-hprc-rate-collapse",
+        action="store_true",
+        help="Skip the lossless HPRC section entropy transcode before replay/rate gates.",
+    )
+    parser.add_argument(
+        "--hprc-rate-collapse-sections",
+        action="append",
+        default=[],
+        help=(
+            "Comma/space separated HPRC sections to entropy-wrap before replay. "
+            "Default: decoder_qw,latents_rc,selectors_rc,residual_rc,receiver_state."
+        ),
+    )
+    parser.add_argument("--hprc-rate-collapse-brotli-quality", type=int, default=11)
+    parser.add_argument(
+        "--hprc-rate-collapse-distortion-reserve",
+        type=float,
+        default=0.04,
+        help=(
+            "Require this much score headroom after rate before local replay. "
+            "This keeps HPRC from replaying candidates whose rate term barely "
+            "clears the frontier but leaves no plausible SegNet/PoseNet budget."
+        ),
+    )
+    parser.add_argument(
         "--strict-exact-auth-gate-returncode",
         action="store_true",
         help="Let a blocked exact-auth gate fail the queue instead of writing a durable blocked report.",
@@ -176,7 +201,10 @@ def main(argv: list[str] | None = None) -> int:
                 basis_count=int(args.basis_count),
                 residual_grid_h=int(args.residual_grid_h),
                 residual_grid_w=int(args.residual_grid_w),
-                skip_runtime_consumption_proof=bool(args.skip_runtime_consumption_proof),
+                skip_runtime_consumption_proof=(
+                    bool(args.skip_runtime_consumption_proof)
+                    or not bool(args.disable_hprc_rate_collapse)
+                ),
                 retain_receiver_output=bool(args.retain_receiver_output),
             )
         )
@@ -427,23 +455,52 @@ def _append_campaign_followup_steps(
         output_dir = output_manifest.parent
         decode_pairs = int(params["decode_pairs"])
         export_dir = output_dir / "hprc_compact_receiver_archive_export"
+        rate_collapse_dir = output_dir / "hprc_rate_collapse"
+        rate_collapse_report = rate_collapse_dir / "hprc_rate_collapse_report.json"
+        candidate_result = output_manifest
+        candidate_export_dir = export_dir
+        if not bool(args.disable_hprc_rate_collapse):
+            candidate_result = rate_collapse_report
+            candidate_export_dir = rate_collapse_dir / "best_archive_export"
         rate_gate = output_dir / "archive_rate_local_replay_gate.json"
         local_replay_summary = output_dir / "local_cpu_replay" / "local_submission_replay_summary.json"
         exact_gate = output_dir / "exact_auth_gate_cpu.json"
         followup_report = output_dir / "hprc_queue_followup_report.json"
 
+        if not bool(args.disable_hprc_rate_collapse):
+            experiment["steps"].append(
+                _hprc_rate_collapse_step(
+                    step_id="transcode_hprc_rate_collapse",
+                    training_result=output_manifest,
+                    output_dir=rate_collapse_dir,
+                    report_path=rate_collapse_report,
+                    args=args,
+                    timeout_seconds=timeout_seconds,
+                    skip_receiver_proof=True,
+                    requires=["run_local_training"],
+                )
+            )
+
         if decode_pairs >= full_replay_min_pairs:
-            followup_requires = ["run_local_training"]
+            followup_requires = [
+                "run_local_training"
+                if bool(args.disable_hprc_rate_collapse)
+                else "transcode_hprc_rate_collapse"
+            ]
             followup_local_summary = local_replay_summary
             followup_gate = exact_gate
         else:
-            followup_requires = ["run_local_training"]
+            followup_requires = [
+                "run_local_training"
+                if bool(args.disable_hprc_rate_collapse)
+                else "transcode_hprc_rate_collapse"
+            ]
             followup_local_summary = None
             followup_gate = None
 
         experiment["steps"].append(
             _hprc_followup_report_step(
-                training_result=output_manifest,
+                training_result=candidate_result,
                 report_path=followup_report,
                 decode_pairs=decode_pairs,
                 full_replay_min_pairs=full_replay_min_pairs,
@@ -462,19 +519,36 @@ def _append_campaign_followup_steps(
             if not bool(args.disable_rate_prefilter_before_local_replay):
                 experiment["steps"].append(
                     _archive_rate_gate_step(
-                        training_result=output_manifest,
+                        training_result=candidate_result,
                         gate_json=rate_gate,
                         args=args,
                         timeout_seconds=timeout_seconds,
+                        requires=["write_hprc_campaign_followup_report"],
                     )
                 )
-                replay_requires = ["gate_archive_rate_before_local_replay"]
+                proof_requires = ["gate_archive_rate_before_local_replay"]
             else:
-                replay_requires = ["run_local_training"]
+                proof_requires = ["write_hprc_campaign_followup_report"]
+            if not bool(args.disable_hprc_rate_collapse):
+                experiment["steps"].append(
+                    _hprc_rate_collapse_step(
+                        step_id="prove_hprc_rate_collapsed_receiver",
+                        training_result=output_manifest,
+                        output_dir=rate_collapse_dir,
+                        report_path=rate_collapse_report,
+                        args=args,
+                        timeout_seconds=timeout_seconds,
+                        skip_receiver_proof=False,
+                        requires=proof_requires,
+                    )
+                )
+                replay_requires = ["prove_hprc_rate_collapsed_receiver"]
+            else:
+                replay_requires = proof_requires
             experiment["steps"].append(
                 _local_replay_step(
                     output_dir=output_dir,
-                    export_dir=export_dir,
+                    export_dir=candidate_export_dir,
                     summary_json=local_replay_summary,
                     device=str(args.local_replay_device),
                     timeout_seconds=timeout_seconds,
@@ -568,6 +642,7 @@ def _archive_rate_gate_step(
     gate_json: Path,
     args: argparse.Namespace,
     timeout_seconds: int,
+    requires: list[str],
 ) -> dict[str, Any]:
     command = [
         ".venv/bin/python",
@@ -575,7 +650,7 @@ def _archive_rate_gate_step(
         "--training-result",
         training_result.as_posix(),
         "--min-local-improvement",
-        repr(float(args.min_local_improvement)),
+        repr(float(_rate_gate_margin(args))),
         "--out-json",
         gate_json.as_posix(),
         "--allow-overwrite",
@@ -588,7 +663,7 @@ def _archive_rate_gate_step(
     return {
         "id": "gate_archive_rate_before_local_replay",
         "kind": "command",
-        "requires": ["run_local_training"],
+        "requires": requires,
         "command": command,
         "resources": {"kind": "local_cpu"},
         "timeout_seconds": timeout_seconds,
@@ -614,6 +689,100 @@ def _archive_rate_gate_step(
             "input_artifact_paths": [training_result.as_posix()],
         },
     }
+
+
+def _hprc_rate_collapse_step(
+    *,
+    step_id: str,
+    training_result: Path,
+    output_dir: Path,
+    report_path: Path,
+    args: argparse.Namespace,
+    timeout_seconds: int,
+    skip_receiver_proof: bool,
+    requires: list[str],
+) -> dict[str, Any]:
+    command = [
+        ".venv/bin/python",
+        "tools/transcode_hprc_compact_receiver_rate_collapse.py",
+        "--training-result",
+        training_result.as_posix(),
+        "--output-dir",
+        output_dir.as_posix(),
+        "--repo-root",
+        Path(args.repo_root).expanduser().resolve(strict=False).as_posix(),
+        "--brotli-quality",
+        str(int(args.hprc_rate_collapse_brotli_quality)),
+        "--out-json",
+        report_path.as_posix(),
+        "--allow-overwrite",
+    ]
+    for raw in args.hprc_rate_collapse_sections or []:
+        command.extend(["--sections", str(raw)])
+    if skip_receiver_proof:
+        command.append("--skip-receiver-proof")
+    target_rate_term = _rate_collapse_target_rate_term(args)
+    if target_rate_term is not None:
+        command.extend(["--target-rate-term", repr(float(target_rate_term))])
+    if bool(args.retain_receiver_output):
+        command.append("--retain-receiver-output")
+    postconditions: list[dict[str, Any]] = [
+        {"type": "path_exists", "path": report_path.as_posix()},
+        {"type": "json_false_authority", "path": report_path.as_posix()},
+        {
+            "type": "json_equals",
+            "path": report_path.as_posix(),
+            "key": "schema",
+            "equals": "hprc_rate_collapse_report.v1",
+        },
+    ]
+    if not skip_receiver_proof:
+        receiver_proof = output_dir / "best_archive_export" / "receiver_proof" / "hprc_receiver_proof.json"
+        postconditions.extend(
+            [
+                {"type": "path_exists", "path": receiver_proof.as_posix()},
+                {
+                    "type": "json_equals",
+                    "path": report_path.as_posix(),
+                    "key": "artifact.receiver_proof_present",
+                    "equals": True,
+                },
+            ]
+        )
+    return {
+        "id": step_id,
+        "kind": "command",
+        "requires": requires,
+        "command": command,
+        "resources": {"kind": "local_cpu"},
+        "timeout_seconds": timeout_seconds,
+        "postconditions": postconditions,
+        "telemetry": {
+            "artifact_paths": [output_dir.as_posix(), report_path.as_posix()],
+            "input_artifact_paths": [training_result.as_posix()],
+            "recursive": True,
+            "max_recursive_entries": 256,
+        },
+    }
+
+
+def _rate_gate_margin(args: argparse.Namespace) -> float:
+    return max(
+        float(args.min_local_improvement),
+        float(args.hprc_rate_collapse_distortion_reserve),
+        0.0,
+    )
+
+
+def _rate_collapse_target_rate_term(args: argparse.Namespace) -> float | None:
+    targets = [
+        float(value)
+        for value in (args.auth_frontier_score, args.local_baseline_score)
+        if value is not None
+    ]
+    if not targets:
+        return None
+    return min(targets) - _rate_gate_margin(args)
 
 
 def _exact_auth_gate_step(

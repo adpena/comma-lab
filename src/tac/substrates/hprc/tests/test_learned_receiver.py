@@ -23,6 +23,7 @@ from tac.substrates.hprc.learned_receiver import (
     render_compact_receiver_frame_batch,
     transform_compact_receiver_residual,
 )
+from tac.substrates.hprc.rate_collapse import transcode_compact_receiver_sections
 
 
 def _frames() -> np.ndarray:
@@ -81,6 +82,48 @@ def test_compact_receiver_packet_decodes_semantic_sections() -> None:
     rows = {row["section"]: row for row in byte_profile["section_rows"]}
     assert rows["residual_rc"]["bytes"] > rows["latents_rc"]["bytes"]
     assert byte_profile["score_claim"] is False
+
+
+def test_compact_receiver_entropy_wrapped_sections_roundtrip_pixels() -> None:
+    packet_bytes = build_compact_receiver_packet_from_lowres_frames(
+        _frames(),
+        basis_count=4,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        source_manifest={"source": "unit"},
+    )
+    base = decode_compact_receiver_packet(parse_hprc_packet(packet_bytes))
+    base_render = render_compact_receiver_frame_batch(
+        base,
+        0,
+        4,
+        height=16,
+        width=20,
+    )
+
+    collapsed, rows = transcode_compact_receiver_sections(
+        packet_bytes,
+        sections=(
+            HprcSectionKind.LATENTS_RC,
+            HprcSectionKind.RESIDUAL_RC,
+            HprcSectionKind.RECEIVER_STATE,
+        ),
+        force=True,
+    )
+    compact = decode_compact_receiver_packet(parse_hprc_packet(collapsed))
+    rendered = render_compact_receiver_frame_batch(
+        compact,
+        0,
+        4,
+        height=16,
+        width=20,
+    )
+
+    assert [row["status"] for row in rows] == ["wrapped", "wrapped", "wrapped"]
+    np.testing.assert_array_equal(rendered, base_render)
+    proof = hprc_candidate.build_hprc_section_mutation_proof(collapsed)
+    assert proof["section_mutation_preview_ready"] is True
+    assert proof["blockers"] == []
     value_profile = compact_receiver_section_value_profile(compact, _frames())
     assert value_profile["metric_scope"] == "decoder_grid_lowres_advisory_not_contest_score"
     assert value_profile["score_claim"] is False

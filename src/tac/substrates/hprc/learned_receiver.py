@@ -10,12 +10,14 @@ runtime stays decode-only and scorer-free.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import struct
 from dataclasses import dataclass
 from typing import Any
 
+import brotli  # type: ignore[import-not-found]
 import numpy as np
 
 from tac.substrates.hprc.archive import (
@@ -35,19 +37,23 @@ _LATENT_MAGIC = b"HPRCLAT1"
 _SELECTOR_MAGIC = b"HPRCSEL1"
 _RESIDUAL_MAGIC = b"HPRCRES1"
 _STATE_MAGIC = b"HPRCSTA1"
+_ENTROPY_WRAPPER_MAGIC = b"HPRCEW1\x00"
 _VERSION = 1
+_BROTLI_CODEC_ID = 1
 
 _DECODER_HEADER_FMT = "<8sBHHBHf"
 _LATENT_HEADER_FMT = "<8sBHHf"
 _SELECTOR_HEADER_FMT = "<8sBH"
 _RESIDUAL_HEADER_FMT = "<8sBHHHBf"
 _STATE_HEADER_FMT = "<8sBHBf"
+_ENTROPY_WRAPPER_HEADER_FMT = "<8sBBHI32s"
 
 _DECODER_HEADER_SIZE = struct.calcsize(_DECODER_HEADER_FMT)
 _LATENT_HEADER_SIZE = struct.calcsize(_LATENT_HEADER_FMT)
 _SELECTOR_HEADER_SIZE = struct.calcsize(_SELECTOR_HEADER_FMT)
 _RESIDUAL_HEADER_SIZE = struct.calcsize(_RESIDUAL_HEADER_FMT)
 _STATE_HEADER_SIZE = struct.calcsize(_STATE_HEADER_FMT)
+_ENTROPY_WRAPPER_HEADER_SIZE = struct.calcsize(_ENTROPY_WRAPPER_HEADER_FMT)
 
 
 class HprcCompactReceiverError(ValueError):
@@ -137,6 +143,76 @@ def _require_exact_length(actual: int, expected: int, section: str) -> None:
         )
 
 
+def is_entropy_wrapped_compact_section(payload: bytes | bytearray | memoryview) -> bool:
+    """Return whether ``payload`` uses the HPRC entropy wrapper.
+
+    The wrapper is section-local and decode-only: it stores a brotli-coded copy
+    of the legacy section payload plus raw length/SHA guards. Existing compact
+    receiver grammars remain valid, and wrapped sections are byte-for-byte
+    restored before semantic parsing.
+    """
+
+    return bytes(payload[: len(_ENTROPY_WRAPPER_MAGIC)]) == _ENTROPY_WRAPPER_MAGIC
+
+
+def pack_entropy_wrapped_compact_section(
+    kind: HprcSectionKind,
+    legacy_payload: bytes | bytearray | memoryview,
+    *,
+    brotli_quality: int = 11,
+) -> bytes:
+    raw = bytes(legacy_payload)
+    if len(raw) > 0xFFFFFFFF:
+        raise HprcCompactReceiverError("entropy-wrapped compact section exceeds u32 raw length")
+    quality = int(brotli_quality)
+    if quality < 0 or quality > 11:
+        raise HprcCompactReceiverError("brotli_quality must be in [0, 11]")
+    compressed = bytes(brotli.compress(raw, quality=quality))
+    header = struct.pack(
+        _ENTROPY_WRAPPER_HEADER_FMT,
+        _ENTROPY_WRAPPER_MAGIC,
+        _VERSION,
+        _BROTLI_CODEC_ID,
+        int(kind),
+        len(raw),
+        hashlib.sha256(raw).digest(),
+    )
+    return header + compressed
+
+
+def unwrap_entropy_wrapped_compact_section(
+    payload: bytes | bytearray | memoryview,
+    *,
+    expected_kind: HprcSectionKind,
+) -> bytes:
+    data = bytes(payload)
+    if not is_entropy_wrapped_compact_section(data):
+        return data
+    if len(data) < _ENTROPY_WRAPPER_HEADER_SIZE:
+        raise HprcCompactReceiverError("entropy-wrapped compact section truncated before header")
+    magic, version, codec_id, raw_kind, raw_len, raw_sha = struct.unpack(
+        _ENTROPY_WRAPPER_HEADER_FMT,
+        data[:_ENTROPY_WRAPPER_HEADER_SIZE],
+    )
+    _check_magic(magic, _ENTROPY_WRAPPER_MAGIC, "entropy_wrapper")
+    if version != _VERSION:
+        raise HprcCompactReceiverError(f"entropy_wrapper version mismatch: {version}")
+    if codec_id != _BROTLI_CODEC_ID:
+        raise HprcCompactReceiverError(f"unsupported entropy_wrapper codec id: {codec_id}")
+    if int(raw_kind) != int(expected_kind):
+        raise HprcCompactReceiverError(
+            f"entropy_wrapper section kind mismatch: expected {expected_kind.name}, got {raw_kind}"
+        )
+    raw = bytes(brotli.decompress(data[_ENTROPY_WRAPPER_HEADER_SIZE:]))
+    if len(raw) != int(raw_len):
+        raise HprcCompactReceiverError(
+            f"entropy_wrapper raw length mismatch: expected {raw_len}, got {len(raw)}"
+        )
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise HprcCompactReceiverError("entropy_wrapper raw sha256 mismatch")
+    return raw
+
+
 def pack_compact_decoder(mean: np.ndarray, basis: np.ndarray) -> bytes:
     mean_u8 = np.asarray(mean, dtype=np.uint8)
     if mean_u8.ndim != 3:
@@ -166,6 +242,10 @@ def pack_compact_decoder(mean: np.ndarray, basis: np.ndarray) -> bytes:
 
 
 def unpack_compact_decoder(payload: bytes) -> CompactDecoder:
+    payload = unwrap_entropy_wrapped_compact_section(
+        payload,
+        expected_kind=HprcSectionKind.DECODER_QW,
+    )
     if len(payload) < _DECODER_HEADER_SIZE:
         raise HprcCompactReceiverError("decoder_qw truncated before header")
     magic, version, height, width, channels, basis_count, basis_scale = struct.unpack(
@@ -213,6 +293,10 @@ def pack_compact_latents(latents: np.ndarray) -> bytes:
 
 
 def unpack_compact_latents(payload: bytes) -> CompactLatents:
+    payload = unwrap_entropy_wrapped_compact_section(
+        payload,
+        expected_kind=HprcSectionKind.LATENTS_RC,
+    )
     if len(payload) < _LATENT_HEADER_SIZE:
         raise HprcCompactReceiverError("latents_rc truncated before header")
     magic, version, frames, basis_count, scale = struct.unpack(
@@ -241,6 +325,10 @@ def pack_compact_selectors(selectors: np.ndarray) -> bytes:
 
 
 def unpack_compact_selectors(payload: bytes) -> CompactSelectors:
+    payload = unwrap_entropy_wrapped_compact_section(
+        payload,
+        expected_kind=HprcSectionKind.SELECTORS_RC,
+    )
     if len(payload) < _SELECTOR_HEADER_SIZE:
         raise HprcCompactReceiverError("selectors_rc truncated before header")
     magic, version, frames = struct.unpack(
@@ -297,6 +385,10 @@ def pack_compact_residual_quantized(q: np.ndarray, *, scale: float) -> bytes:
 
 
 def unpack_compact_residual(payload: bytes) -> CompactResidual:
+    payload = unwrap_entropy_wrapped_compact_section(
+        payload,
+        expected_kind=HprcSectionKind.RESIDUAL_RC,
+    )
     if len(payload) < _RESIDUAL_HEADER_SIZE:
         raise HprcCompactReceiverError("residual_rc truncated before header")
     magic, version, frames, grid_h, grid_w, channels, scale = struct.unpack(
@@ -339,6 +431,10 @@ def pack_compact_receiver_state(state: np.ndarray, *, scale: float = 4.0) -> byt
 
 
 def unpack_compact_receiver_state(payload: bytes) -> CompactReceiverState:
+    payload = unwrap_entropy_wrapped_compact_section(
+        payload,
+        expected_kind=HprcSectionKind.RECEIVER_STATE,
+    )
     if len(payload) < _STATE_HEADER_SIZE:
         raise HprcCompactReceiverError("receiver_state truncated before header")
     magic, version, pairs, dims, scale = struct.unpack(
@@ -1160,34 +1256,47 @@ def mutate_compact_receiver_section(
     payload = packet.section_map().get(kind)
     if payload is None:
         return None
-    data = bytearray(payload)
+    was_wrapped = is_entropy_wrapped_compact_section(payload)
+    semantic_payload = unwrap_entropy_wrapped_compact_section(payload, expected_kind=kind)
+    data = bytearray(semantic_payload)
     if kind == HprcSectionKind.DECODER_QW and len(data) > _DECODER_HEADER_SIZE:
         data[_DECODER_HEADER_SIZE] = (data[_DECODER_HEADER_SIZE] + 7 + salt) & 0xFF
-        return bytes(data)
+        return _maybe_rewrap_mutated_section(kind, bytes(data), was_wrapped=was_wrapped)
     if kind == HprcSectionKind.LATENTS_RC and len(data) > _LATENT_HEADER_SIZE:
         data[_LATENT_HEADER_SIZE] = (data[_LATENT_HEADER_SIZE] + 13 + salt) & 0xFF
-        return bytes(data)
+        return _maybe_rewrap_mutated_section(kind, bytes(data), was_wrapped=was_wrapped)
     if kind == HprcSectionKind.SELECTORS_RC and len(data) > _SELECTOR_HEADER_SIZE:
         fill = 0 if any(data[_SELECTOR_HEADER_SIZE:]) else 255
         data[_SELECTOR_HEADER_SIZE:] = bytes([fill]) * (len(data) - _SELECTOR_HEADER_SIZE)
-        return bytes(data)
+        return _maybe_rewrap_mutated_section(kind, bytes(data), was_wrapped=was_wrapped)
     if kind == HprcSectionKind.RESIDUAL_RC and len(data) > _RESIDUAL_HEADER_SIZE:
         data[_RESIDUAL_HEADER_SIZE:] = bytes([127]) * (len(data) - _RESIDUAL_HEADER_SIZE)
-        return bytes(data)
+        return _maybe_rewrap_mutated_section(kind, bytes(data), was_wrapped=was_wrapped)
     if kind == HprcSectionKind.RECEIVER_STATE and len(data) > _STATE_HEADER_SIZE:
         data[_STATE_HEADER_SIZE] = (data[_STATE_HEADER_SIZE] + 23 + salt) & 0xFF
-        return bytes(data)
+        return _maybe_rewrap_mutated_section(kind, bytes(data), was_wrapped=was_wrapped)
     if kind == HprcSectionKind.RDO_PLAN:
-        rdo = _loads_json(payload, section="rdo_plan")
+        rdo = _loads_json(semantic_payload, section="rdo_plan")
         rdo["latent_gain"] = 0.0 if float(rdo.get("latent_gain", 1.0)) else 1.0
         rdo["residual_gain"] = float(rdo.get("residual_gain", 1.0)) + 0.5
         rdo["semantic_mutation_salt"] = int(salt)
         return _json_bytes(rdo)
     if kind == HprcSectionKind.MANIFEST_JSON:
-        manifest = _loads_json(payload, section="manifest_json")
+        manifest = _loads_json(semantic_payload, section="manifest_json")
         manifest["semantic_mutation_note"] = f"metadata_only_{salt}"
         return _json_bytes(manifest)
     return None
+
+
+def _maybe_rewrap_mutated_section(
+    kind: HprcSectionKind,
+    payload: bytes,
+    *,
+    was_wrapped: bool,
+) -> bytes:
+    if not was_wrapped:
+        return payload
+    return pack_entropy_wrapped_compact_section(kind, payload)
 
 
 __all__ = [
@@ -1202,6 +1311,7 @@ __all__ = [
     "compact_receiver_section_value_profile",
     "decode_compact_receiver_packet",
     "is_compact_receiver_packet",
+    "is_entropy_wrapped_compact_section",
     "mutate_compact_receiver_section",
     "neutralize_compact_receiver_section",
     "pack_compact_decoder",
@@ -1210,8 +1320,10 @@ __all__ = [
     "pack_compact_residual",
     "pack_compact_residual_quantized",
     "pack_compact_selectors",
+    "pack_entropy_wrapped_compact_section",
     "render_compact_receiver_frame",
     "render_compact_receiver_frame_batch",
     "transform_compact_receiver_residual",
+    "unwrap_entropy_wrapped_compact_section",
     "write_compact_receiver_raw",
 ]
