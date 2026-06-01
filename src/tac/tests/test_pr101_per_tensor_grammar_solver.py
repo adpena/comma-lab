@@ -1,12 +1,16 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import io
+import zipfile
+
 import numpy as np
 import pytest
 import torch
 
 from tac.optimization.byte_shaving_campaign import build_signal_surface_from_candidate_queue
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
+    PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
     PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA,
     PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA,
     PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA,
@@ -14,13 +18,14 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     empirical_shannon_floor_bytes,
+    materialize_grouped_archive_from_report,
     materialize_grouped_decoder_blob_from_report,
     measure_tensor_grammar_candidates,
     select_best_tensor_candidate,
     solve_grouped_brotli_packet_grammar,
     solve_state_dict_per_tensor_grammar,
 )
-from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA
+from tac.pr101_split_brotli_codec import DECODER_BLOB_LEN, FIXED_STATE_SCHEMA, LATENT_BLOB_LEN
 
 
 def _tiny_state_dict(seed: int = 0) -> dict[str, torch.Tensor]:
@@ -30,6 +35,16 @@ def _tiny_state_dict(seed: int = 0) -> dict[str, torch.Tensor]:
         # Keep values tiny but non-degenerate so quantization exercises signs.
         out[name] = torch.randn(shape, generator=gen) * (0.01 + idx * 0.0001)
     return out
+
+
+def _stored_zip(member_name: str, payload: bytes) -> bytes:
+    buf = io.BytesIO()
+    info = zipfile.ZipInfo(member_name)
+    info.compress_type = zipfile.ZIP_STORED
+    info.date_time = (2026, 5, 4, 16, 48, 4)
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(info, payload)
+    return buf.getvalue()
 
 
 def test_tensor_candidates_are_real_roundtrip_codecs() -> None:
@@ -277,6 +292,71 @@ def test_grouped_decoder_blob_materializer_rejects_partial_schema_report() -> No
 
     with pytest.raises(ValueError, match="full PR101 schema"):
         materialize_grouped_decoder_blob_from_report(state_dict, report)
+
+
+def test_grouped_archive_materializer_preserves_sections_and_fails_closed() -> None:
+    state_dict = _tiny_state_dict(seed=6)
+    report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=7,
+        max_streams=7,
+        brotli_quality=4,
+    )
+    source_decoder = b"D" * DECODER_BLOB_LEN
+    source_latent = b"L" * LATENT_BLOB_LEN
+    source_sidecar = b"S" * 607
+    source_zip = _stored_zip("x", source_decoder + source_latent + source_sidecar)
+
+    archive_zip, manifest = materialize_grouped_archive_from_report(
+        state_dict,
+        report,
+        source_archive_zip=source_zip,
+    )
+
+    assert manifest["schema"] == PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA
+    assert manifest["byte_closed_archive_zip_materialized"] is True
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["proof"]["latent_blob_preserved"] is True
+    assert manifest["proof"]["sidecar_blob_preserved"] is True
+    assert manifest["zip_proof"]["single_member"] is True
+    assert manifest["zip_proof"]["zip_stored"] is True
+    assert manifest["zip_proof"]["empty_extra"] is True
+    assert manifest["zip_proof"]["empty_comment"] is True
+    assert manifest["zip_proof"]["deterministic_timestamp"] is True
+    assert manifest["zip_proof"]["roundtrip_exact"] is True
+    with zipfile.ZipFile(io.BytesIO(archive_zip), "r") as zf:
+        infos = zf.infolist()
+        assert [info.filename for info in infos] == ["x"]
+        inner = zf.read("x")
+    assert inner.endswith(source_latent + source_sidecar)
+    assert manifest["inner_member_bytes"] == len(inner)
+    assert "full_frame_inflate_parity_missing" in manifest["blockers"]
+    if manifest["decoder_blob_bytes"] != DECODER_BLOB_LEN:
+        assert "stock_runtime_fixed_offset_decoder_blob_length_mismatch" in manifest["blockers"]
+
+
+def test_grouped_archive_materializer_rejects_multimember_source_zip() -> None:
+    state_dict = _tiny_state_dict(seed=7)
+    report = solve_grouped_brotli_packet_grammar(
+        state_dict,
+        selected_transform_mode="stock_pr101",
+        exact_stream_count=7,
+        max_streams=7,
+        brotli_quality=4,
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("x", b"D" * DECODER_BLOB_LEN + b"L" * LATENT_BLOB_LEN)
+        zf.writestr("y", b"extra")
+
+    with pytest.raises(ValueError, match="exactly one member"):
+        materialize_grouped_archive_from_report(
+            state_dict,
+            report,
+            source_archive_zip=buf.getvalue(),
+        )
 
 
 def test_negzig_rejects_int8_min_roundtrip_instead_of_faking_exactness() -> None:

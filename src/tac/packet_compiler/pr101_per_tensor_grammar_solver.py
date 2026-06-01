@@ -18,9 +18,11 @@ from __future__ import annotations
 
 import hashlib
 import heapq
+import io
 import itertools
 import lzma
 import math
+import zipfile
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
@@ -36,10 +38,12 @@ from tac.packet_compiler.pr101_decoder_byte_maps import (
 )
 from tac.pr101_split_brotli_codec import (
     CONV4_STORAGE_PERMS,
+    DECODER_BLOB_LEN,
     DECODER_BYTE_MAPS,
     DECODER_STORAGE_ORDER,
     DECODER_STREAM_ENDS,
     FIXED_STATE_SCHEMA,
+    LATENT_BLOB_LEN,
     LATENT_LZMA_FILTERS,
     N_QUANT,
     _quantize_tensor,
@@ -55,7 +59,11 @@ PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA = "pr101_grouped_brotli_packet_gramma
 PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA = (
     "pr101_grouped_decoder_blob_materialization.v1"
 )
+PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA = (
+    "pr101_grouped_archive_materialization.v1"
+)
 PR101_TENSOR_GRAMMAR_OPTIMIZER_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
+PR101_INNER_MEMBER_NAME = "x"
 FALSE_AUTHORITY_FIELDS = {
     "score_claim": False,
     "score_claim_valid": False,
@@ -852,6 +860,142 @@ def materialize_grouped_decoder_blob_from_report(
     return blob, manifest
 
 
+def materialize_grouped_archive_from_report(
+    state_dict: Mapping[str, Any],
+    report: Mapping[str, Any],
+    *,
+    source_archive_zip: bytes,
+    n_quant: int | None = None,
+    member_name: str = PR101_INNER_MEMBER_NAME,
+) -> tuple[bytes, dict[str, Any]]:
+    """Build a deterministic PR101-shaped archive from a grouped decoder report.
+
+    The function is intentionally stricter than a raw byte splicer.  It always
+    preserves the source archive's latent and sidecar sections byte-for-byte and
+    emits a single stored ZIP member, but it refuses authority unless the grouped
+    decoder blob is compatible with PR101's fixed-offset stock runtime.  Non-stock
+    grouped choices remain useful byte-closed artifacts for future receiver
+    adapters, not exact-ready submissions.
+    """
+
+    decoder_blob, decoder_manifest = materialize_grouped_decoder_blob_from_report(
+        state_dict,
+        report,
+        n_quant=n_quant,
+    )
+    source_layout = _read_pr101_source_archive_layout(
+        source_archive_zip,
+        expected_member_name=member_name,
+    )
+    source_inner = source_layout["inner_member_bytes"]
+    source_decoder, latent_blob, sidecar_blob = _split_pr101_inner_blob(source_inner)
+    output_inner = decoder_blob + latent_blob + sidecar_blob
+    archive_zip = _write_single_stored_zip_member(member_name, output_inner)
+    output_layout = _read_pr101_source_archive_layout(
+        archive_zip,
+        expected_member_name=member_name,
+    )
+
+    fixed_offset_parse_safe = (
+        len(decoder_blob) == DECODER_BLOB_LEN
+        and bool(decoder_manifest.get("stock_runtime_compatible"))
+    )
+    latent_preserved = hashlib.sha256(latent_blob).hexdigest() == hashlib.sha256(
+        source_inner[DECODER_BLOB_LEN : DECODER_BLOB_LEN + LATENT_BLOB_LEN]
+    ).hexdigest()
+    sidecar_preserved = hashlib.sha256(sidecar_blob).hexdigest() == hashlib.sha256(
+        source_inner[DECODER_BLOB_LEN + LATENT_BLOB_LEN :]
+    ).hexdigest()
+    zip_roundtrip_exact = output_layout["inner_member_bytes"] == output_inner
+
+    blockers = [
+        "full_frame_inflate_parity_missing",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    if not fixed_offset_parse_safe:
+        blockers.append("stock_runtime_fixed_offset_decoder_blob_length_mismatch")
+    if not bool(decoder_manifest.get("stock_runtime_compatible")):
+        blockers.extend(["receiver_adapter_not_emitted", "runtime_consumption_proof_missing"])
+    if not latent_preserved:
+        blockers.append("latent_blob_not_preserved")
+    if not sidecar_preserved:
+        blockers.append("sidecar_blob_not_preserved")
+    if not zip_roundtrip_exact:
+        blockers.append("single_member_zip_roundtrip_failed")
+
+    source_zip_sha = hashlib.sha256(source_archive_zip).hexdigest()
+    output_zip_sha = hashlib.sha256(archive_zip).hexdigest()
+    source_inner_sha = hashlib.sha256(source_inner).hexdigest()
+    output_inner_sha = hashlib.sha256(output_inner).hexdigest()
+    source_decoder_sha = hashlib.sha256(source_decoder).hexdigest()
+    decoder_sha = hashlib.sha256(decoder_blob).hexdigest()
+    latent_sha = hashlib.sha256(latent_blob).hexdigest()
+    sidecar_sha = hashlib.sha256(sidecar_blob).hexdigest()
+    manifest = {
+        "schema": PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA,
+        "producer": "tac.packet_compiler.pr101_per_tensor_grammar_solver",
+        "source_report_schema": report.get("schema"),
+        "source_archive_zip_bytes": len(source_archive_zip),
+        "source_archive_zip_sha256": source_zip_sha,
+        "archive_zip_bytes": len(archive_zip),
+        "archive_zip_sha256": output_zip_sha,
+        "archive_zip_delta_bytes": len(archive_zip) - len(source_archive_zip),
+        "inner_member_name": member_name,
+        "inner_member_bytes": len(output_inner),
+        "inner_member_sha256": output_inner_sha,
+        "source_inner_member_bytes": len(source_inner),
+        "source_inner_member_sha256": source_inner_sha,
+        "decoder_blob_offset": 0,
+        "decoder_blob_bytes": len(decoder_blob),
+        "decoder_blob_sha256": decoder_sha,
+        "source_decoder_blob_bytes": len(source_decoder),
+        "source_decoder_blob_sha256": source_decoder_sha,
+        "latent_blob_offset": len(decoder_blob),
+        "latent_blob_bytes": len(latent_blob),
+        "latent_blob_sha256": latent_sha,
+        "sidecar_blob_offset": len(decoder_blob) + len(latent_blob),
+        "sidecar_blob_bytes": len(sidecar_blob),
+        "sidecar_blob_sha256": sidecar_sha,
+        "fixed_offset_stock_runtime_parse_safe": bool(fixed_offset_parse_safe),
+        "byte_closed_archive_zip_materialized": True,
+        "decoder_materialization": decoder_manifest,
+        "zip_proof": {
+            "single_member": output_layout["zip_member_count"] == 1,
+            "member_name_matches": output_layout["inner_member_name"] == member_name,
+            "zip_stored": output_layout["zip_compress_type"] == zipfile.ZIP_STORED,
+            "member_file_size_matches_inner": output_layout["zip_file_size"] == len(output_inner),
+            "member_compress_size_matches_inner": output_layout["zip_compress_size"] == len(output_inner),
+            "empty_extra": output_layout["zip_extra_len"] == 0,
+            "empty_comment": output_layout["zip_comment_len"] == 0,
+            "deterministic_timestamp": output_layout["zip_date_time"] == [1980, 1, 1, 0, 0, 0],
+            "roundtrip_exact": bool(zip_roundtrip_exact),
+        },
+        "proof": {
+            "decoder_blob_materialized": bool(
+                decoder_manifest.get("byte_closed_decoder_blob_materialized")
+            ),
+            "decoder_stream_roundtrip_exact": bool(
+                decoder_manifest.get("proof", {}).get("stream_roundtrip_exact")
+                if isinstance(decoder_manifest.get("proof"), Mapping)
+                else False
+            ),
+            "decoder_quantized_state_dict_exact": bool(
+                decoder_manifest.get("proof", {}).get("quantized_state_dict_exact")
+                if isinstance(decoder_manifest.get("proof"), Mapping)
+                else False
+            ),
+            "latent_blob_preserved": bool(latent_preserved),
+            "sidecar_blob_preserved": bool(sidecar_preserved),
+            "fixed_offset_stock_runtime_parse_safe": bool(fixed_offset_parse_safe),
+            "byte_closed_archive_zip_materialized": True,
+        },
+        "blockers": blockers,
+        "axis_tag": "[archive-zip-materialization-only]",
+        **FALSE_AUTHORITY_FIELDS,
+    }
+    return archive_zip, manifest
+
+
 def empirical_shannon_floor_bytes(payload: bytes | bytearray | memoryview) -> float:
     """Return the order-0 Shannon lower bound for a byte payload."""
 
@@ -1606,6 +1750,62 @@ def _quantized_decode_mismatches(
     return mismatches
 
 
+def _read_pr101_source_archive_layout(
+    archive_zip: bytes,
+    *,
+    expected_member_name: str,
+) -> dict[str, Any]:
+    with zipfile.ZipFile(io.BytesIO(archive_zip), "r") as zf:
+        infos = zf.infolist()
+        if len(infos) != 1:
+            raise ValueError(
+                f"PR101 archive must contain exactly one member; got {len(infos)}"
+            )
+        info = infos[0]
+        if info.filename != expected_member_name:
+            raise ValueError(
+                f"PR101 archive member {info.filename!r} != expected {expected_member_name!r}"
+            )
+        member = zf.read(info.filename)
+        return {
+            "zip_member_count": len(infos),
+            "inner_member_name": info.filename,
+            "inner_member_bytes": member,
+            "zip_compress_type": int(info.compress_type),
+            "zip_file_size": int(info.file_size),
+            "zip_compress_size": int(info.compress_size),
+            "zip_date_time": [int(v) for v in info.date_time],
+            "zip_extra_len": len(info.extra),
+            "zip_comment_len": len(info.comment),
+        }
+
+
+def _split_pr101_inner_blob(inner: bytes) -> tuple[bytes, bytes, bytes]:
+    minimum = DECODER_BLOB_LEN + LATENT_BLOB_LEN
+    if len(inner) < minimum:
+        raise ValueError(
+            f"PR101 inner member length {len(inner)} < required minimum {minimum}"
+        )
+    decoder_blob = inner[:DECODER_BLOB_LEN]
+    latent_blob = inner[DECODER_BLOB_LEN : DECODER_BLOB_LEN + LATENT_BLOB_LEN]
+    sidecar_blob = inner[DECODER_BLOB_LEN + LATENT_BLOB_LEN :]
+    return decoder_blob, latent_blob, sidecar_blob
+
+
+def _write_single_stored_zip_member(member_name: str, payload: bytes) -> bytes:
+    if not member_name or member_name.endswith("/"):
+        raise ValueError(f"invalid PR101 archive member name: {member_name!r}")
+    buf = io.BytesIO()
+    info = zipfile.ZipInfo(filename=member_name)
+    info.compress_type = zipfile.ZIP_STORED
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.comment = b""
+        zf.writestr(info, payload)
+    return buf.getvalue()
+
+
 def default_state_dict_output_path_hint() -> str:
     """Return the preferred bulky-output root for operator CLIs."""
 
@@ -1613,6 +1813,7 @@ def default_state_dict_output_path_hint() -> str:
 
 
 __all__ = [
+    "PR101_GROUPED_ARCHIVE_MATERIALIZATION_SCHEMA",
     "PR101_GROUPED_BROTLI_PACKET_GRAMMAR_SCHEMA",
     "PR101_GROUPED_DECODER_BLOB_MATERIALIZATION_SCHEMA",
     "PR101_PER_TENSOR_GRAMMAR_SOLVER_SCHEMA",
@@ -1624,6 +1825,7 @@ __all__ = [
     "build_optimizer_candidate_queue_from_solver_report",
     "default_state_dict_output_path_hint",
     "empirical_shannon_floor_bytes",
+    "materialize_grouped_archive_from_report",
     "materialize_grouped_decoder_blob_from_report",
     "measure_tensor_grammar_candidates",
     "select_best_tensor_candidate",

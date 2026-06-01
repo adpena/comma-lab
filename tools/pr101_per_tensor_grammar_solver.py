@@ -22,6 +22,7 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
     build_grouped_optimizer_candidate_queue_from_report,
     build_optimizer_candidate_queue_from_solver_report,
     default_state_dict_output_path_hint,
+    materialize_grouped_archive_from_report,
     materialize_grouped_decoder_blob_from_report,
     solve_grouped_brotli_packet_grammar,
     solve_state_dict_per_tensor_grammar,
@@ -119,6 +120,31 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional materialization proof JSON for --grouped-decoder-blob-output.",
     )
     parser.add_argument(
+        "--source-archive",
+        type=Path,
+        default=None,
+        help=(
+            "Optional PR101 source archive.zip whose latent/sidecar sections are "
+            "preserved when emitting --grouped-archive-output."
+        ),
+    )
+    parser.add_argument(
+        "--grouped-archive-output",
+        type=Path,
+        default=None,
+        help=(
+            "Optional deterministic single-member PR101-shaped archive.zip. "
+            "Requires --source-archive and stays fail-closed unless fixed-offset "
+            "stock runtime proof passes."
+        ),
+    )
+    parser.add_argument(
+        "--grouped-archive-proof-output",
+        type=Path,
+        default=None,
+        help="Optional archive materialization proof JSON for --grouped-archive-output.",
+    )
+    parser.add_argument(
         "--grouped-transform-mode",
         choices=("stock_pr101", "best_brotli_per_tensor"),
         default="best_brotli_per_tensor",
@@ -214,6 +240,8 @@ def main(argv: list[str] | None = None) -> int:
         or args.grouped_queue_output is not None
         or args.grouped_decoder_blob_output is not None
         or args.grouped_decoder_proof_output is not None
+        or args.grouped_archive_output is not None
+        or args.grouped_archive_proof_output is not None
     ):
         exact_stream_count = (
             None
@@ -259,6 +287,26 @@ def main(argv: list[str] | None = None) -> int:
                     json.dumps(proof, indent=2, sort_keys=True, default=_json_default),
                     encoding="utf-8",
                 )
+        if args.grouped_archive_output is not None or args.grouped_archive_proof_output is not None:
+            if args.source_archive is None:
+                raise SystemExit("--source-archive is required for grouped archive materialization")
+            if not args.source_archive.is_file():
+                raise SystemExit(f"source archive not found: {args.source_archive}")
+            archive_bytes, archive_proof = materialize_grouped_archive_from_report(
+                state_dict,
+                grouped_report,
+                source_archive_zip=args.source_archive.read_bytes(),
+                n_quant=args.n_quant,
+            )
+            if args.grouped_archive_output is not None:
+                args.grouped_archive_output.parent.mkdir(parents=True, exist_ok=True)
+                args.grouped_archive_output.write_bytes(archive_bytes)
+            if args.grouped_archive_proof_output is not None:
+                args.grouped_archive_proof_output.parent.mkdir(parents=True, exist_ok=True)
+                args.grouped_archive_proof_output.write_text(
+                    json.dumps(archive_proof, indent=2, sort_keys=True, default=_json_default),
+                    encoding="utf-8",
+                )
     bytes_ = report["byte_accounting"]
     print(f"Wrote PR101 per-tensor grammar report to {args.output}")
     if args.queue_output is not None:
@@ -271,6 +319,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Wrote grouped decoder blob to {args.grouped_decoder_blob_output}")
     if args.grouped_decoder_proof_output is not None:
         print(f"Wrote grouped decoder materialization proof to {args.grouped_decoder_proof_output}")
+    if args.grouped_archive_output is not None:
+        print(f"Wrote grouped archive zip to {args.grouped_archive_output}")
+    if args.grouped_archive_proof_output is not None:
+        print(f"Wrote grouped archive materialization proof to {args.grouped_archive_proof_output}")
     print(
         "selected isolated bytes="
         f"{bytes_['selected_isolated_tensor_bytes']}; "
@@ -283,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "Preferred bulky-output root: "
         f"{default_state_dict_output_path_hint()} "
-        "(this run only wrote the requested JSON manifest)"
+        "(this run only wrote explicitly requested outputs)"
     )
     if grouped_report is not None:
         gbytes = grouped_report["byte_accounting"]
