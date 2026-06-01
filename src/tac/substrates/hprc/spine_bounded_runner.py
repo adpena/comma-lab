@@ -230,7 +230,11 @@ def _section_value_row(
         else {}
     )
     coverage_valid = coverage.get("valid_for_base_comparison") is True
-    projection_only_metadata = section_name in {"rdo_plan", "manifest_json"}
+    projection_only_metadata = section_name in {
+        "rdo_plan",
+        "manifest_json",
+        "receiver_state",
+    }
     if projection_only_metadata:
         admission_status = "projection_contract_metadata_not_candidate_runtime_spend"
         delta_nonrate = 0.0
