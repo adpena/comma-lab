@@ -123,8 +123,16 @@ def test_joint_p18_p19_saliency_contract_keeps_frame_and_pair_channels_separate(
     contract = joint_p18_p19_saliency_contract()
 
     assert contract["do_not_collapse_channels_before_incidence_projection"] is True
+    upstream = contract["upstream_score_allocation_contract"]
+    assert upstream["segnet"]["frame_scope"] == "last_frame_only"
+    assert upstream["posenet"]["frame_scope"] == "both_frames_in_pair"
     assert contract["segnet_frame_channel"]["scope"] == "frame_pixel_class_boundary"
+    assert contract["segnet_frame_channel"]["scored_frame_index_within_pair"] == 1
+    assert contract["segnet_frame_channel"]["unscored_frame_index_within_pair"] == 0
     assert contract["posenet_pair_channel"]["scope"] == "pair_pixel_geometry"
+    assert contract["posenet_pair_channel"]["scored_frame_indices_within_pair"] == [0, 1]
     assert "not class-boundary-only" in contract["posenet_pair_channel"]["spatial_structure"]
+    assert contract["combined_saliency"]["rate_denominator_bytes"] == 37_545_489
+    assert contract["combined_saliency"]["rate_water_level"] > 0
     assert "sum_frame_incidence" in contract["combined_saliency"]["formula"]
     assert "sum_pair_incidence" in contract["combined_saliency"]["formula"]

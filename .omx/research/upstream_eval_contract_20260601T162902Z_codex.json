@@ -1,0 +1,301 @@
+{
+  "blockers": [],
+  "canonical_rate_denominator_bytes": 37545489,
+  "contract_valid": true,
+  "implementation_snippet_checks": [
+    {
+      "name": "archive_zip_bytes_authority",
+      "present": true,
+      "relative_path": "evaluate.py"
+    },
+    {
+      "name": "rate_denominator_source_tree",
+      "present": true,
+      "relative_path": "evaluate.py"
+    },
+    {
+      "name": "score_formula",
+      "present": true,
+      "relative_path": "evaluate.py"
+    },
+    {
+      "name": "candidate_raw_dataset",
+      "present": true,
+      "relative_path": "evaluate.py"
+    },
+    {
+      "name": "archive_unzip_before_inflate",
+      "present": true,
+      "relative_path": "evaluate.sh"
+    },
+    {
+      "name": "inflate_contract",
+      "present": true,
+      "relative_path": "evaluate.sh"
+    },
+    {
+      "name": "raw_existence_gate",
+      "present": true,
+      "relative_path": "evaluate.sh"
+    },
+    {
+      "name": "segnet_last_frame_only",
+      "present": true,
+      "relative_path": "modules.py"
+    },
+    {
+      "name": "segnet_argmax_flip",
+      "present": true,
+      "relative_path": "modules.py"
+    },
+    {
+      "name": "posenet_first_six_dims",
+      "present": true,
+      "relative_path": "modules.py"
+    },
+    {
+      "name": "posenet_yuv6_pair_input",
+      "present": true,
+      "relative_path": "modules.py"
+    },
+    {
+      "name": "sequence_length_two",
+      "present": true,
+      "relative_path": "frame_utils.py"
+    },
+    {
+      "name": "camera_size",
+      "present": true,
+      "relative_path": "frame_utils.py"
+    },
+    {
+      "name": "scorer_input_size",
+      "present": true,
+      "relative_path": "frame_utils.py"
+    },
+    {
+      "name": "inplace_yuv_clamp",
+      "present": true,
+      "relative_path": "frame_utils.py"
+    },
+    {
+      "name": "tensor_raw_shape_loader",
+      "present": true,
+      "relative_path": "frame_utils.py"
+    },
+    {
+      "name": "contest_eval_timeout_minutes",
+      "present": true,
+      "relative_path": ".github/workflows/eval.yml"
+    },
+    {
+      "name": "cuda_runner_axis",
+      "present": true,
+      "relative_path": ".github/workflows/eval.yml"
+    },
+    {
+      "name": "cpu_runner_axis",
+      "present": true,
+      "relative_path": ".github/workflows/eval.yml"
+    },
+    {
+      "name": "uv_group_axis_select",
+      "present": true,
+      "relative_path": ".github/workflows/eval.yml"
+    }
+  ],
+  "live_rate_denominator_bytes": 37545489,
+  "model_custody": [
+    {
+      "bytes": 55835560,
+      "exists": true,
+      "relative_path": "models/posenet.safetensors",
+      "resolved_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+    },
+    {
+      "bytes": 38502892,
+      "exists": true,
+      "relative_path": "models/segnet.safetensors",
+      "resolved_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_denominator_note": "upstream/evaluate.py names this uncompressed_size, but computes it from upstream/videos source-file byte sizes; inflated raw bytes are a receiver shape requirement, not the rate denominator",
+  "schema": "upstream_contest_eval_contract.v1",
+  "score_allocation_contract": {
+    "authority": {
+      "mlx_or_proxy_rows": "proposal_only",
+      "receiver_contract": "inflate.sh archive_dir inflated_dir video_names_file",
+      "score_authority_requires": "contest CPU/CUDA upstream evaluate.py axis"
+    },
+    "autograd_guard": {
+      "pose_gradient_requires_differentiable_replacement": "use tac.differentiable_eval_roundtrip or an equivalent patched rgb_to_yuv6 path for VJP; upstream frame_utils.rgb_to_yuv6 is the eval authority but not the gradient path",
+      "upstream_rgb_to_yuv6_uses_inplace_clamp": true
+    },
+    "pair_geometry": {
+      "camera_size_wh": [
+        1164,
+        874
+      ],
+      "candidate_raw_bytes": 3662409600,
+      "candidate_raw_shape": [
+        1200,
+        874,
+        1164,
+        3
+      ],
+      "public_test_frame_count": 1200,
+      "public_test_pair_count": 600,
+      "seq_len": 2
+    },
+    "posenet": {
+      "contest_term": "sqrt(10*d_pose)",
+      "derivative_wrt_d_pose": "5/sqrt(10*d_pose)",
+      "distortion": "MSE on first six dimensions of the 12-output pose head",
+      "frame_scope": "both_frames_in_pair",
+      "input_domain": "two RGB frames -> bilinear resize -> YUV6 -> 12-channel tensor",
+      "input_size_wh": [
+        512,
+        384
+      ],
+      "scored_frame_indices_within_pair": [
+        0,
+        1
+      ],
+      "true_p19_requires": "six-axis PoseNet VJP/JVP or finite-difference null probe under contest inverse-variance/Mahalanobis weighting",
+      "yuv6_shape_per_frame_chw": [
+        6,
+        192,
+        256
+      ]
+    },
+    "rate": {
+      "archive_authority": "submission_dir/archive.zip.stat().st_size",
+      "canonical_denominator_bytes": 37545489,
+      "denominator_source": "sum(file.stat().st_size for file in upstream/videos if file.is_file())",
+      "rate_price_per_archive_byte": 6.658589531221714e-07,
+      "raw_output_shape_bytes_are_not_rate_denominator": 3662409600
+    },
+    "saliency_verification": {
+      "budget_spend_requires": [
+        "source custody contract_valid=true",
+        "saliency row names upstream source SHA-256s",
+        "saliency row names mirror implementation SHA-256s",
+        "real-video or deterministic tensor numerical proof artifact",
+        "score_claim=false until exact CPU/CUDA eval"
+      ],
+      "contest_compliance": {
+        "compress_side_may": [
+          "use frozen upstream scorers for offline analysis",
+          "derive saliency/allocation/latents before archive emission",
+          "overfit the declared contest video in contest mode"
+        ],
+        "promotion_boundary": "only emitted archive.zip plus deterministic inflate runtime cross the receiver boundary",
+        "receiver_must_not": [
+          "load PoseNet/SegNet",
+          "inspect evaluator score state",
+          "fetch sidecars",
+          "adapt at eval time"
+        ]
+      },
+      "required_numerical_proofs": [
+        {
+          "authority_path": "upstream/frame_utils.py::rgb_to_yuv6",
+          "mirror_path": "tac.differentiable_eval_roundtrip.differentiable_rgb_to_yuv6",
+          "name": "yuv6_forward_parity",
+          "purpose": "PoseNet VJP/JVP uses mirror; upstream remains eval authority",
+          "requirement": "max_abs_error==0 on deterministic random and real-video tensors"
+        },
+        {
+          "authority_path": "upstream implementation is no_grad/inplace-clamp",
+          "mirror_path": "differentiable mirror",
+          "name": "yuv6_gradient_nonzero",
+          "purpose": "prevents fake P19 surfaces with severed pose gradients",
+          "requirement": "finite nonzero input gradient in unclamped region"
+        },
+        {
+          "authority_path": "upstream/modules.py::SegNet.preprocess_input",
+          "name": "segnet_last_frame_asymmetry",
+          "purpose": "prevents spending SegNet budget on frame_0 atoms",
+          "requirement": "mutating pair frame_0 alone leaves SegNet input unchanged; mutating pair frame_1 can change SegNet logits"
+        },
+        {
+          "authority_path": "upstream/modules.py::SegNet.compute_distortion",
+          "name": "segnet_argmax_flip_exactness",
+          "purpose": "ties P18 hinge/margin proxy back to hard contest metric",
+          "requirement": "local d_seg equals mean(argmax(gt)!=argmax(candidate))"
+        },
+        {
+          "authority_path": "upstream/modules.py::PoseNet.compute_distortion",
+          "name": "posenet_pair_six_axis_exactness",
+          "purpose": "ties P19 Mahalanobis/Jacobian weighting back to contest MSE",
+          "requirement": "local d_pose equals MSE over first six pose-head dims"
+        },
+        {
+          "authority_path": "upstream/evaluate.py",
+          "name": "rate_byte_price_exactness",
+          "purpose": "sets the reverse-waterfill spend threshold",
+          "requirement": "one archive byte costs exactly 25/source_video_bytes score; source_video_bytes must not be confused with inflated raw bytes"
+        }
+      ],
+      "schema": "upstream_saliency_verification_contract.v1"
+    },
+    "schema": "upstream_score_allocation_contract.v1",
+    "score_formula": "100*d_seg(full_video)+sqrt(10*d_pose(full_video))+25*archive_zip_bytes/source_video_bytes",
+    "segnet": {
+      "allocation_guard": "frame_0 atoms get zero direct SegNet saliency; frame_1 atoms carry SegNet plus PoseNet incidence",
+      "coefficient": 100.0,
+      "contest_term": "100*d_seg",
+      "distortion": "mean(argmax(gt_logits)!=argmax(candidate_logits))",
+      "frame_scope": "last_frame_only",
+      "input_domain": "RGB frame -> bilinear resize to 384x512 -> five-class logits",
+      "input_size_wh": [
+        512,
+        384
+      ],
+      "scored_frame_index_within_pair": 1,
+      "unscored_frame_index_within_pair": 0
+    }
+  },
+  "score_claim": false,
+  "source_custody": [
+    {
+      "bytes": 6005,
+      "exists": true,
+      "relative_path": "evaluate.py",
+      "resolved_path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    },
+    {
+      "bytes": 1934,
+      "exists": true,
+      "relative_path": "evaluate.sh",
+      "resolved_path": "/Users/adpena/Projects/pact/upstream/evaluate.sh",
+      "sha256": "9612284ce6e9585aefcf636f3027808a56160ffd572edffdf4b8622a65fac917"
+    },
+    {
+      "bytes": 8322,
+      "exists": true,
+      "relative_path": "modules.py",
+      "resolved_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    {
+      "bytes": 9345,
+      "exists": true,
+      "relative_path": "frame_utils.py",
+      "resolved_path": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+      "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+    },
+    {
+      "bytes": 4678,
+      "exists": true,
+      "relative_path": ".github/workflows/eval.yml",
+      "resolved_path": "/Users/adpena/Projects/pact/upstream/.github/workflows/eval.yml",
+      "sha256": "8a6cd6300b51a44f36b49774bc0c6100dbb37ef8290d42bf8e584f1dceddce56"
+    }
+  ]
+}

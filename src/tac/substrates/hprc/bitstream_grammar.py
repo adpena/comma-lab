@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from tac.archive_byte_profile import contest_rate_term
+from tac.contest_eval_contract import build_score_allocation_contract
 
 HPRC_OPTIMAL_BITSTREAM_GRAMMAR_PLAN_SCHEMA = "hprc_optimal_bitstream_grammar_plan.v1"
 HPRC_OPTIMAL_BITSTREAM_GRAMMAR_ROW_SCHEMA = "hprc_optimal_bitstream_grammar_row.v1"
@@ -74,8 +75,10 @@ _SECTION_POLICY: dict[str, dict[str, str]] = {
 def joint_p18_p19_saliency_contract() -> dict[str, Any]:
     """Return the score-faithful saliency contract used by grammar planning."""
 
+    upstream_contract = build_score_allocation_contract()
     return {
         "schema": "hprc_joint_p18_p19_saliency_contract.v1",
+        "upstream_score_allocation_contract": upstream_contract,
         "do_not_collapse_channels_before_incidence_projection": True,
         "segnet_frame_channel": {
             "schema": "hprc_segnet_frame_saliency_channel.v1",
@@ -85,6 +88,13 @@ def joint_p18_p19_saliency_contract() -> dict[str, Any]:
             "local_proxy": "top2_logit_margin_smoothed_step_or_crammer_singer_hinge",
             "spatial_structure": "class_boundary_concentrated; flat_interiors_near_zero",
             "scope": "frame_pixel_class_boundary",
+            "upstream_frame_scope": upstream_contract["segnet"]["frame_scope"],
+            "scored_frame_index_within_pair": upstream_contract["segnet"][
+                "scored_frame_index_within_pair"
+            ],
+            "unscored_frame_index_within_pair": upstream_contract["segnet"][
+                "unscored_frame_index_within_pair"
+            ],
         },
         "posenet_pair_channel": {
             "schema": "hprc_posenet_pair_saliency_channel.v1",
@@ -96,6 +106,10 @@ def joint_p18_p19_saliency_contract() -> dict[str, Any]:
                 "camera_geometry_and_texture_gradient_spread; not class-boundary-only"
             ),
             "scope": "pair_pixel_geometry",
+            "upstream_frame_scope": upstream_contract["posenet"]["frame_scope"],
+            "scored_frame_indices_within_pair": upstream_contract["posenet"][
+                "scored_frame_indices_within_pair"
+            ],
         },
         "incidence_projection": {
             "schema": "hprc_pair_latent_frame_pair_incidence.v1",
@@ -121,6 +135,10 @@ def joint_p18_p19_saliency_contract() -> dict[str, Any]:
                 "s_atom=sum_frame_incidence(100*phi(seg_margin))"
                 "+sum_pair_incidence((5/sqrt(10*d_pose))*||J_pose_atom||^2_Sigma_inv)"
             ),
+            "rate_water_level": upstream_contract["rate"]["rate_price_per_archive_byte"],
+            "rate_denominator_bytes": upstream_contract["rate"][
+                "canonical_denominator_bytes"
+            ],
             "allocator": (
                 "reverse water-fill over atoms after full-video reduction; "
                 "dead-zone below lambda, spend precision where value_per_byte "
