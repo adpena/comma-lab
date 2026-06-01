@@ -1,2 +1,0 @@
-ERROR: ROI packaging currently supports VIDEO_CODEC=libx265 only.
-Disable ROI or switch VIDEO_CODEC to libx265 before packaging.

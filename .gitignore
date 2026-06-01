@@ -67,6 +67,7 @@ experiments/queue_state*.db-*
 # Large binary files (GitHub 100MB limit)
 *.raw
 *.npy
+*.npz
 *.safetensors
 experiments/cache/
 experiments/postfilter_weights/
@@ -91,7 +92,9 @@ experiments/results/**/*.pt
 .omx/research/**/pr95_pytorch_state_dict.pt
 .omx/research/**/runtime_consumption_work/
 .omx/research/**/archive.zip
+.omx/research/**/*.zip
 .omx/research/**/pr95_public_archive.zip
+.omx/research/**/0.bin
 .omx/research/pr95_mlx_*/0.bin
 .omx/research/**/submission/archive/
 .omx/research/**/submission/inflated/
@@ -468,3 +471,77 @@ reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot
 # Per-PR fetched intake dirs: source/ subtrees are large + re-cloneable from each PR's head_repo + sha
 # We commit the archive.zip + metadata + provenance JSON, but exclude the cloned source/
 experiments/results/public_pr_intake_full/*/source/
+
+# Hard artifact boundary: binaries and generated build/runtime payloads stay out
+# of git. Preserve provenance through small manifests/ledgers; force-add only
+# after an explicit custody review.
+*.a
+*.avi
+*.bin
+*.br
+*.bz2
+*.ckpt
+*.dylib
+*.exe
+*.gif
+*.gz
+*.jpeg
+*.jpg
+*.lzma
+*.mkv
+*.mov
+*.mp4
+*.npz
+*.o
+*.onnx
+*.pdf
+*.pid
+*.png
+*.pt
+*.pth
+*.raw
+*.safetensors
+*.so
+*.tar
+*.tar.gz
+*.tgz
+*.webm
+*.webp
+*.xz
+*.zst
+*.zip
+
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+
+.omx/research/**/archive/
+.omx/research/**/checkpoints/
+.omx/research/**/eval_work/
+.omx/research/**/extracted/
+.omx/research/**/floor_loop/
+.omx/research/**/floor_loop_runtime_custody/
+.omx/research/**/inflated/
+.omx/research/**/output/
+.omx/research/**/outputs/
+.omx/research/**/queue_results/
+.omx/research/**/receiver_output/
+.omx/research/**/reference_output/
+.omx/research/**/runtime_consumption_work/
+.omx/research/**/runtime_snapshot/
+.omx/research/**/submission/
+.omx/research/**/submission_dir/
+.omx/research/**/submission_runtime_closure/
+.omx/research/**/telemetry.jsonl
+.omx/research/**/training_artifact.json
+experiments/results/
+reports/graphs/public_site/
+reports/private/
+reports/raw/
+submission_packets/
+
+# Canonical control-plane state remains reviewable even though broad local-state
+# rules above ignore neighboring JSON/log files.
+!.omx/state/lane_registry.json
+!.omx/state/lane_maturity_audit.log
