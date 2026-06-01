@@ -65604,15 +65604,15 @@
       "id": "lane_z8_joint_p18_p19_deadzone_rate_attack_20260531",
       "name": "Z8 joint P18/P19 dead-zone rate attack (Mallat wavelet detail bands)",
       "phase": 2.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "src/tac/substrates/z8_hierarchical_predictive_coding/joint_p18_p19_deadzone_rate_attack.py + tools/z8_joint_p18_p19_deadzone_rate_attack.py; real SegNet boundary saliency + real PoseNet pixel-Jacobian -> coeff domain via analysis DWT -> RD-aware keep priority -> deadzone -> repack -> re-measure"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/z8_boundary_sparse_wavelet_probe_4pair_20260601Tlocal/result.json"
         },
         "contest_cuda": {
           "status": false,
@@ -65926,8 +65926,49 @@
           "evidence": ""
         }
       },
-      "notes": "NO-GO / INCONCLUSIVE-IF-COLLAPSED from faithful top-LL-clamped archive-path two-arm confirmation; verdict artifact /Volumes/VertigoDataTier/pact/experiments/results/z8_seg_lever_top_ll_clamped_confirm_20260601/go_no_go_verdict.json",
+      "notes": "Recovered faithful full-600 testbed; full-600 warm-start hinge moved d_seg 0.504541->0.504470 but below 0.1% practical floor, so conservative verdict is NO-GO exact eval: /Volumes/VertigoDataTier/pact/experiments/results/z8_seg_lever_full600_reactivation_20260601/full600_reactivation_conservative_verdict.json",
       "research_only": true
+    },
+    {
+      "id": "lane_inverse_steganalysis_optimal_full_stack_20260601",
+      "name": "Inverse-steganalysis optimal full stack (detector-adapted cheap carrier + oracle-informed L-inf margin-budget embedding, co-trained vs frozen SegNet+PoseNet; Yousfi+Fridrich)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/inverse_steganalysis_linf_vs_l2_gate.py + tools/run_inverse_steganalysis_linf_vs_l2_gate.py: L-inf-vs-L2 $0 gate; 21 NO-FAKE tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "recursive adversarial review 3 rounds: rate-model artifact ruled out by shuffle control (2.10 vs 0.28); rate match 4e-4 disadvantage_linf; bpp sweep 2/3/4/6 all green"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/inverse_steganalysis_linf_vs_l2_gate_landed_20260601.md + anchor .omx/research/inverse_steganalysis_linf_vs_l2_gate_20260601T200459Z.json"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -65937,5 +65978,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-01T18:39:36Z"
+  "updated_at": "2026-06-01T20:09:25Z"
 }

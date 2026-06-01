@@ -1,0 +1,421 @@
+{
+  "aggregate": {
+    "aiming_signal_genuine_linf_beats_shuffled": true,
+    "contest_distortion_delta_linf_minus_l2": -0.3705676402754471,
+    "contest_distortion_l2": 0.6517361373266868,
+    "contest_distortion_linf": 0.2811684970512397,
+    "contest_distortion_shuffled_control": 2.0979483732938973,
+    "d_pose_l2": 0.02440134865982044,
+    "d_pose_linf": 0.001007049299839006,
+    "d_pose_shuffled_control": 0.2281138095487323,
+    "d_seg_l2": 0.0015775892469618057,
+    "d_seg_linf": 0.0018081665103737677,
+    "d_seg_shuffled_control": 0.005876046721823513,
+    "linf_wins_aggregate": true,
+    "n_pairs_linf_wins": 6,
+    "n_pairs_shuffled_control_beats_l2": 0,
+    "n_pairs_total": 6,
+    "relative_improvement_fraction": 0.5685853814941947,
+    "shuffled_control_beats_l2_aggregate": false,
+    "shuffled_control_delta_minus_l2": 1.4462122359672105
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "config": {
+    "bits_per_pixel": 4.0,
+    "dynamic_range": 256.0,
+    "max_step": 128.0,
+    "min_step": 1.0,
+    "noise_seeds": 3,
+    "num_pairs": 6,
+    "pair_stride": 100,
+    "pose_weight": 1.0,
+    "rate_tolerance": 0.001,
+    "seg_weight": 100.0,
+    "video_path": "upstream/videos/0.mkv"
+  },
+  "design_memo": ".omx/research/inverse_steganalysis_optimal_full_stack_design_20260601.md",
+  "fairness_controls": {
+    "allocations_differ_all_pairs": true,
+    "equal_rate_direction": "linf_forced_to_spend_at_least_l2_bits",
+    "multi_pair": true,
+    "noise_seeds_averaged": 3,
+    "rate_match_within_tolerance": true,
+    "rate_match_worst_rel_diff": 0.00041559595040215324,
+    "same_frames": true,
+    "same_noise_seeds_per_allocation": true,
+    "shuffled_control_isolates_detector_aiming": "L-inf vs a same-rate same-step-histogram random-placement control; a win that survives this control is detector-aiming, not a rate artifact",
+    "shuffled_control_present": true
+  },
+  "generated_at_utc": "20260601T200459Z",
+  "lane_id": "lane_inverse_steganalysis_optimal_full_stack_20260601",
+  "per_pair": [
+    {
+      "allocations_differ": true,
+      "contest_distortion_delta_linf_minus_l2": -0.3802708941515943,
+      "contest_distortion_l2": 0.5194713202222155,
+      "contest_distortion_linf": 0.13920042607062122,
+      "contest_distortion_shuffled_control": 2.1302159366131446,
+      "d_pose_l2": 0.015178977278992534,
+      "d_pose_linf": 0.00010600524077138591,
+      "d_pose_shuffled_control": 0.28369345671186846,
+      "d_seg_l2": 0.0012986925042544801,
+      "d_seg_linf": 0.0010664198004330199,
+      "d_seg_shuffled_control": 0.004458957274133961,
+      "l2_total_bits": 4069344.0,
+      "l2_uniform_step": 16.0,
+      "linf_step_max": 128.0,
+      "linf_step_min": 1.0,
+      "linf_total_bits": 4069344.0000005113,
+      "linf_water_level": 1.4001605652029743,
+      "linf_wins": true,
+      "n_pixels": 1017336,
+      "native_hw": [
+        874,
+        1164
+      ],
+      "pair_index": 0,
+      "rate_match_rel_diff": 1.2564582730383514e-13,
+      "saliency_diag": {
+        "combined_gini": 0.9979986532672489,
+        "combined_top10pct_mass": 0.9983587926876749,
+        "pose_finite": true,
+        "pose_weight": 1.0,
+        "seg_finite": true,
+        "seg_weight": 100.0
+      },
+      "shuffled_control_beats_l2": false,
+      "shuffled_control_delta_minus_l2": 1.610744616390929,
+      "target_bits": 4069344.0
+    },
+    {
+      "allocations_differ": true,
+      "contest_distortion_delta_linf_minus_l2": -0.2959938332259555,
+      "contest_distortion_l2": 0.5668275698679787,
+      "contest_distortion_linf": 0.27083373664202315,
+      "contest_distortion_shuffled_control": 1.351828668181685,
+      "d_pose_l2": 0.014998772336790958,
+      "d_pose_linf": 0.001167984165173645,
+      "d_pose_shuffled_control": 0.05305991251952946,
+      "d_seg_l2": 0.0017954508463541667,
+      "d_seg_linf": 0.0016276042054717739,
+      "d_seg_shuffled_control": 0.006234063146015008,
+      "l2_total_bits": 4069344.0,
+      "l2_uniform_step": 16.0,
+      "linf_step_max": 128.0,
+      "linf_step_min": 1.0,
+      "linf_total_bits": 4071035.2028871933,
+      "linf_water_level": 1.1343623236267781,
+      "linf_wins": true,
+      "n_pixels": 1017336,
+      "native_hw": [
+        874,
+        1164
+      ],
+      "pair_index": 100,
+      "rate_match_rel_diff": 0.00041559595040215324,
+      "saliency_diag": {
+        "combined_gini": 0.9983709686292921,
+        "combined_top10pct_mass": 0.998392246168884,
+        "pose_finite": true,
+        "pose_weight": 1.0,
+        "seg_finite": true,
+        "seg_weight": 100.0
+      },
+      "shuffled_control_beats_l2": false,
+      "shuffled_control_delta_minus_l2": 0.7850010983137062,
+      "target_bits": 4069344.0
+    },
+    {
+      "allocations_differ": true,
+      "contest_distortion_delta_linf_minus_l2": -0.2546378097388302,
+      "contest_distortion_l2": 0.7923430815030248,
+      "contest_distortion_linf": 0.5377052717641946,
+      "contest_distortion_shuffled_control": 2.483534966302317,
+      "d_pose_l2": 0.038640419797350965,
+      "d_pose_linf": 0.0029585018443564572,
+      "d_pose_shuffled_control": 0.24152428160111108,
+      "d_seg_l2": 0.0017072889410580199,
+      "d_seg_linf": 0.0036570231119791665,
+      "d_seg_shuffled_control": 0.009294298167030016,
+      "l2_total_bits": 4069344.0,
+      "l2_uniform_step": 16.0,
+      "linf_step_max": 128.0,
+      "linf_step_min": 1.0,
+      "linf_total_bits": 4069344.0000002496,
+      "linf_water_level": 1.2125904868876654,
+      "linf_wins": true,
+      "n_pixels": 1017336,
+      "native_hw": [
+        874,
+        1164
+      ],
+      "pair_index": 200,
+      "rate_match_rel_diff": 6.13353036747319e-14,
+      "saliency_diag": {
+        "combined_gini": 0.998335283531036,
+        "combined_top10pct_mass": 0.9981988107609701,
+        "pose_finite": true,
+        "pose_weight": 1.0,
+        "seg_finite": true,
+        "seg_weight": 100.0
+      },
+      "shuffled_control_beats_l2": false,
+      "shuffled_control_delta_minus_l2": 1.6911918847992922,
+      "target_bits": 4069344.0
+    },
+    {
+      "allocations_differ": true,
+      "contest_distortion_delta_linf_minus_l2": -0.3357557167718511,
+      "contest_distortion_l2": 0.58545242436131,
+      "contest_distortion_linf": 0.24969670758945883,
+      "contest_distortion_shuffled_control": 1.7516100745299374,
+      "d_pose_l2": 0.017087243769007426,
+      "d_pose_linf": 0.0006343482018564828,
+      "d_pose_shuffled_control": 0.144021508594354,
+      "d_seg_l2": 0.0017208522961785395,
+      "d_seg_linf": 0.0017005072829003136,
+      "d_seg_shuffled_control": 0.0055152045873304205,
+      "l2_total_bits": 4069344.0,
+      "l2_uniform_step": 16.0,
+      "linf_step_max": 128.0,
+      "linf_step_min": 1.0,
+      "linf_total_bits": 4069344.0000006375,
+      "linf_water_level": 1.447567427790856,
+      "linf_wins": true,
+      "n_pixels": 1017336,
+      "native_hw": [
+        874,
+        1164
+      ],
+      "pair_index": 300,
+      "rate_match_rel_diff": 1.5665677375132085e-13,
+      "saliency_diag": {
+        "combined_gini": 0.9981651367544964,
+        "combined_top10pct_mass": 0.9982506453244706,
+        "pose_finite": true,
+        "pose_weight": 1.0,
+        "seg_finite": true,
+        "seg_weight": 100.0
+      },
+      "shuffled_control_beats_l2": false,
+      "shuffled_control_delta_minus_l2": 1.1661576501686275,
+      "target_bits": 4069344.0
+    },
+    {
+      "allocations_differ": true,
+      "contest_distortion_delta_linf_minus_l2": -0.46652286550780875,
+      "contest_distortion_l2": 0.6816241638511447,
+      "contest_distortion_linf": 0.21510129834333588,
+      "contest_distortion_shuffled_control": 2.782040013652815,
+      "d_pose_l2": 0.030969458011289436,
+      "d_pose_linf": 0.0006587438656424638,
+      "d_pose_shuffled_control": 0.5245008617639542,
+      "d_seg_l2": 0.001251220703125,
+      "d_seg_linf": 0.0013393826084211469,
+      "d_seg_shuffled_control": 0.004918416341145833,
+      "l2_total_bits": 4069344.0,
+      "l2_uniform_step": 16.0,
+      "linf_step_max": 128.0,
+      "linf_step_min": 1.0,
+      "linf_total_bits": 4069344.000000573,
+      "linf_water_level": 1.0592952779768734,
+      "linf_wins": true,
+      "n_pixels": 1017336,
+      "native_hw": [
+        874,
+        1164
+      ],
+      "pair_index": 400,
+      "rate_match_rel_diff": 1.4086522168581152e-13,
+      "saliency_diag": {
+        "combined_gini": 0.998487678604318,
+        "combined_top10pct_mass": 0.9982794416008255,
+        "pose_finite": true,
+        "pose_weight": 1.0,
+        "seg_finite": true,
+        "seg_weight": 100.0
+      },
+      "shuffled_control_beats_l2": false,
+      "shuffled_control_delta_minus_l2": 2.1004158498016707,
+      "target_bits": 4069344.0
+    },
+    {
+      "allocations_differ": true,
+      "contest_distortion_delta_linf_minus_l2": -0.49495885854946775,
+      "contest_distortion_l2": 0.7126477795248694,
+      "contest_distortion_linf": 0.2176889209754016,
+      "contest_distortion_shuffled_control": 1.5875396798005164,
+      "d_pose_l2": 0.029533220765491325,
+      "d_pose_linf": 0.0005167124812336018,
+      "d_pose_shuffled_control": 0.12188283610157669,
+      "d_seg_l2": 0.001692030190800627,
+      "d_seg_linf": 0.0014580620530371864,
+      "d_seg_shuffled_control": 0.004835340815285842,
+      "l2_total_bits": 4069344.0,
+      "l2_uniform_step": 16.0,
+      "linf_step_max": 128.0,
+      "linf_step_min": 1.0,
+      "linf_total_bits": 4069344.0000001234,
+      "linf_water_level": 0.9154079595763225,
+      "linf_wins": true,
+      "n_pixels": 1017336,
+      "native_hw": [
+        874,
+        1164
+      ],
+      "pair_index": 500,
+      "rate_match_rel_diff": 3.0324357227246184e-14,
+      "saliency_diag": {
+        "combined_gini": 0.9986916864291331,
+        "combined_top10pct_mass": 0.9988771442531643,
+        "pose_finite": true,
+        "pose_weight": 1.0,
+        "seg_finite": true,
+        "seg_weight": 100.0
+      },
+      "shuffled_control_beats_l2": false,
+      "shuffled_control_delta_minus_l2": 0.874891900275647,
+      "target_bits": 4069344.0
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "budget_spend_requires": [
+      "source custody contract_valid=true",
+      "saliency row names upstream source SHA-256s",
+      "saliency row names mirror implementation SHA-256s",
+      "real-video or deterministic tensor numerical proof artifact",
+      "score_claim=false until exact CPU/CUDA eval"
+    ],
+    "contest_compliance": {
+      "compress_side_may": [
+        "use frozen upstream scorers for offline analysis",
+        "derive saliency/allocation/latents before archive emission",
+        "overfit the declared contest video in contest mode"
+      ],
+      "promotion_boundary": "only emitted archive.zip plus deterministic inflate runtime cross the receiver boundary",
+      "receiver_must_not": [
+        "load PoseNet/SegNet",
+        "inspect evaluator score state",
+        "fetch sidecars",
+        "adapt at eval time"
+      ]
+    },
+    "mirror_paths": {
+      "differentiable_yuv6": "tac.differentiable_eval_roundtrip.differentiable_rgb_to_yuv6",
+      "fidelity_verifier": "tools/verify_upstream_scorer_mirror_fidelity.py",
+      "scorer_patch": "tac.scorer.make_scorers_differentiable"
+    },
+    "p18_method": "DeepFool top-2 margin flip-risk on LAST frame (||grad m||^2 / m^2)",
+    "p19_method": "squared input-Jacobian of first-6 pose dims over BOTH frames (diag J^T J)",
+    "producer_module": "tac.analysis.score_exact_saliency",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "required_numerical_proofs": [
+      {
+        "authority_path": "upstream/frame_utils.py::rgb_to_yuv6",
+        "mirror_path": "tac.differentiable_eval_roundtrip.differentiable_rgb_to_yuv6",
+        "name": "yuv6_forward_parity",
+        "purpose": "PoseNet VJP/JVP uses mirror; upstream remains eval authority",
+        "requirement": "max_abs_error==0 on deterministic random and real-video tensors"
+      },
+      {
+        "authority_path": "upstream implementation is no_grad/inplace-clamp",
+        "mirror_path": "differentiable mirror",
+        "name": "yuv6_gradient_nonzero",
+        "purpose": "prevents fake P19 surfaces with severed pose gradients",
+        "requirement": "finite nonzero input gradient in unclamped region"
+      },
+      {
+        "authority_path": "upstream/modules.py::SegNet.preprocess_input",
+        "name": "segnet_last_frame_asymmetry",
+        "purpose": "prevents spending SegNet budget on frame_0 atoms",
+        "requirement": "mutating pair frame_0 alone leaves SegNet input unchanged; mutating pair frame_1 can change SegNet logits"
+      },
+      {
+        "authority_path": "upstream/modules.py::SegNet.compute_distortion",
+        "name": "segnet_argmax_flip_exactness",
+        "purpose": "ties P18 hinge/margin proxy back to hard contest metric",
+        "requirement": "local d_seg equals mean(argmax(gt)!=argmax(candidate))"
+      },
+      {
+        "authority_path": "upstream/modules.py::PoseNet.compute_distortion",
+        "name": "posenet_pair_six_axis_exactness",
+        "purpose": "ties P19 Mahalanobis/Jacobian weighting back to contest MSE",
+        "requirement": "local d_pose equals MSE over first six pose-head dims"
+      },
+      {
+        "authority_path": "upstream/evaluate.py",
+        "name": "rate_byte_price_exactness",
+        "purpose": "sets the reverse-waterfill spend threshold",
+        "requirement": "one archive byte costs exactly 25/source_video_bytes score; source_video_bytes must not be confused with inflated raw bytes"
+      }
+    ],
+    "schema": "score_exact_saliency_producer_provenance.v1",
+    "score_claim": false,
+    "upstream_contract_valid": true,
+    "upstream_model_custody": [
+      {
+        "bytes": 55835560,
+        "exists": true,
+        "relative_path": "models/posenet.safetensors",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+        "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+      },
+      {
+        "bytes": 38502892,
+        "exists": true,
+        "relative_path": "models/segnet.safetensors",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+        "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+      }
+    ],
+    "upstream_source_custody": [
+      {
+        "bytes": 6005,
+        "exists": true,
+        "relative_path": "evaluate.py",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      },
+      {
+        "bytes": 1934,
+        "exists": true,
+        "relative_path": "evaluate.sh",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/evaluate.sh",
+        "sha256": "9612284ce6e9585aefcf636f3027808a56160ffd572edffdf4b8622a65fac917"
+      },
+      {
+        "bytes": 8322,
+        "exists": true,
+        "relative_path": "modules.py",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+        "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+      },
+      {
+        "bytes": 9345,
+        "exists": true,
+        "relative_path": "frame_utils.py",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+        "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+      },
+      {
+        "bytes": 4678,
+        "exists": true,
+        "relative_path": ".github/workflows/eval.yml",
+        "resolved_path": "/Users/adpena/Projects/pact/upstream/.github/workflows/eval.yml",
+        "sha256": "8a6cd6300b51a44f36b49774bc0c6100dbb37ef8290d42bf8e584f1dceddce56"
+      }
+    ]
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "inverse_steganalysis_linf_vs_l2_gate.v1",
+  "score_claim": false,
+  "verdict": "INVERSE_STEGANALYSIS_LINF_BEATS_L2_AT_EQUAL_RATE_AIMING_GENUINE",
+  "verdict_line": "At equal rate (4.00 bits/pixel, L-inf forced to spend >= L2 bits, rate match 4.16e-04), inverse-steganalysis L-inf margin-budget allocation BEATS L2 on the real scorer by 0.37057 contest-distortion (56.9% lower), 6/6 pairs; shuffled-control (same rate+histogram, random placement) contest-distortion 2.09795 vs L-inf 0.28117 -> detector-aiming GENUINE [macOS-CPU advisory].",
+  "wall_clock_seconds": 133.34314433304826
+}
