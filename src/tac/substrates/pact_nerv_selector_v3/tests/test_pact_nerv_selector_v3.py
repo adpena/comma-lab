@@ -130,6 +130,47 @@ def test_archive_pack_then_parse_roundtrip() -> None:
     assert arc.selector_bytes == selector_bytes
 
 
+def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> None:
+    from tac.substrates.pact_nerv_selector_v3.archive_candidate import (
+        export_pact_nerv_selector_v3_mlx_archive,
+    )
+
+    cfg = _smoke_cfg()
+    torch.manual_seed(17)
+    model = PactNervSelectorV3Substrate(cfg).eval()
+    exported = {
+        name: tensor.detach().cpu().numpy().copy()
+        for name, tensor in model.state_dict().items()
+    }
+
+    class _ExportableModel:
+        def __init__(self) -> None:
+            self.cfg = cfg
+
+        def export_state_dict(self):
+            return exported
+
+    archive_path, archive_sha, archive_bytes = export_pact_nerv_selector_v3_mlx_archive(
+        _ExportableModel(),
+        tmp_path / "export",
+        emit_archive_bound_candidate_package=False,
+    )
+
+    projection = (
+        tmp_path
+        / "export"
+        / "hprc_representation_spine_pact_nerv_selector_v3_manifest.json"
+    )
+    payload = json.loads(projection.read_text(encoding="utf-8"))
+    assert archive_path.is_file()
+    assert len(archive_sha) == 64
+    assert archive_bytes > 0
+    assert payload["family"] == "pact_nerv"
+    assert payload["manifest"]["representation_spine"]["manifest_extra"][
+        "source_payload_kind"
+    ] == "pact_nerv_selector_v3_psv3"
+
+
 def test_archive_int8_decoder_quantization_roundtrip_is_fail_closed_parseable() -> None:
     cfg = _smoke_cfg()
     torch.manual_seed(42)

@@ -37,6 +37,8 @@ HPRC_REPRESENTATION_SPINE_PROJECTION_SCHEMA = "hprc_representation_spine_project
 PVQ_MAGIC = b"PVQ\x00"
 PVQ_HEADER_FMT = "<4sBHHHIIII"
 PVQ_HEADER_SIZE = struct.calcsize(PVQ_HEADER_FMT)
+PACT_NERV_LEN_PREFIXED_HEADER_FMT = "<4sBHHBIIII"
+PACT_NERV_LEN_PREFIXED_HEADER_SIZE = struct.calcsize(PACT_NERV_LEN_PREFIXED_HEADER_FMT)
 
 
 class HprcRepresentationFamily(StrEnum):
@@ -276,6 +278,84 @@ def build_pact_nerv_vq_spine_from_archive(
     )
 
 
+def build_pact_nerv_len_prefixed_spine_from_archive_payload(
+    archive_payload: bytes | bytearray | memoryview,
+    *,
+    payload_kind: str,
+    expected_magic: bytes,
+    side_channel_kind: str,
+    family: HprcRepresentationFamily | str = HprcRepresentationFamily.PACT_NERV,
+    source: dict[str, Any] | None = None,
+    manifest_extra: dict[str, Any] | None = None,
+) -> HprcRepresentationSpinePacket:
+    """Project PACT-NeRV 26-byte-header packets into the common spine.
+
+    This covers the IA3 and selector-family archives whose grammar is:
+    header, decoder blob, latent blob, side-channel blob, meta blob.  The
+    side channel is charged as selectors/modes/conditioning, so acquisition can
+    price it independently from decoder weights and per-pair latents.
+    """
+
+    payload = bytes(archive_payload)
+    parts = _split_pact_nerv_len_prefixed_payload(
+        payload,
+        expected_magic=expected_magic,
+        side_channel_kind=side_channel_kind,
+    )
+    state = _json_bytes(
+        {
+            "schema": "hprc_pact_nerv_len_prefixed_receiver_state.v1",
+            "payload_kind": payload_kind,
+            "header": parts["header"],
+            "meta_sha256": hashlib.sha256(parts["meta_blob"]).hexdigest(),
+            "meta_bytes": len(parts["meta_blob"]),
+            "side_channel_kind": side_channel_kind,
+        }
+    )
+    return build_representation_spine_packet(
+        family=family,
+        decoder_blob=parts["decoder_blob"],
+        latents_blob=parts["latents_blob"],
+        selectors_blob=parts["side_blob"],
+        receiver_state_blob=state,
+        source=source or {},
+        manifest_extra={
+            "source_payload_kind": payload_kind,
+            "role": "pact_nerv_learned_receiver_or_selector_policy",
+            "payload_magic": parts["header"]["magic"],
+            "latent_dim": parts["header"]["latent_dim"],
+            "num_pairs": parts["header"]["num_pairs"],
+            "mode_or_palette_or_pose_dim": parts["header"]["mode_or_palette_or_pose_dim"],
+            "side_channel_kind": side_channel_kind,
+            **(manifest_extra or {}),
+        },
+    )
+
+
+def build_pact_nerv_len_prefixed_spine_from_archive(
+    archive_zip: str | Path,
+) -> HprcRepresentationSpinePacket:
+    """Read a PACT-NeRV IA3/selector archive.zip and project ``0.bin``."""
+
+    archive = Path(archive_zip).expanduser().resolve(strict=False)
+    payload, member_name, member_bytes = _read_archive_member(archive, preferred_member="0.bin")
+    if len(payload) < 4:
+        raise HprcRepresentationSpineError("PACT-NeRV archive payload shorter than magic")
+    magic = payload[:4]
+    if magic not in _PACT_NERV_MAGIC_PROJECTIONS:
+        raise HprcRepresentationSpineError(
+            f"unsupported PACT-NeRV len-prefixed magic: {magic!r}"
+        )
+    payload_kind, side_channel_kind = _PACT_NERV_MAGIC_PROJECTIONS[magic]
+    return build_pact_nerv_len_prefixed_spine_from_archive_payload(
+        payload,
+        payload_kind=payload_kind,
+        expected_magic=magic,
+        side_channel_kind=side_channel_kind,
+        source=_source_archive_row(archive, member_name=member_name, member_bytes=member_bytes),
+    )
+
+
 def build_generic_neural_spine_packet(
     *,
     family: HprcRepresentationFamily | str,
@@ -386,6 +466,73 @@ def _split_pact_nerv_vq_payload(payload: bytes) -> dict[str, Any]:
         "indices_blob": payload[end_codebook:end_indices],
         "meta_blob": payload[end_indices:end_meta],
     }
+
+
+def _split_pact_nerv_len_prefixed_payload(
+    payload: bytes,
+    *,
+    expected_magic: bytes,
+    side_channel_kind: str,
+) -> dict[str, Any]:
+    if len(payload) < PACT_NERV_LEN_PREFIXED_HEADER_SIZE:
+        raise HprcRepresentationSpineError("PACT-NeRV payload shorter than header")
+    (
+        magic,
+        version,
+        latent_dim,
+        num_pairs,
+        mode_or_palette_or_pose_dim,
+        decoder_len,
+        latent_len,
+        side_len,
+        meta_len,
+    ) = struct.unpack(
+        PACT_NERV_LEN_PREFIXED_HEADER_FMT,
+        payload[:PACT_NERV_LEN_PREFIXED_HEADER_SIZE],
+    )
+    if magic != expected_magic:
+        raise HprcRepresentationSpineError(
+            f"bad PACT-NeRV magic: {magic!r}; expected {expected_magic!r}"
+        )
+    expected_latent_len = int(num_pairs) * int(latent_dim) * 2
+    if int(latent_len) != expected_latent_len:
+        raise HprcRepresentationSpineError(
+            f"latent_len {latent_len} != num_pairs*latent_dim*2 = {expected_latent_len}"
+        )
+    end_decoder = PACT_NERV_LEN_PREFIXED_HEADER_SIZE + int(decoder_len)
+    end_latents = end_decoder + int(latent_len)
+    end_side = end_latents + int(side_len)
+    end_meta = end_side + int(meta_len)
+    if end_meta != len(payload):
+        raise HprcRepresentationSpineError(
+            f"PACT-NeRV payload bytes {len(payload)} != header-declared {end_meta}"
+        )
+    return {
+        "header": {
+            "magic": magic.decode("ascii", errors="replace"),
+            "version": int(version),
+            "latent_dim": int(latent_dim),
+            "num_pairs": int(num_pairs),
+            "mode_or_palette_or_pose_dim": int(mode_or_palette_or_pose_dim),
+            "decoder_len": int(decoder_len),
+            "latent_len": int(latent_len),
+            "side_len": int(side_len),
+            "meta_len": int(meta_len),
+            "side_channel_kind": side_channel_kind,
+        },
+        "decoder_blob": payload[PACT_NERV_LEN_PREFIXED_HEADER_SIZE:end_decoder],
+        "latents_blob": payload[end_decoder:end_latents],
+        "side_blob": payload[end_latents:end_side],
+        "meta_blob": payload[end_side:end_meta],
+    }
+
+
+_PACT_NERV_MAGIC_PROJECTIONS: dict[bytes, tuple[str, str]] = {
+    b"PIA3": ("pact_nerv_ia3_pia3", "ego_pose_conditioning"),
+    b"PSV2": ("pact_nerv_selector_v2_psv2", "arithmetic_selector_k16"),
+    b"PSV3": ("pact_nerv_selector_v3_psv3", "rice_golomb_selector"),
+    b"PSV4": ("pact_nerv_selector_v4_psv4", "rle_selector"),
+}
 
 
 def _representation_manifest_payload(
@@ -503,12 +650,16 @@ __all__ = [
     "HPRC_REPRESENTATION_SPINE_MANIFEST_SCHEMA",
     "HPRC_REPRESENTATION_SPINE_PROJECTION_SCHEMA",
     "HPRC_REPRESENTATION_SPINE_SCHEMA",
+    "PACT_NERV_LEN_PREFIXED_HEADER_FMT",
+    "PACT_NERV_LEN_PREFIXED_HEADER_SIZE",
     "REPRESENTATION_FAMILY_IDS",
     "HprcRepresentationFamily",
     "HprcRepresentationSpineError",
     "HprcRepresentationSpinePacket",
     "build_generic_neural_spine_packet",
     "build_packed_hnerv_spine_from_archive",
+    "build_pact_nerv_len_prefixed_spine_from_archive",
+    "build_pact_nerv_len_prefixed_spine_from_archive_payload",
     "build_pact_nerv_vq_spine_from_archive",
     "build_pact_nerv_vq_spine_from_archive_payload",
     "build_pr95_hnerv_spine_from_archive",

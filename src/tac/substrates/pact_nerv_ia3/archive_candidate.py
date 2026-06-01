@@ -23,6 +23,10 @@ from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
 )
+from tac.substrates.hprc.representation_spine import (
+    build_pact_nerv_len_prefixed_spine_from_archive_payload,
+    write_representation_spine_projection,
+)
 from tac.substrates.pact_nerv_ia3.archive import pack_archive
 from tac.substrates.pact_nerv_ia3.inflate import inflate_one_video
 
@@ -211,6 +215,29 @@ def materialize_pact_nerv_ia3_byte_closed_candidate(
     runtime_dir_ref = repo_relative(submission_dir, root)
     archive_zip_path = out_dir / "archive.zip"
     build_archive_zip(archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir)
+    archive_sha256 = sha256_file(archive_zip_path)
+    archive_bytes = archive_zip_path.stat().st_size
+    write_representation_spine_projection(
+        output_dir=out_dir,
+        spine=build_pact_nerv_len_prefixed_spine_from_archive_payload(
+            bin_bytes,
+            payload_kind="pact_nerv_ia3_pia3",
+            expected_magic=b"PIA3",
+            side_channel_kind="ego_pose_conditioning",
+            source={
+                "kind": "pact_nerv_ia3_materialized_payload",
+                "archive_zip_path": archive_zip_path.as_posix(),
+                "archive_zip_sha256": archive_sha256,
+                "archive_zip_bytes": int(archive_bytes),
+            },
+            manifest_extra={
+                "emitted_by": "materialize_pact_nerv_ia3_byte_closed_candidate",
+                "pose_dim": int(pose_dim),
+                "archive_bytes_are_authority_for_rate": True,
+            },
+        ),
+        basename="hprc_representation_spine_pact_nerv_ia3",
+    )
 
     file_list_path = out_dir / "file_list.txt"
     file_list_path.write_text("0.mkv\n", encoding="utf-8")

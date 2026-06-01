@@ -165,6 +165,50 @@ def test_inflate_consumes_selector_stream_and_changes_frame0(tmp_path) -> None:
     assert (none_out / "1.png").read_bytes() == (selected_out / "1.png").read_bytes()
 
 
+def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> None:
+    import json
+
+    from tac.substrates.pact_nerv_selector_v2.archive_candidate import (
+        export_pact_nerv_selector_v2_mlx_archive,
+    )
+
+    cfg = _smoke_cfg()
+    torch.manual_seed(17)
+    model = PactNervSelectorV2Substrate(cfg).eval()
+    exported = {
+        name: tensor.detach().cpu().numpy().copy()
+        for name, tensor in model.state_dict().items()
+    }
+
+    class _ExportableModel:
+        def __init__(self) -> None:
+            self.cfg = cfg
+
+        def export_state_dict(self):
+            return exported
+
+    archive_path, archive_sha, archive_bytes = export_pact_nerv_selector_v2_mlx_archive(
+        _ExportableModel(),
+        tmp_path / "export",
+        emit_archive_bound_candidate_package=False,
+    )
+
+    projection = (
+        tmp_path
+        / "export"
+        / "hprc_representation_spine_pact_nerv_selector_v2_manifest.json"
+    )
+    payload = json.loads(projection.read_text(encoding="utf-8"))
+    assert archive_path.is_file()
+    assert len(archive_sha) == 64
+    assert archive_bytes > 0
+    assert payload["schema"] == "hprc_representation_spine_projection.v1"
+    assert payload["family"] == "pact_nerv"
+    assert payload["manifest"]["representation_spine"]["manifest_extra"][
+        "source_payload_kind"
+    ] == "pact_nerv_selector_v2_psv2"
+
+
 def test_archive_header_size_invariant_is_26_bytes() -> None:
     assert PSV2_HEADER_SIZE == 26
 

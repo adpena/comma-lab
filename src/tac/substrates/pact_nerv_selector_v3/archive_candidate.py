@@ -30,6 +30,10 @@ from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
 )
+from tac.substrates.hprc.representation_spine import (
+    build_pact_nerv_len_prefixed_spine_from_archive_payload,
+    write_representation_spine_projection,
+)
 from tac.substrates.pact_nerv_selector_v3.architecture import (
     PactNervSelectorV3Config,
     RiceGolombSelectorCoder,
@@ -235,6 +239,28 @@ def export_pact_nerv_selector_v3_mlx_archive(
     )
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
+    write_representation_spine_projection(
+        output_dir=out_dir,
+        spine=build_pact_nerv_len_prefixed_spine_from_archive_payload(
+            bin_bytes,
+            payload_kind="pact_nerv_selector_v3_psv3",
+            expected_magic=b"PSV3",
+            side_channel_kind="rice_golomb_selector",
+            source={
+                "kind": "pact_nerv_selector_v3_export_payload",
+                "archive_zip_path": archive_zip_path.as_posix(),
+                "archive_zip_sha256": archive_sha256,
+                "archive_zip_bytes": int(archive_bytes),
+            },
+            manifest_extra={
+                "emitted_by": "export_pact_nerv_selector_v3_mlx_archive",
+                "selector_codec": "rice_golomb_selector",
+                "decoder_quantization": decoder_quantization,
+                "archive_bytes_are_authority_for_rate": True,
+            },
+        ),
+        basename="hprc_representation_spine_pact_nerv_selector_v3",
+    )
     if emit_archive_bound_candidate_package:
         emit_archive_bound_candidate_runtime_package(
             adapter_id=PACT_NERV_SELECTOR_V3_MLX_ARCHIVE_BOUND_ADAPTER_ID,
