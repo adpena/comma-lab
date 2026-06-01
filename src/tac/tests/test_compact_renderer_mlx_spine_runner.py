@@ -764,6 +764,83 @@ def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
     ]
 
 
+def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "score_aware_training": {
+                    "schema": "mlx_score_aware_training_objective.v1",
+                    "segnet_distillation_weight": 0.0,
+                    "pose_distillation_weight": 0.0,
+                },
+                "substrate_supplied_score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "coder_aware_qat": {
+                        "schema": "coder_aware_decoder_qat.v1",
+                        "enabled": True,
+                        "quant_bits": 4,
+                        "quant_residual_weight": 0.001,
+                        "magnitude_weight": 0.0001,
+                        "delta_weight": 0.0002,
+                        "authority": "false_macos_mlx_research_signal",
+                    },
+                },
+            },
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_qat",
+        num_pairs=2,
+        epochs=8,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_magnitude_weight=0.0001,
+        coder_qat_delta_weight=0.0002,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["coder_aware_qat"] is True
+    assert captured_train_kwargs["coder_qat_quant_bits"] == 4
+    assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
+    assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
+    assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
+    assert out["score_aware_training"]["coder_aware_qat"] == {
+        "schema": "coder_aware_decoder_qat.v1",
+        "enabled": True,
+        "quant_bits": 4,
+        "quant_residual_weight": 0.001,
+        "magnitude_weight": 0.0001,
+        "delta_weight": 0.0002,
+        "authority": "false_macos_mlx_research_signal",
+    }
+
+
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for HiNeRV adapter smoke")
 def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     tmp_path: Path,

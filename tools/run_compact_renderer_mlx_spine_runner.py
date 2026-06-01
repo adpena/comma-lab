@@ -18,6 +18,7 @@ import os
 import subprocess
 import sys
 import zipfile
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -2057,6 +2058,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
     allow_segnet_only_research: bool = False,
+    coder_aware_qat: bool = False,
+    coder_qat_quant_bits: int = 8,
+    coder_qat_quant_residual_weight: float = 1.0e-4,
+    coder_qat_magnitude_weight: float = 0.0,
+    coder_qat_delta_weight: float = 0.0,
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
@@ -2096,6 +2102,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             segnet_hinge_margin=segnet_hinge_margin,
             distillation_device=distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
+            coder_aware_qat=coder_aware_qat,
+            coder_qat_quant_bits=coder_qat_quant_bits,
+            coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
+            coder_qat_magnitude_weight=coder_qat_magnitude_weight,
+            coder_qat_delta_weight=coder_qat_delta_weight,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -2229,6 +2240,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+                "coder_aware_qat": _coder_qat_report_metadata(
+                    artifact_dict=artifact_dict,
+                    enabled=coder_aware_qat,
+                    quant_bits=coder_qat_quant_bits,
+                    quant_residual_weight=coder_qat_quant_residual_weight,
+                    magnitude_weight=coder_qat_magnitude_weight,
+                    delta_weight=coder_qat_delta_weight,
+                ),
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
@@ -2546,6 +2565,54 @@ def _base_report(
     }
 
 
+def _substrate_score_aware_training_from_artifact(
+    artifact_dict: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Return substrate-supplied score-training metadata from an artifact.
+
+    The shared MLX harness owns the canonical ``score_aware_training`` key for
+    its own objective summary. If a substrate also supplies score-training
+    metadata, the adapter preserves it under
+    ``substrate_supplied_score_aware_training`` to avoid duplicate authority
+    readers. Runner reports need the substrate slot first so knobs such as
+    coder-aware QAT do not disappear after a real harness run.
+    """
+
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if not isinstance(metadata, Mapping):
+        return {}
+    for key in ("substrate_supplied_score_aware_training", "score_aware_training"):
+        value = metadata.get(key)
+        if isinstance(value, Mapping):
+            return dict(value)
+    return {}
+
+
+def _coder_qat_report_metadata(
+    *,
+    artifact_dict: Mapping[str, Any],
+    enabled: bool,
+    quant_bits: int,
+    quant_residual_weight: float,
+    magnitude_weight: float,
+    delta_weight: float,
+) -> dict[str, Any]:
+    """Return machine-readable coder-QAT metadata for runner reports."""
+
+    score_training = _substrate_score_aware_training_from_artifact(artifact_dict)
+    artifact_qat = score_training.get("coder_aware_qat")
+    if isinstance(artifact_qat, Mapping):
+        return dict(artifact_qat)
+    return {
+        "enabled": bool(enabled),
+        "quant_bits": int(quant_bits),
+        "quant_residual_weight": float(quant_residual_weight),
+        "magnitude_weight": float(magnitude_weight),
+        "delta_weight": float(delta_weight),
+        "authority": "false_macos_mlx_research_signal",
+    }
+
+
 def _target_family_rows() -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for family in TARGET_FAMILIES:
@@ -2705,14 +2772,23 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     segnet_hinge_margin: float,
     distillation_device: str,
     allow_segnet_only_research: bool,
+    coder_aware_qat: bool,
+    coder_qat_quant_bits: int,
+    coder_qat_quant_residual_weight: float,
+    coder_qat_magnitude_weight: float,
+    coder_qat_delta_weight: float,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
+        CoderAwareQATConfig,
         RendererBundle,
+        build_decoder_coder_qat_terms,
         build_mlx_posenet_pair_teacher,
         build_mlx_segnet_pair_teacher,
+        coder_qat_loss_weights,
+        coder_qat_metadata,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
     )
@@ -2774,6 +2850,16 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
     model = HinervSubstrateMLX(cfg)
     pr95_curriculum_enabled = int(epochs) >= 8
+    coder_qat_cfg = CoderAwareQATConfig(
+        enabled=bool(coder_aware_qat),
+        quant_bits=int(coder_qat_quant_bits),
+        quant_residual_weight=float(coder_qat_quant_residual_weight),
+        magnitude_weight=float(coder_qat_magnitude_weight),
+        delta_weight=float(coder_qat_delta_weight),
+    ).validated()
+
+    def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
+        return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
 
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
         return export_hi_nerv_mlx_archive(
@@ -2820,6 +2906,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+            "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
@@ -2833,6 +2920,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "target_rgb_1": target_rgb_1,
         "num_pairs": pairs,
         "forward_convention": "call_b2chw_255",
+        "extra_loss_terms": _extra_loss_terms,
+        "extra_loss_weights": coder_qat_loss_weights(coder_qat_cfg),
         "export_archive_fn": _export_archive,
         "substrate_artifact_metadata": artifact_metadata,
     }
@@ -3928,6 +4017,11 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            coder_aware_qat=args.coder_aware_qat,
+            coder_qat_quant_bits=args.coder_qat_quant_bits,
+            coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
+            coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
+            coder_qat_delta_weight=args.coder_qat_delta_weight,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
