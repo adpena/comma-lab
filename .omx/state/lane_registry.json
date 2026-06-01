@@ -66009,7 +66009,7 @@
           "evidence": ""
         }
       },
-      "notes": "False-authority SNeRV scorer-loop/QAT smoke now has coordinate-search GO_LOCAL_CONTINUATION_ONLY in .omx/research/snerv_scorer_loop_decoder_qat_coordinate_pose_gate_20260601T2349Z.json; no promotion/exact authority."
+      "notes": "False-authority coordinate-search continuation is GO_LOCAL_CONTINUATION_ONLY at 1-pair and 2-pair; 2-pair gate .omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_pose_gate_20260601T2355Z.json; no promotion/exact authority."
     }
   ],
   "level_rules": {
@@ -66019,5 +66019,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-01T23:49:19Z"
+  "updated_at": "2026-06-01T23:52:28Z"
 }
