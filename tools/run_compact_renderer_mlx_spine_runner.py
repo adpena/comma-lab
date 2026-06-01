@@ -384,6 +384,14 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     codebook_size: int = 16,
     decoder_channel: int = 8,
     ema_decay: float = 0.9,
+    segnet_distillation_weight: float = 0.0,
+    pose_distillation_weight: float = 0.0,
+    segnet_distillation_objective: str = "kl_t2",
+    distillation_temperature: float = 2.0,
+    segnet_tau_boundary: float = 1.0,
+    segnet_hinge_margin: float = 1.0,
+    distillation_device: str = "cpu",
+    allow_segnet_only_research: bool = False,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -410,6 +418,14 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             codebook_size=codebook_size,
             decoder_channel=decoder_channel,
             ema_decay=ema_decay,
+            segnet_distillation_weight=segnet_distillation_weight,
+            pose_distillation_weight=pose_distillation_weight,
+            segnet_distillation_objective=segnet_distillation_objective,
+            distillation_temperature=distillation_temperature,
+            segnet_tau_boundary=segnet_tau_boundary,
+            segnet_hinge_margin=segnet_hinge_margin,
+            distillation_device=distillation_device,
+            allow_segnet_only_research=allow_segnet_only_research,
             random_seed=random_seed,
             repo_root=root,
         )
@@ -486,6 +502,18 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             "archive_bytes": artifact_dict.get("archive_bytes"),
             "archive_sha256": artifact_dict.get("archive_sha256"),
             "ema_decay": float(ema_decay),
+            "score_aware_training": {
+                "schema": "compact_pact_nerv_vq_score_aware_training.v1",
+                "segnet_distillation_weight": float(segnet_distillation_weight),
+                "pose_distillation_weight": float(pose_distillation_weight),
+                "segnet_distillation_objective": segnet_distillation_objective,
+                "distillation_temperature": float(distillation_temperature),
+                "segnet_tau_boundary": float(segnet_tau_boundary),
+                "segnet_hinge_margin": float(segnet_hinge_margin),
+                "distillation_device": distillation_device,
+                "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
             "receiver_proof_report_paths": [
                 path.as_posix() for path in receiver_proof_paths
@@ -638,13 +666,27 @@ def _run_pact_nerv_vq_mlx_smoke(
     codebook_size: int,
     decoder_channel: int,
     ema_decay: float,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    segnet_distillation_objective: str,
+    distillation_temperature: float,
+    segnet_tau_boundary: float,
+    segnet_hinge_margin: float,
+    distillation_device: str,
+    allow_segnet_only_research: bool,
     random_seed: int,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
         RendererBundle,
+        build_mlx_posenet_pair_teacher,
+        build_mlx_segnet_pair_teacher,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
     )
     from tac.substrates.pact_nerv_vq.architecture import PactNervVqConfig
     from tac.substrates.pact_nerv_vq.archive_candidate import (
@@ -655,6 +697,24 @@ def _run_pact_nerv_vq_mlx_smoke(
     pairs = int(num_pairs)
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
+    if segnet_distillation_weight < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "segnet_distillation_weight must be >= 0"
+        )
+    if pose_distillation_weight < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_weight must be >= 0"
+        )
+    if (
+        segnet_distillation_weight > 0.0
+        and pose_distillation_weight <= 0.0
+        and not allow_segnet_only_research
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "SegNet-bound compact training must also bind PoseNet. Pass "
+            "--pose-distillation-weight > 0, or explicitly pass "
+            "--allow-segnet-only-research for a false-authority SegNet-axis probe."
+        )
     cfg = PactNervVqConfig(
         latent_dim=int(latent_dim),
         embed_dim=int(embed_dim),
@@ -692,26 +752,83 @@ def _run_pact_nerv_vq_mlx_smoke(
             ],
         )
 
-    bundle = RendererBundle(
-        model=model,
-        target_rgb_0=target_rgb_0,
-        target_rgb_1=target_rgb_1,
-        num_pairs=pairs,
-        forward_convention="call_b2chw_255",
-        extra_loss_terms=_extra_loss_terms,
-        extra_loss_weights={"vq_commitment": float(cfg.commitment_weight)},
-        export_archive_fn=_export_archive,
-        substrate_artifact_metadata={
-            "schema": "compact_renderer_pact_nerv_vq_mlx_runner_metadata.v1",
-            "family": "pact_nerv_vq",
-            "num_pairs": pairs,
-            "full_video_pairs_required_for_promotion": 600,
-            "archive_exporter": (
-                "tac.substrates.pact_nerv_vq.archive_candidate."
-                "export_pact_nerv_vq_mlx_archive"
-            ),
-            "score_authority": "false_macos_mlx_research_signal",
+    artifact_metadata = {
+        "schema": "compact_renderer_pact_nerv_vq_mlx_runner_metadata.v1",
+        "family": "pact_nerv_vq",
+        "num_pairs": pairs,
+        "full_video_pairs_required_for_promotion": 600,
+        "archive_exporter": (
+            "tac.substrates.pact_nerv_vq.archive_candidate."
+            "export_pact_nerv_vq_mlx_archive"
+        ),
+        "score_aware_training": {
+            "schema": "compact_pact_nerv_vq_score_aware_training.v1",
+            "segnet_distillation_weight": float(segnet_distillation_weight),
+            "pose_distillation_weight": float(pose_distillation_weight),
+            "segnet_distillation_objective": segnet_distillation_objective,
+            "distillation_temperature": float(distillation_temperature),
+            "segnet_tau_boundary": float(segnet_tau_boundary),
+            "segnet_hinge_margin": float(segnet_hinge_margin),
+            "distillation_device": distillation_device,
+            "allow_segnet_only_research": bool(allow_segnet_only_research),
         },
+        "score_authority": "false_macos_mlx_research_signal",
+    }
+    bundle_kwargs: dict[str, Any] = {
+        "model": model,
+        "target_rgb_0": target_rgb_0,
+        "target_rgb_1": target_rgb_1,
+        "num_pairs": pairs,
+        "forward_convention": "call_b2chw_255",
+        "extra_loss_terms": _extra_loss_terms,
+        "extra_loss_weights": {"vq_commitment": float(cfg.commitment_weight)},
+        "export_archive_fn": _export_archive,
+        "substrate_artifact_metadata": artifact_metadata,
+    }
+    teacher_probe_bundle = RendererBundle(**bundle_kwargs)
+    scorer_teacher = None
+    learnable_student_head = None
+    pose_scorer_teacher = None
+    learnable_pose_student_head = None
+    if segnet_distillation_weight > 0.0:
+        scorer_teacher = build_mlx_segnet_pair_teacher(
+            teacher_probe_bundle,
+            upstream_dir=repo_root / "upstream",
+            device=distillation_device,
+        )
+        learnable_student_head = build_learnable_student_head(
+            num_classes=int(scorer_teacher.num_classes),
+            seed=int(random_seed),
+        )
+    if pose_distillation_weight > 0.0:
+        pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+            teacher_probe_bundle,
+            upstream_dir=repo_root / "upstream",
+            device=distillation_device,
+        )
+        learnable_pose_student_head = build_learnable_pose_student_head(
+            pose_dims=int(pose_scorer_teacher.pose_dims),
+            seed=int(random_seed) + 1,
+        )
+    bundle = RendererBundle(
+        **bundle_kwargs,
+        distillation_weight=float(segnet_distillation_weight),
+        scorer_teacher=scorer_teacher,
+        learnable_student_head=learnable_student_head,
+        distillation_temperature=float(distillation_temperature),
+        segnet_distillation_objective=segnet_distillation_objective,
+        segnet_tau_boundary=float(segnet_tau_boundary),
+        segnet_hinge_margin=float(segnet_hinge_margin),
+        distillation_num_classes=(
+            int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
+        ),
+        pose_distillation_weight=float(pose_distillation_weight),
+        pose_scorer_teacher=pose_scorer_teacher,
+        learnable_pose_student_head=learnable_pose_student_head,
+        pose_dims=int(pose_scorer_teacher.pose_dims)
+        if pose_scorer_teacher is not None
+        else 6,
+        allow_segnet_only_research=bool(allow_segnet_only_research),
     )
     return run_mlx_score_aware_full_main(
         bundle=bundle,
@@ -861,6 +978,51 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "receiver-proven archives do not export near-initial gray frames."
         ),
     )
+    parser.add_argument(
+        "--segnet-distillation-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "Bind compact training to the real MLX SegNet teacher through the "
+            "learnable student-head loss. False-authority MLX research signal only."
+        ),
+    )
+    parser.add_argument(
+        "--pose-distillation-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "Bind compact training to the real PoseNet teacher through the "
+            "learnable pose-head loss. Required for frontier-targeting "
+            "score-aware compact runs."
+        ),
+    )
+    parser.add_argument(
+        "--segnet-distillation-objective",
+        choices=(
+            "kl_t2",
+            "boundary_tckd",
+            "boundary_decision_tckd",
+            "boundary_argmax_hinge",
+        ),
+        default="kl_t2",
+    )
+    parser.add_argument("--distillation-temperature", default=2.0, type=float)
+    parser.add_argument("--segnet-tau-boundary", default=1.0, type=float)
+    parser.add_argument("--segnet-hinge-margin", default=1.0, type=float)
+    parser.add_argument(
+        "--distillation-device",
+        default="cpu",
+        help="Device used to build real scorer teacher caches; default CPU.",
+    )
+    parser.add_argument(
+        "--allow-segnet-only-research",
+        action="store_true",
+        help=(
+            "Explicitly allow SegNet-only compact training without PoseNet. "
+            "This remains false-authority and is never promotion-ready by itself."
+        ),
+    )
     parser.add_argument("--smoke-epochs-per-stage", default=1, type=int)
     parser.add_argument(
         "--training-loss-surface",
@@ -926,6 +1088,14 @@ def main(argv: list[str] | None = None) -> int:
             codebook_size=args.compact_codebook_size,
             decoder_channel=args.compact_decoder_channel,
             ema_decay=args.compact_ema_decay,
+            segnet_distillation_weight=args.segnet_distillation_weight,
+            pose_distillation_weight=args.pose_distillation_weight,
+            segnet_distillation_objective=args.segnet_distillation_objective,
+            distillation_temperature=args.distillation_temperature,
+            segnet_tau_boundary=args.segnet_tau_boundary,
+            segnet_hinge_margin=args.segnet_hinge_margin,
+            distillation_device=args.distillation_device,
+            allow_segnet_only_research=args.allow_segnet_only_research,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,

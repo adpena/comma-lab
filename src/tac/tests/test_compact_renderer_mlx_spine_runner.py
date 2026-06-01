@@ -13,6 +13,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+    _parse_args,
     adapt_pr95_mlx_report_to_spine,
     build_plan_only_report,
 )
@@ -131,3 +132,35 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     assert rows[("rnerv", 178_000)]["trainer_entrypoint"] is None
     assert rows[("pact_nerv_vq", 178_000)]["score_claim"] is False
     assert rows[("pact_nerv_vq", 178_000)]["ready_for_exact_eval_dispatch"] is False
+
+
+def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
+    args = _parse_args(
+        [
+            "--execute-family",
+            "pact_nerv_vq",
+            "--segnet-distillation-weight",
+            "0.25",
+            "--pose-distillation-weight",
+            "0.75",
+            "--segnet-distillation-objective",
+            "boundary_argmax_hinge",
+            "--distillation-temperature",
+            "1.5",
+            "--segnet-tau-boundary",
+            "0.8",
+            "--segnet-hinge-margin",
+            "1.25",
+            "--distillation-device",
+            "cpu",
+        ]
+    )
+
+    assert args.segnet_distillation_weight == 0.25
+    assert args.pose_distillation_weight == 0.75
+    assert args.segnet_distillation_objective == "boundary_argmax_hinge"
+    assert args.distillation_temperature == 1.5
+    assert args.segnet_tau_boundary == 0.8
+    assert args.segnet_hinge_margin == 1.25
+    assert args.distillation_device == "cpu"
+    assert args.allow_segnet_only_research is False
