@@ -80,8 +80,13 @@ TARGET_FAMILIES = (
     "pact_nerv_selector_v4",
     "pact_nerv_vq",
 )
-EXECUTABLE_FAMILIES = ("pr95_hnerv", "pact_nerv_selector_v4", "pact_nerv_vq")
-PLANNER_GATED_FAMILIES = ("hi_nerv", "snerv")
+EXECUTABLE_FAMILIES = (
+    "pr95_hnerv",
+    "pact_nerv_selector_v4",
+    "pact_nerv_vq",
+    "hi_nerv",
+)
+PLANNER_GATED_FAMILIES = ("snerv",)
 CLI_EXECUTE_FAMILIES = (*EXECUTABLE_FAMILIES, *PLANNER_GATED_FAMILIES)
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
@@ -150,24 +155,24 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "hi_nerv": {
         "canonical_family": "hi_nerv",
         "backend_status": (
-            "rate_axis_structural_win_archive_projection_available_"
+            "mlx_archive_export_adapter_available_"
             "distortion_fit_actuator_pending"
         ),
-        "trainer_kind": "pytorch_l0_sketch_present_mlx_exporter_missing",
-        "trainer_entrypoint": None,
+        "trainer_kind": "mlx_renderer_export_smoke_available_scoreaware_trainer_pending",
+        "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv",
         "archive_exporter": (
-            "tac.substrates.hprc.representation_spine."
-            "build_hi_nerv_spine_from_archive"
+            "tac.substrates.hi_nerv.archive_candidate.export_hi_nerv_mlx_archive"
         ),
-        "receiver_proof": "missing_until_mlx_or_portable_runtime_adapter_implemented",
+        "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
         "next_action": (
-            "port_hi_nerv_hierarchical_latent_pyramid_to_mlx_packet_spine_"
-            "with_score_faithful_full_video_training"
+            "replace_initialized_adapter_smoke_with_score_faithful_full_video_"
+            "mlx_training_then_cpu_replay_gate"
         ),
         "execution_scope": (
-            "primary compact carrier candidate; existing PyTorch sketch is not "
-            "promotion-ready until trained MLX/portable artifacts, archive bytes, "
-            "receiver proof, and exact gate exist"
+            "primary compact carrier candidate; MLX renderer/export/receiver "
+            "adapter is executable, but promotion is blocked until score-aware "
+            "full-video training, MLX prefilter, local CPU replay, and exact "
+            "CPU/CUDA gates exist"
         ),
         "rate_axis_evidence": (
             "advisory HiNeRV HIV1 packets show super-small-rate-by-design is "
@@ -795,10 +800,9 @@ def execute_planner_gated_compact_family(
 ) -> dict[str, Any]:
     """Emit a planner-owned refusal for families whose adapters are not real yet.
 
-    ``hi_nerv`` and ``snerv`` are important enough to be accepted by
-    ``--execute-family``. They are not allowed to fake execution. Until their
-    MLX train/export/archive adapters exist, the command writes a normal runner
-    report carrying the score-aware planner row and exact blockers.
+    Planner-gated families are accepted by ``--execute-family`` only to produce
+    a normal runner report carrying the score-aware planner row and exact
+    blockers. They are not allowed to fake execution.
     """
 
     if family not in PLANNER_GATED_FAMILIES:
@@ -1837,6 +1841,157 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     return {**final, "report_path": path.as_posix()}
 
 
+def execute_hi_nerv_mlx_archive_adapter_smoke_and_adapt(
+    *,
+    output_dir: str | Path,
+    num_pairs: int,
+    hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
+    latent_dim: int = 8,
+    embed_dim: int = 8,
+    decoder_channel: int = 8,
+    random_seed: int = 0,
+    allow_overwrite: bool = False,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Export an initialized HiNeRV MLX packet through the real receiver bundle.
+
+    This is an adapter smoke, not a training result.  It proves MLX -> HIV1
+    archive -> contest runtime -> raw receiver consumption, then remains
+    fail-closed on score-aware training, full-video replay, and exact auth.
+    """
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+        raise CompactRendererMlxSpineRunnerError(
+            f"output dir is non-empty; pass --overwrite: {out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+    try:
+        artifact = _run_hi_nerv_mlx_archive_adapter_smoke(
+            output_dir=out / "hi_nerv_mlx_adapter_smoke",
+            num_pairs=num_pairs,
+            latent_dim=latent_dim,
+            embed_dim=embed_dim,
+            decoder_channel=decoder_channel,
+            random_seed=random_seed,
+            repo_root=root,
+        )
+    except Exception as exc:
+        blocker_report = _base_report(
+            output_dir=out,
+            mode="hi_nerv_mlx_archive_adapter_smoke_failed",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        blocker_report.update(
+            {
+                "execute_family": "hi_nerv",
+                "failure": repr(exc),
+                "blockers": ["hi_nerv_mlx_archive_adapter_smoke_failed"],
+            }
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, blocker_report)
+        return {**blocker_report, "report_path": path.as_posix()}
+
+    training_dir = out / "hi_nerv_mlx_adapter_smoke"
+    spine_manifest = training_dir / "hprc_representation_spine_hi_nerv_manifest.json"
+    receiver_proof_path = (
+        training_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
+    )
+    projection_paths = [spine_manifest] if spine_manifest.is_file() else []
+    receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
+    acquisition_path = out / "hprc_spine_acquisition_report.json"
+    runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
+    selected_runner_rows: list[dict[str, Any]] = []
+    blockers: list[Any] = [
+        "hi_nerv_score_aware_training_not_executed",
+        "hi_nerv_initialized_adapter_smoke_not_score_fit",
+        "local_cpu_replay_not_executed",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    if not mlx_profile_paths:
+        blockers.append("full_video_mlx_scorer_replay_not_attached")
+    if projection_paths:
+        acquisition = build_spine_acquisition_report(
+            projection_manifest_paths=projection_paths,
+            hard_byte_ceilings=hard_byte_ceilings,
+        )
+        _write_json(acquisition_path, acquisition)
+        runner_plan = build_spine_bounded_runner_plan(
+            acquisition_report_path=acquisition_path,
+            mlx_profile_paths=mlx_profile_paths,
+            receiver_proof_report_paths=receiver_proof_paths,
+            hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
+            repo_root=root,
+        )
+        write_spine_bounded_runner_plan(
+            output_path=runner_plan_path,
+            plan=runner_plan,
+            allow_overwrite=True,
+        )
+        selected_runner_rows = list(runner_plan.get("selected_runner_rows") or [])
+        blockers.extend(runner_plan.get("blockers") or [])
+    else:
+        blockers.append("hi_nerv_spine_projection_manifest_missing")
+    if not artifact.get("archive_path"):
+        blockers.append("hi_nerv_archive_export_missing")
+
+    final = _base_report(
+        output_dir=out,
+        mode="executed_hi_nerv_mlx_archive_adapter_smoke",
+        hard_byte_ceilings=hard_byte_ceilings,
+        repo_root=root,
+    )
+    final.update(
+        {
+            "execute_family": "hi_nerv",
+            "num_pairs": int(num_pairs),
+            "coverage_valid_for_base_comparison": int(num_pairs) >= 600,
+            "training_executed": False,
+            "adapter_smoke_only": True,
+            "archive_path": artifact.get("archive_path"),
+            "archive_bytes": artifact.get("archive_bytes"),
+            "archive_sha256": artifact.get("archive_sha256"),
+            "adapter_artifact": artifact,
+            "score_aware_training": {
+                "schema": "compact_hi_nerv_score_aware_training.v1",
+                "status": "not_executed_in_adapter_smoke",
+                "required_next": (
+                    "bind real SegNet/PoseNet teachers, PR95 staged optimizer/"
+                    "QAT/C1a pressure, full-video MLX prefilter, then CPU replay"
+                ),
+                "authority": "false_adapter_smoke_only",
+            },
+            "projection_manifest_paths": [path.as_posix() for path in projection_paths],
+            "receiver_proof_report_paths": [
+                path.as_posix() for path in receiver_proof_paths
+            ],
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+            ],
+            "hprc_queue_followup_report_paths": [
+                _resolve(path, base=root).as_posix()
+                for path in hprc_queue_followup_report_paths
+            ],
+            "acquisition_report_path": (
+                acquisition_path.as_posix() if acquisition_path.is_file() else None
+            ),
+            "bounded_runner_plan_path": (
+                runner_plan_path.as_posix() if runner_plan_path.is_file() else None
+            ),
+            "selected_runner_rows": selected_runner_rows,
+            "blockers": _dedupe(blockers),
+        }
+    )
+    path = out / "compact_renderer_mlx_spine_runner_report.json"
+    _write_json(path, final)
+    return {**final, "report_path": path.as_posix()}
+
+
 def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     *,
     output_dir: str | Path,
@@ -2147,6 +2302,14 @@ def _compact_base_campaign_rows(
                 "executable_via_pact_nerv_vq_adapter",
             }:
                 route_status = "queued_for_mlx_training_archive_export_receiver_proof"
+            elif status == (
+                "mlx_archive_export_adapter_available_"
+                "distortion_fit_actuator_pending"
+            ):
+                route_status = (
+                    "queued_for_mlx_archive_adapter_smoke_"
+                    "scoreaware_training_pending"
+                )
             elif status == "checkpoint_adapter_available":
                 route_status = "queued_for_checkpoint_import_or_long_continuation"
             elif status in {
@@ -2215,6 +2378,89 @@ def _score_aware_carrier_training_plan(
         carrier_id=family,
         baseline_id="pr95_hnerv",
     )
+
+
+def _run_hi_nerv_mlx_archive_adapter_smoke(
+    *,
+    output_dir: Path,
+    num_pairs: int,
+    latent_dim: int,
+    embed_dim: int,
+    decoder_channel: int,
+    random_seed: int,
+    repo_root: Path,
+) -> dict[str, Any]:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.architecture import HinervConfig
+    from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    pairs = int(num_pairs)
+    if pairs < 1:
+        raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
+    if hasattr(mx.random, "seed"):
+        mx.random.seed(int(random_seed))
+    cfg = HinervConfig(
+        latent_dim_coarse=max(1, int(latent_dim) // 2),
+        latent_dim_mid=max(1, int(latent_dim)),
+        latent_dim_fine=max(1, int(latent_dim) * 2),
+        embed_dim=max(1, int(embed_dim)),
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=tuple([max(1, int(decoder_channel))] * 7),
+        sin_frequency=30.0,
+        num_upsample_blocks=7,
+        mid_injection_block_index=1,
+        fine_injection_block_index=4,
+        num_pairs=pairs,
+        output_height=384,
+        output_width=512,
+    )
+    model = HinervSubstrateMLX(cfg)
+    mx.eval(model.parameters())
+    archive_path, archive_sha256, archive_bytes = export_hi_nerv_mlx_archive(
+        model,
+        output_dir,
+        repo_root=repo_root,
+        emit_archive_bound_candidate_package=True,
+        retain_receiver_proof_output=False,
+        mlx_triage_argv=[
+            "tools/run_compact_renderer_mlx_spine_runner.py",
+            "--execute-family",
+            "hi_nerv",
+        ],
+        decoder_codec="int8_mixed",
+    )
+    metadata = {
+        "schema": "compact_renderer_hi_nerv_mlx_adapter_smoke_metadata.v1",
+        "family": "hi_nerv",
+        "num_pairs": pairs,
+        "full_video_pairs_required_for_promotion": 600,
+        "archive_path": archive_path.as_posix(),
+        "archive_bytes": int(archive_bytes),
+        "archive_sha256": archive_sha256,
+        "decoder_codec": "int8_mixed",
+        "model_num_parameters": int(model.num_parameters()),
+        "config": {
+            "latent_dim_coarse": int(cfg.latent_dim_coarse),
+            "latent_dim_mid": int(cfg.latent_dim_mid),
+            "latent_dim_fine": int(cfg.latent_dim_fine),
+            "embed_dim": int(cfg.embed_dim),
+            "decoder_channels": [int(value) for value in cfg.decoder_channels],
+            "num_upsample_blocks": int(cfg.num_upsample_blocks),
+            "mid_injection_block_index": int(cfg.mid_injection_block_index),
+            "fine_injection_block_index": int(cfg.fine_injection_block_index),
+            "output_height": int(cfg.output_height),
+            "output_width": int(cfg.output_width),
+        },
+        "training_executed": False,
+        "adapter_smoke_only": True,
+        "score_authority": "false_adapter_smoke_only",
+    }
+    metadata_path = output_dir / "hi_nerv_mlx_adapter_smoke_metadata.json"
+    _write_json(metadata_path, metadata)
+    return {**metadata, "metadata_path": metadata_path.as_posix()}
 
 
 def _run_pact_nerv_vq_mlx_smoke(
@@ -3144,6 +3390,20 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
+            random_seed=args.random_seed,
+            allow_overwrite=args.overwrite,
+            repo_root=args.repo_root,
+        )
+    elif args.execute_family == "hi_nerv":
+        report = execute_hi_nerv_mlx_archive_adapter_smoke_and_adapt(
+            output_dir=output_dir,
+            num_pairs=args.num_pairs,
+            hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            latent_dim=args.compact_latent_dim,
+            embed_dim=args.compact_embed_dim,
+            decoder_channel=args.compact_decoder_channel,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,

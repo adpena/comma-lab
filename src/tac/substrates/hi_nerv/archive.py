@@ -47,14 +47,17 @@ CLAUDE.md compliance: deterministic, no /tmp, no scorer load.
 
 from __future__ import annotations
 
-import io
 import json
-import pickle
 import struct
 from dataclasses import dataclass
 
-import brotli  # type: ignore[import-not-found]
 import torch
+
+from tac.substrates._shared.decoder_state_codec import (
+    decoder_state_codec_stats,
+    deserialize_decoder_state_dict,
+    serialize_decoder_state_dict,
+)
 
 HIV1_MAGIC: bytes = b"HIV1"
 HIV1_SCHEMA_VERSION: int = 1
@@ -87,22 +90,16 @@ class HinervArchive:
     schema_version: int
 
 
-def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
-    buf = io.BytesIO()
-    sd_cpu = {
-        k: v.detach().to("cpu", dtype=torch.float16).contiguous()
-        for k, v in sd.items()
-    }
-    pickle.dump(sd_cpu, buf, protocol=4)
-    return bytes(brotli.compress(buf.getvalue(), quality=BROTLI_QUALITY))
+def _serialize_state_dict(
+    sd: dict[str, torch.Tensor],
+    *,
+    codec: str = "fp16_brotli_legacy",
+) -> bytes:
+    return serialize_decoder_state_dict(sd, codec=codec)
 
 
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
-    raw = brotli.decompress(blob)
-    sd = pickle.loads(raw)
-    if not isinstance(sd, dict):
-        raise ValueError("decoder_state_dict blob did not unpickle to a dict")
-    return sd
+    return deserialize_decoder_state_dict(blob)
 
 
 def _quantize_latents_to_int16(
@@ -136,6 +133,7 @@ def pack_archive(
     meta: dict[str, object],
     *,
     schema_version: int = HIV1_SCHEMA_VERSION,
+    decoder_codec: str = "fp16_brotli_legacy",
 ) -> bytes:
     """Serialize trained weights + 3-scale latents + meta into 0.bin bytes."""
     if schema_version != HIV1_SCHEMA_VERSION:
@@ -175,7 +173,7 @@ def pack_archive(
     bytes_m = qm.contiguous().numpy().tobytes()
     bytes_f = qf.contiguous().numpy().tobytes()
 
-    decoder_blob = _serialize_state_dict(decoder_state_dict)
+    decoder_blob = _serialize_state_dict(decoder_state_dict, codec=decoder_codec)
 
     meta_with_quant = dict(meta)
     meta_with_quant["_quant_scale_coarse"] = float(sc_c)
@@ -184,6 +182,9 @@ def pack_archive(
     meta_with_quant["_quant_zero_point_mid"] = float(zp_m)
     meta_with_quant["_quant_scale_fine"] = float(sc_f)
     meta_with_quant["_quant_zero_point_fine"] = float(zp_f)
+    meta_with_quant["_decoder_state_codec"] = decoder_state_codec_stats(
+        decoder_blob
+    ).as_dict()
     meta_bytes = json.dumps(
         meta_with_quant, separators=(",", ":"), sort_keys=True
     ).encode("utf-8")

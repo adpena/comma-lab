@@ -9,6 +9,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -20,10 +22,18 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     adapt_pr95_mlx_report_to_spine,
     adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
+    execute_hi_nerv_mlx_archive_adapter_smoke_and_adapt,
     execute_pact_nerv_selector_v4_mlx_smoke_and_adapt,
     execute_planner_gated_compact_family,
     execute_pr95_hnerv_mlx_scoreaware_and_adapt,
 )
+
+try:
+    import mlx.core as _mx  # noqa: F401
+
+    _MLX_AVAILABLE = True
+except ImportError:
+    _MLX_AVAILABLE = False
 
 
 def _write_synthetic_pr95_archive(path: Path, *, pairs: int = 600) -> Path:
@@ -163,8 +173,14 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     ]
     assert families["pvq_nerv"]["status"] == "executable_via_pact_nerv_vq_adapter"
     assert families["hi_nerv"]["status"] == (
-        "rate_axis_structural_win_archive_projection_available_"
+        "mlx_archive_export_adapter_available_"
         "distortion_fit_actuator_pending"
+    )
+    assert families["hi_nerv"]["trainer_entrypoint"].endswith(
+        "--execute-family hi_nerv"
+    )
+    assert families["hi_nerv"]["archive_exporter"] == (
+        "tac.substrates.hi_nerv.archive_candidate.export_hi_nerv_mlx_archive"
     )
     assert families["hi_nerv"]["stack_role"] == "primary_carrier"
     assert "super-small-rate-by-design" in families["hi_nerv"]["rate_axis_evidence"]
@@ -239,10 +255,10 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         "tools/profile_pact_nerv_selector_v4_mlx_section_value.py"
     )
     assert rows[("hi_nerv", 178_000)]["route_status"] == (
-        "trainer_actuator_migration_required"
+        "queued_for_mlx_archive_adapter_smoke_scoreaware_training_pending"
     )
     assert rows[("hi_nerv", 178_000)]["stack_role"] == "primary_carrier"
-    assert "build_hi_nerv_spine_from_archive" in rows[("hi_nerv", 178_000)][
+    assert "export_hi_nerv_mlx_archive" in rows[("hi_nerv", 178_000)][
         "archive_exporter"
     ]
     campaign_plan = rows[("hi_nerv", 178_000)][
@@ -396,34 +412,38 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.num_pairs == 128
 
 
-def test_planner_gated_hinerv_execution_writes_refusal_report(
+@pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for HiNeRV adapter smoke")
+def test_hinerv_execute_runs_archive_adapter_smoke_and_receiver_proof(
     tmp_path: Path,
 ) -> None:
-    out = execute_planner_gated_compact_family(
-        family="hi_nerv",
+    out = execute_hi_nerv_mlx_archive_adapter_smoke_and_adapt(
         output_dir=tmp_path / "hinerv_gate",
-        num_pairs=32,
-        epochs=7,
+        num_pairs=1,
         hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
         repo_root=REPO_ROOT,
     )
 
-    assert out["mode"] == "hi_nerv_planner_gated_execution_refused"
+    assert out["mode"] == "executed_hi_nerv_mlx_archive_adapter_smoke"
     assert out["execute_family"] == "hi_nerv"
-    assert out["trainer_launch_allowed"] is False
+    assert out["training_executed"] is False
+    assert out["adapter_smoke_only"] is True
     assert out["score_claim"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
-    assert out["requested_campaign"]["num_pairs"] == 32
-    assert out["requested_campaign"]["epochs"] == 7
-    planner = out["score_aware_carrier_training_plan"]
-    assert planner["planner_action"] == (
-        "run_score_aware_decoder_weight_training_full_main"
-    )
-    assert planner["allocator_target_surface"] == "decoder_weights"
-    assert "hi_nerv_mlx_native_train_export_archive_adapter_missing" in out[
-        "blockers"
-    ]
-    assert "hi_nerv_byte_closed_archive_export_missing" in out["blockers"]
+    assert Path(out["archive_path"]).is_file()
+    assert out["archive_bytes"] == Path(out["archive_path"]).stat().st_size
+    assert len(out["archive_sha256"]) == 64
+    assert out["projection_manifest_paths"]
+    assert out["receiver_proof_report_paths"]
+    proof = json.loads(Path(out["receiver_proof_report_paths"][0]).read_text())
+    assert proof["runtime_consumption_proof_ready"] is True
+    assert proof["receiver_contract_satisfied"] is True
+    assert "hi_nerv_score_aware_training_not_executed" in out["blockers"]
+    assert "hi_nerv_initialized_adapter_smoke_not_score_fit" in out["blockers"]
+    assert "local_cpu_replay_not_executed" in out["blockers"]
+    assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
     assert Path(out["report_path"]).is_file()
 
 

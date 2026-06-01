@@ -51,6 +51,11 @@ from .archive import (
     pack_archive,
     parse_archive,
 )
+from .archive_candidate import (
+    export_hi_nerv_mlx_archive,
+    export_hi_nerv_mlx_archive_bound_candidate_package,
+    pack_archive_from_exported_state_dict,
+)
 from .score_aware_loss import HinervScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
@@ -59,6 +64,9 @@ __all__ = [
     "HinervScoreAwareLoss",
     "HinervSubstrate",
     "ScoreAwareLossWeights",
+    "export_hi_nerv_mlx_archive",
+    "export_hi_nerv_mlx_archive_bound_candidate_package",
     "pack_archive",
+    "pack_archive_from_exported_state_dict",
     "parse_archive",
 ]
