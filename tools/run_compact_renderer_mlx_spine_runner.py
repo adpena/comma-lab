@@ -81,6 +81,8 @@ TARGET_FAMILIES = (
     "pact_nerv_vq",
 )
 EXECUTABLE_FAMILIES = ("pr95_hnerv", "pact_nerv_selector_v4", "pact_nerv_vq")
+PLANNER_GATED_FAMILIES = ("hi_nerv", "snerv")
+CLI_EXECUTE_FAMILIES = (*EXECUTABLE_FAMILIES, *PLANNER_GATED_FAMILIES)
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
         "canonical_family": "pr95_hnerv",
@@ -774,6 +776,110 @@ def build_plan_only_report(
         "receiver_proof_not_yet_emitted",
         "contest_cpu_cuda_exact_eval_missing",
     ]
+    path = out / "compact_renderer_mlx_spine_runner_report.json"
+    _write_json(path, report)
+    return {**report, "report_path": path.as_posix()}
+
+
+def execute_planner_gated_compact_family(
+    *,
+    family: str,
+    output_dir: str | Path,
+    num_pairs: int,
+    epochs: int,
+    hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
+    allow_overwrite: bool = False,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Emit a planner-owned refusal for families whose adapters are not real yet.
+
+    ``hi_nerv`` and ``snerv`` are important enough to be accepted by
+    ``--execute-family``. They are not allowed to fake execution. Until their
+    MLX train/export/archive adapters exist, the command writes a normal runner
+    report carrying the score-aware planner row and exact blockers.
+    """
+
+    if family not in PLANNER_GATED_FAMILIES:
+        raise CompactRendererMlxSpineRunnerError(
+            f"planner-gated execution only supports {PLANNER_GATED_FAMILIES}; got {family!r}"
+        )
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+        raise CompactRendererMlxSpineRunnerError(
+            f"output dir is non-empty; pass --overwrite: {out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+    backend = COMPACT_FAMILY_BACKENDS[family]
+    planner = _score_aware_carrier_training_plan(family, backend)
+    blockers = _dedupe(
+        [
+            *planner.get("dispatch_blockers", []),
+            f"{family}_mlx_native_train_export_archive_adapter_missing",
+            f"{family}_byte_closed_archive_export_missing",
+            f"{family}_receiver_proof_missing",
+            f"{family}_full_video_mlx_prefilter_not_executed",
+            "local_cpu_replay_not_executed",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ]
+    )
+    report = _base_report(
+        output_dir=out,
+        mode=f"{family}_planner_gated_execution_refused",
+        hard_byte_ceilings=hard_byte_ceilings,
+        repo_root=root,
+    )
+    report.update(
+        {
+            "execute_family": family,
+            "trainer_launch_allowed": False,
+            "launch_refusal_reason": (
+                "planner row consumed; native MLX train/export/archive adapter "
+                "is missing, so no fake training or manual launch is allowed"
+            ),
+            "requested_campaign": {
+                "schema": "compact_carrier_campaign_request.v1",
+                "family": family,
+                "num_pairs": int(num_pairs),
+                "epochs": int(epochs),
+                "hard_byte_ceilings": [int(value) for value in hard_byte_ceilings],
+                "mlx_profile_paths": [
+                    _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+                ],
+                "hprc_queue_followup_report_paths": [
+                    _resolve(path, base=root).as_posix()
+                    for path in hprc_queue_followup_report_paths
+                ],
+            },
+            "score_aware_carrier_training_plan": planner,
+            "adapter_contract_required": {
+                "schema": "mlx_native_compact_carrier_adapter_contract.v1",
+                "required_surfaces": [
+                    "MLX renderer module with differentiable pair decode",
+                    "real SegNet teacher cache",
+                    "real PoseNet teacher cache",
+                    "PR95-faithful staged optimizer bridge",
+                    "coder-aware regularization and QAT hooks",
+                    "byte-closed archive exporter",
+                    "numpy-portable inflate runtime",
+                    "receiver proof",
+                    "full-video MLX prefilter report",
+                    "local CPU replay gate",
+                ],
+                "false_authority_until_all_surfaces_exist": True,
+            },
+            "next_actions": [
+                f"implement_{family}_mlx_native_renderer_bundle",
+                f"implement_{family}_archive_exporter_and_numpy_inflate",
+                f"run_{family}_2_pair_mlx_training_smoke_with_real_scorer_teachers",
+                f"scale_{family}_32_128_600_pair_campaigns_after_smoke",
+                "promote_only_byte_closed_local_winners_to_contest_cpu_then_cuda",
+            ],
+            "blockers": blockers,
+        }
+    )
     path = out / "compact_renderer_mlx_spine_runner_report.json"
     _write_json(path, report)
     return {**report, "report_path": path.as_posix()}
@@ -2584,8 +2690,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--execute-family",
-        choices=EXECUTABLE_FAMILIES,
-        help="Execute a real MLX compact-family training/export row.",
+        choices=CLI_EXECUTE_FAMILIES,
+        help=(
+            "Execute a real MLX compact-family training/export row, or emit a "
+            "planner-owned refusal for top-priority families whose adapters are "
+            "not real yet."
+        ),
     )
     parser.add_argument(
         "--pr95-source-archive",
@@ -2896,6 +3006,18 @@ def main(argv: list[str] | None = None) -> int:
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
             random_seed=args.random_seed,
+            allow_overwrite=args.overwrite,
+            repo_root=args.repo_root,
+        )
+    elif args.execute_family in PLANNER_GATED_FAMILIES:
+        report = execute_planner_gated_compact_family(
+            family=args.execute_family,
+            output_dir=output_dir,
+            num_pairs=args.num_pairs,
+            epochs=args.epochs,
+            hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
         )

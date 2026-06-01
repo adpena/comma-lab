@@ -21,6 +21,7 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
     execute_pact_nerv_selector_v4_mlx_smoke_and_adapt,
+    execute_planner_gated_compact_family,
     execute_pr95_hnerv_mlx_scoreaware_and_adapt,
 )
 
@@ -366,6 +367,74 @@ def test_pr95_hnerv_execute_parser_exposes_public_archive_seed() -> None:
     assert args.run_receiver_proof is True
     assert args.keep_receiver_proof_output is True
     assert args.receiver_proof_timeout_seconds == 17
+
+
+def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
+    hi = _parse_args(["--execute-family", "hi_nerv", "--num-pairs", "32"])
+    sn = _parse_args(["--execute-family", "snerv", "--num-pairs", "128"])
+
+    assert hi.execute_family == "hi_nerv"
+    assert hi.num_pairs == 32
+    assert sn.execute_family == "snerv"
+    assert sn.num_pairs == 128
+
+
+def test_planner_gated_hinerv_execution_writes_refusal_report(
+    tmp_path: Path,
+) -> None:
+    out = execute_planner_gated_compact_family(
+        family="hi_nerv",
+        output_dir=tmp_path / "hinerv_gate",
+        num_pairs=32,
+        epochs=7,
+        hard_byte_ceilings=(178_000,),
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "hi_nerv_planner_gated_execution_refused"
+    assert out["execute_family"] == "hi_nerv"
+    assert out["trainer_launch_allowed"] is False
+    assert out["score_claim"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert out["requested_campaign"]["num_pairs"] == 32
+    assert out["requested_campaign"]["epochs"] == 7
+    planner = out["score_aware_carrier_training_plan"]
+    assert planner["planner_action"] == (
+        "run_score_aware_decoder_weight_training_full_main"
+    )
+    assert planner["allocator_target_surface"] == "decoder_weights"
+    assert "hi_nerv_mlx_native_train_export_archive_adapter_missing" in out[
+        "blockers"
+    ]
+    assert "hi_nerv_byte_closed_archive_export_missing" in out["blockers"]
+    assert Path(out["report_path"]).is_file()
+
+
+def test_planner_gated_snerv_execution_writes_missing_stack_blockers(
+    tmp_path: Path,
+) -> None:
+    out = execute_planner_gated_compact_family(
+        family="snerv",
+        output_dir=tmp_path / "snerv_gate",
+        num_pairs=128,
+        epochs=3,
+        hard_byte_ceilings=(178_000, 216_000),
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "snerv_planner_gated_execution_refused"
+    assert out["trainer_launch_allowed"] is False
+    planner = out["score_aware_carrier_training_plan"]
+    assert planner["score_aware_training_ready"] is False
+    assert "missing_training_stack:real_segnet_teacher" in planner[
+        "dispatch_blockers"
+    ]
+    assert "snerv_mlx_native_train_export_archive_adapter_missing" in out[
+        "blockers"
+    ]
+    assert out["adapter_contract_required"][
+        "false_authority_until_all_surfaces_exist"
+    ] is True
 
 
 def test_pr95_stage8_execute_parser_exposes_source_lane_controls() -> None:
