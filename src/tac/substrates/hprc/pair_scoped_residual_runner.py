@@ -109,6 +109,12 @@ def build_pair_scoped_residual_bounded_runner_plan(
         "runner_rows": runner_rows,
         "runner_policy": {
             "schema": "hprc_pair_scoped_residual_runner_policy.v1",
+            "primary_execution": (
+                "incremental_pair_response_first; use "
+                "tools/execute_hprc_pair_scoped_incremental_runner.py to materialize "
+                "archive bytes, rescore changed pair windows, patch onto the reused "
+                "full-video baseline, and emit cleanup/exact blockers"
+            ),
             "selection": (
                 "execute candidate rows in order of estimated archive-byte removal, "
                 "then compare MLX advisory deltas under the same baseline profile"
@@ -242,6 +248,20 @@ def _runner_row(
         "profile_output_dir": candidate_output_dir.as_posix(),
         "profile_command_argv": argv,
         "incremental_response_command_argv": incremental_argv,
+        "incremental_first_execution": {
+            "schema": "hprc_pair_scoped_incremental_first_execution_pointer.v1",
+            "tool": "tools/execute_hprc_pair_scoped_incremental_runner.py",
+            "candidate_id": candidate_id,
+            "requires_runner_plan_path": True,
+            "baseline_reuse_required": True,
+            "full_candidate_profile_required": False,
+            "materializes_archive_zip": True,
+            "receiver_proof_binding_by_archive_sha256": True,
+            "cleanup_plan_emitted": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "expected_incremental_response_report": (
             candidate_output_dir
             / "incremental_pair_response"

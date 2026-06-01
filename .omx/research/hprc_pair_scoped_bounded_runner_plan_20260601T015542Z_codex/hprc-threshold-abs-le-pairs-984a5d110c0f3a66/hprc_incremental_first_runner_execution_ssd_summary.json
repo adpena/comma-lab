@@ -1,0 +1,89 @@
+{
+  "archive": {
+    "bytes": 859923,
+    "hprc_0bin_path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/variants/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66/0.bin",
+    "hprc_0bin_sha256": "3b42cb2039cc4d3d030bbd3316454acfcc810936060cb0f2dc2687725141ddae",
+    "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/variants/residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66/archive.zip",
+    "sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3"
+  },
+  "archive_bytes_removed_vs_baseline": 303937,
+  "artifact_retention_blocked_candidate_count": 1,
+  "candidate_id": "hprc-threshold-abs-le-pairs-984a5d110c0f3a66",
+  "candidate_variant_id": "residual_transform_threshold_abs_le_pairs_3_1_2_4_5_7_13_15_17_23_28_29_38_44_45_4_984a5d110c0f3a66",
+  "changed_pair_count": 284,
+  "cleanup_blocked_bytes_retained": 1340089389,
+  "cleanup_blockers": [
+    "mlx_cache_identity_audit_stamp_missing"
+  ],
+  "cleanup_status": "blocked",
+  "delta_avg_posenet_dist": -14.083532773107294,
+  "delta_avg_segnet_dist": -0.0011248768648753557,
+  "delta_total_mlx_score_advisory": -2.152196352350849,
+  "exact_axis_gate": {
+    "blockers": [
+      "incremental_mlx_response_is_advisory_not_score_authority",
+      "contest_cpu_cuda_exact_eval_not_executed",
+      "uncertified_mlx_cache_retained_cleanup_blocker"
+    ],
+    "ready_for_exact_eval_dispatch": false
+  },
+  "external_artifacts": {
+    "hprc_incremental_runner_execution_prep.json": {
+      "bytes": 16012,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_incremental_runner_execution_prep.json",
+      "sha256": "a400b16070e343125e94483c12aa79571c608c4c2abb92780577cf0e8a92bb4b"
+    },
+    "hprc_incremental_runner_execution_report.json": {
+      "bytes": 7285,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_incremental_runner_execution_report.json",
+      "sha256": "9fde7409ed4af449cfc294753cefaaa00de8fc82b766c08b7edc18dd614e54f8"
+    },
+    "incremental_pair_response/artifact_retention_plan.json": {
+      "bytes": 5543,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/incremental_pair_response/artifact_retention_plan.json",
+      "sha256": "be865790000ba14ec3723728c3d02cea4344190289aef69d1cac809b584cb262"
+    },
+    "incremental_pair_response/hprc_incremental_pair_response_report.json": {
+      "bytes": 13012,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/incremental_pair_response/hprc_incremental_pair_response_report.json",
+      "sha256": "46b6b014cb2dd3318cee8a44b523e1cfe187482483223e754ee0a56db07e2110"
+    },
+    "incremental_pair_response/mlx_incremental_cache_report.json": {
+      "bytes": 12209,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/incremental_pair_response/mlx_incremental_cache_report.json",
+      "sha256": "086502c1aefbca94edb28f928eaea3bb444b7e38beea3507447697de783e00c3"
+    },
+    "incremental_pair_response/mlx_incremental_response.json": {
+      "bytes": 11589,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/incremental_pair_response/mlx_incremental_response.json",
+      "sha256": "b9579b1bc2f8b59960ba149f5c3788043fd4b7c0e0d35dd126f4b54a98eff6fd"
+    },
+    "synthetic_incremental_profile.json": {
+      "bytes": 4224,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/synthetic_incremental_profile.json",
+      "sha256": "626e0ce7d11c784e1081f0ff107810905d5a96ef0691fc40ef6b00a296d2ef36"
+    }
+  },
+  "external_root": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66",
+  "full_video_pair_count": 600,
+  "incremental_command_elapsed_seconds": 279.680526971817,
+  "inner_incremental_scorer_batch_pairs": 1,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_binding": {
+    "archive_sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3",
+    "blockers": [],
+    "proof_path": ".omx/research/hprc_pair_scoped_threshold_abs_le3_receiver_proof_20260601T011601Z_codex/receiver_proof/hprc_receiver_proof.json",
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_contract_satisfied": true,
+    "receiver_output_bytes": 3662409600,
+    "receiver_output_sha256": "b8a444f9342ebddeae769a467fd5661f2979e1e2cad70cf9d2e0b4a04b26783e",
+    "runtime_consumption_proof_ready": true,
+    "schema": "hprc_incremental_runner_receiver_proof_binding.v1",
+    "status": "linked_by_archive_sha256"
+  },
+  "residual_transform": "threshold_abs_le_pairs=3@1-2,4-5,7,13-15,17-23,28-29,38,44-45,49,52,65,69-71,76,79,83,88-89,91,96,98-99,101,103-105,107-111,113-115,117,120-122,125-126,129,131,133-134,140,142,144-149,156,158,160,164,167-168,171,173-177,179-181,183,186,189-194,198-204,208,210-212,214-219,223-225,232,238-241,250-253,255,257,259,261-262,266-267,273,278,282-284,289-291,295,298,300-304,306-307,310,312,314-317,321-322,324-325,327,330,332,341,344-345,350,355,362-369,371,373,375,378,382-393,397,399,403-404,406-418,420-421,423,425-426,428-429,433,435,438,440-442,445-446,449,451,455,457,463,465-472,474-475,477,480-487,491,506,514-518,520-521,525,527-530,532-533,535,537-539,541,543-545,551,553,563-564,570,572-573,576-577,579,585,587-590,592,594-597,599",
+  "runner_plan_path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc_pair_scoped_residual_bounded_runner_plan.json",
+  "schema": "hprc_incremental_first_runner_execution_ssd_summary.v1",
+  "score_claim": false
+}

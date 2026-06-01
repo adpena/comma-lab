@@ -28,6 +28,15 @@ from tac.substrates.hprc.incremental_pair_response import (  # noqa: E402
     HPRC_INCREMENTAL_PAIR_RESPONSE_SCHEMA,
     build_hprc_incremental_pair_response_report,
 )
+from tac.substrates.hprc.incremental_runner_execution import (  # noqa: E402
+    HPRC_INCREMENTAL_RUNNER_EXECUTION_PREP_SCHEMA,
+    HPRC_INCREMENTAL_RUNNER_EXECUTION_SCHEMA,
+    build_hprc_incremental_runner_execution_report,
+    prepare_hprc_incremental_runner_execution,
+)
+from tac.substrates.hprc.learned_receiver import (  # noqa: E402
+    build_compact_receiver_packet_from_lowres_frames,
+)
 from tac.substrates.hprc.pair_scoped_residual_harvest import (  # noqa: E402
     HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_HARVEST_SCHEMA,
     build_pair_scoped_residual_runner_harvest,
@@ -247,6 +256,14 @@ def test_hprc_pair_scoped_residual_runner_plan_emits_executable_rows(tmp_path: P
     assert "--scorer-batch-pairs" in row["profile_command_argv"]
     assert "--pair-ranges" in row["incremental_response_command_argv"]
     assert "0,2-4" in row["incremental_response_command_argv"]
+    assert plan["runner_policy"]["primary_execution"].startswith(
+        "incremental_pair_response_first"
+    )
+    assert row["incremental_first_execution"]["tool"].endswith(
+        "execute_hprc_pair_scoped_incremental_runner.py"
+    )
+    assert row["incremental_first_execution"]["full_candidate_profile_required"] is False
+    assert row["incremental_first_execution"]["materializes_archive_zip"] is True
     assert row["expected_incremental_response_report"].endswith(
         "hprc_incremental_pair_response_report.json"
     )
@@ -628,6 +645,197 @@ def test_hprc_incremental_pair_response_patches_changed_pairs(
     assert report["archive_bytes_removed_vs_baseline"] == 200
     assert report["delta_avg_posenet_dist"] > 0
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hprc_incremental_runner_execution_prepares_synthetic_profile(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    candidate_dir = repo / "candidate"
+    candidate_dir.mkdir()
+    frames = np.zeros((4, 8, 10, 3), dtype=np.float32)
+    frames[:, :, :, 0] = np.arange(4, dtype=np.float32)[:, None, None] * 11
+    (candidate_dir / "0.bin").write_bytes(
+        build_compact_receiver_packet_from_lowres_frames(
+            frames,
+            basis_count=2,
+            residual_grid_h=2,
+            residual_grid_w=3,
+        )
+    )
+    baseline_components = repo / "baseline_components"
+    baseline_components.mkdir()
+    np.save(baseline_components / "pose.npy", np.asarray([0.1, 0.2]))
+    np.save(baseline_components / "seg.npy", np.asarray([0.01, 0.02]))
+    baseline_response = repo / "baseline_response.json"
+    baseline_response.write_text(
+        json.dumps(_response_with_components(baseline_components)),
+        encoding="utf-8",
+    )
+    baseline_profile = repo / "baseline_profile.json"
+    baseline_profile.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "reference_cache_dir": (repo / "reference_cache").as_posix(),
+                "max_pairs": 2,
+                "window_pairs": 1,
+                "variant_rows": [
+                    {
+                        "variant_id": "baseline",
+                        "archive_zip_bytes": 1000,
+                        "hprc_0bin_sha256": "b" * 64,
+                        "mlx_response": baseline_response.as_posix(),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runner_plan = repo / "runner_plan.json"
+    runner_plan.write_text(
+        json.dumps(
+            {
+                "candidate_dir": candidate_dir.as_posix(),
+                "reuse_baseline_profile_path": baseline_profile.as_posix(),
+                "runner_rows": [
+                    {
+                        "candidate_id": "candidate-a",
+                        "residual_transform": "threshold_abs_le_pairs=3@1",
+                        "pair_ranges": [[1, 1]],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    prep = prepare_hprc_incremental_runner_execution(
+        runner_plan_path=runner_plan,
+        candidate_id="candidate-a",
+        output_dir=repo / "incremental_exec",
+        repo_root=repo,
+    )
+
+    synthetic = json.loads(Path(prep["synthetic_profile_path"]).read_text())
+    assert prep["schema"] == HPRC_INCREMENTAL_RUNNER_EXECUTION_PREP_SCHEMA
+    assert prep["pair_ranges_arg"] == "1"
+    assert Path(prep["archive"]["path"]).is_file()
+    assert synthetic["profile_kind"] == "hprc_incremental_pair_scoped_synthetic_profile.v1"
+    assert synthetic["variant_rows"][1]["variant_id"].startswith(
+        "residual_transform_threshold_abs_le_pairs_3_"
+    )
+    assert "--pair-ranges" in prep["incremental_command_argv"]
+    assert prep["score_claim"] is False
+
+
+def test_hprc_incremental_runner_execution_report_preserves_cleanup_blocker(
+    tmp_path: Path,
+) -> None:
+    incremental = tmp_path / "incremental.json"
+    incremental.write_text(
+        json.dumps(
+            {
+                "changed_pair_rows": [1, 2],
+                "full_video_pair_count": 3,
+                "archive_bytes_removed_vs_baseline": 200,
+                "delta_total_mlx_score_advisory": -0.5,
+                "delta_avg_posenet_dist": 0.01,
+                "delta_avg_segnet_dist": -0.001,
+            }
+        ),
+        encoding="utf-8",
+    )
+    retention = tmp_path / "retention.json"
+    retention.write_text(
+        json.dumps(
+            {
+                "plan": {
+                    "candidates": [],
+                    "blocked_candidates": [
+                        {
+                            "bytes": 123,
+                            "blockers": ["mlx_cache_identity_audit_stamp_missing"],
+                        }
+                    ],
+                    "total_reclaimable_bytes": 0,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_hprc_incremental_runner_execution_report(
+        prep={
+            "schema": HPRC_INCREMENTAL_RUNNER_EXECUTION_PREP_SCHEMA,
+            "candidate_id": "candidate-a",
+            "candidate_variant_id": "candidate",
+            "residual_transform": "threshold_abs_le_pairs=3@1",
+            "archive": {"sha256": "a" * 64, "bytes": 10},
+            "synthetic_profile_path": "profile.json",
+            "incremental_command_argv": ["python", "tool.py"],
+        },
+        incremental_report_path=incremental,
+        retention_plan_path=retention,
+    )
+
+    assert report["schema"] == HPRC_INCREMENTAL_RUNNER_EXECUTION_SCHEMA
+    assert report["incremental_summary"]["changed_pair_count"] == 2
+    assert report["receiver_proof_binding"]["status"] == "missing"
+    assert report["cleanup"]["status"] == "blocked"
+    assert "uncertified_mlx_cache_retained_cleanup_blocker" in report["exact_axis_gate"]["blockers"]
+    assert report["score_claim"] is False
+
+
+def test_hprc_incremental_runner_execution_report_binds_receiver_proof(
+    tmp_path: Path,
+) -> None:
+    incremental = tmp_path / "incremental.json"
+    incremental.write_text(
+        json.dumps(
+            {
+                "changed_pair_rows": [1],
+                "full_video_pair_count": 3,
+                "archive_bytes_removed_vs_baseline": 200,
+                "delta_total_mlx_score_advisory": -0.5,
+            }
+        ),
+        encoding="utf-8",
+    )
+    proof_dir = tmp_path / "proof" / "receiver_proof"
+    proof_dir.mkdir(parents=True)
+    (proof_dir / "hprc_receiver_proof.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": "a" * 64,
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_ready": True,
+                "receiver_output_sha256": "b" * 64,
+                "receiver_output_bytes": 123,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_hprc_incremental_runner_execution_report(
+        prep={
+            "schema": HPRC_INCREMENTAL_RUNNER_EXECUTION_PREP_SCHEMA,
+            "candidate_id": "candidate-a",
+            "candidate_variant_id": "candidate",
+            "residual_transform": "threshold_abs_le_pairs=3@1",
+            "archive": {"sha256": "a" * 64, "bytes": 10},
+            "synthetic_profile_path": "profile.json",
+            "incremental_command_argv": ["python", "tool.py"],
+        },
+        incremental_report_path=incremental,
+        proof_roots=[tmp_path / "proof"],
+    )
+
+    assert report["receiver_proof_binding"]["status"] == "linked_by_archive_sha256"
+    assert "receiver_proof_missing_for_incremental_runner_candidate_sha" not in report[
+        "exact_axis_gate"
+    ]["blockers"]
 
 
 def _write_batch_compare_fixture(repo: Path) -> tuple[Path, Path]:
