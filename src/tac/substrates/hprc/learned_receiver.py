@@ -828,6 +828,21 @@ def compact_receiver_section_byte_profile(packet: HprcPacket) -> dict[str, Any]:
     rows.sort(key=lambda row: int(row["bytes"]), reverse=True)
     residual_bytes = len(section_map.get(HprcSectionKind.RESIDUAL_RC, b""))
     latent_bytes = len(section_map.get(HprcSectionKind.LATENTS_RC, b""))
+    residual_tokens = (
+        int(compact.residual.frames)
+        * int(compact.residual.grid_h)
+        * int(compact.residual.grid_w)
+        * int(compact.residual.channels)
+    )
+    protected_tokens = (
+        0
+        if compact.residual.protected_q is None
+        else int(compact.residual.frames)
+        * int(compact.residual.protected_grid_h)
+        * int(compact.residual.protected_grid_w)
+        * int(compact.residual.channels)
+    )
+    decoder_pixels = int(compact.decoder.height) * int(compact.decoder.width)
     return {
         "schema": "hprc_compact_receiver_section_byte_profile.v1",
         "receiver_mode": COMPACT_RECEIVER_MODE,
@@ -839,6 +854,13 @@ def compact_receiver_section_byte_profile(packet: HprcPacket) -> dict[str, Any]:
         "basis_count": int(compact.decoder.basis_count),
         "residual_grid_height": int(compact.residual.grid_h),
         "residual_grid_width": int(compact.residual.grid_w),
+        "decoder_grid_pixels": int(decoder_pixels),
+        "residual_token_count": int(residual_tokens),
+        "protected_residual_token_count": int(protected_tokens),
+        "residual_rc_bytes_per_token": float(residual_bytes / max(residual_tokens, 1)),
+        "residual_rc_bytes_per_combined_token": float(
+            residual_bytes / max(residual_tokens + protected_tokens, 1)
+        ),
         "protected_residual_pathway": {
             "enabled": bool(compact.residual.protected_pathway_enabled),
             "grid_height": int(compact.residual.protected_grid_h),
@@ -860,9 +882,16 @@ def compact_receiver_section_byte_profile(packet: HprcPacket) -> dict[str, Any]:
             },
             {
                 "target": "decoder_grid",
-                "reason": "96x128 grid is low enough for rate but risks SegNet/PoseNet loss after camera upsample",
+                "reason": (
+                    f"{int(compact.decoder.height)}x{int(compact.decoder.width)} "
+                    "decoder grid is charged at archive rate and must be judged "
+                    "against scorer-space distortion after deterministic camera upsample"
+                ),
                 "bytes": int(total),
-                "next_action": "sweep decoder grid and residual grid under exact replay before demotion",
+                "next_action": (
+                    "sweep decoder/protected/residual grids under MLX prefilter "
+                    "and exact local replay before demotion"
+                ),
             },
         ],
         "score_claim": False,

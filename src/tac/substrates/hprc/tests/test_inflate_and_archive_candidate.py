@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
+
 import tac.substrates.hprc.archive_candidate as hprc_candidate
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
     build_archive_bound_candidate_runtime_package,
@@ -11,6 +13,7 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
 from tac.substrates.hprc.archive import HprcSectionKind, pack_hprc_packet
 from tac.substrates.hprc.campaign import build_hprc_queue_followup_report
 from tac.substrates.hprc.inflate import hprc_preview_digest
+from tac.substrates.hprc.learned_receiver import build_compact_receiver_packet_from_lowres_frames
 
 
 def test_hprc_preview_changes_for_pixel_sections_but_not_manifest() -> None:
@@ -131,7 +134,48 @@ def test_hprc_export_emits_archive_bound_package(tmp_path: Path, monkeypatch) ->
     assert package["archive_bound_candidate_adapter_package"][
         "runtime_payload_materializer_backlog_count"
     ] == 3
-    assert (tmp_path / "hprc_archive_byte_ledger.json").is_file()
+    ledger = json.loads((tmp_path / "hprc_archive_byte_ledger.json").read_text())
+    assert ledger["resolution_rate_feasibility"]["schema"] == (
+        "hprc_resolution_rate_feasibility.v1"
+    )
+    assert ledger["resolution_rate_feasibility"]["decoder_grid"] == {
+        "height": 384,
+        "width": 512,
+    }
+
+
+def test_hprc_compact_export_records_section_profile_and_resolution_risk(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(hprc_candidate, "HPRC_RECEIVER_PROOF_SCRATCH_BYTES", 1)
+    frames = np.zeros((4, 8, 10, 3), dtype=np.uint8)
+    frames[:, :, 5:, 0] = 120
+    packet = build_compact_receiver_packet_from_lowres_frames(
+        frames,
+        basis_count=2,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+
+    hprc_candidate.export_hprc_archive_bytes(
+        packet,
+        tmp_path,
+        repo_root=tmp_path,
+        emit_archive_bound_candidate_package=False,
+    )
+
+    ledger = json.loads((tmp_path / "hprc_archive_byte_ledger.json").read_text())
+    profile = ledger["compact_receiver_section_byte_profile"]
+    assert profile["schema"] == "hprc_compact_receiver_section_byte_profile.v1"
+    assert profile["decoder_grid_height"] == 8
+    assert profile["decoder_grid_width"] == 10
+    assert profile["residual_token_count"] == 4 * 2 * 3 * 3
+    assert profile["residual_rc_bytes_per_token"] > 0.0
+    feasibility = ledger["resolution_rate_feasibility"]
+    assert feasibility["decoder_grid_below_scorer_grid"] is True
+    assert feasibility["status"] == "rate_feasible_but_distortion_bound_resolution_risk"
+    assert feasibility["score_claim"] is False
 
 
 def test_hprc_queue_followup_report_blocks_partial_and_missing_z8(tmp_path: Path) -> None:

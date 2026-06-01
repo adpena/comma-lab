@@ -20,6 +20,7 @@ from tac.substrates._shared.pact_nerv_full_main import (
     write_contest_runtime,
 )
 from tac.substrates.hprc.archive import (
+    HprcPacket,
     HprcPacketConfig,
     HprcSectionKind,
     pack_hprc_packet,
@@ -35,6 +36,7 @@ from tac.substrates.hprc.inflate import (
 )
 from tac.substrates.hprc.learned_receiver import (
     COMPACT_RECEIVER_MODE,
+    compact_receiver_section_byte_profile,
     is_compact_receiver_packet,
     mutate_compact_receiver_section,
 )
@@ -330,6 +332,56 @@ def _write_hprc_runtime(
     (submission_dir / "0.bin").write_bytes(bin_bytes)
 
 
+def _resolution_rate_feasibility(
+    *,
+    packet: HprcPacket,
+    archive_bytes_count: int,
+) -> dict[str, Any]:
+    contract = hprc_resolution_contract()
+    scorer = contract["scorer_preprocess"]
+    scorer_h = int(scorer["height"])
+    scorer_w = int(scorer["width"])
+    decoder_h = int(packet.config.height)
+    decoder_w = int(packet.config.width)
+    below_zero_distortion_ceiling = (
+        int(archive_bytes_count) <= HPRC_SUB019_ZERO_DISTORTION_BYTE_CEILING
+    )
+    decoder_below_scorer = decoder_h < scorer_h or decoder_w < scorer_w
+    if not below_zero_distortion_ceiling:
+        status = "rate_bound_before_distortion_gate"
+        next_action = "collapse payload bytes before spending CPU/CUDA replay"
+    elif decoder_below_scorer:
+        status = "rate_feasible_but_distortion_bound_resolution_risk"
+        next_action = (
+            "try scorer-aware training/protected geometry or higher decoder grid "
+            "only if byte model still clears the hard rate ceiling"
+        )
+    else:
+        status = "rate_feasible_resolution_at_or_above_scorer_grid"
+        next_action = "run MLX prefilter and local CPU replay before exact auth"
+    return {
+        "schema": "hprc_resolution_rate_feasibility.v1",
+        "decoder_grid": {"height": decoder_h, "width": decoder_w},
+        "scorer_grid": {"height": scorer_h, "width": scorer_w},
+        "contest_output": contract["contest_output"],
+        "decoder_pixels_per_scorer_pixel": float(
+            (decoder_h * decoder_w) / max(scorer_h * scorer_w, 1)
+        ),
+        "archive_zip_bytes": int(archive_bytes_count),
+        "contest_rate_term": contest_rate_term(int(archive_bytes_count)),
+        "sub019_zero_distortion_byte_ceiling": HPRC_SUB019_ZERO_DISTORTION_BYTE_CEILING,
+        "bytes_to_zero_distortion_ceiling": int(
+            HPRC_SUB019_ZERO_DISTORTION_BYTE_CEILING - int(archive_bytes_count)
+        ),
+        "below_sub019_zero_distortion_byte_ceiling": below_zero_distortion_ceiling,
+        "decoder_grid_below_scorer_grid": decoder_below_scorer,
+        "status": status,
+        "next_action": next_action,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
 def export_hprc_archive_bytes(
     archive_bytes: bytes,
     output_dir: str | Path,
@@ -364,6 +416,13 @@ def export_hprc_archive_bytes(
     build_archive_zip(archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir)
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes_count = archive_zip_path.stat().st_size
+    section_byte_profile = (
+        compact_receiver_section_byte_profile(packet) if compact_receiver_packet else None
+    )
+    resolution_rate_feasibility = _resolution_rate_feasibility(
+        packet=packet,
+        archive_bytes_count=int(archive_bytes_count),
+    )
     byte_ledger = {
         "schema": "hprc_archive_byte_ledger.v1",
         "archive_zip_bytes": int(archive_bytes_count),
@@ -378,6 +437,8 @@ def export_hprc_archive_bytes(
         "receiver_proof_raw_output_retained_by_default": False,
         "receiver_proof_scratch_required_bytes": HPRC_RECEIVER_PROOF_SCRATCH_BYTES,
         "receiver_proof_scratch_free_bytes_at_preflight": preflight_free_bytes,
+        "compact_receiver_section_byte_profile": section_byte_profile,
+        "resolution_rate_feasibility": resolution_rate_feasibility,
         "score_claim": False,
         "promotion_eligible": False,
     }
@@ -428,6 +489,8 @@ def export_hprc_archive_bytes(
                     packet=packet,
                 ),
                 "byte_ledger": byte_ledger,
+                "compact_receiver_section_byte_profile": section_byte_profile,
+                "resolution_rate_feasibility": resolution_rate_feasibility,
                 "trained_renderer_export_ready": compact_receiver_packet,
                 "z8_residual_sidecar_ready": False,
                 "resolution_contract": {
