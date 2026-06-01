@@ -87,6 +87,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--receiver-patch-output-change-contest-full-sample-claim",
         action="store_true",
     )
+    parser.add_argument("--receiver-patch-output-change-left-cache-dir", type=Path)
+    parser.add_argument("--receiver-patch-output-change-right-cache-dir", type=Path)
     parser.add_argument("--include-local-component-loop", action="store_true")
     parser.add_argument("--local-component-upstream-dir", type=Path, default=Path("upstream"))
     parser.add_argument(
@@ -229,6 +231,12 @@ def main(argv: list[str] | None = None) -> int:
             ),
             receiver_patch_output_change_contest_full_sample_claim=(
                 args.receiver_patch_output_change_contest_full_sample_claim
+            ),
+            receiver_patch_output_change_left_cache_dir=(
+                args.receiver_patch_output_change_left_cache_dir
+            ),
+            receiver_patch_output_change_right_cache_dir=(
+                args.receiver_patch_output_change_right_cache_dir
             ),
             include_local_component_loop=args.include_local_component_loop,
             local_component_upstream_dir=args.local_component_upstream_dir,

@@ -269,10 +269,29 @@ def build_hprc_queue_followup_report(
     archive_zip_path = artifact.get("archive_path")
     archive_zip_sha256 = artifact.get("archive_sha256")
     archive_zip_bytes = artifact.get("archive_bytes")
-    export_dir = result_path.parent / "hprc_compact_receiver_archive_export"
-    export_manifest_path = result_path.parent / "hprc_compact_receiver_training_export.json"
-    archive_bound_package_path = export_dir / "archive_bound_candidate_adapter_package.json"
-    receiver_proof_path = export_dir / "receiver_proof" / "hprc_receiver_proof.json"
+    export_manifest_path = _artifact_or_default_path(
+        artifact,
+        "export_manifest_path",
+        result_path.parent / "hprc_compact_receiver_training_export.json",
+        base=root,
+    )
+    archive_bound_package_path = _artifact_or_default_path(
+        artifact,
+        "archive_bound_package_path",
+        result_path.parent
+        / "hprc_compact_receiver_archive_export"
+        / "archive_bound_candidate_adapter_package.json",
+        base=root,
+    )
+    receiver_proof_path = _artifact_or_default_path(
+        artifact,
+        "receiver_proof_path",
+        result_path.parent
+        / "hprc_compact_receiver_archive_export"
+        / "receiver_proof"
+        / "hprc_receiver_proof.json",
+        base=root,
+    )
     replay_summary = _optional_json(local_replay_summary_path, base=root)
     exact_gate = _optional_json(exact_auth_gate_path, base=root)
     local_replay_required = int(decode_pairs) >= int(full_replay_min_pairs)
@@ -443,6 +462,19 @@ def _optional_json(path: str | Path | None, *, base: Path) -> dict[str, Any] | N
     if not resolved.is_file():
         return None
     return _load_json_object(resolved)
+
+
+def _artifact_or_default_path(
+    artifact: dict[str, Any],
+    key: str,
+    default: Path,
+    *,
+    base: Path,
+) -> Path:
+    raw = artifact.get(key)
+    if isinstance(raw, str) and raw:
+        return _resolve(raw, base=base)
+    return default
 
 
 def _resolve(path: str | Path, *, base: Path) -> Path:

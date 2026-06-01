@@ -73,6 +73,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--scale", action="append", type=int, default=[])
     parser.add_argument("--alpha", action="append", type=int, default=[])
     parser.add_argument("--max-variants", type=int, default=48)
+    parser.add_argument("--prove-receiver-patch-output-change", action="store_true")
+    parser.add_argument("--receiver-patch-output-change-file-list-entry", action="append", default=[])
+    parser.add_argument("--receiver-patch-output-change-expected-file-list-sha256")
+    parser.add_argument("--receiver-patch-output-change-expected-entry-count", type=int)
+    parser.add_argument("--receiver-patch-output-change-file-list-source")
+    parser.add_argument(
+        "--receiver-patch-output-change-parity-scope-kind",
+        default="contest_full_sample",
+    )
+    parser.add_argument(
+        "--receiver-patch-output-change-contest-full-sample-claim",
+        action="store_true",
+    )
+    parser.add_argument("--receiver-patch-output-change-left-cache-dir", type=Path)
+    parser.add_argument("--receiver-patch-output-change-right-cache-dir", type=Path)
     parser.add_argument("--include-local-component-loop", action="store_true")
     parser.add_argument("--local-component-upstream-dir", type=Path, default=Path("upstream"))
     parser.add_argument(
@@ -264,6 +279,32 @@ def main(argv: list[str] | None = None) -> int:
             alphas=tuple(args.alpha or [1, 2, 4]),
             repack_orders=_repack_orders(preferred.get("repack_order")),
             max_variants=args.max_variants,
+            prove_receiver_patch_output_change=args.prove_receiver_patch_output_change,
+            receiver_patch_output_change_file_list_entries=tuple(
+                args.receiver_patch_output_change_file_list_entry
+            )
+            or ("0.raw",),
+            receiver_patch_output_change_expected_file_list_sha256=(
+                args.receiver_patch_output_change_expected_file_list_sha256
+            ),
+            receiver_patch_output_change_expected_entry_count=(
+                args.receiver_patch_output_change_expected_entry_count
+            ),
+            receiver_patch_output_change_file_list_source=(
+                args.receiver_patch_output_change_file_list_source
+            ),
+            receiver_patch_output_change_parity_scope_kind=(
+                args.receiver_patch_output_change_parity_scope_kind
+            ),
+            receiver_patch_output_change_contest_full_sample_claim=(
+                args.receiver_patch_output_change_contest_full_sample_claim
+            ),
+            receiver_patch_output_change_left_cache_dir=(
+                args.receiver_patch_output_change_left_cache_dir
+            ),
+            receiver_patch_output_change_right_cache_dir=(
+                args.receiver_patch_output_change_right_cache_dir
+            ),
             include_local_component_loop=args.include_local_component_loop,
             local_component_upstream_dir=args.local_component_upstream_dir,
             local_component_video_names_file=args.local_component_video_names_file,

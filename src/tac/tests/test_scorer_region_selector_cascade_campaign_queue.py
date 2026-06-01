@@ -171,6 +171,9 @@ def test_campaign_queue_builds_independent_variants_and_harvest_dependency(
     ]
     assert "tools/build_scorer_region_selector_cascade_queue_from_policy.py" in followup_step["command"]
     assert "--mlx-first-acquisition" in followup_step["command"]
+    assert "--prove-receiver-patch-output-change" in followup_step["command"]
+    assert "--receiver-patch-output-change-right-cache-dir" in followup_step["command"]
+    assert "--receiver-patch-output-change-file-list-entry" in followup_step["command"]
     assert queue["metadata"]["full_video_mlx_first_acquisition"] is True
     assert queue["metadata"]["dynamic_followup_queue_path"].endswith(
         "dynamic_followup_campaign_queue.json"

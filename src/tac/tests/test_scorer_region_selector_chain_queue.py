@@ -301,6 +301,7 @@ def test_chain_queue_can_prove_receiver_patch_output_change_before_bridge(
         receiver_patch_output_change_file_list_source="tests/full_frame_file_list.txt",
         receiver_patch_output_change_contest_full_sample_claim=True,
         receiver_patch_output_change_left_cache_dir=tmp_path / "inflate_cache",
+        receiver_patch_output_change_right_cache_dir=tmp_path / "candidate_cache",
         scales=(64,),
         alphas=(1,),
         codec_families=("fec10_adaptive_blend",),
@@ -321,6 +322,8 @@ def test_chain_queue_can_prove_receiver_patch_output_change_before_bridge(
     assert proof_step["command"].count("--file-list-entry") == 2
     assert "--left-cache-dir" in proof_step["command"]
     assert "inflate_cache" in proof_step["command"]
+    assert "--right-cache-dir" in proof_step["command"]
+    assert "candidate_cache" in proof_step["command"]
     assert "--require-output-change" in proof_step["command"]
     assert "--contest-full-sample-claim" in proof_step["command"]
     assert bridge_step["requires"] == ["prove_receiver_patch_full_frame_output_change"]
@@ -483,11 +486,18 @@ def test_chain_queue_can_gate_local_cpu_from_mlx_first_acquisition(
     assert "tools/materialize_mlx_scorer_cache_from_submission.py" in by_id[
         "build_mlx_component_cache"
     ]["command"]
+    proof_command = by_id["prove_receiver_patch_full_frame_output_change"]["command"]
+    assert "--right-cache-dir" in proof_command
+    assert any("_shell_inflate_right_cache" in item for item in proof_command)
+    assert "--keep-scratch" in proof_command
     cache_command = by_id["build_mlx_component_cache"]["command"]
     assert "--max-pairs" in cache_command
     assert cache_command[cache_command.index("--max-pairs") + 1] == "12"
-    assert "--local-acquisition-max-pairs" in cache_command
-    assert cache_command[cache_command.index("--local-acquisition-max-pairs") + 1] == "12"
+    assert "--preinflated-output-dir" in cache_command
+    assert cache_command[
+        cache_command.index("--preinflated-output-dir") + 1
+    ].endswith("full_frame_output_change_proof/scratch/right_out")
+    assert "--local-acquisition-max-pairs" not in cache_command
     assert "--local-cpu-advisory" not in by_id["build_mlx_component_cache"]["command"]
     assert "tools/run_mlx_scorer_response_from_cache.py" in by_id[
         "local_mlx_component_response"
@@ -503,6 +513,12 @@ def test_chain_queue_can_gate_local_cpu_from_mlx_first_acquisition(
         "build_scorer_response_dataset",
     ]
     assert queue["metadata"]["mlx_first_acquisition"] is True
+    assert queue["metadata"]["mlx_first_preinflated_receiver_output_dir"].endswith(
+        "full_frame_output_change_proof/scratch/right_out"
+    )
+    assert queue["metadata"]["receiver_patch_output_change_right_cache_dir"].endswith(
+        "_shell_inflate_right_cache"
+    )
     assert queue["metadata"]["local_cpu_gate_policy"].startswith("full local CPU")
 
 
