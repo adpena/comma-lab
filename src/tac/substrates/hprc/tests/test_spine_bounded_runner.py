@@ -10,11 +10,14 @@ from tac.archive_byte_profile import contest_rate_term
 from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
 from tac.substrates.hprc.representation_spine import (
     HprcRepresentationFamily,
-    build_generic_neural_spine_packet,
+    build_representation_spine_packet,
     write_representation_spine_projection,
 )
 from tac.substrates.hprc.spine_acquisition import build_spine_acquisition_report
-from tac.substrates.hprc.spine_bounded_runner import build_spine_bounded_runner_plan
+from tac.substrates.hprc.spine_bounded_runner import (
+    HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA,
+    build_spine_bounded_runner_plan,
+)
 
 REPO = Path(__file__).resolve().parents[5]
 
@@ -324,6 +327,207 @@ def test_projection_metadata_and_short_coverage_do_not_force_mlx_value_replay(
     assert "some_sections_missing_value_per_byte_measurement" not in plan["blockers"]
 
 
+def test_spine_bounded_runner_emits_selector_profile_work_order_for_full_coverage(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "selector_v4_archive.zip"
+    archive.write_bytes(b"archive")
+    manifest = _projection(
+        tmp_path / "selector_v4",
+        family=HprcRepresentationFamily.PACT_NERV,
+        decoder=b"d" * 20,
+        latents=b"l" * 8,
+        selectors=b"s" * 4,
+        source={
+            "archive_zip_path": archive.as_posix(),
+            "archive_zip_sha256": "9" * 64,
+            "archive_zip_bytes": archive.stat().st_size,
+        },
+        manifest_extra={
+            "num_pairs": 600,
+            "source_payload_kind": "pact_nerv_selector_v4_psv4",
+            "side_channel_kind": "rle_selector",
+        },
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+    )
+
+    work_orders = plan["section_value_profile_work_orders"]
+    assert len(work_orders) == 1
+    order = work_orders[0]
+    assert order["schema"] == HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA
+    assert order["status"] == "queued_for_full_video_mlx_section_value_profile"
+    assert order["profile_tool"] == (
+        "tools/profile_pact_nerv_selector_v4_mlx_section_value.py"
+    )
+    assert order["archive_zip_path"] == archive.as_posix()
+    assert order["projection_manifest_path"] == manifest.as_posix()
+    assert order["profile_sections"] == [
+        "decoder_qw",
+        "latents_rc",
+        "selectors_rc",
+    ]
+    assert "--max-pairs" in order["argv"]
+    assert "600" in order["argv"]
+    assert order["preferred_output_dir"].startswith("/Volumes/VertigoDataTier/pact/")
+    assert order["score_claim"] is False
+    assert "macos_mlx_section_value_profile_is_advisory_not_score_authority" in order[
+        "blockers"
+    ]
+    acquisition_row = acquisition["rows"][0]
+    assert acquisition_row["representation_source_payload_kind"] == (
+        "pact_nerv_selector_v4_psv4"
+    )
+
+
+def test_sampled_section_value_profile_opens_full_video_work_order(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "selector_v4_archive.zip"
+    archive.write_bytes(b"archive")
+    manifest = _projection(
+        tmp_path / "selector_v4",
+        family=HprcRepresentationFamily.PACT_NERV,
+        decoder=b"d" * 20,
+        latents=b"l" * 8,
+        selectors=b"s" * 4,
+        source={
+            "archive_zip_path": archive.as_posix(),
+            "archive_zip_sha256": "a" * 64,
+            "archive_zip_bytes": archive.stat().st_size,
+        },
+        manifest_extra={
+            "num_pairs": 600,
+            "source_payload_kind": "pact_nerv_selector_v4_psv4",
+            "side_channel_kind": "rle_selector",
+        },
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    profile_path = tmp_path / "sampled_profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "max_pairs": 32,
+                "scope_status": {"full_video": "sampled_prefix_requires_full_video_rerun"},
+                "section_value_rows": [
+                    {
+                        "variant_id": "neutralize_decoder_qw",
+                        "neutralized_section": "decoder_qw",
+                        "family": "pact_nerv",
+                        "projection_manifest_path": manifest.as_posix(),
+                        "archive_bytes_removed_vs_baseline": 20,
+                        "delta_nonrate_score": 1.0,
+                        "delta_rate_score": -contest_rate_term(20),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        mlx_profile_paths=[profile_path],
+    )
+
+    sections = {row["section_name"]: row for row in plan["section_value_rows"]}
+    assert sections["decoder_qw"]["evidence_status"] == (
+        "sampled_mlx_advisory_requires_full_video_replay"
+    )
+    assert sections["decoder_qw"]["requires_full_video_mlx_replay"] is True
+    assert "sampled_mlx_section_value_replay_not_budget_authority" in sections[
+        "decoder_qw"
+    ]["blockers"]
+    work_orders = plan["section_value_profile_work_orders"]
+    assert len(work_orders) == 1
+    assert work_orders[0]["profile_sections"] == [
+        "decoder_qw",
+        "latents_rc",
+        "selectors_rc",
+    ]
+
+
+def test_full_video_section_value_profile_satisfies_work_order(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "selector_v4_archive.zip"
+    archive.write_bytes(b"archive")
+    manifest = _projection(
+        tmp_path / "selector_v4",
+        family=HprcRepresentationFamily.PACT_NERV,
+        decoder=b"d" * 20,
+        latents=b"l" * 8,
+        selectors=b"s" * 4,
+        source={
+            "archive_zip_path": archive.as_posix(),
+            "archive_zip_sha256": "b" * 64,
+            "archive_zip_bytes": archive.stat().st_size,
+        },
+        manifest_extra={
+            "num_pairs": 600,
+            "source_payload_kind": "pact_nerv_selector_v4_psv4",
+            "side_channel_kind": "rle_selector",
+        },
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    profile_path = tmp_path / "full_profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "max_pairs": 600,
+                "scope_status": {"full_video": "executed"},
+                "section_value_rows": [
+                    {
+                        "variant_id": f"neutralize_{section}",
+                        "neutralized_section": section,
+                        "family": "pact_nerv",
+                        "projection_manifest_path": manifest.as_posix(),
+                        "archive_bytes_removed_vs_baseline": 1,
+                        "delta_nonrate_score": 1.0,
+                        "delta_rate_score": -contest_rate_term(1),
+                    }
+                    for section in ("decoder_qw", "latents_rc", "selectors_rc")
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        mlx_profile_paths=[profile_path],
+    )
+
+    sections = {row["section_name"]: row for row in plan["section_value_rows"]}
+    assert sections["decoder_qw"]["evidence_status"] == "measured_mlx_advisory"
+    assert sections["latents_rc"]["evidence_status"] == "measured_mlx_advisory"
+    assert sections["selectors_rc"]["evidence_status"] == "measured_mlx_advisory"
+    assert plan["section_value_profile_work_orders"] == []
+
+
 def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:
     tool = _load_tool()
     manifest = _projection(
@@ -383,15 +587,17 @@ def _projection(
     codebooks: bytes = b"",
     selectors: bytes = b"",
     residual: bytes = b"",
+    source: dict[str, object] | None = None,
     manifest_extra: dict[str, object] | None = None,
 ) -> Path:
-    spine = build_generic_neural_spine_packet(
+    spine = build_representation_spine_packet(
         family=family,
         decoder_blob=decoder,
         latents_blob=latents,
         codebooks_blob=codebooks,
         selectors_blob=selectors,
         residual_blob=residual,
+        source=source,
         manifest_extra=manifest_extra,
     )
     written = write_representation_spine_projection(output_dir=out, spine=spine)

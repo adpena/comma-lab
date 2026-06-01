@@ -18,7 +18,24 @@ from tac.substrates.hprc.spine_acquisition import HPRC_SPINE_ACQUISITION_REPORT_
 HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA = "hprc_spine_bounded_runner_plan.v1"
 HPRC_SPINE_COMPACT_BASE_SWEEP_ROW_SCHEMA = "hprc_spine_compact_base_sweep_row.v1"
 HPRC_SPINE_SECTION_VALUE_ROW_SCHEMA = "hprc_spine_section_value_row.v1"
+HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA = (
+    "hprc_spine_section_value_profile_work_order.v1"
+)
 HPRC_MLX_COMPONENT_PROFILE_SCHEMA = "hprc_mlx_component_neutralization_profile.v1"
+_SECTION_VALUE_PROFILERS: dict[str, dict[str, Any]] = {
+    "pact_nerv_selector_v3_psv3": {
+        "tool": "tools/profile_pact_nerv_selector_v3_mlx_section_value.py",
+        "sections": ("decoder_qw", "latents_rc", "selectors_rc", "residual_rc"),
+    },
+    "pact_nerv_selector_v4_psv4": {
+        "tool": "tools/profile_pact_nerv_selector_v4_mlx_section_value.py",
+        "sections": ("decoder_qw", "latents_rc", "selectors_rc", "residual_rc"),
+    },
+}
+_SECTION_VALUE_PROFILE_STORAGE_WATERFALL = (
+    "/Volumes/VertigoDataTier/pact",
+    "/Volumes/APDataStore/pact",
+)
 
 
 def build_spine_bounded_runner_plan(
@@ -79,6 +96,11 @@ def build_spine_bounded_runner_plan(
         for row in _rows(acquisition_report, "rows")
         for row_section in _rows(row, "section_rows")
     ]
+    section_value_profile_work_orders = _section_value_profile_work_orders(
+        acquisition_rows=_rows(acquisition_report, "rows"),
+        section_value_rows=section_value_rows,
+        repo_root=root,
+    )
     residual_rows = [
         row
         for row in section_value_rows
@@ -110,6 +132,7 @@ def build_spine_bounded_runner_plan(
         ),
         "compact_base_sweep_rows": compact_base_rows,
         "section_value_rows": section_value_rows,
+        "section_value_profile_work_orders": section_value_profile_work_orders,
         "residual_token_admission_rows": [*residual_rows, *residual_candidate_rows],
         "selected_runner_rows": runner_rows,
         "runner_policy": {
@@ -289,6 +312,10 @@ def _section_value_row(
         )
     ]
     best_evidence = _best_section_evidence(evidence_rows)
+    full_video_evidence_present = any(
+        int(row.get("profile_max_pairs") or 0) >= CONTEST_PAIR_COUNT
+        for row in evidence_rows
+    )
     coverage = (
         acquisition_row.get("coverage")
         if isinstance(acquisition_row.get("coverage"), dict)
@@ -327,6 +354,17 @@ def _section_value_row(
             "full_video_mlx_section_value_replay_missing",
             "contest_cpu_cuda_exact_eval_not_executed",
         ]
+    elif not full_video_evidence_present:
+        admission_status = "blocked_until_full_video_mlx_section_value_replay"
+        delta_nonrate = None
+        admission_delta = None
+        evidence_status = "sampled_mlx_advisory_requires_full_video_replay"
+        requires_replay = True
+        blockers = [
+            "full_video_mlx_section_value_replay_missing",
+            "sampled_mlx_section_value_replay_not_budget_authority",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ]
     else:
         delta_nonrate = best_evidence["presence_delta_nonrate"]
         admission_delta = float(delta_nonrate) + rate_cost
@@ -359,6 +397,226 @@ def _section_value_row(
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
+
+
+def _section_value_profile_work_orders(
+    *,
+    acquisition_rows: list[dict[str, Any]],
+    section_value_rows: list[dict[str, Any]],
+    repo_root: Path,
+) -> list[dict[str, Any]]:
+    rows_by_projection: dict[str, list[dict[str, Any]]] = {}
+    for row in section_value_rows:
+        key = str(row.get("projection_manifest_path") or "")
+        rows_by_projection.setdefault(key, []).append(row)
+
+    work_orders: list[dict[str, Any]] = []
+    for acquisition_row in acquisition_rows:
+        projection = str(acquisition_row.get("projection_manifest_path") or "")
+        missing_rows = [
+            row
+            for row in rows_by_projection.get(projection, [])
+            if row.get("requires_full_video_mlx_replay") is True
+        ]
+        if not missing_rows:
+            continue
+        work_order = _section_value_profile_work_order(
+            acquisition_row=acquisition_row,
+            missing_rows=missing_rows,
+            repo_root=repo_root,
+        )
+        if work_order is not None:
+            work_orders.append(work_order)
+    work_orders.sort(
+        key=lambda row: (
+            row["status"],
+            str(row.get("source_payload_kind") or ""),
+            str(row.get("projection_manifest_path") or ""),
+        )
+    )
+    return work_orders
+
+
+def _section_value_profile_work_order(
+    *,
+    acquisition_row: dict[str, Any],
+    missing_rows: list[dict[str, Any]],
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    payload_kind = str(acquisition_row.get("representation_source_payload_kind") or "")
+    profiler = _SECTION_VALUE_PROFILERS.get(payload_kind)
+    if profiler is None:
+        return None
+    source = (
+        acquisition_row.get("source_archive")
+        if isinstance(acquisition_row.get("source_archive"), dict)
+        else {}
+    )
+    archive_path = _source_archive_path(source)
+    archive_sha256 = source.get("archive_zip_sha256") or source.get("sha256")
+    archive_bytes = source.get("archive_zip_bytes") or source.get("bytes")
+    projection = str(acquisition_row.get("projection_manifest_path") or "")
+    sections = _profile_work_order_sections(
+        profiler_sections=profiler["sections"],
+        missing_rows=missing_rows,
+    )
+    output_dir = _profile_work_order_output_dir(
+        acquisition_row=acquisition_row,
+        archive_sha256=archive_sha256,
+    )
+    blockers: list[str] = []
+    if not archive_path:
+        blockers.append("source_archive_zip_path_missing_for_section_value_profile")
+    if not sections:
+        blockers.append("no_supported_runtime_sections_missing_value_profile")
+    status = (
+        "blocked_section_value_profile_work_order"
+        if blockers
+        else "queued_for_full_video_mlx_section_value_profile"
+    )
+    argv = [
+        ".venv/bin/python",
+        str(profiler["tool"]),
+        "--archive",
+        archive_path or "<missing-archive.zip>",
+        "--projection-manifest",
+        projection or "<missing-projection-manifest.json>",
+        "--output-dir",
+        output_dir,
+        "--repo-root",
+        repo_root.as_posix(),
+        "--sections",
+        *sections,
+        "--max-pairs",
+        str(CONTEST_PAIR_COUNT),
+        "--window-pairs",
+        "25",
+        "--scorer-batch-pairs",
+        "1",
+        "--device",
+        "gpu",
+        "--allow-large-tensor-cache",
+    ]
+    return {
+        "schema": HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA,
+        "work_order_id": _profile_work_order_id(
+            projection_manifest_path=projection,
+            archive_sha256=archive_sha256,
+            payload_kind=payload_kind,
+        ),
+        "family": acquisition_row.get("family"),
+        "source_payload_kind": payload_kind,
+        "projection_manifest_path": projection,
+        "archive_zip_path": archive_path,
+        "archive_zip_sha256": archive_sha256,
+        "archive_zip_bytes": archive_bytes,
+        "profile_tool": profiler["tool"],
+        "profile_sections": sections,
+        "missing_section_names": [
+            str(row.get("section_name") or "") for row in missing_rows
+        ],
+        "argv": argv,
+        "shell_command": " ".join(_shell_quote_arg(arg) for arg in argv),
+        "preferred_output_dir": output_dir,
+        "storage_waterfall": list(_SECTION_VALUE_PROFILE_STORAGE_WATERFALL),
+        "cleanup_contract": {
+            "schema": "ssd_first_section_value_profile_cleanup_contract.v1",
+            "artifact_tier": "ssd_preferred",
+            "large_artifacts_under_output_dir": True,
+            "delete_policy": (
+                "success_scratch_only; profile JSON, argv, archive hashes, "
+                "cache reports, and MLX response manifests retained"
+            ),
+            "no_signal_loss": True,
+        },
+        "provenance_requirements": [
+            "archive_zip_path_bytes_sha256",
+            "projection_manifest_path_sha256",
+            "tool_argv",
+            "repo_root",
+            "reference_cache_manifest",
+            "false_authority_flags",
+        ],
+        "status": status,
+        "blockers": _dedupe(
+            [
+                *blockers,
+                "macos_mlx_section_value_profile_is_advisory_not_score_authority",
+                "contest_cpu_cuda_exact_eval_not_executed",
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _profile_work_order_sections(
+    *,
+    profiler_sections: tuple[str, ...],
+    missing_rows: list[dict[str, Any]],
+) -> list[str]:
+    wanted = {
+        str(row.get("section_name") or "")
+        for row in missing_rows
+        if str(row.get("section_name") or "")
+    }
+    return [section for section in profiler_sections if section in wanted]
+
+
+def _source_archive_path(source: dict[str, Any]) -> str | None:
+    for key in ("archive_zip_path", "archive_path", "path"):
+        value = source.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _profile_work_order_output_dir(
+    *,
+    acquisition_row: dict[str, Any],
+    archive_sha256: Any,
+) -> str:
+    family = str(acquisition_row.get("family") or "unknown")
+    payload_kind = str(acquisition_row.get("representation_source_payload_kind") or "unknown")
+    projection = str(acquisition_row.get("projection_manifest_path") or "")
+    fingerprint_source = f"{projection}\n{archive_sha256 or ''}\n{payload_kind}"
+    fingerprint = hashlib.sha256(fingerprint_source.encode("utf-8")).hexdigest()[:16]
+    safe_name = _safe_path_token(f"{family}_{payload_kind}_{fingerprint}")
+    return (
+        Path(_SECTION_VALUE_PROFILE_STORAGE_WATERFALL[0])
+        / "hprc_section_value_profiles"
+        / safe_name
+    ).as_posix()
+
+
+def _profile_work_order_id(
+    *,
+    projection_manifest_path: str,
+    archive_sha256: Any,
+    payload_kind: str,
+) -> str:
+    fingerprint_source = f"{projection_manifest_path}\n{archive_sha256 or ''}\n{payload_kind}"
+    fingerprint = hashlib.sha256(fingerprint_source.encode("utf-8")).hexdigest()[:16]
+    return f"section_value_profile:{_safe_path_token(payload_kind)}:{fingerprint}"
+
+
+def _safe_path_token(value: str) -> str:
+    chars = []
+    for ch in value:
+        if ch.isalnum() or ch in {"_", "-", "."}:
+            chars.append(ch)
+        else:
+            chars.append("_")
+    return "".join(chars).strip("_") or "unknown"
+
+
+def _shell_quote_arg(value: Any) -> str:
+    text = str(value)
+    if not text:
+        return "''"
+    safe = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+-=.,/:@%")
+    if all(ch in safe for ch in text):
+        return text
+    return "'" + text.replace("'", "'\"'\"'") + "'"
 
 
 def _choose_runner_rows(*, compact_base_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -936,6 +1194,7 @@ def _utc_stamp() -> str:
 __all__ = [
     "HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA",
     "HPRC_SPINE_COMPACT_BASE_SWEEP_ROW_SCHEMA",
+    "HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA",
     "HPRC_SPINE_SECTION_VALUE_ROW_SCHEMA",
     "build_spine_bounded_runner_plan",
     "write_spine_bounded_runner_plan",
