@@ -127,7 +127,13 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
             "export_pact_nerv_selector_v4_mlx_archive"
         ),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
-        "next_action": "train_mlx_export_psv4_archive_spine_receiver_proof_then_full_video_replay",
+        "section_value_profiler": (
+            "tools/profile_pact_nerv_selector_v4_mlx_section_value.py"
+        ),
+        "next_action": (
+            "train_mlx_export_psv4_archive_spine_receiver_proof_then_"
+            "full_video_section_value_profile"
+        ),
         "execution_scope": (
             "MLX advisory train/export/archive candidate lane; PSV4 selector "
             "primitive is charged at archive encode time and remains "
@@ -1797,8 +1803,10 @@ def _target_family_rows() -> list[dict[str, Any]]:
                     "spine_acquisition_row",
                     "bounded_runner_row",
                     "receiver_proof_gate",
+                    "mlx_component_neutralization_profile_when_profiler_exists",
                     "exact_axis_blocker_or_dispatch_packet",
                 ],
+                "section_value_profiler": backend.get("section_value_profiler"),
                 **FALSE_AUTHORITY,
             }
         )
@@ -1838,6 +1846,7 @@ def _compact_base_campaign_rows(
                     "trainer_entrypoint": backend["trainer_entrypoint"],
                     "archive_exporter": backend["archive_exporter"],
                     "receiver_proof": backend["receiver_proof"],
+                    "section_value_profiler": backend.get("section_value_profiler"),
                     "execution_scope": backend["execution_scope"],
                     "byte_policy": (
                         "train/export only charged weights, latents, selectors, "

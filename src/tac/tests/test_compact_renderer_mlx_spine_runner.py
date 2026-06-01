@@ -152,6 +152,9 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert families["pact_nerv_selector_v4"]["status"] == (
         "executable_mlx_backend_available"
     )
+    assert families["pact_nerv_selector_v4"]["section_value_profiler"] == (
+        "tools/profile_pact_nerv_selector_v4_mlx_section_value.py"
+    )
     assert "pact_nerv_selector_v4" in families["pact_nerv_selector_v4"][
         "trainer_entrypoint"
     ]
@@ -186,6 +189,9 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     )
     assert rows[("pact_nerv_selector_v4", 178_000)]["route_status"] == (
         "queued_for_mlx_training_archive_export_receiver_proof"
+    )
+    assert rows[("pact_nerv_selector_v4", 178_000)]["section_value_profiler"] == (
+        "tools/profile_pact_nerv_selector_v4_mlx_section_value.py"
     )
     assert rows[("boostnerv", 178_000)]["route_status"] == (
         "migration_required_before_runner_execution"
