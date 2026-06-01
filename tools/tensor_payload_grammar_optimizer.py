@@ -19,6 +19,11 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.packet_compiler.int_payload_bit_layouts import (  # noqa: E402
+    DEFAULT_INT_PAYLOAD_LAYOUTS,
+    VALID_INT_PAYLOAD_LAYOUTS,
+    IntPayloadLayout,
+)
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
     DEFAULT_CODERS,
     CoderName,
@@ -64,6 +69,23 @@ def _parse_scale_dtypes(raw: str) -> tuple[str, ...]:
     return tuple(dict.fromkeys(out))
 
 
+def _parse_payload_layouts(raw: str) -> tuple[IntPayloadLayout, ...]:
+    out: list[IntPayloadLayout] = []
+    for item in raw.split(","):
+        value = item.strip()
+        if not value:
+            continue
+        if value not in VALID_INT_PAYLOAD_LAYOUTS:
+            raise argparse.ArgumentTypeError(
+                f"unknown int payload layout {value!r}; "
+                f"valid={sorted(VALID_INT_PAYLOAD_LAYOUTS)}"
+            )
+        out.append(value)  # type: ignore[arg-type]
+    if not out:
+        raise argparse.ArgumentTypeError("at least one int payload layout is required")
+    return tuple(dict.fromkeys(out))
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
@@ -80,6 +102,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--brotli-quality", type=int, default=11)
     parser.add_argument("--coders", type=_parse_coders, default=DEFAULT_CODERS)
     parser.add_argument("--scale-dtypes", type=_parse_scale_dtypes, default=("fp16",))
+    parser.add_argument(
+        "--payload-layouts",
+        type=_parse_payload_layouts,
+        default=DEFAULT_INT_PAYLOAD_LAYOUTS,
+        help=(
+            "Comma-separated lossless pre-entropy integer layouts "
+            f"(valid: {','.join(sorted(VALID_INT_PAYLOAD_LAYOUTS))})."
+        ),
+    )
     parser.add_argument(
         "--storage-perm-mode",
         choices=("identity", "identity-plus-exhaustive4"),
@@ -135,6 +166,7 @@ def main(argv: list[str] | None = None) -> int:
         n_quant=args.n_quant,
         scale_dtypes=args.scale_dtypes,
         storage_perm_mode=args.storage_perm_mode,
+        payload_layouts=args.payload_layouts,
         coders=args.coders,
         brotli_quality=args.brotli_quality,
         campaign_id=args.campaign_id,

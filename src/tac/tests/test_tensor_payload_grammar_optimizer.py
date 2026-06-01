@@ -41,6 +41,7 @@ def test_tensor_payload_candidates_are_roundtrip_and_fail_closed() -> None:
         scale_dtypes=("fp16", "fp32"),
         storage_perm_mode="identity",
         byte_maps=("zig", "off"),
+        payload_layouts=("flat", "nibble_planes", "bitplanes_lsb"),
         coders=("brotli", "canonical_huffman"),
         brotli_quality=4,
     )
@@ -49,6 +50,11 @@ def test_tensor_payload_candidates_are_roundtrip_and_fail_closed() -> None:
     assert all(row["schema"] == TENSOR_PAYLOAD_GRAMMAR_CANDIDATE_SCHEMA for row in candidates)
     assert all(row["roundtrip_exact"] for row in candidates if row["status"] == "ok")
     assert {row["scale_dtype"] for row in candidates} == {"fp16", "fp32"}
+    assert {row["int_payload_layout"] for row in candidates} == {
+        "flat",
+        "nibble_planes",
+        "bitplanes_lsb",
+    }
     selected = select_best_tensor_payload_candidate(candidates)
     assert selected["charged_bytes"] == min(
         row["charged_bytes"] for row in candidates if row["status"] == "ok"
@@ -72,6 +78,7 @@ def test_generic_tensor_payload_solver_emits_queue_consumable_signal() -> None:
     report = solve_tensor_payload_grammar(
         tensors,
         storage_perm_mode="identity",
+        payload_layouts=("flat", "nibble_planes", "bitplanes_lsb"),
         coders=("brotli", "canonical_huffman"),
         brotli_quality=4,
         baseline_coder="canonical_huffman",
@@ -86,6 +93,11 @@ def test_generic_tensor_payload_solver_emits_queue_consumable_signal() -> None:
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["byte_accounting"]["selected_isolated_tensor_bytes"] > 0
+    assert report["int_payload_layouts"] == [
+        "flat",
+        "nibble_planes",
+        "bitplanes_lsb",
+    ]
     order_diag = report["grouped_brotli_order_diagnostic"]
     assert order_diag["schema"] == "tensor_payload_grouped_brotli_order_diagnostic.v1"
     assert order_diag["candidate_count"] >= 1
@@ -93,6 +105,10 @@ def test_generic_tensor_payload_solver_emits_queue_consumable_signal() -> None:
     assert "grouped_delta_bytes_vs_identity" in order_diag
     assert "grouped_delta_bytes_vs_selected_isolated" in order_diag
     assert report["planner_feedback"]["operation_hint_count"] == 2
+    assert all(
+        "int_payload_layout" in row
+        for row in report["planner_feedback"]["operation_hints"]
+    )
     assert report["planner_feedback"]["grouped_brotli_order_hint"][
         "selected_grouped_brotli_bytes"
     ] == order_diag["selected_grouped_brotli_bytes"]
@@ -143,6 +159,8 @@ def test_tensor_payload_optimizer_cli_reads_npz_and_writes_report(
             "identity",
             "--coders",
             "brotli,canonical_huffman",
+            "--payload-layouts",
+            "flat,nibble_planes",
             "--brotli-quality",
             "4",
         ],
@@ -164,6 +182,7 @@ def test_tensor_payload_optimizer_cli_reads_npz_and_writes_report(
         report["grouped_brotli_order_diagnostic"]["schema"]
         == "tensor_payload_grouped_brotli_order_diagnostic.v1"
     )
+    assert report["int_payload_layouts"] == ["flat", "nibble_planes"]
     assert {row["tensor_name"] for row in report["rows"]} == {"bias", "weight"}
     assert queue["schema"] == TENSOR_PAYLOAD_GRAMMAR_QUEUE_SCHEMA
 
