@@ -222,6 +222,10 @@ def build_compact_renderer_mlx_section_value_profile(
             "score_axis": response.get("score_axis"),
             "evidence_grade": response.get("evidence_grade"),
             "hardware_substrate": response.get("hardware_substrate"),
+            "batch_pairs": response.get("batch_pairs"),
+            "batch_shape_research_signal_allowed": response.get(
+                "batch_shape_research_signal_allowed"
+            ),
             "max_pairs": response.get("max_pairs"),
             "n_samples": response.get("n_samples"),
             "candidate_cache_pairs": response.get("candidate_cache_pairs"),

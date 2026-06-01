@@ -521,7 +521,9 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
             {
                 "schema": "hprc_mlx_component_neutralization_profile.v1",
                 "max_pairs": 600,
+                "scorer_batch_pairs": 1,
                 "scope_status": {"full_video": "executed"},
+                "score_components": {"canonical_score": 0.1},
                 "section_value_rows": [],
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -556,7 +558,9 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert out["local_cpu_replay_gate"]["executed"] is True
     assert out["local_cpu_replay_gate"]["default_enabled_for_full_coverage"] is True
     assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is True
+    assert out["local_cpu_replay_gate"]["local_replay_mlx_prefilter_passed"] is True
     assert out["mlx_prefilter_coverage"]["has_full_video_mlx_prefilter"] is True
+    assert out["mlx_prefilter_coverage"]["local_replay_mlx_prefilter_passed"] is True
     assert out["mlx_prefilter_coverage"]["blockers"] == []
     assert out["local_cpu_replay_summary"]["axis_tag"] == "[macOS-CPU advisory]"
     assert out["local_cpu_replay_summary"]["score_claim"] is False
@@ -603,6 +607,7 @@ def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(
             {
                 "schema": "hprc_mlx_component_neutralization_profile.v1",
                 "mlx_response_summary": {"max_pairs": 128, "n_samples": 128},
+                "scorer_batch_pairs": 1,
                 "scope_status": {
                     "full_video": "sampled_prefix_requires_full_video_rerun"
                 },
@@ -641,6 +646,80 @@ def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(
     ]
     assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
     assert "sampled_mlx_prefilter_requires_full_video_rerun" in out["blockers"]
+
+
+def test_hinerv_full_video_bad_mlx_score_does_not_unlock_default_cpu_replay(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=600)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    replay_calls: list[dict[str, object]] = []
+
+    def fake_run_local_submission_replay(**kwargs):
+        replay_calls.append(kwargs)
+        raise AssertionError("bad MLX prefilter score must not run default CPU replay")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+    monkeypatch.setattr(
+        runner_mod,
+        "run_local_submission_replay",
+        fake_run_local_submission_replay,
+    )
+    bad_profile = tmp_path / "bad_full_video_mlx_profile.json"
+    bad_profile.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "max_pairs": 600,
+                "scorer_batch_pairs": 1,
+                "scope_status": {"full_video": "executed"},
+                "score_components": {"canonical_score": 90.0},
+                "section_value_rows": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_gate",
+        num_pairs=600,
+        epochs=8,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        mlx_profile_paths=(bad_profile,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        repo_root=REPO_ROOT,
+    )
+
+    assert replay_calls == []
+    assert out["local_cpu_replay_gate"]["executed"] is False
+    assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is True
+    assert out["local_cpu_replay_gate"]["local_replay_mlx_prefilter_passed"] is False
+    assert out["mlx_prefilter_coverage"]["best_full_video_mlx_score"] == 90.0
+    assert "local_cpu_replay_blocked_by_mlx_prefilter_score" in out["blockers"]
+    assert "mlx_prefilter_score_not_below_local_replay_threshold" in out["blockers"]
+    assert "mlx_score_above_hard_demote_threshold" in out["blockers"]
 
 
 def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
@@ -683,6 +762,83 @@ def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
     assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out[
         "blockers"
     ]
+
+
+def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "score_aware_training": {
+                    "schema": "mlx_score_aware_training_objective.v1",
+                    "segnet_distillation_weight": 0.0,
+                    "pose_distillation_weight": 0.0,
+                },
+                "substrate_supplied_score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "coder_aware_qat": {
+                        "schema": "coder_aware_decoder_qat.v1",
+                        "enabled": True,
+                        "quant_bits": 4,
+                        "quant_residual_weight": 0.001,
+                        "magnitude_weight": 0.0001,
+                        "delta_weight": 0.0002,
+                        "authority": "false_macos_mlx_research_signal",
+                    },
+                },
+            },
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_qat",
+        num_pairs=2,
+        epochs=8,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_magnitude_weight=0.0001,
+        coder_qat_delta_weight=0.0002,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["coder_aware_qat"] is True
+    assert captured_train_kwargs["coder_qat_quant_bits"] == 4
+    assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
+    assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
+    assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
+    assert out["score_aware_training"]["coder_aware_qat"] == {
+        "schema": "coder_aware_decoder_qat.v1",
+        "enabled": True,
+        "quant_bits": 4,
+        "quant_residual_weight": 0.001,
+        "magnitude_weight": 0.0001,
+        "delta_weight": 0.0002,
+        "authority": "false_macos_mlx_research_signal",
+    }
 
 
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for HiNeRV adapter smoke")
@@ -1134,6 +1290,7 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
                 "schema": "hprc_mlx_component_neutralization_profile.v1",
                 "family": "pact_nerv",
                 "max_pairs": 600,
+                "scorer_batch_pairs": 1,
                 "projection_manifest_path": projection_manifest_path.as_posix(),
                 "scope_status": {
                     "full_video": True,

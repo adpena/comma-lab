@@ -12,6 +12,7 @@ from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
 
 HPRC_MLX_COMPONENT_PROFILE_SCHEMA = "hprc_mlx_component_neutralization_profile.v1"
 HPRC_MLX_PREFILTER_COVERAGE_SCHEMA = "hprc_mlx_prefilter_coverage.v1"
+DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY = 0.5
 
 
 def mlx_profile_pair_count(profile: dict[str, Any]) -> int | None:
@@ -40,6 +41,25 @@ def mlx_profile_pair_count(profile: dict[str, Any]) -> int | None:
     return max(counts) if counts else None
 
 
+def mlx_profile_batch_pairs(profile: dict[str, Any]) -> int | None:
+    """Return the declared scorer batch-pair count when present."""
+
+    containers = [
+        profile,
+        profile.get("mlx_response_summary"),
+        profile.get("response_metadata"),
+        profile.get("score_context"),
+    ]
+    for container in containers:
+        if not isinstance(container, dict):
+            continue
+        for key in ("scorer_batch_pairs", "batch_pairs"):
+            value = _nonnegative_int(container.get(key))
+            if value is not None:
+                return value
+    return None
+
+
 def mlx_profile_full_video_scope(profile: dict[str, Any]) -> str:
     """Return the profile's declared full-video scope marker."""
 
@@ -64,11 +84,37 @@ def mlx_profile_has_full_video_coverage(
     if profile.get("schema") != HPRC_MLX_COMPONENT_PROFILE_SCHEMA:
         return False
     count = mlx_profile_pair_count(profile)
+    batch_pairs = mlx_profile_batch_pairs(profile)
     return (
         mlx_profile_full_video_scope(profile) == "executed"
         and count is not None
         and int(count) >= int(required_pairs)
+        and batch_pairs == 1
     )
+
+
+def mlx_profile_score_estimate(profile: dict[str, Any]) -> float | None:
+    """Return the profile's full-video MLX score estimate when present."""
+
+    containers = [
+        profile,
+        profile.get("score_components"),
+        profile.get("mlx_response_summary"),
+        profile.get("response_metadata"),
+    ]
+    for container in containers:
+        if not isinstance(container, dict):
+            continue
+        for key in (
+            "canonical_score",
+            "recomputed_total_score",
+            "score_recomputed_from_components",
+            "local_score_estimate",
+        ):
+            value = _finite_float(container.get(key))
+            if value is not None:
+                return value
+    return None
 
 
 def summarize_mlx_prefilter_coverage(
@@ -76,6 +122,7 @@ def summarize_mlx_prefilter_coverage(
     *,
     root: str | Path,
     required_pairs: int = CONTEST_PAIR_COUNT,
+    max_mlx_score_for_local_replay: float | None = DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY,
 ) -> dict[str, Any]:
     """Load MLX profiles and report whether any is full-video replay evidence."""
 
@@ -85,6 +132,21 @@ def summarize_mlx_prefilter_coverage(
         for path in profile_paths
     ]
     has_full = any(record.get("full_video_prefilter") is True for record in records)
+    score_threshold = _finite_float(max_mlx_score_for_local_replay)
+    full_records = [
+        record for record in records if record.get("full_video_prefilter") is True
+    ]
+    scored_full_records = [
+        record
+        for record in full_records
+        if _finite_float(record.get("mlx_score_estimate")) is not None
+    ]
+    local_replay_passed = bool(full_records)
+    if score_threshold is not None:
+        local_replay_passed = any(
+            float(record["mlx_score_estimate"]) < score_threshold
+            for record in scored_full_records
+        )
     blockers: list[str] = []
     if not records:
         blockers.append("full_video_mlx_scorer_replay_not_attached")
@@ -100,11 +162,24 @@ def summarize_mlx_prefilter_coverage(
             for record in records
             for blocker in record.get("blockers", [])
         )
+    elif score_threshold is not None and not local_replay_passed:
+        blockers.append("mlx_prefilter_score_not_below_local_replay_threshold")
+        if not scored_full_records:
+            blockers.append("mlx_score_missing_or_nonfinite")
+        else:
+            blockers.append("mlx_score_above_hard_demote_threshold")
     return {
         "schema": HPRC_MLX_PREFILTER_COVERAGE_SCHEMA,
         "required_pairs": int(required_pairs),
+        "max_mlx_score_for_local_replay": score_threshold,
         "profile_count": len(records),
         "has_full_video_mlx_prefilter": has_full,
+        "local_replay_mlx_prefilter_passed": local_replay_passed,
+        "best_full_video_mlx_score": (
+            min(float(record["mlx_score_estimate"]) for record in scored_full_records)
+            if scored_full_records
+            else None
+        ),
         "full_video_profile_paths": [
             str(record["path"])
             for record in records
@@ -139,13 +214,17 @@ def _profile_path_record(
         return record
     schema = payload.get("schema")
     pair_count = mlx_profile_pair_count(payload)
+    batch_pairs = mlx_profile_batch_pairs(payload)
     full_video_scope = mlx_profile_full_video_scope(payload)
+    mlx_score = mlx_profile_score_estimate(payload)
     record.update(
         {
             "bytes": resolved.stat().st_size,
             "sha256": _sha256_file(resolved),
             "schema_name": schema,
             "pair_count": pair_count,
+            "batch_pairs": batch_pairs,
+            "mlx_score_estimate": mlx_score,
             "full_video_scope": full_video_scope,
             "score_claim": bool(payload.get("score_claim")),
             "promotion_eligible": bool(payload.get("promotion_eligible")),
@@ -166,6 +245,8 @@ def _profile_path_record(
         record["blockers"].append("mlx_profile_pair_count_missing")
     elif int(pair_count) < int(required_pairs):
         record["blockers"].append("mlx_profile_pair_count_below_full_video")
+    if batch_pairs != 1:
+        record["blockers"].append("mlx_profile_batch_pairs_not_singleton")
     return record
 
 
@@ -197,6 +278,16 @@ def _nonnegative_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return out if out >= 0 else None
+
+
+def _finite_float(value: Any) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if out == out and abs(out) != float("inf") else None
 
 
 def _dedupe(values: list[Any]) -> list[Any]:
