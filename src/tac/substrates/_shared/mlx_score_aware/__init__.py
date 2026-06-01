@@ -48,6 +48,12 @@ from tac.substrates._shared.mlx_score_aware.bundle import (
     RendererBundle,
     ScorerTeacherProvider,
 )
+from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (
+    CANONICAL_SCORE_AWARE_DECODER_TRAINING_STACK,
+    CarrierTrainingPlanError,
+    CarrierTrainingThresholds,
+    build_score_aware_carrier_training_plan,
+)
 from tac.substrates._shared.mlx_score_aware.device_gate import (
     MlxScoreAwareHarnessError,
     is_mlx_available,
@@ -74,11 +80,14 @@ from tac.substrates._shared.mlx_score_aware.targets import (
 )
 
 __all__ = [
+    "CANONICAL_SCORE_AWARE_DECODER_TRAINING_STACK",
     "CONTEST_NORMALIZER",
     "FORBIDDEN_INFLATE_IMPORT_ROOTS",
     "FORWARD_CONVENTIONS",
     "MLX_EVIDENCE_GRADE",
     "N_PAIRS_FULL",
+    "CarrierTrainingPlanError",
+    "CarrierTrainingThresholds",
     "MlxRenderer",
     "MlxScoreAwareAdapter",
     "MlxScoreAwareHarnessError",
@@ -88,6 +97,7 @@ __all__ = [
     "assert_numpy_portable_inflate",
     "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",
+    "build_score_aware_carrier_training_plan",
     "decode_frames_nhwc01",
     "decode_mlx_targets",
     "is_mlx_available",
