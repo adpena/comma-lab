@@ -235,6 +235,7 @@ def solve_section_payload_grammar(
     order_diagnostic = _grouped_brotli_order_diagnostic(
         normalized,
         brotli_quality=brotli_quality,
+        selected_isolated_section_bytes=selected_total,
     )
     blockers = [
         "section_codec_choices_not_bound_to_receiver",
@@ -363,6 +364,108 @@ def build_section_payload_optimizer_queue(
             **FALSE_AUTHORITY_FIELDS,
         }
         candidates.append(candidate)
+    grouped = report.get("grouped_brotli_order_diagnostic")
+    if isinstance(grouped, Mapping):
+        grouped_saved_vs_selected = max(
+            0,
+            int(grouped.get("grouped_saved_bytes_vs_selected_isolated") or 0),
+        )
+        grouped_delta_vs_selected = int(
+            grouped.get("grouped_delta_bytes_vs_selected_isolated") or 0
+        )
+        grouped_saved_vs_identity = max(
+            0,
+            int(grouped.get("grouped_saved_bytes_vs_identity") or 0),
+        )
+        grouped_delta_vs_identity = int(
+            grouped.get("grouped_delta_bytes_vs_identity") or 0
+        )
+        if grouped_saved_vs_selected > 0:
+            candidates.append(
+                {
+                    "schema": "optimizer_candidate_queue_row_v1",
+                    "candidate_id": f"{cid}:section_grouped_brotli_order",
+                    "candidate_kind": "planning_only_section_grouped_brotli_order",
+                    "status": "blocked_planning_signal_only",
+                    "target_kind": "archive_section_payload_grammar",
+                    "operation_family": "section_payload_grouped_brotli_order",
+                    "operation_families": ["section_payload_grouped_brotli_order"],
+                    "operation_id": "section_grouped_brotli_order",
+                    "operation_params": {
+                        "schema": "section_payload_grouped_brotli_order_hint.v1",
+                        "selected_order_label": grouped.get("selected_order_label"),
+                        "selected_section_order": list(
+                            grouped.get("selected_section_order") or []
+                        ),
+                        "selected_grouped_brotli_bytes": grouped.get(
+                            "selected_grouped_brotli_bytes"
+                        ),
+                        "identity_grouped_brotli_bytes": grouped.get(
+                            "identity_grouped_brotli_bytes"
+                        ),
+                        "selected_isolated_section_bytes": grouped.get(
+                            "selected_isolated_section_bytes"
+                        ),
+                        "grouped_delta_bytes_vs_identity": grouped_delta_vs_identity,
+                        "grouped_delta_bytes_vs_selected_isolated": (
+                            grouped_delta_vs_selected
+                        ),
+                        "grouped_saved_bytes_vs_identity": grouped_saved_vs_identity,
+                        "grouped_saved_bytes_vs_selected_isolated": (
+                            grouped_saved_vs_selected
+                        ),
+                    },
+                    "selected_operations": [
+                        {
+                            "operation_family": "section_payload_grouped_brotli_order",
+                            "operation_id": "section_grouped_brotli_order",
+                            "selected_order_label": grouped.get(
+                                "selected_order_label"
+                            ),
+                            "selected_section_order": list(
+                                grouped.get("selected_section_order") or []
+                            ),
+                        }
+                    ],
+                    "candidate_saved_bytes": grouped_saved_vs_selected,
+                    "saved_bytes_scope": (
+                        "single_stream_grouped_brotli_diagnostic_not_archive_authority"
+                    ),
+                    "predicted_delta_bytes": grouped_delta_vs_selected,
+                    "predicted_delta_bytes_scope": (
+                        "single_stream_grouped_brotli_diagnostic_not_archive_authority"
+                    ),
+                    "runtime_consumption_status": "section_receiver_adapter_required",
+                    "consumer_payload": {
+                        "selected_operations": [
+                            {
+                                "operation_family": (
+                                    "section_payload_grouped_brotli_order"
+                                ),
+                                "operation_id": "section_grouped_brotli_order",
+                                "selected_order_label": grouped.get(
+                                    "selected_order_label"
+                                ),
+                            }
+                        ],
+                        "byte_accounting_scope": (
+                            "single_stream_grouped_brotli_diagnostic_not_archive_authority"
+                        ),
+                    },
+                    "blockers": [
+                        "section_codec_choice_not_bound_to_receiver",
+                        "byte_closed_archive_not_materialized",
+                        "runtime_consumption_proof_missing",
+                        "full_frame_inflate_parity_missing",
+                    ],
+                    "consumer_surfaces": [
+                        "tac.optimization.byte_shaving_campaign.build_signal_surface_from_candidate_queue",
+                        "tac.cathedral_consumers.packetir_candidate_queue_consumer.consume_queue",
+                    ],
+                    "axis_tag": "[planning-only byte-profile]",
+                    **FALSE_AUTHORITY_FIELDS,
+                }
+            )
     return {
         "schema": SECTION_PAYLOAD_GRAMMAR_QUEUE_SCHEMA,
         "campaign_id": cid,
@@ -540,6 +643,7 @@ def _grouped_brotli_order_diagnostic(
     sections: Sequence[tuple[str, bytes]],
     *,
     brotli_quality: int,
+    selected_isolated_section_bytes: int,
 ) -> dict[str, Any]:
     candidates = [
         ("identity", list(range(len(sections)))),
@@ -564,10 +668,26 @@ def _grouped_brotli_order_diagnostic(
         )
     rows.sort(key=lambda row: (int(row["compressed_bytes"]), str(row["order_label"])))
     selected = rows[0]
+    identity = next(row for row in rows if str(row.get("order_label")) == "identity")
+    selected_bytes = int(selected["compressed_bytes"])
+    identity_bytes = int(identity["compressed_bytes"])
+    selected_isolated_bytes = int(selected_isolated_section_bytes)
     return {
         "schema": "section_payload_grouped_brotli_order_diagnostic.v1",
         "selected_order_label": selected["order_label"],
-        "selected_grouped_brotli_bytes": selected["compressed_bytes"],
+        "selected_section_order": selected["section_order"],
+        "selected_grouped_brotli_bytes": selected_bytes,
+        "identity_grouped_brotli_bytes": identity_bytes,
+        "selected_isolated_section_bytes": selected_isolated_bytes,
+        "grouped_delta_bytes_vs_identity": selected_bytes - identity_bytes,
+        "grouped_saved_bytes_vs_identity": max(0, identity_bytes - selected_bytes),
+        "grouped_delta_bytes_vs_selected_isolated": (
+            selected_bytes - selected_isolated_bytes
+        ),
+        "grouped_saved_bytes_vs_selected_isolated": max(
+            0,
+            selected_isolated_bytes - selected_bytes,
+        ),
         "candidate_count": len(rows),
         "candidates": rows,
         "byte_accounting_scope": "single_stream_grouped_brotli_diagnostic_not_archive_authority",
@@ -605,11 +725,24 @@ def _planner_feedback(
     return {
         "schema": "section_payload_grammar_planner_feedback.v1",
         "operation_hint_count": len(hints),
+        "rate_positive_hint_count": sum(
+            1 for row in hints if int(row["isolated_byte_delta_vs_baseline"]) < 0
+        ),
         "operation_hints": hints,
         "grouped_brotli_order_hint": {
             "selected_order_label": order_diagnostic.get("selected_order_label"),
+            "selected_section_order": order_diagnostic.get("selected_section_order"),
             "selected_grouped_brotli_bytes": order_diagnostic.get(
                 "selected_grouped_brotli_bytes"
+            ),
+            "grouped_delta_bytes_vs_identity": order_diagnostic.get(
+                "grouped_delta_bytes_vs_identity"
+            ),
+            "grouped_delta_bytes_vs_selected_isolated": order_diagnostic.get(
+                "grouped_delta_bytes_vs_selected_isolated"
+            ),
+            "grouped_saved_bytes_vs_selected_isolated": order_diagnostic.get(
+                "grouped_saved_bytes_vs_selected_isolated"
             ),
         },
         "posterior_update_hooks": [

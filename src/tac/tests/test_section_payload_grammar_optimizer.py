@@ -92,6 +92,11 @@ def test_section_payload_solver_reports_saturation_and_planner_hints() -> None:
     assert report["planner_feedback"]["operation_hint_count"] == 2
     assert report["planner_feedback"]["posterior_update_hooks"]
     assert report["grouped_brotli_order_diagnostic"]["candidate_count"] == 2
+    assert "identity_grouped_brotli_bytes" in report["grouped_brotli_order_diagnostic"]
+    assert "selected_isolated_section_bytes" in report["grouped_brotli_order_diagnostic"]
+    assert "grouped_delta_bytes_vs_selected_isolated" in report[
+        "grouped_brotli_order_diagnostic"
+    ]
     assert all(row["selected"]["roundtrip_exact"] for row in report["rows"])
     assert report["score_claim"] is False
     assert report["promotable"] is False
@@ -131,6 +136,43 @@ def test_section_payload_queue_is_planning_only_and_consumable() -> None:
         unit["operation_families"] == ["section_payload_coder_selection"]
         for unit in surface["units"]
     )
+
+
+def test_section_payload_queue_routes_grouped_brotli_order_when_positive() -> None:
+    report = solve_section_payload_grammar(
+        {"a": b"\x00" * 256, "b": bytes(range(64)) * 4},
+        coders=("brotli",),
+        brotli_quality=4,
+        campaign_id="grouped_section_order",
+    )
+    # Force a positive grouped-order diagnostic without depending on Brotli's
+    # exact version-specific byte count for the fixture above.
+    report["grouped_brotli_order_diagnostic"] = {
+        "schema": "section_payload_grouped_brotli_order_diagnostic.v1",
+        "selected_order_label": "size_desc",
+        "selected_section_order": ["b", "a"],
+        "selected_grouped_brotli_bytes": 90,
+        "identity_grouped_brotli_bytes": 120,
+        "selected_isolated_section_bytes": 100,
+        "grouped_delta_bytes_vs_identity": -30,
+        "grouped_saved_bytes_vs_identity": 30,
+        "grouped_delta_bytes_vs_selected_isolated": -10,
+        "grouped_saved_bytes_vs_selected_isolated": 10,
+    }
+
+    queue = build_section_payload_optimizer_queue(report)
+
+    grouped = [
+        row
+        for row in queue["candidates"]
+        if row["operation_family"] == "section_payload_grouped_brotli_order"
+    ]
+    assert len(grouped) == 1
+    assert grouped[0]["candidate_saved_bytes"] == 10
+    assert grouped[0]["predicted_delta_bytes"] == -10
+    assert grouped[0]["operation_params"]["selected_section_order"] == ["b", "a"]
+    assert grouped[0]["score_claim"] is False
+    assert grouped[0]["ready_for_exact_eval_dispatch"] is False
 
 
 def test_single_member_zip_archive_sections_are_extracted_with_provenance() -> None:

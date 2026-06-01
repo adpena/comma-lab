@@ -194,6 +194,94 @@ def test_operator_briefing_routes_grouped_tensor_payload_to_receiver_binding(
     assert "receiver_work=True" in text
 
 
+def test_operator_briefing_surfaces_saturated_section_payload_grammar(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "section_grammar"
+    _write_json(
+        root / "run" / "pr101_section_payload_report_consumer_result.json",
+        {
+            "schema": "section_payload_grammar_consumer_result.v1",
+            "campaign_id": "pr101_sections",
+            "section_count": 4,
+            "saturation_status": "entropy_saturated",
+            "selected_isolated_section_bytes": 12000,
+            "baseline_isolated_section_bytes": 12017,
+            "selected_saved_bytes_vs_baseline": 17,
+            "selected_over_floor_ratio": 1.03,
+            "receiver_work_justified": False,
+            "demotion_recommended": True,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS", (root,))
+
+    summary = mod._section_payload_grammar_summary()
+    text = mod._format_section_payload_grammar_summary()
+
+    assert summary["status"] == "SATURATED"
+    assert summary["artifact_count"] == 1
+    assert summary["consumer_result_count"] == 1
+    assert summary["demotion_recommended_count"] == 1
+    assert summary["total_selected_saved_bytes_vs_baseline"] == 17
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert "preserve as negative posterior" in summary["reason"]
+    assert "Generic section payload grammar saturation diagnostics" in text
+    assert "status: SATURATED" in text
+
+
+def test_operator_briefing_routes_grouped_section_payload_to_receiver_binding(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "section_grammar"
+    _write_json(
+        root / "candidate" / "z8_section_payload_report.json",
+        {
+            "schema": "section_payload_grammar_optimizer.v1",
+            "campaign_id": "z8_section_order",
+            "section_count": 3,
+            "byte_accounting": {
+                "selected_isolated_section_bytes": 4096,
+                "baseline_isolated_section_bytes": 4096,
+                "selected_saved_bytes_vs_baseline": 0,
+                "selected_over_floor_ratio": 1.01,
+            },
+            "saturation_diagnostic": {"status": "entropy_saturated"},
+            "grouped_brotli_order_diagnostic": {
+                "schema": "section_payload_grouped_brotli_order_diagnostic.v1",
+                "selected_order_label": "size_desc",
+                "selected_section_order": ["weights", "latents", "sidecar"],
+                "selected_grouped_brotli_bytes": 3990,
+                "selected_isolated_section_bytes": 4013,
+                "identity_grouped_brotli_bytes": 4013,
+                "grouped_delta_bytes_vs_identity": -23,
+                "grouped_saved_bytes_vs_identity": 23,
+                "grouped_delta_bytes_vs_selected_isolated": -23,
+                "grouped_saved_bytes_vs_selected_isolated": 23,
+            },
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS", (root,))
+
+    summary = mod._section_payload_grammar_summary()
+    text = mod._format_section_payload_grammar_summary()
+
+    assert summary["status"] == "NEEDS_RECEIVER_BINDING"
+    assert summary["receiver_work_justified_count"] == 1
+    assert summary["demotion_recommended_count"] == 0
+    assert summary["total_grouped_saved_bytes_vs_selected_isolated"] == 23
+    assert summary["total_grouped_saved_bytes_vs_identity"] == 23
+    assert "grouped Brotli order savings" in summary["reason"]
+    assert "grouped_saved=23" in text
+    assert "receiver_work=True" in text
+
+
 def test_operator_briefing_surfaces_grouped_optimal_grammar_campaign(
     tmp_path: Path, monkeypatch
 ) -> None:

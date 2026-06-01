@@ -92,6 +92,7 @@ TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact"),
     Path("/Volumes/APDataStore/pact"),
 )
+SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS = TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
 FRONTIER_FEEDBACK_CYCLE_REPORT_NAME = "frontier_rate_attack_feedback_cycle.json"
 FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
@@ -99,6 +100,9 @@ PR95_MLX_MATRIX_MANIFEST_NAME = "matrix_manifest.json"
 TENSOR_PAYLOAD_GRAMMAR_REPORT_GLOB = "*tensor_payload*report*.json"
 TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA = "tensor_payload_grammar_optimizer.v1"
 TENSOR_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA = "tensor_payload_grammar_consumer_result.v1"
+SECTION_PAYLOAD_GRAMMAR_REPORT_GLOB = "*section_payload*report*.json"
+SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA = "section_payload_grammar_optimizer.v1"
+SECTION_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA = "section_payload_grammar_consumer_result.v1"
 OPTIMAL_GRAMMAR_CAMPAIGN_REPORT_NAME = "campaign_summary.json"
 PR101_OPTIMAL_GRAMMAR_CAMPAIGN_SCHEMA = "pr101_optimal_grammar_campaign_summary.v1"
 DISTORTION_AXIS_PROBE_VERDICT_GLOB = "probe_*_verdict.json"
@@ -5329,6 +5333,295 @@ def _format_tensor_payload_grammar_summary() -> str:
     return "\n".join(lines)
 
 
+def _section_payload_grammar_artifact_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+    *,
+    max_depth: int = 4,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS
+    patterns = tuple(
+        f"{'*/' * depth}{SECTION_PAYLOAD_GRAMMAR_REPORT_GLOB}"
+        for depth in range(max_depth + 1)
+    )
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                resolved = path.resolve(strict=False)
+                if resolved in seen or not path.is_file():
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime if item.exists() else 0.0,
+        reverse=True,
+    )
+
+
+def _section_payload_grammar_row(path: Path) -> dict[str, object] | None:
+    payload = _load_json_file(path)
+    schema = payload.get("schema")
+    if schema not in (
+        SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA,
+        SECTION_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA,
+    ):
+        return None
+
+    if schema == SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA:
+        source_manifest = payload.get("source_payload_manifest")
+        if not isinstance(source_manifest, dict):
+            source_manifest = {}
+        byte_accounting = payload.get("byte_accounting")
+        if not isinstance(byte_accounting, dict):
+            byte_accounting = {}
+        grouped_diagnostic = payload.get("grouped_brotli_order_diagnostic")
+        if not isinstance(grouped_diagnostic, dict):
+            grouped_diagnostic = {}
+        saturation = payload.get("saturation_diagnostic")
+        if not isinstance(saturation, dict):
+            saturation = {}
+        selected_saved = max(
+            0, _safe_int(byte_accounting.get("selected_saved_bytes_vs_baseline"))
+        )
+        saturation_status = str(saturation.get("status") or "unknown")
+        receiver_work_justified = (
+            saturation_status == "unsaturated_entropy_gap" and selected_saved > 0
+        )
+        demotion_recommended = saturation_status in {
+            "entropy_saturated",
+            "weak_entropy_gap",
+        }
+        selected_bytes = _safe_int(
+            byte_accounting.get("selected_isolated_section_bytes")
+        )
+        baseline_bytes = _safe_int(
+            byte_accounting.get("baseline_isolated_section_bytes")
+        )
+        over_floor = _safe_float(
+            byte_accounting.get("selected_over_floor_ratio"),
+            default=0.0,
+        )
+        grouped_saved_vs_identity = _safe_int(
+            grouped_diagnostic.get("grouped_saved_bytes_vs_identity")
+        )
+        grouped_delta_vs_identity = _safe_int(
+            grouped_diagnostic.get("grouped_delta_bytes_vs_identity")
+        )
+        grouped_saved = _safe_int(
+            grouped_diagnostic.get("grouped_saved_bytes_vs_selected_isolated")
+        )
+        grouped_delta = _safe_int(
+            grouped_diagnostic.get("grouped_delta_bytes_vs_selected_isolated")
+        )
+        grouped_receiver_work_justified = grouped_saved > 0
+        receiver_work_justified = receiver_work_justified or grouped_receiver_work_justified
+        demotion_recommended = (
+            demotion_recommended and not grouped_receiver_work_justified
+        )
+    else:
+        source_manifest = {}
+        selected_saved = max(
+            0, _safe_int(payload.get("selected_saved_bytes_vs_baseline"))
+        )
+        saturation_status = str(payload.get("saturation_status") or "unknown")
+        receiver_work_justified = payload.get("receiver_work_justified") is True
+        demotion_recommended = payload.get("demotion_recommended") is True
+        selected_bytes = _safe_int(payload.get("selected_isolated_section_bytes"))
+        baseline_bytes = _safe_int(payload.get("baseline_isolated_section_bytes"))
+        over_floor = _safe_float(payload.get("selected_over_floor_ratio"), default=0.0)
+        grouped_saved_vs_identity = _safe_int(
+            payload.get("grouped_saved_bytes_vs_identity")
+        )
+        grouped_delta_vs_identity = _safe_int(
+            payload.get("grouped_delta_bytes_vs_identity")
+        )
+        grouped_saved = _safe_int(
+            payload.get("grouped_saved_bytes_vs_selected_isolated")
+        )
+        grouped_delta = _safe_int(
+            payload.get("grouped_delta_bytes_vs_selected_isolated")
+        )
+
+    return {
+        "path": _repo_rel(path),
+        "schema": schema,
+        "campaign_id": str(payload.get("campaign_id") or ""),
+        "source_kind": str(
+            payload.get("source_kind") or source_manifest.get("source_kind") or ""
+        ),
+        "section_count": _safe_int(payload.get("section_count")),
+        "saturation_status": saturation_status,
+        "selected_over_floor_ratio": over_floor,
+        "selected_isolated_section_bytes": selected_bytes,
+        "baseline_isolated_section_bytes": baseline_bytes,
+        "selected_saved_bytes_vs_baseline": selected_saved,
+        "grouped_saved_bytes_vs_identity": grouped_saved_vs_identity,
+        "grouped_delta_bytes_vs_identity": grouped_delta_vs_identity,
+        "grouped_saved_bytes_vs_selected_isolated": grouped_saved,
+        "grouped_delta_bytes_vs_selected_isolated": grouped_delta,
+        "receiver_work_justified": receiver_work_justified,
+        "demotion_recommended": demotion_recommended,
+        "planner_action": str(payload.get("planner_action") or ""),
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "mtime": path.stat().st_mtime if path.exists() else 0.0,
+    }
+
+
+def _section_payload_grammar_next_command(summary: dict[str, object]) -> str:
+    if _safe_int(summary.get("receiver_work_justified_count")):
+        return (
+            ".venv/bin/python tools/section_payload_grammar_optimizer.py --help  "
+            "# then bind the winning section codec/order into receiver/archive"
+        )
+    return ".venv/bin/python tools/section_payload_grammar_optimizer.py --help"
+
+
+def _section_payload_grouped_saved(
+    rows: list[dict[str, object]],
+    *,
+    key: str = "grouped_saved_bytes_vs_selected_isolated",
+) -> int:
+    return sum(_safe_int(row.get(key)) for row in rows)
+
+
+def _section_payload_grammar_summary() -> dict[str, object]:
+    rows = [
+        row
+        for path in _section_payload_grammar_artifact_paths()
+        if (row := _section_payload_grammar_row(path)) is not None
+    ]
+    consumer_rows = [
+        row
+        for row in rows
+        if row.get("schema") == SECTION_PAYLOAD_GRAMMAR_CONSUMER_SCHEMA
+    ]
+    optimizer_rows = [
+        row
+        for row in rows
+        if row.get("schema") == SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA
+    ]
+    primary_rows = consumer_rows if consumer_rows else optimizer_rows
+    receiver_work_justified_count = sum(
+        1 for row in primary_rows if row.get("receiver_work_justified") is True
+    )
+    demotion_recommended_count = sum(
+        1 for row in primary_rows if row.get("demotion_recommended") is True
+    )
+    saturated_count = sum(
+        1
+        for row in primary_rows
+        if row.get("saturation_status") in {"entropy_saturated", "weak_entropy_gap"}
+    )
+    if not rows:
+        status = "PENDING"
+        reason = "no generic section payload grammar reports found"
+    elif receiver_work_justified_count:
+        status = "NEEDS_RECEIVER_BINDING"
+        if _section_payload_grouped_saved(primary_rows) > 0:
+            reason = (
+                f"{receiver_work_justified_count} section grammar report(s) show "
+                "grouped Brotli order savings; bind receiver/archive before replay"
+            )
+        else:
+            reason = (
+                f"{receiver_work_justified_count} section grammar report(s) show "
+                "unsaturated entropy gap; bind receiver/archive before replay"
+            )
+    elif primary_rows and demotion_recommended_count == len(primary_rows):
+        status = "SATURATED"
+        reason = (
+            "all consumed section grammar reports are saturated or weak-gap; "
+            "preserve as negative posterior and stop same-substrate section churn"
+        )
+    else:
+        status = "INCOMPLETE"
+        reason = "section grammar reports are present but not fully consumed or decisive"
+
+    summary = {
+        "schema": "pact.section_payload_grammar_summary.v1",
+        "scan_roots": [_repo_rel(root) for root in SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS],
+        "status": status,
+        "reason": reason,
+        "artifact_count": len(rows),
+        "optimizer_report_count": len(optimizer_rows),
+        "consumer_result_count": len(consumer_rows),
+        "primary_row_count": len(primary_rows),
+        "receiver_work_justified_count": receiver_work_justified_count,
+        "demotion_recommended_count": demotion_recommended_count,
+        "saturated_count": saturated_count,
+        "total_selected_saved_bytes_vs_baseline": sum(
+            _safe_int(row.get("selected_saved_bytes_vs_baseline"))
+            for row in primary_rows
+        ),
+        "total_grouped_saved_bytes_vs_selected_isolated": (
+            _section_payload_grouped_saved(primary_rows)
+        ),
+        "total_grouped_saved_bytes_vs_identity": _section_payload_grouped_saved(
+            primary_rows,
+            key="grouped_saved_bytes_vs_identity",
+        ),
+        "max_selected_over_floor_ratio": max(
+            (_safe_float(row.get("selected_over_floor_ratio")) for row in primary_rows),
+            default=0.0,
+        ),
+        "latest_rows": rows[:5],
+        **_false_authority_fields(),
+    }
+    summary["next_command"] = _section_payload_grammar_next_command(summary)
+    return summary
+
+
+def _format_section_payload_grammar_summary() -> str:
+    payload = _section_payload_grammar_summary()
+    lines = [
+        "Generic section payload grammar saturation diagnostics. "
+        "This is planning-only rate signal, not score authority.",
+        f"status: {payload['status']} — {payload['reason']}",
+        (
+            "artifacts: "
+            f"{payload['artifact_count']} "
+            f"optimizer_reports={payload['optimizer_report_count']} "
+            f"consumer_results={payload['consumer_result_count']} "
+            f"receiver_work={payload['receiver_work_justified_count']} "
+            f"demotions={payload['demotion_recommended_count']} "
+            f"saved_bytes={payload['total_selected_saved_bytes_vs_baseline']} "
+            f"grouped_saved={payload['total_grouped_saved_bytes_vs_selected_isolated']} "
+            f"grouped_identity_saved={payload['total_grouped_saved_bytes_vs_identity']} "
+            f"max_over_floor={payload['max_selected_over_floor_ratio']:.6g}"
+        ),
+        f"score_claim: {payload['score_claim']}",
+        f"ready_for_exact_eval_dispatch: {payload['ready_for_exact_eval_dispatch']}",
+    ]
+    latest_rows = payload.get("latest_rows")
+    if isinstance(latest_rows, list) and latest_rows:
+        lines.append("latest section grammar rows:")
+        for row in latest_rows[:5]:
+            if not isinstance(row, dict):
+                continue
+            over_floor = _safe_float(row.get("selected_over_floor_ratio"))
+            lines.append(
+                "  - "
+                f"{row.get('path')} schema={row.get('schema')} "
+                f"campaign={row.get('campaign_id') or '<none>'} "
+                f"status={row.get('saturation_status')} "
+                f"saved={row.get('selected_saved_bytes_vs_baseline', 0)} "
+                f"grouped_saved={row.get('grouped_saved_bytes_vs_selected_isolated', 0)} "
+                f"grouped_identity_saved={row.get('grouped_saved_bytes_vs_identity', 0)} "
+                f"over_floor={over_floor:.6g} "
+                f"receiver_work={row.get('receiver_work_justified') is True} "
+                f"demote={row.get('demotion_recommended') is True}"
+            )
+    lines.append("next command:")
+    lines.append(f"  {payload['next_command']}")
+    return "\n".join(lines)
+
+
 def _optimal_grammar_campaign_artifact_paths(
     scan_roots: tuple[Path, ...] | None = None,
     *,
@@ -7301,6 +7594,7 @@ def _dispatch_readiness() -> dict[str, object]:
     distortion_learned_sweep = _distortion_axis_learned_sweep_summary()
     dqs1_drop_many_greedy = _dqs1_drop_many_greedy_summary()
     tensor_payload_grammar = _tensor_payload_grammar_summary()
+    section_payload_grammar = _section_payload_grammar_summary()
     optimal_grammar_campaign = _optimal_grammar_campaign_summary()
     archive_contract_hygiene = _archive_bound_contract_hygiene_summary()
     return {
@@ -7431,6 +7725,33 @@ def _dispatch_readiness() -> dict[str, object]:
                 "total_grouped_saved_bytes_vs_identity"
             ],
             "max_selected_over_floor_ratio": tensor_payload_grammar[
+                "max_selected_over_floor_ratio"
+            ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
+        "phase_6c_section_payload_grammar": {
+            "status": section_payload_grammar["status"],
+            "reason": section_payload_grammar["reason"],
+            "artifact_count": section_payload_grammar["artifact_count"],
+            "optimizer_report_count": section_payload_grammar["optimizer_report_count"],
+            "consumer_result_count": section_payload_grammar["consumer_result_count"],
+            "receiver_work_justified_count": section_payload_grammar[
+                "receiver_work_justified_count"
+            ],
+            "demotion_recommended_count": section_payload_grammar[
+                "demotion_recommended_count"
+            ],
+            "total_selected_saved_bytes_vs_baseline": section_payload_grammar[
+                "total_selected_saved_bytes_vs_baseline"
+            ],
+            "total_grouped_saved_bytes_vs_selected_isolated": section_payload_grammar[
+                "total_grouped_saved_bytes_vs_selected_isolated"
+            ],
+            "total_grouped_saved_bytes_vs_identity": section_payload_grammar[
+                "total_grouped_saved_bytes_vs_identity"
+            ],
+            "max_selected_over_floor_ratio": section_payload_grammar[
                 "max_selected_over_floor_ratio"
             ],
             "ready_for_exact_eval_dispatch": False,
@@ -7775,6 +8096,7 @@ def main(argv: list[str] | None = None) -> int:
             "public_submission_audit": _public_submission_audit_status(),
             "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
             "tensor_payload_grammar": _tensor_payload_grammar_summary(),
+            "section_payload_grammar": _section_payload_grammar_summary(),
             "optimal_grammar_campaign": _optimal_grammar_campaign_summary(),
             "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
             "pr95_mlx_control_profiles": _pr95_mlx_control_profile_summary(),
@@ -7935,6 +8257,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6c.1 — Generic tensor payload grammar",
         _format_tensor_payload_grammar_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6c.1b — Generic section payload grammar",
+        _format_section_payload_grammar_summary(),
     ))
     parts.append(_section(
         "Phase 6c.2 — PR101 grouped optimal-grammar campaign",
