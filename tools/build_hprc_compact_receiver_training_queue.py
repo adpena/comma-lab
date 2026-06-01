@@ -71,6 +71,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--residual-grid-h", type=int, default=24)
     parser.add_argument("--residual-grid-w", type=int, default=32)
     parser.add_argument(
+        "--training-backend",
+        choices=("auto", "mlx", "numpy"),
+        default="auto",
+        help=(
+            "Local trainer backend. Default is MLX/Metal when available; exported "
+            "archives remain numpy-portable for contest CPU/T4 auth eval."
+        ),
+    )
+    parser.add_argument(
         "--enable-native-rate-aware-hprc",
         action="store_true",
         help="Train HPRC residual tokens with native rate pressure before archive export.",
@@ -162,6 +171,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=("global_weighted", "eligible_low"),
     )
     parser.add_argument("--hprc-rate-collapse-importance-protected-spec")
+    parser.add_argument(
+        "--hprc-rate-collapse-waterfill-low-spec",
+        default="dz0_qd10",
+        help=(
+            "Default low-importance residual collapse used when P18/P19 artifacts "
+            "are provided but no explicit residual-collapse schedule is set."
+        ),
+    )
+    parser.add_argument(
+        "--hprc-rate-collapse-waterfill-high-spec",
+        default="dz0_qd1",
+        help=(
+            "Default high-importance residual collapse for P18/P19 waterfill; "
+            "keeps boundaries/pose-sensitive cells near-lossless."
+        ),
+    )
+    parser.add_argument(
+        "--hprc-rate-collapse-waterfill-coarsen-quantile",
+        type=float,
+        default=0.25,
+        help=(
+            "Default fraction of explicit low-importance P19-null cells to coarsen "
+            "when P18/P19 artifacts are present."
+        ),
+    )
     parser.add_argument(
         "--hprc-rate-collapse-distortion-reserve",
         type=float,
@@ -265,6 +299,7 @@ def main(argv: list[str] | None = None) -> int:
                 basis_count=int(args.basis_count),
                 residual_grid_h=int(args.residual_grid_h),
                 residual_grid_w=int(args.residual_grid_w),
+                training_backend=str(args.training_backend),
                 native_rate_aware=bool(args.enable_native_rate_aware_hprc),
                 native_rate_residual_l1_weight=float(args.native_rate_residual_l1_weight),
                 native_rate_residual_prox_weight=float(args.native_rate_residual_prox_weight),
@@ -365,6 +400,7 @@ def build_hprc_compact_receiver_training_plan(
     basis_count: int,
     residual_grid_h: int,
     residual_grid_w: int,
+    training_backend: str,
     native_rate_aware: bool,
     native_rate_residual_l1_weight: float,
     native_rate_residual_prox_weight: float,
@@ -402,6 +438,8 @@ def build_hprc_compact_receiver_training_plan(
         str(int(residual_grid_h)),
         "--residual-grid-w",
         str(int(residual_grid_w)),
+        "--training-backend",
+        str(training_backend),
     ]
     if native_rate_aware:
         command.append("--native-rate-aware")
@@ -518,6 +556,8 @@ def build_hprc_compact_receiver_training_plan(
             "basis_count": int(basis_count),
             "residual_grid_h": int(residual_grid_h),
             "residual_grid_w": int(residual_grid_w),
+            "training_backend": str(training_backend),
+            "portable_runtime": "numpy",
             "native_rate_aware": bool(native_rate_aware),
             "native_rate_residual_l1_weight": float(native_rate_residual_l1_weight),
             "native_rate_residual_prox_weight": float(native_rate_residual_prox_weight),
@@ -528,9 +568,13 @@ def build_hprc_compact_receiver_training_plan(
         "recommended_execution": {
             "schema": "hprc_compact_receiver_training_recommended_execution.v1",
             "tool": "tools/run_hprc_compact_receiver_training.py",
-            "training_backend": "local_numpy",
-            "device": "local_numpy",
-            "resource_kind": "local_cpu",
+            "training_backend": str(training_backend),
+            "device": "auto" if str(training_backend) == "auto" else str(training_backend),
+            "resource_kind": "local_mlx"
+            if str(training_backend) in {"auto", "mlx"}
+            else "local_cpu",
+            "portable_runtime": "numpy",
+            "contest_runtime_requires_mlx": False,
             "output_manifest": output_manifest.as_posix(),
             "python_command_args": command,
             "extra_artifact_postconditions": extra_postconditions,
@@ -988,6 +1032,16 @@ def _hprc_rate_collapse_step(
         command.extend(["--sections", str(raw)])
     for raw in args.hprc_rate_collapse_residual_collapse_schedule or []:
         command.extend(["--residual-collapse-schedule", str(raw)])
+    if (
+        _rate_collapse_requests_structured_waterfill(args)
+        and not args.hprc_rate_collapse_residual_collapse_schedule
+    ):
+        command.extend(
+            [
+                "--residual-collapse-schedule",
+                str(args.hprc_rate_collapse_waterfill_low_spec),
+            ]
+        )
     if _rate_collapse_requests_lossy_residual(args):
         command.append("--enable-lossy-residual-collapse")
     if args.hprc_rate_collapse_residual_importance_npy is not None:
@@ -1001,9 +1055,10 @@ def _hprc_rate_collapse_step(
                 _repo_rel_or_abs(importance_npy, repo_root),
             ]
         )
-    if args.hprc_rate_collapse_p19_posenet_null_pairs is not None:
+    p19_posenet_null_pairs = _rate_collapse_p19_posenet_null_pairs(args)
+    if p19_posenet_null_pairs is not None:
         p19_path = _resolve_path(
-            args.hprc_rate_collapse_p19_posenet_null_pairs,
+            p19_posenet_null_pairs,
             repo_root=repo_root,
         )
         command.extend(
@@ -1012,9 +1067,10 @@ def _hprc_rate_collapse_step(
                 _repo_rel_or_abs(p19_path, repo_root),
             ]
         )
-    if args.hprc_rate_collapse_p18_segnet_region_waterfill is not None:
+    p18_segnet_region_waterfill = _rate_collapse_p18_segnet_region_waterfill(args)
+    if p18_segnet_region_waterfill is not None:
         p18_path = _resolve_path(
-            args.hprc_rate_collapse_p18_segnet_region_waterfill,
+            p18_segnet_region_waterfill,
             repo_root=repo_root,
         )
         command.extend(
@@ -1023,25 +1079,34 @@ def _hprc_rate_collapse_step(
                 _repo_rel_or_abs(p18_path, repo_root),
             ]
         )
-    if args.hprc_rate_collapse_importance_coarsen_quantile is not None:
+    coarsen_quantile = args.hprc_rate_collapse_importance_coarsen_quantile
+    if coarsen_quantile is None and _rate_collapse_requests_structured_waterfill(args):
+        coarsen_quantile = float(args.hprc_rate_collapse_waterfill_coarsen_quantile)
+    if coarsen_quantile is not None:
         command.extend(
             [
                 "--importance-coarsen-quantile",
-                repr(float(args.hprc_rate_collapse_importance_coarsen_quantile)),
+                repr(float(coarsen_quantile)),
             ]
         )
-    if args.hprc_rate_collapse_importance_selection_domain is not None:
+    selection_domain = args.hprc_rate_collapse_importance_selection_domain
+    if selection_domain is None and _rate_collapse_requests_structured_waterfill(args):
+        selection_domain = "eligible_low"
+    if selection_domain is not None:
         command.extend(
             [
                 "--importance-selection-domain",
-                str(args.hprc_rate_collapse_importance_selection_domain),
+                str(selection_domain),
             ]
         )
-    if args.hprc_rate_collapse_importance_protected_spec is not None:
+    protected_spec = args.hprc_rate_collapse_importance_protected_spec
+    if protected_spec is None and _rate_collapse_requests_structured_waterfill(args):
+        protected_spec = str(args.hprc_rate_collapse_waterfill_high_spec)
+    if protected_spec is not None:
         command.extend(
             [
                 "--importance-protected-spec",
-                str(args.hprc_rate_collapse_importance_protected_spec),
+                str(protected_spec),
             ]
         )
     if skip_receiver_proof:
@@ -1120,9 +1185,33 @@ def _rate_collapse_requests_lossy_residual(args: argparse.Namespace) -> bool:
     return bool(
         args.hprc_rate_collapse_residual_collapse_schedule
         or args.hprc_rate_collapse_residual_importance_npy is not None
-        or args.hprc_rate_collapse_p19_posenet_null_pairs is not None
-        or args.hprc_rate_collapse_p18_segnet_region_waterfill is not None
+        or _rate_collapse_p19_posenet_null_pairs(args) is not None
+        or _rate_collapse_p18_segnet_region_waterfill(args) is not None
     )
+
+
+def _rate_collapse_requests_structured_waterfill(args: argparse.Namespace) -> bool:
+    return bool(
+        _rate_collapse_p19_posenet_null_pairs(args) is not None
+        or _rate_collapse_p18_segnet_region_waterfill(args) is not None
+        or args.hprc_rate_collapse_residual_importance_npy is not None
+    )
+
+
+def _rate_collapse_p19_posenet_null_pairs(args: argparse.Namespace) -> Path | None:
+    if args.hprc_rate_collapse_p19_posenet_null_pairs is not None:
+        return args.hprc_rate_collapse_p19_posenet_null_pairs
+    if args.hprc_rate_collapse_residual_importance_npy is not None:
+        return None
+    return args.native_rate_p19_posenet_null_pairs
+
+
+def _rate_collapse_p18_segnet_region_waterfill(args: argparse.Namespace) -> Path | None:
+    if args.hprc_rate_collapse_p18_segnet_region_waterfill is not None:
+        return args.hprc_rate_collapse_p18_segnet_region_waterfill
+    if args.hprc_rate_collapse_residual_importance_npy is not None:
+        return None
+    return args.native_rate_p18_segnet_region_waterfill
 
 
 def _rate_gate_margin(args: argparse.Namespace) -> float:

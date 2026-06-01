@@ -108,6 +108,9 @@ def test_hprc_campaign_queue_scales_and_gates_full_video(tmp_path: Path) -> None
         rate_collapse["command"][rate_collapse["command"].index("--residual-collapse-schedule") + 1]
         == "dz0_qd10"
     )
+    assert "--training-backend" in train_command
+    assert train_command[train_command.index("--training-backend") + 1] == "auto"
+    assert queue["experiments"][2]["steps"][0]["resources"]["kind"] == "local_mlx"
     assert "--p19-posenet-null-pairs" in rate_collapse["command"]
     assert "--p18-segnet-region-waterfill" in rate_collapse["command"]
     assert "--importance-coarsen-quantile" in rate_collapse["command"]
@@ -148,15 +151,132 @@ def test_hprc_campaign_queue_scales_and_gates_full_video(tmp_path: Path) -> None
         command_part.endswith("hprc_rate_collapse/best_archive_export/archive.zip")
         for command_part in replay_step["command"]
     )
-    gate_command = queue["experiments"][2]["steps"][6]["command"]
+
+
+def test_hprc_rate_collapse_defaults_to_p18_p19_waterfill(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+    p19_artifact = repo_root / ".omx" / "research" / "p19_posenet_null_pairs.json"
+    p18_artifact = repo_root / ".omx" / "research" / "p18_segnet_region_waterfill.json"
+    p19_artifact.parent.mkdir(parents=True)
+    p19_artifact.write_text("{}")
+    p18_artifact.write_text("{}")
+
+    assert (
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--campaign-pairs",
+                "600",
+                "--epochs",
+                "1",
+                "--auth-frontier-score",
+                "0.19",
+                "--hprc-rate-collapse-p19-posenet-null-pairs",
+                p19_artifact.as_posix(),
+                "--hprc-rate-collapse-p18-segnet-region-waterfill",
+                p18_artifact.as_posix(),
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+        == 0
+    )
+
+    queue = json.loads(queue_path.read_text())
+    command = queue["experiments"][0]["steps"][1]["command"]
+    assert command[command.index("--residual-collapse-schedule") + 1] == "dz0_qd10"
+    assert command[command.index("--importance-selection-domain") + 1] == "eligible_low"
+    assert command[command.index("--importance-coarsen-quantile") + 1] == "0.25"
+    assert command[command.index("--importance-protected-spec") + 1] == "dz0_qd1"
+    gate_command = queue["experiments"][0]["steps"][6]["command"]
     assert "--success-on-blocked" in gate_command
     assert "--auth-frontier-score" in gate_command
-    post_replay = queue["experiments"][2]["steps"][7]
+    post_replay = queue["experiments"][0]["steps"][7]
     assert post_replay["requires"] == ["gate_exact_cpu_after_local_replay"]
     assert any(
         command_part.endswith("hprc_queue_post_replay_report.json")
         for command_part in post_replay["command"]
     )
+
+
+def test_hprc_rate_collapse_reuses_native_p18_p19_waterfill_by_default(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+    p19_artifact = repo_root / ".omx" / "research" / "p19_posenet_null_pairs.json"
+    p18_artifact = repo_root / ".omx" / "research" / "p18_segnet_region_waterfill.json"
+    p19_artifact.parent.mkdir(parents=True)
+    p19_artifact.write_text("{}")
+    p18_artifact.write_text("{}")
+
+    assert (
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--campaign-pairs",
+                "600",
+                "--epochs",
+                "1",
+                "--enable-native-rate-aware-hprc",
+                "--native-rate-p19-posenet-null-pairs",
+                p19_artifact.as_posix(),
+                "--native-rate-p18-segnet-region-waterfill",
+                p18_artifact.as_posix(),
+                "--auth-frontier-score",
+                "0.19",
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+        == 0
+    )
+
+    queue = json.loads(queue_path.read_text())
+    steps = queue["experiments"][0]["steps"]
+    assert [step["id"] for step in steps[:3]] == [
+        "build_hprc_native_rate_residual_protection_surface",
+        "run_local_training",
+        "transcode_hprc_rate_collapse",
+    ]
+    command = steps[2]["command"]
+    assert "--enable-lossy-residual-collapse" in command
+    assert command[command.index("--residual-collapse-schedule") + 1] == "dz0_qd10"
+    assert command[command.index("--p19-posenet-null-pairs") + 1].endswith(
+        "p19_posenet_null_pairs.json"
+    )
+    assert command[command.index("--p18-segnet-region-waterfill") + 1].endswith(
+        "p18_segnet_region_waterfill.json"
+    )
+    assert command[command.index("--importance-selection-domain") + 1] == "eligible_low"
+    assert command[command.index("--importance-protected-spec") + 1] == "dz0_qd1"
 
 
 def test_hprc_campaign_queue_binds_optional_z8_followups(tmp_path: Path) -> None:

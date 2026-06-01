@@ -20,6 +20,7 @@ from typing import Any
 import numpy as np
 
 import tac.substrates.hprc.archive_candidate as hprc_archive_candidate
+from tac.framework_agnostic import is_mlx_runtime_available, require_mlx_core
 from tac.substrates.hprc.archive import HprcPacketConfig, HprcSectionKind, pack_hprc_packet
 from tac.substrates.hprc.learned_receiver import (
     COMPACT_NUMPY_DECODER_FAMILY_ID,
@@ -37,6 +38,8 @@ from tac.substrates.hprc.learned_receiver import (
 HPRC_LONG_TRAINING_SUBSTRATE_ID = "hprc_compact_receiver"
 HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA = "hprc_compact_receiver_training_export.v1"
 HPRC_NATIVE_RATE_AWARE_TRAINING_SCHEMA = "hprc_native_rate_aware_training.v1"
+HPRC_MLX_TRAIN_NUMPY_PORTABLE_SCHEMA = "hprc_mlx_trained_numpy_portable_export.v1"
+HPRC_TRAINING_BACKENDS = frozenset({"auto", "numpy", "mlx"})
 
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
@@ -70,6 +73,42 @@ def _downsample_sum_nearest_inverse(frame: np.ndarray, grid_h: int, grid_w: int)
     out = np.zeros((int(grid_h) * int(grid_w), int(channels)), dtype=np.float64)
     np.add.at(out, cell, arr.reshape((-1, int(channels))))
     return out.reshape((int(grid_h), int(grid_w), int(channels)))
+
+
+def _nearest_resize_batch_mlx(mx: Any, frames: Any, height: int, width: int) -> Any:
+    """Nearest-neighbor resize for NHWC MLX arrays.
+
+    Training can use MLX/Metal, but the receiver runtime remains numpy-only.
+    Keeping this helper local to the training adapter avoids pulling MLX into
+    archive decode paths.
+    """
+
+    src_h, src_w = int(frames.shape[1]), int(frames.shape[2])
+    y_idx = (np.arange(int(height), dtype=np.int32) * src_h // int(height)).clip(0, src_h - 1)
+    x_idx = (np.arange(int(width), dtype=np.int32) * src_w // int(width)).clip(0, src_w - 1)
+    return frames[:, mx.array(y_idx), :, :][:, :, mx.array(x_idx), :]
+
+
+def _training_backend_requested(value: str) -> str:
+    backend = str(value or "auto").strip().lower()
+    if backend not in HPRC_TRAINING_BACKENDS:
+        raise ValueError(
+            f"HPRC training backend must be one of {sorted(HPRC_TRAINING_BACKENDS)}, got {value!r}"
+        )
+    return backend
+
+
+def _select_training_backend(value: str) -> str:
+    requested = _training_backend_requested(value)
+    if requested == "auto":
+        return "mlx" if is_mlx_runtime_available() else "numpy"
+    if requested == "mlx":
+        require_mlx_core()
+    return requested
+
+
+def _mx_scalar(value: Any) -> float:
+    return float(np.array(value).reshape(()))
 
 
 def _normalize_frames(frames: np.ndarray) -> np.ndarray:
@@ -201,6 +240,14 @@ class HprcCompactReceiverTrainingModel:
             residual=float(initial_residual_gain),
             receiver_state=float(initial_receiver_state_gain),
         )
+        self.training_backend_lineage: dict[str, Any] = {
+            "schema": HPRC_MLX_TRAIN_NUMPY_PORTABLE_SCHEMA,
+            "requested_training_backend": "numpy",
+            "effective_training_backend": "numpy",
+            "portable_runtime": "numpy",
+            "contest_runtime_requires_mlx": False,
+            "contest_runtime_requires_torch": False,
+        }
         self.train_steps = 0
 
     @property
@@ -275,6 +322,7 @@ class HprcCompactReceiverTrainingModel:
             "output_resize": "bilinear",
             "output_resize_alignment": "bilinear_align_corners_false",
             "train_steps": int(self.train_steps),
+            "training_backend": dict(self.training_backend_lineage),
             "score_claim": False,
             "promotion_eligible": False,
         }
@@ -286,6 +334,8 @@ class HprcCompactReceiverTrainingModel:
             "z8_scorer_weighted_residual_sidecar_ready": False,
             "mamba_dreamer_stack_ready": False,
             "exact_cpu_cuda_authority_ready": False,
+            "training_backend": dict(self.training_backend_lineage),
+            "portable_runtime": "numpy",
             "training_adapter": HPRC_LONG_TRAINING_SUBSTRATE_ID,
             "target_frame_count": self.frame_count,
             "target_height": int(self.packet_config.height),
@@ -352,7 +402,11 @@ class HprcCompactReceiverLongTrainingAdapter:
         rate_aware_residual_l1_weight: float = 0.0,
         rate_aware_residual_prox_weight: float = 0.0,
         residual_protection: np.ndarray | None = None,
+        training_backend: str = "auto",
     ) -> None:
+        self.requested_training_backend = _training_backend_requested(training_backend)
+        self.effective_training_backend = _select_training_backend(self.requested_training_backend)
+        self._mlx = require_mlx_core() if self.effective_training_backend == "mlx" else None
         self.model = HprcCompactReceiverTrainingModel(
             frames,
             basis_count=basis_count,
@@ -364,6 +418,18 @@ class HprcCompactReceiverLongTrainingAdapter:
             initial_receiver_state_gain=initial_receiver_state_gain,
             gain_bounds=gain_bounds,
         )
+        self.model.training_backend_lineage = {
+            "schema": HPRC_MLX_TRAIN_NUMPY_PORTABLE_SCHEMA,
+            "requested_training_backend": self.requested_training_backend,
+            "effective_training_backend": self.effective_training_backend,
+            "portable_runtime": "numpy",
+            "portable_archive_contract": "hprc_packet_plus_numpy_decode_only_receiver",
+            "contest_runtime_requires_mlx": False,
+            "contest_runtime_requires_torch": False,
+            "contest_auth_eval_path": "inflate.sh -> numpy receiver -> upstream evaluate.py",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
         self.repo_root = None if repo_root is None else Path(repo_root)
         self.retain_receiver_proof_output = bool(retain_receiver_proof_output)
         self.emit_archive_bound_candidate_package = bool(emit_archive_bound_candidate_package)
@@ -424,7 +490,10 @@ class HprcCompactReceiverLongTrainingAdapter:
         learning_rate: float,
         loss_weights: Mapping[str, float],
     ) -> Mapping[str, float]:
-        loss, grads, metrics = self._loss_and_grads(self.model, batch, loss_weights)
+        if self.effective_training_backend == "mlx":
+            loss, grads, metrics = self._loss_and_grads_mlx(self.model, batch, loss_weights)
+        else:
+            loss, grads, metrics = self._loss_and_grads(self.model, batch, loss_weights)
         latent = self.model.latent_gain - float(learning_rate) * grads[0]
         residual = self.model.residual_gain - float(learning_rate) * grads[1]
         state = self.model.receiver_state_gain - float(learning_rate) * grads[2]
@@ -435,11 +504,18 @@ class HprcCompactReceiverLongTrainingAdapter:
                 receiver_state=state,
             )
         )
-        rate_update = self._apply_native_residual_rate_step(
-            batch=batch,
-            learning_rate=float(learning_rate),
-            loss_weights=loss_weights,
-        )
+        if self.effective_training_backend == "mlx":
+            rate_update = self._apply_native_residual_rate_step_mlx(
+                batch=batch,
+                learning_rate=float(learning_rate),
+                loss_weights=loss_weights,
+            )
+        else:
+            rate_update = self._apply_native_residual_rate_step(
+                batch=batch,
+                learning_rate=float(learning_rate),
+                loss_weights=loss_weights,
+            )
         self.model.train_steps += 1
         return {
             "total": float(loss),
@@ -500,6 +576,114 @@ class HprcCompactReceiverLongTrainingAdapter:
             "residual_nonzero_fraction": float(np.count_nonzero(model.residual) / model.residual.size),
         }
 
+    def _mlx_common_tensors(
+        self,
+        model: HprcCompactReceiverTrainingModel,
+        frame_indices: np.ndarray,
+    ) -> dict[str, Any]:
+        mx = self._mlx or require_mlx_core()
+        indices = np.asarray(frame_indices, dtype=np.int64).reshape(-1)
+        target = mx.array(model.target_frames[indices].astype(np.float32, copy=False))
+        mean = mx.broadcast_to(mx.array(model.mean.astype(np.float32, copy=False)), target.shape)
+        basis = mx.array(model.basis.astype(np.float32, copy=False))
+        latents = mx.array(model.latents[indices].astype(np.float32, copy=False))
+        latent_component = mx.tensordot(latents, basis, axes=([1], [0]))
+        selector = mx.array(model.selectors[indices].astype(np.float32, copy=False)).reshape(
+            (int(indices.size), 1, 1, 1)
+        )
+        pair_indices = (
+            indices // max(int(model.packet_config.gop_size), 1)
+        ).clip(0, model.receiver_state.shape[0] - 1)
+        if model.receiver_state.shape[1] >= 3:
+            state = mx.array(model.receiver_state[pair_indices, :3].astype(np.float32, copy=False))
+            state_component = mx.broadcast_to(state.reshape((int(indices.size), 1, 1, 3)), target.shape)
+        else:
+            state_component = mx.zeros_like(target)
+        return {
+            "mx": mx,
+            "target": target,
+            "mean": mean,
+            "latent_component": latent_component,
+            "selector": selector,
+            "state_component": state_component,
+            "height": int(model.packet_config.height),
+            "width": int(model.packet_config.width),
+            "frame_indices": indices,
+        }
+
+    def _mlx_prediction_from_residual(
+        self,
+        model: HprcCompactReceiverTrainingModel,
+        common: Mapping[str, Any],
+        residual_batch: Any,
+    ) -> tuple[Any, Any]:
+        mx = common["mx"]
+        residual_component = common["selector"] * _nearest_resize_batch_mlx(
+            mx,
+            residual_batch,
+            int(common["height"]),
+            int(common["width"]),
+        )
+        pred = (
+            common["mean"]
+            + float(model.latent_gain) * common["latent_component"]
+            + float(model.residual_gain) * residual_component
+            + float(model.receiver_state_gain) * common["state_component"]
+        )
+        return pred, residual_component
+
+    def _loss_and_grads_mlx(
+        self,
+        model: HprcCompactReceiverTrainingModel,
+        batch: Mapping[str, Any],
+        loss_weights: Mapping[str, float],
+    ) -> tuple[float, tuple[float, float, float], dict[str, float]]:
+        frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
+        if frame_indices.size == 0:
+            raise ValueError("HPRC training batch contains no frames")
+        mx = self._mlx or require_mlx_core()
+        common = self._mlx_common_tensors(model, frame_indices)
+        residual_batch = mx.array(model.residual[frame_indices].astype(np.float32, copy=False))
+        pred, residual_component = self._mlx_prediction_from_residual(model, common, residual_batch)
+        diff = pred - common["target"]
+        recon_weight = float(loss_weights.get("recon", 1.0))
+        gain_l2_weight = float(loss_weights.get("gain_l2", 0.0))
+        residual_l1_weight = self._residual_l1_weight(loss_weights)
+        mse = mx.mean(diff * diff)
+        grad_scale = 2.0 / float(np.prod(model.target_frames.shape[1:]) * frame_indices.size)
+        grad_latent = mx.sum(diff * common["latent_component"]) * grad_scale
+        grad_residual = mx.sum(diff * residual_component) * grad_scale
+        grad_state = mx.sum(diff * common["state_component"]) * grad_scale
+        recon_objective = mse
+        if gain_l2_weight:
+            defaults = mx.array([1.0, 1.0, 0.25], dtype=mx.float32)
+            gains = mx.array(
+                [model.latent_gain, model.residual_gain, model.receiver_state_gain],
+                dtype=mx.float32,
+            )
+            delta = gains - defaults
+            recon_objective = recon_objective + float(gain_l2_weight) * mx.sum(delta * delta)
+            grad_l2 = 2.0 * float(gain_l2_weight) * delta
+            grad_latent = grad_latent + grad_l2[0]
+            grad_residual = grad_residual + grad_l2[1]
+            grad_state = grad_state + grad_l2[2]
+        pressure = mx.array(self._residual_rate_pressure()[frame_indices].astype(np.float32, copy=False))
+        residual_rate_l1 = mx.mean(mx.abs(residual_batch) * pressure)
+        total_loss = float(recon_weight) * recon_objective + float(residual_l1_weight) * residual_rate_l1
+        grads = (
+            float(recon_weight) * grad_latent,
+            float(recon_weight) * grad_residual,
+            float(recon_weight) * grad_state,
+        )
+        mx.eval(total_loss, mse, residual_rate_l1, *grads)
+        return _mx_scalar(total_loss), tuple(_mx_scalar(g) for g in grads), {
+            "recon": _mx_scalar(mse),
+            "residual_rate_l1_proxy": _mx_scalar(residual_rate_l1),
+            "residual_rate_l1_weight": float(residual_l1_weight),
+            "residual_nonzero_fraction": float(np.count_nonzero(model.residual) / model.residual.size),
+            "loss_backend_is_mlx": 1.0,
+        }
+
     def _residual_l1_weight(self, loss_weights: Mapping[str, float]) -> float:
         explicit = loss_weights.get("residual_rate_l1")
         if explicit is not None:
@@ -540,6 +724,7 @@ class HprcCompactReceiverLongTrainingAdapter:
                 "native_rate_residual_update_l1_weight": 0.0,
                 "native_rate_residual_update_prox_weight": 0.0,
                 "native_rate_residual_mean_abs_delta": 0.0,
+                "native_rate_residual_update_backend_is_mlx": 0.0,
             }
         frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
         if frame_indices.size == 0:
@@ -547,6 +732,7 @@ class HprcCompactReceiverLongTrainingAdapter:
                 "native_rate_residual_update_l1_weight": float(l1_weight),
                 "native_rate_residual_update_prox_weight": float(prox_weight),
                 "native_rate_residual_mean_abs_delta": 0.0,
+                "native_rate_residual_update_backend_is_mlx": 0.0,
             }
         before = self.model.residual[frame_indices].copy()
         pressure_all = self._residual_rate_pressure()
@@ -581,6 +767,65 @@ class HprcCompactReceiverLongTrainingAdapter:
             "native_rate_residual_update_l1_weight": float(l1_weight),
             "native_rate_residual_update_prox_weight": float(prox_weight),
             "native_rate_residual_mean_abs_delta": float(np.mean(np.abs(after - before))),
+            "native_rate_residual_update_backend_is_mlx": 0.0,
+        }
+
+    def _apply_native_residual_rate_step_mlx(
+        self,
+        *,
+        batch: Mapping[str, Any],
+        learning_rate: float,
+        loss_weights: Mapping[str, float],
+    ) -> dict[str, float]:
+        l1_weight = self._residual_l1_weight(loss_weights)
+        prox_weight = self._residual_prox_weight(loss_weights)
+        if l1_weight <= 0.0 and prox_weight <= 0.0:
+            return {
+                "native_rate_residual_update_l1_weight": 0.0,
+                "native_rate_residual_update_prox_weight": 0.0,
+                "native_rate_residual_mean_abs_delta": 0.0,
+                "native_rate_residual_update_backend_is_mlx": 1.0,
+            }
+        frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
+        if frame_indices.size == 0:
+            return {
+                "native_rate_residual_update_l1_weight": float(l1_weight),
+                "native_rate_residual_update_prox_weight": float(prox_weight),
+                "native_rate_residual_mean_abs_delta": 0.0,
+                "native_rate_residual_update_backend_is_mlx": 1.0,
+            }
+        mx = self._mlx or require_mlx_core()
+        before = self.model.residual[frame_indices].copy()
+        common = self._mlx_common_tensors(self.model, frame_indices)
+        residual_batch = mx.array(before.astype(np.float32, copy=False))
+        pressure = mx.array(self._residual_rate_pressure()[frame_indices].astype(np.float32, copy=False))
+        recon_weight = float(loss_weights.get("recon", 1.0))
+
+        def residual_objective(residual_value: Any) -> Any:
+            pred, _residual_component = self._mlx_prediction_from_residual(
+                self.model,
+                common,
+                residual_value,
+            )
+            diff = pred - common["target"]
+            recon = float(recon_weight) * mx.mean(diff * diff)
+            rate = float(l1_weight) * mx.mean(mx.abs(residual_value) * pressure)
+            return recon + rate
+
+        loss_value, grad = mx.value_and_grad(residual_objective)(residual_batch)
+        updated = residual_batch - float(learning_rate) * grad
+        if prox_weight > 0.0:
+            shrink = float(learning_rate) * float(prox_weight) * pressure
+            updated = mx.sign(updated) * mx.maximum(mx.abs(updated) - shrink, 0.0)
+        mx.eval(loss_value, updated)
+        updated_np = np.nan_to_num(np.array(updated), copy=False).astype(np.float32, copy=False)
+        self.model.residual[frame_indices] = updated_np
+        after = self.model.residual[frame_indices]
+        return {
+            "native_rate_residual_update_l1_weight": float(l1_weight),
+            "native_rate_residual_update_prox_weight": float(prox_weight),
+            "native_rate_residual_mean_abs_delta": float(np.mean(np.abs(after - before))),
+            "native_rate_residual_update_backend_is_mlx": 1.0,
         }
 
     def export_state_dict(self, model: HprcCompactReceiverTrainingModel, path: Path) -> None:
@@ -652,6 +897,15 @@ class HprcCompactReceiverLongTrainingAdapter:
             "schema": "hprc_compact_receiver_training_metadata.v1",
             "receiver_mode": COMPACT_RECEIVER_MODE,
             "portable_runtime": "numpy",
+            "training_backend": {
+                "schema": HPRC_MLX_TRAIN_NUMPY_PORTABLE_SCHEMA,
+                "requested_training_backend": self.requested_training_backend,
+                "effective_training_backend": self.effective_training_backend,
+                "portable_runtime": "numpy",
+                "archive_export_runtime_requires_mlx": False,
+                "contest_runtime_requires_mlx": False,
+                "contest_runtime_requires_torch": False,
+            },
             "training_surface": "rdo_gain_projection_over_fixed_compact_components",
             "native_rate_aware_training": {
                 "schema": HPRC_NATIVE_RATE_AWARE_TRAINING_SCHEMA,
@@ -684,7 +938,9 @@ class HprcCompactReceiverLongTrainingAdapter:
 __all__ = [
     "HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA",
     "HPRC_LONG_TRAINING_SUBSTRATE_ID",
+    "HPRC_MLX_TRAIN_NUMPY_PORTABLE_SCHEMA",
     "HPRC_NATIVE_RATE_AWARE_TRAINING_SCHEMA",
+    "HPRC_TRAINING_BACKENDS",
     "HprcCompactReceiverLongTrainingAdapter",
     "HprcCompactReceiverTrainingModel",
     "HprcGainBounds",

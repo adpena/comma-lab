@@ -61,6 +61,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--basis-count", type=int, default=3)
     parser.add_argument("--residual-grid-h", type=int, default=24)
     parser.add_argument("--residual-grid-w", type=int, default=32)
+    parser.add_argument(
+        "--training-backend",
+        choices=("auto", "mlx", "numpy"),
+        default="auto",
+        help=(
+            "Train with MLX/Metal when available, but always export a numpy-only "
+            "receiver archive for contest CPU/T4 auth eval."
+        ),
+    )
     parser.add_argument("--initial-latent-gain", type=float, default=1.0)
     parser.add_argument("--initial-residual-gain", type=float, default=1.0)
     parser.add_argument("--initial-receiver-state-gain", type=float, default=0.25)
@@ -133,6 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         rate_aware_residual_l1_weight=float(args.rate_aware_residual_l1_weight),
         rate_aware_residual_prox_weight=float(args.rate_aware_residual_prox_weight),
         residual_protection=residual_protection,
+        training_backend=str(args.training_backend),
     )
     loss_weights = {"recon": 1.0}
     if bool(args.native_rate_aware):
@@ -174,6 +184,13 @@ def main(argv: list[str] | None = None) -> int:
         else storage_plan_for_result.as_posix(),
         "source_manifest": source_manifest,
         "residual_protection_manifest": protection_manifest,
+        "training_backend": {
+            "requested": str(args.training_backend),
+            "effective": adapter.effective_training_backend,
+            "portable_runtime": "numpy",
+            "contest_runtime_requires_mlx": False,
+            "contest_runtime_requires_torch": False,
+        },
         "artifact": artifact.as_dict(),
         "runtime_consumption_proof_requested": not bool(args.skip_runtime_consumption_proof),
         "exact_axis_blocker": "contest_cpu_cuda_exact_eval_not_executed",

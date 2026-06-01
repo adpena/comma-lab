@@ -189,6 +189,40 @@ def test_hprc_native_rate_protection_blocks_residual_shrink() -> None:
     np.testing.assert_allclose(adapter.model.residual, before)
 
 
+def test_hprc_mlx_training_backend_exports_numpy_portable_packet() -> None:
+    pytest.importorskip("mlx.core")
+    adapter = HprcCompactReceiverLongTrainingAdapter(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=4,
+        residual_grid_w=5,
+        initial_latent_gain=0.0,
+        initial_residual_gain=0.0,
+        initial_receiver_state_gain=0.0,
+        native_rate_aware=True,
+        rate_aware_residual_prox_weight=0.25,
+        residual_protection=np.zeros((6, 4, 5, 3), dtype=np.float32),
+        emit_archive_bound_candidate_package=False,
+        training_backend="mlx",
+    )
+    batch = {"frame_indices": np.arange(6, dtype=np.int32)}
+
+    metrics = adapter.train_step(
+        batch,
+        learning_rate=0.01,
+        loss_weights={"recon": 1.0, "residual_rate_prox": 0.25},
+    )
+
+    assert adapter.effective_training_backend == "mlx"
+    assert metrics["loss_backend_is_mlx"] == 1.0
+    packet = parse_hprc_packet(adapter.model.packet_bytes())
+    compact = decode_compact_receiver_packet(packet)
+    assert compact.manifest["portable_runtime"] == "numpy"
+    assert compact.manifest["training_backend"]["effective_training_backend"] == "mlx"
+    assert compact.manifest["training_backend"]["contest_runtime_requires_mlx"] is False
+    assert compact.rdo_plan["training_backend"]["portable_runtime"] == "numpy"
+
+
 def test_hprc_gain_l2_gradient_matches_reweighted_loss() -> None:
     adapter = HprcCompactReceiverLongTrainingAdapter(
         _frames(),
@@ -236,6 +270,8 @@ def test_hprc_training_cli_materializes_storage_custody_result(
             "2",
             "--learning-rate",
             "0.01",
+            "--training-backend",
+            "numpy",
             "--skip-runtime-consumption-proof",
         ]
     )
@@ -244,6 +280,7 @@ def test_hprc_training_cli_materializes_storage_custody_result(
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema"] == hprc_training_tool.HPRC_LONG_TRAINING_RESULT_SCHEMA
     assert payload["runtime_consumption_proof_requested"] is False
+    assert payload["training_backend"]["effective"] == "numpy"
     assert payload["artifact"]["archive_path"]
     assert Path(payload["result_path"]).is_file()
     assert payload["score_claim"] is False
@@ -272,6 +309,8 @@ def test_hprc_training_cli_consumes_native_rate_protection_surface(
             "3",
             "--learning-rate",
             "0.01",
+            "--training-backend",
+            "numpy",
             "--residual-grid-h",
             "4",
             "--residual-grid-w",
@@ -291,6 +330,7 @@ def test_hprc_training_cli_consumes_native_rate_protection_surface(
     artifact_metadata = payload["artifact"]["substrate_artifact_metadata"]
     assert artifact_metadata["native_rate_aware_training"]["enabled"] is True
     assert artifact_metadata["native_rate_aware_training"]["residual_protection_present"] is True
+    assert artifact_metadata["training_backend"]["portable_runtime"] == "numpy"
 
 
 def test_hprc_training_cli_decodes_real_video_source_via_canonical_helper(
@@ -330,6 +370,8 @@ def test_hprc_training_cli_decodes_real_video_source_via_canonical_helper(
             "1",
             "--batch-pair-indices-per-step",
             "2",
+            "--training-backend",
+            "numpy",
             "--skip-runtime-consumption-proof",
         ]
     )
