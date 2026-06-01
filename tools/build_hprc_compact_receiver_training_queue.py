@@ -70,6 +70,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--basis-count", type=int, default=3)
     parser.add_argument("--residual-grid-h", type=int, default=24)
     parser.add_argument("--residual-grid-w", type=int, default=32)
+    parser.add_argument(
+        "--enable-native-rate-aware-hprc",
+        action="store_true",
+        help="Train HPRC residual tokens with native rate pressure before archive export.",
+    )
+    parser.add_argument("--native-rate-residual-l1-weight", type=float, default=0.0)
+    parser.add_argument("--native-rate-residual-prox-weight", type=float, default=0.0)
+    parser.add_argument(
+        "--native-rate-residual-protection-npy",
+        type=Path,
+        help="Precomputed residual protection surface consumed by native rate-aware training.",
+    )
+    parser.add_argument(
+        "--native-rate-p19-posenet-null-pairs",
+        type=Path,
+        help="Optional P19 artifact used to build the native HPRC train-time protection surface.",
+    )
+    parser.add_argument(
+        "--native-rate-p18-segnet-region-waterfill",
+        type=Path,
+        help="Optional P18 artifact used to protect SegNet-sensitive residual cells.",
+    )
+    parser.add_argument("--native-rate-default-protection", type=float, default=1.0)
+    parser.add_argument("--native-rate-p19-null-protection", type=float, default=0.15)
+    parser.add_argument("--native-rate-p18-region-protection", type=float, default=1.0)
     parser.add_argument("--local-cpu-concurrency", type=int, default=1)
     parser.add_argument("--local-mlx-concurrency", type=int, default=1)
     parser.add_argument("--timeout-seconds", type=int, default=1800)
@@ -203,6 +228,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     plans: list[dict[str, Any]] = []
+    native_surface_steps: list[dict[str, Any]] = []
     for pairs in campaign_pairs:
         campaign_output_dir = (
             run_root
@@ -213,6 +239,14 @@ def main(argv: list[str] | None = None) -> int:
         output_manifest = (
             campaign_output_dir / "hprc_compact_receiver_training_run_result.json"
         )
+        native_surface_step = _native_rate_surface_step_config(
+            args=args,
+            repo_root=repo_root,
+            output_dir=campaign_output_dir,
+            decode_pairs=int(pairs),
+        )
+        if native_surface_step is not None:
+            native_surface_steps.append(native_surface_step)
         plans.append(
             build_hprc_compact_receiver_training_plan(
                 repo_root=repo_root,
@@ -231,6 +265,14 @@ def main(argv: list[str] | None = None) -> int:
                 basis_count=int(args.basis_count),
                 residual_grid_h=int(args.residual_grid_h),
                 residual_grid_w=int(args.residual_grid_w),
+                native_rate_aware=bool(args.enable_native_rate_aware_hprc),
+                native_rate_residual_l1_weight=float(args.native_rate_residual_l1_weight),
+                native_rate_residual_prox_weight=float(args.native_rate_residual_prox_weight),
+                native_rate_residual_protection_npy=_native_rate_protection_npy_for_plan(
+                    args=args,
+                    repo_root=repo_root,
+                    output_dir=campaign_output_dir,
+                ),
                 skip_runtime_consumption_proof=(
                     bool(args.skip_runtime_consumption_proof)
                     or not bool(args.disable_hprc_rate_collapse)
@@ -250,24 +292,25 @@ def main(argv: list[str] | None = None) -> int:
     _append_campaign_followup_steps(
         queue,
         plans=plans,
+        native_surface_steps=native_surface_steps,
         args=args,
         repo_root=repo_root,
         full_replay_min_pairs=int(args.full_replay_min_pairs),
         timeout_seconds=int(args.timeout_seconds),
     )
     queue = normalize_queue_definition(queue)
-    plan_artifact: dict[str, Any] = (
-        plans[0]
-        if len(plans) == 1
-        else {
+    if len(plans) == 1 and not native_surface_steps:
+        plan_artifact: dict[str, Any] = plans[0]
+    else:
+        plan_artifact = {
             "schema": HPRC_TRAINING_PLAN_SUITE_SCHEMA,
             "run_id": run_id,
             "campaign_pairs": campaign_pairs,
             "plan_count": len(plans),
             "plans": plans,
+            "native_rate_surface_steps": native_surface_steps,
             **FALSE_AUTHORITY,
         }
-    )
     _write_json(
         plan_output,
         plan_artifact,
@@ -322,6 +365,10 @@ def build_hprc_compact_receiver_training_plan(
     basis_count: int,
     residual_grid_h: int,
     residual_grid_w: int,
+    native_rate_aware: bool,
+    native_rate_residual_l1_weight: float,
+    native_rate_residual_prox_weight: float,
+    native_rate_residual_protection_npy: Path | None,
     skip_runtime_consumption_proof: bool,
     retain_receiver_output: bool,
 ) -> dict[str, Any]:
@@ -356,6 +403,23 @@ def build_hprc_compact_receiver_training_plan(
         "--residual-grid-w",
         str(int(residual_grid_w)),
     ]
+    if native_rate_aware:
+        command.append("--native-rate-aware")
+        command.extend(
+            [
+                "--rate-aware-residual-l1-weight",
+                repr(float(native_rate_residual_l1_weight)),
+                "--rate-aware-residual-prox-weight",
+                repr(float(native_rate_residual_prox_weight)),
+            ]
+        )
+        if native_rate_residual_protection_npy is not None:
+            command.extend(
+                [
+                    "--rate-aware-residual-protection-npy",
+                    _repo_rel_or_abs(native_rate_residual_protection_npy, repo_root),
+                ]
+            )
     if decode_max_pairs is not None:
         command.extend(["--decode-max-pairs", str(int(decode_max_pairs))])
     if skip_runtime_consumption_proof:
@@ -454,6 +518,12 @@ def build_hprc_compact_receiver_training_plan(
             "basis_count": int(basis_count),
             "residual_grid_h": int(residual_grid_h),
             "residual_grid_w": int(residual_grid_w),
+            "native_rate_aware": bool(native_rate_aware),
+            "native_rate_residual_l1_weight": float(native_rate_residual_l1_weight),
+            "native_rate_residual_prox_weight": float(native_rate_residual_prox_weight),
+            "native_rate_residual_protection_npy": None
+            if native_rate_residual_protection_npy is None
+            else _repo_rel_or_abs(native_rate_residual_protection_npy, repo_root),
         },
         "recommended_execution": {
             "schema": "hprc_compact_receiver_training_recommended_execution.v1",
@@ -474,11 +544,16 @@ def _append_campaign_followup_steps(
     queue: dict[str, Any],
     *,
     plans: list[dict[str, Any]],
+    native_surface_steps: list[dict[str, Any]],
     args: argparse.Namespace,
     repo_root: Path,
     full_replay_min_pairs: int,
     timeout_seconds: int,
 ) -> None:
+    surface_by_output = {
+        str(step["training_output_dir"]): step
+        for step in native_surface_steps
+    }
     for plan, experiment in zip(plans, queue["experiments"], strict=True):
         params = plan["candidate_params"]
         output_manifest = Path(plan["recommended_execution"]["output_manifest"])
@@ -497,6 +572,24 @@ def _append_campaign_followup_steps(
         exact_gate = output_dir / "exact_auth_gate_cpu.json"
         followup_report = output_dir / "hprc_queue_followup_report.json"
         post_replay_report = output_dir / "hprc_queue_post_replay_report.json"
+        native_surface_step = surface_by_output.get(output_dir.as_posix())
+
+        if native_surface_step is not None:
+            experiment["steps"].insert(
+                0,
+                _native_rate_surface_queue_step(
+                    config=native_surface_step,
+                    timeout_seconds=timeout_seconds,
+                ),
+            )
+            train_requires = ["build_hprc_native_rate_residual_protection_surface"]
+            for step in experiment["steps"]:
+                if step.get("id") == "run_local_training":
+                    step["requires"] = train_requires
+                    step["telemetry"]["input_artifact_paths"].append(
+                        str(native_surface_step["output_npy"])
+                    )
+                    break
 
         if not bool(args.disable_hprc_rate_collapse):
             experiment["steps"].append(
@@ -633,6 +726,130 @@ def _append_campaign_followup_steps(
                     requires=["build_z8_full_video_p18_p19_allocator_plan"],
                 )
             )
+
+
+def _native_rate_protection_npy_for_plan(
+    *,
+    args: argparse.Namespace,
+    repo_root: Path,
+    output_dir: Path,
+) -> Path | None:
+    if not bool(args.enable_native_rate_aware_hprc):
+        return None
+    if args.native_rate_residual_protection_npy is not None:
+        return _resolve_path(args.native_rate_residual_protection_npy, repo_root=repo_root)
+    if args.native_rate_p19_posenet_null_pairs is not None:
+        return output_dir / "hprc_native_rate_surface" / "residual_protection.npy"
+    return None
+
+
+def _native_rate_surface_step_config(
+    *,
+    args: argparse.Namespace,
+    repo_root: Path,
+    output_dir: Path,
+    decode_pairs: int,
+) -> dict[str, Any] | None:
+    if not bool(args.enable_native_rate_aware_hprc):
+        return None
+    if args.native_rate_residual_protection_npy is not None:
+        return None
+    if args.native_rate_p19_posenet_null_pairs is None:
+        return None
+    effective_pairs = int(decode_pairs)
+    if args.decode_max_pairs is not None:
+        effective_pairs = min(effective_pairs, int(args.decode_max_pairs))
+    surface_dir = output_dir / "hprc_native_rate_surface"
+    output_npy = surface_dir / "residual_protection.npy"
+    report_path = surface_dir / "hprc_native_rate_residual_protection_surface.json"
+    command = [
+        ".venv/bin/python",
+        "tools/build_hprc_native_rate_surface.py",
+        "--p19-posenet-null-pairs",
+        _repo_rel_or_abs(
+            _resolve_path(args.native_rate_p19_posenet_null_pairs, repo_root=repo_root),
+            repo_root,
+        ),
+        "--frames",
+        str(effective_pairs * 2),
+        "--residual-grid-h",
+        str(int(args.residual_grid_h)),
+        "--residual-grid-w",
+        str(int(args.residual_grid_w)),
+        "--gop-size",
+        "2",
+        "--default-protection",
+        repr(float(args.native_rate_default_protection)),
+        "--p19-null-protection",
+        repr(float(args.native_rate_p19_null_protection)),
+        "--p18-region-protection",
+        repr(float(args.native_rate_p18_region_protection)),
+        "--output-npy",
+        _repo_rel_or_abs(output_npy, repo_root),
+        "--out-json",
+        _repo_rel_or_abs(report_path, repo_root),
+        "--repo-root",
+        repo_root.as_posix(),
+        "--allow-overwrite",
+    ]
+    if args.native_rate_p18_segnet_region_waterfill is not None:
+        command.extend(
+            [
+                "--p18-segnet-region-waterfill",
+                _repo_rel_or_abs(
+                    _resolve_path(args.native_rate_p18_segnet_region_waterfill, repo_root=repo_root),
+                    repo_root,
+                ),
+            ]
+        )
+    return {
+        "schema": "hprc_native_rate_surface_step_config.v1",
+        "training_output_dir": output_dir.as_posix(),
+        "output_npy": output_npy.as_posix(),
+        "report_path": report_path.as_posix(),
+        "decode_pairs": int(decode_pairs),
+        "effective_pairs": int(effective_pairs),
+        "command": command,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _native_rate_surface_queue_step(
+    *,
+    config: dict[str, Any],
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    output_npy = Path(str(config["output_npy"]))
+    report_path = Path(str(config["report_path"]))
+    return {
+        "id": "build_hprc_native_rate_residual_protection_surface",
+        "kind": "command",
+        "command": list(config["command"]),
+        "resources": {"kind": "local_cpu"},
+        "timeout_seconds": timeout_seconds,
+        "postconditions": [
+            {"type": "path_exists", "path": output_npy.as_posix()},
+            {"type": "path_exists", "path": report_path.as_posix()},
+            {"type": "json_false_authority", "path": report_path.as_posix()},
+            {
+                "type": "json_equals",
+                "path": report_path.as_posix(),
+                "key": "schema",
+                "equals": "hprc_native_rate_residual_protection_surface.v1",
+            },
+        ],
+        "telemetry": {
+            "artifact_paths": [output_npy.as_posix(), report_path.as_posix()],
+            "input_artifact_paths": [
+                part
+                for index, part in enumerate(config["command"])
+                if index > 0 and config["command"][index - 1] in {
+                    "--p19-posenet-null-pairs",
+                    "--p18-segnet-region-waterfill",
+                }
+            ],
+        },
+    }
 
 
 def _local_replay_step(

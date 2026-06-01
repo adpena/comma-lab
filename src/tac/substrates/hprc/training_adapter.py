@@ -36,6 +36,7 @@ from tac.substrates.hprc.learned_receiver import (
 
 HPRC_LONG_TRAINING_SUBSTRATE_ID = "hprc_compact_receiver"
 HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA = "hprc_compact_receiver_training_export.v1"
+HPRC_NATIVE_RATE_AWARE_TRAINING_SCHEMA = "hprc_native_rate_aware_training.v1"
 
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
@@ -56,6 +57,21 @@ def _nearest_resize(frame: np.ndarray, height: int, width: int) -> np.ndarray:
     return frame[y_idx[:, None], x_idx[None, :], :]
 
 
+def _downsample_sum_nearest_inverse(frame: np.ndarray, grid_h: int, grid_w: int) -> np.ndarray:
+    """Sum full-resolution pixels into the residual cells used by ``_nearest_resize``."""
+
+    arr = np.asarray(frame, dtype=np.float64)
+    if arr.ndim != 3:
+        raise ValueError("frame must be HxWxC")
+    src_h, src_w, channels = arr.shape
+    y_idx = (np.arange(src_h, dtype=np.int64) * int(grid_h) // src_h).clip(0, int(grid_h) - 1)
+    x_idx = (np.arange(src_w, dtype=np.int64) * int(grid_w) // src_w).clip(0, int(grid_w) - 1)
+    cell = (y_idx[:, None] * int(grid_w) + x_idx[None, :]).reshape(-1)
+    out = np.zeros((int(grid_h) * int(grid_w), int(channels)), dtype=np.float64)
+    np.add.at(out, cell, arr.reshape((-1, int(channels))))
+    return out.reshape((int(grid_h), int(grid_w), int(channels)))
+
+
 def _normalize_frames(frames: np.ndarray) -> np.ndarray:
     arr = np.asarray(frames)
     if arr.ndim == 5:
@@ -72,6 +88,44 @@ def _normalize_frames(frames: np.ndarray) -> np.ndarray:
     if np.issubdtype(arr.dtype, np.floating) and float(np.max(arr)) <= 1.5:
         arr = arr * 255.0
     return np.asarray(arr, dtype=np.float32)
+
+
+def _normalize_residual_protection(
+    value: np.ndarray | None,
+    *,
+    residual_shape: tuple[int, int, int, int],
+) -> np.ndarray | None:
+    """Normalize scorer protection weights to residual-token shape.
+
+    Protection is in ``[0, 1]`` where ``1`` means protect from rate pressure and
+    ``0`` means safest to shrink.  The train-time rate pressure is therefore
+    ``1 - protection``.
+    """
+
+    if value is None:
+        return None
+    arr = np.asarray(value, dtype=np.float32)
+    frames, grid_h, grid_w, channels = residual_shape
+    allowed = {
+        (frames, grid_h, grid_w, channels),
+        (frames, grid_h, grid_w),
+        (frames, 1, 1, 1),
+        (frames, 1, 1),
+        (1, grid_h, grid_w, channels),
+        (1, grid_h, grid_w),
+    }
+    if tuple(arr.shape) not in allowed:
+        raise ValueError(
+            "residual protection shape must broadcast to residual tokens; "
+            f"got {arr.shape}, expected one of {sorted(allowed)}"
+        )
+    if arr.ndim == 3:
+        arr = arr[:, :, :, None]
+    if arr.ndim != 4:
+        raise ValueError("residual protection must be 3D or 4D")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("residual protection contains non-finite values")
+    return np.broadcast_to(np.clip(arr, 0.0, 1.0), residual_shape).astype(np.float32, copy=True)
 
 
 @dataclass(frozen=True)
@@ -294,6 +348,10 @@ class HprcCompactReceiverLongTrainingAdapter:
         repo_root: str | Path | None = None,
         retain_receiver_proof_output: bool = False,
         emit_archive_bound_candidate_package: bool = True,
+        native_rate_aware: bool = False,
+        rate_aware_residual_l1_weight: float = 0.0,
+        rate_aware_residual_prox_weight: float = 0.0,
+        residual_protection: np.ndarray | None = None,
     ) -> None:
         self.model = HprcCompactReceiverTrainingModel(
             frames,
@@ -309,6 +367,18 @@ class HprcCompactReceiverLongTrainingAdapter:
         self.repo_root = None if repo_root is None else Path(repo_root)
         self.retain_receiver_proof_output = bool(retain_receiver_proof_output)
         self.emit_archive_bound_candidate_package = bool(emit_archive_bound_candidate_package)
+        self.native_rate_aware = bool(native_rate_aware)
+        self.rate_aware_residual_l1_weight = max(0.0, float(rate_aware_residual_l1_weight))
+        self.rate_aware_residual_prox_weight = max(0.0, float(rate_aware_residual_prox_weight))
+        self.residual_protection = _normalize_residual_protection(
+            residual_protection,
+            residual_shape=tuple(int(v) for v in self.model.residual.shape),
+        )
+        if self.native_rate_aware and (
+            self.rate_aware_residual_l1_weight <= 0.0
+            and self.rate_aware_residual_prox_weight <= 0.0
+        ):
+            raise ValueError("native rate-aware HPRC training requires a positive residual rate weight")
 
     def sample_batch(self, batch_size: int, seed: int) -> dict[str, np.ndarray]:
         rng = np.random.default_rng(int(seed))
@@ -333,10 +403,10 @@ class HprcCompactReceiverLongTrainingAdapter:
         batch: Mapping[str, Any],
         loss_weights: Mapping[str, float],
     ) -> Mapping[str, float]:
-        loss, grads = self._loss_and_grads(model, batch, loss_weights)
+        loss, grads, metrics = self._loss_and_grads(model, batch, loss_weights)
         return {
             "total": float(loss),
-            "recon": float(loss),
+            **metrics,
             "latent_gain_grad": float(grads[0]),
             "residual_gain_grad": float(grads[1]),
             "receiver_state_gain_grad": float(grads[2]),
@@ -354,7 +424,7 @@ class HprcCompactReceiverLongTrainingAdapter:
         learning_rate: float,
         loss_weights: Mapping[str, float],
     ) -> Mapping[str, float]:
-        loss, grads = self._loss_and_grads(self.model, batch, loss_weights)
+        loss, grads, metrics = self._loss_and_grads(self.model, batch, loss_weights)
         latent = self.model.latent_gain - float(learning_rate) * grads[0]
         residual = self.model.residual_gain - float(learning_rate) * grads[1]
         state = self.model.receiver_state_gain - float(learning_rate) * grads[2]
@@ -365,13 +435,19 @@ class HprcCompactReceiverLongTrainingAdapter:
                 receiver_state=state,
             )
         )
+        rate_update = self._apply_native_residual_rate_step(
+            batch=batch,
+            learning_rate=float(learning_rate),
+            loss_weights=loss_weights,
+        )
         self.model.train_steps += 1
         return {
             "total": float(loss),
-            "recon": float(loss),
+            **metrics,
             "latent_gain_grad": float(grads[0]),
             "residual_gain_grad": float(grads[1]),
             "receiver_state_gain_grad": float(grads[2]),
+            **rate_update,
         }
 
     def _loss_and_grads(
@@ -379,12 +455,13 @@ class HprcCompactReceiverLongTrainingAdapter:
         model: HprcCompactReceiverTrainingModel,
         batch: Mapping[str, Any],
         loss_weights: Mapping[str, float],
-    ) -> tuple[float, tuple[float, float, float]]:
+    ) -> tuple[float, tuple[float, float, float], dict[str, float]]:
         frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
         if frame_indices.size == 0:
             raise ValueError("HPRC training batch contains no frames")
         recon_weight = float(loss_weights.get("recon", 1.0))
         gain_l2_weight = float(loss_weights.get("gain_l2", 0.0))
+        residual_l1_weight = self._residual_l1_weight(loss_weights)
         sse = 0.0
         count = 0
         grad = np.zeros((3,), dtype=np.float64)
@@ -398,6 +475,8 @@ class HprcCompactReceiverLongTrainingAdapter:
             for i, component in enumerate(components):
                 grad[i] += float(np.sum(diff * component) * inv_count)
         mse = sse / max(count, 1)
+        residual_rate_l1 = self._residual_rate_l1(frame_indices)
+        recon_objective = float(mse)
         grad /= float(frame_indices.size)
         if gain_l2_weight:
             defaults = np.array([1.0, 1.0, 0.25], dtype=np.float64)
@@ -410,10 +489,99 @@ class HprcCompactReceiverLongTrainingAdapter:
                 dtype=np.float64,
             )
             delta = gains - defaults
-            mse += gain_l2_weight * float(np.sum(delta * delta))
+            recon_objective += gain_l2_weight * float(np.sum(delta * delta))
             grad += 2.0 * gain_l2_weight * delta
         grad *= recon_weight
-        return recon_weight * mse, (float(grad[0]), float(grad[1]), float(grad[2]))
+        total_loss = recon_weight * recon_objective + residual_l1_weight * residual_rate_l1
+        return total_loss, (float(grad[0]), float(grad[1]), float(grad[2])), {
+            "recon": float(mse),
+            "residual_rate_l1_proxy": float(residual_rate_l1),
+            "residual_rate_l1_weight": float(residual_l1_weight),
+            "residual_nonzero_fraction": float(np.count_nonzero(model.residual) / model.residual.size),
+        }
+
+    def _residual_l1_weight(self, loss_weights: Mapping[str, float]) -> float:
+        explicit = loss_weights.get("residual_rate_l1")
+        if explicit is not None:
+            return max(0.0, float(explicit))
+        if not self.native_rate_aware:
+            return 0.0
+        return self.rate_aware_residual_l1_weight
+
+    def _residual_prox_weight(self, loss_weights: Mapping[str, float]) -> float:
+        explicit = loss_weights.get("residual_rate_prox")
+        if explicit is not None:
+            return max(0.0, float(explicit))
+        if not self.native_rate_aware:
+            return 0.0
+        return self.rate_aware_residual_prox_weight
+
+    def _residual_rate_pressure(self) -> np.ndarray:
+        if self.residual_protection is None:
+            return np.ones_like(self.model.residual, dtype=np.float32)
+        return (1.0 - self.residual_protection).astype(np.float32, copy=False)
+
+    def _residual_rate_l1(self, frame_indices: np.ndarray) -> float:
+        residual = self.model.residual[frame_indices]
+        pressure = self._residual_rate_pressure()[frame_indices]
+        return float(np.mean(np.abs(residual) * pressure))
+
+    def _apply_native_residual_rate_step(
+        self,
+        *,
+        batch: Mapping[str, Any],
+        learning_rate: float,
+        loss_weights: Mapping[str, float],
+    ) -> dict[str, float]:
+        l1_weight = self._residual_l1_weight(loss_weights)
+        prox_weight = self._residual_prox_weight(loss_weights)
+        if l1_weight <= 0.0 and prox_weight <= 0.0:
+            return {
+                "native_rate_residual_update_l1_weight": 0.0,
+                "native_rate_residual_update_prox_weight": 0.0,
+                "native_rate_residual_mean_abs_delta": 0.0,
+            }
+        frame_indices = np.asarray(batch["frame_indices"], dtype=np.int32).reshape(-1)
+        if frame_indices.size == 0:
+            return {
+                "native_rate_residual_update_l1_weight": float(l1_weight),
+                "native_rate_residual_update_prox_weight": float(prox_weight),
+                "native_rate_residual_mean_abs_delta": 0.0,
+            }
+        before = self.model.residual[frame_indices].copy()
+        pressure_all = self._residual_rate_pressure()
+        recon_weight = float(loss_weights.get("recon", 1.0))
+        grid_h, grid_w = int(self.model.residual.shape[1]), int(self.model.residual.shape[2])
+        for frame_index in frame_indices:
+            idx = int(frame_index)
+            pred, _components = self.model.render_continuous(idx)
+            diff = pred - self.model.target_frames[idx]
+            grad_grid = _downsample_sum_nearest_inverse(diff, grid_h, grid_w)
+            grad_grid *= (
+                recon_weight
+                * float(self.model.selectors[idx])
+                * float(self.model.residual_gain)
+                * (2.0 / max(diff.size, 1))
+            )
+            pressure = pressure_all[idx].astype(np.float64)
+            if l1_weight > 0.0:
+                grad_grid += (
+                    float(l1_weight)
+                    * pressure
+                    * np.sign(self.model.residual[idx]).astype(np.float64)
+                    / max(self.model.residual[idx].size, 1)
+                )
+            updated = self.model.residual[idx].astype(np.float64) - float(learning_rate) * grad_grid
+            if prox_weight > 0.0:
+                shrink = float(learning_rate) * float(prox_weight) * pressure
+                updated = np.sign(updated) * np.maximum(np.abs(updated) - shrink, 0.0)
+            self.model.residual[idx] = np.nan_to_num(updated, copy=False).astype(np.float32)
+        after = self.model.residual[frame_indices]
+        return {
+            "native_rate_residual_update_l1_weight": float(l1_weight),
+            "native_rate_residual_update_prox_weight": float(prox_weight),
+            "native_rate_residual_mean_abs_delta": float(np.mean(np.abs(after - before))),
+        }
 
     def export_state_dict(self, model: HprcCompactReceiverTrainingModel, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -468,10 +636,14 @@ class HprcCompactReceiverLongTrainingAdapter:
         model: HprcCompactReceiverTrainingModel,
         batch: Mapping[str, Any],
     ) -> Mapping[str, float] | None:
-        loss, _grads = self._loss_and_grads(model, batch, {"recon": 1.0})
+        loss, _grads, _metrics = self._loss_and_grads(model, batch, {"recon": 1.0})
         return {
             "decoder_grid_mse_rgb255_advisory": float(loss),
             "archive_rate_term_advisory": 0.0,
+            "native_rate_aware_training_enabled": bool(self.native_rate_aware),
+            "native_residual_nonzero_fraction": float(
+                np.count_nonzero(model.residual) / model.residual.size
+            ),
         }
 
     def artifact_metadata(self) -> Mapping[str, Any]:
@@ -481,6 +653,19 @@ class HprcCompactReceiverLongTrainingAdapter:
             "receiver_mode": COMPACT_RECEIVER_MODE,
             "portable_runtime": "numpy",
             "training_surface": "rdo_gain_projection_over_fixed_compact_components",
+            "native_rate_aware_training": {
+                "schema": HPRC_NATIVE_RATE_AWARE_TRAINING_SCHEMA,
+                "enabled": bool(self.native_rate_aware),
+                "residual_l1_weight": float(self.rate_aware_residual_l1_weight),
+                "residual_prox_weight": float(self.rate_aware_residual_prox_weight),
+                "residual_protection_present": self.residual_protection is not None,
+                "residual_protection_semantics": (
+                    "1=protect_from_rate_pressure,0=safest_to_shrink"
+                ),
+                "residual_nonzero_fraction": float(
+                    np.count_nonzero(self.model.residual) / self.model.residual.size
+                ),
+            },
             "packet_sha256_at_metadata": _sha256_bytes(packet),
             "frame_count": int(self.model.frame_count),
             "decoder_grid": {
@@ -499,6 +684,7 @@ class HprcCompactReceiverLongTrainingAdapter:
 __all__ = [
     "HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA",
     "HPRC_LONG_TRAINING_SUBSTRATE_ID",
+    "HPRC_NATIVE_RATE_AWARE_TRAINING_SCHEMA",
     "HprcCompactReceiverLongTrainingAdapter",
     "HprcCompactReceiverTrainingModel",
     "HprcGainBounds",

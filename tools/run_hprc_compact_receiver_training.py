@@ -65,6 +65,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--initial-residual-gain", type=float, default=1.0)
     parser.add_argument("--initial-receiver-state-gain", type=float, default=0.25)
     parser.add_argument(
+        "--native-rate-aware",
+        action="store_true",
+        help="Optimize HPRC residual tokens with a train-time rate proxy before archive export.",
+    )
+    parser.add_argument("--rate-aware-residual-l1-weight", type=float, default=0.0)
+    parser.add_argument("--rate-aware-residual-prox-weight", type=float, default=0.0)
+    parser.add_argument(
+        "--rate-aware-residual-protection-npy",
+        type=Path,
+        help=(
+            "Optional residual-token protection surface. Shape must broadcast to "
+            "frames x residual_grid_h x residual_grid_w x 3; 1 protects, 0 shrinks."
+        ),
+    )
+    parser.add_argument(
         "--skip-runtime-consumption-proof",
         action="store_true",
         help="Emit archive bytes without running generated inflate receiver proof.",
@@ -99,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = Path(args.repo_root).expanduser().resolve(strict=False)
     output_dir, storage_plan_path = _resolve_output_dir(args, repo_root=repo_root)
     frames, source_manifest = _load_source_frames(args, repo_root=repo_root)
+    residual_protection, protection_manifest = _load_residual_protection(args, repo_root=repo_root)
     external_storage_plan = _resolve_optional_path(args.storage_plan_path, repo_root=repo_root)
     storage_plan_for_result = storage_plan_path or external_storage_plan
     adapter = HprcCompactReceiverLongTrainingAdapter(
@@ -113,7 +129,19 @@ def main(argv: list[str] | None = None) -> int:
         repo_root=repo_root,
         retain_receiver_proof_output=bool(args.retain_receiver_output),
         emit_archive_bound_candidate_package=not bool(args.skip_runtime_consumption_proof),
+        native_rate_aware=bool(args.native_rate_aware),
+        rate_aware_residual_l1_weight=float(args.rate_aware_residual_l1_weight),
+        rate_aware_residual_prox_weight=float(args.rate_aware_residual_prox_weight),
+        residual_protection=residual_protection,
     )
+    loss_weights = {"recon": 1.0}
+    if bool(args.native_rate_aware):
+        loss_weights.update(
+            {
+                "residual_rate_l1": float(args.rate_aware_residual_l1_weight),
+                "residual_rate_prox": float(args.rate_aware_residual_prox_weight),
+            }
+        )
     config = LongTrainingConfig(
         substrate_id=HPRC_LONG_TRAINING_SUBSTRATE_ID,
         lane_id="lane_hprc_compact_receiver_training",
@@ -124,8 +152,11 @@ def main(argv: list[str] | None = None) -> int:
                 name="compact_receiver_gain_fit",
                 start_epoch=0,
                 end_epoch=int(args.epochs),
-                loss_weights={"recon": 1.0},
-                notes="Fit HPRC compact receiver decode RDO gains before archive export.",
+                loss_weights=loss_weights,
+                notes=(
+                    "Fit HPRC compact receiver decode RDO gains and, when enabled, "
+                    "native residual-token rate pressure before archive export."
+                ),
             ),
         ),
         checkpoint_interval_epochs=max(1, min(int(args.epochs), 10)),
@@ -142,6 +173,7 @@ def main(argv: list[str] | None = None) -> int:
         if storage_plan_for_result is None
         else storage_plan_for_result.as_posix(),
         "source_manifest": source_manifest,
+        "residual_protection_manifest": protection_manifest,
         "artifact": artifact.as_dict(),
         "runtime_consumption_proof_requested": not bool(args.skip_runtime_consumption_proof),
         "exact_axis_blocker": "contest_cpu_cuda_exact_eval_not_executed",
@@ -226,6 +258,33 @@ def _load_source_frames(
         "frames_dtype": str(frames.dtype),
         "frames_sha256": frames_sha,
         "resize_mode": "bilinear_align_corners_false",
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
+def _load_residual_protection(
+    args: argparse.Namespace,
+    *,
+    repo_root: Path,
+) -> tuple[np.ndarray | None, dict[str, object] | None]:
+    if args.rate_aware_residual_protection_npy is None:
+        return None, None
+    path = Path(args.rate_aware_residual_protection_npy).expanduser()
+    if not path.is_absolute():
+        path = repo_root / path
+    path = path.resolve(strict=False)
+    if not path.is_file():
+        raise ValueError(f"rate-aware residual protection missing: {path}")
+    arr = np.load(path)
+    return arr, {
+        "schema": "hprc_native_rate_residual_protection_input.v1",
+        "path": path.as_posix(),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+        "shape": [int(v) for v in arr.shape],
+        "dtype": str(arr.dtype),
+        "semantics": "1=protect_from_rate_pressure,0=safest_to_shrink",
         "score_claim": False,
         "promotion_eligible": False,
     }

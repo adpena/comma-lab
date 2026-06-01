@@ -212,6 +212,69 @@ def test_hprc_campaign_queue_binds_optional_z8_followups(tmp_path: Path) -> None
     assert materializer["requires"] == ["build_z8_full_video_p18_p19_allocator_plan"]
 
 
+def test_hprc_campaign_queue_builds_native_rate_surface_before_training(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    video_path.parent.mkdir(parents=True)
+    video_path.write_bytes(b"fake contest video bytes")
+    p19_artifact = repo_root / ".omx" / "research" / "p19.json"
+    p18_artifact = repo_root / ".omx" / "research" / "p18.json"
+    p19_artifact.parent.mkdir(parents=True)
+    p19_artifact.write_text("{}")
+    p18_artifact.write_text("{}")
+    storage_root = tmp_path / "ssd"
+    queue_path = tmp_path / "hprc_queue.json"
+    plan_path = tmp_path / "hprc_plan.json"
+
+    assert (
+        builder.main(
+            [
+                "--repo-root",
+                repo_root.as_posix(),
+                "--video-path",
+                video_path.as_posix(),
+                "--output",
+                queue_path.as_posix(),
+                "--plan-output",
+                plan_path.as_posix(),
+                "--campaign-pairs",
+                "32",
+                "--enable-native-rate-aware-hprc",
+                "--native-rate-residual-prox-weight",
+                "0.25",
+                "--native-rate-p19-posenet-null-pairs",
+                p19_artifact.as_posix(),
+                "--native-rate-p18-segnet-region-waterfill",
+                p18_artifact.as_posix(),
+                "--disable-hprc-rate-collapse",
+                "--storage-tier",
+                f"test={storage_root.as_posix()}",
+                "--storage-expected-bytes",
+                "1",
+                "--storage-reserve-free-gb",
+                "0",
+                "--allow-local-output-dir",
+            ]
+        )
+        == 0
+    )
+
+    queue = json.loads(queue_path.read_text())
+    plan = json.loads(plan_path.read_text())
+    steps = queue["experiments"][0]["steps"]
+    assert steps[0]["id"] == "build_hprc_native_rate_residual_protection_surface"
+    assert steps[0]["resources"]["kind"] == "local_cpu"
+    assert steps[1]["id"] == "run_local_training"
+    assert steps[1]["requires"] == ["build_hprc_native_rate_residual_protection_surface"]
+    train_command = steps[1]["command"]
+    assert "--native-rate-aware" in train_command
+    assert "--rate-aware-residual-protection-npy" in train_command
+    protection_arg = train_command[train_command.index("--rate-aware-residual-protection-npy") + 1]
+    assert protection_arg.endswith("hprc_native_rate_surface/residual_protection.npy")
+    assert plan["schema"] == builder.HPRC_TRAINING_PLAN_SUITE_SCHEMA
+    assert plan["native_rate_surface_steps"][0]["schema"] == "hprc_native_rate_surface_step_config.v1"
+
+
 def test_archive_rate_gate_blocks_replay_when_rate_alone_loses() -> None:
     report = build_archive_rate_local_replay_gate(
         training_result={
