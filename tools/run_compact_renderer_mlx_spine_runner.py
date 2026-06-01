@@ -2642,6 +2642,7 @@ def _validate_recon_pixel_weight_array(
     arr: Any,
     *,
     expected_hw: tuple[int, int] = (384, 512),
+    expected_pairs: int | None = None,
 ) -> Any:
     import numpy as np
 
@@ -2653,13 +2654,28 @@ def _validate_recon_pixel_weight_array(
         h, w, channels = weight.shape
     elif weight.ndim == 4:
         leading, h, w, channels = weight.shape
-        if int(leading) != 1:
+        if int(leading) != 1 and (
+            expected_pairs is None or int(leading) != int(expected_pairs)
+        ):
             raise CompactRendererMlxSpineRunnerError(
-                "recon pixel weight with 4 dims must have leading dimension 1"
+                "recon pixel weight with 4 dims must have leading dimension "
+                f"1 or expected pair count {expected_pairs}; got {int(leading)}"
+            )
+    elif weight.ndim == 5:
+        pairs, frames, h, w, channels = weight.shape
+        if int(frames) != 2:
+            raise CompactRendererMlxSpineRunnerError(
+                "recon pixel weight with 5 dims must have frame dimension 2"
+            )
+        if expected_pairs is not None and int(pairs) != int(expected_pairs):
+            raise CompactRendererMlxSpineRunnerError(
+                "recon pixel weight pair count must match num_pairs "
+                f"({int(pairs)} vs {int(expected_pairs)})"
             )
     else:
         raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight must be shaped (H,W), (H,W,1/3), or (1,H,W,1/3)"
+            "recon pixel weight must be shaped (H,W), (H,W,1/3), "
+            "(1|N,H,W,1/3), or (N,2,H,W,1/3)"
         )
     if (int(h), int(w)) != tuple(int(v) for v in expected_hw):
         raise CompactRendererMlxSpineRunnerError(
@@ -2687,6 +2703,7 @@ def _load_recon_pixel_weight(
     *,
     base: Path,
     expected_hw: tuple[int, int] = (384, 512),
+    expected_pairs: int | None = None,
     normalize: str = "mean",
 ) -> tuple[Any, dict[str, Any]]:
     import numpy as np
@@ -2708,7 +2725,11 @@ def _load_recon_pixel_weight(
             weight = np.asarray(data[key], dtype=np.float32)
     else:
         weight = np.asarray(np.load(resolved), dtype=np.float32)
-    weight = _validate_recon_pixel_weight_array(weight, expected_hw=expected_hw)
+    weight = _validate_recon_pixel_weight_array(
+        weight,
+        expected_hw=expected_hw,
+        expected_pairs=expected_pairs,
+    )
     metadata = {
         "schema": "compact_recon_pixel_weight.v1",
         "enabled": True,
@@ -2724,6 +2745,8 @@ def _load_recon_pixel_weight(
         "stats": _weight_stats(weight),
         "authority": "false_macos_mlx_research_signal",
     }
+    if expected_pairs is not None:
+        metadata["expected_pairs"] = int(expected_pairs)
     return weight, metadata
 
 
@@ -3114,6 +3137,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         recon_pixel_weight, recon_metadata = _load_recon_pixel_weight(
             recon_pixel_weight_path,
             base=repo_root,
+            expected_pairs=pairs,
             normalize=recon_pixel_weight_normalize,
         )
         artifact_metadata["score_aware_training"]["recon_pixel_weight"] = (
@@ -3976,7 +4000,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help=(
             "File-backed P18/P19 recon_pixel_weight map (.npy or .npz). "
-            "Must be shaped (384,512), (384,512,1/3), or (1,384,512,1/3)."
+            "Must be shaped (384,512), (384,512,1/3), "
+            "(1|N,384,512,1/3), or (N,2,384,512,1/3)."
         ),
     )
     parser.add_argument(

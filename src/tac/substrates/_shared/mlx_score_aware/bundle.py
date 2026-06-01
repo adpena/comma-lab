@@ -279,20 +279,24 @@ class RendererBundle:
             second stale readiness reader.
         recon_pixel_weight: OPTIONAL canonical per-pixel reconstruction-loss
             weight map (the codex-named ``recon_pixel_weight`` channel). An MLX
-            float32 spatial map ``(H, W)`` / ``(H, W, 1)`` / ``(1, H, W, 1)``,
-            non-negative, matching the decoded frame's ``(H, W)``. When set, the
-            recon MSE is re-weighted PER PIXEL by this map BEFORE the spatial
-            mean (``mean(w * (rgb - gt)^2) / mean(w)``) so the renderer spends
-            its capacity on the pixels the map deems score-relevant. The
+            float32 spatial map ``(H, W)`` / ``(H, W, C)`` / ``(1, H, W, C)``,
+            a per-pair map ``(N, H, W, C)``, or a per-pair/per-frame map
+            ``(N, 2, H, W, C)`` with ``C in {1, 3}``, non-negative, matching
+            the decoded frame's ``(H, W)``. When set, the recon MSE is
+            re-weighted PER PIXEL by this map BEFORE the spatial mean
+            (``mean(w * (rgb - gt)^2) / mean(w)``) so the renderer spends its
+            capacity on the pixels the map deems score-relevant. The
             canonical source is the FULL-GRID measured SegNet input-gradient
             saliency ``|∂L_seg/∂pixel|`` from
             :mod:`tac.substrates.uniward_per_pixel_distortion.full_grid_segnet_response_cost_map`
             (sister #1587: CONTEST_RELEVANT at moderate seg degradation), but
-            ANY non-negative ``(H, W)`` map is accepted (e.g. inverse-S-UNIWARD
-            texture for the A/B comparison). ``None`` DISABLES it — the recon
-            term is the canonical UNIFORM ``mean((rgb - gt)^2)``, BYTE-IDENTICAL
-            to existing runs (Catalog #290 opt-in default-OFF). The weight is
-            applied to BOTH frame_0 and frame_1; it is gradient-blocked
+            ANY valid non-negative map is accepted (e.g. inverse-S-UNIWARD
+            texture for the A/B comparison, or a joint P18/P19 per-pair map).
+            ``None`` DISABLES it — the recon term is the canonical UNIFORM
+            ``mean((rgb - gt)^2)``, BYTE-IDENTICAL to existing runs
+            (Catalog #290 opt-in default-OFF). Static maps are applied to BOTH
+            frame_0 and frame_1; ``(N,2,H,W,C)`` maps may protect/spend
+            different pixels per pair/frame. The weight is gradient-blocked
             (``mx.stop_gradient``) so only the renderer carries gradient.
         recon_pixel_weight_normalize: how the weight map is normalized before
             re-weighting. ``"mean"`` (canonical default) preserves the loss

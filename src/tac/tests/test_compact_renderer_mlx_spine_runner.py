@@ -493,6 +493,47 @@ def test_recon_pixel_weight_loader_records_file_custody(
     assert metadata["authority"] == "false_macos_mlx_research_signal"
 
 
+def test_recon_pixel_weight_loader_accepts_pair_frame_map(
+    tmp_path: Path,
+) -> None:
+    weight_path = tmp_path / "joint_p18_p19_pair_frame_weight.npz"
+    weight = np.ones((3, 2, 384, 512, 1), dtype=np.float32)
+    weight[1, 0, :, :, 0] = 2.0
+    np.savez_compressed(weight_path, weight=weight)
+
+    loaded, metadata = runner_mod._load_recon_pixel_weight(
+        weight_path,
+        base=tmp_path,
+        expected_pairs=3,
+        normalize="mean",
+    )
+
+    assert loaded.shape == (3, 2, 384, 512, 1)
+    assert metadata["schema"] == "compact_recon_pixel_weight.v1"
+    assert metadata["enabled"] is True
+    assert metadata["source_kind"] == "file"
+    assert metadata["expected_pairs"] == 3
+    assert metadata["stats"]["shape"] == [3, 2, 384, 512, 1]
+    assert metadata["sha256"] == runner_mod._sha256_file(weight_path)
+
+
+def test_recon_pixel_weight_loader_rejects_pair_count_mismatch(
+    tmp_path: Path,
+) -> None:
+    weight_path = tmp_path / "joint_p18_p19_pair_frame_weight.npy"
+    np.save(weight_path, np.ones((2, 2, 384, 512, 1), dtype=np.float32))
+
+    with pytest.raises(runner_mod.CompactRendererMlxSpineRunnerError) as exc:
+        runner_mod._load_recon_pixel_weight(
+            weight_path,
+            base=tmp_path,
+            expected_pairs=3,
+            normalize="mean",
+        )
+
+    assert "pair count" in str(exc.value)
+
+
 def test_recon_pixel_weight_loader_fails_closed_on_bad_shape(
     tmp_path: Path,
 ) -> None:

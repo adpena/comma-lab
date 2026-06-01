@@ -63,19 +63,30 @@ def decode_frames_nhwc01(bundle: RendererBundle, idx: Any) -> tuple[Any, Any]:
     return rgb_0, rgb_1
 
 
-def _prepare_recon_pixel_weight(bundle: RendererBundle, frame_shape: Any) -> Any:
+def _prepare_recon_pixel_weight(
+    bundle: RendererBundle,
+    frame_shape: Any,
+    *,
+    idx: Any | None = None,
+    frame_index: int | None = None,
+) -> Any:
     """Coerce + validate the bundle's ``recon_pixel_weight`` map for broadcasting.
 
-    Accepts an MLX float32 spatial map shaped ``(H, W)`` / ``(H, W, 1)`` /
-    ``(H, W, C)`` (C in {1, 3}) / ``(1, H, W, 1)`` and returns it broadcastable
-    against the decoded frame ``(B, H, W, 3)`` as ``(1, H, W, 1)`` (a single
-    per-pixel weight shared across channels) or ``(1, H, W, 3)`` (per-channel).
+    Accepts an MLX float32 static spatial map shaped ``(H, W)`` /
+    ``(H, W, 1)`` / ``(H, W, C)`` (C in {1, 3}) / ``(1, H, W, C)``, a per-pair
+    map shaped ``(N, H, W, C)``, or a per-pair/per-frame map shaped
+    ``(N, 2, H, W, C)``. Static maps return broadcastable shape
+    ``(1, H, W, C)``; indexed maps return ``(B, H, W, C)`` for the active
+    batch. C may be 1 or 3.
     The map is gradient-blocked by the caller; this helper only normalizes shape
     and validates the spatial dims match + the map is non-negative + finite.
 
     Args:
         bundle: the harness RendererBundle carrying ``recon_pixel_weight``.
         frame_shape: the decoded frame's ``(B, H, W, 3)`` shape tuple.
+        idx: optional pair indices for dynamic ``(N,...)`` maps.
+        frame_index: required for ``(N,2,H,W,C)`` maps; 0 for frame_0, 1 for
+            frame_1.
 
     Returns:
         an MLX float32 array broadcastable against ``(B, H, W, 3)``.
@@ -107,15 +118,34 @@ def _prepare_recon_pixel_weight(bundle: RendererBundle, frame_shape: Any) -> Any
                 f"recon_pixel_weight (H,W,C) must be ({h},{w},1) or ({h},{w},3); got {tuple(w_arr.shape)}"
             )
         w_arr = w_arr.reshape(1, h, w, wc)
-    elif nd == 4:  # (1, H, W, C) -> as-is with leading dim 1 and C in {1, 3}
+    elif nd == 4:  # (1, H, W, C) static OR (N, H, W, C) per-pair.
         lb, wh, ww, wc = w_arr.shape
-        if lb != 1 or (wh, ww) != (h, w) or wc not in (1, 3):
+        if (wh, ww) != (h, w) or wc not in (1, 3):
             raise MlxScoreAwareHarnessError(
-                f"recon_pixel_weight (B,H,W,C) must be (1,{h},{w},1) or (1,{h},{w},3); got {tuple(w_arr.shape)}"
+                f"recon_pixel_weight (B,H,W,C) must be (1|N,{h},{w},1|3); got {tuple(w_arr.shape)}"
             )
+        if lb != 1:
+            if idx is None:
+                raise MlxScoreAwareHarnessError(
+                    "per-pair recon_pixel_weight (N,H,W,C) requires pair indices"
+                )
+            w_arr = w_arr[idx]
+    elif nd == 5:  # (N, 2, H, W, C) -> select active frame and pair batch.
+        n, frames, wh, ww, wc = w_arr.shape
+        if frames != 2 or (wh, ww) != (h, w) or wc not in (1, 3):
+            raise MlxScoreAwareHarnessError(
+                f"recon_pixel_weight (N,2,H,W,C) must be (N,2,{h},{w},1|3); got {tuple(w_arr.shape)}"
+            )
+        if idx is None or frame_index not in (0, 1):
+            raise MlxScoreAwareHarnessError(
+                "per-pair/per-frame recon_pixel_weight requires pair indices "
+                "and frame_index 0 or 1"
+            )
+        w_arr = w_arr[idx, int(frame_index)]
     else:
         raise MlxScoreAwareHarnessError(
-            f"recon_pixel_weight must be (H,W) / (H,W,C) / (1,H,W,C); got ndim={nd} shape={tuple(w_arr.shape)}"
+            "recon_pixel_weight must be (H,W) / (H,W,C) / (1|N,H,W,C) / "
+            f"(N,2,H,W,C); got ndim={nd} shape={tuple(w_arr.shape)}"
         )
     # Non-negative + finite invariants (the map is a re-weight, not a mask).
     if float(mx.min(w_arr)) < 0.0:
@@ -196,9 +226,24 @@ def score_aware_loss(
         # re-weight the per-pixel squared error by the measured-SegNet-saliency
         # map (gradient-blocked) so the renderer spends capacity on the pixels
         # the map deems score-relevant. Applied to BOTH frames.
-        weight = mx.stop_gradient(_prepare_recon_pixel_weight(bundle, rgb_0.shape))
-        mse_0 = _weighted_recon(bundle, rgb_0, gt_0, weight)
-        mse_1 = _weighted_recon(bundle, rgb_1, gt_1, weight)
+        weight_0 = mx.stop_gradient(
+            _prepare_recon_pixel_weight(
+                bundle,
+                rgb_0.shape,
+                idx=idx,
+                frame_index=0,
+            )
+        )
+        weight_1 = mx.stop_gradient(
+            _prepare_recon_pixel_weight(
+                bundle,
+                rgb_1.shape,
+                idx=idx,
+                frame_index=1,
+            )
+        )
+        mse_0 = _weighted_recon(bundle, rgb_0, gt_0, weight_0)
+        mse_1 = _weighted_recon(bundle, rgb_1, gt_1, weight_1)
         recon = mse_0 + mse_1
     total = recon_weight * recon
     parts: dict[str, Any] = {"recon": recon}

@@ -14,8 +14,9 @@ pixels. These tests verify REAL behavior (Class-2 NO-FAKE per CLAUDE.md
     headline no-op guard — FAILS if the weighted branch reverts to uniform);
   * the ``"mean"`` normalization preserves the loss SCALE on a uniform map
     (so the recon_weight Lagrangian coefficient is comparable across A/B arms);
-  * shape coercion ``(H,W)`` / ``(H,W,1)`` / ``(H,W,3)`` / ``(1,H,W,1)`` all work
-    and mismatched / negative / non-finite maps are REFUSED;
+  * shape coercion ``(H,W)`` / ``(H,W,1)`` / ``(H,W,3)`` / ``(1,H,W,1)`` /
+    ``(N,H,W,C)`` / ``(N,2,H,W,C)`` all work and mismatched / negative /
+    non-finite maps are REFUSED;
   * gradient flows to the renderer through the weighted recon but NOT to the
     weight (the weight is ``mx.stop_gradient``).
 
@@ -247,6 +248,47 @@ def test_prepare_weight_accepts_canonical_shapes(shape, expected_last) -> None:
 
 
 @mlx_only
+def test_prepare_weight_indexes_per_pair_and_frame_maps() -> None:
+    import mlx.core as mx
+
+    weight_np = np.ones((4, 2, 384, 512, 1), dtype=np.float32)
+    weight_np[2, 1, :, :, 0] = 7.0
+    weight_np[0, 1, :, :, 0] = 3.0
+    bundle = _tiny_bundle(recon_pixel_weight=mx.array(weight_np), num_pairs=4)
+    idx = mx.array([2, 0], dtype=mx.int32)
+
+    prepared = _prepare_recon_pixel_weight(
+        bundle,
+        (2, 384, 512, 3),
+        idx=idx,
+        frame_index=1,
+    )
+    mx.eval(prepared)
+    assert prepared.shape == (2, 384, 512, 1)
+    assert float(prepared[0, 0, 0, 0].item()) == pytest.approx(7.0)
+    assert float(prepared[1, 0, 0, 0].item()) == pytest.approx(3.0)
+
+
+@mlx_only
+def test_prepare_weight_indexes_per_pair_shared_frame_maps() -> None:
+    import mlx.core as mx
+
+    weight_np = np.ones((4, 384, 512, 1), dtype=np.float32)
+    weight_np[3, :, :, 0] = 5.0
+    bundle = _tiny_bundle(recon_pixel_weight=mx.array(weight_np), num_pairs=4)
+
+    prepared = _prepare_recon_pixel_weight(
+        bundle,
+        (1, 384, 512, 3),
+        idx=mx.array([3], dtype=mx.int32),
+        frame_index=0,
+    )
+    mx.eval(prepared)
+    assert prepared.shape == (1, 384, 512, 1)
+    assert float(prepared[0, 0, 0, 0].item()) == pytest.approx(5.0)
+
+
+@mlx_only
 def test_prepare_weight_rejects_spatial_mismatch() -> None:
     import mlx.core as mx
 
@@ -290,9 +332,21 @@ def test_prepare_weight_rejects_zero_total_mass() -> None:
 def test_prepare_weight_rejects_bad_ndim() -> None:
     import mlx.core as mx
 
-    bundle = _tiny_bundle(recon_pixel_weight=mx.ones((2, 2, 384, 512, 1)))
+    bundle = _tiny_bundle(recon_pixel_weight=mx.ones((1, 2, 2, 384, 512, 1)))
     with pytest.raises(MlxScoreAwareHarnessError):
         _prepare_recon_pixel_weight(bundle, (4, 384, 512, 3))
+
+
+@mlx_only
+def test_prepare_weight_rejects_dynamic_map_without_indices() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_bundle(
+        recon_pixel_weight=mx.ones((4, 2, 384, 512, 1)),
+        num_pairs=4,
+    )
+    with pytest.raises(MlxScoreAwareHarnessError, match="requires pair indices"):
+        _prepare_recon_pixel_weight(bundle, (2, 384, 512, 3))
 
 
 def test_bundle_rejects_bad_normalize_mode() -> None:
