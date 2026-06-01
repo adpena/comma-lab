@@ -213,15 +213,21 @@ class TestFourCoLeadStructure:
 
 
 class TestGrandCouncilRoster:
-    def test_grand_council_has_22_seats(self) -> None:
+    def test_grand_council_has_25_seats(self) -> None:
         # 11 existing (since 2026-04-29; Schmidhuber listed once) +
         # 8 new (2026-05-15 expansion: Atick/Redlich/Rao/Ballard/Tishby/
         # Zaslavsky/Wyner/TimeTravelerProtege) +
         # 1 operator-initiated 2026-05-19 (TimeTraveler mentor reframe) +
         # 2 operator-initiated 2026-05-19 ROSTER-MAINTENANCE-V2 sister seats
         # (Rudin_Grand + Daubechies_Grand per Catalog #110 APPEND-ONLY
-        # coexistence with inner-council co-leads) = 22.
-        assert len(GRAND_COUNCIL) == 22
+        # coexistence with inner-council co-leads) = 22, +
+        # 3 NeRV-family carrier-architecture seats (2026-06-01, lane
+        # lane_inverse_steganalysis_optimal_full_stack_20260601 deep-research
+        # subagent: HaoChen_NeRV / Shrivastava_INR / Gwilliam_RNeRV, verified
+        # principal authors of the NeRV/HNeRV/VINRB-RNeRV neural-video-codec
+        # lineage that supplies the inverse-steganalysis PHASE-2 carrier
+        # candidates) = 25.
+        assert len(GRAND_COUNCIL) == 25
 
     def test_existing_11_seats_present(self) -> None:
         names = frozenset(s.name for s in GRAND_COUNCIL)

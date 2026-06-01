@@ -682,6 +682,115 @@ GRAND_COUNCIL: tuple[CouncilSeat, ...] = (
             "INNER_COUNCIL seat 'Daubechies' is the canonical co-lead voice"
         ),
     ),
+    # --- 2026-06-01 NeRV-family carrier-architecture seats (lane
+    # lane_inverse_steganalysis_optimal_full_stack_20260601, deep-research
+    # subagent) per Catalog #110 APPEND-ONLY + #346. These are the verified
+    # principal authors of the neural-video-representation lineage that
+    # supplies the inverse-steganalysis stack's L2 carrier candidates
+    # (PHASE-2 detector-adapted cheap carrier per the grand symposium
+    # `grand_symposium_inverse_steganalysis_full_stack_20260601` carrier
+    # co-keystone decision). Author lists verified across >=2 independent
+    # sources (arXiv abstract + NeurIPS/CVPR proceedings + GitHub + project
+    # pages); see lane research return. The neural-video-INR carrier is
+    # cheap-BY-CONSTRUCTION (parameterized by a target byte budget:
+    # HNeRV total size = embedding + decoder, configured by `--modelsize`),
+    # which is the structural property HPRC's explicit-coefficient carrier
+    # lacked (FALSIFIED at byte-heavy = the Z8 disease). These seats are the
+    # AUTHORITATIVE voices on the NeRV-family carrier-cheapness landscape.
+    CouncilSeat(
+        name="HaoChen_NeRV",
+        role="grand_council",
+        canonical_position_summary=(
+            "Hao Chen (University of Maryland, College Park; advised by "
+            "Abhinav Shrivastava) — first author of NeRV (NeurIPS 2021) and "
+            "HNeRV (CVPR 2023), the canonical implicit-neural-video-codec "
+            "lineage. Canonical position: a video IS a small neural network "
+            "(frame-index -> RGB), so video compression = model compression; "
+            "the carrier is cheap-by-construction because it is parameterized "
+            "by a target byte budget (HNeRV total = content-adaptive embedding "
+            "+ balanced decoder, set by --modelsize). The AUTHORITATIVE voice "
+            "on why the NeRV-family carrier is structurally cheap (PR95/HNeRV "
+            "frontier lives near 178k bytes) where an explicit-coefficient "
+            "carrier (HPRC/Z8) is byte-heavy."
+        ),
+        relevance_tokens=(
+            "nerv", "hnerv", "neural_video_representation",
+            "implicit_video_codec", "carrier_architecture",
+            "carrier_cheapness", "model_compression_as_video_compression",
+            "content_adaptive_embedding", "frame_index_to_rgb",
+            "inr_video", "pr95_lineage",
+        ),
+        canonical_reference_path=(
+            "arXiv:2110.13903 (NeRV, NeurIPS 2021) + arXiv:2304.02633 "
+            "(HNeRV, CVPR 2023); github.com/haochen-rye/NeRV + "
+            "github.com/haochen-rye/HNeRV; lane research return "
+            "lane_inverse_steganalysis_optimal_full_stack_20260601"
+        ),
+    ),
+    CouncilSeat(
+        name="Shrivastava_INR",
+        role="grand_council",
+        canonical_position_summary=(
+            "Abhinav Shrivastava (University of Maryland, College Park) — "
+            "senior author across NeRV (NeurIPS 2021), HNeRV (CVPR 2023), and "
+            "VINRB/RNeRV (arXiv:2506.24127, 2025). Canonical position: the INR "
+            "carrier is a learned representation whose byte budget is a design "
+            "knob, NOT an emergent overhead; the principled NeRV-family "
+            "carrier-design discipline (decoder/embedding capacity split, "
+            "positional encoding, quantization knobs) is the lab that produced "
+            "the cheap-carrier lineage the contest frontier (PR95/HNeRV) "
+            "descends from. The grand-council voice on principled carrier "
+            "design + the warning that hybrid-INR compression evaluation has "
+            "known bitstream/set-zero pitfalls (VINRB README caveat)."
+        ),
+        relevance_tokens=(
+            "nerv", "hnerv", "rnerv", "vinrb", "carrier_architecture",
+            "carrier_design_discipline", "neural_video_representation",
+            "implicit_video_codec", "decoder_embedding_split",
+            "positional_encoding", "quantization_knobs",
+            "hybrid_inr_bitstream_caveat",
+        ),
+        canonical_reference_path=(
+            "arXiv:2110.13903 + arXiv:2304.02633 + arXiv:2506.24127 "
+            "(senior author across the NeRV/HNeRV/VINRB lineage, UMD "
+            "Shrivastava lab); lane research return "
+            "lane_inverse_steganalysis_optimal_full_stack_20260601"
+        ),
+    ),
+    CouncilSeat(
+        name="Gwilliam_RNeRV",
+        role="grand_council",
+        canonical_position_summary=(
+            "Matthew Gwilliam (University of Maryland, College Park) — HNeRV "
+            "(CVPR 2023) second author and lead author of VINRB / RNeRV "
+            "(\"How to Design and Train Your Implicit Neural Representation for "
+            "Video Compression\", arXiv:2506.24127, 2025). RNeRV = \"Rabbit "
+            "NeRV\", a state-of-the-art CONFIGURATION of disentangled "
+            "NeRV-family components (NOT a fundamentally new architecture; "
+            "+1.27% PSNR avg over the best per-video alternative at equal "
+            "training time on 7 UVG 1080p videos). Canonical position: the "
+            "NeRV-family is a COMPONENT DESIGN SPACE — the right carrier is the "
+            "right CONFIGURATION (positional encoding, decoder split, capacity) "
+            "for the byte budget + content, found by disentangled component "
+            "ablation; AND the honest empirical caveat that the VINRB hybrid-INR "
+            "compression eval (HNeRV/DiffNeRV/DivNeRV) is currently unreliable "
+            "(set_zero operates on non-bitstream model parts). The "
+            "carrier-configuration + measurement-honesty voice."
+        ),
+        relevance_tokens=(
+            "rnerv", "rabbit_nerv", "vinrb", "hnerv",
+            "neural_video_representation", "implicit_video_codec",
+            "carrier_architecture", "carrier_configuration",
+            "component_design_space", "disentangled_ablation",
+            "hybrid_inr_bitstream_caveat", "measurement_honesty",
+        ),
+        canonical_reference_path=(
+            "arXiv:2304.02633 (HNeRV 2nd author) + arXiv:2506.24127 "
+            "(VINRB/RNeRV lead author) + github.com/mgwillia/vinrb (UMD "
+            "Shrivastava lab); lane research return "
+            "lane_inverse_steganalysis_optimal_full_stack_20260601"
+        ),
+    ),
 )
 
 
