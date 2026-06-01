@@ -769,6 +769,11 @@ def _append_campaign_followup_steps(
             candidate_export_dir = rate_collapse_dir / "best_archive_export"
         rate_gate = output_dir / "archive_rate_local_replay_gate.json"
         local_replay_summary = output_dir / "local_cpu_replay" / "local_submission_replay_summary.json"
+        mlx_gate_json = (
+            output_dir / "hprc_mlx_prefilter_local_replay_gate.json"
+            if bool(args.enable_hprc_mlx_prefilter_before_local_replay)
+            else None
+        )
         exact_gate = output_dir / "exact_auth_gate_cpu.json"
         followup_report = output_dir / "hprc_queue_followup_report.json"
         post_replay_report = output_dir / "hprc_queue_post_replay_report.json"
@@ -830,6 +835,7 @@ def _append_campaign_followup_steps(
                 decode_pairs=decode_pairs,
                 full_replay_min_pairs=full_replay_min_pairs,
                 local_replay_summary=followup_local_summary,
+                mlx_prefilter_gate=None,
                 exact_gate=followup_gate,
                 z8_archive_bin=args.z8_archive_bin,
                 z8_surface=args.z8_surface,
@@ -876,7 +882,6 @@ def _append_campaign_followup_steps(
                     / "hprc_mlx_prefilter"
                     / "hprc_mlx_component_neutralization_profile.json"
                 )
-                mlx_gate_json = output_dir / "hprc_mlx_prefilter_local_replay_gate.json"
                 experiment["steps"].append(
                     _hprc_mlx_prefilter_step(
                         output_dir=output_dir,
@@ -891,11 +896,42 @@ def _append_campaign_followup_steps(
                 )
                 experiment["steps"].append(
                     _hprc_mlx_prefilter_gate_step(
+                        step_id="record_hprc_mlx_prefilter_local_replay_gate",
                         profile_json=profile_json,
                         gate_json=mlx_gate_json,
                         args=args,
                         timeout_seconds=timeout_seconds,
                         requires=["run_hprc_full_video_mlx_prefilter"],
+                        enforce_local_replay_recommended=False,
+                    )
+                )
+                experiment["steps"].append(
+                    _hprc_followup_report_step(
+                        step_id="write_hprc_campaign_mlx_gate_followup_report",
+                        training_result=candidate_result,
+                        report_path=followup_report,
+                        decode_pairs=decode_pairs,
+                        full_replay_min_pairs=full_replay_min_pairs,
+                        local_replay_summary=followup_local_summary,
+                        mlx_prefilter_gate=mlx_gate_json,
+                        exact_gate=followup_gate,
+                        z8_archive_bin=args.z8_archive_bin,
+                        z8_surface=args.z8_surface,
+                        z8_reference_pairs_npy=args.z8_reference_pairs_npy,
+                        repo_root=repo_root,
+                        requires=["record_hprc_mlx_prefilter_local_replay_gate"],
+                        timeout_seconds=timeout_seconds,
+                    )
+                )
+                experiment["steps"].append(
+                    _hprc_mlx_prefilter_gate_step(
+                        step_id="gate_hprc_mlx_prefilter_before_local_replay",
+                        profile_json=profile_json,
+                        gate_json=mlx_gate_json,
+                        args=args,
+                        timeout_seconds=timeout_seconds,
+                        requires=["record_hprc_mlx_prefilter_local_replay_gate"],
+                        enforce_local_replay_recommended=True,
                     )
                 )
                 replay_requires = ["gate_hprc_mlx_prefilter_before_local_replay"]
@@ -925,6 +961,7 @@ def _append_campaign_followup_steps(
                     decode_pairs=decode_pairs,
                     full_replay_min_pairs=full_replay_min_pairs,
                     local_replay_summary=local_replay_summary,
+                    mlx_prefilter_gate=mlx_gate_json,
                     exact_gate=exact_gate,
                     z8_archive_bin=args.z8_archive_bin,
                     z8_surface=args.z8_surface,
@@ -1222,11 +1259,13 @@ def _hprc_mlx_prefilter_step(
 
 def _hprc_mlx_prefilter_gate_step(
     *,
+    step_id: str,
     profile_json: Path,
     gate_json: Path,
     args: argparse.Namespace,
     timeout_seconds: int,
     requires: list[str],
+    enforce_local_replay_recommended: bool,
 ) -> dict[str, Any]:
     command = [
         ".venv/bin/python",
@@ -1246,35 +1285,41 @@ def _hprc_mlx_prefilter_gate_step(
         command.extend(["--auth-frontier-score", repr(float(args.auth_frontier_score))])
     if args.local_baseline_score is not None:
         command.extend(["--local-baseline-score", repr(float(args.local_baseline_score))])
-    return {
-        "id": "gate_hprc_mlx_prefilter_before_local_replay",
-        "kind": "command",
-        "requires": requires,
-        "command": command,
-        "resources": {"kind": "local_cpu"},
-        "timeout_seconds": timeout_seconds,
-        "on_postcondition_failure": "skipped",
-        "postconditions": [
-            {"type": "path_exists", "path": gate_json.as_posix()},
-            {"type": "json_false_authority", "path": gate_json.as_posix()},
-            {
-                "type": "json_equals",
-                "path": gate_json.as_posix(),
-                "key": "schema",
-                "equals": "hprc_mlx_prefilter_local_replay_gate.v1",
-            },
+    postconditions: list[dict[str, Any]] = [
+        {"type": "path_exists", "path": gate_json.as_posix()},
+        {"type": "json_false_authority", "path": gate_json.as_posix()},
+        {
+            "type": "json_equals",
+            "path": gate_json.as_posix(),
+            "key": "schema",
+            "equals": "hprc_mlx_prefilter_local_replay_gate.v1",
+        },
+    ]
+    if enforce_local_replay_recommended:
+        postconditions.append(
             {
                 "type": "json_equals",
                 "path": gate_json.as_posix(),
                 "key": "local_replay_recommended",
                 "equals": True,
-            },
-        ],
+            }
+        )
+    step = {
+        "id": step_id,
+        "kind": "command",
+        "requires": requires,
+        "command": command,
+        "resources": {"kind": "local_cpu"},
+        "timeout_seconds": timeout_seconds,
+        "postconditions": postconditions,
         "telemetry": {
             "artifact_paths": [gate_json.as_posix()],
             "input_artifact_paths": [profile_json.as_posix()],
         },
     }
+    if enforce_local_replay_recommended:
+        step["on_postcondition_failure"] = "skipped"
+    return step
 
 
 def _archive_rate_gate_step(
@@ -1624,6 +1669,7 @@ def _hprc_followup_report_step(
     decode_pairs: int,
     full_replay_min_pairs: int,
     local_replay_summary: Path | None,
+    mlx_prefilter_gate: Path | None,
     exact_gate: Path | None,
     z8_archive_bin: Path | None,
     z8_surface: Path | None,
@@ -1649,6 +1695,8 @@ def _hprc_followup_report_step(
     ]
     if local_replay_summary is not None:
         command.extend(["--local-replay-summary-json", local_replay_summary.as_posix()])
+    if mlx_prefilter_gate is not None:
+        command.extend(["--mlx-prefilter-gate-json", mlx_prefilter_gate.as_posix()])
     if exact_gate is not None:
         command.extend(["--exact-auth-gate-json", exact_gate.as_posix()])
     if z8_archive_bin is not None:
@@ -1676,7 +1724,10 @@ def _hprc_followup_report_step(
         ],
         "telemetry": {
             "artifact_paths": [report_path.as_posix()],
-            "input_artifact_paths": [training_result.as_posix()],
+            "input_artifact_paths": [
+                training_result.as_posix(),
+                *([] if mlx_prefilter_gate is None else [mlx_prefilter_gate.as_posix()]),
+            ],
         },
     }
 

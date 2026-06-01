@@ -250,3 +250,79 @@ def test_hprc_queue_followup_report_accepts_local_replay_but_keeps_false_authori
     )
     assert report["promotion_gate"]["ready_for_exact_eval_dispatch"] is False
     assert "contest_cpu_cuda_exact_eval_not_executed" in report["promotion_gate"]["blockers"]
+
+
+def test_hprc_queue_followup_report_records_mlx_prefilter_rejection(
+    tmp_path: Path,
+) -> None:
+    result_path = tmp_path / "hprc_rate_collapse_report.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_rate_collapse_report.v1",
+                "artifact": {
+                    "archive_path": (tmp_path / "archive.zip").as_posix(),
+                    "archive_sha256": "c" * 64,
+                    "archive_bytes": 217365,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    mlx_gate_path = tmp_path / "mlx_gate.json"
+    mlx_gate_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_prefilter_local_replay_gate.v1",
+                "axis_tag": "[macOS-MLX research-signal]",
+                "local_replay_recommended": False,
+                "mlx_score_estimate": 23.465335421414697,
+                "max_mlx_score_for_local_replay": 0.5,
+                "next_required_action": "skip_cpu_replay_until_mlx_prefilter_improves",
+                "blockers": [
+                    "mlx_score_not_below_target",
+                    "mlx_score_above_hard_demote_threshold",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_hprc_queue_followup_report(
+        training_result_path=result_path,
+        decode_pairs=600,
+        mlx_prefilter_gate_path=mlx_gate_path,
+        repo_root=tmp_path,
+    )
+
+    mlx_gate = report["local_replay_gate"]["mlx_prefilter_gate"]
+    assert mlx_gate["observed"] is True
+    assert mlx_gate["local_replay_recommended"] is False
+    assert mlx_gate["mlx_score_estimate"] == 23.465335421414697
+    assert "mlx_score_above_hard_demote_threshold" in mlx_gate["blockers"]
+    assert "mlx_prefilter_rejected_candidate_before_cpu_replay" in report[
+        "local_replay_gate"
+    ]["blockers"]
+    assert "hprc_mlx_prefilter_gate_not_passed" in report[
+        "z8_residual_sidecar_followup"
+    ]["blockers"]
+    assert "local_gate_did_not_recommend_exact_cpu_auth_dispatch" in report[
+        "promotion_gate"
+    ]["blockers"]
+    signal = report["planner_learning_signals"][0]
+    assert signal["signal_id"] == (
+        "defer_lowres_dense_residual_collapse_until_mlx_distortion_recovers"
+    )
+    assert signal["status"] == "blocking_for_cpu_replay"
+    assert "sparse_procedural_pose_geometry_tokens_instead_of_dense_rgb_residual" in signal[
+        "next_architecture_priorities"
+    ]

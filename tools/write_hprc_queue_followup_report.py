@@ -30,6 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--decode-pairs", required=True, type=int)
     parser.add_argument("--full-replay-min-pairs", type=int, default=600)
     parser.add_argument("--local-replay-summary-json", type=Path)
+    parser.add_argument("--mlx-prefilter-gate-json", type=Path)
     parser.add_argument("--exact-auth-gate-json", type=Path)
     parser.add_argument("--z8-archive-bin", type=Path)
     parser.add_argument("--z8-surface", type=Path)
@@ -47,6 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         decode_pairs=int(args.decode_pairs),
         full_replay_min_pairs=int(args.full_replay_min_pairs),
         local_replay_summary_path=args.local_replay_summary_json,
+        mlx_prefilter_gate_path=args.mlx_prefilter_gate_json,
         exact_auth_gate_path=args.exact_auth_gate_json,
         z8_archive_bin_path=args.z8_archive_bin,
         z8_surface_path=args.z8_surface,

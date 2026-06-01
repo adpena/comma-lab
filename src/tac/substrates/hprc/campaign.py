@@ -247,6 +247,7 @@ def build_hprc_queue_followup_report(
     decode_pairs: int,
     full_replay_min_pairs: int = 600,
     local_replay_summary_path: str | Path | None = None,
+    mlx_prefilter_gate_path: str | Path | None = None,
     exact_auth_gate_path: str | Path | None = None,
     z8_archive_bin_path: str | Path | None = None,
     z8_surface_path: str | Path | None = None,
@@ -293,11 +294,21 @@ def build_hprc_queue_followup_report(
         base=root,
     )
     replay_summary = _optional_json(local_replay_summary_path, base=root)
+    mlx_prefilter_gate = _optional_json(mlx_prefilter_gate_path, base=root)
     exact_gate = _optional_json(exact_auth_gate_path, base=root)
     local_replay_required = int(decode_pairs) >= int(full_replay_min_pairs)
     local_replay_passed = (
         isinstance(replay_summary, dict)
         and replay_summary.get("evaluation_passed") is True
+    )
+    mlx_prefilter_observed = isinstance(mlx_prefilter_gate, dict)
+    mlx_prefilter_passed = (
+        mlx_prefilter_observed
+        and mlx_prefilter_gate.get("local_replay_recommended") is True
+    )
+    mlx_prefilter_rejected = (
+        mlx_prefilter_observed
+        and mlx_prefilter_gate.get("local_replay_recommended") is False
     )
     exact_gate_recommended = (
         isinstance(exact_gate, dict)
@@ -313,13 +324,18 @@ def build_hprc_queue_followup_report(
 
     replay_blockers: list[str] = []
     if local_replay_required and not local_replay_passed:
-        replay_blockers.append("full_video_local_cpu_replay_not_passed_or_missing")
+        if mlx_prefilter_rejected:
+            replay_blockers.append("mlx_prefilter_rejected_candidate_before_cpu_replay")
+        else:
+            replay_blockers.append("full_video_local_cpu_replay_not_passed_or_missing")
     if not local_replay_required:
         replay_blockers.append("partial_pair_campaign_not_full_video_replay_candidate")
 
     z8_sidecar_blockers: list[str] = []
     if not archive_zip_path:
         z8_sidecar_blockers.append("hprc_archive_zip_missing_from_training_result")
+    if mlx_prefilter_rejected:
+        z8_sidecar_blockers.append("hprc_mlx_prefilter_gate_not_passed")
     if local_replay_required and not local_replay_passed:
         z8_sidecar_blockers.append("hprc_full_video_local_replay_gate_not_passed")
     if z8_archive_path is None or not z8_archive_path.is_file():
@@ -351,6 +367,31 @@ def build_hprc_queue_followup_report(
         if exact_gate is None
         else list(exact_gate.get("blockers") or [])
     )
+    planner_learning_signals: list[dict[str, Any]] = []
+    if mlx_prefilter_rejected:
+        planner_learning_signals.append(
+            {
+                "schema": "hprc_planner_learning_signal.v1",
+                "signal_id": "defer_lowres_dense_residual_collapse_until_mlx_distortion_recovers",
+                "status": "blocking_for_cpu_replay",
+                "axis_tag": mlx_prefilter_gate.get("axis_tag"),
+                "metric_name": "mlx_score_estimate",
+                "metric_value": mlx_prefilter_gate.get("mlx_score_estimate"),
+                "threshold": mlx_prefilter_gate.get("max_mlx_score_for_local_replay"),
+                "blockers": list(mlx_prefilter_gate.get("blockers") or []),
+                "next_architecture_priorities": [
+                    "native_rate_aware_scorer_training_before_residual_collapse",
+                    "sparse_procedural_pose_geometry_tokens_instead_of_dense_rgb_residual",
+                    "z8_or_hprc_residual_sidecar_only_after_full_video_p18_p19_allocator",
+                ],
+                "reactivation_criteria": [
+                    "archive_zip_bytes_under_sub019_zero_distortion_ceiling",
+                    "full600_mlx_score_below_cpu_replay_threshold",
+                    "receiver_proof_present",
+                    "local_cpu_replay_gate_recommended",
+                ],
+            }
+        )
     return {
         "schema": HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA,
         "generated_at_utc": _utc_stamp(),
@@ -378,6 +419,33 @@ def build_hprc_queue_followup_report(
             "local_score_estimate": None
             if replay_summary is None
             else replay_summary.get("local_score_estimate"),
+            "mlx_prefilter_gate": {
+                "observed": mlx_prefilter_observed,
+                "path": (
+                    None
+                    if mlx_prefilter_gate_path is None
+                    else _repo_relative(_resolve(mlx_prefilter_gate_path, base=root), root)
+                ),
+                "passed": mlx_prefilter_passed,
+                "local_replay_recommended": None
+                if not mlx_prefilter_observed
+                else mlx_prefilter_gate.get("local_replay_recommended"),
+                "axis_tag": None
+                if not mlx_prefilter_observed
+                else mlx_prefilter_gate.get("axis_tag"),
+                "mlx_score_estimate": None
+                if not mlx_prefilter_observed
+                else mlx_prefilter_gate.get("mlx_score_estimate"),
+                "max_mlx_score_for_local_replay": None
+                if not mlx_prefilter_observed
+                else mlx_prefilter_gate.get("max_mlx_score_for_local_replay"),
+                "blockers": []
+                if not mlx_prefilter_observed
+                else list(mlx_prefilter_gate.get("blockers") or []),
+                "next_required_action": None
+                if not mlx_prefilter_observed
+                else mlx_prefilter_gate.get("next_required_action"),
+            },
             "blockers": replay_blockers,
         },
         "exact_auth_gate": {
@@ -416,6 +484,7 @@ def build_hprc_queue_followup_report(
             "cpu_then_cuda_order": ["[contest-CPU]", "[contest-CUDA]"],
             "blockers": sorted(dict.fromkeys(promotion_blockers)),
         },
+        "planner_learning_signals": planner_learning_signals,
         **FALSE_AUTHORITY,
     }
 

@@ -444,8 +444,14 @@ def test_hprc_campaign_queue_can_insert_mlx_prefilter_before_cpu_replay(
     steps = queue["experiments"][0]["steps"]
     step_ids = [step["id"] for step in steps]
     assert "run_hprc_full_video_mlx_prefilter" in step_ids
+    assert "record_hprc_mlx_prefilter_local_replay_gate" in step_ids
+    assert "write_hprc_campaign_mlx_gate_followup_report" in step_ids
     assert "gate_hprc_mlx_prefilter_before_local_replay" in step_ids
     prefilter = steps[step_ids.index("run_hprc_full_video_mlx_prefilter")]
+    record_gate = steps[step_ids.index("record_hprc_mlx_prefilter_local_replay_gate")]
+    mlx_followup = steps[
+        step_ids.index("write_hprc_campaign_mlx_gate_followup_report")
+    ]
     gate = steps[step_ids.index("gate_hprc_mlx_prefilter_before_local_replay")]
     replay = steps[step_ids.index("run_local_cpu_replay")]
     assert prefilter["requires"] == ["prove_hprc_rate_collapsed_receiver"]
@@ -453,7 +459,15 @@ def test_hprc_campaign_queue_can_insert_mlx_prefilter_before_cpu_replay(
     assert "--no-sections" in prefilter["command"]
     assert "--cache-materialization-mode" in prefilter["command"]
     assert "hprc-direct" in prefilter["command"]
-    assert gate["requires"] == ["run_hprc_full_video_mlx_prefilter"]
+    assert record_gate["requires"] == ["run_hprc_full_video_mlx_prefilter"]
+    assert record_gate["postconditions"][-1]["key"] == "schema"
+    assert not any(
+        condition.get("key") == "local_replay_recommended"
+        for condition in record_gate["postconditions"]
+    )
+    assert mlx_followup["requires"] == ["record_hprc_mlx_prefilter_local_replay_gate"]
+    assert "--mlx-prefilter-gate-json" in mlx_followup["command"]
+    assert gate["requires"] == ["record_hprc_mlx_prefilter_local_replay_gate"]
     assert gate["on_postcondition_failure"] == "skipped"
     assert "--max-mlx-score-for-local-replay" in gate["command"]
     assert gate["postconditions"][-1]["key"] == "local_replay_recommended"
@@ -650,6 +664,8 @@ def test_hprc_campaign_queue_scales_with_mlx_prefilter_and_protected_pathway(
     full = queue["experiments"][2]
     step_ids = [step["id"] for step in full["steps"]]
     assert "run_hprc_full_video_mlx_prefilter" in step_ids
+    assert "record_hprc_mlx_prefilter_local_replay_gate" in step_ids
+    assert "write_hprc_campaign_mlx_gate_followup_report" in step_ids
     assert "gate_hprc_mlx_prefilter_before_local_replay" in step_ids
     train_step = next(step for step in full["steps"] if step["id"] == "run_local_training")
     train_command = train_step["command"]
@@ -680,6 +696,13 @@ def test_hprc_campaign_queue_scales_with_mlx_prefilter_and_protected_pathway(
     assert mlx_step["command"][mlx_step["command"].index("--max-pairs") + 1] == "600"
     replay_step = next(step for step in full["steps"] if step["id"] == "run_local_cpu_replay")
     assert replay_step["requires"] == ["gate_hprc_mlx_prefilter_before_local_replay"]
+    followup_step = next(
+        step
+        for step in full["steps"]
+        if step["id"] == "write_hprc_campaign_mlx_gate_followup_report"
+    )
+    assert followup_step["requires"] == ["record_hprc_mlx_prefilter_local_replay_gate"]
+    assert "--mlx-prefilter-gate-json" in followup_step["command"]
     full_plan = plan["plans"][2]
     assert full_plan["candidate_params"]["protected_highres_residual_pathway_enabled"] is True
     assert full_plan["candidate_params"]["protected_residual_grid_h"] == 32
