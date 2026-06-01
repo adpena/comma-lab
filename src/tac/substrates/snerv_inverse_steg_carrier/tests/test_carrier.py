@@ -1,0 +1,151 @@
+# SPDX-License-Identifier: MIT
+"""NO-FAKE tests for the SNeRV store-LF / generate-HF carrier.
+
+Slot EEE Class 2 discipline: tests verify ACTUAL carrier behaviour — the HF
+decoder really predicts HF from LF (a zero decoder produces a different, worse
+reconstruction than a fitted one), the per-element quantizer really uses the step
+map, and the decode path is numpy-only (no scorer). NOT constants.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    HfGenerationDecoder,
+    SnervCarrierError,
+    SnervFrameCode,
+    decode_frame,
+    dequantize_lf,
+    encode_frame_lf,
+    fit_hf_decoder_least_squares,
+    generate_hf_from_lf,
+    quantize_lf,
+)
+
+
+def _smooth_frame(rng, hw=(64, 96)):
+    """A smooth-ish frame whose HF is predictable from LF (real-video-like)."""
+    h, w = hw
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float64)
+    base = 128 + 60 * np.sin(xx / 9.0) + 40 * np.cos(yy / 7.0)
+    base += 8 * rng.standard_normal(hw)
+    return np.clip(base, 0, 255)
+
+
+def test_quantize_dequantize_uniform_roundtrip():
+    rng = np.random.default_rng(0)
+    lf = rng.standard_normal((8, 12)) * 50
+    q, sc, zr = quantize_lf(lf, n_levels=256)
+    deq = dequantize_lf(q, sc, zr)
+    # uniform 8-bit quant error bounded by half a step
+    assert np.abs(deq - lf).max() <= sc * 0.51
+
+
+def test_quantize_per_element_steps_actually_used():
+    """NO-FAKE: per-element steps produce per-element quant granularity."""
+    rng = np.random.default_rng(1)
+    lf = rng.standard_normal((4, 4)) * 20
+    steps = np.full((4, 4), 1.0)
+    steps[0, 0] = 10.0  # one coarse coefficient
+    q, sc, zr = quantize_lf(lf, per_element_steps=steps)
+    deq = dequantize_lf(q, sc, zr, per_element_steps=steps)
+    err = np.abs(deq - lf)
+    # the coarse coefficient tolerates a larger error than the fine ones
+    assert err[0, 0] <= 10.0 * 0.51
+    assert err[1, 1] <= 1.0 * 0.51
+
+
+def test_per_element_steps_must_be_positive():
+    with pytest.raises(SnervCarrierError):
+        quantize_lf(np.zeros((2, 2)), per_element_steps=np.zeros((2, 2)))
+
+
+def test_fitted_decoder_beats_zero_decoder():
+    """NO-FAKE: the FITTED HF decoder predicts real HF better than a zero decoder.
+
+    If the decoder were a no-op stub, the fitted and zero decoders would give the
+    SAME reconstruction. They must differ, and the fitted one must reconstruct the
+    real frame better (lower MSE).
+    """
+    rng = np.random.default_rng(2)
+    frames = [_smooth_frame(rng) for _ in range(8)]
+    pyrs = [encode_frame_lf(f, levels=3) for f in frames]
+    fitted = fit_hf_decoder_least_squares(pyrs, levels=3)
+    zero = HfGenerationDecoder.zeros(3)
+
+    f0, p0 = frames[0], pyrs[0]
+    q, sc, zr = quantize_lf(p0.lf, n_levels=256)
+    code = SnervFrameCode(
+        lf_quant=q, lf_scale=sc, lf_zero=zr, lf_shape=p0.lf.shape,
+        levels=3, wavelet=p0.wavelet, orig_hw=f0.shape,
+    )
+    recon_fit = decode_frame(code, fitted)
+    recon_zero = decode_frame(code, zero)
+    mse_fit = float(np.mean((recon_fit - f0) ** 2))
+    mse_zero = float(np.mean((recon_zero - f0) ** 2))
+    assert not np.allclose(recon_fit, recon_zero)  # decoder is not a no-op
+    assert mse_fit < mse_zero  # fitting HF helps
+
+
+def test_decoder_byte_cost_is_tiny_and_real():
+    """The decoder is byte-cheap (shared across all frames) and cost scales w/ levels."""
+    rng = np.random.default_rng(3)
+    pyrs = [encode_frame_lf(_smooth_frame(rng), levels=3) for _ in range(4)]
+    dec = fit_hf_decoder_least_squares(pyrs, levels=3)
+    # 3 levels * 3 subbands * 9 taps * 4 bytes = 324 B per channel
+    assert dec.byte_cost() == 3 * 3 * 9 * 4
+    dec4 = fit_hf_decoder_least_squares(
+        [encode_frame_lf(_smooth_frame(rng), levels=4) for _ in range(4)], levels=4
+    )
+    assert dec4.byte_cost() > dec.byte_cost()  # more levels = more kernels
+
+
+def test_generate_hf_produces_correct_shapes():
+    """The generated detail tuples match the template subband shapes (well-formed synthesis)."""
+    rng = np.random.default_rng(4)
+    pyrs = [encode_frame_lf(_smooth_frame(rng), levels=3) for _ in range(3)]
+    dec = fit_hf_decoder_least_squares(pyrs, levels=3)
+    p0 = pyrs[0]
+    coeffs = generate_hf_from_lf(p0.lf, dec, p0)
+    assert len(coeffs) == len(p0.coeffs)  # LF + same number of detail levels
+    for (glh, ghl, ghh), (tlh, thl, thh) in zip(
+        coeffs[1:], p0.details, strict=True
+    ):
+        assert glh.shape == tlh.shape
+        assert ghl.shape == thl.shape
+        assert ghh.shape == thh.shape
+
+
+def test_decode_frame_is_numpy_only_no_torch_dependency():
+    """The decode (inflate) path imports no torch/scorer (receiver contract)."""
+
+    rng = np.random.default_rng(5)
+    pyrs = [encode_frame_lf(_smooth_frame(rng), levels=2) for _ in range(3)]
+    dec = fit_hf_decoder_least_squares(pyrs, levels=2)
+    p0 = pyrs[0]
+    q, sc, zr = quantize_lf(p0.lf, n_levels=256)
+    code = SnervFrameCode(
+        lf_quant=q, lf_scale=sc, lf_zero=zr, lf_shape=p0.lf.shape,
+        levels=2, wavelet=p0.wavelet, orig_hw=(64, 96),
+    )
+    out = decode_frame(code, dec)
+    assert isinstance(out, np.ndarray)
+    assert out.shape == (64, 96)
+    # the decode helpers in carrier.py must not import torch
+    import tac.substrates.snerv_inverse_steg_carrier.carrier as carrier_mod
+
+    with open(carrier_mod.__file__) as f:
+        src = f.read()
+    assert "import torch" not in src and "from torch" not in src
+
+
+def test_decode_shape_mismatch_raises():
+    dec = HfGenerationDecoder.zeros(3)
+    bad = SnervFrameCode(
+        lf_quant=np.zeros((2, 2), dtype=np.int64), lf_scale=1.0, lf_zero=0.0,
+        lf_shape=(2, 2), levels=3, wavelet="db2", orig_hw=(64, 96),
+    )
+    with pytest.raises(SnervCarrierError):
+        decode_frame(bad, dec)
