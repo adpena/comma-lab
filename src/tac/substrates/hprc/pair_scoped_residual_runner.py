@@ -35,6 +35,7 @@ def build_pair_scoped_residual_bounded_runner_plan(
     device: str = "cpu",
     allow_large_tensor_cache: bool = True,
     profile_tool_path: str | Path = "tools/profile_hprc_mlx_component_neutralization.py",
+    incremental_tool_path: str | Path = "tools/profile_hprc_incremental_pair_response.py",
 ) -> dict[str, Any]:
     """Return executable rows for measured HPRC pair-scoped residual candidates.
 
@@ -84,6 +85,7 @@ def build_pair_scoped_residual_bounded_runner_plan(
             allow_batch_shape_research_signal=bool(allow_batch_shape_research_signal),
             device=device,
             allow_large_tensor_cache=bool(allow_large_tensor_cache),
+            incremental_tool_path=Path(incremental_tool_path),
         )
         for index, row in enumerate(rows, start=1)
     ]
@@ -161,11 +163,15 @@ def _runner_row(
     allow_batch_shape_research_signal: bool,
     device: str,
     allow_large_tensor_cache: bool,
+    incremental_tool_path: Path,
 ) -> dict[str, Any]:
     transform = _required_string(source_row, "residual_transform")
     candidate_id = _candidate_id(transform)
     candidate_output_dir = output_dir / candidate_id
     tool = _resolve(profile_tool_path, base=root)
+    incremental_tool = _resolve(incremental_tool_path, base=root)
+    profile_variant_id = f"residual_transform_{_profile_variant_slug(transform)}"
+    pair_ranges_arg = _format_pair_ranges(source_row.get("pair_ranges", []))
     argv = [
         sys.executable,
         str(tool),
@@ -192,6 +198,27 @@ def _runner_row(
         argv.append("--allow-large-tensor-cache")
     if allow_batch_shape_research_signal:
         argv.append("--allow-batch-shape-research-signal")
+    incremental_argv = [
+        sys.executable,
+        str(incremental_tool),
+        "--profile",
+        (candidate_output_dir / "hprc_mlx_component_neutralization_profile.json").as_posix(),
+        "--candidate-variant-id",
+        profile_variant_id,
+        "--pair-ranges",
+        pair_ranges_arg,
+        "--output-dir",
+        (candidate_output_dir / "incremental_pair_response").as_posix(),
+        "--device",
+        device,
+        "--scorer-batch-pairs",
+        str(scorer_batch_pairs),
+        "--force",
+    ]
+    if allow_large_tensor_cache:
+        incremental_argv.append("--allow-large-tensor-cache")
+    if allow_batch_shape_research_signal:
+        incremental_argv.append("--allow-batch-shape-research-signal")
     return {
         "schema": HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_ROW_SCHEMA,
         "rank": int(rank),
@@ -214,6 +241,12 @@ def _runner_row(
         "pair_ranges": source_row.get("pair_ranges", []),
         "profile_output_dir": candidate_output_dir.as_posix(),
         "profile_command_argv": argv,
+        "incremental_response_command_argv": incremental_argv,
+        "expected_incremental_response_report": (
+            candidate_output_dir
+            / "incremental_pair_response"
+            / "hprc_incremental_pair_response_report.json"
+        ).as_posix(),
         "expected_profile_report": (
             candidate_output_dir / "hprc_mlx_component_neutralization_profile.json"
         ).as_posix(),
@@ -255,6 +288,26 @@ def _candidate_id(transform: str) -> str:
     digest = hashlib.sha256(transform.encode("utf-8")).hexdigest()[:16]
     kind = transform.split("=", 1)[0].strip().lower().replace("_", "-")
     return f"hprc-{kind}-{digest}"
+
+
+def _profile_variant_slug(value: str) -> str:
+    slug = "".join(ch.lower() if ch.isalnum() else "_" for ch in value).strip("_")
+    if len(slug) <= 80:
+        return slug
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+    return f"{slug[:63].rstrip('_')}_{digest}"
+
+
+def _format_pair_ranges(value: Any) -> str:
+    if not isinstance(value, list):
+        raise ValueError("pair_ranges must be a list")
+    parts = []
+    for row in value:
+        if not isinstance(row, list) or len(row) != 2:
+            raise ValueError(f"invalid pair range row: {row!r}")
+        start, end = int(row[0]), int(row[1])
+        parts.append(str(start) if start == end else f"{start}-{end}")
+    return ",".join(parts)
 
 
 def _required_string(payload: dict[str, Any], key: str) -> str:

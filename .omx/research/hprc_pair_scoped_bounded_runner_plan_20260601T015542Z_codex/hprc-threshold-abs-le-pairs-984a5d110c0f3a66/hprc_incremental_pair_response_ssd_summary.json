@@ -1,0 +1,50 @@
+{
+  "archive_bytes_removed_vs_baseline": 303937,
+  "blockers": [
+    "incremental_mlx_response_is_advisory_not_score_authority",
+    "singleton_full_replay_required_before_promotion",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "external_ssd_cache_retained_until_identity_audit_stamp_exists"
+  ],
+  "cache_elapsed_seconds": 43.746679067611694,
+  "candidate_archive_bytes": 859923,
+  "changed_pair_count": 284,
+  "cleanup_blockers": [
+    "mlx_cache_identity_audit_stamp_missing"
+  ],
+  "cleanup_status": "blocked",
+  "delta_avg_posenet_dist": -14.083532773107294,
+  "delta_avg_segnet_dist": -0.0011248768648753557,
+  "delta_total_mlx_score_advisory": -2.152196352350849,
+  "external_artifacts": {
+    "artifact_retention_plan.json": {
+      "bytes": 5343,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_pair_response_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/artifact_retention_plan.json",
+      "sha256": "4c0195d6ebdd3bef20d6542a71e1361693f3e901734e20e49dbd0830e82b712c"
+    },
+    "hprc_incremental_pair_response_report.json": {
+      "bytes": 12890,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_pair_response_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_incremental_pair_response_report.json",
+      "sha256": "dce72d614794c56433be0d7ad38196c9678e3a5ca77766a54fac48f1d8b44a1c"
+    },
+    "mlx_incremental_cache_report.json": {
+      "bytes": 12174,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_pair_response_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_incremental_cache_report.json",
+      "sha256": "c6be1cff02959c7d806432230b2b935375c14e92a4f296a86aef4093e69efa9b"
+    },
+    "mlx_incremental_response.json": {
+      "bytes": 11504,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_incremental_pair_response_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/mlx_incremental_response.json",
+      "sha256": "1675031e63f6fe6361a140f454a89edc799c861167fa43cabb23fad4c784f02f"
+    }
+  },
+  "external_root": "/Volumes/VertigoDataTier/pact/hprc_incremental_pair_response_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66",
+  "full_video_pair_count": 600,
+  "pairs_per_second": 1.1847209979962383,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "response_elapsed_seconds": 239.71888780593872,
+  "response_n_samples": 284,
+  "schema": "hprc_incremental_pair_response_ssd_summary.v1",
+  "score_claim": false
+}

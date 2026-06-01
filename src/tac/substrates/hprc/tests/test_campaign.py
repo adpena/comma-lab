@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
+
 REPO = Path(__file__).resolve().parents[5]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
@@ -13,10 +15,18 @@ import tac.substrates.hprc.archive_candidate as hprc_candidate  # noqa: E402
 from tac.optimization.archive_bound_candidate_runtime_bridge import (  # noqa: E402
     build_archive_bound_candidate_runtime_package,
 )
+from tac.substrates.hprc.batch_profile_compare import (  # noqa: E402
+    HPRC_MLX_BATCH_PROFILE_COMPARISON_SCHEMA,
+    compare_hprc_mlx_batch_profiles,
+)
 from tac.substrates.hprc.campaign import (  # noqa: E402
     HPRC_CAMPAIGN_MANIFEST_SCHEMA,
     HPRC_EXACT_READINESS_REFUSAL_SCHEMA,
     materialize_minimal_hprc_campaign,
+)
+from tac.substrates.hprc.incremental_pair_response import (  # noqa: E402
+    HPRC_INCREMENTAL_PAIR_RESPONSE_SCHEMA,
+    build_hprc_incremental_pair_response_report,
 )
 from tac.substrates.hprc.pair_scoped_residual_harvest import (  # noqa: E402
     HPRC_PAIR_SCOPED_RESIDUAL_RUNNER_HARVEST_SCHEMA,
@@ -27,6 +37,7 @@ from tac.substrates.hprc.pair_scoped_residual_runner import (  # noqa: E402
     build_pair_scoped_residual_bounded_runner_plan,
 )
 from tools import build_hprc_pair_scoped_residual_bounded_runner as pair_runner_tool  # noqa: E402
+from tools import compare_hprc_mlx_batch_profiles as batch_compare_tool  # noqa: E402
 from tools import harvest_hprc_pair_scoped_residual_runner as harvest_runner_tool  # noqa: E402
 from tools import package_hprc_minimal_candidate as hprc_tool  # noqa: E402
 
@@ -234,6 +245,11 @@ def test_hprc_pair_scoped_residual_runner_plan_emits_executable_rows(tmp_path: P
     assert "--reuse-baseline-profile" in row["profile_command_argv"]
     assert "--residual-transforms" in row["profile_command_argv"]
     assert "--scorer-batch-pairs" in row["profile_command_argv"]
+    assert "--pair-ranges" in row["incremental_response_command_argv"]
+    assert "0,2-4" in row["incremental_response_command_argv"]
+    assert row["expected_incremental_response_report"].endswith(
+        "hprc_incremental_pair_response_report.json"
+    )
     assert row["scorer_batch_pairs"] == 1
     assert row["receiver_proof_followup"]["required"] is True
 
@@ -321,6 +337,7 @@ def test_hprc_pair_scoped_residual_runner_allows_batched_research_rows(
     assert row["scorer_batch_pairs"] == 8
     assert row["batch_shape_research_signal"] is True
     assert "--allow-batch-shape-research-signal" in row["profile_command_argv"]
+    assert "--allow-batch-shape-research-signal" in row["incremental_response_command_argv"]
 
 
 def test_hprc_pair_scoped_residual_harvest_binds_receiver_proof_by_sha(
@@ -486,3 +503,249 @@ def test_hprc_pair_scoped_residual_harvest_cli_writes_output(
     assert exit_code == 0
     payload = json.loads(output.read_text())
     assert payload["receiver_proof_binding"]["status"] == "missing"
+
+
+def test_hprc_mlx_batch_profile_comparison_reports_drift_and_speed(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    singleton_profile, batched_profile = _write_batch_compare_fixture(repo)
+
+    comparison = compare_hprc_mlx_batch_profiles(
+        singleton_profile_path=singleton_profile,
+        batched_profile_path=batched_profile,
+        repo_root=repo,
+    )
+
+    assert comparison["schema"] == HPRC_MLX_BATCH_PROFILE_COMPARISON_SCHEMA
+    assert comparison["wall_clock"]["singleton_scored_variant_count"] == 1
+    assert comparison["wall_clock"]["batched_scored_variant_count"] == 2
+    assert comparison["max_abs_response_drift"] > 0
+    assert comparison["max_abs_delta_drift"] > 0
+    assert comparison["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hprc_mlx_batch_profile_comparison_cli_writes_output(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    singleton_profile, batched_profile = _write_batch_compare_fixture(repo)
+    output = repo / "comparison.json"
+
+    exit_code = batch_compare_tool.main(
+        [
+            "--repo-root",
+            repo.as_posix(),
+            "--singleton-profile",
+            singleton_profile.as_posix(),
+            "--batched-profile",
+            batched_profile.as_posix(),
+            "--output",
+            output.as_posix(),
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(output.read_text())
+    assert payload["schema"] == HPRC_MLX_BATCH_PROFILE_COMPARISON_SCHEMA
+    assert payload["score_claim"] is False
+
+
+def test_hprc_incremental_pair_response_patches_changed_pairs(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    baseline_components = repo / "baseline_components"
+    candidate_components = repo / "candidate_components"
+    candidate_cache = repo / "candidate_cache"
+    baseline_components.mkdir()
+    candidate_components.mkdir()
+    candidate_cache.mkdir()
+    np.save(baseline_components / "pose.npy", np.asarray([0.10, 0.20, 0.30]))
+    np.save(baseline_components / "seg.npy", np.asarray([0.01, 0.02, 0.03]))
+    np.save(candidate_components / "pose.npy", np.asarray([0.25, 0.35]))
+    np.save(candidate_components / "seg.npy", np.asarray([0.025, 0.035]))
+    np.save(candidate_cache / "pair_indices.npy", np.asarray([[2, 3], [4, 5]]))
+    baseline_response = repo / "baseline_response.json"
+    candidate_response = repo / "candidate_response.json"
+    baseline_response.write_text(
+        json.dumps(_response_with_components(baseline_components)),
+        encoding="utf-8",
+    )
+    candidate_response.write_text(
+        json.dumps(_response_with_components(candidate_components)),
+        encoding="utf-8",
+    )
+    profile = repo / "profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "variant_rows": [
+                    {
+                        "variant_id": "baseline",
+                        "archive_zip_bytes": 1000,
+                        "mlx_response": baseline_response.as_posix(),
+                    },
+                    {
+                        "variant_id": "candidate",
+                        "archive_zip_bytes": 800,
+                        "mlx_response": candidate_response.as_posix(),
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    materialization_report = repo / "cache_report.json"
+    materialization_report.write_text(
+        json.dumps(
+            {
+                "cached_pair_count": 2,
+                "hprc_direct_cache_report": {
+                    "selected_pair_ranges": [[1, 2]],
+                    "pair_index_scope": "explicit_pair_ranges",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_hprc_incremental_pair_response_report(
+        profile_path=profile,
+        candidate_variant_id="candidate",
+        candidate_response_path=candidate_response,
+        candidate_cache_dir=candidate_cache,
+        materialization_report_path=materialization_report,
+        repo_root=repo,
+    )
+
+    assert report["schema"] == HPRC_INCREMENTAL_PAIR_RESPONSE_SCHEMA
+    assert report["changed_pair_rows"] == [1, 2]
+    assert report["full_video_pair_count"] == 3
+    assert report["archive_bytes_removed_vs_baseline"] == 200
+    assert report["delta_avg_posenet_dist"] > 0
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def _write_batch_compare_fixture(repo: Path) -> tuple[Path, Path]:
+    singleton_dir = repo / "singleton"
+    batched_dir = repo / "batched"
+    singleton_dir.mkdir()
+    batched_dir.mkdir()
+    singleton_responses = _write_compare_responses(singleton_dir, score_offset=0.0)
+    batched_responses = _write_compare_responses(batched_dir, score_offset=0.03)
+    singleton_profile = singleton_dir / "profile.json"
+    batched_profile = batched_dir / "profile.json"
+    singleton_profile.write_text(
+        json.dumps(
+            _compare_profile_payload(
+                responses=singleton_responses,
+                scorer_batch_pairs=1,
+                batch_shape_research_signal=False,
+                baseline_reuse_enabled=True,
+                elapsed_seconds=100.0,
+                delta_total=-1.2,
+            )
+        ),
+        encoding="utf-8",
+    )
+    batched_profile.write_text(
+        json.dumps(
+            _compare_profile_payload(
+                responses=batched_responses,
+                scorer_batch_pairs=8,
+                batch_shape_research_signal=True,
+                baseline_reuse_enabled=False,
+                elapsed_seconds=120.0,
+                delta_total=-1.17,
+            )
+        ),
+        encoding="utf-8",
+    )
+    return singleton_profile, batched_profile
+
+
+def _write_compare_responses(root: Path, *, score_offset: float) -> dict[str, Path]:
+    responses: dict[str, Path] = {}
+    for variant_id, archive_bytes, base_score in (
+        ("baseline", 1000, 10.0),
+        ("candidate", 900, 8.8),
+    ):
+        path = root / f"{variant_id}.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "avg_segnet_dist": 0.01 + score_offset,
+                    "avg_posenet_dist": 0.02 + score_offset,
+                    "canonical_score": base_score + score_offset,
+                    "score_rate_contribution": archive_bytes / 1000.0,
+                }
+            ),
+            encoding="utf-8",
+        )
+        responses[variant_id] = path
+    return responses
+
+
+def _response_with_components(component_dir: Path) -> dict:
+    return {
+        "components": {
+            "artifacts": {
+                "posenet_distortion": {
+                    "path": (component_dir / "pose.npy").as_posix(),
+                },
+                "segnet_distortion": {
+                    "path": (component_dir / "seg.npy").as_posix(),
+                },
+            }
+        }
+    }
+
+
+def _compare_profile_payload(
+    *,
+    responses: dict[str, Path],
+    scorer_batch_pairs: int,
+    batch_shape_research_signal: bool,
+    baseline_reuse_enabled: bool,
+    elapsed_seconds: float,
+    delta_total: float,
+) -> dict:
+    return {
+        "schema": "hprc_mlx_component_neutralization_profile.v1",
+        "max_pairs": 600,
+        "reference_cache_dir": "/reference/cache",
+        "elapsed_seconds": elapsed_seconds,
+        "scorer_batch_pairs": scorer_batch_pairs,
+        "batch_shape_research_signal": batch_shape_research_signal,
+        "baseline_reuse": {"enabled": baseline_reuse_enabled},
+        "variant_rows": [
+            {
+                "variant_id": "baseline",
+                "archive_zip_sha256": "a" * 64,
+                "hprc_0bin_sha256": "b" * 64,
+                "mlx_response": responses["baseline"].as_posix(),
+            },
+            {
+                "variant_id": "candidate",
+                "archive_zip_sha256": "c" * 64,
+                "hprc_0bin_sha256": "d" * 64,
+                "mlx_response": responses["candidate"].as_posix(),
+            },
+        ],
+        "section_value_rows": [
+            {"variant_id": "baseline"},
+            {
+                "variant_id": "candidate",
+                "archive_bytes_removed_vs_baseline": 100,
+                "delta_nonrate_score": -1.0,
+                "delta_rate_score": -0.2,
+                "delta_total_mlx_score_advisory": delta_total,
+                "delta_avg_posenet_dist": 0.001,
+                "delta_avg_segnet_dist": -0.002,
+            },
+        ],
+    }

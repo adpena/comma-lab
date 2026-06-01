@@ -219,3 +219,81 @@ def test_submission_mlx_cache_can_render_hprc_direct_without_raw_scratch(
     assert manifest["pair_count"] == 1
     assert manifest["raw_sha256"] == hashlib.sha256(expected_raw).hexdigest()
     assert not (work_dir / "inflated").exists()
+
+
+def test_submission_mlx_cache_hprc_direct_can_render_pair_subset(
+    tmp_path: Path,
+) -> None:
+    frames = np.zeros((4, 8, 10, 3), dtype=np.float32)
+    frames[:, :, :, 0] = np.arange(4, dtype=np.float32)[:, None, None] * 13
+    packet_bytes = build_compact_receiver_packet_from_lowres_frames(
+        frames,
+        basis_count=2,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", packet_bytes)
+
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 99\n")
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    report = tmp_path / "report.json"
+    cache_dir = tmp_path / "cache"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--archive",
+            str(archive),
+            "--submission-dir",
+            str(submission),
+            "--upstream-dir",
+            str(upstream),
+            "--video-names-file",
+            str(video_names),
+            "--output-cache-dir",
+            str(cache_dir),
+            "--work-dir",
+            str(tmp_path / "work"),
+            "--report-output",
+            str(report),
+            "--hprc-direct-cache",
+            "--pair-ranges",
+            "1",
+            "--batch-pairs",
+            "1",
+            "--allow-large-tensor-cache",
+            "--force",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    manifest = json.loads((cache_dir / "manifest.json").read_text(encoding="utf-8"))
+    compact = decode_compact_receiver_packet(parse_hprc_packet(packet_bytes))
+    h, w = CAMERA_HW
+    expected_raw = render_compact_receiver_frame_batch(
+        compact,
+        2,
+        2,
+        height=h,
+        width=w,
+    ).tobytes()
+    pair_indices = np.load(cache_dir / "pair_indices.npy")
+
+    assert payload["cached_pair_count"] == 1
+    assert payload["hprc_direct_cache_report"]["selected_pair_ranges"] == [[1, 1]]
+    assert payload["hprc_direct_cache_report"]["pair_index_scope"] == "explicit_pair_ranges"
+    assert manifest["pair_count"] == 1
+    assert pair_indices.tolist() == [[2, 3]]
+    assert manifest["raw_sha256"] == hashlib.sha256(expected_raw).hexdigest()

@@ -1,0 +1,48 @@
+{
+  "baseline_reuse_enabled": false,
+  "batch_shape_research_signal": true,
+  "blockers": [
+    "mlx_local_response_is_advisory_not_score_authority",
+    "batch_shape_research_signal_requires_singleton_rerun_before_promotion",
+    "class_region_boundary_scopes_require_logits_or_boundary_cache_extension",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "external_ssd_cache_retained_until_identity_audit_stamp_exists"
+  ],
+  "cleanup_blockers": [
+    "mlx_cache_identity_audit_stamp_missing",
+    "mlx_cache_identity_audit_stamp_missing"
+  ],
+  "cleanup_status": "blocked",
+  "comparison": {
+    "max_abs_delta_drift": 3.437070873246739e-06,
+    "max_abs_response_drift": 5.52178882884391e-06,
+    "path": "/Users/adpena/Projects/pact/.omx/research/hprc_pair_scoped_bounded_runner_plan_20260601T015542Z_codex/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_batch8_singleton_comparison.json",
+    "per_scored_variant_speedup_singleton_over_batched": 0.9015888458647845,
+    "raw_speedup_singleton_over_batched": 0.45079442293239225
+  },
+  "elapsed_seconds": 1214.580165863037,
+  "external_artifacts": {
+    "artifact_retention_plan.json": {
+      "bytes": 6393,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_batched_baseline_profile_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66-batch8/artifact_retention_plan.json",
+      "sha256": "01d232f759a897c9d583b2be699fef4b0cb4bb0cd752dcfe0b1b47d11c5f494f"
+    },
+    "hprc_mlx_component_neutralization_profile.json": {
+      "bytes": 373804,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_batched_baseline_profile_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66-batch8/hprc_mlx_component_neutralization_profile.json",
+      "sha256": "fbd0e17e58e7188771487be3571235cc885e13190687b4083498b65b876093ad"
+    },
+    "hprc_scorer_ranked_residual_shrink_backlog.json": {
+      "bytes": 2231,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_batched_baseline_profile_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66-batch8/hprc_scorer_ranked_residual_shrink_backlog.json",
+      "sha256": "c8c2dfaf4128a0fb40d6b4bd236d563d521fed18040a9e347eb1370431f06c3a"
+    }
+  },
+  "external_root": "/Volumes/VertigoDataTier/pact/hprc_batched_baseline_profile_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66-batch8",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "hprc_batch8_profile_ssd_summary.v1",
+  "score_claim": false,
+  "scorer_batch_pairs": 8,
+  "variant_count": 2
+}

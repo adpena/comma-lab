@@ -20,6 +20,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover
@@ -81,6 +83,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--batch-pairs", type=int, default=1)
     parser.add_argument("--max-pairs", type=int)
     parser.add_argument(
+        "--pair-ranges",
+        help=(
+            "For --hprc-direct-cache, render only explicit pair indices/ranges "
+            "such as 1-2,4,9-12. The manifest preserves source pair indices so "
+            "MLX response can align the subset against the full reference cache."
+        ),
+    )
+    parser.add_argument(
         "--local-acquisition-max-pairs",
         type=int,
         help=(
@@ -116,6 +126,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--max-pairs must be >= 1")
     if args.local_acquisition_max_pairs is not None and args.local_acquisition_max_pairs < 1:
         raise SystemExit("--local-acquisition-max-pairs must be >= 1")
+    if args.pair_ranges and not args.hprc_direct_cache:
+        raise SystemExit("--pair-ranges currently requires --hprc-direct-cache")
     if args.large_cache_pair_threshold < 1:
         raise SystemExit("--large-cache-pair-threshold must be >= 1")
 
@@ -214,6 +226,7 @@ def main(argv: list[str] | None = None) -> int:
             local_acquisition_max_pairs=args.local_acquisition_max_pairs,
             batch_pairs=int(args.batch_pairs),
             archive_sha256=provenance["archive_sha256"],
+            pair_indices_filter=_parse_pair_ranges(args.pair_ranges),
         )
         raw_path: Path | None = None
         inflated_manifest = {
@@ -356,6 +369,7 @@ def _write_hprc_direct_cache(
     local_acquisition_max_pairs: int | None,
     batch_pairs: int,
     archive_sha256: str,
+    pair_indices_filter: list[int] | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     member_name, packet_bytes = _read_single_member_zip(archive)
     from tac.substrates.hprc.archive import parse_hprc_packet
@@ -372,28 +386,43 @@ def _write_hprc_direct_cache(
     raw_pair_count = int(packet.config.frames) // 2
     if local_acquisition_max_pairs is not None:
         raw_pair_count = min(raw_pair_count, int(local_acquisition_max_pairs))
-    pair_count = raw_pair_count if max_pairs is None else min(raw_pair_count, int(max_pairs))
+    selected_pair_indices = (
+        list(range(raw_pair_count))
+        if pair_indices_filter is None
+        else _validate_selected_pair_indices(pair_indices_filter, raw_pair_count=raw_pair_count)
+    )
+    if max_pairs is not None:
+        selected_pair_indices = selected_pair_indices[: int(max_pairs)]
+    pair_count = len(selected_pair_indices)
     if pair_count < 1:
         raise SystemExit("HPRC direct cache has no complete frame pairs")
 
     h, w = CAMERA_HW
+    scorer_pair_indices = np.array(
+        [[2 * idx, 2 * idx + 1] for idx in selected_pair_indices],
+        dtype=np.int64,
+    )
 
     def pair_batches():
-        for start_pair in range(0, pair_count, int(batch_pairs)):
-            chunk_pairs = min(int(batch_pairs), pair_count - start_pair)
-            frames = render_compact_receiver_frame_batch(
-                compact,
-                start_pair * 2,
-                chunk_pairs * 2,
-                height=h,
-                width=w,
-            )
-            yield frames.reshape(chunk_pairs, 2, h, w, 3)
+        for start in range(0, pair_count, int(batch_pairs)):
+            chunk_indices = selected_pair_indices[start : start + int(batch_pairs)]
+            chunks = [
+                render_compact_receiver_frame_batch(
+                    compact,
+                    pair_index * 2,
+                    2,
+                    height=h,
+                    width=w,
+                ).reshape(1, 2, h, w, 3)
+                for pair_index in chunk_indices
+            ]
+            yield np.concatenate(chunks, axis=0)
 
     manifest = write_scorer_input_cache_from_pair_batches(
         pair_batches(),
         output_cache,
         pair_count=pair_count,
+        pair_indices=scorer_pair_indices,
         frame_shape_hwc=(h, w, 3),
         source=str(archive),
         source_kind="hprc_direct_receiver_render",
@@ -412,6 +441,11 @@ def _write_hprc_direct_cache(
         "packet_config": packet.config.as_dict(),
         "raw_pair_count": raw_pair_count,
         "cached_pair_count": int(manifest["pair_count"]),
+        "selected_pair_count": int(pair_count),
+        "selected_pair_ranges": _format_pair_ranges(selected_pair_indices),
+        "pair_index_scope": (
+            "explicit_pair_ranges" if pair_indices_filter is not None else "prefix_from_zero"
+        ),
         "frame_shape_hwc": [h, w, 3],
         "direct_render_raw_bytes": int(manifest["pair_count"]) * 2 * h * w * 3,
         "direct_render_raw_pair_count": int(manifest["pair_count"]),
@@ -423,6 +457,59 @@ def _write_hprc_direct_cache(
         **FALSE_AUTHORITY,
     }
     return report, manifest
+
+
+def _parse_pair_ranges(value: str | None) -> list[int] | None:
+    if value is None or not value.strip():
+        return None
+    out: list[int] = []
+    for part in value.split(","):
+        item = part.strip()
+        if not item:
+            continue
+        if "-" in item:
+            start_s, end_s = item.split("-", 1)
+            start = int(start_s)
+            end = int(end_s)
+            if end < start:
+                raise SystemExit(f"invalid descending pair range: {item}")
+            out.extend(range(start, end + 1))
+        else:
+            out.append(int(item))
+    return sorted(set(out))
+
+
+def _validate_selected_pair_indices(
+    pair_indices: list[int],
+    *,
+    raw_pair_count: int,
+) -> list[int]:
+    if not pair_indices:
+        raise SystemExit("--pair-ranges selected no pairs")
+    invalid = [idx for idx in pair_indices if idx < 0 or idx >= raw_pair_count]
+    if invalid:
+        preview = invalid[:8]
+        suffix = "" if len(invalid) <= 8 else f" ... +{len(invalid) - 8} more"
+        raise SystemExit(
+            f"--pair-ranges contains pairs outside [0,{raw_pair_count}): {preview}{suffix}"
+        )
+    return list(pair_indices)
+
+
+def _format_pair_ranges(indices: list[int]) -> list[list[int]]:
+    if not indices:
+        return []
+    ranges: list[list[int]] = []
+    start = prev = int(indices[0])
+    for value in indices[1:]:
+        idx = int(value)
+        if idx == prev + 1:
+            prev = idx
+            continue
+        ranges.append([start, prev])
+        start = prev = idx
+    ranges.append([start, prev])
+    return ranges
 
 
 def _read_single_member_zip(archive: Path) -> tuple[str, bytes]:

@@ -457,6 +457,7 @@ def write_scorer_input_cache_from_pair_batches(
     output_dir: str | Path,
     *,
     pair_count: int,
+    pair_indices: np.ndarray | None = None,
     frame_shape_hwc: tuple[int, int, int],
     source: str,
     source_kind: str,
@@ -489,7 +490,15 @@ def write_scorer_input_cache_from_pair_batches(
     pose_path = out / "posenet_yuv6_pair.npy"
     pair_path = out / "pair_indices.npy"
 
-    pair_indices = non_overlapping_pair_indices(pair_count * SEQ_LEN)
+    if pair_indices is None:
+        pair_indices = non_overlapping_pair_indices(pair_count * SEQ_LEN)
+    else:
+        pair_indices = np.asarray(pair_indices, dtype=np.int64)
+        if pair_indices.shape != (pair_count, SEQ_LEN):
+            raise ValueError(
+                f"pair_indices must have shape {(pair_count, SEQ_LEN)}, "
+                f"got {pair_indices.shape}"
+            )
     seg_mm = np.lib.format.open_memmap(
         seg_path,
         mode="w+",
