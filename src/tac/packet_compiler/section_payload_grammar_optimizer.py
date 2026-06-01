@@ -11,6 +11,9 @@ new one-off entropy probes.
 
 from __future__ import annotations
 
+import hashlib
+import io
+import zipfile
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -29,6 +32,79 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (
 SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA = "section_payload_grammar_optimizer.v1"
 SECTION_PAYLOAD_GRAMMAR_CANDIDATE_SCHEMA = "section_payload_grammar_candidate.v1"
 SECTION_PAYLOAD_GRAMMAR_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
+SECTION_PAYLOAD_SOURCE_MANIFEST_SCHEMA = "section_payload_source_manifest.v1"
+
+
+def sections_from_single_member_zip_archive(
+    archive_zip: bytes | bytearray | memoryview,
+    *,
+    spans: Sequence[Mapping[str, Any]] | None = None,
+    member_name: str | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Extract named payload sections from a single-member ZIP archive.
+
+    The returned section rows are directly consumable by
+    :func:`solve_section_payload_grammar`.  This keeps archive profiling
+    deterministic and in-memory: no extracted scratch tree is needed, and the
+    manifest records enough archive/member SHA and span data to reproduce the
+    exact section bytes.
+    """
+
+    archive_bytes = bytes(archive_zip)
+    archive_sha = hashlib.sha256(archive_bytes).hexdigest()
+    with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as zf:
+        infos = zf.infolist()
+        if len(infos) != 1:
+            raise ValueError(f"expected a single-member ZIP archive, got {len(infos)}")
+        info = infos[0]
+        if member_name is not None and info.filename != member_name:
+            raise ValueError(
+                f"ZIP member mismatch: expected {member_name!r}, got {info.filename!r}"
+            )
+        member_bytes = zf.read(info.filename)
+    member_sha = hashlib.sha256(member_bytes).hexdigest()
+    span_rows = _normalize_spans(spans, member_len=len(member_bytes), member_name=info.filename)
+    sections = [
+        {
+            "name": row["name"],
+            "payload": member_bytes[int(row["start"]) : int(row["end"])],
+        }
+        for row in span_rows
+    ]
+    section_manifest_rows = [
+        {
+            **{key: value for key, value in row.items() if key != "payload"},
+            "sha256": hashlib.sha256(section["payload"]).hexdigest(),
+            "bytes": len(section["payload"]),
+        }
+        for row, section in zip(span_rows, sections, strict=True)
+    ]
+    overhead_bytes = len(archive_bytes) - int(info.compress_size)
+    blockers: list[str] = []
+    if info.compress_type != zipfile.ZIP_STORED:
+        blockers.append("zip_member_not_stored_payload_bytes_are_decompressed_view")
+    if not _spans_cover_contiguously(span_rows, member_len=len(member_bytes)):
+        blockers.append("section_spans_do_not_cover_member_contiguously")
+    manifest = {
+        "schema": SECTION_PAYLOAD_SOURCE_MANIFEST_SCHEMA,
+        "source_kind": "single_member_zip_archive",
+        "archive_zip_bytes": len(archive_bytes),
+        "archive_zip_sha256": archive_sha,
+        "zip_member_count": 1,
+        "zip_member_name": info.filename,
+        "zip_member_file_size": int(info.file_size),
+        "zip_member_compress_size": int(info.compress_size),
+        "zip_member_compress_type": int(info.compress_type),
+        "zip_member_is_stored": info.compress_type == zipfile.ZIP_STORED,
+        "zip_overhead_bytes": overhead_bytes,
+        "zip_overhead_scope": "archive_zip_bytes_minus_member_compress_size",
+        "member_payload_bytes": len(member_bytes),
+        "member_payload_sha256": member_sha,
+        "section_count": len(section_manifest_rows),
+        "sections": section_manifest_rows,
+        "blockers": blockers,
+    }
+    return sections, manifest
 
 
 def measure_section_coder_candidates(
@@ -115,6 +191,7 @@ def solve_section_payload_grammar(
     brotli_quality: int = 11,
     baseline_coder: CoderName = "brotli",
     campaign_id: str = "section_payload_grammar",
+    source_payload_manifest: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Solve independent per-section codec selection for arbitrary sections.
 
@@ -159,9 +236,21 @@ def solve_section_payload_grammar(
         normalized,
         brotli_quality=brotli_quality,
     )
+    blockers = [
+        "section_codec_choices_not_bound_to_receiver",
+        "byte_closed_archive_not_materialized",
+        "runtime_consumption_proof_missing",
+        "full_frame_inflate_parity_missing",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    if source_payload_manifest is not None:
+        blockers.extend(str(item) for item in source_payload_manifest.get("blockers", []))
     return {
         "schema": SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA,
         "campaign_id": campaign_id,
+        "source_payload_manifest": None
+        if source_payload_manifest is None
+        else dict(source_payload_manifest),
         "section_count": len(rows),
         "coders": list(coders),
         "baseline_coder": baseline_coder,
@@ -183,13 +272,7 @@ def solve_section_payload_grammar(
         "saturation_diagnostic": payload_saturation_diagnostic(ratio),
         "planner_feedback": _planner_feedback(rows, order_diagnostic=order_diagnostic),
         "rows": rows,
-        "blockers": [
-            "section_codec_choices_not_bound_to_receiver",
-            "byte_closed_archive_not_materialized",
-            "runtime_consumption_proof_missing",
-            "full_frame_inflate_parity_missing",
-            "contest_cpu_cuda_exact_eval_not_executed",
-        ],
+        "blockers": sorted(dict.fromkeys(blockers)),
         "authority": {
             "score_claim": False,
             "promotion_eligible": False,
@@ -333,6 +416,72 @@ def _normalize_sections(
         seen.add(clean)
         normalized.append((clean, bytes(payload)))
     return normalized
+
+
+def _normalize_spans(
+    spans: Sequence[Mapping[str, Any]] | None,
+    *,
+    member_len: int,
+    member_name: str,
+) -> list[dict[str, Any]]:
+    if spans is None:
+        return [
+            {
+                "name": f"member:{member_name}",
+                "start": 0,
+                "end": member_len,
+                "length": member_len,
+            }
+        ]
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, span in enumerate(spans):
+        if not isinstance(span, Mapping):
+            raise ValueError(f"spans[{index}] must be an object")
+        name = _section_name(str(span.get("name") or span.get("section_name") or ""))
+        if name in seen:
+            raise ValueError(f"duplicate section span name: {name!r}")
+        seen.add(name)
+        start = _nonnegative_int(span.get("start"), f"spans[{index}].start")
+        if "end" in span and span.get("end") is not None:
+            end = _nonnegative_int(span.get("end"), f"spans[{index}].end")
+            length = end - start
+        else:
+            length = _nonnegative_int(span.get("length"), f"spans[{index}].length")
+            end = start + length
+        if length < 0:
+            raise ValueError(f"spans[{index}] end must be >= start")
+        if end > member_len:
+            raise ValueError(
+                f"spans[{index}] exceeds ZIP member length: end={end} member_len={member_len}"
+            )
+        rows.append({"name": name, "start": start, "end": end, "length": length})
+    return rows
+
+
+def _nonnegative_int(value: Any, label: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{label} must be a non-negative integer")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a non-negative integer") from exc
+    if parsed < 0:
+        raise ValueError(f"{label} must be a non-negative integer")
+    return parsed
+
+
+def _spans_cover_contiguously(
+    spans: Sequence[Mapping[str, Any]],
+    *,
+    member_len: int,
+) -> bool:
+    cursor = 0
+    for span in sorted(spans, key=lambda row: int(row["start"])):
+        if int(span["start"]) != cursor:
+            return False
+        cursor = int(span["end"])
+    return cursor == member_len
 
 
 def _section_name(value: str) -> str:
@@ -479,8 +628,10 @@ __all__ = [
     "SECTION_PAYLOAD_GRAMMAR_CANDIDATE_SCHEMA",
     "SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA",
     "SECTION_PAYLOAD_GRAMMAR_QUEUE_SCHEMA",
+    "SECTION_PAYLOAD_SOURCE_MANIFEST_SCHEMA",
     "build_section_payload_optimizer_queue",
     "measure_section_coder_candidates",
+    "sections_from_single_member_zip_archive",
     "select_best_section_candidate",
     "solve_section_payload_grammar",
 ]

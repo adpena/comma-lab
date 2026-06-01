@@ -4,21 +4,36 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import zipfile
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 
+from tac.optimization.byte_shaving_campaign import build_signal_surface_from_candidate_queue
 from tac.packet_compiler.pr101_per_tensor_grammar_solver import DEFAULT_CODERS
 from tac.packet_compiler.section_payload_grammar_optimizer import (
     SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA,
     SECTION_PAYLOAD_GRAMMAR_QUEUE_SCHEMA,
+    SECTION_PAYLOAD_SOURCE_MANIFEST_SCHEMA,
     build_section_payload_optimizer_queue,
     measure_section_coder_candidates,
+    sections_from_single_member_zip_archive,
     select_best_section_candidate,
     solve_section_payload_grammar,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _stored_zip(member_name: str, payload: bytes) -> bytes:
+    buf = BytesIO()
+    info = zipfile.ZipInfo(member_name)
+    info.compress_type = zipfile.ZIP_STORED
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(info, payload)
+    return buf.getvalue()
 
 
 def test_section_coder_candidates_reuse_shared_portfolio_fail_closed() -> None:
@@ -89,6 +104,7 @@ def test_section_payload_queue_is_planning_only_and_consumable() -> None:
         {"latents": b"\x01\x02\x03\x04" * 128},
         coders=("brotli", "canonical_huffman"),
         brotli_quality=4,
+        baseline_coder="canonical_huffman",
         campaign_id="latents_section_grammar",
     )
 
@@ -106,6 +122,49 @@ def test_section_payload_queue_is_planning_only_and_consumable() -> None:
     assert queue["promotion_eligible"] is False
     assert queue["ready_for_provider_dispatch"] is False
     assert "byte_closed_archive_not_materialized" in queue["blockers"]
+
+    surface = build_signal_surface_from_candidate_queue(queue)
+    assert surface["score_claim"] is False
+    assert surface["ready_for_exact_eval_dispatch"] is False
+    assert len(surface["units"]) == 1
+    assert all(
+        unit["operation_families"] == ["section_payload_coder_selection"]
+        for unit in surface["units"]
+    )
+
+
+def test_single_member_zip_archive_sections_are_extracted_with_provenance() -> None:
+    member_payload = b"A" * 64 + b"BC" * 32
+    archive = _stored_zip("0.bin", member_payload)
+
+    sections, manifest = sections_from_single_member_zip_archive(
+        archive,
+        member_name="0.bin",
+        spans=[
+            {"name": "alpha", "start": 0, "length": 64},
+            {"name": "beta", "start": 64, "length": 64},
+        ],
+    )
+    report = solve_section_payload_grammar(
+        sections,
+        coders=("brotli", "canonical_huffman"),
+        brotli_quality=4,
+        source_payload_manifest=manifest,
+    )
+
+    assert manifest["schema"] == SECTION_PAYLOAD_SOURCE_MANIFEST_SCHEMA
+    assert manifest["zip_member_is_stored"] is True
+    assert manifest["member_payload_bytes"] == len(member_payload)
+    assert manifest["section_count"] == 2
+    assert manifest["sections"][0]["name"] == "alpha"
+    assert manifest["sections"][1]["bytes"] == 64
+    assert manifest["blockers"] == []
+    assert sections[0]["payload"] == b"A" * 64
+    assert sections[1]["payload"] == b"BC" * 32
+    assert report["source_payload_manifest"]["archive_zip_sha256"] == manifest[
+        "archive_zip_sha256"
+    ]
+    assert report["blockers"]
 
 
 def test_section_payload_solver_rejects_duplicate_names() -> None:
@@ -176,3 +235,50 @@ def test_section_payload_optimizer_cli_writes_report_and_queue(tmp_path: Path) -
     assert queue["campaign_id"] == "cli_section_grammar"
     assert report["score_claim"] is False
     assert queue["score_claim"] is False
+
+
+def test_section_payload_optimizer_cli_reads_single_member_zip_spans(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    report_path = tmp_path / "report.json"
+    payload = b"\x00" * 128 + b"abcd" * 64
+    archive.write_bytes(_stored_zip("0.bin", payload))
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "section_payload_grammar_optimizer.py"),
+            "--zip-archive",
+            str(archive),
+            "--zip-member",
+            "0.bin",
+            "--zip-section",
+            "zeros:0:128",
+            "--zip-section",
+            "pattern:128:256",
+            "--output",
+            str(report_path),
+            "--campaign-id",
+            "cli_zip_section_grammar",
+            "--coder",
+            "brotli",
+            "--coder",
+            "canonical_huffman",
+            "--brotli-quality",
+            "4",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    stdout = json.loads(result.stdout)
+    assert stdout["source_kind"] == "single_member_zip_archive"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["schema"] == SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA
+    assert report["source_payload_manifest"]["zip_member_name"] == "0.bin"
+    assert report["source_payload_manifest"]["section_count"] == 2
+    assert {row["section_name"] for row in report["rows"]} == {"zeros", "pattern"}

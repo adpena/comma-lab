@@ -23,6 +23,7 @@ from tac.packet_compiler.pr101_per_tensor_grammar_solver import (  # noqa: E402
 )
 from tac.packet_compiler.section_payload_grammar_optimizer import (  # noqa: E402
     build_section_payload_optimizer_queue,
+    sections_from_single_member_zip_archive,
     solve_section_payload_grammar,
 )
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
@@ -41,6 +42,24 @@ def _parse_section(raw: str) -> tuple[str, Path]:
     return name, parsed
 
 
+def _parse_zip_section(raw: str) -> dict[str, int | str]:
+    parts = raw.split(":")
+    if len(parts) != 3:
+        raise argparse.ArgumentTypeError("zip section must be NAME:START:LENGTH")
+    name, start_raw, length_raw = parts
+    name = name.strip()
+    if not name:
+        raise argparse.ArgumentTypeError("zip section name must be non-empty")
+    try:
+        start = int(start_raw)
+        length = int(length_raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("zip section START/LENGTH must be integers") from exc
+    if start < 0 or length < 0:
+        raise argparse.ArgumentTypeError("zip section START/LENGTH must be non-negative")
+    return {"name": name, "start": start, "length": length}
+
+
 def _parse_coder(raw: str) -> CoderName:
     if raw not in DEFAULT_CODERS:
         raise argparse.ArgumentTypeError(
@@ -55,8 +74,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--section",
         action="append",
         type=_parse_section,
-        required=True,
         help="Named payload file as NAME=PATH. Repeat for multiple sections.",
+    )
+    parser.add_argument(
+        "--zip-archive",
+        type=Path,
+        help=(
+            "Single-member ZIP archive to inspect directly. Use --zip-section "
+            "to slice the member; without spans the full member is one section."
+        ),
+    )
+    parser.add_argument("--zip-member", help="Expected ZIP member name.")
+    parser.add_argument(
+        "--zip-section",
+        action="append",
+        type=_parse_zip_section,
+        help="Named member span as NAME:START:LENGTH. Repeat for multiple sections.",
     )
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--queue-output", type=Path)
@@ -88,15 +121,38 @@ def _read_sections(items: list[tuple[str, Path]]) -> dict[str, bytes]:
     return out
 
 
+def _load_section_source(args: argparse.Namespace) -> tuple[object, dict[str, Any] | None]:
+    file_sections = list(args.section or [])
+    if bool(file_sections) == bool(args.zip_archive):
+        raise SystemExit("pass exactly one of --section or --zip-archive")
+    if file_sections:
+        return _read_sections(file_sections), None
+    archive_path = Path(args.zip_archive).expanduser()
+    if not archive_path.is_file():
+        raise SystemExit(f"ZIP archive not found: {archive_path}")
+    sections, manifest = sections_from_single_member_zip_archive(
+        archive_path.read_bytes(),
+        spans=args.zip_section,
+        member_name=args.zip_member,
+    )
+    manifest = {
+        **manifest,
+        "archive_path": archive_path.as_posix(),
+    }
+    return sections, manifest
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     coders = tuple(args.coder or DEFAULT_CODERS)
+    sections, source_manifest = _load_section_source(args)
     report = solve_section_payload_grammar(
-        _read_sections(args.section),
+        sections,
         coders=coders,
         brotli_quality=args.brotli_quality,
         baseline_coder=args.baseline_coder,
         campaign_id=args.campaign_id,
+        source_payload_manifest=source_manifest,
     )
     try:
         report_artifact = write_json_artifact(
@@ -127,6 +183,9 @@ def main(argv: list[str] | None = None) -> int:
                 "ok": True,
                 "campaign_id": report["campaign_id"],
                 "section_count": report["section_count"],
+                "source_kind": None
+                if source_manifest is None
+                else source_manifest.get("source_kind"),
                 "selected_isolated_section_bytes": report["byte_accounting"][
                     "selected_isolated_section_bytes"
                 ],
