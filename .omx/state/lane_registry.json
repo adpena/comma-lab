@@ -66215,6 +66215,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_pytorch_render_parity_crux_20260601",
+      "name": "MLX-PyTorch render parity crux",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/mlx_pytorch_render_parity_crux.py + carrier render device-pinning + fixed_fp64 override; crux=conv2d fp32 accumulation order, render at uint8 floor, d_seg delta=0.0 across modes"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "7 NO-FAKE tests pass (src/tac/tests/test_mlx_pytorch_render_parity_crux.py) + 23 existing carrier tests + ruff clean"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/feedback_mlx_pytorch_render_parity_crux_landed_20260601.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_apple_gpu_scorer_parity_crux_20260601",
+      "name": "Apple-GPU scorer parity crux",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/local_acceleration/apple_gpu_scorer_parity_crux.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_apple_gpu_scorer_parity_crux.py (11 NO-FAKE behavioral tests, headline guards FAIL on fix revert)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_apple_gpu_scorer_parity_crux_landed_20260601.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_codex_snerv_runtime_hinerv_mlx_portable_20260601",
+      "name": "Codex SNeRV receiver runtime and HiNeRV MLX portable continuation",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -66224,5 +66347,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-01T21:05:26Z"
+  "updated_at": "2026-06-01T21:43:30Z"
 }
