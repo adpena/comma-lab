@@ -528,6 +528,91 @@ def test_full_video_section_value_profile_satisfies_work_order(
     assert plan["section_value_profile_work_orders"] == []
 
 
+def test_full_video_section_value_profile_marks_cut_candidates(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "selector_v4_archive.zip"
+    archive.write_bytes(b"archive")
+    manifest = _projection(
+        tmp_path / "selector_v4_cut",
+        family=HprcRepresentationFamily.PACT_NERV,
+        decoder=b"d" * 20,
+        latents=b"l" * 8,
+        selectors=b"s" * 4,
+        source={
+            "archive_zip_path": archive.as_posix(),
+            "archive_zip_sha256": "c" * 64,
+            "archive_zip_bytes": archive.stat().st_size,
+        },
+        manifest_extra={
+            "num_pairs": 600,
+            "source_payload_kind": "pact_nerv_selector_v4_psv4",
+            "side_channel_kind": "rle_selector",
+        },
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    profile_path = tmp_path / "full_profile_cut.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "family": "pact_nerv",
+                "max_pairs": 600,
+                "scope_status": {"full_video": "executed"},
+                "section_value_rows": [
+                    {
+                        "variant_id": "neutralize_decoder_qw",
+                        "neutralized_section": "decoder_qw",
+                        "family": "pact_nerv",
+                        "projection_manifest_path": manifest.as_posix(),
+                        "archive_bytes_removed_vs_baseline": 20,
+                        "delta_nonrate_score": 1.0,
+                        "delta_total_mlx_score_advisory": 1.0,
+                        "marginal_status": "protect_candidate_value_exceeds_rate_price",
+                    },
+                    {
+                        "variant_id": "neutralize_latents_rc",
+                        "neutralized_section": "latents_rc",
+                        "family": "pact_nerv",
+                        "projection_manifest_path": manifest.as_posix(),
+                        "archive_bytes_removed_vs_baseline": 8,
+                        "delta_nonrate_score": 0.0,
+                        "delta_total_mlx_score_advisory": -contest_rate_term(8),
+                        "marginal_status": "cut_candidate_distortion_nonworse",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        mlx_profile_paths=[profile_path],
+    )
+
+    sections = {row["section_name"]: row for row in plan["section_value_rows"]}
+    assert sections["decoder_qw"]["admission_status"] == (
+        "admit_section_bytes_for_receiver_proof"
+    )
+    assert sections["decoder_qw"]["section_spend_recommendation"] == (
+        "protect_section_bytes_measured_value_exceeds_rate_price"
+    )
+    assert sections["latents_rc"]["admission_status"] == (
+        "cut_section_bytes_for_receiver_proof"
+    )
+    assert sections["latents_rc"]["section_spend_recommendation"] == (
+        "cut_section_bytes_measured_removal_improves_objective"
+    )
+    assert sections["latents_rc"]["measured_removal_delta_total_mlx_advisory"] < 0
+
+
 def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:
     tool = _load_tool()
     manifest = _projection(

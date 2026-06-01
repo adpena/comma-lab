@@ -327,6 +327,11 @@ def _section_value_row(
         "manifest_json",
         "receiver_state",
     }
+    observed_removal_delta_nonrate = None
+    observed_removal_delta_total = None
+    observed_archive_bytes_removed = None
+    measured_marginal_status = None
+    section_spend_recommendation = "not_priced"
     if projection_only_metadata:
         admission_status = "projection_contract_metadata_not_candidate_runtime_spend"
         delta_nonrate = 0.0
@@ -334,6 +339,7 @@ def _section_value_row(
         evidence_status = "metadata_contract_no_mlx_replay_required"
         requires_replay = False
         blockers = ["contest_cpu_cuda_exact_eval_not_executed"]
+        section_spend_recommendation = "metadata_no_runtime_spend"
     elif not coverage_valid:
         admission_status = "blocked_until_full_video_coverage_before_section_pricing"
         delta_nonrate = None
@@ -344,6 +350,7 @@ def _section_value_row(
             "declared_pair_coverage_below_full_video",
             "contest_cpu_cuda_exact_eval_not_executed",
         ]
+        section_spend_recommendation = "wait_for_full_video_coverage"
     elif best_evidence is None:
         admission_status = "blocked_until_full_video_mlx_section_value_replay"
         delta_nonrate = None
@@ -354,6 +361,7 @@ def _section_value_row(
             "full_video_mlx_section_value_replay_missing",
             "contest_cpu_cuda_exact_eval_not_executed",
         ]
+        section_spend_recommendation = "run_full_video_section_value_replay"
     elif not full_video_evidence_present:
         admission_status = "blocked_until_full_video_mlx_section_value_replay"
         delta_nonrate = None
@@ -365,16 +373,44 @@ def _section_value_row(
             "sampled_mlx_section_value_replay_not_budget_authority",
             "contest_cpu_cuda_exact_eval_not_executed",
         ]
+        section_spend_recommendation = "rerun_as_full_video_section_value_replay"
     else:
         delta_nonrate = best_evidence["presence_delta_nonrate"]
         admission_delta = float(delta_nonrate) + rate_cost
         evidence_status = "measured_mlx_advisory"
+        observed_removal_delta_nonrate = best_evidence.get(
+            "observed_removal_delta_nonrate"
+        )
+        observed_removal_delta_total = best_evidence.get(
+            "observed_removal_delta_total_mlx_advisory"
+        )
+        observed_archive_bytes_removed = best_evidence.get(
+            "archive_bytes_removed_vs_baseline"
+        )
+        measured_marginal_status = best_evidence.get("marginal_status")
         if admission_delta < 0.0:
             admission_status = "admit_section_bytes_for_receiver_proof"
+            section_spend_recommendation = (
+                "protect_section_bytes_measured_value_exceeds_rate_price"
+            )
         elif section_name == "residual_rc" or "residual" in section_role:
             admission_status = "demote_or_block_residual_tokens"
+            section_spend_recommendation = (
+                "demote_residual_bytes_measured_value_below_rate_price"
+            )
+        elif (
+            observed_removal_delta_total is not None
+            and float(observed_removal_delta_total) < 0.0
+        ):
+            admission_status = "cut_section_bytes_for_receiver_proof"
+            section_spend_recommendation = (
+                "cut_section_bytes_measured_removal_improves_objective"
+            )
         else:
             admission_status = "protect_or_shrink_by_smaller_recode_only"
+            section_spend_recommendation = (
+                "recode_smaller_only_if_exact_replay_preserves_distortion"
+            )
         requires_replay = False
         blockers = ["contest_cpu_cuda_exact_eval_not_executed"]
     return {
@@ -387,9 +423,14 @@ def _section_value_row(
         "rate_cost": rate_cost,
         "evidence_status": evidence_status,
         "measured_presence_delta_nonrate": delta_nonrate,
+        "measured_removal_delta_nonrate": observed_removal_delta_nonrate,
+        "measured_removal_delta_total_mlx_advisory": observed_removal_delta_total,
+        "measured_archive_bytes_removed_vs_baseline": observed_archive_bytes_removed,
+        "measured_marginal_status": measured_marginal_status,
         "admission_objective_delta": admission_delta,
         "admission_rule": "measured_delta_nonrate + rate_cost < 0",
         "admission_status": admission_status,
+        "section_spend_recommendation": section_spend_recommendation,
         "evidence_rows": evidence_rows,
         "requires_receiver_proof": True,
         "requires_full_video_mlx_replay": requires_replay,
