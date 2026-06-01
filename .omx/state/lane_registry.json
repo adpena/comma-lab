@@ -65969,6 +65969,252 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z8_symbolic_lambda_wavelet_blob_20260601",
+      "name": "Z8 symbolic lambda wavelet blob int8/int16 probe",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/z8_hierarchical_predictive_coding/symbolic_wavelet_blob.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/z8_symbolic_lambda_wavelet_blob_score_waterfill_int4_joint_2pair_20260601Tlocal/result.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_z8_symbolic_lambda_wavelet_blob_probe_20260601T202000Z_codex.md"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_z8_symbolic_lambda_wavelet_blob_probe_20260601T202000Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_rnerv_rabbit_nerv_inverse_steganalysis_carrier_candidate_20260601",
+      "name": "RNeRV (Rabbit NeRV / VINRB arXiv 2506.24127) as inverse-steganalysis carrier candidate \u2014 synergy-stack comparison vs PR95-HNeRV; GATED on the L-inf-vs-L2 proof",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_snerv_inverse_steganalysis_carrier_20260601",
+      "name": "SNeRV inverse-steganalysis carrier (LF-store/HF-generate, L-inf pose-Fisher allocation)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/snerv_inverse_steg_carrier/advisory.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_dwt_adjoint.py"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/snerv_inverse_steganalysis_carrier_landed_20260601.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_hinerv_inverse_steganalysis_carrier_20260601",
+      "name": "HiNeRV inverse-steganalysis carrier (Linf latent allocation via decoder-VJP G3)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/hinerv_latent_linf_allocation.py + tools/run_hinerv_latent_linf_allocation.py: dense decoder-VJP adjoint G3 (dotprod ~1e-7) + Fisher-pullback + Linf latent allocation; advisory anchor experiments/results/hinerv_invsteg_carrier_advisory/"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/hinerv_inverse_steganalysis_carrier_linf_latent_allocation_landed_20260601.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "sr_nerv_resolution_axis_mirror",
+      "name": "SR-NeRV resolution-axis mirror check",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr95_hnerv_linf_carrier_20260601",
+      "name": "PR95-HNeRV L-inf carrier",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/pr95_hnerv_linf_carrier.py + tools/run_pr95_hnerv_linf_carrier.py; 23 NO-FAKE tests pass; ruff clean; real carrier renders + head-to-head row produced"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "23 NO-FAKE tests (Slot EEE 5-class behavior-not-constants) + ruff clean + 24 sister HiNeRV tests no regression; research_only advisory NON-PROMOTABLE per Catalog 341/192/127/323; paired CPU+CUDA Catalog 246 operator-gated"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/feedback_pr95_hnerv_linf_carrier_landed_20260601.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -65978,5 +66224,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-01T20:09:25Z"
+  "updated_at": "2026-06-01T21:05:26Z"
 }
