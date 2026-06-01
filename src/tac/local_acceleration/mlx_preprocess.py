@@ -19,6 +19,7 @@ import hashlib
 import json
 import platform
 import sys
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,7 @@ __all__ = [
     "non_overlapping_pair_indices",
     "preprocess_scorer_inputs_from_pairs",
     "write_scorer_input_cache",
+    "write_scorer_input_cache_from_pair_batches",
     "write_scorer_input_cache_from_raw_file",
     "write_scorer_input_cache_from_video_file",
     "write_scorer_input_cache_hash_manifest_from_raw_file",
@@ -407,6 +409,160 @@ def write_scorer_input_cache_from_raw_file(
         "archive_sha256": archive_sha256,
         "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
         "raw_sha256": _file_sha256(raw_path),
+        "hash_domain": ARRAY_HASH_DOMAIN,
+        "producer_environment": _producer_environment(),
+        "artifacts": {
+            "segnet_last_rgb": _artifact_record(seg_path),
+            "posenet_yuv6_pair": _artifact_record(pose_path),
+            "pair_indices": _artifact_record(pair_path),
+        },
+        "array_sha256": {
+            "segnet_last_rgb": seg_hash.hexdigest(),
+            "posenet_yuv6_pair": pose_hash.hexdigest(),
+            "pair_indices": _array_sha256(pair_indices),
+        },
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "device_contract": {
+            "allowed_uses": [
+                "local_mlx_training",
+                "scorer_surrogate_calibration",
+                "prepaid_dispatch_spend_filter_after_score_calibration",
+                "cross_backend_tensor_parity",
+            ],
+            "forbidden_uses": [
+                "auth_eval",
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+                "leaderboard_claim",
+            ],
+        },
+    }
+    (out / "manifest.json").write_text(
+        json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
+def write_scorer_input_cache_from_pair_batches(
+    pair_batches: Iterable[np.ndarray],
+    output_dir: str | Path,
+    *,
+    pair_count: int,
+    frame_shape_hwc: tuple[int, int, int],
+    source: str,
+    source_kind: str,
+    archive_sha256: str | None = None,
+    inflated_outputs_aggregate_sha256: str | None = None,
+    batch_pairs: int = 8,
+    compute_raw_sha256: bool = False,
+) -> dict[str, Any]:
+    """Build a scorer-input cache from already-rendered RGB pair chunks.
+
+    This keeps local MLX acquisition from writing a multi-GB ``.raw`` scratch
+    file when a deterministic receiver can render chunks directly. It is not an
+    auth-eval path: callers must still prove the packaged receiver consumes the
+    archive through ``inflate.sh`` before any promotion.
+    """
+
+    if batch_pairs <= 0:
+        raise ValueError(f"batch_pairs must be positive, got {batch_pairs}")
+    _validate_scorer_cache_batch_working_set(batch_pairs)
+    pair_count = int(pair_count)
+    if pair_count < 1:
+        raise ValueError(f"pair_count must be >= 1, got {pair_count}")
+    h, w, c = (int(v) for v in frame_shape_hwc)
+    if h < 1 or w < 1 or c != 3:
+        raise ValueError(f"frame_shape_hwc must be positive RGB, got {frame_shape_hwc}")
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    seg_path = out / "segnet_last_rgb.npy"
+    pose_path = out / "posenet_yuv6_pair.npy"
+    pair_path = out / "pair_indices.npy"
+
+    pair_indices = non_overlapping_pair_indices(pair_count * SEQ_LEN)
+    seg_mm = np.lib.format.open_memmap(
+        seg_path,
+        mode="w+",
+        dtype=np.float32,
+        shape=(pair_count, 3, *SEGNET_INPUT_HW),
+    )
+    pose_mm = np.lib.format.open_memmap(
+        pose_path,
+        mode="w+",
+        dtype=np.float32,
+        shape=(pair_count, 12, *YUV6_INPUT_HW),
+    )
+    np.save(pair_path, pair_indices)
+    seg_hash = _StreamingArraySha256(tuple(seg_mm.shape), np.dtype("float32"))
+    pose_hash = _StreamingArraySha256(tuple(pose_mm.shape), np.dtype("float32"))
+    raw_hash = hashlib.sha256() if compute_raw_sha256 else None
+
+    written = 0
+    for pairs in pair_batches:
+        pairs_u8 = np.asarray(pairs)
+        if pairs_u8.ndim != 5 or pairs_u8.shape[1] != SEQ_LEN or pairs_u8.shape[-1] != 3:
+            raise ValueError(
+                "pair batch must have shape (B, 2, H, W, 3), "
+                f"got {pairs_u8.shape}"
+            )
+        if pairs_u8.dtype != np.uint8:
+            raise TypeError(f"pair batch must be uint8 RGB, got {pairs_u8.dtype}")
+        if tuple(int(v) for v in pairs_u8.shape[2:]) != (h, w, c):
+            raise ValueError(
+                f"pair batch frame shape {pairs_u8.shape[2:]} does not match "
+                f"declared {(h, w, c)}"
+            )
+        chunk_count = int(pairs_u8.shape[0])
+        if written + chunk_count > pair_count:
+            raise ValueError(
+                f"pair_batches yielded too many pairs: {written + chunk_count}>{pair_count}"
+            )
+        if raw_hash is not None:
+            raw_hash.update(np.ascontiguousarray(pairs_u8).tobytes())
+        chunk_indices = pair_indices[written : written + chunk_count]
+        batch = preprocess_scorer_inputs_from_pairs(
+            pairs_u8,
+            pair_indices=chunk_indices,
+            source=source,
+        )
+        end = written + chunk_count
+        seg_mm[written:end] = batch.segnet_last_rgb
+        pose_mm[written:end] = batch.posenet_yuv6_pair
+        seg_hash.update(batch.segnet_last_rgb)
+        pose_hash.update(batch.posenet_yuv6_pair)
+        written = end
+
+    if written != pair_count:
+        raise ValueError(f"pair_batches yielded {written} pairs, expected {pair_count}")
+
+    seg_mm.flush()
+    pose_mm.flush()
+    raw_sha256 = raw_hash.hexdigest() if raw_hash is not None else None
+    manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "source": source,
+        "source_kind": source_kind,
+        "streaming_batch_pairs": int(batch_pairs),
+        "frame_shape_hwc": [h, w, c],
+        "seq_len": SEQ_LEN,
+        "pair_count": pair_count,
+        "segnet_last_rgb_shape": list(seg_mm.shape),
+        "posenet_yuv6_pair_shape": list(pose_mm.shape),
+        "pair_indices_shape": list(pair_indices.shape),
+        "archive_sha256": archive_sha256,
+        "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
+        "raw_sha256": raw_sha256,
+        "raw_sha256_scope": "cached_pair_stream" if compute_raw_sha256 else None,
         "hash_domain": ARRAY_HASH_DOMAIN,
         "producer_environment": _producer_environment(),
         "artifacts": {

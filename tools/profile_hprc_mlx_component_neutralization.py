@@ -115,6 +115,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--progress-every", type=int, default=0)
     parser.add_argument("--inflate-timeout", type=int, default=1800)
     parser.add_argument(
+        "--cache-materialization-mode",
+        choices=("hprc-direct", "shell-inflate"),
+        default="hprc-direct",
+        help=(
+            "How to build advisory MLX scorer caches for HPRC variants. "
+            "hprc-direct avoids multi-GB raw scratch; shell-inflate preserves "
+            "the older full inflate path for parity audits."
+        ),
+    )
+    parser.add_argument(
         "--allow-large-tensor-cache",
         action="store_true",
         help="Permit full-video scorer tensor caches after SSD/storage preflight.",
@@ -175,6 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         max_pairs=int(args.max_pairs),
         inflate_timeout=int(args.inflate_timeout),
         allow_large_tensor_cache=bool(args.allow_large_tensor_cache),
+        cache_materialization_mode=str(args.cache_materialization_mode),
     )
     payloads = _run_mlx_responses(
         variants=variants,
@@ -353,6 +364,7 @@ def _materialize_mlx_caches(
     max_pairs: int,
     inflate_timeout: int,
     allow_large_tensor_cache: bool,
+    cache_materialization_mode: str,
 ) -> dict[str, dict[str, Any]]:
     rows: dict[str, dict[str, Any]] = {}
     tool = repo_root / "tools" / "materialize_mlx_scorer_cache_from_submission.py"
@@ -360,27 +372,16 @@ def _materialize_mlx_caches(
         cache_dir = output_dir / "mlx_caches" / variant.variant_id
         work_dir = output_dir / "mlx_work" / variant.variant_id
         report_output = output_dir / "mlx_cache_reports" / f"{variant.variant_id}.json"
-        cmd = [
-            sys.executable,
-            str(tool),
-            "--archive",
-            str(variant.archive_zip_path),
-            "--submission-dir",
-            str(variant.submission_dir),
-            "--output-cache-dir",
-            str(cache_dir),
-            "--work-dir",
-            str(work_dir),
-            "--report-output",
-            str(report_output),
-            "--max-pairs",
-            str(max_pairs),
-            "--local-acquisition-max-pairs",
-            str(max_pairs),
-            "--inflate-timeout",
-            str(inflate_timeout),
-            "--force",
-        ]
+        cmd = _build_mlx_cache_materialization_command(
+            tool=tool,
+            variant=variant,
+            cache_dir=cache_dir,
+            work_dir=work_dir,
+            report_output=report_output,
+            max_pairs=max_pairs,
+            inflate_timeout=inflate_timeout,
+            cache_materialization_mode=cache_materialization_mode,
+        )
         if allow_large_tensor_cache:
             cmd.append("--allow-large-tensor-cache")
         completed = subprocess.run(cmd, cwd=repo_root, text=True, capture_output=True)
@@ -398,6 +399,45 @@ def _materialize_mlx_caches(
             "stderr_tail": completed.stderr.strip()[-4000:],
         }
     return rows
+
+
+def _build_mlx_cache_materialization_command(
+    *,
+    tool: Path,
+    variant: VariantSpec,
+    cache_dir: Path,
+    work_dir: Path,
+    report_output: Path,
+    max_pairs: int,
+    inflate_timeout: int,
+    cache_materialization_mode: str,
+) -> list[str]:
+    if cache_materialization_mode not in {"hprc-direct", "shell-inflate"}:
+        raise ValueError(f"unknown cache materialization mode: {cache_materialization_mode}")
+    cmd = [
+        sys.executable,
+        str(tool),
+        "--archive",
+        str(variant.archive_zip_path),
+        "--submission-dir",
+        str(variant.submission_dir),
+        "--output-cache-dir",
+        str(cache_dir),
+        "--work-dir",
+        str(work_dir),
+        "--report-output",
+        str(report_output),
+        "--max-pairs",
+        str(max_pairs),
+        "--local-acquisition-max-pairs",
+        str(max_pairs),
+        "--inflate-timeout",
+        str(inflate_timeout),
+        "--force",
+    ]
+    if cache_materialization_mode == "hprc-direct":
+        cmd.append("--hprc-direct-cache")
+    return cmd
 
 
 def _run_mlx_responses(

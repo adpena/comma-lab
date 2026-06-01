@@ -20,6 +20,7 @@ from tac.substrates.hprc.learned_receiver import (
     mutate_compact_receiver_section,
     neutralize_compact_receiver_section,
     render_compact_receiver_frame,
+    render_compact_receiver_frame_batch,
     transform_compact_receiver_residual,
 )
 
@@ -146,6 +147,8 @@ def test_compact_receiver_vectorized_raw_writer_matches_frame_renderer(tmp_path:
         for idx in range(4)
     )
     assert out.read_bytes() == expected
+    batch = render_compact_receiver_frame_batch(compact, 0, 4, height=16, width=20)
+    assert batch.tobytes() == expected
 
 
 def test_compact_receiver_manifest_mutation_is_metadata_only() -> None:

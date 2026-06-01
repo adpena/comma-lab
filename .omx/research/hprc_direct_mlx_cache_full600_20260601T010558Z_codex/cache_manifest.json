@@ -1,0 +1,100 @@
+{
+  "archive_sha256": "bfd2c7a604134ead151ff7e784fb06a7f76ffd66c817610ef997d9dd23814188",
+  "array_sha256": {
+    "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+    "posenet_yuv6_pair": "fdbd43f092e3070054d4303929e8eee6ef8bbde1a5de0f02ae9bd19ed26e5c47",
+    "segnet_last_rgb": "5402540fa675956e513b6c39c7a8874124c37924a5b1b37efea486847403dfb4"
+  },
+  "artifacts": {
+    "pair_indices": {
+      "bytes": 9728,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_direct_cache_threshold_abs_le3_full600_20260601T010558Z/cache/pair_indices.npy",
+      "sha256": "16941927786fd609201a2954f09cf5e2b50ee2eefb850c51306454fa5910091e"
+    },
+    "posenet_yuv6_pair": {
+      "bytes": 1415577728,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_direct_cache_threshold_abs_le3_full600_20260601T010558Z/cache/posenet_yuv6_pair.npy",
+      "sha256": "32a5a47f630ffcb72a18737eaa0986cce25522a30eb141ac078cf4ff61307cf5"
+    },
+    "segnet_last_rgb": {
+      "bytes": 1415577728,
+      "path": "/Volumes/VertigoDataTier/pact/hprc_direct_cache_threshold_abs_le3_full600_20260601T010558Z/cache/segnet_last_rgb.npy",
+      "sha256": "a56066353c0bac619cb302bbf7b7df5dceea439615abaf1afed87b4843346e81"
+    }
+  },
+  "device_contract": {
+    "allowed_uses": [
+      "local_mlx_training",
+      "scorer_surrogate_calibration",
+      "prepaid_dispatch_spend_filter_after_score_calibration",
+      "cross_backend_tensor_parity"
+    ],
+    "forbidden_uses": [
+      "auth_eval",
+      "score_claim",
+      "promotion",
+      "rank_or_kill",
+      "leaderboard_claim"
+    ]
+  },
+  "eligible_for_local_mlx_transfer_calibration": false,
+  "eligible_for_unaudited_mlx_candidate_generation": true,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "frame_shape_hwc": [
+    874,
+    1164,
+    3
+  ],
+  "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+  "inflated_outputs_aggregate_sha256": "ed484328d899fe6b7b0e1076db1d5d5ec38ac21429361122f96d7f93c8489e69",
+  "pair_count": 600,
+  "pair_indices_shape": [
+    600,
+    2
+  ],
+  "posenet_yuv6_pair_shape": [
+    600,
+    12,
+    192,
+    256
+  ],
+  "producer_environment": {
+    "numpy_version": "2.4.4",
+    "platform_machine": "arm64",
+    "platform_system": "Darwin",
+    "python_version": "3.12.13",
+    "torch_version": "2.11.0"
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_sha256": "ed484328d899fe6b7b0e1076db1d5d5ec38ac21429361122f96d7f93c8489e69",
+  "raw_sha256_scope": "cached_pair_stream",
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "mlx_scorer_input_cache.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "segnet_last_rgb_shape": [
+    600,
+    3,
+    384,
+    512
+  ],
+  "seq_len": 2,
+  "source": "/Users/adpena/Projects/pact/.omx/research/hprc_threshold_abs_le_3_receiver_proof_20260601T004446Z_codex/archive.zip",
+  "source_kind": "hprc_direct_receiver_render",
+  "streaming_batch_pairs": 8,
+  "unaudited_candidate_cache_contract": {
+    "allowed_use": "local_mlx_candidate_generation_prior_before_cpu_gate",
+    "created_by": "tools/materialize_mlx_scorer_cache_from_submission.py",
+    "forbidden_use": "score_claim_or_promotion_or_rank_or_exact_dispatch",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "unaudited_mlx_candidate_cache_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  }
+}

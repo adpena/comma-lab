@@ -83,3 +83,42 @@ def test_shrink_backlog_prioritizes_distortion_nonworse_byte_cuts() -> None:
         backlog["rows"][0]["next_materializer_task"]
         == "replace_raw_residual_grid_with_scorer_ranked_significance_and_learned_prior_coder"
     )
+
+
+def test_hprc_profile_defaults_to_direct_cache_materialization() -> None:
+    module = _load_tool_module()
+    variant = module.VariantSpec(  # pyright: ignore[reportPrivateUsage]
+        variant_id="baseline",
+        neutralized_section=None,
+        archive_zip_path=Path("candidate/archive.zip"),
+        submission_dir=Path("candidate/submission"),
+        hprc_bin_path=Path("candidate/0.bin"),
+        archive_bytes=123,
+        archive_sha256="abc",
+        hprc_0bin_sha256="def",
+        variant_dir=Path("candidate"),
+    )
+
+    direct_cmd = module._build_mlx_cache_materialization_command(  # pyright: ignore[reportPrivateUsage]
+        tool=Path("tools/materialize_mlx_scorer_cache_from_submission.py"),
+        variant=variant,
+        cache_dir=Path("cache"),
+        work_dir=Path("work"),
+        report_output=Path("report.json"),
+        max_pairs=600,
+        inflate_timeout=1800,
+        cache_materialization_mode="hprc-direct",
+    )
+    shell_cmd = module._build_mlx_cache_materialization_command(  # pyright: ignore[reportPrivateUsage]
+        tool=Path("tools/materialize_mlx_scorer_cache_from_submission.py"),
+        variant=variant,
+        cache_dir=Path("cache"),
+        work_dir=Path("work"),
+        report_output=Path("report.json"),
+        max_pairs=600,
+        inflate_timeout=1800,
+        cache_materialization_mode="shell-inflate",
+    )
+
+    assert "--hprc-direct-cache" in direct_cmd
+    assert "--hprc-direct-cache" not in shell_cmd

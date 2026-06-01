@@ -671,6 +671,31 @@ def _render_compact_receiver_frame_batch(
     return _nearest_resize_batch(out_low, height, width)
 
 
+def render_compact_receiver_frame_batch(
+    compact: CompactReceiverPacket,
+    start_frame: int,
+    frame_count: int,
+    *,
+    height: int,
+    width: int,
+) -> np.ndarray:
+    """Render a contiguous batch of receiver frames.
+
+    This is the public batch surface for MLX-local scorer-cache acquisition.
+    Contest promotion still requires the shipped ``inflate.sh`` receiver proof;
+    this helper only removes avoidable local raw-video I/O during advisory
+    sweeps.
+    """
+
+    return _render_compact_receiver_frame_batch(
+        compact,
+        start_frame,
+        frame_count,
+        height=height,
+        width=width,
+    )
+
+
 def render_compact_receiver_frame(
     compact: CompactReceiverPacket,
     frame_index: int,
@@ -1097,6 +1122,7 @@ __all__ = [
     "pack_compact_residual_quantized",
     "pack_compact_selectors",
     "render_compact_receiver_frame",
+    "render_compact_receiver_frame_batch",
     "transform_compact_receiver_residual",
     "write_compact_receiver_raw",
 ]
