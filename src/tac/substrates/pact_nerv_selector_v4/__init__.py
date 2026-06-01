@@ -56,10 +56,10 @@ from .architecture import (
     RunLengthSelectorCoder,
 )
 from .archive import (
-    PactNervSelectorV4Archive,
     PSV4_HEADER_SIZE,
     PSV4_MAGIC,
     PSV4_SCHEMA_VERSION,
+    PactNervSelectorV4Archive,
     pack_archive,
     parse_archive,
 )
@@ -72,11 +72,22 @@ from .score_aware_loss import (
     PactNervSelectorV4ScoreAwareLoss,
     ScoreAwareLossWeights,
 )
+from .section_value import (
+    PSV4_SECTION_VALUE_PROFILE_SCHEMA,
+    PSV4_SECTION_VALUE_SOURCE_SCHEMA,
+    PSV4_SUPPORTED_SECTION_NAMES,
+    neutralize_psv4_section,
+    psv4_layout_report,
+    psv4_section_layout,
+)
 
 __all__ = [
     "PSV4_HEADER_SIZE",
     "PSV4_MAGIC",
     "PSV4_SCHEMA_VERSION",
+    "PSV4_SECTION_VALUE_PROFILE_SCHEMA",
+    "PSV4_SECTION_VALUE_SOURCE_SCHEMA",
+    "PSV4_SUPPORTED_SECTION_NAMES",
     "PactNervSelectorV4Archive",
     "PactNervSelectorV4Config",
     "PactNervSelectorV4ScoreAwareLoss",
@@ -84,8 +95,11 @@ __all__ = [
     "RunLengthSelectorCoder",
     "ScoreAwareLossWeights",
     "export_pact_nerv_selector_v4_mlx_archive",
+    "neutralize_psv4_section",
     "pack_archive",
     "pack_archive_from_exported_state_dict",
     "parse_archive",
+    "psv4_layout_report",
+    "psv4_section_layout",
     "selector_v4_meta_from_config",
 ]
