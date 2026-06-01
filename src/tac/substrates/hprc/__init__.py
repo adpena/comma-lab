@@ -107,6 +107,13 @@ from tac.substrates.hprc.spine_acquisition import (
     HPRC_SPINE_ACQUISITION_REPORT_SCHEMA,
     build_spine_acquisition_report,
 )
+from tac.substrates.hprc.spine_bounded_runner import (
+    HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA,
+    HPRC_SPINE_COMPACT_BASE_SWEEP_ROW_SCHEMA,
+    HPRC_SPINE_SECTION_VALUE_ROW_SCHEMA,
+    build_spine_bounded_runner_plan,
+    write_spine_bounded_runner_plan,
+)
 from tac.substrates.hprc.training_adapter import (
     HPRC_LONG_TRAINING_ARCHIVE_EXPORT_SCHEMA,
     HPRC_LONG_TRAINING_SUBSTRATE_ID,
@@ -141,6 +148,9 @@ __all__ = [
     "HPRC_RESOLUTION_CONTRACT_SCHEMA",
     "HPRC_SCHEMA_VERSION",
     "HPRC_SPINE_ACQUISITION_REPORT_SCHEMA",
+    "HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA",
+    "HPRC_SPINE_COMPACT_BASE_SWEEP_ROW_SCHEMA",
+    "HPRC_SPINE_SECTION_VALUE_ROW_SCHEMA",
     "HPRC_V0_EXACT_READINESS_BLOCKERS",
     "PACT_NERV_LEN_PREFIXED_HEADER_FMT",
     "PACT_NERV_LEN_PREFIXED_HEADER_SIZE",
@@ -182,6 +192,7 @@ __all__ = [
     "build_rate_collapse_exact_execution_report",
     "build_representation_spine_packet",
     "build_spine_acquisition_report",
+    "build_spine_bounded_runner_plan",
     "collapse_residual_tokens",
     "export_hprc_archive_bytes",
     "get_binding",
@@ -200,4 +211,5 @@ __all__ = [
     "transcode_compact_receiver_sections",
     "write_hprc_incremental_exact_gate_bridge",
     "write_representation_spine_projection",
+    "write_spine_bounded_runner_plan",
 ]
