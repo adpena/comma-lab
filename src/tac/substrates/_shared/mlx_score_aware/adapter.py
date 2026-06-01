@@ -240,6 +240,34 @@ class MlxScoreAwareAdapter:
         self._pose_head_optimizer: Any = None
         self._pose_head_optimizer_lr: float | None = None
 
+    def _post_train_step_update(self, batch: Any) -> tuple[list[Any], dict[str, float]]:
+        """Run substrate-local non-gradient updates after an accepted step."""
+
+        hook = getattr(self.model, "post_train_step_update", None)
+        if not callable(hook):
+            return [], {}
+        result = hook(batch)
+        if result is None:
+            return [], {}
+        if not isinstance(result, Mapping):
+            return [result], {}
+        raw_targets = result.get("eval_targets", [])
+        if raw_targets is None:
+            eval_targets: list[Any] = []
+        elif isinstance(raw_targets, list):
+            eval_targets = list(raw_targets)
+        else:
+            eval_targets = [raw_targets]
+        metrics: dict[str, float] = {}
+        raw_metrics = result.get("metrics", {})
+        if isinstance(raw_metrics, Mapping):
+            for name, value in raw_metrics.items():
+                try:
+                    metrics[str(name)] = float(value)
+                except (TypeError, ValueError):
+                    continue
+        return eval_targets, metrics
+
     def artifact_metadata(self) -> Mapping[str, Any]:
         """Return non-authority substrate metadata for TrainingArtifact JSON.
 
@@ -488,9 +516,16 @@ class MlxScoreAwareAdapter:
                 self._wave_n11_clipped_count += 1
         self._wave_n11_step_count += 1
         self._optimizer.update(self.model, grads)
+        post_update_eval_targets, post_update_metrics = self._post_train_step_update(
+            batch
+        )
 
         # Accumulate the MLX arrays the single trailing mx.eval must realize.
-        eval_targets: list[Any] = [self.model.parameters(), self._optimizer.state]
+        eval_targets: list[Any] = [
+            self.model.parameters(),
+            self._optimizer.state,
+            *post_update_eval_targets,
+        ]
 
         # Sibling SegNet student-head step (real-scorer-bound distillation only).
         head = self.bundle.learnable_student_head
@@ -620,7 +655,7 @@ class MlxScoreAwareAdapter:
             )
 
         mx.eval(*eval_targets)
-        return {"total": float(loss_value.item())}
+        return {"total": float(loss_value.item()), **post_update_metrics}
 
     def _train_step_pr95_faithful_curriculum(
         self,
@@ -714,14 +749,18 @@ class MlxScoreAwareAdapter:
             self._pr95_optimizer_state,
             config,
         )
+        post_update_eval_targets, post_update_metrics = self._post_train_step_update(
+            batch
+        )
 
-        mx.eval(self.model.parameters(), loss_value)
+        mx.eval(self.model.parameters(), loss_value, *post_update_eval_targets)
         return {
             "total": float(loss_value.item()),
             "pr95_stage_index": float(stage_verdict.stage_index),
             "pr95_stage_uses_muon": float(int(stage_verdict.uses_muon)),
             "pr95_stage_cat_lambda": float(stage_verdict.cat_lambda),
             "pr95_stage_cat_sigma": float(stage_verdict.cat_sigma),
+            **post_update_metrics,
         }
 
     def notify_global_epoch(self, global_epoch: int) -> None:

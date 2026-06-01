@@ -137,6 +137,29 @@ def test_adapter_train_step_reduces_loss_over_steps() -> None:
 
 
 @mlx_only
+def test_adapter_runs_substrate_post_train_step_update_hook() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_dreamer_bundle(distill=0.0)
+    calls: list[tuple[int, ...]] = []
+
+    def _post_train_step_update(batch):
+        calls.append(tuple(int(x) for x in mx.array(batch).tolist()))
+        return {
+            "eval_targets": [],
+            "metrics": {"custom_post_update_called": len(calls)},
+        }
+
+    bundle.model.post_train_step_update = _post_train_step_update
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
+    batch = mx.array([0, 1, 2, 3], dtype=mx.int32)
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    assert calls == [(0, 1, 2, 3)]
+    assert metrics["custom_post_update_called"] == 1.0
+
+
+@mlx_only
 def test_adapter_trains_pose_head_jointly() -> None:
     import mlx.core as mx
 

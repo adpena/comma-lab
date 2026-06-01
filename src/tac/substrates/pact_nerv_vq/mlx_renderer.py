@@ -262,7 +262,10 @@ class VectorQuantizerEMAMLX(nn.Module if nn is not None else object):  # type: i
             shape=(codebook_size, latent_dim)
         ) * 0.02
         self._ema_cluster_size = mx.zeros((codebook_size,))  # type: ignore[union-attr]
-        self._ema_w = mx.array(self._codebook)  # type: ignore[union-attr]
+        # EMA sums must share the same scale as EMA counts. Initializing this
+        # to raw codebook vectors makes first-use updates divide O(0.02) by
+        # O(0.01), inflating active codes by two orders of magnitude.
+        self._ema_w = mx.zeros_like(self._codebook)  # type: ignore[union-attr]
 
     @property
     def codebook(self) -> Any:
@@ -326,28 +329,40 @@ class VectorQuantizerEMAMLX(nn.Module if nn is not None else object):  # type: i
         one_hot = (idx_bcast == ar_bcast).astype(z_e.dtype)
 
         cluster_size = mx.sum(one_hot, axis=0)  # type: ignore[union-attr]
-        ema_cluster = (
+        previous_cluster = self._ema_cluster_size
+        previous_ema_w = self._ema_w
+        previous_codebook = self._codebook
+        raw_ema_cluster = (
             self._ema_cluster_size * self.decay + cluster_size * (1.0 - self.decay)
         )
         # Laplace smoothing.
-        n = mx.sum(ema_cluster)  # type: ignore[union-attr]
-        ema_cluster = (
-            (ema_cluster + self.epsilon)
+        n = mx.sum(raw_ema_cluster)  # type: ignore[union-attr]
+        smoothed_ema_cluster = (
+            (raw_ema_cluster + self.epsilon)
             / (n + float(self.codebook_size) * self.epsilon)
         ) * n
-        self._ema_cluster_size = ema_cluster
 
         # dw = encodings.T @ z_e  shape (codebook_size, latent_dim)
         dw = mx.transpose(one_hot) @ z_e  # type: ignore[union-attr]
-        self._ema_w = self._ema_w * self.decay + dw * (1.0 - self.decay)
+        raw_ema_w = self._ema_w * self.decay + dw * (1.0 - self.decay)
         # Updated codebook = ema_w / ema_cluster (broadcast over latent_dim).
-        denom = mx.expand_dims(ema_cluster, axis=1)  # type: ignore[union-attr]
-        # Avoid div-by-zero on entirely-unused codes.
+        denom = mx.expand_dims(smoothed_ema_cluster, axis=1)  # type: ignore[union-attr]
         safe_denom = mx.where(denom > 0, denom, mx.ones_like(denom))  # type: ignore[union-attr]
-        new_codebook = self._ema_w / safe_denom
-        # Where denom == 0, keep old codebook entry.
-        keep_old = (denom == 0).astype(self._codebook.dtype)  # type: ignore[union-attr]
-        self._codebook = keep_old * self._codebook + (1.0 - keep_old) * new_codebook
+        new_codebook = raw_ema_w / safe_denom
+        # Never-used codes have no evidence and must remain dormant. Laplace
+        # smoothing gives them a tiny denominator; updating them would explode
+        # the vector and collapse every latent to the single non-exploded code.
+        active = raw_ema_cluster > self.epsilon
+        active_1d = active.astype(previous_codebook.dtype)  # type: ignore[union-attr]
+        active_2d = mx.expand_dims(active_1d, axis=1)  # type: ignore[union-attr]
+        self._ema_cluster_size = (
+            active_1d * smoothed_ema_cluster
+            + (1.0 - active_1d) * previous_cluster
+        )
+        self._ema_w = active_2d * raw_ema_w + (1.0 - active_2d) * previous_ema_w
+        self._codebook = (
+            active_2d * new_codebook + (1.0 - active_2d) * previous_codebook
+        )
 
 
 class PactNervVqSubstrateMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
@@ -429,6 +444,9 @@ class PactNervVqSubstrateMLX(nn.Module if nn is not None else object):  # type: 
 
         self._last_commitment_loss = mx.array(0.0)  # type: ignore[union-attr]
         self._last_indices = mx.array([], dtype=mx.int32)  # type: ignore[union-attr]
+        self._last_encoder_latents = mx.zeros(  # type: ignore[union-attr]
+            (0, latent_dim), dtype=mx.float32
+        )
 
         self._siren_init()
 
@@ -494,7 +512,8 @@ class PactNervVqSubstrateMLX(nn.Module if nn is not None else object):  # type: 
         z_q_st, indices, commitment_loss = self.quantizer(z_e)
         # Track for trainer observability per Catalog #305.
         self._last_commitment_loss = commitment_loss
-        self._last_indices = indices
+        self._last_indices = mx.stop_gradient(indices)  # type: ignore[union-attr]
+        self._last_encoder_latents = mx.stop_gradient(z_e)  # type: ignore[union-attr]
 
         # Latent -> initial spatial grid (NHWC).
         h = self.latent_embed(z_q_st)
@@ -531,6 +550,31 @@ class PactNervVqSubstrateMLX(nn.Module if nn is not None else object):  # type: 
     def last_indices(self) -> Any:
         """Codebook indices from the most recent forward."""
         return self._last_indices
+
+    def post_train_step_update(self, _pair_indices: Any) -> dict[str, Any]:
+        """EMA-update the VQ codebook after a gradient step.
+
+        The codebook is an EMA buffer, not an optimizer parameter. Without this
+        hook, the archive-visible token dictionary remains at initialization and
+        the decoder can only learn around stale random codes. The shared MLX
+        adapter calls this hook once per successful train step.
+        """
+        if int(self._last_indices.size) == 0:
+            return {"eval_targets": [], "metrics": {"vq_ema_updates": 0.0}}
+        self.quantizer.ema_update(self._last_encoder_latents, self._last_indices)
+        unique_indices = np.unique(np.asarray(self._last_indices)).size
+        return {
+            "eval_targets": [
+                self.quantizer.codebook,
+                self.quantizer.ema_cluster_size,
+                self.quantizer.ema_w,
+            ],
+            "metrics": {
+                "vq_ema_updates": 1.0,
+                "vq_ema_batch_size": float(int(self._last_indices.size)),
+                "vq_ema_unique_indices": float(int(unique_indices)),
+            },
+        }
 
     def num_parameters(self) -> int:
         """Total trainable parameter count (excludes EMA buffers).

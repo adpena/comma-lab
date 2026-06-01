@@ -18,6 +18,13 @@ from tac.substrates.pact_nerv_vq.archive import (
     parse_archive,
 )
 
+try:
+    import mlx.core as _mx  # noqa: F401
+
+    _MLX = True
+except ImportError:
+    _MLX = False
+
 
 def _smoke_cfg() -> PactNervVqConfig:
     return PactNervVqConfig(
@@ -93,6 +100,31 @@ def test_vector_quantizer_ema_straight_through_gradient_flows() -> None:
     z_q_st.sum().backward()
     assert z_e.grad is not None
     assert z_e.grad.shape == z_e.shape
+
+
+def test_mlx_vq_renderer_post_step_updates_codebook_ema() -> None:
+    """The archive-visible MLX VQ codebook must learn, not stay initialized."""
+    import pytest
+
+    if not _MLX:
+        pytest.skip("MLX required")
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.pact_nerv_vq.mlx_renderer import PactNervVqSubstrateMLX
+
+    cfg = _smoke_cfg()
+    model = PactNervVqSubstrateMLX(cfg)
+    batch = mx.array([0, 1, 2], dtype=mx.int32)
+    _ = model(batch)
+    before = np.asarray(model.quantizer.codebook, dtype=np.float32).copy()
+    result = model.post_train_step_update(batch)
+    after = np.asarray(model.quantizer.codebook, dtype=np.float32).copy()
+
+    assert result["metrics"]["vq_ema_updates"] == 1.0
+    assert result["metrics"]["vq_ema_batch_size"] == 3.0
+    assert float(np.max(np.abs(after - before))) > 0.0
+    assert float(np.max(np.abs(after))) < 1.0
 
 
 def test_archive_pack_then_parse_roundtrip_recovers_tensors() -> None:
