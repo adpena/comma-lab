@@ -215,6 +215,14 @@ def _section_value_row(
     byte_count = int(section.get("bytes") or 0)
     rate_cost = contest_rate_term(byte_count)
     evidence_rows = section_evidence.get(section_name, [])
+    evidence_rows = [
+        row
+        for row in evidence_rows
+        if _section_evidence_matches_acquisition(
+            evidence=row,
+            acquisition_row=acquisition_row,
+        )
+    ]
     best_evidence = _best_section_evidence(evidence_rows)
     coverage = (
         acquisition_row.get("coverage")
@@ -415,6 +423,11 @@ def _section_evidence_row(*, row: dict[str, Any], profile: dict[str, Any]) -> di
         "profile_sha256": profile["sha256"],
         "profile_max_pairs": profile["payload"].get("max_pairs"),
         "profile_scope_status": profile["payload"].get("scope_status"),
+        "profile_family": row.get("family") or profile["payload"].get("family"),
+        "profile_projection_manifest_path": (
+            row.get("projection_manifest_path")
+            or profile["payload"].get("projection_manifest_path")
+        ),
         "variant_id": row.get("variant_id"),
         "neutralized_section": row.get("neutralized_section"),
         "archive_bytes_removed_vs_baseline": bytes_removed,
@@ -427,6 +440,20 @@ def _section_evidence_row(*, row: dict[str, Any], profile: dict[str, Any]) -> di
         "marginal_status": row.get("marginal_status"),
         **FALSE_AUTHORITY,
     }
+
+
+def _section_evidence_matches_acquisition(
+    *,
+    evidence: dict[str, Any],
+    acquisition_row: dict[str, Any],
+) -> bool:
+    evidence_family = evidence.get("profile_family")
+    if evidence_family not in (None, "") and evidence_family != acquisition_row.get("family"):
+        return False
+    evidence_projection = evidence.get("profile_projection_manifest_path")
+    if evidence_projection in (None, ""):
+        return True
+    return str(evidence_projection) == str(acquisition_row.get("projection_manifest_path") or "")
 
 
 def _best_section_evidence(evidence_rows: list[dict[str, Any]]) -> dict[str, Any] | None:
