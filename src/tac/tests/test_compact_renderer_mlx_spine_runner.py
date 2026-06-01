@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import struct
 import sys
+import zipfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -14,12 +16,21 @@ if str(REPO_ROOT) not in sys.path:
 import tools.run_compact_renderer_mlx_spine_runner as runner_mod  # noqa: E402
 from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
-    DEFAULT_PR95_SOURCE_ARCHIVE_ZIP,
     _parse_args,
     adapt_pr95_mlx_report_to_spine,
     build_plan_only_report,
     execute_pr95_hnerv_mlx_scoreaware_and_adapt,
 )
+
+
+def _write_synthetic_pr95_archive(path: Path, *, pairs: int = 600) -> Path:
+    chunks = []
+    for payload in (f'{{"pairs":{pairs}}}'.encode(), b"decoder", b"latents"):
+        chunks.append(struct.pack("<I", len(payload)))
+        chunks.append(payload)
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", b"".join(chunks))
+    return path
 
 
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
@@ -248,7 +259,7 @@ def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(
         out = Path(kwargs["output_dir"])
         out.mkdir(parents=True, exist_ok=True)
         archive = out / "pr95_public_archive.zip"
-        archive.write_bytes(DEFAULT_PR95_SOURCE_ARCHIVE_ZIP.read_bytes())
+        _write_synthetic_pr95_archive(archive)
         return {
             "archive_path": archive.as_posix(),
             "archive_bytes": archive.stat().st_size,
@@ -299,7 +310,7 @@ def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(
         batch_pair_indices_per_step=1,
         learning_rate=1e-5,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
-        source_archive_zip=DEFAULT_PR95_SOURCE_ARCHIVE_ZIP,
+        source_archive_zip=tmp_path / "synthetic_source_pr95.zip",
         hard_byte_ceilings=(178_000,),
         run_receiver_proof=True,
         allow_overwrite=True,

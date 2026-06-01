@@ -186,16 +186,22 @@ def build_pr95_hnerv_spine_from_archive(
     archive = Path(archive_zip).expanduser().resolve(strict=False)
     view = read_strict_single_member_zip(archive)
     parsed = parse_pr95_hnerv_payload(view.payload)
+    manifest_extra: dict[str, Any] = {
+        "source_payload_kind": "pr95_u32_prefixed_hnerv",
+        "role": "frontier_scale_control_base_renderer",
+    }
+    num_pairs = _infer_pr95_num_pairs_from_meta_blob(
+        _expect_bytes(parsed["meta_blob"], "meta_blob")
+    )
+    if num_pairs is not None:
+        manifest_extra["num_pairs"] = num_pairs
     return build_representation_spine_packet(
         family=HprcRepresentationFamily.PR95_HNERV,
         decoder_blob=_expect_bytes(parsed["decoder_blob"], "decoder_blob"),
         latents_blob=_expect_bytes(parsed["latents_blob"], "latents_blob"),
         receiver_state_blob=_expect_bytes(parsed["meta_blob"], "meta_blob"),
         source=_source_archive_row(archive, member_name=view.member_name, member_bytes=view.member_bytes),
-        manifest_extra={
-            "source_payload_kind": "pr95_u32_prefixed_hnerv",
-            "role": "frontier_scale_control_base_renderer",
-        },
+        manifest_extra=manifest_extra,
     )
 
 
@@ -635,6 +641,34 @@ def _json_bytes(payload: dict[str, Any]) -> bytes:
         separators=(",", ":"),
         allow_nan=False,
     ).encode("utf-8")
+
+
+def _infer_pr95_num_pairs_from_meta_blob(meta_blob: bytes) -> int | None:
+    raw_candidates: list[bytes] = []
+    try:
+        import brotli
+
+        raw_candidates.append(brotli.decompress(meta_blob))
+    except Exception:
+        pass
+    raw_candidates.append(meta_blob)
+    for raw in raw_candidates:
+        try:
+            meta = json.loads(raw.decode("utf-8"))
+        except Exception:
+            continue
+        if not isinstance(meta, dict):
+            continue
+        value = meta.get("n_pairs", meta.get("pairs"))
+        if isinstance(value, bool) or value is None:
+            continue
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            continue
+        if parsed > 0:
+            return parsed
+    return None
 
 
 def _coerce_family(family: HprcRepresentationFamily | str) -> HprcRepresentationFamily:

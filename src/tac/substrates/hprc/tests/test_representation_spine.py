@@ -33,9 +33,9 @@ def _single_member_zip(path: Path, payload: bytes, *, name: str = "0.bin") -> Pa
     return path
 
 
-def _pr95_payload() -> bytes:
+def _pr95_payload(*, pairs: int = 600) -> bytes:
     chunks = []
-    for payload in (b'{"pairs":600}', b"decoder-brotli", b"latents-brotli"):
+    for payload in (f'{{"pairs":{pairs}}}'.encode(), b"decoder-brotli", b"latents-brotli"):
         chunks.append(struct.pack("<I", len(payload)))
         chunks.append(payload)
     return b"".join(chunks)
@@ -98,7 +98,24 @@ def test_pr95_hnerv_projects_to_common_spine(tmp_path: Path) -> None:
     assert sections[HprcSectionKind.LATENTS_RC] == b"latents-brotli"
     assert sections[HprcSectionKind.RECEIVER_STATE] == b'{"pairs":600}'
     assert embedded["schema"] == "hprc_representation_spine_manifest.v1"
+    assert embedded["manifest_extra"]["num_pairs"] == 600
     assert embedded["score_claim"] is False
+
+
+def test_pr95_hnerv_projection_preserves_short_pair_coverage(tmp_path: Path) -> None:
+    archive = _single_member_zip(tmp_path / "pr95_short.zip", _pr95_payload(pairs=1))
+
+    spine = build_pr95_hnerv_spine_from_archive(archive)
+    projection = write_representation_spine_projection(
+        output_dir=tmp_path / "projection",
+        spine=spine,
+        basename="pr95_short",
+    )
+    manifest = json.loads(Path(projection["manifest_path"]).read_text())
+
+    assert manifest["manifest"]["representation_spine"]["manifest_extra"][
+        "num_pairs"
+    ] == 1
 
 
 def test_packed_hnerv_projects_decoder_latents_and_header(tmp_path: Path) -> None:
