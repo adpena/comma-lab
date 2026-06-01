@@ -146,6 +146,54 @@ def test_operator_briefing_routes_unsaturated_tensor_payload_to_receiver_binding
     assert "receiver_work=True" in text
 
 
+def test_operator_briefing_routes_grouped_tensor_payload_to_receiver_binding(
+    tmp_path: Path, monkeypatch
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "grammar"
+    _write_json(
+        root / "candidate" / "z8_tensor_payload_report.json",
+        {
+            "schema": "tensor_payload_grammar_optimizer.v1",
+            "campaign_id": "z8_grouped_order",
+            "tensor_count": 6,
+            "byte_accounting": {
+                "selected_isolated_tensor_bytes": 8192,
+                "baseline_isolated_tensor_bytes": 8192,
+                "selected_saved_bytes_vs_baseline": 0,
+                "selected_over_floor_ratio": 1.02,
+            },
+            "saturation_diagnostic": {"status": "entropy_saturated"},
+            "grouped_brotli_order_diagnostic": {
+                "schema": "tensor_payload_grouped_brotli_order_diagnostic.v1",
+                "selected_order_label": "histogram_greedy",
+                "selected_grouped_brotli_bytes": 7911,
+                "selected_isolated_tensor_bytes": 7930,
+                "identity_grouped_brotli_bytes": 7930,
+                "grouped_delta_bytes_vs_identity": -19,
+                "grouped_saved_bytes_vs_identity": 19,
+                "grouped_delta_bytes_vs_selected_isolated": -19,
+                "grouped_saved_bytes_vs_selected_isolated": 19,
+            },
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS", (root,))
+
+    summary = mod._tensor_payload_grammar_summary()
+    text = mod._format_tensor_payload_grammar_summary()
+
+    assert summary["status"] == "NEEDS_RECEIVER_BINDING"
+    assert summary["receiver_work_justified_count"] == 1
+    assert summary["demotion_recommended_count"] == 0
+    assert summary["total_grouped_saved_bytes_vs_selected_isolated"] == 19
+    assert summary["total_grouped_saved_bytes_vs_identity"] == 19
+    assert "grouped Brotli order savings" in summary["reason"]
+    assert "grouped_saved=19" in text
+    assert "receiver_work=True" in text
+
+
 def test_operator_briefing_surfaces_grouped_optimal_grammar_campaign(
     tmp_path: Path, monkeypatch
 ) -> None:

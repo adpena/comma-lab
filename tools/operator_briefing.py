@@ -5086,9 +5086,15 @@ def _tensor_payload_grammar_row(path: Path) -> dict[str, object] | None:
         return None
 
     if schema == TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA:
+        source_manifest = payload.get("source_payload_manifest")
+        if not isinstance(source_manifest, dict):
+            source_manifest = {}
         byte_accounting = payload.get("byte_accounting")
         if not isinstance(byte_accounting, dict):
             byte_accounting = {}
+        grouped_diagnostic = payload.get("grouped_brotli_order_diagnostic")
+        if not isinstance(grouped_diagnostic, dict):
+            grouped_diagnostic = {}
         saturation = payload.get("saturation_diagnostic")
         if not isinstance(saturation, dict):
             saturation = {}
@@ -5108,7 +5114,25 @@ def _tensor_payload_grammar_row(path: Path) -> dict[str, object] | None:
         over_floor = _safe_float(
             byte_accounting.get("selected_over_floor_ratio"), default=0.0
         )
+        grouped_saved_vs_identity = _safe_int(
+            grouped_diagnostic.get("grouped_saved_bytes_vs_identity")
+        )
+        grouped_delta_vs_identity = _safe_int(
+            grouped_diagnostic.get("grouped_delta_bytes_vs_identity")
+        )
+        grouped_saved = _safe_int(
+            grouped_diagnostic.get("grouped_saved_bytes_vs_selected_isolated")
+        )
+        grouped_delta = _safe_int(
+            grouped_diagnostic.get("grouped_delta_bytes_vs_selected_isolated")
+        )
+        grouped_receiver_work_justified = grouped_saved > 0
+        receiver_work_justified = receiver_work_justified or grouped_receiver_work_justified
+        demotion_recommended = (
+            demotion_recommended and not grouped_receiver_work_justified
+        )
     else:
+        source_manifest = {}
         selected_saved = max(
             0, _safe_int(payload.get("selected_saved_bytes_vs_baseline"))
         )
@@ -5118,18 +5142,36 @@ def _tensor_payload_grammar_row(path: Path) -> dict[str, object] | None:
         selected_bytes = _safe_int(payload.get("selected_isolated_tensor_bytes"))
         baseline_bytes = _safe_int(payload.get("baseline_isolated_tensor_bytes"))
         over_floor = _safe_float(payload.get("selected_over_floor_ratio"), default=0.0)
+        grouped_saved_vs_identity = _safe_int(
+            payload.get("grouped_saved_bytes_vs_identity")
+        )
+        grouped_delta_vs_identity = _safe_int(
+            payload.get("grouped_delta_bytes_vs_identity")
+        )
+        grouped_saved = _safe_int(
+            payload.get("grouped_saved_bytes_vs_selected_isolated")
+        )
+        grouped_delta = _safe_int(
+            payload.get("grouped_delta_bytes_vs_selected_isolated")
+        )
 
     return {
         "path": _repo_rel(path),
         "schema": schema,
         "campaign_id": str(payload.get("campaign_id") or ""),
-        "source_kind": str(payload.get("source_kind") or ""),
+        "source_kind": str(
+            payload.get("source_kind") or source_manifest.get("source_kind") or ""
+        ),
         "tensor_count": _safe_int(payload.get("tensor_count")),
         "saturation_status": saturation_status,
         "selected_over_floor_ratio": over_floor,
         "selected_isolated_tensor_bytes": selected_bytes,
         "baseline_isolated_tensor_bytes": baseline_bytes,
         "selected_saved_bytes_vs_baseline": selected_saved,
+        "grouped_saved_bytes_vs_identity": grouped_saved_vs_identity,
+        "grouped_delta_bytes_vs_identity": grouped_delta_vs_identity,
+        "grouped_saved_bytes_vs_selected_isolated": grouped_saved,
+        "grouped_delta_bytes_vs_selected_isolated": grouped_delta,
         "receiver_work_justified": receiver_work_justified,
         "demotion_recommended": demotion_recommended,
         "planner_action": str(payload.get("planner_action") or ""),
@@ -5146,6 +5188,17 @@ def _tensor_payload_grammar_next_command(summary: dict[str, object]) -> str:
             "# then bind the winning tensor map into a substrate receiver/archive"
         )
     return ".venv/bin/python tools/tensor_payload_grammar_optimizer.py --help"
+
+
+def _tensor_payload_grouped_saved(
+    rows: list[dict[str, object]],
+    *,
+    key: str = "grouped_saved_bytes_vs_selected_isolated",
+) -> int:
+    return sum(
+        _safe_int(row.get(key))
+        for row in rows
+    )
 
 
 def _tensor_payload_grammar_summary() -> dict[str, object]:
@@ -5177,10 +5230,16 @@ def _tensor_payload_grammar_summary() -> dict[str, object]:
         reason = "no generic tensor payload grammar reports found"
     elif receiver_work_justified_count:
         status = "NEEDS_RECEIVER_BINDING"
-        reason = (
-            f"{receiver_work_justified_count} tensor grammar report(s) show "
-            "unsaturated entropy gap; bind receiver/archive before replay"
-        )
+        if _tensor_payload_grouped_saved(primary_rows) > 0:
+            reason = (
+                f"{receiver_work_justified_count} tensor grammar report(s) show "
+                "grouped Brotli order savings; bind receiver/archive before replay"
+            )
+        else:
+            reason = (
+                f"{receiver_work_justified_count} tensor grammar report(s) show "
+                "unsaturated entropy gap; bind receiver/archive before replay"
+            )
     elif primary_rows and demotion_recommended_count == len(primary_rows):
         status = "SATURATED"
         reason = (
@@ -5207,6 +5266,13 @@ def _tensor_payload_grammar_summary() -> dict[str, object]:
             _safe_int(row.get("selected_saved_bytes_vs_baseline"))
             for row in primary_rows
         ),
+        "total_grouped_saved_bytes_vs_selected_isolated": _tensor_payload_grouped_saved(
+            primary_rows
+        ),
+        "total_grouped_saved_bytes_vs_identity": _tensor_payload_grouped_saved(
+            primary_rows,
+            key="grouped_saved_bytes_vs_identity",
+        ),
         "max_selected_over_floor_ratio": max(
             (_safe_float(row.get("selected_over_floor_ratio")) for row in primary_rows),
             default=0.0,
@@ -5232,6 +5298,8 @@ def _format_tensor_payload_grammar_summary() -> str:
             f"receiver_work={payload['receiver_work_justified_count']} "
             f"demotions={payload['demotion_recommended_count']} "
             f"saved_bytes={payload['total_selected_saved_bytes_vs_baseline']} "
+            f"grouped_saved={payload['total_grouped_saved_bytes_vs_selected_isolated']} "
+            f"grouped_identity_saved={payload['total_grouped_saved_bytes_vs_identity']} "
             f"max_over_floor={payload['max_selected_over_floor_ratio']:.6g}"
         ),
         f"score_claim: {payload['score_claim']}",
@@ -5250,6 +5318,8 @@ def _format_tensor_payload_grammar_summary() -> str:
                 f"campaign={row.get('campaign_id') or '<none>'} "
                 f"status={row.get('saturation_status')} "
                 f"saved={row.get('selected_saved_bytes_vs_baseline', 0)} "
+                f"grouped_saved={row.get('grouped_saved_bytes_vs_selected_isolated', 0)} "
+                f"grouped_identity_saved={row.get('grouped_saved_bytes_vs_identity', 0)} "
                 f"over_floor={over_floor:.6g} "
                 f"receiver_work={row.get('receiver_work_justified') is True} "
                 f"demote={row.get('demotion_recommended') is True}"
@@ -7353,6 +7423,12 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "total_selected_saved_bytes_vs_baseline": tensor_payload_grammar[
                 "total_selected_saved_bytes_vs_baseline"
+            ],
+            "total_grouped_saved_bytes_vs_selected_isolated": tensor_payload_grammar[
+                "total_grouped_saved_bytes_vs_selected_isolated"
+            ],
+            "total_grouped_saved_bytes_vs_identity": tensor_payload_grammar[
+                "total_grouped_saved_bytes_vs_identity"
             ],
             "max_selected_over_floor_ratio": tensor_payload_grammar[
                 "max_selected_over_floor_ratio"
