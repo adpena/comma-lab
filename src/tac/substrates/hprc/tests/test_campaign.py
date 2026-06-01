@@ -29,9 +29,11 @@ from tac.substrates.hprc.incremental_pair_response import (  # noqa: E402
     build_hprc_incremental_pair_response_report,
 )
 from tac.substrates.hprc.incremental_runner_execution import (  # noqa: E402
+    HPRC_INCREMENTAL_RUNNER_EXECUTION_COMPARISON_SCHEMA,
     HPRC_INCREMENTAL_RUNNER_EXECUTION_PREP_SCHEMA,
     HPRC_INCREMENTAL_RUNNER_EXECUTION_SCHEMA,
     build_hprc_incremental_runner_execution_report,
+    compare_hprc_incremental_runner_execution_reports,
     prepare_hprc_incremental_runner_execution,
 )
 from tac.substrates.hprc.learned_receiver import (  # noqa: E402
@@ -838,6 +840,40 @@ def test_hprc_incremental_runner_execution_report_binds_receiver_proof(
     ]["blockers"]
 
 
+def test_hprc_incremental_runner_execution_comparison_keeps_slow_batch_research_only(
+    tmp_path: Path,
+) -> None:
+    reference = _write_incremental_execution_fixture(
+        tmp_path / "singleton",
+        scorer_batch_pairs=1,
+        elapsed_seconds=100.0,
+        cache_elapsed_seconds=10.0,
+        delta_total=-1.0,
+        delta_pose=-2.0,
+        delta_seg=-0.001,
+    )
+    challenger = _write_incremental_execution_fixture(
+        tmp_path / "batch8",
+        scorer_batch_pairs=8,
+        elapsed_seconds=99.5,
+        cache_elapsed_seconds=9.0,
+        delta_total=-1.000001,
+        delta_pose=-2.000001,
+        delta_seg=-0.001000001,
+    )
+
+    comparison = compare_hprc_incremental_runner_execution_reports(
+        reference_report_path=reference,
+        challenger_report_path=challenger,
+    )
+
+    assert comparison["schema"] == HPRC_INCREMENTAL_RUNNER_EXECUTION_COMPARISON_SCHEMA
+    assert comparison["drift"]["within_tolerance"] is True
+    assert comparison["challenger"]["batch_shape_research_signal"] is True
+    assert comparison["default_execution_recommendation"]["mode"] == "reference"
+    assert comparison["score_claim"] is False
+
+
 def _write_batch_compare_fixture(repo: Path) -> tuple[Path, Path]:
     singleton_dir = repo / "singleton"
     batched_dir = repo / "batched"
@@ -874,6 +910,56 @@ def _write_batch_compare_fixture(repo: Path) -> tuple[Path, Path]:
         encoding="utf-8",
     )
     return singleton_profile, batched_profile
+
+
+def _write_incremental_execution_fixture(
+    root: Path,
+    *,
+    scorer_batch_pairs: int,
+    elapsed_seconds: float,
+    cache_elapsed_seconds: float,
+    delta_total: float,
+    delta_pose: float,
+    delta_seg: float,
+) -> Path:
+    root.mkdir(parents=True)
+    incremental = root / "hprc_incremental_pair_response_report.json"
+    incremental.write_text(
+        json.dumps(
+            {
+                "changed_pair_rows": [1, 2],
+                "scorer_batch_pairs": scorer_batch_pairs,
+                "batch_shape_research_signal": scorer_batch_pairs != 1,
+                "delta_total_mlx_score_advisory": delta_total,
+                "delta_avg_posenet_dist": delta_pose,
+                "delta_avg_segnet_dist": delta_seg,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (root / "mlx_incremental_cache_report.json").write_text(
+        json.dumps({"elapsed_seconds": cache_elapsed_seconds}),
+        encoding="utf-8",
+    )
+    report = root / "hprc_incremental_runner_execution_report.json"
+    report.write_text(
+        json.dumps(
+            {
+                "candidate_id": "candidate-a",
+                "archive": {"sha256": "a" * 64, "bytes": 10},
+                "incremental_report_path": incremental.as_posix(),
+                "incremental_command": {"elapsed_seconds": elapsed_seconds},
+                "incremental_summary": {
+                    "delta_total_mlx_score_advisory": delta_total,
+                    "delta_avg_posenet_dist": delta_pose,
+                    "delta_avg_segnet_dist": delta_seg,
+                },
+                "cleanup": {"status": "blocked"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    return report
 
 
 def _write_compare_responses(root: Path, *, score_offset: float) -> dict[str, Path]:

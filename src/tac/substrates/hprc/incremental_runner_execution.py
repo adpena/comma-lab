@@ -19,6 +19,9 @@ HPRC_INCREMENTAL_RUNNER_EXECUTION_PREP_SCHEMA = (
 HPRC_INCREMENTAL_RUNNER_EXECUTION_SCHEMA = (
     "hprc_incremental_pair_scoped_runner_execution.v1"
 )
+HPRC_INCREMENTAL_RUNNER_EXECUTION_COMPARISON_SCHEMA = (
+    "hprc_incremental_pair_scoped_runner_execution_comparison.v1"
+)
 HPRC_SYNTHETIC_INCREMENTAL_PROFILE_SCHEMA = (
     "hprc_incremental_pair_scoped_synthetic_profile.v1"
 )
@@ -245,6 +248,121 @@ def write_hprc_incremental_runner_execution_report(
     return path
 
 
+def compare_hprc_incremental_runner_execution_reports(
+    *,
+    reference_report_path: str | Path,
+    challenger_report_path: str | Path,
+    drift_tolerance: float = 1.0e-5,
+    min_default_speedup: float = 1.10,
+) -> dict[str, Any]:
+    """Compare two incremental execution reports without granting score authority."""
+
+    reference_path = Path(reference_report_path).expanduser()
+    challenger_path = Path(challenger_report_path).expanduser()
+    reference = _load_json_object(reference_path)
+    challenger = _load_json_object(challenger_path)
+    ref_inc = _load_json_object(Path(str(reference["incremental_report_path"])))
+    ch_inc = _load_json_object(Path(str(challenger["incremental_report_path"])))
+    ref_cache = _load_incremental_cache_report(reference)
+    ch_cache = _load_incremental_cache_report(challenger)
+    archive_match = (
+        reference.get("archive", {}).get("sha256")
+        == challenger.get("archive", {}).get("sha256")
+    )
+    candidate_match = reference.get("candidate_id") == challenger.get("candidate_id")
+    delta_drift = _float_or_none(
+        challenger.get("incremental_summary", {}).get("delta_total_mlx_score_advisory")
+    ) - _float_or_none(
+        reference.get("incremental_summary", {}).get("delta_total_mlx_score_advisory")
+    )
+    pose_drift = _float_or_none(
+        challenger.get("incremental_summary", {}).get("delta_avg_posenet_dist")
+    ) - _float_or_none(
+        reference.get("incremental_summary", {}).get("delta_avg_posenet_dist")
+    )
+    seg_drift = _float_or_none(
+        challenger.get("incremental_summary", {}).get("delta_avg_segnet_dist")
+    ) - _float_or_none(
+        reference.get("incremental_summary", {}).get("delta_avg_segnet_dist")
+    )
+    ref_elapsed = _float_or_none(reference.get("incremental_command", {}).get("elapsed_seconds"))
+    ch_elapsed = _float_or_none(challenger.get("incremental_command", {}).get("elapsed_seconds"))
+    ref_cache_elapsed = _float_or_none(ref_cache.get("elapsed_seconds"))
+    ch_cache_elapsed = _float_or_none(ch_cache.get("elapsed_seconds"))
+    total_speedup = ref_elapsed / ch_elapsed if ch_elapsed > 0 else 0.0
+    ref_score_elapsed = max(0.0, ref_elapsed - ref_cache_elapsed)
+    ch_score_elapsed = max(0.0, ch_elapsed - ch_cache_elapsed)
+    score_speedup = ref_score_elapsed / ch_score_elapsed if ch_score_elapsed > 0 else 0.0
+    drift_within_tolerance = (
+        abs(delta_drift) <= float(drift_tolerance)
+        and abs(pose_drift) <= 1.0e-4
+        and abs(seg_drift) <= 1.0e-7
+    )
+    challenger_default_worthy = (
+        archive_match
+        and candidate_match
+        and drift_within_tolerance
+        and total_speedup >= float(min_default_speedup)
+    )
+    default_execution_mode = "challenger" if challenger_default_worthy else "reference"
+    return {
+        "schema": HPRC_INCREMENTAL_RUNNER_EXECUTION_COMPARISON_SCHEMA,
+        "generated_at_utc": _utc_stamp(),
+        "reference_report_path": reference_path.as_posix(),
+        "reference_report_sha256": _sha256_file(reference_path),
+        "challenger_report_path": challenger_path.as_posix(),
+        "challenger_report_sha256": _sha256_file(challenger_path),
+        "candidate_id": reference.get("candidate_id"),
+        "archive_sha256": reference.get("archive", {}).get("sha256"),
+        "archive_match": archive_match,
+        "candidate_match": candidate_match,
+        "reference": _execution_summary(reference, ref_inc, ref_cache),
+        "challenger": _execution_summary(challenger, ch_inc, ch_cache),
+        "drift": {
+            "delta_total_mlx_score_advisory": delta_drift,
+            "delta_avg_posenet_dist": pose_drift,
+            "delta_avg_segnet_dist": seg_drift,
+            "within_tolerance": drift_within_tolerance,
+            "drift_tolerance": float(drift_tolerance),
+        },
+        "speed": {
+            "total_speedup_reference_over_challenger": total_speedup,
+            "score_pass_speedup_reference_over_challenger": score_speedup,
+            "min_default_speedup": float(min_default_speedup),
+        },
+        "default_execution_recommendation": {
+            "mode": default_execution_mode,
+            "reason": (
+                "challenger_drift_clean_and_fast_enough"
+                if challenger_default_worthy
+                else "challenger_not_materially_faster_keep_reference_default"
+            ),
+            "challenger_default_worthy": challenger_default_worthy,
+        },
+        "blockers": [
+            "mlx_local_response_comparison_is_advisory_not_score_authority",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def write_hprc_incremental_runner_execution_comparison(
+    *,
+    output_path: str | Path,
+    comparison: dict[str, Any],
+    allow_overwrite: bool = False,
+) -> Path:
+    """Write a deterministic incremental execution comparison report."""
+
+    path = Path(output_path)
+    if path.exists() and not allow_overwrite:
+        raise FileExistsError(f"output exists; pass allow_overwrite=True: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(comparison, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
 def _build_synthetic_profile(
     *,
     plan: dict[str, Any],
@@ -312,6 +430,39 @@ def _build_synthetic_profile(
         ],
         **FALSE_AUTHORITY,
     }
+
+
+def _execution_summary(
+    execution: dict[str, Any],
+    incremental: dict[str, Any],
+    cache: dict[str, Any],
+) -> dict[str, Any]:
+    elapsed = _float_or_none(execution.get("incremental_command", {}).get("elapsed_seconds"))
+    cache_elapsed = _float_or_none(cache.get("elapsed_seconds"))
+    return {
+        "report_path": execution.get("incremental_report_path"),
+        "scorer_batch_pairs": int(incremental.get("scorer_batch_pairs") or 1),
+        "batch_shape_research_signal": bool(
+            incremental.get("batch_shape_research_signal")
+        ),
+        "changed_pair_count": len(incremental.get("changed_pair_rows", [])),
+        "archive_bytes": execution.get("archive", {}).get("bytes"),
+        "delta_total_mlx_score_advisory": incremental.get(
+            "delta_total_mlx_score_advisory"
+        ),
+        "delta_avg_posenet_dist": incremental.get("delta_avg_posenet_dist"),
+        "delta_avg_segnet_dist": incremental.get("delta_avg_segnet_dist"),
+        "elapsed_seconds": elapsed,
+        "cache_elapsed_seconds": cache_elapsed,
+        "score_elapsed_seconds_estimate": max(0.0, elapsed - cache_elapsed),
+        "cleanup_status": execution.get("cleanup", {}).get("status"),
+    }
+
+
+def _load_incremental_cache_report(execution: dict[str, Any]) -> dict[str, Any]:
+    incremental_path = Path(str(execution["incremental_report_path"]))
+    candidate = incremental_path.with_name("mlx_incremental_cache_report.json")
+    return _load_json_object(candidate) if candidate.is_file() else {}
 
 
 def _select_runner_row(plan: dict[str, Any], candidate_id: str) -> dict[str, Any]:
@@ -441,6 +592,12 @@ def _required_string(payload: dict[str, Any], key: str) -> str:
     return value
 
 
+def _float_or_none(value: Any) -> float:
+    if value is None:
+        return 0.0
+    return float(value)
+
+
 def _load_json_object(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as f:
         payload = json.load(f)
@@ -472,9 +629,12 @@ def _utc_stamp() -> str:
 
 
 __all__ = [
+    "HPRC_INCREMENTAL_RUNNER_EXECUTION_COMPARISON_SCHEMA",
     "HPRC_INCREMENTAL_RUNNER_EXECUTION_PREP_SCHEMA",
     "HPRC_INCREMENTAL_RUNNER_EXECUTION_SCHEMA",
     "build_hprc_incremental_runner_execution_report",
+    "compare_hprc_incremental_runner_execution_reports",
     "prepare_hprc_incremental_runner_execution",
+    "write_hprc_incremental_runner_execution_comparison",
     "write_hprc_incremental_runner_execution_report",
 ]

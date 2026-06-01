@@ -1,0 +1,69 @@
+{
+  "archive_match": true,
+  "archive_sha256": "234ef386b71d4bb439517ecf7dab7623e737b0c54da66456fc4d189a8d6c0ec3",
+  "blockers": [
+    "mlx_local_response_comparison_is_advisory_not_score_authority",
+    "contest_cpu_cuda_exact_eval_not_executed"
+  ],
+  "candidate_id": "hprc-threshold-abs-le-pairs-984a5d110c0f3a66",
+  "candidate_match": true,
+  "challenger": {
+    "archive_bytes": 859923,
+    "batch_shape_research_signal": true,
+    "cache_elapsed_seconds": 39.26089000701904,
+    "changed_pair_count": 284,
+    "cleanup_status": "blocked",
+    "delta_avg_posenet_dist": -14.083535044863822,
+    "delta_avg_segnet_dist": -0.0011248853430151917,
+    "delta_total_mlx_score_advisory": -2.1521975038152874,
+    "elapsed_seconds": 277.8041458129883,
+    "report_path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tbatched8/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/incremental_pair_response/hprc_incremental_pair_response_report.json",
+    "score_elapsed_seconds_estimate": 238.54325580596924,
+    "scorer_batch_pairs": 8
+  },
+  "challenger_report_path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tbatched8/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_incremental_runner_execution_report.json",
+  "challenger_report_sha256": "1e2d18d48c136b464771e5e6cbcc96ef3b884ba063f2bfe1f4e30306fe3c95b9",
+  "default_execution_recommendation": {
+    "challenger_default_worthy": false,
+    "mode": "reference",
+    "reason": "challenger_not_materially_faster_keep_reference_default"
+  },
+  "dispatch_attempted": false,
+  "drift": {
+    "delta_avg_posenet_dist": -2.271756528671176e-06,
+    "delta_avg_segnet_dist": -8.47813983601009e-09,
+    "delta_total_mlx_score_advisory": -1.1514644384647e-06,
+    "drift_tolerance": 1e-05,
+    "within_tolerance": true
+  },
+  "generated_at_utc": "20260601T032425Z",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reference": {
+    "archive_bytes": 859923,
+    "batch_shape_research_signal": false,
+    "cache_elapsed_seconds": 44.00871205329895,
+    "changed_pair_count": 284,
+    "cleanup_status": "blocked",
+    "delta_avg_posenet_dist": -14.083532773107294,
+    "delta_avg_segnet_dist": -0.0011248768648753557,
+    "delta_total_mlx_score_advisory": -2.152196352350849,
+    "elapsed_seconds": 279.680526971817,
+    "report_path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/incremental_pair_response/hprc_incremental_pair_response_report.json",
+    "score_elapsed_seconds_estimate": 235.67181491851807,
+    "scorer_batch_pairs": 1
+  },
+  "reference_report_path": "/Volumes/VertigoDataTier/pact/hprc_incremental_runner_execution_20260601Tlocal/hprc-threshold-abs-le-pairs-984a5d110c0f3a66/hprc_incremental_runner_execution_report.json",
+  "reference_report_sha256": "9fde7409ed4af449cfc294753cefaaa00de8fc82b766c08b7edc18dd614e54f8",
+  "schema": "hprc_incremental_pair_scoped_runner_execution_comparison.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "speed": {
+    "min_default_speedup": 1.1,
+    "score_pass_speedup_reference_over_challenger": 0.9879625987423145,
+    "total_speedup_reference_over_challenger": 1.0067543310174063
+  }
+}
