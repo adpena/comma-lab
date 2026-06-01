@@ -16,6 +16,9 @@ from tac.local_acceleration.mlx_preprocess import (
     write_scorer_input_cache_from_video_file,
     write_scorer_input_cache_hash_manifest_from_raw_file,
 )
+from tac.local_acceleration.mlx_upstream_scorer_contract import (
+    validate_mlx_cache_manifest_against_upstream_contract,
+)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -95,13 +98,31 @@ def main(argv: list[str] | None = None) -> int:
                 max_pairs=args.max_pairs,
                 batch_pairs=args.batch_pairs,
             )
+    validation = validate_mlx_cache_manifest_against_upstream_contract(
+        manifest,
+        require_full_contest_shapes=args.max_pairs is None,
+    )
+    manifest["upstream_scorer_contract_validation"] = validation
+    manifest_path = args.output_dir / "manifest.json"
+    if manifest_path.is_file():
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    if not validation["passed"]:
+        raise SystemExit(
+            "MLX scorer cache manifest failed upstream contract validation: "
+            + ",".join(str(blocker) for blocker in validation["blockers"])
+        )
+
     print(
         json.dumps(
             {
-                "manifest": str(args.output_dir / "manifest.json"),
+                "manifest": str(manifest_path),
                 "pair_count": manifest["pair_count"],
                 "segnet_last_rgb_shape": manifest["segnet_last_rgb_shape"],
                 "posenet_yuv6_pair_shape": manifest["posenet_yuv6_pair_shape"],
+                "upstream_contract_validation_passed": validation["passed"],
             },
             sort_keys=True,
         )

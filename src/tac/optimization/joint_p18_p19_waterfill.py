@@ -40,6 +40,7 @@ from typing import Any
 
 import numpy as np
 
+from tac.contest_eval_contract import build_score_allocation_contract
 from tac.optimization.target_modes import (
     CONTEST_VIDEO_OVERFIT_MODE,
     normalize_target_optimization_mode,
@@ -49,6 +50,7 @@ from tac.optimization.target_modes import (
 
 JOINT_P18_P19_WATERFILL_SCHEMA = "joint_p18_p19_waterfill_surface.v1"
 JOINT_P18_SEGNET_CLASS_BOUNDARY_SCHEMA = "joint_p18_segnet_class_boundary_modifier.v1"
+JOINT_P18_SEGNET_DEEPFOOL_MARGIN_SCHEMA = "joint_p18_segnet_deepfool_margin_weight.v1"
 JOINT_P18_P19_IMPLICIT_ALLOCATOR_SCHEMA = "joint_p18_p19_implicit_kkt_dykstra_allocator.v1"
 JOINT_P18_P19_WEIGHT_FORMULA = (
     "w_i = 100*class_boundary_weight_i*abs(dL_seg/dx_i) "
@@ -142,6 +144,109 @@ def mahalanobis_pose_jacobian_norm(
     if jac.shape[-1] != inv_var.shape[0]:
         raise ValueError("pose_jacobian last dimension must match pose_inverse_variance length")
     return np.sqrt(np.sum((jac * jac) * inv_var, axis=-1))
+
+
+def contest_fixed_rate_price_per_archive_byte() -> float:
+    """Return the fixed contest byte water level ``25/source_video_bytes``."""
+
+    contract = build_score_allocation_contract()
+    return float(contract["rate"]["rate_price_per_archive_byte"])
+
+
+def build_segnet_deepfool_margin_class_region_weight(
+    *,
+    top2_margin: np.ndarray,
+    margin_gradient_norm_sq: np.ndarray,
+    class_region_prior: np.ndarray | None = None,
+    margin_floor: float = 1e-6,
+    output_floor: float = 1e-12,
+    normalize_mean_to_one: bool = True,
+    boundary_margin_quantile: float = 0.10,
+) -> dict[str, Any]:
+    """Build the P18 margin-flip weight consumed by ``segnet_class_region_weight``.
+
+    The hard contest SegNet term is an argmax flip rate, so the differentiable
+    proposal surface should not be a static class mask.  For top-1/top-2 logit
+    margin ``m`` and a VJP-produced squared input-gradient ``||grad m||^2``,
+    the first-order DeepFool flip-risk proxy is
+
+        ``risk_i = ||grad m_i||^2 / max(m_i, eps)^2``.
+
+    The returned ``class_region_weight`` is finite and strictly positive because
+    ``build_joint_p18_p19_waterfill_surface`` uses it as a multiplicative
+    allocator weight.  The raw zero-risk structure is still preserved in
+    ``raw_flip_risk`` and blockers; this helper is a bridge into the existing
+    allocator, not a score authority.
+    """
+
+    margin = np.asarray(top2_margin, dtype=np.float64)
+    grad_sq = np.asarray(margin_gradient_norm_sq, dtype=np.float64)
+    if margin.shape != grad_sq.shape:
+        raise ValueError("top2_margin shape must match margin_gradient_norm_sq")
+    if margin_floor <= 0.0:
+        raise ValueError("margin_floor must be > 0")
+    if output_floor <= 0.0:
+        raise ValueError("output_floor must be > 0")
+    if not 0.0 <= boundary_margin_quantile <= 1.0:
+        raise ValueError("boundary_margin_quantile must be in [0, 1]")
+    if not np.all(np.isfinite(margin)):
+        raise ValueError("top2_margin must be finite")
+    if not np.all(np.isfinite(grad_sq)):
+        raise ValueError("margin_gradient_norm_sq must be finite")
+    if np.any(margin < 0.0):
+        raise ValueError("top2_margin must be top1_minus_top2 and therefore >= 0")
+    if np.any(grad_sq < 0.0):
+        raise ValueError("margin_gradient_norm_sq must be >= 0")
+
+    prior = np.ones_like(margin, dtype=np.float64)
+    if class_region_prior is not None:
+        prior = np.asarray(class_region_prior, dtype=np.float64)
+        if prior.shape != margin.shape:
+            raise ValueError("class_region_prior shape must match top2_margin")
+        if not np.all(np.isfinite(prior)):
+            raise ValueError("class_region_prior must be finite")
+        if np.any(prior < 0.0):
+            raise ValueError("class_region_prior must be >= 0")
+
+    raw = (grad_sq / np.square(np.maximum(margin, float(margin_floor)))) * prior
+    blockers: list[str] = []
+    finite_raw = raw[np.isfinite(raw)]
+    if finite_raw.size != raw.size:
+        blockers.append("segnet_deepfool_margin_raw_flip_risk_nonfinite")
+    if not np.any(finite_raw > 0.0):
+        blockers.append("segnet_deepfool_margin_gradient_zero_everywhere")
+
+    weight = np.where(np.isfinite(raw), np.maximum(raw, float(output_floor)), float(output_floor))
+    positive = weight[weight > output_floor]
+    if normalize_mean_to_one and positive.size:
+        weight = weight / float(np.mean(positive))
+        weight = np.maximum(weight, float(output_floor))
+
+    if margin.size:
+        boundary_threshold = float(np.quantile(margin, boundary_margin_quantile))
+        boundary_mask = margin <= boundary_threshold
+    else:
+        boundary_threshold = 0.0
+        boundary_mask = np.zeros_like(margin, dtype=bool)
+
+    return {
+        "schema": JOINT_P18_SEGNET_DEEPFOOL_MARGIN_SCHEMA,
+        "formula": "class_region_weight_i ~= ||grad(top1-top2)_i||^2/max(top1-top2,eps)^2",
+        "class_region_weight": weight,
+        "raw_flip_risk": raw,
+        "boundary_protect_mask": boundary_mask,
+        "boundary_margin_quantile": float(boundary_margin_quantile),
+        "boundary_margin_threshold": boundary_threshold,
+        "margin_floor": float(margin_floor),
+        "output_floor": float(output_floor),
+        "normalization": "positive_mean_one" if normalize_mean_to_one else "none",
+        "raw_positive_atom_count": int(np.count_nonzero(raw > 0.0)),
+        "boundary_atom_count": int(np.count_nonzero(boundary_mask)),
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _optional_array_matching(
@@ -582,6 +687,7 @@ def build_joint_p18_p19_waterfill_surface(
         "schema": JOINT_P18_P19_WATERFILL_SCHEMA,
         "formula": JOINT_P18_P19_WEIGHT_FORMULA,
         "rate_axis_attack_role": JOINT_P18_P19_RATE_ATTACK_ROLE,
+        "contest_rate_price_per_archive_byte": contest_fixed_rate_price_per_archive_byte(),
         "d_pose": float(config.d_pose),
         "pose_ail_gain": float(config.pose_ail_gain),
         "pose_null_threshold": float(config.pose_null_threshold),
@@ -663,11 +769,14 @@ __all__ = [
     "JOINT_P18_P19_WATERFILL_SCHEMA",
     "JOINT_P18_P19_WEIGHT_FORMULA",
     "JOINT_P18_SEGNET_CLASS_BOUNDARY_SCHEMA",
+    "JOINT_P18_SEGNET_DEEPFOOL_MARGIN_SCHEMA",
     "PROPOSAL_ONLY_SCOPE",
     "PROPOSAL_OR_SAMPLED_REDUCTION",
     "JointP18P19WaterfillAuthorityError",
     "JointP18P19WaterfillConfig",
     "build_joint_p18_p19_waterfill_surface",
+    "build_segnet_deepfool_margin_class_region_weight",
+    "contest_fixed_rate_price_per_archive_byte",
     "mahalanobis_pose_jacobian_norm",
     "require_exact_full_video_gradient_reduction",
     "require_fresh_joint_surface",

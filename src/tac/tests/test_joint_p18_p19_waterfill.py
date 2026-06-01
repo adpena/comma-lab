@@ -12,9 +12,12 @@ from tac.optimization.joint_p18_p19_waterfill import (
     JOINT_P18_P19_RATE_ATTACK_ROLE,
     JOINT_P18_P19_WEIGHT_FORMULA,
     JOINT_P18_SEGNET_CLASS_BOUNDARY_SCHEMA,
+    JOINT_P18_SEGNET_DEEPFOOL_MARGIN_SCHEMA,
     JointP18P19WaterfillAuthorityError,
     JointP18P19WaterfillConfig,
     build_joint_p18_p19_waterfill_surface,
+    build_segnet_deepfool_margin_class_region_weight,
+    contest_fixed_rate_price_per_archive_byte,
     mahalanobis_pose_jacobian_norm,
     require_exact_full_video_gradient_reduction,
     require_fresh_joint_surface,
@@ -90,6 +93,9 @@ def test_joint_p18_p19_weight_uses_segnet_and_pose_mahalanobis_terms() -> None:
     )
     assert surface["formula"] == JOINT_P18_P19_WEIGHT_FORMULA
     assert surface["rate_axis_attack_role"] == JOINT_P18_P19_RATE_ATTACK_ROLE
+    assert surface["contest_rate_price_per_archive_byte"] == pytest.approx(
+        25.0 / 37_545_489
+    )
     assert surface["target_mode"] == CONTEST_VIDEO_OVERFIT_MODE
     assert surface["declared_overfit_allowed"] is True
     assert surface["corpus_manifest_required"] is False
@@ -112,6 +118,64 @@ def test_joint_p18_p19_weight_uses_segnet_and_pose_mahalanobis_terms() -> None:
     assert surface["ready_for_budget_spend"] is False
     assert surface["score_claim"] is False
     assert surface["ready_for_exact_eval_dispatch"] is False
+
+
+def test_segnet_deepfool_margin_weight_prioritizes_low_margin_high_gradient_atoms() -> None:
+    margin = np.array([0.01, 1.0, 0.25, 0.02], dtype=np.float64)
+    grad_sq = np.array([1.0, 1.0, 0.0, 0.25], dtype=np.float64)
+
+    report = build_segnet_deepfool_margin_class_region_weight(
+        top2_margin=margin,
+        margin_gradient_norm_sq=grad_sq,
+        boundary_margin_quantile=0.25,
+    )
+
+    weight = report["class_region_weight"]
+    assert report["schema"] == JOINT_P18_SEGNET_DEEPFOOL_MARGIN_SCHEMA
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["blockers"] == []
+    assert weight[0] > weight[3] > weight[1] > weight[2]
+    assert report["boundary_protect_mask"].tolist() == [True, False, False, False]
+
+
+def test_segnet_deepfool_margin_weight_feeds_existing_allocator_without_static_mask() -> None:
+    margin_report = build_segnet_deepfool_margin_class_region_weight(
+        top2_margin=np.array([0.02, 1.0, 0.5], dtype=np.float64),
+        margin_gradient_norm_sq=np.array([1.0, 1.0, 0.0], dtype=np.float64),
+    )
+    seg = np.array([0.01, 0.01, 0.01], dtype=np.float64)
+    surface = build_joint_p18_p19_waterfill_surface(
+        segnet_argmax_gradient=seg,
+        pose_jacobian=np.zeros((3, 1), dtype=np.float64),
+        segnet_class_region_weight=margin_report["class_region_weight"],
+        segnet_boundary_protect_mask=margin_report["boundary_protect_mask"],
+        config=JointP18P19WaterfillConfig(
+            d_pose=1e-4,
+            pose_inverse_variance=(1.0,),
+            evidence_scope=FULL_VIDEO_AUTHORITY_SCOPE,
+            full_video_atom_count=seg.size,
+            linearization_archive_sha=ARCHIVE_A_SHA,
+            gradient_reduction_semantics=FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
+        ),
+    )
+
+    assert surface["segnet_class_boundary_report"]["class_region_weight_applied"] is True
+    assert surface["segnet_class_boundary_report"]["boundary_protect_mask_applied"] is True
+    assert surface["ready_for_budget_spend"] is True
+    assert surface["safe_rate_spend_mask"][0].item() is False
+
+
+def test_fixed_contest_rate_price_is_source_grounded_water_level() -> None:
+    assert contest_fixed_rate_price_per_archive_byte() == pytest.approx(25.0 / 37_545_489)
+
+
+def test_segnet_deepfool_margin_weight_rejects_fake_negative_margin() -> None:
+    with pytest.raises(ValueError, match="top2_margin"):
+        build_segnet_deepfool_margin_class_region_weight(
+            top2_margin=np.array([0.1, -0.1], dtype=np.float64),
+            margin_gradient_norm_sq=np.ones((2,), dtype=np.float64),
+        )
 
 
 def test_joint_p18_p19_class_boundary_modifier_blocks_boundary_coarsening() -> None:

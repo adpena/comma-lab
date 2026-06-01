@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from tac.archive_byte_profile import CONTEST_ORIGINAL_BYTES, contest_rate_term
+from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
 from tac.contest_eval_contract import (
     CAMERA_SIZE_WH,
     PUBLIC_TEST_PAIR_COUNT,
@@ -17,6 +18,8 @@ from tac.contest_eval_contract import (
     build_score_allocation_contract,
     build_upstream_eval_contract,
 )
+from tac.contest_oracle.constants import CONTEST_RATE_DENOM_BYTES, CONTEST_RATE_PER_BYTE
+from tac.eval.auth_eval import FALLBACK_UNCOMPRESSED_SIZE, compute_final_score
 
 
 def test_score_allocation_contract_matches_upstream_score_geometry() -> None:
@@ -75,6 +78,31 @@ def test_score_formula_is_not_raw_output_byte_denominator() -> None:
     assert contract["rate"]["canonical_denominator_bytes"] != PUBLIC_TEST_RAW_OUTPUT_BYTES
     assert contract["rate"]["rate_price_per_archive_byte"] == pytest.approx(
         25.0 / 37_545_489
+    )
+
+
+def test_contest_formula_and_denominator_mirrors_agree_across_modules() -> None:
+    contract = build_score_allocation_contract()
+    denom = contract["rate"]["canonical_denominator_bytes"]
+    archive_bytes = 178_493
+    seg = 0.00123
+    pose = 3.4e-5
+
+    assert denom == CONTEST_ORIGINAL_BYTES
+    assert denom == ORIGINAL_VIDEO_BYTES
+    assert denom == CONTEST_RATE_DENOM_BYTES
+    assert denom == FALLBACK_UNCOMPRESSED_SIZE
+    assert contract["rate"]["rate_price_per_archive_byte"] == pytest.approx(CONTEST_RATE_PER_BYTE)
+    assert contest_formula_score(
+        seg_dist=seg,
+        pose_dist=pose,
+        archive_bytes=archive_bytes,
+    ) == pytest.approx(
+        compute_final_score(
+            segnet_dist=seg,
+            posenet_dist=pose,
+            rate=archive_bytes / denom,
+        )
     )
 
 
