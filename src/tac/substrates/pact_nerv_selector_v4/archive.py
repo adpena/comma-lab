@@ -3,23 +3,72 @@
 
 from __future__ import annotations
 
-import io
 import json
-import pickle
 import struct
 from dataclasses import dataclass
 
-import brotli  # type: ignore[import-not-found]
 import torch
+
+try:
+    from tac.substrates._shared.decoder_state_codec import (
+        decoder_state_codec_stats,
+        deserialize_decoder_state_dict,
+        serialize_decoder_state_dict,
+    )
+except ModuleNotFoundError:  # pragma: no cover - protects older vendored runtimes.
+    import io
+    import pickle
+
+    import brotli  # type: ignore[import-not-found]
+
+    class _FallbackStats:
+        def __init__(self, *, size: int) -> None:
+            self.size = size
+
+        def as_dict(self) -> dict[str, object]:
+            return {
+                "codec": "fp16_brotli_legacy",
+                "payload_bytes": self.size,
+                "envelope_bytes": 0,
+                "legacy_fallback": True,
+            }
+
+    def serialize_decoder_state_dict(
+        state_dict: dict[str, torch.Tensor],
+        *,
+        codec: str = "fp16_brotli_legacy",
+    ) -> bytes:
+        if codec not in {"fp16_brotli_legacy", "legacy"}:
+            raise RuntimeError(
+                "vendored runtime lacks decoder_state_codec.py; only legacy "
+                "fp16_brotli archives can be written"
+            )
+        buf = io.BytesIO()
+        pickle.dump(
+            {
+                name: tensor.detach().to("cpu", dtype=torch.float16).contiguous()
+                for name, tensor in state_dict.items()
+                if name != "selectors"
+            },
+            buf,
+            protocol=4,
+        )
+        return bytes(brotli.compress(buf.getvalue(), quality=9))
+
+    def deserialize_decoder_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+        sd = pickle.loads(brotli.decompress(blob))
+        if not isinstance(sd, dict):
+            raise ValueError("decoder_state_dict legacy blob did not unpickle to a dict")
+        return sd
+
+    def decoder_state_codec_stats(blob: bytes) -> _FallbackStats:
+        return _FallbackStats(size=len(blob))
 
 PSV4_MAGIC: bytes = b"PSV4"
 PSV4_SCHEMA_VERSION: int = 1
 PSV4_HEADER_FMT: str = "<4sBHHBIIII"
 PSV4_HEADER_SIZE: int = struct.calcsize(PSV4_HEADER_FMT)
 assert PSV4_HEADER_SIZE == 26
-BROTLI_QUALITY = 9
-
-
 @dataclass(frozen=True)
 class PactNervSelectorV4Archive:
     decoder_state_dict: dict[str, torch.Tensor]
@@ -30,21 +79,16 @@ class PactNervSelectorV4Archive:
     palette_size: int
 
 
-def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
-    buf = io.BytesIO()
-    sd_cpu = {
-        k: v.detach().to("cpu", dtype=torch.float16).contiguous()
-        for k, v in sd.items() if k != "selectors"
-    }
-    pickle.dump(sd_cpu, buf, protocol=4)
-    return bytes(brotli.compress(buf.getvalue(), quality=BROTLI_QUALITY))
+def _serialize_state_dict(
+    sd: dict[str, torch.Tensor],
+    *,
+    codec: str = "fp16_brotli_legacy",
+) -> bytes:
+    return serialize_decoder_state_dict(sd, codec=codec)
 
 
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
-    sd = pickle.loads(brotli.decompress(blob))
-    if not isinstance(sd, dict):
-        raise ValueError("decoder_state_dict blob did not unpickle to a dict")
-    return sd
+    return deserialize_decoder_state_dict(blob)
 
 
 def _quantize_int16(t: torch.Tensor) -> tuple[torch.Tensor, float, float]:
@@ -73,6 +117,7 @@ def pack_archive(
     *,
     palette_size: int,
     schema_version: int = PSV4_SCHEMA_VERSION,
+    decoder_codec: str = "fp16_brotli_legacy",
 ) -> bytes:
     if schema_version != PSV4_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {schema_version}")
@@ -89,10 +134,11 @@ def pack_archive(
         raise ValueError(f"latent_dim {latent_dim} out of u16 range")
     q_lat, lat_scale, lat_zp = _quantize_int16(latents)
     lat_bytes = q_lat.contiguous().numpy().tobytes()
-    dec_blob = _serialize_state_dict(decoder_state_dict)
+    dec_blob = _serialize_state_dict(decoder_state_dict, codec=decoder_codec)
     meta_q = dict(meta)
     meta_q["_lat_quant_scale"] = float(lat_scale)
     meta_q["_lat_quant_zero_point"] = float(lat_zp)
+    meta_q["_decoder_state_codec"] = decoder_state_codec_stats(dec_blob).as_dict()
     meta_bytes = json.dumps(meta_q, separators=(",", ":"), sort_keys=True).encode("utf-8")
     header = struct.pack(
         PSV4_HEADER_FMT, PSV4_MAGIC, schema_version, latent_dim, num_pairs,

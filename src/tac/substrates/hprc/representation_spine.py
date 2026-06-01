@@ -445,14 +445,9 @@ def _split_pact_nerv_vq_payload(payload: bytes) -> dict[str, Any]:
     if magic != PVQ_MAGIC:
         raise HprcRepresentationSpineError(f"bad PVQ magic: {magic!r}")
     expected_codebook_len = int(codebook_size) * int(latent_dim) * 2
-    expected_indices_len = int(num_pairs) * 2
     if int(codebook_len) != expected_codebook_len:
         raise HprcRepresentationSpineError(
             f"PVQ codebook_len {codebook_len} != {expected_codebook_len}"
-        )
-    if int(indices_len) != expected_indices_len:
-        raise HprcRepresentationSpineError(
-            f"PVQ indices_len {indices_len} != {expected_indices_len}"
         )
     end_decoder = PVQ_HEADER_SIZE + int(decoder_len)
     end_codebook = end_decoder + int(codebook_len)

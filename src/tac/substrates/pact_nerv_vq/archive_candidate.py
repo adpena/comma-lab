@@ -120,6 +120,8 @@ def pack_archive_from_exported_state_dict(
     *,
     exported_state_dict: dict[str, np.ndarray],
     cfg: PactNervVqConfig,
+    decoder_codec: str = "int8_mixed",
+    indices_codec: str = "auto",
 ) -> bytes:
     """Pack a PyTorch-layout exported MLX state dict into PVQ ``0.bin`` bytes.
 
@@ -186,6 +188,8 @@ def pack_archive_from_exported_state_dict(
         codebook,
         indices,
         vq_meta_from_config(cfg),
+        decoder_codec=decoder_codec,
+        indices_codec=indices_codec,
     )
 
 
@@ -197,6 +201,8 @@ def export_pact_nerv_vq_mlx_archive(
     emit_archive_bound_candidate_package: bool = True,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
+    decoder_codec: str = "int8_mixed",
+    indices_codec: str = "auto",
 ) -> tuple[Path, str, int]:
     """Export an MLX VQ model as a contest-shaped ``archive.zip``."""
 
@@ -215,6 +221,8 @@ def export_pact_nerv_vq_mlx_archive(
     bin_bytes = pack_archive_from_exported_state_dict(
         exported_state_dict=exported,
         cfg=cfg,
+        decoder_codec=decoder_codec,
+        indices_codec=indices_codec,
     )
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
@@ -248,6 +256,8 @@ def export_pact_nerv_vq_mlx_archive(
             manifest_extra={
                 "emitted_by": "export_pact_nerv_vq_mlx_archive",
                 "archive_bytes_are_authority_for_rate": True,
+                "decoder_codec": decoder_codec,
+                "indices_codec": indices_codec,
             },
         ),
         basename="hprc_representation_spine_pact_nerv_vq",
@@ -275,6 +285,8 @@ def export_pact_nerv_vq_mlx_archive(
                 "schema": "pact_nerv_vq_mlx_runtime_adapter_manifest.v1",
                 "discrete_representation": "vector_quantized_codebook_indices",
                 "codebook_size": int(cfg.codebook_size),
+                "decoder_codec": decoder_codec,
+                "indices_codec": indices_codec,
             },
             candidate_row_schema="pact_nerv_vq_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=PACT_NERV_VQ_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
@@ -290,6 +302,8 @@ def export_pact_nerv_vq_mlx_archive_bound_candidate_package(
     repo_root: str | Path | None = None,
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
+    decoder_codec: str = "int8_mixed",
+    indices_codec: str = "auto",
 ) -> dict[str, Any]:
     """Export PACT-NeRV-VQ MLX bytes and emit the shared package."""
 
@@ -299,6 +313,8 @@ def export_pact_nerv_vq_mlx_archive_bound_candidate_package(
             output_dir,
             repo_root=repo_root,
             emit_archive_bound_candidate_package=False,
+            decoder_codec=decoder_codec,
+            indices_codec=indices_codec,
         )
     )
     root = (
@@ -332,6 +348,8 @@ def export_pact_nerv_vq_mlx_archive_bound_candidate_package(
             "schema": "pact_nerv_vq_mlx_runtime_adapter_manifest.v1",
             "discrete_representation": "vector_quantized_codebook_indices",
             "codebook_size": int(cfg.codebook_size),
+            "decoder_codec": decoder_codec,
+            "indices_codec": indices_codec,
         },
         candidate_row_schema="pact_nerv_vq_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=PACT_NERV_VQ_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,

@@ -130,6 +130,7 @@ def neutralize_psv4_section(blob: bytes, section_name: str) -> bytes:
         dict(arc.meta),
         palette_size=arc.palette_size,
         schema_version=arc.schema_version,
+        decoder_codec=_decoder_codec_from_meta(arc.meta),
     )
 
 
@@ -146,6 +147,13 @@ def psv4_layout_report(*, blob: bytes) -> dict[str, Any]:
         "meta": dict(arc.meta),
         **FALSE_AUTHORITY,
     }
+
+
+def _decoder_codec_from_meta(meta: dict[str, Any]) -> str:
+    codec = meta.get("_decoder_state_codec")
+    if isinstance(codec, dict):
+        return str(codec.get("codec", "fp16_brotli_legacy"))
+    return "fp16_brotli_legacy"
 
 
 __all__ = [

@@ -146,6 +146,31 @@ def test_archive_pack_then_parse_roundtrip_recovers_tensors() -> None:
     assert torch.equal(arc.indices, indices)
 
 
+def test_archive_pack_int8_decoder_and_auto_indices_roundtrip() -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(5)
+    model = PactNervVqSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+    codebook = model.quantizer.codebook.clone()
+    indices = torch.tensor([0, 5, 7], dtype=torch.long)
+
+    blob = pack_archive(
+        decoder_sd,
+        codebook,
+        indices,
+        _smoke_meta(cfg),
+        decoder_codec="int8_mixed",
+        indices_codec="auto",
+    )
+    arc = parse_archive(blob)
+
+    assert arc.indices_codec != "raw_uint16_legacy"
+    assert torch.equal(arc.indices, indices)
+    assert arc.decoder_state_dict.keys() == decoder_sd.keys()
+    assert arc.meta["_decoder_state_codec"]["codec"] == "int8_mixed"
+
+
 def test_archive_candidate_quantizes_exported_state_dict_to_pvq_packet() -> None:
     from tac.substrates.pact_nerv_vq.archive_candidate import (
         pack_archive_from_exported_state_dict,
@@ -172,6 +197,8 @@ def test_archive_candidate_quantizes_exported_state_dict_to_pvq_packet() -> None
     assert blob[:4] == PVQ_MAGIC
     assert arc.codebook.shape == codebook.shape
     assert torch.equal(arc.indices, expected_indices)
+    assert arc.indices_codec != "raw_uint16_legacy"
+    assert arc.meta["_decoder_state_codec"]["codec"] == "int8_mixed"
     assert "quantizer.codebook" not in arc.decoder_state_dict
     assert "latents" not in arc.decoder_state_dict
 
@@ -210,6 +237,26 @@ def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> 
     assert archive_path.is_file()
     assert len(archive_sha) == 64
     assert archive_bytes > 0
+    assert (
+        tmp_path
+        / "export"
+        / "submission"
+        / "src"
+        / "tac"
+        / "substrates"
+        / "_shared"
+        / "decoder_state_codec.py"
+    ).is_file()
+    assert (
+        tmp_path
+        / "export"
+        / "submission"
+        / "src"
+        / "tac"
+        / "substrates"
+        / "_shared"
+        / "int_stream_codec.py"
+    ).is_file()
     payload = json.loads(projection.read_text(encoding="utf-8"))
     assert payload["schema"] == "hprc_representation_spine_projection.v1"
     assert payload["family"] == "pact_nerv_vq"
