@@ -65928,6 +65928,47 @@
       },
       "notes": "NO-GO / INCONCLUSIVE-IF-COLLAPSED from faithful top-LL-clamped archive-path two-arm confirmation; verdict artifact /Volumes/VertigoDataTier/pact/experiments/results/z8_seg_lever_top_ll_clamped_confirm_20260601/go_no_go_verdict.json",
       "research_only": true
+    },
+    {
+      "id": "lane_snerv_scorer_loop_decoder_qat_contract_20260601",
+      "name": "SNeRV scorer-loop decoder QAT contract",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/snerv_scorer_loop_decoder_qat_contract.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -65937,5 +65978,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-01T18:39:36Z"
+  "updated_at": "2026-06-01T23:33:29Z"
 }

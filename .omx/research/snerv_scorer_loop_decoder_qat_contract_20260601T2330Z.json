@@ -1,0 +1,105 @@
+{
+  "acceptance_gate": {
+    "authority_after_pass": "GO_LOCAL_CONTINUATION_ONLY",
+    "authority_not_granted": [
+      "promotion",
+      "rank_or_kill",
+      "exact_eval_dispatch",
+      "score_claim"
+    ],
+    "control_label": "least_squares_baseline_existing",
+    "max_archive_bytes": 35802,
+    "max_d_pose_linf": 2.1390697956085205,
+    "max_d_seg_linf": 0.02,
+    "max_score_linf": 6.911887587116307,
+    "required_receiver_archive_replay_verified": true
+  },
+  "accepted_rows_in_source_gate": 0,
+  "allowed_training_modes": [
+    {
+      "acceptance_gate": "must pass pose-guarded decoder gate versus least-squares waterfill",
+      "allocator_home": "decoder_weights_not_posthoc_per_pair_latents",
+      "decoder_weight_surface": "HfGenerationDecoder.kernels",
+      "large_artifact_policy": "SSD temp/cold-store required before any full-frame cache",
+      "mode_id": "decoder_weight_linf_waterfill_qat",
+      "objective": "train shared HF decoder weights against SegNet/PoseNet advisory losses, with PoseNet d_pose_linf as a hard guard",
+      "protected_axis": "pose_first_then_seg_score",
+      "quantization_policy": "mixed precision by waterfill: protect high-leverage kernels at int8/fp16, demote low-leverage atoms toward int4/int2/zero only after replay and pose guard",
+      "receiver_export_requirement": "SNAR1 receiver packet must consume quantized decoder",
+      "status": "implementation_missing"
+    },
+    {
+      "acceptance_gate": "must beat least-squares waterfill under same archive/runtime gate",
+      "allocator_home": "decoder_weight_training",
+      "decoder_weight_surface": "new receiver-portable HF decoder section",
+      "large_artifact_policy": "local bounded smoke only until storage preflight is wired",
+      "mode_id": "nonlinear_hf_decoder_qat",
+      "objective": "replace scalar weighted least-squares with a tiny nonlinear HF decoder trained in scorer loop",
+      "protected_axis": "pose_first_then_seg_score",
+      "quantization_policy": "QAT during fit, not post-hoc quantization",
+      "receiver_export_requirement": "inflate path must be numpy-portable and scorer-free",
+      "status": "implementation_missing"
+    }
+  ],
+  "axis_tag": "[macOS-CPU advisory]",
+  "baseline_archive_bytes": 33754,
+  "baseline_d_pose_linf": 2.1390697956085205,
+  "baseline_d_seg_linf": 0.02264404296875,
+  "baseline_label": "least_squares_baseline_existing",
+  "baseline_score_linf": 6.911887587116307,
+  "blockers": [
+    "snerv_scorer_loop_decoder_qat_trainer_cli_missing",
+    "segnet_posenet_in_loop_gradient_path_missing",
+    "decoder_weight_qat_receiver_export_proof_missing",
+    "full_600_pair_receiver_proof_missing",
+    "paired_contest_cpu_cuda_pass_missing",
+    "pr101_cpu_pending_blocks_exact_cuda_dispatch"
+  ],
+  "closed_form_scalar_weighting_no_go": true,
+  "dispatch_hold_reason": "pr101_cpu_pending_blocks_exact_cuda_dispatch",
+  "forbidden_actions": [
+    "rerun_closed_form_scalar_or_component_hf_weight_sweep_for_promotion",
+    "dispatch_full_video_or_exact_eval_from_pose_gate_negative",
+    "promote_without_byte_closed_receiver_proof",
+    "claim_score_from_macos_cpu_advisory_rows"
+  ],
+  "lane_id": "lane_snerv_scorer_loop_decoder_qat_contract_20260601",
+  "next_code_artifacts": [
+    "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+    "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
+    "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_scorer_loop_decoder_qat.py",
+    ".omx/research/snerv_scorer_loop_decoder_qat_smoke_<UTC>.json"
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_local_training_smoke": false,
+  "ready_for_scorer_loop_trainer_implementation": true,
+  "required_preconditions": [
+    "pose_guarded_gate_artifact_consumed",
+    "least_squares_waterfill_control_present",
+    "closed_form_scalar_component_weighting_no_go",
+    "no_pose_guard_accepted_candidate",
+    "exact_and_promotion_authority_false"
+  ],
+  "satisfied_preconditions": [
+    "pose_guarded_gate_artifact_consumed",
+    "least_squares_waterfill_control_present",
+    "closed_form_scalar_component_weighting_no_go",
+    "no_pose_guard_accepted_candidate",
+    "exact_and_promotion_authority_false"
+  ],
+  "schema": "snerv_scorer_loop_decoder_qat_contract.v1",
+  "score_claim": false,
+  "source_gate_next_action": "implement_scorer_loop_or_nonlinear_qat_decoder_before_more_sweeps",
+  "source_gate_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-codec-20260601/.omx/research/snerv_pose_guarded_decoder_gate_20260601T2324Z.json",
+  "source_gate_sha256": "25f577bce214d08499e56bf4d7a39d8117aa57a8a654b91a8dd15d2fc211e0c5",
+  "source_gate_verdict": "NO_GO_FOR_PROMOTION_OR_EXACT_EVAL",
+  "verifier_tests_to_add": [
+    "real_frames_are_loaded_from_upstream_video_not_synthetic_noise",
+    "segnet_and_posenet_losses_both_enter_training_objective",
+    "pose_guard_is_hard_constraint_before_segnet_gain",
+    "quantized_decoder_export_roundtrips_through_snar1_receiver",
+    "local_smoke_cannot_set_score_claim_or_exact_eval_ready"
+  ]
+}
