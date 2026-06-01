@@ -1,0 +1,59 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_chain_compiler",
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_operation_chain_stage_plan.py",
+        "--operation-chain-compiler-work-orders",
+        ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/post_execute_feedback_refresh/operation_chain_compiler_work_orders.json",
+        "--source-operation-id",
+        "chain_registered_multisurface_materializer_program",
+        "--stage-plan-out",
+        "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_operation_chain_compiler/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+        "--overwrite"
+      ],
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "priority": 1,
+      "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_chain_compiler",
+      "resource_kind": "local_io_heavy",
+      "step_hashes": {
+        "command_hash": "16ffab1f069ef2afc714b5756b264967c89643b3c52d7a6a16f9e4f1f8e9165f",
+        "definition_hash": "e9930080d221ddc8559209a8d77a97b1813b494643144f71b14db07c936dfc1b",
+        "postcondition_hash": "66ad94226eeadd8d0eca17e722c9554a19515eb8428e7b0623a23253f5fe71e6"
+      },
+      "step_id": "emit_operation_chain_stage_plan"
+    }
+  ],
+  "schema": "experiment_queue_summary.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_chain_compiler.sqlite",
+  "status_counts": {
+    "queued": 2
+  },
+  "step_count": 2,
+  "steps": [
+    {
+      "attempts": 0,
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_byte_range_stage_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:13:58Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_operation_chain_stage_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:13:58Z"
+    }
+  ]
+}

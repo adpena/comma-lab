@@ -1,0 +1,73 @@
+{
+  "axis_tag": "[macOS-MLX research-signal]",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "evidence_grade": "predicted",
+    "kind": "predicted_from_model",
+    "promotable": false,
+    "rationale": "MLX-local smoke produces no score; this manifest documents renderer construction + single forward pass only. Non-promotable by construction per Catalog #192/#317/#341. Full training path BLOCKED pending Z7Mamba2MLXNativeRenderer -> mlx.nn.Module migration per landing memo \u00a710.",
+    "score_claim_valid": false
+  },
+  "config": {
+    "d_conv": 4,
+    "d_model": 64,
+    "d_state": 16,
+    "decoder_channels": [
+      32,
+      24,
+      16,
+      12
+    ],
+    "decoder_embed_dim": 32,
+    "decoder_num_upsample_blocks": 4,
+    "ego_motion_dim": 8,
+    "expand": 2,
+    "latent_dim": 24,
+    "num_pairs": 4,
+    "output_height": 384,
+    "output_width": 512,
+    "stateful": true
+  },
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "forward_convention": "reconstruct_pair_nchw01",
+  "forward_smoke": {
+    "input_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "rgb_0_max": 0.5,
+    "rgb_0_mean": 0.5,
+    "rgb_0_min": 0.5,
+    "rgb_0_shape": [
+      4,
+      3,
+      384,
+      512
+    ],
+    "rgb_1_max": 0.5,
+    "rgb_1_mean": 0.5,
+    "rgb_1_min": 0.5,
+    "rgb_1_shape": [
+      4,
+      3,
+      384,
+      512
+    ]
+  },
+  "lane_id": "lane_slot_1_z7_mamba2_hinton_distill_600pair_long_mlx_20260528",
+  "operator_routable_reactivation_criteria_memo": ".omx/research/z7_mamba2_state_space_hinton_distill_600pair_long_mlx_landed_20260528.md",
+  "predicted_delta_adjustment": 0.0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "renderer_module": "tac.substrates.time_traveler_l5_z7_mamba2.mlx_native",
+  "renderer_num_parameters": "deferred_pending_mlx_module_migration",
+  "renderer_schema_version": "z7_mamba2_mlx_native_v1_20260518",
+  "scaffold_state": "L1_scaffold_full_main_blocked_pending_mlx_module_migration",
+  "schema_version": "z7_mamba2_mlx_local_smoke_manifest_v1_20260528",
+  "score_claim": false,
+  "substrate_id": "time_traveler_l5_z7_mamba2_mlx_local"
+}

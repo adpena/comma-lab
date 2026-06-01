@@ -1,0 +1,162 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 1,
+  "max_experiments": null,
+  "max_parallel": 2,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "frontier_final_rate_attack_feca_default_exec_20260528Tlocal_post_execute_feedback_chain_compiler",
+  "requested_max_parallel": 2,
+  "resource_limits": {
+    "local_io_heavy": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-28T05:38:10Z",
+  "started_experiment_ids": [
+    "chain_registered_multisurface_materializer_program"
+  ],
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec_20260528Tlocal_post_execute_feedback_chain_compiler.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_operation_chain_stage_plan.py",
+        "--operation-chain-compiler-work-orders",
+        ".omx/research/frontier_final_rate_attack_feca_default_exec_20260528Tlocal/post_execute_feedback_refresh/operation_chain_compiler_work_orders.json",
+        "--source-operation-id",
+        "chain_registered_multisurface_materializer_program",
+        "--stage-plan-out",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.7625395829963963,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec_20260528Tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/emit_operation_chain_stage_plan/20260528T053810Z_3c585c854c89681e.log",
+      "pid": 61169,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_operation_chain_stage_plan.py",
+          "--operation-chain-compiler-work-orders",
+          ".omx/research/frontier_final_rate_attack_feca_default_exec_20260528Tlocal/post_execute_feedback_refresh/operation_chain_compiler_work_orders.json",
+          "--source-operation-id",
+          "chain_registered_multisurface_materializer_program",
+          "--stage-plan-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+          "--overwrite"
+        ],
+        "experiment_id": "chain_registered_multisurface_materializer_program",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_feca_default_exec_20260528Tlocal_post_execute_feedback_chain_compiler",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "920a9e6d50eaf58e1a6bf3545f3314486ee71acd99deccfa73eb205e4f29bf9c",
+          "definition_hash": "8171ade6aec656874c9cdabe466ab468f25529df9c24ec3bdb0656fab0ccf908",
+          "postcondition_hash": "194fcca0772582b0724228380e5c88fcaaaf0463b4fe49a02e8097b8e287bc58"
+        },
+        "step_id": "emit_operation_chain_stage_plan"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 13164,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T05:38:10Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 657,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "3c585c854c89681e"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_byte_range_stage_inputs.py",
+        "--operation-chain-stage-plan",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+        "--stage-inputs-out",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+        "--chain-output-dir",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.7153506250033388,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec_20260528Tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/emit_byte_range_stage_inputs/20260528T053810Z_cf8dfd46ad586327.log",
+      "pid": 61512,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_byte_range_stage_inputs.py",
+          "--operation-chain-stage-plan",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+          "--stage-inputs-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+          "--chain-output-dir",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+          "--overwrite"
+        ],
+        "experiment_id": "chain_registered_multisurface_materializer_program",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_feca_default_exec_20260528Tlocal_post_execute_feedback_chain_compiler",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "387dbfa9dc41406a73d1c8f8c033afd8441d05943090880791e38a4b8037b159",
+          "definition_hash": "8ec5911dd2b8de6ad3eec02ab60af9d1b313fafb3884bdf5565dfa1bf262f63f",
+          "postcondition_hash": "98536b4981425e54b181d743d433441e6ea71b5ba23f5e8df2165045e2083efa"
+        },
+        "step_id": "emit_byte_range_stage_inputs"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 7226,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T05:38:11Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_feca_default_exec_20260528tlocal_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 1028,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "cf8dfd46ad586327"
+    }
+  ],
+  "steps_started": 2,
+  "stop_reason": "idle_limit_reached",
+  "stop_signals": [],
+  "success_count": 2
+}

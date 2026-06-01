@@ -1,0 +1,262 @@
+{
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "execute": true,
+  "final_reason": "terminal_queue_state",
+  "final_summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 2,
+        "resource_limits": {
+          "local_cpu": 1,
+          "local_io_heavy": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu",
+        "local_io_heavy"
+      ],
+      "with_cloud": {
+        "max_parallel": 2,
+        "resource_limits": {
+          "local_cpu": 1,
+          "local_io_heavy": 1
+        }
+      }
+    },
+    "automation_blockers": [],
+    "automation_verdict": "safe_to_resume_or_continue",
+    "blocked_steps": [],
+    "blocker_count": 0,
+    "blockers": [],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": true,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec6_20260528Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_cpu": {
+          "artifact_record_bytes_mean": 5487.871794871795,
+          "artifact_record_bytes_sum": 214027,
+          "artifact_record_count": 24,
+          "artifact_record_raw_bytes_mean": 5487.871794871795,
+          "artifact_record_raw_bytes_sum": 214027,
+          "candidate_ids": [
+            "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+            "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+            "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+          ],
+          "dominant_resource_kind": "local_cpu",
+          "elapsed_seconds_max": 3.57689537499391,
+          "elapsed_seconds_mean": 0.8004158204622889,
+          "elapsed_seconds_min": 0.07354170899634482,
+          "elapsed_seconds_sum": 31.216216998029267,
+          "experiment_ids": [
+            "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+            "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+            "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 2204.5897435897436,
+          "log_bytes_sum": 85979,
+          "resource_kind_counts": {
+            "local_cpu": 39
+          },
+          "run_count": 39,
+          "step_ids": [
+            "append_blocked_repair_campaign_learning_posterior",
+            "assert_repair_budget_waterfill_work_order_materialized",
+            "build_repair_campaign_blocked_learning_signals",
+            "build_repair_campaign_byte_closed_materialization_queue",
+            "build_repair_campaign_entropy_stage_chain_contract",
+            "build_repair_campaign_stackability_queue",
+            "build_repair_cascade_mlx_probe_queue",
+            "run_repair_campaign_stackability_queue_bounded_local",
+            "run_repair_cascade_mlx_probe_queue_bounded_local",
+            "validate_repair_budget_waterfill_source_queue",
+            "validate_repair_campaign_byte_closed_materialization_queue",
+            "validate_repair_campaign_stackability_queue",
+            "validate_repair_cascade_mlx_probe_queue"
+          ],
+          "success_count": 39
+        },
+        "local_io_heavy": {
+          "artifact_record_bytes_mean": 66609.0,
+          "artifact_record_bytes_sum": 599481,
+          "artifact_record_count": 9,
+          "artifact_record_raw_bytes_mean": 66609.0,
+          "artifact_record_raw_bytes_sum": 599481,
+          "candidate_ids": [
+            "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+            "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+            "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+          ],
+          "dominant_resource_kind": "local_io_heavy",
+          "elapsed_seconds_max": 6.7309562080045,
+          "elapsed_seconds_mean": 1.2091952037759863,
+          "elapsed_seconds_min": 0.06455158299650066,
+          "elapsed_seconds_sum": 10.882756833983876,
+          "experiment_ids": [
+            "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+            "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+            "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 2541.222222222222,
+          "log_bytes_sum": 22871,
+          "resource_kind_counts": {
+            "local_io_heavy": 9
+          },
+          "run_count": 9,
+          "step_ids": [
+            "run_repair_budget_waterfill_source_queue",
+            "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+            "score_repair_campaign_from_typed_ledger"
+          ],
+          "success_count": 9
+        }
+      },
+      "event_count": 48,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+    "queue_path": ".omx/research/frontier_final_rate_attack_feca_default_exec6_20260528Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+    "queued_step_count": 0,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec6_20260528Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_cpu": 18,
+        "local_io_heavy": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_cpu": 900,
+        "local_io_heavy": 600
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-28T06:04:20Z",
+      "event_count": 156,
+      "max_event_id": 156,
+      "max_step_updated_at_utc": "2026-05-28T19:41:11Z",
+      "queue_id": "frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score.sqlite",
+      "step_state_count": 48
+    },
+    "status_counts": {
+      "succeeded": 48
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec6_20260528Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec6_20260528Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "8",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "finished_at_utc": "2026-05-28T19:41:11Z",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "heartbeat_path": ".omx/research/queue_fleet_supervisor_20260528T193927Z/005_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score/heartbeat.json",
+  "last_tick": {
+    "action": "observe",
+    "automation_verdict": "safe_to_resume_or_continue",
+    "final_reason_if_stopping": "terminal_queue_state",
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_supervisor_tick.v1",
+    "score_claim": false,
+    "status_counts": {
+      "succeeded": 48
+    },
+    "tick_artifact": {
+      "bytes": 9906,
+      "path": ".omx/research/queue_fleet_supervisor_20260528T193927Z/005_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score/tick_0001/tick.json",
+      "sha256": "9d8f8598df264b46b0131d66ecc0584579442f3e3a0c8ad98961ff94584fc93d"
+    },
+    "tick_index": 1
+  },
+  "lock_path": ".omx/research/queue_fleet_supervisor_20260528T193927Z/005_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score/supervisor.lock",
+  "output_dir": ".omx/research/queue_fleet_supervisor_20260528T193927Z/005_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+  "queue_path": ".omx/research/frontier_final_rate_attack_feca_default_exec6_20260528Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_supervisor_run.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "started_at_utc": "2026-05-28T19:41:09Z",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score.sqlite",
+  "tick_count": 2,
+  "ticks_jsonl": ".omx/research/queue_fleet_supervisor_20260528T193927Z/005_frontier_final_rate_attack_feca_default_exec6_20260528Tlocal_post_execute_feedback_repair_campaign_score/ticks.jsonl"
+}

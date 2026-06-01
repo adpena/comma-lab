@@ -1,0 +1,20 @@
+{
+  "auto_parallelism": {
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      }
+    },
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      }
+    }
+  },
+  "experiment_count": 4,
+  "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair",
+  "step_count": 4,
+  "valid": true
+}

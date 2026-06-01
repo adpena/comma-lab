@@ -1,0 +1,31 @@
+{
+  "archive_member_bytes": 391813,
+  "archive_sha256": "7f67a0423c3f99c2cc88def5f4e8cdbc726bc3e8a3b34282eede3ea5fccf6f12",
+  "axis_tag": "[macOS-MLX research-signal]",
+  "config": {
+    "kmeans_iters": 2,
+    "ksub_codebook_size": 2,
+    "m_sub_quantizers": 2,
+    "num_pairs": 1,
+    "seed": 42,
+    "tile_h": 192,
+    "tile_w": 256
+  },
+  "elapsed_seconds": 0.1065600829970208,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "lane_id": "lane_path_3_fix_wave_r1_prime_prime_i_faiss_ivf_pq_residual_20260526",
+  "promotable": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "residual_recon_mse_mean": 0.00021060400467831641,
+  "result_review_blockers": [
+    "codebook_fit_residual_mse_proxy_not_contest_score",
+    "no_score_aware_loss_no_segnet_no_posenet_feedback",
+    "no_paired_contest_cpu_plus_cuda_anchor",
+    "per_substrate_symposium_pending_catalog_325"
+  ],
+  "schema_version": "faiss_ivf_pq_residual_codebook_fit_stats_v1",
+  "score_claim": false,
+  "substrate_id": "faiss_ivf_pq_residual",
+  "training_algorithm": "kmeans_codebook_fitting_not_gradient"
+}

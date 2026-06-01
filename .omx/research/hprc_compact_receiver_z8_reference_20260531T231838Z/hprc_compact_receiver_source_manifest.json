@@ -1,0 +1,25 @@
+{
+  "basis_count": 5,
+  "contest_output_height": 874,
+  "contest_output_width": 1164,
+  "decoder_grid_height": 96,
+  "decoder_grid_width": 128,
+  "materialized_frame_count": 1200,
+  "materialized_pair_count": 600,
+  "promotion_eligible": false,
+  "residual_grid_h": 24,
+  "residual_grid_w": 32,
+  "resolution_authority": "contest_output_raw_bytes_only_after_inflate_sh_replay",
+  "schema": "hprc_compact_receiver_source_manifest.v1",
+  "score_claim": false,
+  "source_reference_pairs_bytes": 176947328,
+  "source_reference_pairs_npy": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/reference_pairs_rgb255.npy",
+  "source_reference_pairs_sha256": "96aef7910e00943c9bc39b9746c474a0e11b7890a2d51f370c69da4734ffc6fe",
+  "source_shape": [
+    600,
+    2,
+    96,
+    128,
+    3
+  ]
+}

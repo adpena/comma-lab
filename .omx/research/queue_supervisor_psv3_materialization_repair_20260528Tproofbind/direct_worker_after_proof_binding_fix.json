@@ -1,0 +1,111 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 0,
+  "max_experiments": null,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_cpu": 1,
+    "local_io_heavy": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-28T19:51:54Z",
+  "started_experiment_ids": [
+    "repair_materialize_fec6_live_segnet_region"
+  ],
+  "state": ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/run_repair_family_byte_transform_executor.py",
+        "--family-materializer-manifest",
+        ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_materializer_manifest.json",
+        "--output-dir",
+        ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_byte_transform",
+        "--execution-report-out",
+        ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_byte_transform_execution_report.json",
+        "--replay-bundle-out",
+        ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_byte_transform_replay_bundle.json",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.5165372909978032,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_segnet_region/execute_repair_family_byte_transform/20260528T195154Z_a6028ff617289eb8.log",
+      "pid": 5349,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_repair_family_byte_transform_executor.py",
+          "--family-materializer-manifest",
+          ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_materializer_manifest.json",
+          "--output-dir",
+          ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_byte_transform",
+          "--execution-report-out",
+          ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_byte_transform_execution_report.json",
+          "--replay-bundle-out",
+          ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_byte_transform_replay_bundle.json",
+          "--overwrite"
+        ],
+        "experiment_id": "repair_materialize_fec6_live_segnet_region",
+        "priority": 2,
+        "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "bc9a62c0c271b279a84d52eafd2fd7615b05bc58032dc087d8c5d571bf053956",
+          "definition_hash": "1b1c0447f936e1d5eb2edce31b51189cb9ba44ccf43a8fe603901af68e74f0a6",
+          "postcondition_hash": "8b971a78b406c5191b9a3ad51116fcaa3b4e11cb470bf93c8ea952f28be5fe3e"
+        },
+        "step_id": "execute_repair_family_byte_transform"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 245975,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T19:51:54Z",
+            "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_byte_transform_execution_report.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 41695,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T19:51:54Z",
+            "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_segnet_region/repair_family_byte_transform_replay_bundle.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 1531,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "a6028ff617289eb8"
+    }
+  ],
+  "steps_started": 1,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 1
+}

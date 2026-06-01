@@ -1,0 +1,643 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 4,
+      "resource_limits": {
+        "local_cpu": 2,
+        "local_io_heavy": 2
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu",
+      "local_io_heavy"
+    ],
+    "with_cloud": {
+      "max_parallel": 4,
+      "resource_limits": {
+        "local_cpu": 2,
+        "local_io_heavy": 2
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-05-27T20:59:07Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "repair_posterior_followup_harvest_targeted_component_response_rows": {
+        "artifact_record_bytes_mean": 307.3333333333333,
+        "artifact_record_bytes_sum": 922,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 307.3333333333333,
+        "artifact_record_raw_bytes_sum": 922,
+        "candidate_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6034974590002093,
+        "elapsed_seconds_mean": 0.42311211166816065,
+        "elapsed_seconds_min": 0.06525254200096242,
+        "elapsed_seconds_sum": 1.269336335004482,
+        "experiment_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2121.6666666666665,
+        "log_bytes_sum": 6365,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_io_heavy": 1
+        },
+        "run_count": 3,
+        "step_ids": [
+          "inspect_harvest_targeted_component_response_rows_targeted_component_correction_response_harvest",
+          "run_harvest_targeted_component_response_rows_targeted_component_correction_queue_bounded_local",
+          "validate_harvest_targeted_component_response_rows_targeted_component_correction_queue"
+        ],
+        "success_count": 3
+      },
+      "repair_posterior_followup_materialize_missing_local_mlx_custody": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "repair_posterior_followup_materialize_missing_local_mlx_custody"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.5935338329982187,
+        "elapsed_seconds_mean": 0.5935338329982187,
+        "elapsed_seconds_min": 0.5935338329982187,
+        "elapsed_seconds_sum": 0.5935338329982187,
+        "experiment_ids": [
+          "repair_posterior_followup_materialize_missing_local_mlx_custody"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 427.0,
+        "log_bytes_sum": 427,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_materialize_missing_local_mlx_custody_repair_campaign_score_queue"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows",
+          "repair_posterior_followup_materialize_missing_local_mlx_custody"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6034974590002093,
+        "elapsed_seconds_mean": 0.42076127799979685,
+        "elapsed_seconds_min": 0.06525254200096242,
+        "elapsed_seconds_sum": 1.2622838339993905,
+        "experiment_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows",
+          "repair_posterior_followup_materialize_missing_local_mlx_custody"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1956.6666666666667,
+        "log_bytes_sum": 5870,
+        "resource_kind_counts": {
+          "local_cpu": 3
+        },
+        "run_count": 3,
+        "step_ids": [
+          "inspect_harvest_targeted_component_response_rows_targeted_component_correction_response_harvest",
+          "validate_harvest_targeted_component_response_rows_targeted_component_correction_queue",
+          "validate_materialize_missing_local_mlx_custody_repair_campaign_score_queue"
+        ],
+        "success_count": 3
+      },
+      "local_io_heavy": {
+        "artifact_record_bytes_mean": 922.0,
+        "artifact_record_bytes_sum": 922,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 922.0,
+        "artifact_record_raw_bytes_sum": 922,
+        "candidate_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.6005863340033102,
+        "elapsed_seconds_mean": 0.6005863340033102,
+        "elapsed_seconds_min": 0.6005863340033102,
+        "elapsed_seconds_sum": 0.6005863340033102,
+        "experiment_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 922.0,
+        "log_bytes_sum": 922,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_harvest_targeted_component_response_rows_targeted_component_correction_queue_bounded_local"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "repair_posterior_followup_harvest_targeted_component_response_rows.inspect_harvest_targeted_component_response_rows_targeted_component_correction_response_harvest": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.06525254200096242,
+        "elapsed_seconds_mean": 0.06525254200096242,
+        "elapsed_seconds_min": 0.06525254200096242,
+        "elapsed_seconds_sum": 0.06525254200096242,
+        "experiment_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 5007.0,
+        "log_bytes_sum": 5007,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "inspect_harvest_targeted_component_response_rows_targeted_component_correction_response_harvest"
+        ],
+        "success_count": 1
+      },
+      "repair_posterior_followup_harvest_targeted_component_response_rows.run_harvest_targeted_component_response_rows_targeted_component_correction_queue_bounded_local": {
+        "artifact_record_bytes_mean": 922.0,
+        "artifact_record_bytes_sum": 922,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 922.0,
+        "artifact_record_raw_bytes_sum": 922,
+        "candidate_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.6005863340033102,
+        "elapsed_seconds_mean": 0.6005863340033102,
+        "elapsed_seconds_min": 0.6005863340033102,
+        "elapsed_seconds_sum": 0.6005863340033102,
+        "experiment_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 922.0,
+        "log_bytes_sum": 922,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_harvest_targeted_component_response_rows_targeted_component_correction_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "repair_posterior_followup_harvest_targeted_component_response_rows.validate_harvest_targeted_component_response_rows_targeted_component_correction_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.6034974590002093,
+        "elapsed_seconds_mean": 0.6034974590002093,
+        "elapsed_seconds_min": 0.6034974590002093,
+        "elapsed_seconds_sum": 0.6034974590002093,
+        "experiment_ids": [
+          "repair_posterior_followup_harvest_targeted_component_response_rows"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 436.0,
+        "log_bytes_sum": 436,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_harvest_targeted_component_response_rows_targeted_component_correction_queue"
+        ],
+        "success_count": 1
+      },
+      "repair_posterior_followup_materialize_missing_local_mlx_custody.validate_materialize_missing_local_mlx_custody_repair_campaign_score_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "repair_posterior_followup_materialize_missing_local_mlx_custody"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.5935338329982187,
+        "elapsed_seconds_mean": 0.5935338329982187,
+        "elapsed_seconds_min": 0.5935338329982187,
+        "elapsed_seconds_sum": 0.5935338329982187,
+        "experiment_ids": [
+          "repair_posterior_followup_materialize_missing_local_mlx_custody"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 427.0,
+        "log_bytes_sum": 427,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_materialize_missing_local_mlx_custody_repair_campaign_score_queue"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "repair_posterior_followup_harvest_targeted_component_response_rows": [
+        "repair_posterior_followup_harvest_targeted_component_response_rows"
+      ],
+      "repair_posterior_followup_materialize_missing_local_mlx_custody": [
+        "repair_posterior_followup_materialize_missing_local_mlx_custody"
+      ]
+    },
+    "event_count": 4,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+  "queue_sha256": "27cc1ed5c7c4eeb0eaf8b95e45fab3b4256c2a387855aff5ffb7f4063f720365",
+  "queued_steps": [
+    {
+      "attempts": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json",
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "experiment_id": "repair_posterior_followup_materialize_missing_local_mlx_custody",
+      "experiment_status": "queued",
+      "log_exists": false,
+      "log_path": null,
+      "pid": null,
+      "processes": [],
+      "resource_kind": "local_io_heavy",
+      "status": "queued",
+      "step_id": "run_materialize_missing_local_mlx_custody_repair_campaign_score_queue_bounded_local",
+      "stored_status": "queued",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-27T20:59:04Z",
+      "worker_run_id": null
+    },
+    {
+      "attempts": 0,
+      "expected_artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/targeted_component_correction_response_harvest.json"
+      ],
+      "expected_artifacts": [],
+      "experiment_id": "repair_posterior_followup_route_component_response_to_exact_axis_replay",
+      "experiment_status": "queued",
+      "log_exists": false,
+      "log_path": null,
+      "pid": null,
+      "processes": [],
+      "resource_kind": "local_cpu",
+      "status": "queued",
+      "step_id": "inspect_route_component_response_to_exact_axis_replay_targeted_component_correction_response_harvest",
+      "stored_status": "queued",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-27T20:59:04Z",
+      "worker_run_id": null
+    },
+    {
+      "attempts": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/route_component_response_to_exact_axis_replay/targeted_component_correction_queue_worker_result.json",
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/targeted_component_correction_queue.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/route_component_response_to_exact_axis_replay/targeted_component_correction_queue_worker_result.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/route_component_response_to_exact_axis_replay/targeted_component_correction_queue_worker_result.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/route_component_response_to_exact_axis_replay/targeted_component_correction_queue_worker_result.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/route_component_response_to_exact_axis_replay/targeted_component_correction_queue_worker_result.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "experiment_id": "repair_posterior_followup_route_component_response_to_exact_axis_replay",
+      "experiment_status": "queued",
+      "log_exists": false,
+      "log_path": null,
+      "pid": null,
+      "processes": [],
+      "resource_kind": "local_io_heavy",
+      "status": "queued",
+      "step_id": "run_route_component_response_to_exact_axis_replay_targeted_component_correction_queue_bounded_local",
+      "stored_status": "queued",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-27T20:59:04Z",
+      "worker_run_id": null
+    },
+    {
+      "attempts": 0,
+      "expected_artifact_paths": [
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/targeted_component_correction_queue.json"
+      ],
+      "expected_artifacts": [],
+      "experiment_id": "repair_posterior_followup_route_component_response_to_exact_axis_replay",
+      "experiment_status": "queued",
+      "log_exists": false,
+      "log_path": null,
+      "pid": null,
+      "processes": [],
+      "resource_kind": "local_cpu",
+      "status": "queued",
+      "step_id": "validate_route_component_response_to_exact_axis_replay_targeted_component_correction_queue",
+      "stored_status": "queued",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-27T20:59:04Z",
+      "worker_run_id": null
+    }
+  ],
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "12",
+        "--max-experiments",
+        "4",
+        "--max-parallel",
+        "2",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_posterior_acquisition_followup_queue/frontier_final_rate_attack_goal_resume_20260527tlocal_post_execute_feedback_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json"
+      ],
+      "experiment_id": "repair_posterior_followup_materialize_missing_local_mlx_custody",
+      "priority": 2,
+      "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+      "resource_kind": "local_io_heavy",
+      "step_hashes": {
+        "command_hash": "dda2c38f5d1dab76e604a55302bd207c13187590994abad8d23465fd6d02ca01",
+        "definition_hash": "ac27a6133969c523178da0e6f639d84d39bf87a60aec84764ce2819f4d23e8e3",
+        "postcondition_hash": "0ab4e09a9ad02eb49f5092008d2f4aec69b177bccbf9aadbb31bb2e348aa6534"
+      },
+      "step_id": "run_materialize_missing_local_mlx_custody_repair_campaign_score_queue_bounded_local"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "json.tool",
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/targeted_component_correction_response_harvest.json"
+      ],
+      "experiment_id": "repair_posterior_followup_route_component_response_to_exact_axis_replay",
+      "priority": 3,
+      "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+      "resource_kind": "local_cpu",
+      "step_hashes": {
+        "command_hash": "59ea3b191cc9a880e96c6821376395dc3239cccf8b71cd9151f3a48d09953785",
+        "definition_hash": "5a1f63c78cbdaffb63a357133b35dd87fe26d611067a184e124834406e1e8f65",
+        "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "step_id": "inspect_route_component_response_to_exact_axis_replay_targeted_component_correction_response_harvest"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/targeted_component_correction_queue.json",
+        "validate"
+      ],
+      "experiment_id": "repair_posterior_followup_route_component_response_to_exact_axis_replay",
+      "priority": 3,
+      "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+      "resource_kind": "local_cpu",
+      "step_hashes": {
+        "command_hash": "554d72ac593cda144cc6bb485e6bcdd3376a1d08b2e2852324ee1690e7c4e70a",
+        "definition_hash": "df0fc525e0a85d3f851c052b04f418c0ff249482db0ab7ced4e9c935d9489444",
+        "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "step_id": "validate_route_component_response_to_exact_axis_replay_targeted_component_correction_queue"
+    }
+  ],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 2
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 2,
+      "local_io_heavy": 2
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 4,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18,
+      "local_io_heavy": 2
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 120,
+      "local_io_heavy": 900
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 2,
+        "current_timeout_seconds_max": 120,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.5935338329982187,
+        "elapsed_seconds_p95": 0.6034974590002093,
+        "observed_failure_count": 0,
+        "observed_run_count": 3,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 120,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      },
+      "local_io_heavy": {
+        "advisory_only": true,
+        "concurrency_reason": "cap_io_heavy_pressure",
+        "current_concurrency": 2,
+        "current_timeout_seconds_max": 900,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.6005863340033102,
+        "elapsed_seconds_p95": 0.6005863340033102,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 2,
+        "recommended_timeout_seconds": 900,
+        "resource_kind": "local_io_heavy",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-27T20:59:04Z",
+    "event_count": 15,
+    "max_event_id": 15,
+    "max_step_updated_at_utc": "2026-05-27T20:59:06Z",
+    "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup.sqlite",
+    "step_state_count": 8
+  },
+  "status_counts": {
+    "queued": 4,
+    "succeeded": 4
+  },
+  "step_count": 8,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

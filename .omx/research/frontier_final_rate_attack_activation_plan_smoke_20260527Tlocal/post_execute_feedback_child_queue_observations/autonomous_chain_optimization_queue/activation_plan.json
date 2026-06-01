@@ -1,0 +1,426 @@
+{
+  "activation_actions": [
+    {
+      "activation_action": "thaw_queue_definition_after_prerequisite_evidence_lands",
+      "blocker": "experiment_status:frozen",
+      "evidence_surface": "queue_definition_status"
+    },
+    {
+      "activation_action": "inspect_queue_owned_prerequisite",
+      "blocker": "child_queue_not_runnable:repair_campaign_score_queue",
+      "evidence_surface": "experiment_metadata_or_step_postconditions"
+    }
+  ],
+  "allowed_use": "local_child_queue_activation_planning_only",
+  "blocked_experiment_count": 3,
+  "blocked_experiments": [
+    {
+      "activation_actions": [
+        {
+          "activation_action": "thaw_queue_definition_after_prerequisite_evidence_lands",
+          "blocker": "experiment_status:frozen",
+          "evidence_surface": "queue_definition_status"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "child_queue_not_runnable:repair_budget_waterfill_queue",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "child_queue_not_runnable:repair_campaign_score_queue",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        }
+      ],
+      "activation_blockers": [
+        "experiment_status:frozen",
+        "child_queue_not_runnable:repair_budget_waterfill_queue",
+        "child_queue_not_runnable:repair_campaign_score_queue"
+      ],
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "lane_id": null,
+      "status": "frozen",
+      "step_count": 5,
+      "step_evidence_refs": [
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+          ],
+          "postcondition_types": [
+            "json_equals",
+            "json_false_authority"
+          ],
+          "requires": [],
+          "resource_kind": "local_io_heavy",
+          "step_id": "emit_autonomous_chain_work_order",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+          ]
+        },
+        {
+          "postcondition_paths": [],
+          "postcondition_types": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": []
+        },
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ],
+          "postcondition_types": [
+            "json_equals"
+          ],
+          "requires": [
+            "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ]
+        },
+        {
+          "postcondition_paths": [],
+          "postcondition_types": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": []
+        },
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+          ],
+          "postcondition_types": [
+            "json_equals"
+          ],
+          "requires": [
+            "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+            "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+          ]
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "autonomous-many-op-chain",
+        "encoder-side-actuation",
+        "no-score-authority",
+        "blocked-child-queue-artifact-binding"
+      ]
+    },
+    {
+      "activation_actions": [
+        {
+          "activation_action": "thaw_queue_definition_after_prerequisite_evidence_lands",
+          "blocker": "experiment_status:frozen",
+          "evidence_surface": "queue_definition_status"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "child_queue_not_runnable:repair_budget_waterfill_queue",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "child_queue_not_runnable:repair_campaign_score_queue",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        }
+      ],
+      "activation_blockers": [
+        "experiment_status:frozen",
+        "child_queue_not_runnable:repair_budget_waterfill_queue",
+        "child_queue_not_runnable:repair_campaign_score_queue"
+      ],
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "lane_id": null,
+      "status": "frozen",
+      "step_count": 5,
+      "step_evidence_refs": [
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+          ],
+          "postcondition_types": [
+            "json_equals",
+            "json_false_authority"
+          ],
+          "requires": [],
+          "resource_kind": "local_io_heavy",
+          "step_id": "emit_autonomous_chain_work_order",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+          ]
+        },
+        {
+          "postcondition_paths": [],
+          "postcondition_types": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": []
+        },
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ],
+          "postcondition_types": [
+            "json_equals"
+          ],
+          "requires": [
+            "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ]
+        },
+        {
+          "postcondition_paths": [],
+          "postcondition_types": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": []
+        },
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+          ],
+          "postcondition_types": [
+            "json_equals"
+          ],
+          "requires": [
+            "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+            "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+          ]
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "autonomous-many-op-chain",
+        "encoder-side-actuation",
+        "no-score-authority",
+        "blocked-child-queue-artifact-binding"
+      ]
+    },
+    {
+      "activation_actions": [
+        {
+          "activation_action": "thaw_queue_definition_after_prerequisite_evidence_lands",
+          "blocker": "experiment_status:frozen",
+          "evidence_surface": "queue_definition_status"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "child_queue_not_runnable:repair_budget_waterfill_queue",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        },
+        {
+          "activation_action": "inspect_queue_owned_prerequisite",
+          "blocker": "child_queue_not_runnable:repair_campaign_score_queue",
+          "evidence_surface": "experiment_metadata_or_step_postconditions"
+        }
+      ],
+      "activation_blockers": [
+        "experiment_status:frozen",
+        "child_queue_not_runnable:repair_budget_waterfill_queue",
+        "child_queue_not_runnable:repair_campaign_score_queue"
+      ],
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "lane_id": null,
+      "status": "frozen",
+      "step_count": 5,
+      "step_evidence_refs": [
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+          ],
+          "postcondition_types": [
+            "json_equals",
+            "json_false_authority"
+          ],
+          "requires": [],
+          "resource_kind": "local_io_heavy",
+          "step_id": "emit_autonomous_chain_work_order",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+          ]
+        },
+        {
+          "postcondition_paths": [],
+          "postcondition_types": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": []
+        },
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ],
+          "postcondition_types": [
+            "json_equals"
+          ],
+          "requires": [
+            "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+          ]
+        },
+        {
+          "postcondition_paths": [],
+          "postcondition_types": [],
+          "requires": [
+            "emit_autonomous_chain_work_order"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": []
+        },
+        {
+          "postcondition_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+          ],
+          "postcondition_types": [
+            "json_equals"
+          ],
+          "requires": [
+            "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+            "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+          ],
+          "resource_kind": "local_io_heavy",
+          "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+          "telemetry_input_artifact_paths": [
+            ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json"
+          ],
+          "telemetry_output_artifact_paths": [
+            "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_autonomous_chain_optimization/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+          ]
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "autonomous-many-op-chain",
+        "encoder-side-actuation",
+        "no-score-authority",
+        "blocked-child-queue-artifact-binding"
+      ]
+    }
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-27T20:12:32Z",
+  "gpu_launched": false,
+  "mathematical_contract": {
+    "hard_constraints": [
+      "score_claim_false_until_contest_auth_axis_eval",
+      "promotion_false_until_byte_closed_runtime_receiver_proof",
+      "budget_spend_false_until_receiver_closed_saved_bytes_exist"
+    ],
+    "objective": "minimize_delta_score_under_rate_and_runtime_constraints",
+    "state_variables": [
+      "bytes_delta",
+      "segnet_response",
+      "posenet_response",
+      "interaction_terms",
+      "entropy_position",
+      "receiver_runtime_identity"
+    ]
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+  "queue_path": ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+  "queue_sha256": "7a77c3be9d845f4001461f030ac8494fe7229c8a94827cf61f2eb86e26b8d964",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_final_rate_attack_child_queue_activation_plan.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

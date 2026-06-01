@@ -1,0 +1,23 @@
+{
+  "array_payload_sha256": "8122dd1a559277dbb71bb32108724be43a6b15e6fe3a0064b6d922a03e91c07a",
+  "dtype": "float32",
+  "eval_hw": [
+    96,
+    128
+  ],
+  "num_pairs": 600,
+  "ready_for_exact_eval_dispatch": false,
+  "reference_pairs_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/reference_pairs_rgb255.npy",
+  "schema": "z8_full_video_reference_pairs_rgb255_manifest.v1",
+  "score_claim": false,
+  "shape": [
+    600,
+    2,
+    96,
+    128,
+    3
+  ],
+  "value_range": "rgb255",
+  "video_path": "upstream/videos/0.mkv",
+  "video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+}

@@ -1,0 +1,97 @@
+{
+  "candidate_archive": {
+    "bytes": 178493,
+    "path": "/Users/adpena/Projects/pact/.omx/research/final_rate_repair_b7106_z8_priority_loop_after_noop_guard_20260531Tlocal/intake/source_archive_custody/b7106_current_cpu_frontier/receiver_closed_archive.zip",
+    "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+  },
+  "candidate_archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+  "candidate_member_sha256s": {
+    "x": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c"
+  },
+  "candidate_members": [
+    {
+      "bytes": 178393,
+      "name": "x",
+      "sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "zip_compressed_bytes": 178393,
+      "zip_compressed_payload_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "zip_compressed_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "zip_compression_method": "stored"
+    }
+  ],
+  "charged_bits_changed": true,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "archive_zip_repack_adapter",
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "archive_zip_repack_payload_identity_receiver_proof.v1",
+  "proof_scope": "archive_zip_member_payload_identity_after_repack",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+  "receiver_contract_satisfied": true,
+  "runtime_consumption_probe": {
+    "all_member_payloads_identical": true,
+    "member_count": 1,
+    "member_proofs": [
+      {
+        "candidate_member_bytes": 178393,
+        "candidate_member_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+        "candidate_zip_compressed_bytes": 178393,
+        "candidate_zip_compression_method": "stored",
+        "member_name": "x",
+        "member_payload_identical_to_source": true,
+        "passed": true,
+        "source_member_bytes": 178393,
+        "source_member_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+        "source_zip_compressed_bytes": 178393,
+        "source_zip_compression_method": "stored"
+      }
+    ],
+    "passed": true,
+    "same_member_name_set": true,
+    "schema": "archive_zip_repack_payload_identity_probe.v1"
+  },
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_repack": {
+    "candidate_archive_bytes": 178493,
+    "compression_plan": [
+      {
+        "member_name": "x",
+        "zip_compression_method": "stored",
+        "zip_compresslevel": null
+      }
+    ],
+    "member_count": 1,
+    "plan_key": "x:stored:default",
+    "saved_bytes": 0,
+    "source_archive_bytes": 178493,
+    "strategy": "uniform"
+  },
+  "source_archive": {
+    "bytes": 178493,
+    "path": "/Users/adpena/Projects/pact/.omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8/archive.zip",
+    "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+  },
+  "source_members": [
+    {
+      "bytes": 178393,
+      "name": "x",
+      "sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "zip_compressed_bytes": 178393,
+      "zip_compressed_payload_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "zip_compressed_sha256": "c5e322c1cdfa7c059e1c1d88d2e700e8bc6631ef2effcdbbc51c4fbb1bb1b42c",
+      "zip_compression_method": "stored"
+    }
+  ],
+  "target_kind": "archive_zip_repack_v1"
+}

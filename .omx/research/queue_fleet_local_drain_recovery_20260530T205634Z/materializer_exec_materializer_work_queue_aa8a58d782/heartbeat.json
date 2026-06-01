@@ -1,0 +1,24 @@
+{
+  "action": "run_worker",
+  "automation_verdict": "needs_recovery_or_operator_attention",
+  "final_reason_if_stopping": "worker_command_failed",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "materializer_exec_materializer_work_queue_aa8a58d782",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_supervisor_heartbeat.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "status_counts": {
+    "failed": 1,
+    "succeeded": 3
+  },
+  "tick_artifact": {
+    "bytes": 41716,
+    "path": ".omx/research/queue_fleet_local_drain_recovery_20260530T205634Z/materializer_exec_materializer_work_queue_aa8a58d782/tick_0000/tick.json",
+    "sha256": "de3ede6363243f92f07df39f67c4864662f11c307fd06cb2d239d629ad0ece00"
+  },
+  "tick_index": 0,
+  "updated_at_utc": "2026-05-30T20:56:37Z"
+}

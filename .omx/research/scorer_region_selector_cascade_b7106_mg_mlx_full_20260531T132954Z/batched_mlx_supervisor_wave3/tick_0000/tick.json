@@ -1,0 +1,783 @@
+{
+  "action": "run_worker",
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "auto_resume_paused": true,
+  "automation_blockers": [],
+  "execute": true,
+  "final_reason_if_stopping": "worker_command_failed",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "generated_at_utc": "2026-05-31T16:19:31Z",
+  "max_parallel": 5,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recovery_result": null,
+  "resume_result": null,
+  "schema": "experiment_queue_supervisor_tick.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 5,
+        "resource_limits": {
+          "local_cpu": 2,
+          "local_io_heavy": 2,
+          "local_mlx": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu",
+        "local_io_heavy",
+        "local_mlx"
+      ],
+      "with_cloud": {
+        "max_parallel": 5,
+        "resource_limits": {
+          "local_cpu": 2,
+          "local_io_heavy": 2,
+          "local_mlx": 1
+        }
+      }
+    },
+    "automation_blockers": [
+      "queue_observation_unhealthy",
+      "queue_has_failed_steps:1"
+    ],
+    "automation_verdict": "needs_recovery_or_operator_attention",
+    "blocked_steps": [],
+    "blocker_count": 1,
+    "blockers": [
+      "experiment_queue_observation_failed_steps:1"
+    ],
+    "failed_steps": [
+      "mlx_scorer_response_batch_0000.run_mlx_scorer_response_batch"
+    ],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": false,
+    "mode": "frozen",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_cpu": {
+          "artifact_record_bytes_mean": 84047.66666666667,
+          "artifact_record_bytes_sum": 252143,
+          "artifact_record_count": 6,
+          "artifact_record_raw_bytes_mean": 84047.66666666667,
+          "artifact_record_raw_bytes_sum": 252143,
+          "candidate_ids": [
+            "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch"
+          ],
+          "dominant_resource_kind": "local_cpu",
+          "elapsed_seconds_max": 0.9362526250188239,
+          "elapsed_seconds_mean": 0.5957389863324352,
+          "elapsed_seconds_min": 0.38299754197942093,
+          "elapsed_seconds_sum": 1.7872169589973055,
+          "experiment_ids": [
+            "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 20476.666666666668,
+          "log_bytes_sum": 61430,
+          "resource_kind_counts": {
+            "local_cpu": 3
+          },
+          "run_count": 3,
+          "step_ids": [
+            "emit_composed_chain_report",
+            "materialize_p11_selector_context_recode",
+            "materialize_p15_archive_zip_repack"
+          ],
+          "success_count": 3
+        },
+        "local_mlx": {
+          "artifact_record_bytes_mean": 47157.0,
+          "artifact_record_bytes_sum": 47157,
+          "artifact_record_count": 5,
+          "artifact_record_raw_bytes_mean": 47157.0,
+          "artifact_record_raw_bytes_sum": 47157,
+          "candidate_ids": [
+            "mlx_scorer_response_batch_0000"
+          ],
+          "dominant_resource_kind": "local_mlx",
+          "elapsed_seconds_max": 339.9700360419811,
+          "elapsed_seconds_mean": 339.9700360419811,
+          "elapsed_seconds_min": 339.9700360419811,
+          "elapsed_seconds_sum": 339.9700360419811,
+          "experiment_ids": [
+            "mlx_scorer_response_batch_0000"
+          ],
+          "failure_count": 1,
+          "log_bytes_mean": 0.0,
+          "log_bytes_sum": 0,
+          "resource_kind_counts": {
+            "local_mlx": 1
+          },
+          "run_count": 1,
+          "step_ids": [
+            "run_mlx_scorer_response_batch"
+          ],
+          "success_count": 0
+        }
+      },
+      "event_count": 4,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+    "queue_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+    "queued_step_count": 336,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [
+      {
+        "action": "resume_queue",
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+          "control",
+          "running",
+          "--reason",
+          "operator_resume_after_queue_control_status"
+        ],
+        "rank": 40,
+        "reason": "queue_mode_frozen_with_336_queued_steps"
+      },
+      {
+        "action": "inspect_failed_or_blocked",
+        "blocked_steps": [],
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+          "observe",
+          "--format",
+          "markdown",
+          "--tail-lines",
+          "80"
+        ],
+        "failed_steps": [
+          "mlx_scorer_response_batch_0000.run_mlx_scorer_response_batch"
+        ],
+        "rank": 70,
+        "reason": "failed=1 blocked=0"
+      }
+    ],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "4"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_cpu": 18,
+        "local_io_heavy": 2,
+        "local_mlx": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_cpu": 7800,
+        "local_io_heavy": 1200,
+        "local_mlx": 3600
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+    "state_watermark": {
+      "control_mode": "frozen",
+      "control_updated_at_utc": "2026-05-31T16:19:30Z",
+      "event_count": 99,
+      "max_event_id": 99,
+      "max_step_updated_at_utc": "2026-05-31T16:19:31Z",
+      "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "step_state_count": 418
+    },
+    "status_counts": {
+      "failed": 1,
+      "queued": 336,
+      "succeeded": 81
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "4",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "tick_index": 0,
+  "worker_result": {
+    "command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "4",
+      "--max-parallel",
+      "5",
+      "--noncanonical-state-rationale",
+      "queue_supervisor_explicit_state_path_prevents_default_worker_collision"
+    ],
+    "elapsed_seconds": 340.9855063330033,
+    "failed": true,
+    "json_payload": {
+      "allow_cloud": false,
+      "claim_refused_count": 0,
+      "execute": true,
+      "failure_count": 1,
+      "idle_cycles": 0,
+      "max_experiments": null,
+      "max_parallel": 5,
+      "noncanonical_state_rationale": "queue_supervisor_explicit_state_path_prevents_default_worker_collision",
+      "orphaned_state_rationale": null,
+      "planned_steps": [],
+      "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "requested_max_parallel": 5,
+      "resource_limits": {
+        "local_cpu": 2,
+        "local_io_heavy": 2,
+        "local_mlx": 1
+      },
+      "schema": "experiment_queue_worker_result.v1",
+      "skip_count": 0,
+      "stale_running_reconciliations": [],
+      "started_at_utc": "2026-05-31T16:13:50Z",
+      "started_experiment_ids": [
+        "mlx_scorer_response_batch_0000",
+        "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+        "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch"
+      ],
+      "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "step_results": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/run_family_agnostic_materializer.py",
+            "--target-kind",
+            "archive_zip_repack_v1",
+            "--archive-path",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p11_selector_context_recode/submission_dir/archive.zip",
+            "--output-archive",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive.zip",
+            "--output-manifest",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+            "--runtime-consumption-proof-out",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+            "--allow-overwrite"
+          ],
+          "elapsed_seconds": 0.46796679199906066,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fe_9bf73b3a4fa8fb01/materialize_p15_archive_zip_repack/20260531T161351Z_799984dfe12d26a9.log",
+          "pid": 35615,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/run_family_agnostic_materializer.py",
+              "--target-kind",
+              "archive_zip_repack_v1",
+              "--archive-path",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p11_selector_context_recode/submission_dir/archive.zip",
+              "--output-archive",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive.zip",
+              "--output-manifest",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+              "--runtime-consumption-proof-out",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+              "--allow-overwrite"
+            ],
+            "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "priority": 9,
+            "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "ae486385d7563435e3dcd36d22b97a573eed4c001832fa2b9464d65f1660f58a",
+              "definition_hash": "c4426032d7fa61e53df8f3ae2711069e2cf460653fe032042f0211d35a35d36e",
+              "postcondition_hash": "2ece712c7d84b7d05d3245c5a878b52f385d1c84159a34776bc527013736e353"
+            },
+            "step_id": "materialize_p15_archive_zip_repack"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 0,
+          "skip_reason": null,
+          "skipped": false,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 3,
+            "artifact_records": [
+              {
+                "bytes": 178493,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T16:13:51Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive.zip",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 44394,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T16:13:51Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 4176,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T16:13:51Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 44394,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "799984dfe12d26a9"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_feca_selector_reparameterized_candidate.py",
+            "--source-submission-dir",
+            ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode",
+            "--upstream-entropy-position",
+            "P19",
+            "--upstream-entropy-position",
+            "P18",
+            "--downstream-materializer-target",
+            "archive_zip_repack_v1",
+            "--chain-parent-artifact",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+            "--chain-label",
+            "cascade_c_grouped_nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "--overwrite",
+            "--scale",
+            "32",
+            "--scale",
+            "64",
+            "--scale",
+            "128",
+            "--scale",
+            "256",
+            "--alpha",
+            "1",
+            "--alpha",
+            "2",
+            "--alpha",
+            "4",
+            "--codec-family",
+            "fec10_adaptive_blend",
+            "--allow-nonpositive-candidate"
+          ],
+          "elapsed_seconds": 0.38299754197942093,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/materialize_p11_selector_context_recode/20260531T161351Z_0473aae6b3fcada4.log",
+          "pid": 35686,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/build_feca_selector_reparameterized_candidate.py",
+              "--source-submission-dir",
+              ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+              "--output-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode",
+              "--upstream-entropy-position",
+              "P19",
+              "--upstream-entropy-position",
+              "P18",
+              "--downstream-materializer-target",
+              "archive_zip_repack_v1",
+              "--chain-parent-artifact",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+              "--chain-label",
+              "cascade_c_grouped_nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+              "--overwrite",
+              "--scale",
+              "32",
+              "--scale",
+              "64",
+              "--scale",
+              "128",
+              "--scale",
+              "256",
+              "--alpha",
+              "1",
+              "--alpha",
+              "2",
+              "--alpha",
+              "4",
+              "--codec-family",
+              "fec10_adaptive_blend",
+              "--allow-nonpositive-candidate"
+            ],
+            "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "priority": 10,
+            "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "1e4591ef78e40f36f2771489b942fb297f0d3a1973d8c11368ddb84e1f9bb646",
+              "definition_hash": "f0621f736f1266624ba75298b1b8717afc779bd074f119679e33357341c82161",
+              "postcondition_hash": "64f9edef7c57c1803b43763fcbe070a74d3f1fcb339070d29ad775d9a0df7fd4"
+            },
+            "step_id": "materialize_p11_selector_context_recode"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 0,
+          "skip_reason": null,
+          "skipped": false,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 2,
+            "artifact_records": [
+              {
+                "bytes": 160,
+                "exists": true,
+                "is_dir": true,
+                "is_file": false,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T16:13:51Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 16369,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T16:13:51Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+                "source": "step.postconditions.path"
+              }
+            ],
+            "log_bytes": 16369,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "0473aae6b3fcada4"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_scorer_region_selector_chain_report.py",
+            "--chain-context",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/chain_context.json",
+            "--selector-manifest",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+            "--repack-manifest",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+            "--output",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+            "--overwrite"
+          ],
+          "elapsed_seconds": 0.9362526250188239,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fe_9bf73b3a4fa8fb01/emit_composed_chain_report/20260531T161351Z_72814dd6183c21f2.log",
+          "pid": 35727,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/build_scorer_region_selector_chain_report.py",
+              "--chain-context",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/chain_context.json",
+              "--selector-manifest",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+              "--repack-manifest",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+              "--output",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+              "--overwrite"
+            ],
+            "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "priority": 9,
+            "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "a380b0e6e6532d41da4ea570a24d1d0210135e3a3743653f88c3daba85cbcc9c",
+              "definition_hash": "1a1063d6a79a36ac3163fde54499c306d824116a2b4cceaefab58c72bf7441d5",
+              "postcondition_hash": "2b472851fecbf7a4f31f9845453a4fa9b1f2a4f3f2d7986e76a3b48b1b2329c2"
+            },
+            "step_id": "emit_composed_chain_report"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 0,
+          "skip_reason": null,
+          "skipped": false,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 8551,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T16:13:52Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 667,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "72814dd6183c21f2"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/run_mlx_scorer_response_from_cache_batch.py",
+            "--reference-cache-dir",
+            "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+            "--summary-out",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json",
+            "--repo-root",
+            ".",
+            "--batch-pairs",
+            "1",
+            "--device",
+            "gpu",
+            "--overwrite",
+            "--allow-gpu-research-signal",
+            "--allow-unaudited-candidate-cache-debug",
+            "--job-json",
+            "{\"archive\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip\",\"candidate_cache_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\"components_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components\",\"output\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\"response_family\":\"scorer_region_frame1_waterfill_patch\"}",
+            "--job-json",
+            "{\"archive\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip\",\"candidate_cache_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\"components_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components\",\"output\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\"response_family\":\"scorer_region_frame1_waterfill_patch\"}",
+            "--job-json",
+            "{\"archive\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip\",\"candidate_cache_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\"components_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components\",\"output\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\"response_family\":\"scorer_region_frame1_waterfill_patch\"}",
+            "--job-json",
+            "{\"archive\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip\",\"candidate_cache_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\"components_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components\",\"output\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\"response_family\":\"scorer_region_frame1_waterfill_patch\"}"
+          ],
+          "elapsed_seconds": 339.9700360419811,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [
+            {
+              "equals": "mlx_scorer_response_batch_run.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/mlx_scorer_response_batch_0000/run_mlx_scorer_response_batch/20260531T161351Z_79207ff312496392.log",
+          "pid": 35548,
+          "postcondition_errors": [
+            {
+              "condition": "{\"equals\":\"mlx_scorer_response_batch_run.v1\",\"key\":\"schema\",\"path\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json\",\"type\":\"json_equals\"}",
+              "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json'"
+            },
+            {
+              "condition": "{\"path\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json\",\"type\":\"json_false_authority\"}",
+              "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json'"
+            }
+          ],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/run_mlx_scorer_response_from_cache_batch.py",
+              "--reference-cache-dir",
+              "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+              "--summary-out",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json",
+              "--repo-root",
+              ".",
+              "--batch-pairs",
+              "1",
+              "--device",
+              "gpu",
+              "--overwrite",
+              "--allow-gpu-research-signal",
+              "--allow-unaudited-candidate-cache-debug",
+              "--job-json",
+              "{\"archive\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip\",\"candidate_cache_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\"components_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components\",\"output\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\"response_family\":\"scorer_region_frame1_waterfill_patch\"}",
+              "--job-json",
+              "{\"archive\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip\",\"candidate_cache_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\"components_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components\",\"output\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\"response_family\":\"scorer_region_frame1_waterfill_patch\"}",
+              "--job-json",
+              "{\"archive\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip\",\"candidate_cache_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\"components_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components\",\"output\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\"response_family\":\"scorer_region_frame1_waterfill_patch\"}",
+              "--job-json",
+              "{\"archive\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip\",\"candidate_cache_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\"components_dir\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components\",\"output\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\"response_family\":\"scorer_region_frame1_waterfill_patch\"}"
+            ],
+            "experiment_id": "mlx_scorer_response_batch_0000",
+            "priority": 2,
+            "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+            "resource_kind": "local_mlx",
+            "step_hashes": {
+              "command_hash": "9f5d7579a767e061b114b209e6917f95957017919ac310f6b0d819378dbad678",
+              "definition_hash": "a136392c33322e813708a5e7851eddefdbfd88da693da89d304cb71e4c2f3230",
+              "postcondition_hash": "8201e387dbce7731e34da0db68d2c46c18657126c9dadc183053d23add698dae"
+            },
+            "step_id": "run_mlx_scorer_response_batch"
+          },
+          "resource_kind": "local_mlx",
+          "returncode": -15,
+          "skip_reason": null,
+          "skipped": false,
+          "succeeded": false,
+          "telemetry": {
+            "artifact_record_count": 5,
+            "artifact_records": [
+              {
+                "exists": false,
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json",
+                "source": "step.postconditions.path"
+              },
+              {
+                "bytes": 11698,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:34:49Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+                "source": "step.postconditions.path"
+              },
+              {
+                "bytes": 11717,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:59:30Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+                "source": "step.postconditions.path"
+              },
+              {
+                "bytes": 11725,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:35:47Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+                "source": "step.postconditions.path"
+              },
+              {
+                "bytes": 12017,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:54:16Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+                "source": "step.postconditions.path"
+              }
+            ],
+            "log_bytes": 0,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "79207ff312496392"
+        }
+      ],
+      "steps_started": 4,
+      "stop_reason": "max_steps_reached",
+      "stop_signals": [],
+      "success_count": 3
+    },
+    "label": "run_worker",
+    "returncode": 2,
+    "stderr_tail": "",
+    "stdout_tail": "family\\\":\\\"scorer_region_frame1_waterfill_patch\\\"}\"\n        ],\n        \"experiment_id\": \"mlx_scorer_response_batch_0000\",\n        \"priority\": 2,\n        \"queue_id\": \"scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z\",\n        \"resource_kind\": \"local_mlx\",\n        \"step_hashes\": {\n          \"command_hash\": \"9f5d7579a767e061b114b209e6917f95957017919ac310f6b0d819378dbad678\",\n          \"definition_hash\": \"a136392c33322e813708a5e7851eddefdbfd88da693da89d304cb71e4c2f3230\",\n          \"postcondition_hash\": \"8201e387dbce7731e34da0db68d2c46c18657126c9dadc183053d23add698dae\"\n        },\n        \"step_id\": \"run_mlx_scorer_response_batch\"\n      },\n      \"resource_kind\": \"local_mlx\",\n      \"returncode\": -15,\n      \"skip_reason\": null,\n      \"skipped\": false,\n      \"succeeded\": false,\n      \"telemetry\": {\n        \"artifact_record_count\": 5,\n        \"artifact_records\": [\n          {\n            \"exists\": false,\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/mlx_response_batches/mlx_scorer_response_batch_0000.json\",\n            \"source\": \"step.postconditions.path\"\n          },\n          {\n            \"bytes\": 11698,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-31T14:34:49Z\",\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\n            \"source\": \"step.postconditions.path\"\n          },\n          {\n            \"bytes\": 11717,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-31T14:59:30Z\",\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\n            \"source\": \"step.postconditions.path\"\n          },\n          {\n            \"bytes\": 11725,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-31T14:35:47Z\",\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\n            \"source\": \"step.postconditions.path\"\n          },\n          {\n            \"bytes\": 12017,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-31T14:54:16Z\",\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json\",\n            \"source\": \"step.postconditions.path\"\n          }\n        ],\n        \"log_bytes\": 0,\n        \"recursive_truncated\": false,\n        \"schema\": \"experiment_queue_step_telemetry.v1\"\n      },\n      \"timed_out\": false,\n      \"worker_run_id\": \"79207ff312496392\"\n    }\n  ],\n  \"steps_started\": 4,\n  \"stop_reason\": \"max_steps_reached\",\n  \"stop_signals\": [],\n  \"success_count\": 3\n}\n"
+  }
+}

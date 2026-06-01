@@ -1,0 +1,23 @@
+{
+  "action": "observe",
+  "automation_verdict": "safe_to_resume_or_continue",
+  "final_reason_if_stopping": "terminal_queue_state",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_supervisor_heartbeat.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "status_counts": {
+    "succeeded": 90
+  },
+  "tick_artifact": {
+    "bytes": 10245,
+    "path": ".omx/research/queue_supervisor_psv3_materialization_repair_20260528T1953Z/tick_0010/tick.json",
+    "sha256": "f906561c9c54f8cc7e2c52c06de4f976fe7b5db90883f24d0fb5e2137a666316"
+  },
+  "tick_index": 10,
+  "updated_at_utc": "2026-05-28T19:53:25Z"
+}

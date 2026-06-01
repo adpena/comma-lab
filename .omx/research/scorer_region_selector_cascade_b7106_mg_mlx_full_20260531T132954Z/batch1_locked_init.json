@@ -1,0 +1,4161 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_scorer_region_archive_master_gradient_hydration.py",
+        "--source-submission-dir",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+        "--master-gradient-tensor",
+        ".omx/state/master_gradient_fec6_frontier_mlx_per_pair_full600_20260527.npy",
+        "--anchor-ledger-path",
+        ".omx/state/master_gradient_anchors.jsonl",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/archive_master_gradient_hydration.json",
+        "--overwrite"
+      ],
+      "experiment_id": "archive_master_gradient_hydration",
+      "priority": 1,
+      "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "resource_kind": "local_cpu",
+      "step_hashes": {
+        "command_hash": "938dd7b77326bcf825cd85c6c9ef3786bc9d611cc8a6fe4078943e4199b34170",
+        "definition_hash": "441b71d25a856b480fbf4e29be436b78b709905ec6e11249dd97bf574ced1511",
+        "postcondition_hash": "3021dee06a7fbd0fd65afd0f622c3a3e1654652f88ef3c7f2800e05701366b44"
+      },
+      "step_id": "hydrate_archive_specific_master_gradient"
+    }
+  ],
+  "schema": "experiment_queue_summary.v1",
+  "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+  "status_counts": {
+    "queued": 412
+  },
+  "step_count": 412,
+  "steps": [
+    {
+      "attempts": 0,
+      "experiment_id": "archive_master_gradient_hydration",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "hydrate_archive_specific_master_gradient",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "campaign_acquisition_policy",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_campaign_acquisition_policy",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "campaign_dynamic_followup_queue",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "compile_dynamic_followup_campaign_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "campaign_harvest",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "harvest_campaign_learning_surface",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p12_rp2_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_mlx_component_cache",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_p18_p19_chain_context",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_scorer_response_dataset",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_composed_chain_report",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_closed_distortion_budget_attack_plan",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_scorer_region_exact_ready_bridge_inputs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_component_spot_check",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_cpu_contest_drift_eureka",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "local_mlx_component_response",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_frame1_region_waterfill_runtime_patch",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p11_selector_context_recode",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p15_archive_zip_repack",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p18_segnet_region_waterfill",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "materialize_p19_posenet_null_pairs",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "mlx_cpu_spend_gate",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "plan_local_component_artifact_retention",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "nf0_05_r2_p24_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "prove_receiver_patch_full_frame_output_change",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-31T14:33:18Z"
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "execute": true,
+  "final_reason": "terminal_queue_state",
+  "final_summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {
+        "local_cpu": 1
+      },
+      "local_only": {
+        "max_parallel": 1,
+        "resource_limits": {
+          "local_io_heavy": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_io_heavy"
+      ],
+      "with_cloud": {
+        "max_parallel": 1,
+        "resource_limits": {
+          "local_io_heavy": 1
+        }
+      }
+    },
+    "automation_blockers": [],
+    "automation_verdict": "safe_to_resume_or_continue",
+    "blocked_steps": [],
+    "blocker_count": 0,
+    "blockers": [],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": true,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/receiver_repair_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_io_heavy": {
+          "artifact_record_bytes_mean": 5281.5,
+          "artifact_record_bytes_sum": 21126,
+          "artifact_record_count": 4,
+          "artifact_record_raw_bytes_mean": 5281.5,
+          "artifact_record_raw_bytes_sum": 21126,
+          "candidate_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_selector_stream_context_recode_v1_full_frame_inflate_parity_repair_candidate_requires_full_frame_inflate_output_parity_before_score_claim"
+          ],
+          "dominant_resource_kind": "local_io_heavy",
+          "elapsed_seconds_max": 0.7778116250119638,
+          "elapsed_seconds_mean": 0.7713586977479281,
+          "elapsed_seconds_min": 0.7660160829982487,
+          "elapsed_seconds_sum": 3.0854347909917124,
+          "experiment_ids": [
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "receiver_repair_materializer_selector_stream_context_recode_v1_full_frame_inflate_parity_repair_candidate_requires_full_frame_inflate_output_parity_before_score_claim"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 861.0,
+          "log_bytes_sum": 3444,
+          "resource_kind_counts": {
+            "local_io_heavy": 4
+          },
+          "run_count": 4,
+          "step_ids": [
+            "emit_receiver_repair_work_order"
+          ],
+          "success_count": 4
+        }
+      },
+      "event_count": 4,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair",
+    "queue_path": ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/receiver_repair_queue.json",
+    "queued_step_count": 0,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/receiver_repair_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_io_heavy": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_io_heavy": 120
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-28T19:43:05Z",
+      "event_count": 16,
+      "max_event_id": 16,
+      "max_step_updated_at_utc": "2026-05-28T19:44:21Z",
+      "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair.sqlite",
+      "step_state_count": 4
+    },
+    "status_counts": {
+      "succeeded": 4
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/receiver_repair_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/receiver_repair_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "8",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "finished_at_utc": "2026-05-28T19:44:21Z",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "heartbeat_path": ".omx/research/queue_fleet_supervisor_20260528T194411Z/000_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair/heartbeat.json",
+  "last_tick": {
+    "action": "observe",
+    "automation_verdict": "safe_to_resume_or_continue",
+    "final_reason_if_stopping": "terminal_queue_state",
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_supervisor_tick.v1",
+    "score_claim": false,
+    "status_counts": {
+      "succeeded": 4
+    },
+    "tick_artifact": {
+      "bytes": 8225,
+      "path": ".omx/research/queue_fleet_supervisor_20260528T194411Z/000_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair/tick_0001/tick.json",
+      "sha256": "fcc3acacbe7c48cb8e5eedd2c3d65c031b246ac2f38f38dcbb3721000793f3f4"
+    },
+    "tick_index": 1
+  },
+  "lock_path": ".omx/research/queue_fleet_supervisor_20260528T194411Z/000_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair/supervisor.lock",
+  "output_dir": ".omx/research/queue_fleet_supervisor_20260528T194411Z/000_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair",
+  "queue_path": ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/receiver_repair_queue.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_supervisor_run.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "started_at_utc": "2026-05-28T19:44:17Z",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair.sqlite",
+  "tick_count": 2,
+  "ticks_jsonl": ".omx/research/queue_fleet_supervisor_20260528T194411Z/000_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_receiver_repair/ticks.jsonl"
+}

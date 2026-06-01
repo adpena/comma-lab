@@ -1,0 +1,261 @@
+{
+  "action": "observe",
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "automation_blockers": [],
+  "execute": true,
+  "final_reason_if_stopping": "terminal_queue_state",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "generated_at_utc": "2026-05-28T19:53:25Z",
+  "max_parallel": 2,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recovery_result": null,
+  "schema": "experiment_queue_supervisor_tick.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 2,
+        "resource_limits": {
+          "local_cpu": 1,
+          "local_io_heavy": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu",
+        "local_io_heavy"
+      ],
+      "with_cloud": {
+        "max_parallel": 2,
+        "resource_limits": {
+          "local_cpu": 1,
+          "local_io_heavy": 1
+        }
+      }
+    },
+    "automation_blockers": [],
+    "automation_verdict": "safe_to_resume_or_continue",
+    "blocked_steps": [],
+    "blocker_count": 0,
+    "blockers": [],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": true,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_cpu": {
+          "artifact_record_bytes_mean": 2046445.5333333334,
+          "artifact_record_bytes_sum": 61393366,
+          "artifact_record_count": 40,
+          "artifact_record_raw_bytes_mean": 2046445.5333333334,
+          "artifact_record_raw_bytes_sum": 61393366,
+          "candidate_ids": [
+            "repair_materialize_fec6_live_entropy_boundary",
+            "repair_materialize_fec6_live_frame0_k16_palette",
+            "repair_materialize_fec6_live_posenet_bottom_decile",
+            "repair_materialize_fec6_live_segnet_region",
+            "repair_materialize_fec6_live_selector_codec",
+            "repair_materialize_psv3_live_entropy_boundary",
+            "repair_materialize_psv3_live_frame0_k16_palette",
+            "repair_materialize_psv3_live_posenet_bottom_decile",
+            "repair_materialize_psv3_live_segnet_region",
+            "repair_materialize_psv3_live_selector_codec"
+          ],
+          "dominant_resource_kind": "local_cpu",
+          "elapsed_seconds_max": 0.29536525000003166,
+          "elapsed_seconds_mean": 0.27093524023415133,
+          "elapsed_seconds_min": 0.25732883300224785,
+          "elapsed_seconds_sum": 8.12805720702454,
+          "experiment_ids": [
+            "repair_materialize_fec6_live_entropy_boundary",
+            "repair_materialize_fec6_live_frame0_k16_palette",
+            "repair_materialize_fec6_live_posenet_bottom_decile",
+            "repair_materialize_fec6_live_segnet_region",
+            "repair_materialize_fec6_live_selector_codec",
+            "repair_materialize_psv3_live_entropy_boundary",
+            "repair_materialize_psv3_live_frame0_k16_palette",
+            "repair_materialize_psv3_live_posenet_bottom_decile",
+            "repair_materialize_psv3_live_segnet_region",
+            "repair_materialize_psv3_live_selector_codec"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 695.8666666666667,
+          "log_bytes_sum": 20876,
+          "resource_kind_counts": {
+            "local_cpu": 30
+          },
+          "run_count": 30,
+          "step_ids": [
+            "append_repair_materialization_posterior_signal",
+            "build_repair_materialization_learning_signal",
+            "emit_selected_repair_materialization_gate"
+          ],
+          "success_count": 30
+        },
+        "local_io_heavy": {
+          "artifact_record_bytes_mean": 76256.91803278688,
+          "artifact_record_bytes_sum": 4651672,
+          "artifact_record_count": 72,
+          "artifact_record_raw_bytes_mean": 76256.91803278688,
+          "artifact_record_raw_bytes_sum": 4651672,
+          "candidate_ids": [
+            "repair_materialize_fec6_live_entropy_boundary",
+            "repair_materialize_fec6_live_frame0_k16_palette",
+            "repair_materialize_fec6_live_posenet_bottom_decile",
+            "repair_materialize_fec6_live_segnet_region",
+            "repair_materialize_fec6_live_selector_codec",
+            "repair_materialize_psv3_live_entropy_boundary",
+            "repair_materialize_psv3_live_frame0_k16_palette",
+            "repair_materialize_psv3_live_posenet_bottom_decile",
+            "repair_materialize_psv3_live_segnet_region",
+            "repair_materialize_psv3_live_selector_codec"
+          ],
+          "dominant_resource_kind": "local_io_heavy",
+          "elapsed_seconds_max": 0.8582537920010509,
+          "elapsed_seconds_mean": 0.6726636981632614,
+          "elapsed_seconds_min": 0.2590077500062762,
+          "elapsed_seconds_sum": 41.032485587958945,
+          "experiment_ids": [
+            "repair_materialize_fec6_live_entropy_boundary",
+            "repair_materialize_fec6_live_frame0_k16_palette",
+            "repair_materialize_fec6_live_posenet_bottom_decile",
+            "repair_materialize_fec6_live_segnet_region",
+            "repair_materialize_fec6_live_selector_codec",
+            "repair_materialize_psv3_live_entropy_boundary",
+            "repair_materialize_psv3_live_frame0_k16_palette",
+            "repair_materialize_psv3_live_posenet_bottom_decile",
+            "repair_materialize_psv3_live_segnet_region",
+            "repair_materialize_psv3_live_selector_codec"
+          ],
+          "failure_count": 1,
+          "log_bytes_mean": 1140.1147540983607,
+          "log_bytes_sum": 69547,
+          "resource_kind_counts": {
+            "local_io_heavy": 61
+          },
+          "run_count": 61,
+          "step_ids": [
+            "audit_repair_budget_materialization_execution",
+            "bind_repair_budget_materializer_execution",
+            "emit_repair_budget_child_component_replay_manifests",
+            "emit_repair_budget_materialization_plan",
+            "emit_repair_family_materializer_manifest",
+            "execute_repair_family_byte_transform"
+          ],
+          "success_count": 60
+        }
+      },
+      "event_count": 91,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+    "queue_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+    "queued_step_count": 0,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_cpu": 18,
+        "local_io_heavy": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_cpu": 120,
+        "local_io_heavy": 120
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-28T19:48:54Z",
+      "event_count": 303,
+      "max_event_id": 303,
+      "max_step_updated_at_utc": "2026-05-28T19:53:23Z",
+      "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "step_state_count": 90
+    },
+    "status_counts": {
+      "succeeded": 90
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_repair_multi_archive_live_psv3_fec6_materialization",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "8",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "tick_index": 10,
+  "worker_result": null
+}

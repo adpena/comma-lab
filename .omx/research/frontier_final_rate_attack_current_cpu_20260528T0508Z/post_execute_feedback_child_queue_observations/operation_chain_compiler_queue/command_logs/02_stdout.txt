@@ -1,0 +1,162 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 1,
+  "max_experiments": null,
+  "max_parallel": 4,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_chain_compiler",
+  "requested_max_parallel": 4,
+  "resource_limits": {
+    "local_io_heavy": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-28T05:33:55Z",
+  "started_experiment_ids": [
+    "chain_registered_multisurface_materializer_program"
+  ],
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_chain_compiler.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_operation_chain_stage_plan.py",
+        "--operation-chain-compiler-work-orders",
+        ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/operation_chain_compiler_work_orders.json",
+        "--source-operation-id",
+        "chain_registered_multisurface_materializer_program",
+        "--stage-plan-out",
+        "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.7384363329983898,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/emit_operation_chain_stage_plan/20260528T053355Z_1fc407cea4cf0fce.log",
+      "pid": 6820,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_operation_chain_stage_plan.py",
+          "--operation-chain-compiler-work-orders",
+          ".omx/research/frontier_final_rate_attack_current_cpu_20260528T0508Z/post_execute_feedback_refresh/operation_chain_compiler_work_orders.json",
+          "--source-operation-id",
+          "chain_registered_multisurface_materializer_program",
+          "--stage-plan-out",
+          "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+          "--overwrite"
+        ],
+        "experiment_id": "chain_registered_multisurface_materializer_program",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_chain_compiler",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "a55ef1e15168aa20e72953963be5d3e821cdc06ff64bbe5301487798a893f2bc",
+          "definition_hash": "4d81f74b6703026da6f440ef9651f4aa7bb6d59941ef2378bf7aabd7afc75500",
+          "postcondition_hash": "1d5a5de094de08928c2fb6dc00fcaefa76223873b842f66eefa1c914e1f576d1"
+        },
+        "step_id": "emit_operation_chain_stage_plan"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 13164,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T05:33:56Z",
+            "path": "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 626,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "1fc407cea4cf0fce"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_byte_range_stage_inputs.py",
+        "--operation-chain-stage-plan",
+        "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+        "--stage-inputs-out",
+        "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+        "--chain-output-dir",
+        "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.7489470829968923,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/emit_byte_range_stage_inputs/20260528T053356Z_7b8472e8795373fe.log",
+      "pid": 7463,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_byte_range_stage_inputs.py",
+          "--operation-chain-stage-plan",
+          "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+          "--stage-inputs-out",
+          "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+          "--chain-output-dir",
+          "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+          "--overwrite"
+        ],
+        "experiment_id": "chain_registered_multisurface_materializer_program",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_chain_compiler",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "63a1449e262695cbf704e2e2dcec8f8ebb63213e4c081efd2d491cdb09191296",
+          "definition_hash": "d57fe152062e049bebf92d4a47016417c5cd77d77530f183dc254419be8fb1d6",
+          "postcondition_hash": "6ef087cc9624d364da731bc49d479063ff31c1366a9737f6c70c03fc5256bc25"
+        },
+        "step_id": "emit_byte_range_stage_inputs"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 7133,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T05:33:57Z",
+            "path": "experiments/results/frontier_final_rate_attack/frontier_operation_chain_compiler/frontier_final_rate_attack_current_cpu_20260528t0508z_post_execute_feedback_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 966,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "7b8472e8795373fe"
+    }
+  ],
+  "steps_started": 2,
+  "stop_reason": "idle_limit_reached",
+  "stop_signals": [],
+  "success_count": 2
+}

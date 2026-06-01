@@ -1,0 +1,24 @@
+{
+  "action": "recover",
+  "automation_verdict": "needs_recovery_or_operator_attention",
+  "final_reason_if_stopping": "unsafe_state_after_recovery",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_supervisor_heartbeat.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "status_counts": {
+    "queued": 340,
+    "succeeded": 78
+  },
+  "tick_artifact": {
+    "bytes": 184100,
+    "path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/batched_mlx_supervisor_wave2/tick_0000/tick.json",
+    "sha256": "717a69ee6d9f06efd7d338d4e750dbe0ed7b3194550f121e6bb9cc45ffdcf3d2"
+  },
+  "tick_index": 0,
+  "updated_at_utc": "2026-05-31T16:12:20Z"
+}

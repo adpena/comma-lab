@@ -1,0 +1,427 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 2,
+      "local_io_heavy": 2
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "repair_posterior_followup_harvest_targeted_component_response_rows",
+      "lane_id": null,
+      "metadata": {
+        "activation_action": "harvest_targeted_component_response_rows",
+        "allowed_use": "repair_posterior_acquisition_followup_local_queue_only",
+        "budget_spend_allowed": false,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "executable_queue_artifact_keys": [
+          "targeted_component_correction_queue"
+        ],
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "missing_prerequisite_artifact_keys": [],
+        "posterior_route": {
+          "activation_action": "harvest_targeted_component_response_rows",
+          "allowed_use": "repair_campaign_posterior_acquisition_followup_only",
+          "blocker_total": 105,
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "family_ids": [
+            "per_region_selector_codec",
+            "autonomous-many-op-chain",
+            "repair-campaign-scorer",
+            "encoder-repair-allocator",
+            "targeted-component-correction"
+          ],
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+          "gpu_launched": false,
+          "missing_artifact_total": 105,
+          "observation_count": 17,
+          "priority_score": 100,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_artifact_key": "targeted_component_correction_response_harvest",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "recommended_acquisition_policy": "increase_priority_for_targeted_component_response_harvest",
+          "required_evidence_surface": "targeted_component_correction_response_harvest",
+          "schema": "repair_campaign_posterior_acquisition_followup.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "typed_response_ids": [
+            "selector_missing",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_autonomous_chain_optimization:autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_autonomous_chain_optimization:autonomous_chain_portfolio_materializer_context_closure_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_autonomous_chain_optimization:autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_repair_campaign_score:score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_repair_campaign_score:score_repair_campaign_portfolio_materializer_context_closure_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_repair_campaign_score:score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_repair_budget_waterfill:repair_waterfill_global_many_op_rate_distortion_receiver_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_repair_budget_waterfill:repair_waterfill_portfolio_materializer_context_closure_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_repair_budget_waterfill:repair_waterfill_segnet_posenet_geometry_drop_many_campaign",
+            "activation_plan:frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_component_correction:inspect_empty_targeted_component_correction_selection"
+          ]
+        },
+        "posterior_route_index": 1,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_blockers": [],
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_acquisition_policy": "increase_priority_for_targeted_component_response_harvest",
+        "required_evidence_surface": "targeted_component_correction_response_harvest",
+        "route_queue_artifact_key": "targeted_component_correction_response_harvest",
+        "schema": "repair_posterior_acquisition_followup_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/targeted_component_correction_response_harvest.json"
+          ],
+          "id": "inspect_harvest_targeted_component_response_rows_targeted_component_correction_response_harvest",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/targeted_component_correction_response_harvest.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/targeted_component_correction_queue.json",
+            "validate"
+          ],
+          "id": "validate_harvest_targeted_component_response_rows_targeted_component_correction_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/targeted_component_correction_queue.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/targeted_component_correction_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "12",
+            "--max-experiments",
+            "4",
+            "--max-parallel",
+            "2",
+            "--output",
+            "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup/harvest_targeted_component_response_rows/targeted_component_correction_queue_worker_result.json"
+          ],
+          "id": "run_harvest_targeted_component_response_rows_targeted_component_correction_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup/harvest_targeted_component_response_rows/targeted_component_correction_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup/harvest_targeted_component_response_rows/targeted_component_correction_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_harvest_targeted_component_response_rows_targeted_component_correction_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup/harvest_targeted_component_response_rows/targeted_component_correction_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/targeted_component_correction_queue.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "repair-posterior-acquisition",
+        "queue-owned-feedback",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "repair_posterior_followup_materialize_missing_local_mlx_custody",
+      "lane_id": null,
+      "metadata": {
+        "activation_action": "materialize_missing_local_mlx_custody",
+        "allowed_use": "repair_posterior_acquisition_followup_local_queue_only",
+        "budget_spend_allowed": false,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "executable_queue_artifact_keys": [
+          "repair_campaign_score_queue"
+        ],
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "missing_prerequisite_artifact_keys": [],
+        "posterior_route": {
+          "activation_action": "materialize_missing_local_mlx_custody",
+          "allowed_use": "repair_campaign_posterior_acquisition_followup_only",
+          "blocker_total": 225,
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "family_ids": [
+            "per_region_selector_codec"
+          ],
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+          "gpu_launched": false,
+          "missing_artifact_total": 165,
+          "observation_count": 15,
+          "priority_score": 70,
+          "promotable": false,
+          "promotion_eligible": false,
+          "queue_artifact_key": "repair_cascade_mlx_probe_queue",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "recommended_acquisition_policy": "materialize_missing_local_mlx_custody_before_stackability",
+          "required_evidence_surface": "local_mlx_research_signal",
+          "schema": "repair_campaign_posterior_acquisition_followup.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "typed_response_ids": [
+            "selector_missing"
+          ]
+        },
+        "posterior_route_index": 2,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_blockers": [],
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_acquisition_policy": "materialize_missing_local_mlx_custody_before_stackability",
+        "required_evidence_surface": "local_mlx_research_signal",
+        "route_queue_artifact_key": "repair_cascade_mlx_probe_queue",
+        "schema": "repair_posterior_acquisition_followup_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_campaign_score_queue.json",
+            "validate"
+          ],
+          "id": "validate_materialize_missing_local_mlx_custody_repair_campaign_score_queue",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_campaign_score_queue.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_campaign_score_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "12",
+            "--max-experiments",
+            "4",
+            "--max-parallel",
+            "2",
+            "--output",
+            "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json"
+          ],
+          "id": "run_materialize_missing_local_mlx_custody_repair_campaign_score_queue_bounded_local",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "experiment_queue_worker_result.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 0,
+              "key": "failure_count",
+              "path": "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "validate_materialize_missing_local_mlx_custody_repair_campaign_score_queue"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup/materialize_missing_local_mlx_custody/repair_campaign_score_queue_worker_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_campaign_score_queue.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "repair-posterior-acquisition",
+        "queue-owned-feedback",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "metadata": {
+    "allowed_use": "queue_owned_repair_posterior_acquisition_followups",
+    "available_artifact_keys": [
+      "autonomous_chain_optimization",
+      "dqs1_observation_discovery",
+      "local_cpu_eureka_planning",
+      "materializer_feedback_discovery",
+      "operation_chain_compiler_queue",
+      "operation_chain_compiler_work_orders",
+      "operation_materializer_backlog",
+      "operation_materializer_bridge",
+      "operation_materializer_contexts",
+      "operation_materializer_work_queue",
+      "operation_portfolio",
+      "pair_frame_geometry_discovery",
+      "rate_budget_preservation_plan",
+      "receiver_closed_correction_budget",
+      "receiver_repair_backlog",
+      "receiver_repair_queue",
+      "repair_budget_waterfill_queue",
+      "repair_campaign_score_queue",
+      "targeted_component_correction_acquisition",
+      "targeted_component_correction_chain_materializer_handoff",
+      "targeted_component_correction_chain_materializer_work_queue",
+      "targeted_component_correction_materialization_requests",
+      "targeted_component_correction_operation_chain_work_orders",
+      "targeted_component_correction_queue",
+      "targeted_component_correction_response_harvest"
+    ],
+    "blocked_experiment_count": 0,
+    "budget_spend_allowed": false,
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "experiment_count": 2,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+    "gpu_launched": false,
+    "posterior_acquisition_followup_route_count": 2,
+    "posterior_path": "/Users/adpena/Projects/pact/.omx/state/repair_campaign_stackability_posterior.jsonl",
+    "posterior_prior_summary_schema": "repair_campaign_posterior_prior_summary.v1",
+    "posterior_row_count": 71,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_experiment_count": 2,
+    "ready_for_exact_eval_dispatch": false,
+    "results_root": "/Volumes/VertigoDataTier/pact/frontier_rate_attack_feedback_posterior_followup_smoke_20260527T204506Z/repair_posterior_acquisition_followup_queue/frontier_rate_attack_feedback_dqs1_followup_20260527t204515z_repair_posterior_acquisition_followup",
+    "schema": "repair_posterior_acquisition_followup_queue_metadata.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260527T204515Z_repair_posterior_acquisition_followup",
+  "schema": "experiment_queue.v1"
+}

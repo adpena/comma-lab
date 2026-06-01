@@ -1,0 +1,247 @@
+{
+  "archive_bound_candidate_adapter_package_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/archive_bound_candidate_adapter_package.json",
+  "archive_zip_bytes": 10289674,
+  "archive_zip_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/archive.zip",
+  "archive_zip_sha256": "4c28fac07768eb1234e184cabaff570baa359c3f17c48d0b12d5d3e791aedeed",
+  "blockers": [],
+  "byte_mutation_proof_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/z8_hpc1_byte_mutation_proof.json",
+  "cleanup_policy": {
+    "evidence_artifacts_are_durable": true,
+    "large_rebuildable_artifacts": [],
+    "no_signal_loss_provenance": true,
+    "receiver_raw_output_retained": false,
+    "scratch_deleted_by_default": true
+  },
+  "copied_0bin_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/0.bin",
+  "custody_repaired": true,
+  "dispatch_attempted": false,
+  "emit_byte_mutation_proof": true,
+  "emit_runtime_payload_bridge_report": true,
+  "exact_axis_blocker": "contest_cpu_cuda_exact_eval_not_executed",
+  "gpu_launched": false,
+  "input_archive_bin": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/0.bin",
+  "input_archive_bin_bytes": 10195155,
+  "input_archive_bin_sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb",
+  "manifest_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/package_z8hpc1_archive_bytes_manifest.json",
+  "output_dir": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z",
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "Repair custody for an existing Z8HPC1 inner archive packet by emitting contest-shaped archive.zip, decode-only runtime, receiver proof, runtime payload bridge report, and shared archive-bound candidate package.",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/receiver_proof/z8_hpc1_receiver_proof.json",
+  "reproducibility": {
+    "argv": [
+      "tools/package_z8hpc1_archive_bytes.py",
+      "--archive-bin",
+      ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/0.bin",
+      "--output-dir",
+      ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z"
+    ],
+    "cwd": "/Users/adpena/Projects/pact",
+    "env": {}
+  },
+  "retain_receiver_output": false,
+  "runtime_payload_bridge_report_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/z8_hpc1_runtime_payload_bridge_report.json",
+  "schema": "z8_hpc1_archive_bytes_packaging_manifest.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "submission_0bin_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/submission/0.bin",
+  "tool": "tools/package_z8hpc1_archive_bytes.py",
+  "zip_custody": {
+    "archive_zip_bytes": 10289674,
+    "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/archive.zip",
+    "archive_zip_sha256": "4c28fac07768eb1234e184cabaff570baa359c3f17c48d0b12d5d3e791aedeed",
+    "expected_zero_bin_sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb",
+    "member_count": 23,
+    "members": [
+      {
+        "compressed_bytes": 10171887,
+        "compression_type": 8,
+        "filename": "0.bin",
+        "matches_expected_zero_bin_sha256": true,
+        "sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb",
+        "uncompressed_bytes": 10195155
+      },
+      {
+        "compressed_bytes": 652,
+        "compression_type": 8,
+        "filename": "inflate.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "a22e40201ae63805fd5db3b5f12606f94543a26d41c7b2721a2cbf1f59b72f42",
+        "uncompressed_bytes": 1302
+      },
+      {
+        "compressed_bytes": 331,
+        "compression_type": 8,
+        "filename": "inflate.sh",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "95f5142333b5e727618ce60f8b5e6918a34d56efd85e11ee16095f4989f72e0e",
+        "uncompressed_bytes": 460
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_type": 8,
+        "filename": "src/tac/__init__.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_type": 8,
+        "filename": "src/tac/optimization/__init__.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 14964,
+        "compression_type": 8,
+        "filename": "src/tac/optimization/mamba2_predictor.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "f6347398b7fe7e5306f415ad9f455f2effae63acebecfa4a37a1fb3ca1674d81",
+        "uncompressed_bytes": 53260
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/__init__.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/_shared/__init__.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 2621,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/_shared/inflate_runtime.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "dd7c3def09b6eab4ce8b65b6ed271a2fbd884b741002ffbd099072d92938a4a1",
+        "uncompressed_bytes": 6269
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/__init__.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 7141,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/archive.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "fa480859ab408017150843f35dfceb742498e556792bb548e527ad8c4e2f63f0",
+        "uncompressed_bytes": 25006
+      },
+      {
+        "compressed_bytes": 7338,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/binding_contract.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "9a8db2ce76b83aa03a2c9bfdb8b98836a03c10a9757be513d07bb48288f7cfdc",
+        "uncompressed_bytes": 23578
+      },
+      {
+        "compressed_bytes": 26789,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "cfb870b9570f2c1251a7cc529adcae798cfe6d1e7fba1d227e346759371b5497",
+        "uncompressed_bytes": 103888
+      },
+      {
+        "compressed_bytes": 3985,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "51b224fe484ab2985b34f194b6a5c69afc2a954c0ef9f0caed453a2fc461cde3",
+        "uncompressed_bytes": 11251
+      },
+      {
+        "compressed_bytes": 6032,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/loss.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "f7bec7825a126006b0144b65d46c851af13f5d06342439c43f2110b5ee2826f9",
+        "uncompressed_bytes": 18551
+      },
+      {
+        "compressed_bytes": 5100,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mallat_dwt_adapter.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "a1219e38868a2ec3451992ad25b86e8181e47e9a012a54837d7b661a83cce7cd",
+        "uncompressed_bytes": 14861
+      },
+      {
+        "compressed_bytes": 5684,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/mamba2_adapter.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "3f632825fe0a58c4ee36fc49b6d970b5224e2864d433912e1b9482420aaf1dbe",
+        "uncompressed_bytes": 19045
+      },
+      {
+        "compressed_bytes": 1017,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_custody.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "5f07ca96335bf6d56ccc64f5a2c20a0c41182d29c96fe7d77a749f0515944fdd",
+        "uncompressed_bytes": 3566
+      },
+      {
+        "compressed_bytes": 6153,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/runtime_payload_bridge.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "5b32b6e9b68560976dd0e4e820e7c05832e761a23f65da80a9b011883716a22c",
+        "uncompressed_bytes": 28520
+      },
+      {
+        "compressed_bytes": 8875,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/scorer_sensitivity_map.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "0ee58e93945c5d2ed5e416842992119252b2b0241df342b1eebe5ae31a10d388",
+        "uncompressed_bytes": 31164
+      },
+      {
+        "compressed_bytes": 12803,
+        "compression_type": 8,
+        "filename": "src/tac/substrates/z8_hierarchical_predictive_coding/wyner_ziv_coder.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "f57eb2356f1fd9625eb97c0c17e3bd58cdb50f62fa7138c49273d286f3215615",
+        "uncompressed_bytes": 44702
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_type": 8,
+        "filename": "src/tac/symposium_impls/__init__.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 4196,
+        "compression_type": 8,
+        "filename": "src/tac/symposium_impls/daubechies_wavelet_codec.py",
+        "matches_expected_zero_bin_sha256": false,
+        "sha256": "49040b2efdfeb7b57e26a7c1ba31500e532cf5ca75593079afc2674018f7512a",
+        "uncompressed_bytes": 12088
+      }
+    ],
+    "zero_bin_member_count": 1,
+    "zero_bin_member_sha256": "34ce95655a0a7e093dc3963a206350967018aafc97bcc141123643bfa34d23cb",
+    "zip_custody_ok": true
+  }
+}

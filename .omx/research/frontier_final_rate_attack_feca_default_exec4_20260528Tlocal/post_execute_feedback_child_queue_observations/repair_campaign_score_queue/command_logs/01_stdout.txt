@@ -1,0 +1,970 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_cascade_mlx_probe_queue.json",
+        "validate"
+      ],
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "priority": 1,
+      "queue_id": "frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+      "resource_kind": "local_cpu",
+      "step_hashes": {
+        "command_hash": "af65142d8d79a0a3c555aa10585b3b47408fc1fdae507662ca631efc236dca41",
+        "definition_hash": "6ae7b0d3fc45a17446954ad1ede7ba79245082c69769590aa80e05fbf4c0b9da",
+        "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "step_id": "validate_repair_cascade_mlx_probe_queue"
+    }
+  ],
+  "schema": "experiment_queue_summary.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedback_repair_campaign_score.sqlite",
+  "status_counts": {
+    "queued": 36,
+    "succeeded": 12
+  },
+  "step_count": 48,
+  "steps": [
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/append_repair_campaign_blocked_posterior.py",
+          "--blocked-learning-signal-report",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_blocked_learning_signal_report.json",
+          "--posterior-path",
+          ".omx/state/repair_campaign_stackability_posterior.jsonl",
+          "--lock-path",
+          ".omx/state/.repair_campaign_stackability_posterior.jsonl.lock",
+          "--report-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_blocked_posterior_append_report.json",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.2653016249969369,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/append_blocked_repair_campaign_learning_posterior/20260528T055708Z_a54a6076d712759a.log",
+        "pid": 34106,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 1519,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:08Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_blocked_posterior_append_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1136,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "a54a6076d712759a"
+      },
+      "status": "succeeded",
+      "step_id": "append_blocked_repair_campaign_learning_posterior",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:08Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "-c",
+          "import json, sys; from pathlib import Path; p = Path(sys.argv[1]); ok = p.is_file(); print(json.dumps({'schema': 'repair_campaign_score_prerequisite_check.v1', 'work_order': str(p), 'work_order_exists': ok, 'budget_spend_allowed': False, 'ready_for_exact_eval_dispatch': False, 'score_claim': False, 'promotion_eligible': False, 'rank_or_kill_eligible': False}, sort_keys=True)); raise SystemExit(0 if ok else 2)",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_repair_budget_waterfill/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json"
+        ],
+        "elapsed_seconds": 0.2592295830036164,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/assert_repair_budget_waterfill_work_order_materialized/20260528T055707Z_543219b83d4e42f0.log",
+        "pid": 33992,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 0,
+          "artifact_records": [],
+          "log_bytes": 557,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "543219b83d4e42f0"
+      },
+      "status": "succeeded",
+      "step_id": "assert_repair_budget_waterfill_work_order_materialized",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:07Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_repair_campaign_blocked_learning_signals.py",
+          "--score-report",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_score_report.json",
+          "--blocked-signal-report-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_blocked_learning_signal_report.json",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.25616570800048066,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/build_repair_campaign_blocked_learning_signals/20260528T055707Z_4570ccbe65ecad7a.log",
+        "pid": 34020,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 10007,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:07Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_blocked_learning_signal_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1020,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "4570ccbe65ecad7a"
+      },
+      "status": "succeeded",
+      "step_id": "build_repair_campaign_blocked_learning_signals",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:08Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_repair_campaign_byte_closed_materialization_queue.py",
+          "--score-report",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_score_report.json",
+          "--work-order",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_repair_budget_waterfill/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json",
+          "--materialization-queue-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_byte_closed_materialization_queue.json",
+          "--results-root",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack",
+          "--queue-id",
+          "global_many_op_rate_distortion_receiver_campaign_repair_byte_closed_materialization",
+          "--posterior-path",
+          ".omx/state/repair_campaign_stackability_posterior.jsonl",
+          "--posterior-lock-path",
+          ".omx/state/.repair_campaign_stackability_posterior.jsonl.lock",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.7773624589972314,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/build_repair_campaign_byte_closed_materialization_queue/20260528T055708Z_c259c5e4297a239e.log",
+        "pid": 34121,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 7677,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:09Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_byte_closed_materialization_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1560,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "c259c5e4297a239e"
+      },
+      "status": "succeeded",
+      "step_id": "build_repair_campaign_byte_closed_materialization_queue",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:09Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_repair_campaign_entropy_stage_chain_contract.py",
+          "--score-report",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_score_report.json",
+          "--chain-contract-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_entropy_stage_chain_contract.json",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.2647214999960852,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/build_repair_campaign_entropy_stage_chain_contract/20260528T055708Z_fd30662cbe76c99d.log",
+        "pid": 34105,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 3694,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:08Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_entropy_stage_chain_contract.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 890,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "fd30662cbe76c99d"
+      },
+      "status": "succeeded",
+      "step_id": "build_repair_campaign_entropy_stage_chain_contract",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:08Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_repair_campaign_stackability_queue.py",
+          "--score-report",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_score_report.json",
+          "--stackability-queue-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_stackability_queue.json",
+          "--results-root",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack",
+          "--queue-id",
+          "global_many_op_rate_distortion_receiver_campaign_repair_stackability",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.7842771659998107,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/build_repair_campaign_stackability_queue/20260528T055710Z_82e07ad84a02a285.log",
+        "pid": 34148,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 7196,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:10Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_stackability_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1113,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "82e07ad84a02a285"
+      },
+      "status": "succeeded",
+      "step_id": "build_repair_campaign_stackability_queue",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:11Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_repair_cascade_mlx_probe_queue.py",
+          "--source-payload",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_score_report.json",
+          "--probe-queue-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_cascade_mlx_probe_queue.json",
+          "--results-root",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack",
+          "--queue-id",
+          "global_many_op_rate_distortion_receiver_campaign_repair_cascade_mlx_probe",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.7852935830014758,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/build_repair_cascade_mlx_probe_queue/20260528T055711Z_01c4a50a8685d0a5.log",
+        "pid": 34161,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 21769,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:11Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_cascade_mlx_probe_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1106,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "01c4a50a8685d0a5"
+      },
+      "status": "succeeded",
+      "step_id": "build_repair_cascade_mlx_probe_queue",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:11Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "8",
+          "--max-experiments",
+          "2",
+          "--max-parallel",
+          "1",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_source_worker_result.json"
+        ],
+        "elapsed_seconds": 6.759182499998133,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/run_repair_budget_waterfill_source_queue/20260528T055700Z_744ca67353a02897.log",
+        "pid": 33817,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 15301,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:07Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_source_worker_result.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 15301,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "744ca67353a02897"
+      },
+      "status": "succeeded",
+      "step_id": "run_repair_budget_waterfill_source_queue",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:07Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_byte_closed_materialization_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "9",
+          "--max-experiments",
+          "1",
+          "--max-parallel",
+          "1",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_byte_closed_materialization_worker_result.json"
+        ],
+        "elapsed_seconds": 0.7712904579966562,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/run_repair_campaign_byte_closed_materialization_queue_bounded_local/20260528T055711Z_7a5e61a148129b51.log",
+        "pid": 34163,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 891,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:12Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_byte_closed_materialization_worker_result.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 891,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "7a5e61a148129b51"
+      },
+      "status": "succeeded",
+      "step_id": "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:12Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_campaign_stackability_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_cascade_mlx_probe_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/score_repair_campaign.py",
+          "--work-order",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_repair_budget_waterfill/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json",
+          "--score-report-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_score_report.json",
+          "--overwrite",
+          "--posterior",
+          ".omx/state/repair_campaign_stackability_posterior.jsonl"
+        ],
+        "elapsed_seconds": 0.2605487499968149,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/score_repair_campaign_from_typed_ledger/20260528T055707Z_74215ad34a8c3275.log",
+        "pid": 33996,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 189344,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-28T05:57:07Z",
+              "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_score_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1000,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "74215ad34a8c3275"
+      },
+      "status": "succeeded",
+      "step_id": "score_repair_campaign_from_typed_ledger",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:07Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "validate"
+        ],
+        "elapsed_seconds": 0.7859646249999059,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/validate_repair_budget_waterfill_source_queue/20260528T055659Z_fdbd544b2c33be46.log",
+        "pid": 33815,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 0,
+          "artifact_records": [],
+          "log_bytes": 495,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "fdbd544b2c33be46"
+      },
+      "status": "succeeded",
+      "step_id": "validate_repair_budget_waterfill_source_queue",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:00Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/repair_campaign_score_queue/frontier_final_rate_attack_feca_default_exec4_20260528tlocal_post_execute_feedback_repair_campaign_score/global_many_op_rate_distortion_receiver_campaign/repair_campaign_byte_closed_materialization_queue.json",
+          "validate"
+        ],
+        "elapsed_seconds": 0.787142875000427,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedb_2bd9427c506796a2/score_repair_campaign_global_many_op_rate_distortion_receiver_campaign/validate_repair_campaign_byte_closed_materialization_queue/20260528T055709Z_186db2c3ead6bd46.log",
+        "pid": 34123,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 0,
+          "artifact_records": [],
+          "log_bytes": 413,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "186db2c3ead6bd46"
+      },
+      "status": "succeeded",
+      "step_id": "validate_repair_campaign_byte_closed_materialization_queue",
+      "stored_status": "succeeded",
+      "updated_at_utc": "2026-05-28T05:57:10Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_campaign_stackability_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_cascade_mlx_probe_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "append_blocked_repair_campaign_learning_posterior",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "assert_repair_budget_waterfill_work_order_materialized",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_campaign_blocked_learning_signals",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_campaign_byte_closed_materialization_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_campaign_entropy_stage_chain_contract",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_campaign_stackability_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_cascade_mlx_probe_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_budget_waterfill_source_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_campaign_stackability_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_cascade_mlx_probe_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "score_repair_campaign_from_typed_ledger",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_budget_waterfill_source_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_campaign_byte_closed_materialization_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_campaign_stackability_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_cascade_mlx_probe_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "append_blocked_repair_campaign_learning_posterior",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "assert_repair_budget_waterfill_work_order_materialized",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_campaign_blocked_learning_signals",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_campaign_byte_closed_materialization_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_campaign_entropy_stage_chain_contract",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_campaign_stackability_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "build_repair_cascade_mlx_probe_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_budget_waterfill_source_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_campaign_stackability_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_repair_cascade_mlx_probe_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "score_repair_campaign_from_typed_ledger",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_budget_waterfill_source_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_campaign_byte_closed_materialization_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_campaign_stackability_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_repair_cascade_mlx_probe_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-28T05:56:59Z"
+    }
+  ]
+}

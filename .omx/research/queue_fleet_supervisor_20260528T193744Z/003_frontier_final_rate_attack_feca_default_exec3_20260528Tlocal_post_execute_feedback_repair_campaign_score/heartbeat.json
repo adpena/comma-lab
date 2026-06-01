@@ -1,0 +1,23 @@
+{
+  "action": "observe",
+  "automation_verdict": "safe_to_resume_or_continue",
+  "final_reason_if_stopping": "terminal_queue_state",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_feca_default_exec3_20260528Tlocal_post_execute_feedback_repair_campaign_score",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_supervisor_heartbeat.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "status_counts": {
+    "succeeded": 48
+  },
+  "tick_artifact": {
+    "bytes": 9917,
+    "path": ".omx/research/queue_fleet_supervisor_20260528T193744Z/003_frontier_final_rate_attack_feca_default_exec3_20260528Tlocal_post_execute_feedback_repair_campaign_score/tick_0001/tick.json",
+    "sha256": "1067f0251507cd7dffcef6e5e855f960ce278bfd987df953637204b8fabad128"
+  },
+  "tick_index": 1,
+  "updated_at_utc": "2026-05-28T19:38:55Z"
+}

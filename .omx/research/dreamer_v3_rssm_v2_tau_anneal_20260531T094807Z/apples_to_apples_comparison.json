@@ -1,0 +1,56 @@
+{
+  "apples_to_apples_matched_ep299": {
+    "baseline_pose": 7.003602027893066,
+    "baseline_pose_reduction_pct": 93.4629628403211,
+    "note": "same epoch budget (299), same init, same real teachers \u2014 isolates tau-anneal+cosine+distill from epoch extension",
+    "tau_anneal_matched_gain_abs": 0.07698917388916016,
+    "tau_anneal_matched_gain_rel_pct": 1.099279678978579,
+    "v2_pose": 6.926612854003906,
+    "v2_pose_reduction_pct": 93.53482592378958
+  },
+  "axis_tag": "[macOS-MLX research-signal]",
+  "baseline": {
+    "cosine_lr": false,
+    "dir": ".omx/research/dreamer_v3_rssm_real_hinton_long_mlx_20260531T021334Z",
+    "distillation_weight": 0.5,
+    "epochs": 300,
+    "pose_ep0": 107.13725280761719,
+    "pose_final": 7.003602027893066,
+    "pose_min": 5.646099090576172,
+    "pose_reduction_pct_final": 93.4629628403211,
+    "seg_ep0": 6.337273597717285,
+    "seg_final": 5.648943901062012,
+    "seg_min": 5.490239143371582,
+    "tau": "static_1.0"
+  },
+  "captured_at_utc": "2026-05-31T09:55:15Z",
+  "catalog_307_classification": "PARADIGM_INTACT_IMPLEMENTATION_LEVEL_IMPROVEMENT",
+  "evidence_grade": "predicted",
+  "honest_verdict": "tau-anneal closes the comment-only-contract and gives a SMALL matched-epoch pose gain (93.46%->93.53% @ep299); the headline 99.21% full-budget reduction is PRIMARILY the 2x epoch extension + cosine LR decay continuing the still-active descent, NOT tau-anneal alone. Seg-axis remains frozen (structural decoder/SegNet ceiling, not addressed by tau).",
+  "promotable": false,
+  "schema": "dreamer_v3_rssm_v2_tau_anneal_apples_to_apples_v1",
+  "score_claim": false,
+  "seg_unfreeze": {
+    "baseline_seg_min": 5.490239143371582,
+    "unfroze_below_5_65": true,
+    "v2_seg_min": 5.403444290161133,
+    "verdict": "MARGINAL_NOT_MEANINGFUL: seg still ~5.6 plateau; tau-anneal did NOT break the seg ceiling"
+  },
+  "v2": {
+    "cosine_lr": true,
+    "cosine_min_lr_ratio": 0.01,
+    "dir": ".omx/research/dreamer_v3_rssm_v2_tau_anneal_20260531T094807Z",
+    "distillation_weight": 1.0,
+    "epochs": 600,
+    "pose_ep0": 107.13729858398438,
+    "pose_ep299": 6.926612854003906,
+    "pose_final": 0.8505768775939941,
+    "pose_min": 0.49968287348747253,
+    "pose_reduction_pct_ep299": 93.53482592378958,
+    "pose_reduction_pct_final": 99.20608705946862,
+    "seg_ep0": 6.337449550628662,
+    "seg_final": 5.6234130859375,
+    "seg_min": 5.403444290161133,
+    "tau": "cosine_anneal_1.0_to_0.1"
+  }
+}

@@ -1,0 +1,698 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 1,
+  "idle_cycles": 1,
+  "max_experiments": 1,
+  "max_parallel": 4,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+  "requested_max_parallel": 0,
+  "resource_limits": {
+    "local_cpu": 2,
+    "local_io_heavy": 1,
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-31T02:28:05Z",
+  "started_experiment_ids": [
+    "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch"
+  ],
+  "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_campaign_20260531T022714Z.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_p19_posenet_null_pairs.py",
+        "--source-submission-dir",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+        "--pose-null-modes-artifact",
+        ".omx/research/pr110_opt_frame0_bundle_artifacts_20260526/pr110_opt12_posenet_null_frame0.json",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+        "--null-fraction",
+        "0.05",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.2811442079837434,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/materialize_p19_posenet_null_pairs/20260531T022805Z_fbe3dc809a02e8aa.log",
+      "pid": 56666,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_p19_posenet_null_pairs.py",
+          "--source-submission-dir",
+          ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+          "--pose-null-modes-artifact",
+          ".omx/research/pr110_opt_frame0_bundle_artifacts_20260526/pr110_opt12_posenet_null_frame0.json",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+          "--null-fraction",
+          "0.05",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "f721e8052a61e86a702960ee24a32a99a7160ee47655d21f5eb9b0401dd96028",
+          "definition_hash": "fcc2bddebe64afad3ce6330f3257d7751b154535c5dbe65b597bb53238bae30f",
+          "postcondition_hash": "6e4c177641e54b55fce689b39dce76fc330588aa37bbd92c5ac98c7ad807a4c6"
+        },
+        "step_id": "materialize_p19_posenet_null_pairs"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 11571,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:05Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 482,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "fbe3dc809a02e8aa"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_p18_segnet_region_waterfill.py",
+        "--posenet-null-pairs",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+        "--segnet-softmax-16",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+        "--segnet-softmax-256",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+        "--top-regions-per-pair",
+        "2",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.27147845801664516,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/materialize_p18_segnet_region_waterfill/20260531T022805Z_e9689da386bd0657.log",
+      "pid": 56678,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_p18_segnet_region_waterfill.py",
+          "--posenet-null-pairs",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+          "--segnet-softmax-16",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+          "--segnet-softmax-256",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+          "--top-regions-per-pair",
+          "2",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "ee29b228df9f9ddc8ad15d2e2fa5517815af1e19eb58f6fa8a30e844086b2a81",
+          "definition_hash": "eb24b55a468fe1d254e4a990f0cd9ffbd0821ba0e8f9add1f9dac630236b7926",
+          "postcondition_hash": "469ba9ae1dc0a93a14b69c4d8c25bc1694c306ae5857d0a20dd4fdf0e2065ac2"
+        },
+        "step_id": "materialize_p18_segnet_region_waterfill"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 40231,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:05Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 512,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "e9689da386bd0657"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_scorer_region_selector_chain_context.py",
+        "--source-submission-dir",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+        "--chain-label",
+        "cascade_c_grouped_nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "--overwrite",
+        "--posenet-null-pairs",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+        "--segnet-region-masks",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+        "--selector-region-bits",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json"
+      ],
+      "elapsed_seconds": 0.828014999977313,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/build_p18_p19_chain_context/20260531T022806Z_3ceba78f989e72b0.log",
+      "pid": 56690,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_scorer_region_selector_chain_context.py",
+          "--source-submission-dir",
+          ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+          "--chain-label",
+          "cascade_c_grouped_nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+          "--overwrite",
+          "--posenet-null-pairs",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+          "--segnet-region-masks",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+          "--selector-region-bits",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "12a1a46c013a1c70e07a628a38189dccc71f3a10ca138f02daa2d9db5677f8ba",
+          "definition_hash": "4203a9da55b4aae2546b6a07389c7d0c65291d1f710eabc7cd5a476c51bfd5b6",
+          "postcondition_hash": "ef723694194012e91a6e8b7937867493f18933dc589be53b4945d2ff901c3620"
+        },
+        "step_id": "build_p18_p19_chain_context"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 7786,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:06Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 549,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "3ceba78f989e72b0"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_feca_selector_reparameterized_candidate.py",
+        "--source-submission-dir",
+        ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+        "--output-dir",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode",
+        "--upstream-entropy-position",
+        "P19",
+        "--upstream-entropy-position",
+        "P18",
+        "--downstream-materializer-target",
+        "archive_zip_repack_v1",
+        "--chain-parent-artifact",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+        "--chain-label",
+        "cascade_c_grouped_nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "--overwrite",
+        "--scale",
+        "64",
+        "--alpha",
+        "1",
+        "--codec-family",
+        "fec10_adaptive_blend",
+        "--allow-nonpositive-candidate"
+      ],
+      "elapsed_seconds": 0.27975304203573614,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/materialize_p11_selector_context_recode/20260531T022806Z_ef869b380651cef7.log",
+      "pid": 56748,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_feca_selector_reparameterized_candidate.py",
+          "--source-submission-dir",
+          ".omx/research/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/results/frontier_final_rate_attack_fp11_brotli_exec3_20260528Tlocal/per_archive/current_contest_cpu_frontier/fp11_source_brotli_recode_v1/fp11_source_brotli_recode/exact_eval_handoff/submission_closure/submission/fp11_source_brotli_recode_b7106c9bdbb8",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode",
+          "--upstream-entropy-position",
+          "P19",
+          "--upstream-entropy-position",
+          "P18",
+          "--downstream-materializer-target",
+          "archive_zip_repack_v1",
+          "--chain-parent-artifact",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+          "--chain-label",
+          "cascade_c_grouped_nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+          "--overwrite",
+          "--scale",
+          "64",
+          "--alpha",
+          "1",
+          "--codec-family",
+          "fec10_adaptive_blend",
+          "--allow-nonpositive-candidate"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "e8125aed35e19c88df5452769aa760396517154a808af9621a81d8bd510b1ef7",
+          "definition_hash": "2a902e9f3a2dba41d614be3d904f7e147e11f56e9afc0e3059192006217f7c6c",
+          "postcondition_hash": "dd75dd6b320f6bb46738ca962c251c4582bf89a85fed43137d557f351c7cba8d"
+        },
+        "step_id": "materialize_p11_selector_context_recode"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 160,
+            "exists": true,
+            "is_dir": true,
+            "is_file": false,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:07Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 10784,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:07Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+            "source": "step.postconditions.path"
+          }
+        ],
+        "log_bytes": 10784,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "ef869b380651cef7"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/run_family_agnostic_materializer.py",
+        "--target-kind",
+        "archive_zip_repack_v1",
+        "--archive-path",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode/submission_dir/archive.zip",
+        "--output-archive",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive.zip",
+        "--output-manifest",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+        "--runtime-consumption-proof-out",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+        "--allow-overwrite"
+      ],
+      "elapsed_seconds": 0.27982266602339223,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/materialize_p15_archive_zip_repack/20260531T022807Z_3545735d57f9b88e.log",
+      "pid": 56749,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_family_agnostic_materializer.py",
+          "--target-kind",
+          "archive_zip_repack_v1",
+          "--archive-path",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode/submission_dir/archive.zip",
+          "--output-archive",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive.zip",
+          "--output-manifest",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+          "--runtime-consumption-proof-out",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+          "--allow-overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "494ea513ef5945592d89e11d447e3e1a2a881f1839c4881dc89a6e681d15931e",
+          "definition_hash": "0091f64de1e99e530c39b9beccfe153ce31fce09259a3d982d92dddc5e1372ff",
+          "postcondition_hash": "45460083124c690dd0c066eab55934b798e237b93c41731485337d8c7e4378a9"
+        },
+        "step_id": "materialize_p15_archive_zip_repack"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 3,
+        "artifact_records": [
+          {
+            "bytes": 178493,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:07Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive.zip",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 35387,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:07Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 4004,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:07Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack.runtime_consumption_proof.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 35387,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "3545735d57f9b88e"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_scorer_region_selector_chain_report.py",
+        "--chain-context",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+        "--selector-manifest",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+        "--repack-manifest",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.8252232079976238,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/emit_composed_chain_report/20260531T022807Z_e91b98dcab51087c.log",
+      "pid": 56750,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_scorer_region_selector_chain_report.py",
+          "--chain-context",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/chain_context.json",
+          "--selector-manifest",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode/feca_selector_reparameterization_manifest.json",
+          "--repack-manifest",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p15_archive_zip_repack/archive_zip_repack_manifest.json",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "c3666117f068b015b07789d180624ab1da6bf5cf1e7c8f5f8c3b9edfe34892a8",
+          "definition_hash": "d787ae3fe04f869169e889d0cd7e2955da435b9dbd9edab3ea138ace158a82e4",
+          "postcondition_hash": "d68704a355409bb87da33b3277596bdf290f5c1198ea659d10fb6d739357d01d"
+        },
+        "step_id": "emit_composed_chain_report"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 7881,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:08Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 581,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "e91b98dcab51087c"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_receiver_closed_distortion_budget_attack_plan.py",
+        "--chain-report",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+        "--posenet-null-pairs",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+        "--segnet-region-waterfill",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/receiver_closed_distortion_budget_attack_plan.json",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.2803010829957202,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/emit_receiver_closed_distortion_budget_attack_plan/20260531T022808Z_64e9cd653b3bebcb.log",
+      "pid": 56751,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_receiver_closed_distortion_budget_attack_plan.py",
+          "--chain-report",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+          "--posenet-null-pairs",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+          "--segnet-region-waterfill",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/receiver_closed_distortion_budget_attack_plan.json",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "b8cf44012c5ff719e0909f5d33bce6f7187063acf735ce9129c9be35a86d02d1",
+          "definition_hash": "0f629e972b69a303dec053734b44c33b5b69c799779acdce92507bb8f5dc58e6",
+          "postcondition_hash": "f971bd40c228246e663b1130e9459150401f5289bfa74c3a1d1703402b4acb77"
+        },
+        "step_id": "emit_receiver_closed_distortion_budget_attack_plan"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 45491,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T02:28:08Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/receiver_closed_distortion_budget_attack_plan.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 542,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "64e9cd653b3bebcb"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/materialize_frame1_region_waterfill_runtime_patch.py",
+        "--source-submission-dir",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode/submission_dir",
+        "--segnet-region-waterfill",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+        "--output-submission-dir",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir",
+        "--output-manifest",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json",
+        "--selected-archive-chain-report",
+        "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+        "--max-pairs",
+        "12",
+        "--regions-per-pair",
+        "1",
+        "--rgb-delta=-1,-1,-1",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.27001120802015066,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [
+        {
+          "equals": "frame1_region_waterfill_runtime_patch.v1",
+          "key": "schema",
+          "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json",
+          "type": "json_equals"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json",
+          "type": "json_false_authority"
+        }
+      ],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/materialize_frame1_region_waterfill_runtime_patch/20260531T022808Z_39fac3e7ecb1f9c7.log",
+      "pid": 56753,
+      "postcondition_errors": [
+        {
+          "condition": "{\"equals\":\"frame1_region_waterfill_runtime_patch.v1\",\"key\":\"schema\",\"path\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json\",\"type\":\"json_equals\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json'"
+        },
+        {
+          "condition": "{\"path\":\"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json\",\"type\":\"json_false_authority\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json'"
+        }
+      ],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/materialize_frame1_region_waterfill_runtime_patch.py",
+          "--source-submission-dir",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p11_selector_context_recode/submission_dir",
+          "--segnet-region-waterfill",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+          "--output-submission-dir",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir",
+          "--output-manifest",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json",
+          "--selected-archive-chain-report",
+          "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+          "--max-pairs",
+          "12",
+          "--regions-per-pair",
+          "1",
+          "--rgb-delta=-1,-1,-1",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 1,
+        "queue_id": "scorer_region_selector_cascade_campaign_20260531T022714Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "61b47be75ed65f81a626780e38d24682b229c443f8cf9b4fbd43da2877d3dd5e",
+          "definition_hash": "11bd5b05e8b7f48cbc85350a2c40f4f61b3c74fa69376141490365fb28829a88",
+          "postcondition_hash": "966dc2395fd2e85368b44d48aa08199109c88c16a51a2ce06f0a467f75e5c0a4"
+        },
+        "step_id": "materialize_frame1_region_waterfill_runtime_patch"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 1,
+      "succeeded": false,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "exists": false,
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/frame1_region_waterfill_runtime_patch.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "exists": false,
+            "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_campaign_20260531T022714Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 799,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "39fac3e7ecb1f9c7"
+    }
+  ],
+  "steps_started": 8,
+  "stop_reason": "idle_limit_reached",
+  "stop_signals": [],
+  "success_count": 7
+}

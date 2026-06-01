@@ -1,0 +1,68 @@
+{
+  "axis_tag": "[macOS-MLX research-signal]",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "evidence_grade": "predicted",
+    "kind": "predicted_from_model",
+    "promotable": false,
+    "rationale": "MLX-local smoke produces no score; this manifest documents renderer construction + single forward pass only. Non-promotable by construction per Catalog #192/#317/#341.",
+    "score_claim_valid": false
+  },
+  "config": {
+    "cooperative_receiver_beta": 0.5,
+    "decoder_channels": [
+      56,
+      48,
+      40,
+      36,
+      32,
+      28,
+      24
+    ],
+    "ego_dim": 6,
+    "embed_dim": 64,
+    "film_generator_depth": 3,
+    "film_hidden_width": 80,
+    "initial_grid_h": 3,
+    "initial_grid_w": 4,
+    "latent_dim": 24,
+    "num_pairs": 4,
+    "num_upsample_blocks": 7,
+    "output_height": 384,
+    "output_width": 512,
+    "rao_ballard_level_boundary": 3,
+    "sin_frequency": 30.0
+  },
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "forward_convention": "call_b2chw_255",
+  "forward_smoke": {
+    "input_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "output_max": 127.7854995727539,
+    "output_mean": 127.50568389892578,
+    "output_min": 127.22045135498047,
+    "output_shape": [
+      4,
+      2,
+      3,
+      384,
+      512
+    ]
+  },
+  "lane_id": "lane_z6_v2_cargo_cult_unwind_l1_long_run_mlx_local_20260528",
+  "predicted_delta_adjustment": 0.0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "renderer_module": "tac.substrates.z6_v2_cargo_cult_unwind.mlx_renderer",
+  "renderer_num_parameters": 306766,
+  "renderer_schema_version": "z6_v2_cargo_cult_unwind_mlx_renderer_v1",
+  "schema_version": "z6_v2_cargo_cult_unwind_mlx_smoke_manifest_v1_20260528",
+  "score_claim": false,
+  "substrate_id": "z6_v2_cargo_cult_unwind_mlx_local"
+}

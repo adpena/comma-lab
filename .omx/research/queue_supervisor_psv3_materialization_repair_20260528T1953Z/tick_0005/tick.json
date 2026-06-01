@@ -1,0 +1,881 @@
+{
+  "action": "run_worker",
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "automation_blockers": [],
+  "execute": true,
+  "final_reason_if_stopping": "max_ticks_reached",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "generated_at_utc": "2026-05-28T19:53:01Z",
+  "max_parallel": 2,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recovery_result": null,
+  "schema": "experiment_queue_supervisor_tick.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 2,
+        "resource_limits": {
+          "local_cpu": 1,
+          "local_io_heavy": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu",
+        "local_io_heavy"
+      ],
+      "with_cloud": {
+        "max_parallel": 2,
+        "resource_limits": {
+          "local_cpu": 1,
+          "local_io_heavy": 1
+        }
+      }
+    },
+    "automation_blockers": [],
+    "automation_verdict": "safe_to_resume_or_continue",
+    "blocked_steps": [],
+    "blocker_count": 0,
+    "blockers": [],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": true,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_cpu": {
+          "artifact_record_bytes_mean": 2042874.6666666667,
+          "artifact_record_bytes_sum": 42900368,
+          "artifact_record_count": 28,
+          "artifact_record_raw_bytes_mean": 2042874.6666666667,
+          "artifact_record_raw_bytes_sum": 42900368,
+          "candidate_ids": [
+            "repair_materialize_fec6_live_frame0_k16_palette",
+            "repair_materialize_fec6_live_posenet_bottom_decile",
+            "repair_materialize_fec6_live_segnet_region",
+            "repair_materialize_fec6_live_selector_codec",
+            "repair_materialize_psv3_live_frame0_k16_palette",
+            "repair_materialize_psv3_live_posenet_bottom_decile",
+            "repair_materialize_psv3_live_segnet_region"
+          ],
+          "dominant_resource_kind": "local_cpu",
+          "elapsed_seconds_max": 0.29536525000003166,
+          "elapsed_seconds_mean": 0.2691583968103043,
+          "elapsed_seconds_min": 0.25732883300224785,
+          "elapsed_seconds_sum": 5.65232633301639,
+          "experiment_ids": [
+            "repair_materialize_fec6_live_frame0_k16_palette",
+            "repair_materialize_fec6_live_posenet_bottom_decile",
+            "repair_materialize_fec6_live_segnet_region",
+            "repair_materialize_fec6_live_selector_codec",
+            "repair_materialize_psv3_live_frame0_k16_palette",
+            "repair_materialize_psv3_live_posenet_bottom_decile",
+            "repair_materialize_psv3_live_segnet_region"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 696.4761904761905,
+          "log_bytes_sum": 14626,
+          "resource_kind_counts": {
+            "local_cpu": 21
+          },
+          "run_count": 21,
+          "step_ids": [
+            "append_repair_materialization_posterior_signal",
+            "build_repair_materialization_learning_signal",
+            "emit_selected_repair_materialization_gate"
+          ],
+          "success_count": 21
+        },
+        "local_io_heavy": {
+          "artifact_record_bytes_mean": 74438.86363636363,
+          "artifact_record_bytes_sum": 3275310,
+          "artifact_record_count": 52,
+          "artifact_record_raw_bytes_mean": 74438.86363636363,
+          "artifact_record_raw_bytes_sum": 3275310,
+          "candidate_ids": [
+            "repair_materialize_fec6_live_frame0_k16_palette",
+            "repair_materialize_fec6_live_posenet_bottom_decile",
+            "repair_materialize_fec6_live_segnet_region",
+            "repair_materialize_fec6_live_selector_codec",
+            "repair_materialize_psv3_live_frame0_k16_palette",
+            "repair_materialize_psv3_live_posenet_bottom_decile",
+            "repair_materialize_psv3_live_segnet_region",
+            "repair_materialize_psv3_live_selector_codec"
+          ],
+          "dominant_resource_kind": "local_io_heavy",
+          "elapsed_seconds_max": 0.8493402499880176,
+          "elapsed_seconds_mean": 0.6731731866129849,
+          "elapsed_seconds_min": 0.2590077500062762,
+          "elapsed_seconds_sum": 29.619620210971334,
+          "experiment_ids": [
+            "repair_materialize_fec6_live_frame0_k16_palette",
+            "repair_materialize_fec6_live_posenet_bottom_decile",
+            "repair_materialize_fec6_live_segnet_region",
+            "repair_materialize_fec6_live_selector_codec",
+            "repair_materialize_psv3_live_frame0_k16_palette",
+            "repair_materialize_psv3_live_posenet_bottom_decile",
+            "repair_materialize_psv3_live_segnet_region",
+            "repair_materialize_psv3_live_selector_codec"
+          ],
+          "failure_count": 1,
+          "log_bytes_mean": 1136.6363636363637,
+          "log_bytes_sum": 50012,
+          "resource_kind_counts": {
+            "local_io_heavy": 44
+          },
+          "run_count": 44,
+          "step_ids": [
+            "audit_repair_budget_materialization_execution",
+            "bind_repair_budget_materializer_execution",
+            "emit_repair_budget_child_component_replay_manifests",
+            "emit_repair_budget_materialization_plan",
+            "emit_repair_family_materializer_manifest",
+            "execute_repair_family_byte_transform"
+          ],
+          "success_count": 43
+        }
+      },
+      "event_count": 65,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+    "queue_path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+    "queued_step_count": 26,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [
+      {
+        "action": "run_worker",
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+          "--state",
+          ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "8"
+        ],
+        "rank": 50,
+        "reason": "26_queued_steps_available"
+      }
+    ],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_cpu": 18,
+        "local_io_heavy": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_cpu": 120,
+        "local_io_heavy": 120
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-28T19:48:54Z",
+      "event_count": 216,
+      "max_event_id": 216,
+      "max_step_updated_at_utc": "2026-05-28T19:53:00Z",
+      "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "step_state_count": 90
+    },
+    "status_counts": {
+      "queued": 26,
+      "succeeded": 64
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_repair_multi_archive_live_psv3_fec6_materialization",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "8",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "tick_index": 5,
+  "worker_result": {
+    "command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/repair_materialization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8",
+      "--max-parallel",
+      "2",
+      "--noncanonical-state-rationale",
+      "queue_supervisor_explicit_state_path_prevents_default_worker_collision"
+    ],
+    "elapsed_seconds": 4.5909429589955835,
+    "failed": false,
+    "json_payload": {
+      "allow_cloud": false,
+      "claim_refused_count": 0,
+      "execute": true,
+      "failure_count": 0,
+      "idle_cycles": 0,
+      "max_experiments": null,
+      "max_parallel": 2,
+      "noncanonical_state_rationale": "queue_supervisor_explicit_state_path_prevents_default_worker_collision",
+      "orphaned_state_rationale": null,
+      "planned_steps": [],
+      "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+      "requested_max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1
+      },
+      "schema": "experiment_queue_worker_result.v1",
+      "stale_running_reconciliations": [],
+      "started_at_utc": "2026-05-28T19:52:56Z",
+      "started_experiment_ids": [
+        "repair_materialize_fec6_live_selector_codec",
+        "repair_materialize_psv3_live_selector_codec"
+      ],
+      "state": ".omx/state/experiment_queue_repair_multi_archive_live_psv3_fec6_materialization.sqlite",
+      "step_results": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_child_component_replay_manifests.py",
+            "--materialization-plan",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_plan.json",
+            "--output-manifest",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_child_component_replay_manifests.json",
+            "--overwrite"
+          ],
+          "elapsed_seconds": 0.8126822500053095,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_selector_codec/emit_repair_budget_child_component_replay_manifests/20260528T195256Z_b0ebc4ff4e69327e.log",
+          "pid": 7859,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/build_frontier_repair_budget_child_component_replay_manifests.py",
+              "--materialization-plan",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_plan.json",
+              "--output-manifest",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_child_component_replay_manifests.json",
+              "--overwrite"
+            ],
+            "experiment_id": "repair_materialize_fec6_live_selector_codec",
+            "priority": 7,
+            "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+            "resource_kind": "local_io_heavy",
+            "step_hashes": {
+              "command_hash": "3fd6cd7137f9b567d276cde2a049346811bc58c9257531e4bf5aa592debd0156",
+              "definition_hash": "777baf242965e9d4d2c66cc16c0810bf473cff37a8c68454dfcc29836bf96ff4",
+              "postcondition_hash": "94d5fa0a6ed41aa9054efe4bd24da1beed928d6227881ece7a3479437780687f"
+            },
+            "step_id": "emit_repair_budget_child_component_replay_manifests"
+          },
+          "resource_kind": "local_io_heavy",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 3030,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:52:57Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_child_component_replay_manifests.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 1029,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "b0ebc4ff4e69327e"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/run_repair_family_byte_transform_executor.py",
+            "--family-materializer-manifest",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_materializer_manifest.json",
+            "--output-dir",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform",
+            "--execution-report-out",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform_execution_report.json",
+            "--replay-bundle-out",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform_replay_bundle.json",
+            "--overwrite"
+          ],
+          "elapsed_seconds": 0.5416519999998854,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_selector_codec/execute_repair_family_byte_transform/20260528T195257Z_07b466fac699d10e.log",
+          "pid": 7882,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/run_repair_family_byte_transform_executor.py",
+              "--family-materializer-manifest",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_materializer_manifest.json",
+              "--output-dir",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform",
+              "--execution-report-out",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform_execution_report.json",
+              "--replay-bundle-out",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform_replay_bundle.json",
+              "--overwrite"
+            ],
+            "experiment_id": "repair_materialize_fec6_live_selector_codec",
+            "priority": 7,
+            "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+            "resource_kind": "local_io_heavy",
+            "step_hashes": {
+              "command_hash": "1c4688ec29f295ee77459ab9ab318e7d0f2d65540101d51e6741abe9ee84d1dd",
+              "definition_hash": "c6d7d13d815ff597a43341260f6f428eb6e86b06544f1857c909d901a7135899",
+              "postcondition_hash": "98336ed33aa3d73ce0820f54e03af943e4c99653eb2ac02cd410152c17e19b53"
+            },
+            "step_id": "execute_repair_family_byte_transform"
+          },
+          "resource_kind": "local_io_heavy",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 2,
+            "artifact_records": [
+              {
+                "bytes": 245752,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:52:58Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform_execution_report.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 67640,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:52:58Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform_replay_bundle.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 1531,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "07b466fac699d10e"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materializer_binding_report.py",
+            "--materialization-plan",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_plan.json",
+            "--binding-report-out",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materializer_binding_report.json",
+            "--materializer-manifest",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_child_component_replay_manifests.json",
+            "--materializer-manifest",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_materializer_manifest.json",
+            "--materializer-manifest",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform_execution_report.json",
+            "--overwrite"
+          ],
+          "elapsed_seconds": 0.8094991669931915,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_selector_codec/bind_repair_budget_materializer_execution/20260528T195258Z_0835ff8067d6cbe0.log",
+          "pid": 7896,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/build_frontier_repair_budget_materializer_binding_report.py",
+              "--materialization-plan",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_plan.json",
+              "--binding-report-out",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materializer_binding_report.json",
+              "--materializer-manifest",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_child_component_replay_manifests.json",
+              "--materializer-manifest",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_materializer_manifest.json",
+              "--materializer-manifest",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_byte_transform_execution_report.json",
+              "--overwrite"
+            ],
+            "experiment_id": "repair_materialize_fec6_live_selector_codec",
+            "priority": 7,
+            "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+            "resource_kind": "local_io_heavy",
+            "step_hashes": {
+              "command_hash": "b82f35fc90725a00821de5f0b26398c769d9878247be7fb922208502f9e1e939",
+              "definition_hash": "2788f451850ea3958e3d71fee02d8233704ebbbf07ece88427f17ee7dcf2c2fc",
+              "postcondition_hash": "136dc51c97c3470c985bc8128e142782f30aeef34c116c62647c094f638c4cd8"
+            },
+            "step_id": "bind_repair_budget_materializer_execution"
+          },
+          "resource_kind": "local_io_heavy",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 35491,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:52:58Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materializer_binding_report.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 1007,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "0835ff8067d6cbe0"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materialization_execution_report.py",
+            "--materialization-plan",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_plan.json",
+            "--materializer-binding-report",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materializer_binding_report.json",
+            "--execution-report-out",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_execution_report.json",
+            "--overwrite"
+          ],
+          "elapsed_seconds": 0.8057289580028737,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_selector_codec/audit_repair_budget_materialization_execution/20260528T195259Z_5d0fb227243b4181.log",
+          "pid": 8003,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/build_frontier_repair_budget_materialization_execution_report.py",
+              "--materialization-plan",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_plan.json",
+              "--materializer-binding-report",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materializer_binding_report.json",
+              "--execution-report-out",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_execution_report.json",
+              "--overwrite"
+            ],
+            "experiment_id": "repair_materialize_fec6_live_selector_codec",
+            "priority": 7,
+            "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+            "resource_kind": "local_io_heavy",
+            "step_hashes": {
+              "command_hash": "2fc13700531892695a1a127bb418cfa93996c740bd1aa6bb8891a0cc98de5aea",
+              "definition_hash": "56294cc0b4403aab27b511a17e38d584a64a9bdc8f744553f456863ba10ebe49",
+              "postcondition_hash": "e10546deb298a651f663e587f56e7a3e98360c020ae83d3b3c75556d1e066036"
+            },
+            "step_id": "audit_repair_budget_materialization_execution"
+          },
+          "resource_kind": "local_io_heavy",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 46670,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:52:59Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_execution_report.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 969,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "5d0fb227243b4181"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "-c",
+            "import json, sys; from pathlib import Path; report = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8')); out = Path(sys.argv[2]); out.parent.mkdir(parents=True, exist_ok=True); payload = {'schema': 'repair_campaign_byte_closed_materialization_gate.v1', 'typed_response_id': sys.argv[3], 'candidate_id': sys.argv[4], 'source_execution_report_path': sys.argv[1], 'candidate_archive_materialized': report.get('candidate_archive_materialized') is True, 'archive_bound_runtime_consumption_proof_ready': report.get('runtime_consumption_proof_present') is True and report.get('receiver_consumed') is True, 'component_response_replayed': report.get('component_response_replayed') is True, 'exact_eval_handoff_eligible': False, 'budget_spend_allowed': False, 'ready_for_budget_spend': False, 'ready_for_exact_eval_dispatch': False, 'score_claim': False, 'promotion_eligible': False, 'rank_or_kill_eligible': False, 'blockers': report.get('blockers') or []}; out.write_text(json.dumps(payload, sort_keys=True, indent=2) + '\\n', encoding='utf-8')",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_execution_report.json",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_campaign_byte_closed_materialization_gate.json",
+            "fec6_live_selector_codec",
+            "per_region_selector_codec"
+          ],
+          "elapsed_seconds": 0.27672683299169876,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_selector_codec/emit_selected_repair_materialization_gate/20260528T195300Z_382586a74f4e4524.log",
+          "pid": 8016,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "-c",
+              "import json, sys; from pathlib import Path; report = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8')); out = Path(sys.argv[2]); out.parent.mkdir(parents=True, exist_ok=True); payload = {'schema': 'repair_campaign_byte_closed_materialization_gate.v1', 'typed_response_id': sys.argv[3], 'candidate_id': sys.argv[4], 'source_execution_report_path': sys.argv[1], 'candidate_archive_materialized': report.get('candidate_archive_materialized') is True, 'archive_bound_runtime_consumption_proof_ready': report.get('runtime_consumption_proof_present') is True and report.get('receiver_consumed') is True, 'component_response_replayed': report.get('component_response_replayed') is True, 'exact_eval_handoff_eligible': False, 'budget_spend_allowed': False, 'ready_for_budget_spend': False, 'ready_for_exact_eval_dispatch': False, 'score_claim': False, 'promotion_eligible': False, 'rank_or_kill_eligible': False, 'blockers': report.get('blockers') or []}; out.write_text(json.dumps(payload, sort_keys=True, indent=2) + '\\n', encoding='utf-8')",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_execution_report.json",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_campaign_byte_closed_materialization_gate.json",
+              "fec6_live_selector_codec",
+              "per_region_selector_codec"
+            ],
+            "experiment_id": "repair_materialize_fec6_live_selector_codec",
+            "priority": 7,
+            "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "d450b81f1e21e0d5e19c6ff2c93a27ff9070c23edb09d7502025867eb0f763e3",
+              "definition_hash": "e16c63fb069ced45e2b89c4db429e9e554ebbf25cca40aea100db2ab29102641",
+              "postcondition_hash": "df965b347547512398a26e0456a7d15ea1753dff626c284cf2a3aa77e76535b6"
+            },
+            "step_id": "emit_selected_repair_materialization_gate"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 1750,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:53:00Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_campaign_byte_closed_materialization_gate.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 0,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "382586a74f4e4524"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_repair_campaign_blocked_learning_signals.py",
+            "--materialization-execution-report",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_execution_report.json",
+            "--materialization-gate",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_campaign_byte_closed_materialization_gate.json",
+            "--family-materializer-manifest",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_materializer_manifest.json",
+            "--blocked-signal-report-out",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_learning_signal_report.json",
+            "--overwrite"
+          ],
+          "elapsed_seconds": 0.2579693750012666,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_selector_codec/build_repair_materialization_learning_signal/20260528T195300Z_d91253fda809090d.log",
+          "pid": 8018,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/build_repair_campaign_blocked_learning_signals.py",
+              "--materialization-execution-report",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_budget_materialization_execution_report.json",
+              "--materialization-gate",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_campaign_byte_closed_materialization_gate.json",
+              "--family-materializer-manifest",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_family_materializer_manifest.json",
+              "--blocked-signal-report-out",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_learning_signal_report.json",
+              "--overwrite"
+            ],
+            "experiment_id": "repair_materialize_fec6_live_selector_codec",
+            "priority": 7,
+            "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "6e457422cd60dd771df8bcf6e55ef57570dd83d4dc9a8ae7937a35159f7c74c5",
+              "definition_hash": "d471000dc5e3cc7259984a013aa8145f5674472099c5099cfa6815b514776d2f",
+              "postcondition_hash": "220042d3081bef72a2027f8a8b272a6bcf90dcc98d22ef4ad4f4378a6ba9b530"
+            },
+            "step_id": "build_repair_materialization_learning_signal"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 9629,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:53:00Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_learning_signal_report.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 1014,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "d91253fda809090d"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materialization_plan.py",
+            "--work-order",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/work_order.json",
+            "--materialization-plan-out",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_selector_codec/repair_budget_materialization_plan.json",
+            "--overwrite"
+          ],
+          "elapsed_seconds": 0.8052723750006407,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_psv3_live_selector_codec/emit_repair_budget_materialization_plan/20260528T195300Z_e81aeec75e5357bd.log",
+          "pid": 8017,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/build_frontier_repair_budget_materialization_plan.py",
+              "--work-order",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/work_order.json",
+              "--materialization-plan-out",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_selector_codec/repair_budget_materialization_plan.json",
+              "--overwrite"
+            ],
+            "experiment_id": "repair_materialize_psv3_live_selector_codec",
+            "priority": 8,
+            "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+            "resource_kind": "local_io_heavy",
+            "step_hashes": {
+              "command_hash": "b9c92af3b9bdea0367bfbf79019521f99ca391a867cb842f83a422a69d7e8ec8",
+              "definition_hash": "314ab6045b20fcacf3e9076c2bef48b29647931d0d747fc8ba8bee2a3d3dc977",
+              "postcondition_hash": "15fb0d119839df6a00868952360b5e7b9ea0f7a1647fa63ea60eb3579578c845"
+            },
+            "step_id": "emit_repair_budget_materialization_plan"
+          },
+          "resource_kind": "local_io_heavy",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 63122,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:53:00Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/psv3_live_selector_codec/repair_budget_materialization_plan.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 774,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "e81aeec75e5357bd"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/append_repair_campaign_blocked_posterior.py",
+            "--blocked-learning-signal-report",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_learning_signal_report.json",
+            "--posterior-path",
+            ".omx/state/repair_campaign_stackability_posterior.jsonl",
+            "--lock-path",
+            ".omx/state/.repair_campaign_stackability_posterior.lock",
+            "--report-out",
+            ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_posterior_append_report.json",
+            "--overwrite"
+          ],
+          "elapsed_seconds": 0.26143441699969117,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_selector_codec/append_repair_materialization_posterior_signal/20260528T195300Z_de38d0c4eceb4751.log",
+          "pid": 8019,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/append_repair_campaign_blocked_posterior.py",
+              "--blocked-learning-signal-report",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_learning_signal_report.json",
+              "--posterior-path",
+              ".omx/state/repair_campaign_stackability_posterior.jsonl",
+              "--lock-path",
+              ".omx/state/.repair_campaign_stackability_posterior.lock",
+              "--report-out",
+              ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_posterior_append_report.json",
+              "--overwrite"
+            ],
+            "experiment_id": "repair_materialize_fec6_live_selector_codec",
+            "priority": 7,
+            "queue_id": "repair_multi_archive_live_psv3_fec6_materialization",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "aa4239547b61310c2756e12f8773e32621fdd3e4eb35f547caef47d2e3cbecc0",
+              "definition_hash": "985444a131ad184985fb613ec6c5e112fe9dd91419aca319efaa4efa1717c149",
+              "postcondition_hash": "11f74d7369f93d422d1114568c9926d590d72b9ecd8ff5e3bd742fa036968a1b"
+            },
+            "step_id": "append_repair_materialization_posterior_signal"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 2,
+            "artifact_records": [
+              {
+                "bytes": 1477,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:53:00Z",
+                "path": ".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_posterior_append_report.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 6137236,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:53:00Z",
+                "path": ".omx/state/repair_campaign_stackability_posterior.jsonl",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 1064,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "de38d0c4eceb4751"
+        }
+      ],
+      "steps_started": 8,
+      "stop_reason": "max_steps_reached",
+      "stop_signals": [],
+      "success_count": 8
+    },
+    "label": "run_worker",
+    "returncode": 0,
+    "stderr_tail": "",
+    "stdout_tail": "  \"--posterior-path\",\n        \".omx/state/repair_campaign_stackability_posterior.jsonl\",\n        \"--lock-path\",\n        \".omx/state/.repair_campaign_stackability_posterior.lock\",\n        \"--report-out\",\n        \".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_posterior_append_report.json\",\n        \"--overwrite\"\n      ],\n      \"elapsed_seconds\": 0.26143441699969117,\n      \"executed\": true,\n      \"execution_error\": null,\n      \"failed_postconditions\": [],\n      \"log_path\": \"/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/repair_multi_archive_live_psv3_fec6_materialization/repair_materialize_fec6_live_selector_codec/append_repair_materialization_posterior_signal/20260528T195300Z_de38d0c4eceb4751.log\",\n      \"pid\": 8019,\n      \"postcondition_errors\": [],\n      \"ready_step\": {\n        \"command\": [\n          \".venv/bin/python\",\n          \"tools/append_repair_campaign_blocked_posterior.py\",\n          \"--blocked-learning-signal-report\",\n          \".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_learning_signal_report.json\",\n          \"--posterior-path\",\n          \".omx/state/repair_campaign_stackability_posterior.jsonl\",\n          \"--lock-path\",\n          \".omx/state/.repair_campaign_stackability_posterior.lock\",\n          \"--report-out\",\n          \".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_posterior_append_report.json\",\n          \"--overwrite\"\n        ],\n        \"experiment_id\": \"repair_materialize_fec6_live_selector_codec\",\n        \"priority\": 7,\n        \"queue_id\": \"repair_multi_archive_live_psv3_fec6_materialization\",\n        \"resource_kind\": \"local_cpu\",\n        \"step_hashes\": {\n          \"command_hash\": \"aa4239547b61310c2756e12f8773e32621fdd3e4eb35f547caef47d2e3cbecc0\",\n          \"definition_hash\": \"985444a131ad184985fb613ec6c5e112fe9dd91419aca319efaa4efa1717c149\",\n          \"postcondition_hash\": \"11f74d7369f93d422d1114568c9926d590d72b9ecd8ff5e3bd742fa036968a1b\"\n        },\n        \"step_id\": \"append_repair_materialization_posterior_signal\"\n      },\n      \"resource_kind\": \"local_cpu\",\n      \"returncode\": 0,\n      \"succeeded\": true,\n      \"telemetry\": {\n        \"artifact_record_count\": 2,\n        \"artifact_records\": [\n          {\n            \"bytes\": 1477,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-28T19:53:00Z\",\n            \"path\": \".omx/research/repair_multi_archive_autonomous_live_psv3_fec6_20260528T055303Z/queue_results/repair_campaign_byte_closed_materialization_queue/repair_multi_archive_live_psv3_fec6_materialization/fec6_live_selector_codec/repair_materialization_posterior_append_report.json\",\n            \"source\": \"step.telemetry.artifact_paths\"\n          },\n          {\n            \"bytes\": 6137236,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-28T19:53:00Z\",\n            \"path\": \".omx/state/repair_campaign_stackability_posterior.jsonl\",\n            \"source\": \"step.telemetry.artifact_paths\"\n          }\n        ],\n        \"log_bytes\": 1064,\n        \"recursive_truncated\": false,\n        \"schema\": \"experiment_queue_step_telemetry.v1\"\n      },\n      \"timed_out\": false,\n      \"worker_run_id\": \"de38d0c4eceb4751\"\n    }\n  ],\n  \"steps_started\": 8,\n  \"stop_reason\": \"max_steps_reached\",\n  \"stop_signals\": [],\n  \"success_count\": 8\n}\n"
+  }
+}

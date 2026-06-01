@@ -1,0 +1,278 @@
+{
+  "allowed_use": "post_feedback_bounded_local_autoloop_custody_only",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "executed_queue_count": 2,
+  "failed_command_count": 0,
+  "failed_queue_count": 0,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-27T19:33:06Z",
+  "gpu_launched": false,
+  "limit": 2,
+  "max_parallel": 1,
+  "max_steps": 3,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_runs": [
+    {
+      "allowed_use": "bounded_local_post_feedback_queue_execution_only",
+      "artifact_key": "operation_chain_compiler_queue",
+      "charged_bits_changed": false,
+      "commands": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+            "validate"
+          ],
+          "elapsed_seconds": 0.5528698329981125,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 442,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/command_logs/00_stdout.txt",
+          "stdout_sha256": "e1422d97ce2de370a3985e7a12a008885df18214ec4854f6d0e5cf56f36769e8"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+            "init"
+          ],
+          "elapsed_seconds": 0.5576228330028243,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 2419,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/command_logs/01_stdout.txt",
+          "stdout_sha256": "529ce7e23298821cf208cf48740cce39b3242d78fe6c455c07aceaaf467b3f04"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "3",
+            "--max-parallel",
+            "1",
+            "--poll-interval-seconds",
+            "0.05",
+            "--idle-sleep-seconds",
+            "0.0",
+            "--max-idle-cycles",
+            "1"
+          ],
+          "elapsed_seconds": 1.6362009170006786,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 9078,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/command_logs/02_stdout.txt",
+          "stdout_sha256": "79758bca9b9473b16f5c127c8c5747763009524aab75b99e1d3dd5a918e7bda1"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+            "observe",
+            "--format",
+            "json"
+          ],
+          "elapsed_seconds": 0.5521944160027488,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 10036,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/command_logs/03_stdout.txt",
+          "stdout_sha256": "2627f11804ec367225a103708e0fc99bde2c870934102536bb8e89e6327b505b"
+        }
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "failed_command_count": 0,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+      "gpu_launched": false,
+      "observer_revalidation_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/observer_revalidation.json",
+      "progress_blockers": [],
+      "progress_made": true,
+      "promotable": false,
+      "promotion_eligible": false,
+      "queue_blockers": [],
+      "queue_healthy": true,
+      "queue_id": "frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_chain_compiler",
+      "queue_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+      "queue_status_counts": {
+        "succeeded": 2
+      },
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "frontier_final_rate_attack_post_feedback_child_queue_run.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+      "steps_started": 2
+    },
+    {
+      "allowed_use": "bounded_local_post_feedback_queue_execution_only",
+      "artifact_key": "autonomous_chain_optimization_queue",
+      "charged_bits_changed": false,
+      "commands": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+            "validate"
+          ],
+          "elapsed_seconds": 0.5249924159979855,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 458,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/autonomous_chain_optimization_queue/command_logs/00_stdout.txt",
+          "stdout_sha256": "27737027b7c14ffbe0d8d524c4c799f6f5f3b9fffae00deb34a55d9b0b97e5c0"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+            "init"
+          ],
+          "elapsed_seconds": 0.5545233330012707,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 5365,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/autonomous_chain_optimization_queue/command_logs/01_stdout.txt",
+          "stdout_sha256": "9616d278d3a861dd9ebb6a4e54c024efed9fe9b83be54441ea4e0a29c0dcded6"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "3",
+            "--max-parallel",
+            "1",
+            "--poll-interval-seconds",
+            "0.05",
+            "--idle-sleep-seconds",
+            "0.0",
+            "--max-idle-cycles",
+            "1"
+          ],
+          "elapsed_seconds": 0.5296489579995978,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 939,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/autonomous_chain_optimization_queue/command_logs/02_stdout.txt",
+          "stdout_sha256": "2687185d3ae671b0cb04251d667c2d3d05da58d82cab2cfbbac44cf74942eb34"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+            "observe",
+            "--format",
+            "json"
+          ],
+          "elapsed_seconds": 0.5689457090011274,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 48815,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/autonomous_chain_optimization_queue/command_logs/03_stdout.txt",
+          "stdout_sha256": "c101a2f5e22a1fdaf3886d2f152287951649ab18c86f3b749db757890ce9cfd1"
+        }
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "failed_command_count": 0,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+      "gpu_launched": false,
+      "observer_revalidation_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_child_queue_observations/autonomous_chain_optimization_queue/observer_revalidation.json",
+      "progress_blockers": [
+        "child_queue_worker_started_zero_steps_with_queued_work"
+      ],
+      "progress_made": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "queue_blockers": [],
+      "queue_healthy": true,
+      "queue_id": "frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+      "queue_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+      "queue_status_counts": {
+        "queued": 15
+      },
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "frontier_final_rate_attack_post_feedback_child_queue_run.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+      "steps_started": 0
+    }
+  ],
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_final_rate_attack_post_feedback_child_queue_runs.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_queue_count": 2,
+  "selected_queues": [
+    {
+      "artifact_key": "operation_chain_compiler_queue",
+      "queue_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json"
+    },
+    {
+      "artifact_key": "autonomous_chain_optimization_queue",
+      "queue_path": ".omx/research/frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json"
+    }
+  ],
+  "stalled_queue_count": 1
+}

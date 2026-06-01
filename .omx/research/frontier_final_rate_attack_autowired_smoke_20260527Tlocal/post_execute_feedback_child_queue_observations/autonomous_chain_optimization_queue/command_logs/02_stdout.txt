@@ -1,0 +1,1324 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 3,
+  "idle_cycles": 0,
+  "max_experiments": null,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_io_heavy": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-27T21:11:38Z",
+  "started_experiment_ids": [
+    "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+    "autonomous_chain_portfolio_materializer_context_closure_campaign",
+    "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+  ],
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_autonomous_chain_work_order.py",
+        "--autonomous-chain-optimization",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json",
+        "--chain-id",
+        "global_many_op_rate_distortion_receiver_campaign",
+        "--work-order-out",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json",
+        "--overwrite",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "--queue-actuation-ready"
+      ],
+      "elapsed_seconds": 0.5991303749979124,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_global_many_op_rate_distortion_receiver_campaign/emit_autonomous_chain_work_order/20260527T211138Z_2a1b07c9cdc87336.log",
+      "pid": 65135,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_autonomous_chain_work_order.py",
+          "--autonomous-chain-optimization",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json",
+          "--chain-id",
+          "global_many_op_rate_distortion_receiver_campaign",
+          "--work-order-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json",
+          "--overwrite",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "--queue-actuation-ready"
+        ],
+        "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "ec0d48a807664083ca56020ae3f3bedda3ab45ae6b995a44227026b5def29654",
+          "definition_hash": "1c8785d65696426ce446daae332dc42cb5bb8ddebbaf092b9b58f3dfcfd411fa",
+          "postcondition_hash": "d195ef8bbc6a9af648be725ccd329a48fd134ce9101225c8736a0a7a17e1dc9b"
+        },
+        "step_id": "emit_autonomous_chain_work_order"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 22957,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:11:39Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/autonomous_chain_work_order.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 678,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "2a1b07c9cdc87336"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.5446564170015336,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_global_many_op_rate_distortion_receiver_campaign/validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue/20260527T211139Z_e360d9a4d4812924.log",
+      "pid": 65136,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "4c5784153ecab540ee95f139ae85af8c8cf8556f9324c4bc0deb5be98d2c48bc",
+          "definition_hash": "495e999fb58232bf42c62b9ce10e30f3fb6f6c97b4f9ae1aaa7212a7bf383fca",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 492,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "e360d9a4d4812924"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "8",
+        "--max-experiments",
+        "2",
+        "--max-parallel",
+        "1",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+      ],
+      "elapsed_seconds": 3.723544958000275,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [
+        {
+          "equals": 0,
+          "key": "failure_count",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+          "type": "json_equals"
+        }
+      ],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_global_many_op_rate_distortion_receiver_campaign/run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local/20260527T211139Z_7d360359549b1ce3.log",
+      "pid": 65137,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "8",
+          "--max-experiments",
+          "2",
+          "--max-parallel",
+          "1",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+        ],
+        "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "a5592a4ebd6a7b01d8cf878dba99e31125b0a32330bca6e74dd40557b5384ab1",
+          "definition_hash": "67193a00428f3877879537d224b93c6463bd0b4fafb232f3020e613b3cb3af2c",
+          "postcondition_hash": "1429c2373fc7c20fd810c7e50d9ca5e5c102805c432876e6beac248f2ae59213"
+        },
+        "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 2,
+      "succeeded": false,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 19990,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:11:43Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 19990,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "7d360359549b1ce3"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.542774792000273,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_global_many_op_rate_distortion_receiver_campaign/validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue/20260527T211143Z_2974678e3b7db57a.log",
+      "pid": 65156,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "de91abbc4604cbd22efa89e9706f474c23d1c4a6a6b1e9ed9142d3a5d6f0dad1",
+          "definition_hash": "eebf03f5a8a6070262b3b4dfa9a0971502d5cae5fab7ba9404184e8fee6f00c5",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 490,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "2974678e3b7db57a"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.5835403339988261,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_global_many_op_rate_distortion_receiver_campaign/validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acqu_6c9e6141140816ba/20260527T211144Z_44d692639038c2f5.log",
+      "pid": 65157,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "a23d3092fc82385a1e9255ddc3ec4816ab50174127b459826ab9bdde21d59df7",
+          "definition_hash": "581eb7aa72a370bf2767e8cb6a62edf2baa9efcbd1f80181ebe02cbcfda04590",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 505,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "44d692639038c2f5"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "12",
+        "--max-experiments",
+        "4",
+        "--max-parallel",
+        "2",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json"
+      ],
+      "elapsed_seconds": 7.842671000002156,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [
+        {
+          "equals": 0,
+          "key": "failure_count",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json",
+          "type": "json_equals"
+        }
+      ],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_global_many_op_rate_distortion_receiver_campaign/run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisiti_c7d69d07895a952c/20260527T211144Z_24243173e69c916d.log",
+      "pid": 65158,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "12",
+          "--max-experiments",
+          "4",
+          "--max-parallel",
+          "2",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json"
+        ],
+        "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "d17efa46472e04dc617c55cbcaee7a1e6a59702cecec301feafb46448ead36d2",
+          "definition_hash": "35ddf8aacbadba9673a93b3888068503ff4ae26be9790e6a5dec35897ffff6b6",
+          "postcondition_hash": "7efde78f118d2e8c918fff74bb4b80b35a9e45ade7f8988cbff979e1af62bf8f"
+        },
+        "step_id": "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 2,
+      "succeeded": false,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 24876,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:11:52Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/global_many_op_rate_distortion_receiver_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 24876,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "24243173e69c916d"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_autonomous_chain_work_order.py",
+        "--autonomous-chain-optimization",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json",
+        "--chain-id",
+        "portfolio_materializer_context_closure_campaign",
+        "--work-order-out",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json",
+        "--overwrite",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "--queue-actuation-ready"
+      ],
+      "elapsed_seconds": 0.5904538750000938,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_portfolio_materializer_context_closure_campaign/emit_autonomous_chain_work_order/20260527T211152Z_091d568f7a2031a4.log",
+      "pid": 65411,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_autonomous_chain_work_order.py",
+          "--autonomous-chain-optimization",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json",
+          "--chain-id",
+          "portfolio_materializer_context_closure_campaign",
+          "--work-order-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json",
+          "--overwrite",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "--queue-actuation-ready"
+        ],
+        "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+        "priority": 2,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "0c10a368459bddd140ef6862d9b2cde366ebfb72a84e13937dc8d12f9b99d076",
+          "definition_hash": "41a491195fe51ec822901038842552826d7499b6a6b196db0e16de749b52a87c",
+          "postcondition_hash": "dc21d380b6dff7c2a62b8d8cd9b30dfbd927b5d2677af1c1c87ac5a61207772b"
+        },
+        "step_id": "emit_autonomous_chain_work_order"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 22902,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:11:53Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/autonomous_chain_work_order.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 676,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "091d568f7a2031a4"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.5444871250001597,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_portfolio_materializer_context_closure_campaign/validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue/20260527T211153Z_23fd2e8615828af2.log",
+      "pid": 65412,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+        "priority": 2,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "4c5784153ecab540ee95f139ae85af8c8cf8556f9324c4bc0deb5be98d2c48bc",
+          "definition_hash": "b8185aec051531b3b3fa38f6f6ab91c258d77d0e3a87c5c008f6a9467f2cf18c",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 492,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "23fd2e8615828af2"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "8",
+        "--max-experiments",
+        "2",
+        "--max-parallel",
+        "1",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+      ],
+      "elapsed_seconds": 0.5441288329966483,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_portfolio_materializer_context_closure_campaign/run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local/20260527T211153Z_db6022db8f1899bb.log",
+      "pid": 65414,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "8",
+          "--max-experiments",
+          "2",
+          "--max-parallel",
+          "1",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+        ],
+        "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+        "priority": 2,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "39cc422c0bcfb054ca9f4e71a8edb7f5bafcf21805fff6d5870112b578a6edd0",
+          "definition_hash": "399e82573a6ae7203fa799fc4ea0912b517114377e342d711f6bb214bf0c869a",
+          "postcondition_hash": "40d2256c640ad1a13da0b6dedf1004efa99db5c1b70eb55459ee5131d37cb42f"
+        },
+        "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 956,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:11:54Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 956,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "db6022db8f1899bb"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.543997542001307,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_portfolio_materializer_context_closure_campaign/validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue/20260527T211154Z_af4281c0025f637e.log",
+      "pid": 65415,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+        "priority": 2,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "de91abbc4604cbd22efa89e9706f474c23d1c4a6a6b1e9ed9142d3a5d6f0dad1",
+          "definition_hash": "4b16d34813408e31994cde7b6be00bedc9329a75fb13f1d0f0d2d30bab35ae15",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 490,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "af4281c0025f637e"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "12",
+        "--max-experiments",
+        "2",
+        "--max-parallel",
+        "1",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+      ],
+      "elapsed_seconds": 4.294936124999367,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [
+        {
+          "equals": 0,
+          "key": "failure_count",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json",
+          "type": "json_equals"
+        }
+      ],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_portfolio_materializer_context_closure_campaign/run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_sco_7aff530233a603b1/20260527T211154Z_cb58d8b23b3875d5.log",
+      "pid": 65416,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "12",
+          "--max-experiments",
+          "2",
+          "--max-parallel",
+          "1",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+        ],
+        "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+        "priority": 2,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "4637fe8b15abbf239a310668f16e48dd2d234ed465d6c2fd82003fc357eaa7b0",
+          "definition_hash": "8c996df46e8c6cda79082430a7f6143a95823d57453912c380a21016ce3b759f",
+          "postcondition_hash": "66374d7f2f2e31130f8c6520bf9ac13d9b753ffe9eac1593e374a19e15b631b0"
+        },
+        "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 2,
+      "succeeded": false,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 27526,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:11:59Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 27526,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "cb58d8b23b3875d5"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.5443002910033101,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_portfolio_materializer_context_closure_campaign/validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acqu_6c9e6141140816ba/20260527T211159Z_143138038d2c035c.log",
+      "pid": 65439,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+        "priority": 2,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "a23d3092fc82385a1e9255ddc3ec4816ab50174127b459826ab9bdde21d59df7",
+          "definition_hash": "dbb2acf364b494de73f4ef5a6d4f0a9da3592081564f86e96e8195b77d132dd4",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 505,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "143138038d2c035c"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "12",
+        "--max-experiments",
+        "4",
+        "--max-parallel",
+        "2",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json"
+      ],
+      "elapsed_seconds": 0.5442199999997683,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_portfolio_materializer_context_closure_campaign/run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisiti_c7d69d07895a952c/20260527T211159Z_2273067d4c94e022.log",
+      "pid": 65440,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "12",
+          "--max-experiments",
+          "4",
+          "--max-parallel",
+          "2",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json"
+        ],
+        "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+        "priority": 2,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "9f3a21b00756422e2b3939799f7fca83527b6f0b6f05e77bccd7c0d8c33428dd",
+          "definition_hash": "5ca851937b4af0c8119e4db470ee4890aeb345e90ac03f2860f98ddbf7b63476",
+          "postcondition_hash": "800ba38f218129bb322a7acaea371b3cfa9e2441c40f2634bed71b77b3a0e5b2"
+        },
+        "step_id": "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 984,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:12:00Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/portfolio_materializer_context_closure_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 984,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "2273067d4c94e022"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_autonomous_chain_work_order.py",
+        "--autonomous-chain-optimization",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json",
+        "--chain-id",
+        "segnet_posenet_geometry_drop_many_campaign",
+        "--work-order-out",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json",
+        "--overwrite",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "--child-queue-artifact-path",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "--queue-actuation-ready"
+      ],
+      "elapsed_seconds": 0.5396239589972538,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/emit_autonomous_chain_work_order/20260527T211200Z_2c9ebcfbd7ac1df9.log",
+      "pid": 65441,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_autonomous_chain_work_order.py",
+          "--autonomous-chain-optimization",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization.json",
+          "--chain-id",
+          "segnet_posenet_geometry_drop_many_campaign",
+          "--work-order-out",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json",
+          "--overwrite",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+          "--child-queue-artifact-path",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "--queue-actuation-ready"
+        ],
+        "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+        "priority": 3,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "e65b640ff9c1b9af055445bba52b1eb8c5b8567874fa0b0a80fa8dd8efb4f865",
+          "definition_hash": "be864fa007d8d40eb57dde362c3c0d43c5bde8b68053e2690505876bc7cfb448",
+          "postcondition_hash": "fd60150db0c2fed2b57036e1573e7413116cdac881aa99696fe8b62699a45ad5"
+        },
+        "step_id": "emit_autonomous_chain_work_order"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 22176,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:12:00Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/autonomous_chain_work_order.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 666,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "2c9ebcfbd7ac1df9"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.5442119590006769,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue/20260527T211200Z_0124198aeda485b3.log",
+      "pid": 65442,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+        "priority": 3,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "4c5784153ecab540ee95f139ae85af8c8cf8556f9324c4bc0deb5be98d2c48bc",
+          "definition_hash": "c15c4e0a3860ce5d274eb806b0431c3223b78fc2f94e0a2d1b59d77e7a0eb1fd",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 492,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "0124198aeda485b3"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "8",
+        "--max-experiments",
+        "2",
+        "--max-parallel",
+        "1",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+      ],
+      "elapsed_seconds": 0.5398742910001602,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local/20260527T211201Z_36c51383dc2fecdb.log",
+      "pid": 65451,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_budget_waterfill_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "8",
+          "--max-experiments",
+          "2",
+          "--max-parallel",
+          "1",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json"
+        ],
+        "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+        "priority": 3,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "ac080f04d2fec4b7c22bab515b6fed4676fc62a037a40e02622ec8fe812f1a1c",
+          "definition_hash": "1d9803e5a1cdf62d39be0cbc9b364e672e6dc782ea8a484047db0ae594fe14ad",
+          "postcondition_hash": "5bcdf7abb9e45d2126b08513ec3261763684202c5ed835cce66251edc6a419e4"
+        },
+        "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 956,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:12:01Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_worker_result.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 956,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "36c51383dc2fecdb"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.5441030000001774,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue/20260527T211201Z_4b3b1af015b812ea.log",
+      "pid": 65453,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+        "priority": 3,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "de91abbc4604cbd22efa89e9706f474c23d1c4a6a6b1e9ed9142d3a5d6f0dad1",
+          "definition_hash": "f523e4045ef1ca82faea01db36e671471d17f61138eefd828117a1c56be7d136",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 490,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "4b3b1af015b812ea"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "12",
+        "--max-experiments",
+        "2",
+        "--max-parallel",
+        "1",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+      ],
+      "elapsed_seconds": 0.5432335420009622,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_sco_7aff530233a603b1/20260527T211202Z_5623500116927871.log",
+      "pid": 65454,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "12",
+          "--max-experiments",
+          "2",
+          "--max-parallel",
+          "1",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+        ],
+        "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+        "priority": 3,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "c004079fc3aa7c0d2f0d45eada2d210d815c9d3b1f0a0309e2cee3daf60702e4",
+          "definition_hash": "cdaf423e76f02d89d649e5c7824e4da62ee467f9779cd6766af49a86be138c37",
+          "postcondition_hash": "3831d5e561cb76abdf722e1185c5531d450ac83bc6f527deaf8ab1b7a6903b9a"
+        },
+        "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 952,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:12:02Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 952,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "5623500116927871"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.5440139579986862,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acqu_6c9e6141140816ba/20260527T211203Z_af7b7372becb5df9.log",
+      "pid": 65466,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "validate"
+        ],
+        "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+        "priority": 3,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "a23d3092fc82385a1e9255ddc3ec4816ab50174127b459826ab9bdde21d59df7",
+          "definition_hash": "aae7beb376265a6b9344571ceafe6b9aefaf12fba47e18b30cd8564ccb1b2204",
+          "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "step_id": "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 0,
+        "artifact_records": [],
+        "log_bytes": 505,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "af7b7372becb5df9"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "12",
+        "--max-experiments",
+        "4",
+        "--max-parallel",
+        "2",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json"
+      ],
+      "elapsed_seconds": 0.5977849999981117,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_6afa1f10aa63a472/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisiti_c7d69d07895a952c/20260527T211203Z_89745797a53cb48b.log",
+      "pid": 65467,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/frontier_final_rate_attack_autowired_smoke_20260527Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "12",
+          "--max-experiments",
+          "4",
+          "--max-parallel",
+          "2",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json"
+        ],
+        "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+        "priority": 3,
+        "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "358297918e9a782d0d61f12182ff62942a24afbfa8ba4811016dcea69b5a3956",
+          "definition_hash": "2b34f8aa88fee55adbf9efd7a2a2f196eaa8501fe5388c4633fa2806ed6c16b7",
+          "postcondition_hash": "e068a9b27bc005dcf6e03c0e0885ce15c8040a828173d9007de42bf9fbb189ca"
+        },
+        "step_id": "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 984,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T21:12:04Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_autowired_smoke_20260527tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 984,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "89745797a53cb48b"
+    }
+  ],
+  "steps_started": 20,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 17
+}

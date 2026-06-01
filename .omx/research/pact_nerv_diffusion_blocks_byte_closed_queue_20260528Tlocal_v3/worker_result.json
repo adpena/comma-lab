@@ -1,0 +1,623 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 0,
+  "max_experiments": null,
+  "max_parallel": 2,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3",
+  "requested_max_parallel": 2,
+  "resource_limits": {
+    "local_cpu": 1,
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-28T04:05:20Z",
+  "started_experiment_ids": [
+    "pact_nerv_diffusion_blocks_mlx_smoke"
+  ],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_pact_nerv_diffusion_blocks_schedule.py",
+        "--output",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/diffusion_blocks_schedule.json",
+        "--block-count",
+        "2",
+        "--difficulty-mass-source",
+        "scorer_region_waterfill_and_master_gradient",
+        "--overlap-fraction",
+        "0.0",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.6703131670001312,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3/pact_nerv_diffusion_blocks_mlx_smoke/emit_diffusion_blocks_schedule/20260528T040520Z_e491781754ed7e26.log",
+      "pid": 5692,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_pact_nerv_diffusion_blocks_schedule.py",
+          "--output",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/diffusion_blocks_schedule.json",
+          "--block-count",
+          "2",
+          "--difficulty-mass-source",
+          "scorer_region_waterfill_and_master_gradient",
+          "--overlap-fraction",
+          "0.0",
+          "--overwrite"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "7b6d5ea59183dee161e4a8d592e523af4b289067bece1eb857df87a6f1556cf8",
+          "definition_hash": "716a9cfe9d19c7f26df06cfccfc499848ee7a9cc0225afd64220cb3291233be2",
+          "postcondition_hash": "32d4f9b8ba5604f83111ee3e9e7bb7656708e669f6b4058a98c7f6ee465f6fc7"
+        },
+        "step_id": "emit_diffusion_blocks_schedule"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 3559,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:21Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/diffusion_blocks_schedule.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 375,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "e491781754ed7e26"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "experiments/train_substrate_pact_nerv_ia3_mlx_local.py",
+        "--smoke",
+        "--output-dir",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_renderer_smoke",
+        "--num-pairs",
+        "4"
+      ],
+      "elapsed_seconds": 0.5543495000019902,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3/pact_nerv_diffusion_blocks_mlx_smoke/run_pact_nerv_ia3_mlx_renderer_smoke/20260528T040521Z_096b20ed47a765ab.log",
+      "pid": 5695,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "experiments/train_substrate_pact_nerv_ia3_mlx_local.py",
+          "--smoke",
+          "--output-dir",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_renderer_smoke",
+          "--num-pairs",
+          "4"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "cc6e016195d51e24804e2b415cb79472e688e2165a01beba5e7ea18c8d2462a0",
+          "definition_hash": "37a117c166d77b772b3c193e4217d968b67e868b6b418fe2db84c0e5f7ae5bd8",
+          "postcondition_hash": "d29a675bb7e1c73fa6a0b65af8aa6fbb1982c6661ff9fa5276dd4ccd6494e169"
+        },
+        "step_id": "run_pact_nerv_ia3_mlx_renderer_smoke"
+      },
+      "resource_kind": "local_mlx",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 96,
+            "exists": true,
+            "is_dir": true,
+            "is_file": false,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:21Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_renderer_smoke",
+            "recursive_bytes": 1706,
+            "recursive_entry_count": 1,
+            "recursive_entry_limit": 64,
+            "recursive_truncated": false,
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 1706,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:21Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 304,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "096b20ed47a765ab"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "experiments/train_substrate_pact_nerv_diffusion_distilled.py",
+        "--smoke",
+        "--device",
+        "cpu",
+        "--epochs",
+        "1",
+        "--batch-size",
+        "4",
+        "--output-dir",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_diffusion_distilled_smoke"
+      ],
+      "elapsed_seconds": 1.2267800420013373,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3/pact_nerv_diffusion_blocks_mlx_smoke/run_pact_nerv_diffusion_distilled_smoke/20260528T040521Z_8147ed86642cb042.log",
+      "pid": 5694,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "experiments/train_substrate_pact_nerv_diffusion_distilled.py",
+          "--smoke",
+          "--device",
+          "cpu",
+          "--epochs",
+          "1",
+          "--batch-size",
+          "4",
+          "--output-dir",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_diffusion_distilled_smoke"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "8ed89d6ded912c7543a1672127661b25a033ffcfc7695ca361374770cae943e0",
+          "definition_hash": "3499168773bf78101e75efcfc1ea842016dea354b9d68b15a33b44e092aa6904",
+          "postcondition_hash": "f7965cf4537882b611aa7e985d9cff5e63112156ea365799301f6c5c4475ed6c"
+        },
+        "step_id": "run_pact_nerv_diffusion_distilled_smoke"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 128,
+            "exists": true,
+            "is_dir": true,
+            "is_file": false,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:22Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_diffusion_distilled_smoke",
+            "recursive_bytes": 33333,
+            "recursive_entry_count": 2,
+            "recursive_entry_limit": 64,
+            "recursive_truncated": false,
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 1834,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:22Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 426,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "8147ed86642cb042"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/run_pr95_mlx_long_training.py",
+        "--output-report",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_control_plan.json",
+        "--source-video-path",
+        "upstream/videos/0.mkv",
+        "--checkpoint-root",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_checkpoints",
+        "--telemetry-path",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_telemetry.jsonl",
+        "--operator-run-label",
+        "diffusionblocks_blockwise_control",
+        "--smoke-mode",
+        "--smoke-epochs-per-stage",
+        "1",
+        "--max-frames",
+        "8",
+        "--hash-source-video",
+        "--execute-smoke"
+      ],
+      "elapsed_seconds": 1.1014067079959204,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3/pact_nerv_diffusion_blocks_mlx_smoke/plan_pr95_mlx_blockwise_control/20260528T040522Z_2d2eb531c26906f5.log",
+      "pid": 5696,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_pr95_mlx_long_training.py",
+          "--output-report",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_control_plan.json",
+          "--source-video-path",
+          "upstream/videos/0.mkv",
+          "--checkpoint-root",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_checkpoints",
+          "--telemetry-path",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_telemetry.jsonl",
+          "--operator-run-label",
+          "diffusionblocks_blockwise_control",
+          "--smoke-mode",
+          "--smoke-epochs-per-stage",
+          "1",
+          "--max-frames",
+          "8",
+          "--hash-source-video",
+          "--execute-smoke"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "d5ae17471dd20944446ac39890046d2edff7de71b5410e8884dc474d38e41b06",
+          "definition_hash": "77135809cf0b18b4c231637a8bcaa8bd0009b4223ae2116eeb6f66123659465c",
+          "postcondition_hash": "6a36280467b6f412d0f4151bb6b24159a1cd2ec5c745ceacdd0e9d46ab93c094"
+        },
+        "step_id": "plan_pr95_mlx_blockwise_control"
+      },
+      "resource_kind": "local_mlx",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 36474,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:23Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_control_plan.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 756,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "2d2eb531c26906f5"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py",
+        "--report-out",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+        "--pt-out",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+        "--pair-indices",
+        "0,1,2",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.5586105409965967,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3/pact_nerv_diffusion_blocks_mlx_smoke/prove_pact_nerv_ia3_mlx_pytorch_forward_parity/20260528T040523Z_d4fb13f4509e7516.log",
+      "pid": 5809,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py",
+          "--report-out",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+          "--pt-out",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+          "--pair-indices",
+          "0,1,2",
+          "--overwrite"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "0421a3f6ef89812f2101a3472394c02931a17c99e497fc1e878f7cc7ee4c413b",
+          "definition_hash": "9e33740882f7752e04ad08ac55263b730a88d5fbaa1a22441afd5cc7c143dec7",
+          "postcondition_hash": "a1454532e5c9ce000e100a2449314207ae1ad690682c0e52538487f98955861a"
+        },
+        "step_id": "prove_pact_nerv_ia3_mlx_pytorch_forward_parity"
+      },
+      "resource_kind": "local_mlx",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 12075,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:23Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 40949,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:23Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 576,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "d4fb13f4509e7516"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/materialize_pact_nerv_ia3_byte_closed_candidate.py",
+        "--pytorch-state-dict",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+        "--parity-report",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+        "--output-dir",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate",
+        "--manifest-out",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate.json",
+        "--label",
+        "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3:pact_nerv_ia3_byte_closed",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 1.0927118330000667,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3/pact_nerv_diffusion_blocks_mlx_smoke/materialize_pact_nerv_ia3_byte_closed_candidate/20260528T040523Z_cc6ccb2350c0bb58.log",
+      "pid": 5811,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/materialize_pact_nerv_ia3_byte_closed_candidate.py",
+          "--pytorch-state-dict",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+          "--parity-report",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+          "--output-dir",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate",
+          "--manifest-out",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate.json",
+          "--label",
+          "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3:pact_nerv_ia3_byte_closed",
+          "--overwrite"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "e17d1f0e1d2b460e5f0d3974ea92c39fc07340d6b3482b220c1f0a3b515a3708",
+          "definition_hash": "7b8196aa2f32d88f6b680db666df5da0a6cc871a5e9233ba91faa442e79bf4d8",
+          "postcondition_hash": "27de84e492f782df6941d18d45abcc1d5d3a811673b4d0ef2dbf565c286f7f1f"
+        },
+        "step_id": "materialize_pact_nerv_ia3_byte_closed_candidate"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 3,
+        "artifact_records": [
+          {
+            "bytes": 4457,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:24Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 26267,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:24Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate/archive.zip",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 4968,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:24Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate/receiver_inflate_proof.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 657,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "cc6ccb2350c0bb58"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_mlx_local_replay_bundle.py",
+        "--bundle-out",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/mlx_local_replay_bundle.json",
+        "--bundle-id",
+        "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3:pact_nerv_diffusionblocks_mlx",
+        "--command-json",
+        "[[\".venv/bin/python\",\"tools/build_pact_nerv_diffusion_blocks_schedule.py\",\"--output\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/diffusion_blocks_schedule.json\",\"--block-count\",\"2\",\"--difficulty-mass-source\",\"scorer_region_waterfill_and_master_gradient\",\"--overlap-fraction\",\"0.0\",\"--overwrite\"],[\".venv/bin/python\",\"experiments/train_substrate_pact_nerv_diffusion_distilled.py\",\"--smoke\",\"--device\",\"cpu\",\"--epochs\",\"1\",\"--batch-size\",\"4\",\"--output-dir\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_diffusion_distilled_smoke\"],[\".venv/bin/python\",\"experiments/train_substrate_pact_nerv_ia3_mlx_local.py\",\"--smoke\",\"--output-dir\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_renderer_smoke\",\"--num-pairs\",\"4\"],[\".venv/bin/python\",\"tools/run_pr95_mlx_long_training.py\",\"--output-report\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_control_plan.json\",\"--source-video-path\",\"upstream/videos/0.mkv\",\"--checkpoint-root\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_checkpoints\",\"--telemetry-path\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_telemetry.jsonl\",\"--operator-run-label\",\"diffusionblocks_blockwise_control\",\"--smoke-mode\",\"--smoke-epochs-per-stage\",\"1\",\"--max-frames\",\"8\",\"--hash-source-video\",\"--execute-smoke\"],[\".venv/bin/python\",\"tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py\",\"--report-out\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json\",\"--pt-out\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt\",\"--pair-indices\",\"0,1,2\",\"--overwrite\"],[\".venv/bin/python\",\"tools/materialize_pact_nerv_ia3_byte_closed_candidate.py\",\"--pytorch-state-dict\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt\",\"--parity-report\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json\",\"--output-dir\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate\",\"--manifest-out\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate.json\",\"--label\",\"pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3:pact_nerv_ia3_byte_closed\",\"--overwrite\"]]",
+        "--input-artifact",
+        "upstream/videos/0.mkv",
+        "--input-artifact",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/diffusion_blocks_schedule.json",
+        "--artifact",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json",
+        "--artifact",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+        "--artifact",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_control_plan.json",
+        "--artifact",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+        "--artifact",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate.json",
+        "--artifact",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate/archive.zip",
+        "--artifact",
+        ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate/receiver_inflate_proof.json",
+        "--metadata-json",
+        "{\"paper_basis\":\"arxiv:2506.14202v3\",\"queue_id\":\"pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3\",\"substrate_family\":\"pact_nerv_diffusion_blocks\"}",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.6530284170003142,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3/pact_nerv_diffusion_blocks_mlx_smoke/emit_mlx_local_deterministic_replay_bundle/20260528T040524Z_72e7c900da7c631b.log",
+      "pid": 5818,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_mlx_local_replay_bundle.py",
+          "--bundle-out",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/mlx_local_replay_bundle.json",
+          "--bundle-id",
+          "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3:pact_nerv_diffusionblocks_mlx",
+          "--command-json",
+          "[[\".venv/bin/python\",\"tools/build_pact_nerv_diffusion_blocks_schedule.py\",\"--output\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/diffusion_blocks_schedule.json\",\"--block-count\",\"2\",\"--difficulty-mass-source\",\"scorer_region_waterfill_and_master_gradient\",\"--overlap-fraction\",\"0.0\",\"--overwrite\"],[\".venv/bin/python\",\"experiments/train_substrate_pact_nerv_diffusion_distilled.py\",\"--smoke\",\"--device\",\"cpu\",\"--epochs\",\"1\",\"--batch-size\",\"4\",\"--output-dir\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_diffusion_distilled_smoke\"],[\".venv/bin/python\",\"experiments/train_substrate_pact_nerv_ia3_mlx_local.py\",\"--smoke\",\"--output-dir\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_renderer_smoke\",\"--num-pairs\",\"4\"],[\".venv/bin/python\",\"tools/run_pr95_mlx_long_training.py\",\"--output-report\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_control_plan.json\",\"--source-video-path\",\"upstream/videos/0.mkv\",\"--checkpoint-root\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_checkpoints\",\"--telemetry-path\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_telemetry.jsonl\",\"--operator-run-label\",\"diffusionblocks_blockwise_control\",\"--smoke-mode\",\"--smoke-epochs-per-stage\",\"1\",\"--max-frames\",\"8\",\"--hash-source-video\",\"--execute-smoke\"],[\".venv/bin/python\",\"tools/prove_pact_nerv_ia3_mlx_pytorch_forward_parity.py\",\"--report-out\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json\",\"--pt-out\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt\",\"--pair-indices\",\"0,1,2\",\"--overwrite\"],[\".venv/bin/python\",\"tools/materialize_pact_nerv_ia3_byte_closed_candidate.py\",\"--pytorch-state-dict\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt\",\"--parity-report\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json\",\"--output-dir\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate\",\"--manifest-out\",\".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate.json\",\"--label\",\"pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3:pact_nerv_ia3_byte_closed\",\"--overwrite\"]]",
+          "--input-artifact",
+          "upstream/videos/0.mkv",
+          "--input-artifact",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/diffusion_blocks_schedule.json",
+          "--artifact",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_diffusion_distilled_smoke/provenance.json",
+          "--artifact",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+          "--artifact",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pr95_mlx_blockwise_control_plan.json",
+          "--artifact",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+          "--artifact",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate.json",
+          "--artifact",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate/archive.zip",
+          "--artifact",
+          ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/pact_nerv_ia3_byte_closed_candidate/receiver_inflate_proof.json",
+          "--metadata-json",
+          "{\"paper_basis\":\"arxiv:2506.14202v3\",\"queue_id\":\"pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3\",\"substrate_family\":\"pact_nerv_diffusion_blocks\"}",
+          "--overwrite"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_byte_closed_20260528Tlocal_v3",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "549e13750b06f1f4e20bbe6d19efdb468861f5169bde1ad7d7d15c09139014a2",
+          "definition_hash": "8a8518bf9a93b53e2d2cd7c8c9c7011bebfe5d770157d2bb77fb54dfacc0d083",
+          "postcondition_hash": "b5c41eff1de5e4fcb4524e368b8e125699c9cf2a8203a6c878c7a5ea4d88d651"
+        },
+        "step_id": "emit_mlx_local_deterministic_replay_bundle"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 21042,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T04:05:25Z",
+            "path": ".omx/research/pact_nerv_diffusion_blocks_byte_closed_queue_20260528Tlocal_v3/outputs/mlx_local_replay_bundle.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 512,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "72e7c900da7c631b"
+    }
+  ],
+  "steps_started": 7,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 7
+}

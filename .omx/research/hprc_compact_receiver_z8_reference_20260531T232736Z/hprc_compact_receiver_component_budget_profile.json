@@ -1,0 +1,202 @@
+{
+  "archive_member_profile": {
+    "members": [
+      {
+        "compressed_bytes": 1145665,
+        "compression_method": "deflated",
+        "crc32": "4d2abd6e",
+        "filename": "0.bin",
+        "sha256": "f8ad8b6b04fd46bb35459e147c865ee32978d95718f72f7f1c3f4f051f2a205b",
+        "uncompressed_bytes": 3008245
+      },
+      {
+        "compressed_bytes": 634,
+        "compression_method": "deflated",
+        "crc32": "96f2bf6d",
+        "filename": "inflate.py",
+        "sha256": "1f3a4cada1ca93d8e60a0a542dfd9566380f89f0466b09a881e0370111ebd610",
+        "uncompressed_bytes": 1244
+      },
+      {
+        "compressed_bytes": 310,
+        "compression_method": "deflated",
+        "crc32": "24dabb20",
+        "filename": "inflate.sh",
+        "sha256": "2502c55ba6c944219dc136e721256db77c8490a771ccf9d5b08cfc607369c7c3",
+        "uncompressed_bytes": 431
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_method": "deflated",
+        "crc32": "00000000",
+        "filename": "src/tac/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_method": "deflated",
+        "crc32": "00000000",
+        "filename": "src/tac/substrates/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 2,
+        "compression_method": "deflated",
+        "crc32": "00000000",
+        "filename": "src/tac/substrates/hprc/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "uncompressed_bytes": 0
+      },
+      {
+        "compressed_bytes": 3826,
+        "compression_method": "deflated",
+        "crc32": "962f4355",
+        "filename": "src/tac/substrates/hprc/archive.py",
+        "sha256": "9832bde1a1411464e942c6f05f084c52bd2b0d7503b315d403c414f7bfece30d",
+        "uncompressed_bytes": 12225
+      },
+      {
+        "compressed_bytes": 1829,
+        "compression_method": "deflated",
+        "crc32": "53844b13",
+        "filename": "src/tac/substrates/hprc/inflate.py",
+        "sha256": "8867777587f890c2d7f4620ba4da75d39de96d8fe04638a484378911ccf4fa34",
+        "uncompressed_bytes": 5384
+      },
+      {
+        "compressed_bytes": 7873,
+        "compression_method": "deflated",
+        "crc32": "8bfbfefd",
+        "filename": "src/tac/substrates/hprc/learned_receiver.py",
+        "sha256": "5c76459c45ba333b169012032685d16ab02911b1271db1f6939b5e1843e0da71",
+        "uncompressed_bytes": 34806
+      }
+    ],
+    "profile_by_top_level": [
+      {
+        "compressed_bytes": 1145665,
+        "key": "0.bin",
+        "member_count": 1,
+        "uncompressed_bytes": 3008245
+      },
+      {
+        "compressed_bytes": 13534,
+        "key": "src",
+        "member_count": 6,
+        "uncompressed_bytes": 52415
+      },
+      {
+        "compressed_bytes": 634,
+        "key": "inflate.py",
+        "member_count": 1,
+        "uncompressed_bytes": 1244
+      },
+      {
+        "compressed_bytes": 310,
+        "key": "inflate.sh",
+        "member_count": 1,
+        "uncompressed_bytes": 431
+      }
+    ],
+    "zip_overhead_bytes": 1146
+  },
+  "archive_zip_bytes": 1161289,
+  "bytes_over_sub019_zero_distortion_ceiling": 875944,
+  "compression_factor_needed_for_sub019_zero_distortion": 4.069771679896266,
+  "contest_rate_term": 0.7732546778122933,
+  "hprc_payload_section_bytes": 3007829,
+  "mathematical_authority": "component profile is an allocator input; final optimal bytes require MLX/exact SegNet-PoseNet-rate RD curves and Lagrangian lambda solve",
+  "promotion_eligible": false,
+  "schema": "hprc_compact_receiver_component_budget_profile.v1",
+  "score_claim": false,
+  "section_budget_rows": [
+    {
+      "allocation_status": "candidate_protect",
+      "bytes_to_remove_at_proportional_budget": 76,
+      "current_payload_bytes": 259,
+      "decoder_grid_proxy_delta_mse": 79.59575670030381,
+      "decoder_grid_proxy_delta_mse_per_kib": 314.69519251394246,
+      "entropy_position": "after_transform_metadata",
+      "pipeline_stage": "allocator_contract_metadata",
+      "section": "rdo_plan",
+      "share_of_hprc_payload": 8.611e-05,
+      "zero_distortion_sub019_proportional_budget_bytes": 183
+    },
+    {
+      "allocation_status": "candidate_compress_or_cut",
+      "bytes_to_remove_at_proportional_budget": 805175,
+      "current_payload_bytes": 2764820,
+      "decoder_grid_proxy_delta_mse": 67.53561618381076,
+      "decoder_grid_proxy_delta_mse_per_kib": 0.025013010240168335,
+      "entropy_position": "before_entropy_coder",
+      "pipeline_stage": "pre_entropy_scorer_weighted_residual_tokens",
+      "section": "residual_rc",
+      "share_of_hprc_payload": 0.91920784,
+      "zero_distortion_sub019_proportional_budget_bytes": 1959645
+    },
+    {
+      "allocation_status": "candidate_compress_or_cut",
+      "bytes_to_remove_at_proportional_budget": 64420,
+      "current_payload_bytes": 221204,
+      "decoder_grid_proxy_delta_mse": 658.7516736291956,
+      "decoder_grid_proxy_delta_mse_per_kib": 3.0495005234819272,
+      "entropy_position": "before_entropy_coder",
+      "pipeline_stage": "pre_entropy_learned_renderer_weights",
+      "section": "decoder_qw",
+      "share_of_hprc_payload": 0.07354274,
+      "zero_distortion_sub019_proportional_budget_bytes": 156784
+    },
+    {
+      "allocation_status": "candidate_compress_or_cut",
+      "bytes_to_remove_at_proportional_budget": 3500,
+      "current_payload_bytes": 12017,
+      "decoder_grid_proxy_delta_mse": 8.301061559606481,
+      "decoder_grid_proxy_delta_mse_per_kib": 0.7073551666004024,
+      "entropy_position": "before_entropy_coder",
+      "pipeline_stage": "pre_entropy_frame_latent_stream",
+      "section": "latents_rc",
+      "share_of_hprc_payload": 0.00399524,
+      "zero_distortion_sub019_proportional_budget_bytes": 8517
+    },
+    {
+      "allocation_status": "candidate_compress_or_cut",
+      "bytes_to_remove_at_proportional_budget": 2102,
+      "current_payload_bytes": 7216,
+      "decoder_grid_proxy_delta_mse": -0.6102209020543938,
+      "decoder_grid_proxy_delta_mse_per_kib": -0.0865945404245703,
+      "entropy_position": "before_entropy_coder",
+      "pipeline_stage": "decode_time_temporal_state_stream",
+      "section": "receiver_state",
+      "share_of_hprc_payload": 0.00239907,
+      "zero_distortion_sub019_proportional_budget_bytes": 5114
+    },
+    {
+      "allocation_status": "candidate_compress_or_cut",
+      "bytes_to_remove_at_proportional_budget": 353,
+      "current_payload_bytes": 1211,
+      "decoder_grid_proxy_delta_mse": 67.53561618381076,
+      "decoder_grid_proxy_delta_mse_per_kib": 57.10691244609597,
+      "entropy_position": "before_entropy_coder",
+      "pipeline_stage": "pre_entropy_frame_selector_stream",
+      "section": "selectors_rc",
+      "share_of_hprc_payload": 0.00040262,
+      "zero_distortion_sub019_proportional_budget_bytes": 858
+    },
+    {
+      "allocation_status": "candidate_compress_or_cut",
+      "bytes_to_remove_at_proportional_budget": 321,
+      "current_payload_bytes": 1102,
+      "decoder_grid_proxy_delta_mse": null,
+      "decoder_grid_proxy_delta_mse_per_kib": 0.0,
+      "entropy_position": "after_transform_metadata",
+      "pipeline_stage": "custody_and_provenance_metadata",
+      "section": "manifest_json",
+      "share_of_hprc_payload": 0.00036638,
+      "zero_distortion_sub019_proportional_budget_bytes": 781
+    }
+  ],
+  "sub019_zero_distortion_archive_byte_ceiling": 285345,
+  "target_section_payload_budget_if_other_archive_bytes_unchanged": 2131885
+}

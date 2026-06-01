@@ -1,0 +1,182 @@
+{
+  "archive_num_pairs": 600,
+  "archive_sha256": "eb5d371c8d3c5afe0bff4b28b0ff98bc67bd562ea57d1aeef6b450c368ab9498",
+  "contest_mode_budget_spend_requires_full_video_archive_pinned_surface": true,
+  "corpus_manifest_path": null,
+  "corpus_manifest_required": false,
+  "declared_overfit_allowed": true,
+  "full_video_residency_required": true,
+  "full_video_vjp_is_first_class_acquisition_lane": true,
+  "gradient_reduction_semantics": "full_video_exact_accumulation",
+  "local_axis": "[macOS-MLX research-signal]",
+  "minibatch_window_gradients_budget_spend_authority": false,
+  "minibatch_window_gradients_policy": "ranking_probe_only_between_full_video_passes",
+  "optimizer_update_semantics": "single_update_after_all_pair_shards_reduce",
+  "pair_chunk_size": 32,
+  "pair_chunk_updates_forbidden": true,
+  "pair_shards": [
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 32,
+      "pair_start": 0,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 0
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 64,
+      "pair_start": 32,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 1
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 96,
+      "pair_start": 64,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 2
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 128,
+      "pair_start": 96,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 3
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 160,
+      "pair_start": 128,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 4
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 192,
+      "pair_start": 160,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 5
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 224,
+      "pair_start": 192,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 6
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 256,
+      "pair_start": 224,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 7
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 288,
+      "pair_start": 256,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 8
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 320,
+      "pair_start": 288,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 9
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 352,
+      "pair_start": 320,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 10
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 384,
+      "pair_start": 352,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 11
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 416,
+      "pair_start": 384,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 12
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 448,
+      "pair_start": 416,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 13
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 480,
+      "pair_start": 448,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 14
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 512,
+      "pair_start": 480,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 15
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 544,
+      "pair_start": 512,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 16
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 32,
+      "pair_end": 576,
+      "pair_start": 544,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 17
+    },
+    {
+      "execution_hint": "mlx_full_video_resident_pair_chunk_vjp",
+      "pair_count": 24,
+      "pair_end": 600,
+      "pair_start": 576,
+      "schema": "z8_full_video_vjp_pair_shard.v1",
+      "shard_index": 18
+    }
+  ],
+  "parallel_workers": 19,
+  "plan_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/mlx_vjp/iteration_0000/plan/z8_full_video_vjp_acquisition_plan.json",
+  "production_mode_requires_declared_corpus_manifest": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "z8_full_video_vjp_acquisition_plan.v1",
+  "score_claim": false,
+  "shard_count": 19,
+  "surface_linearization_archive_sha_required": true,
+  "surface_relinearization_required_after_accepted_mutation": true,
+  "target_mode": "contest_video_overfit"
+}

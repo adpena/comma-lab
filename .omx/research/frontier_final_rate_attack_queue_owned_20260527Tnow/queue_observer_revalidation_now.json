@@ -1,0 +1,2518 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 4,
+      "resource_limits": {
+        "local_cpu": 4
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu"
+    ],
+    "with_cloud": {
+      "max_parallel": 4,
+      "resource_limits": {
+        "local_cpu": 4
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 1,
+  "blockers": [
+    "experiment_queue_observation_artifact_postcondition_failures:30"
+  ],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "failed_steps": [],
+  "generated_at_utc": "2026-05-27T19:10:46Z",
+  "healthy": false,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1": "frontier_rate_attack:archive_zip_repack_v1",
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": "frontier_rate_attack:packet_member_recompress_v1",
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": "frontier_rate_attack:packet_member_zip_header_elide_v1"
+    },
+    "by_backlog_key": {
+      "frontier_rate_attack:archive_zip_repack_v1": {
+        "artifact_record_bytes_mean": 76098.2,
+        "artifact_record_bytes_sum": 380491,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 76098.2,
+        "artifact_record_raw_bytes_sum": 380491,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0225405829987722,
+        "elapsed_seconds_mean": 0.5786018915998283,
+        "elapsed_seconds_min": 0.15070812500198372,
+        "elapsed_seconds_sum": 2.893009457999142,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2122.2,
+        "log_bytes_sum": 10611,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ]
+      },
+      "frontier_rate_attack:packet_member_recompress_v1": {
+        "artifact_record_bytes_mean": 77405.6,
+        "artifact_record_bytes_sum": 387028,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 77405.6,
+        "artifact_record_raw_bytes_sum": 387028,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.9929799170022306,
+        "elapsed_seconds_mean": 0.5599526918005722,
+        "elapsed_seconds_min": 0.1289224579995789,
+        "elapsed_seconds_sum": 2.799763459002861,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2036.4,
+        "log_bytes_sum": 10182,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "frontier_rate_attack:packet_member_zip_header_elide_v1": {
+        "artifact_record_bytes_mean": 78806.8,
+        "artifact_record_bytes_sum": 394034,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 78806.8,
+        "artifact_record_raw_bytes_sum": 394034,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.007548333000159,
+        "elapsed_seconds_mean": 0.5690083164008684,
+        "elapsed_seconds_min": 0.13844683400020585,
+        "elapsed_seconds_sum": 2.8450415820043418,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2143.4,
+        "log_bytes_sum": 10717,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_experiment": {
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1": {
+        "artifact_record_bytes_mean": 76098.2,
+        "artifact_record_bytes_sum": 380491,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 76098.2,
+        "artifact_record_raw_bytes_sum": 380491,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0225405829987722,
+        "elapsed_seconds_mean": 0.5786018915998283,
+        "elapsed_seconds_min": 0.15070812500198372,
+        "elapsed_seconds_sum": 2.893009457999142,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2122.2,
+        "log_bytes_sum": 10611,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": {
+        "artifact_record_bytes_mean": 77405.6,
+        "artifact_record_bytes_sum": 387028,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 77405.6,
+        "artifact_record_raw_bytes_sum": 387028,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.9929799170022306,
+        "elapsed_seconds_mean": 0.5599526918005722,
+        "elapsed_seconds_min": 0.1289224579995789,
+        "elapsed_seconds_sum": 2.799763459002861,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2036.4,
+        "log_bytes_sum": 10182,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": {
+        "artifact_record_bytes_mean": 78806.8,
+        "artifact_record_bytes_sum": 394034,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 78806.8,
+        "artifact_record_raw_bytes_sum": 394034,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.007548333000159,
+        "elapsed_seconds_mean": 0.5690083164008684,
+        "elapsed_seconds_min": 0.13844683400020585,
+        "elapsed_seconds_sum": 2.8450415820043418,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2143.4,
+        "log_bytes_sum": 10717,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 77436.86666666667,
+        "artifact_record_bytes_sum": 1161553,
+        "artifact_record_count": 36,
+        "artifact_record_raw_bytes_mean": 77436.86666666667,
+        "artifact_record_raw_bytes_sum": 1161553,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1",
+          "frontier_rate_attack:packet_member_recompress_v1",
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0225405829987722,
+        "elapsed_seconds_mean": 0.5691876332670897,
+        "elapsed_seconds_min": 0.1289224579995789,
+        "elapsed_seconds_sum": 8.537814499006345,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2100.6666666666665,
+        "log_bytes_sum": 31510,
+        "resource_kind_counts": {
+          "local_cpu": 15
+        },
+        "run_count": 15,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 15,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_source_selection_id": {
+      "current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 77436.86666666667,
+        "artifact_record_bytes_sum": 1161553,
+        "artifact_record_count": 36,
+        "artifact_record_raw_bytes_mean": 77436.86666666667,
+        "artifact_record_raw_bytes_sum": 1161553,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1",
+          "frontier_rate_attack:packet_member_recompress_v1",
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0225405829987722,
+        "elapsed_seconds_mean": 0.5691876332670897,
+        "elapsed_seconds_min": 0.1289224579995789,
+        "elapsed_seconds_sum": 8.537814499006345,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2100.6666666666665,
+        "log_bytes_sum": 31510,
+        "resource_kind_counts": {
+          "local_cpu": 15
+        },
+        "run_count": 15,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 15,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_source_unit_id": {
+      "current_contest_cpu_frontier": {
+        "artifact_record_bytes_mean": 77436.86666666667,
+        "artifact_record_bytes_sum": 1161553,
+        "artifact_record_count": 36,
+        "artifact_record_raw_bytes_mean": 77436.86666666667,
+        "artifact_record_raw_bytes_sum": 1161553,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1",
+          "frontier_rate_attack:packet_member_recompress_v1",
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0225405829987722,
+        "elapsed_seconds_mean": 0.5691876332670897,
+        "elapsed_seconds_min": 0.1289224579995789,
+        "elapsed_seconds_sum": 8.537814499006345,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2100.6666666666665,
+        "log_bytes_sum": 31510,
+        "resource_kind_counts": {
+          "local_cpu": 15
+        },
+        "run_count": 15,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 15,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_step": {
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1.build_exact_eval_dispatch_plan": {
+        "artifact_record_bytes_mean": 4152.0,
+        "artifact_record_bytes_sum": 4152,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 4152.0,
+        "artifact_record_raw_bytes_sum": 4152,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.8134220829997503,
+        "elapsed_seconds_mean": 0.8134220829997503,
+        "elapsed_seconds_min": 0.8134220829997503,
+        "elapsed_seconds_sum": 0.8134220829997503,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 274.0,
+        "log_bytes_sum": 274,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1.build_materializer_submission_closure": {
+        "artifact_record_bytes_mean": 333892.0,
+        "artifact_record_bytes_sum": 333892,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 333892.0,
+        "artifact_record_raw_bytes_sum": 333892,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.1928894170014246,
+        "elapsed_seconds_mean": 0.1928894170014246,
+        "elapsed_seconds_min": 0.1928894170014246,
+        "elapsed_seconds_sum": 0.1928894170014246,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 973.0,
+        "log_bytes_sum": 973,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_materializer_submission_closure"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1.harvest_materializer_chains": {
+        "artifact_record_bytes_mean": 20802.0,
+        "artifact_record_bytes_sum": 20802,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 20802.0,
+        "artifact_record_raw_bytes_sum": 20802,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0225405829987722,
+        "elapsed_seconds_mean": 1.0225405829987722,
+        "elapsed_seconds_min": 1.0225405829987722,
+        "elapsed_seconds_sum": 1.0225405829987722,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 453.0,
+        "log_bytes_sum": 453,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "harvest_materializer_chains"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1.materialize_local_proof_chain": {
+        "artifact_record_bytes_mean": 14330.0,
+        "artifact_record_bytes_sum": 14330,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 14330.0,
+        "artifact_record_raw_bytes_sum": 14330,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.15070812500198372,
+        "elapsed_seconds_mean": 0.15070812500198372,
+        "elapsed_seconds_min": 0.15070812500198372,
+        "elapsed_seconds_sum": 0.15070812500198372,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 8357.0,
+        "log_bytes_sum": 8357,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1.run_materializer_exact_readiness_bridge": {
+        "artifact_record_bytes_mean": 7315.0,
+        "artifact_record_bytes_sum": 7315,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 7315.0,
+        "artifact_record_raw_bytes_sum": 7315,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7134492499972112,
+        "elapsed_seconds_mean": 0.7134492499972112,
+        "elapsed_seconds_min": 0.7134492499972112,
+        "elapsed_seconds_sum": 0.7134492499972112,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 554.0,
+        "log_bytes_sum": 554,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.build_exact_eval_dispatch_plan": {
+        "artifact_record_bytes_mean": 4170.0,
+        "artifact_record_bytes_sum": 4170,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 4170.0,
+        "artifact_record_raw_bytes_sum": 4170,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7995592920015042,
+        "elapsed_seconds_mean": 0.7995592920015042,
+        "elapsed_seconds_min": 0.7995592920015042,
+        "elapsed_seconds_sum": 0.7995592920015042,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 280.0,
+        "log_bytes_sum": 280,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.build_materializer_submission_closure": {
+        "artifact_record_bytes_mean": 337947.0,
+        "artifact_record_bytes_sum": 337947,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 337947.0,
+        "artifact_record_raw_bytes_sum": 337947,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.18069325000033132,
+        "elapsed_seconds_mean": 0.18069325000033132,
+        "elapsed_seconds_min": 0.18069325000033132,
+        "elapsed_seconds_sum": 0.18069325000033132,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 991.0,
+        "log_bytes_sum": 991,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_materializer_submission_closure"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.harvest_materializer_chains": {
+        "artifact_record_bytes_mean": 23623.0,
+        "artifact_record_bytes_sum": 23623,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 23623.0,
+        "artifact_record_raw_bytes_sum": 23623,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.9929799170022306,
+        "elapsed_seconds_mean": 0.9929799170022306,
+        "elapsed_seconds_min": 0.9929799170022306,
+        "elapsed_seconds_sum": 0.9929799170022306,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 465.0,
+        "log_bytes_sum": 465,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "harvest_materializer_chains"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.materialize_local_proof_chain": {
+        "artifact_record_bytes_mean": 13550.0,
+        "artifact_record_bytes_sum": 13550,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 13550.0,
+        "artifact_record_raw_bytes_sum": 13550,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.1289224579995789,
+        "elapsed_seconds_mean": 0.1289224579995789,
+        "elapsed_seconds_min": 0.1289224579995789,
+        "elapsed_seconds_sum": 0.1289224579995789,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 7886.0,
+        "log_bytes_sum": 7886,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1.run_materializer_exact_readiness_bridge": {
+        "artifact_record_bytes_mean": 7738.0,
+        "artifact_record_bytes_sum": 7738,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 7738.0,
+        "artifact_record_raw_bytes_sum": 7738,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.697608541999216,
+        "elapsed_seconds_mean": 0.697608541999216,
+        "elapsed_seconds_min": 0.697608541999216,
+        "elapsed_seconds_sum": 0.697608541999216,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 560.0,
+        "log_bytes_sum": 560,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.build_exact_eval_dispatch_plan": {
+        "artifact_record_bytes_mean": 4188.0,
+        "artifact_record_bytes_sum": 4188,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 4188.0,
+        "artifact_record_raw_bytes_sum": 4188,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.8060224159999052,
+        "elapsed_seconds_mean": 0.8060224159999052,
+        "elapsed_seconds_min": 0.8060224159999052,
+        "elapsed_seconds_sum": 0.8060224159999052,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 286.0,
+        "log_bytes_sum": 286,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.build_materializer_submission_closure": {
+        "artifact_record_bytes_mean": 344097.0,
+        "artifact_record_bytes_sum": 344097,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 344097.0,
+        "artifact_record_raw_bytes_sum": 344097,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.1867865830026858,
+        "elapsed_seconds_mean": 0.1867865830026858,
+        "elapsed_seconds_min": 0.1867865830026858,
+        "elapsed_seconds_sum": 0.1867865830026858,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1009.0,
+        "log_bytes_sum": 1009,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_materializer_submission_closure"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.harvest_materializer_chains": {
+        "artifact_record_bytes_mean": 23562.0,
+        "artifact_record_bytes_sum": 23562,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 23562.0,
+        "artifact_record_raw_bytes_sum": 23562,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.007548333000159,
+        "elapsed_seconds_mean": 1.007548333000159,
+        "elapsed_seconds_min": 1.007548333000159,
+        "elapsed_seconds_sum": 1.007548333000159,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 477.0,
+        "log_bytes_sum": 477,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "harvest_materializer_chains"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.materialize_local_proof_chain": {
+        "artifact_record_bytes_mean": 14359.0,
+        "artifact_record_bytes_sum": 14359,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 14359.0,
+        "artifact_record_raw_bytes_sum": 14359,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.13844683400020585,
+        "elapsed_seconds_mean": 0.13844683400020585,
+        "elapsed_seconds_min": 0.13844683400020585,
+        "elapsed_seconds_sum": 0.13844683400020585,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 8379.0,
+        "log_bytes_sum": 8379,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1.run_materializer_exact_readiness_bridge": {
+        "artifact_record_bytes_mean": 7828.0,
+        "artifact_record_bytes_sum": 7828,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 7828.0,
+        "artifact_record_raw_bytes_sum": 7828,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.706237416001386,
+        "elapsed_seconds_mean": 0.706237416001386,
+        "elapsed_seconds_min": 0.706237416001386,
+        "elapsed_seconds_sum": 0.706237416001386,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 566.0,
+        "log_bytes_sum": 566,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "by_work_id": {
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1": {
+        "artifact_record_bytes_mean": 76098.2,
+        "artifact_record_bytes_sum": 380491,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 76098.2,
+        "artifact_record_raw_bytes_sum": 380491,
+        "backlog_keys": [
+          "frontier_rate_attack:archive_zip_repack_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0225405829987722,
+        "elapsed_seconds_mean": 0.5786018915998283,
+        "elapsed_seconds_min": 0.15070812500198372,
+        "elapsed_seconds_sum": 2.893009457999142,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2122.2,
+        "log_bytes_sum": 10611,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": {
+        "artifact_record_bytes_mean": 77405.6,
+        "artifact_record_bytes_sum": 387028,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 77405.6,
+        "artifact_record_raw_bytes_sum": 387028,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_recompress_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.9929799170022306,
+        "elapsed_seconds_mean": 0.5599526918005722,
+        "elapsed_seconds_min": 0.1289224579995789,
+        "elapsed_seconds_sum": 2.799763459002861,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2036.4,
+        "log_bytes_sum": 10182,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+        ]
+      },
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": {
+        "artifact_record_bytes_mean": 78806.8,
+        "artifact_record_bytes_sum": 394034,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 78806.8,
+        "artifact_record_raw_bytes_sum": 394034,
+        "backlog_keys": [
+          "frontier_rate_attack:packet_member_zip_header_elide_v1"
+        ],
+        "candidate_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.007548333000159,
+        "elapsed_seconds_mean": 0.5690083164008684,
+        "elapsed_seconds_min": 0.13844683400020585,
+        "elapsed_seconds_sum": 2.8450415820043418,
+        "experiment_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2143.4,
+        "log_bytes_sum": 10717,
+        "resource_kind_counts": {
+          "local_cpu": 5
+        },
+        "run_count": 5,
+        "source_selection_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "source_unit_ids": [
+          "current_contest_cpu_frontier"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "build_materializer_submission_closure",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain",
+          "run_materializer_exact_readiness_bridge"
+        ],
+        "success_count": 5,
+        "work_ids": [
+          "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+        ]
+      }
+    },
+    "candidate_id_by_experiment": {
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "event_count": 15,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_queue_owned_20260527Tnow",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "source_unit_ids_by_experiment": {
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": [
+        "current_contest_cpu_frontier"
+      ],
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": [
+        "current_contest_cpu_frontier"
+      ]
+    },
+    "telemetry_only": true,
+    "work_id_by_experiment": {
+      "materializer_work_frontier_rate_attack_archive_zip_repack_v1": "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+      "materializer_work_frontier_rate_attack_packet_member_recompress_v1": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+    }
+  },
+  "queue_id": "frontier_final_rate_attack_queue_owned_20260527Tnow",
+  "queue_sha256": "6912ceed21b6de7dfd13ec54716685bd6da9b379356c1bedb66e9a606fe35209",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 4
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 15,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_queue_owned_20260527Tnow",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 30
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 4,
+        "current_timeout_seconds_max": null,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.706237416001386,
+        "elapsed_seconds_p95": 1.0225405829987722,
+        "observed_failure_count": 0,
+        "observed_run_count": 15,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 30,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_queue_owned_20260527Tnow.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-27T18:17:53Z",
+    "event_count": 56,
+    "max_event_id": 56,
+    "max_step_updated_at_utc": "2026-05-27T18:17:56Z",
+    "queue_id": "frontier_final_rate_attack_queue_owned_20260527Tnow",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_queue_owned_20260527Tnow.sqlite",
+    "step_state_count": 15
+  },
+  "status_counts": {
+    "succeeded": 15
+  },
+  "step_count": 15,
+  "succeeded_artifact_failure_steps": [
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:archive_zip_repack_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/dispatch_plan.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/dispatch_queue.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 2569,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:56Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/dispatch_plan.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/dispatch_plan.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1583,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:56Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/dispatch_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/dispatch_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_archive_zip_repack_v1/build_exact_eval_dispatch_plan/20260527T181755Z_82a918e9c7c67372.log",
+      "log_tail": [],
+      "materializer_id": "archive_zip_repack_adapter",
+      "operation_family": "archive_zip_repack",
+      "pid": 58909,
+      "processes": [],
+      "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_exact_eval_dispatch_plan",
+      "target_kind": "archive_zip_repack_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "archive",
+      "updated_at_utc": "2026-05-27T18:17:56Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+      ],
+      "worker_run_id": "82a918e9c7c67372"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:archive_zip_repack_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/submission_closure/submission"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 23186,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/submission_closure/closed_source_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 15420,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/submission_closure/submission_closure_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_archive_zip_repack_v1/build_materializer_submission_closure/20260527T181754Z_4b47088fe73f9965.log",
+      "log_tail": [],
+      "materializer_id": "archive_zip_repack_adapter",
+      "operation_family": "archive_zip_repack",
+      "pid": 58898,
+      "processes": [],
+      "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_materializer_submission_closure",
+      "target_kind": "archive_zip_repack_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "archive",
+      "updated_at_utc": "2026-05-27T18:17:55Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+      ],
+      "worker_run_id": "4b47088fe73f9965"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:archive_zip_repack_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/harvest_report.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 13591,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:54Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/source_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/source_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7211,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:54Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/harvest_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/harvest_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_archive_zip_repack_v1/harvest_materializer_chains/20260527T181753Z_443d68105d94f781.log",
+      "log_tail": [],
+      "materializer_id": "archive_zip_repack_adapter",
+      "operation_family": "archive_zip_repack",
+      "pid": 58895,
+      "processes": [],
+      "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "harvest_materializer_chains",
+      "target_kind": "archive_zip_repack_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "archive",
+      "updated_at_utc": "2026-05-27T18:17:54Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+      ],
+      "worker_run_id": "443d68105d94f781"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:archive_zip_repack_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/sweep.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/observations.jsonl",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1",
+        "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 8357,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/sweep.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/sweep.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_completion_contract",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 8357,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/sweep.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/sweep.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_completion_contract"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [
+              "jsonl_false_authority_read_failed:PermissionError",
+              "jsonl_false_authority_empty"
+            ],
+            "jsonl_false_authority": {
+              "blockers": [
+                "jsonl_false_authority_read_failed:PermissionError",
+                "jsonl_false_authority_empty"
+              ],
+              "row_count": 0,
+              "schema": "observer_jsonl_false_authority_revalidation.v1",
+              "valid": false
+            },
+            "postcondition_type": "jsonl_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": false
+          },
+          "artifact_revalidation_blockers": [
+            "jsonl_false_authority_read_failed:PermissionError",
+            "jsonl_false_authority_empty"
+          ],
+          "bytes": 5813,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/observations.jsonl",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/observations.jsonl'",
+          "postcondition_passed": false,
+          "postcondition_schema_equals": "family_agnostic_materializer_empirical_observation.v1",
+          "postcondition_type": "jsonl_false_authority"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_archive_zip_repack_v1/materialize_local_proof_chain/20260527T181753Z_bc967ed5e12ebbc6.log",
+      "log_tail": [],
+      "materializer_id": "archive_zip_repack_adapter",
+      "operation_family": "archive_zip_repack",
+      "pid": 58889,
+      "processes": [],
+      "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "materialize_local_proof_chain",
+      "target_kind": "archive_zip_repack_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "archive",
+      "updated_at_utc": "2026-05-27T18:17:53Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+      ],
+      "worker_run_id": "bc967ed5e12ebbc6"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:archive_zip_repack_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/exact_readiness"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 3061,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/archive_zip_repack_v1/exact_eval_handoff/exact_readiness_bridge_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_archive_zip_repack_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_archive_zip_repack_v1/run_materializer_exact_readiness_bridge/20260527T181755Z_dfcb182fe12fb7f9.log",
+      "log_tail": [],
+      "materializer_id": "archive_zip_repack_adapter",
+      "operation_family": "archive_zip_repack",
+      "pid": 58905,
+      "processes": [],
+      "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "run_materializer_exact_readiness_bridge",
+      "target_kind": "archive_zip_repack_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "archive",
+      "updated_at_utc": "2026-05-27T18:17:55Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_archive_zip_repack_v1"
+      ],
+      "worker_run_id": "dfcb182fe12fb7f9"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_recompress_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/dispatch_plan.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/dispatch_queue.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 2581,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:56Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/dispatch_plan.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/dispatch_plan.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1589,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:56Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/dispatch_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/dispatch_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_recompress_v1/build_exact_eval_dispatch_plan/20260527T181755Z_31ab9ff1ef468618.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "pid": 58911,
+      "processes": [],
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_exact_eval_dispatch_plan",
+      "target_kind": "packet_member_recompress_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:56Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+      ],
+      "worker_run_id": "31ab9ff1ef468618"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_recompress_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 27320,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/submission_closure/closed_source_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 15684,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/submission_closure/submission_closure_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_recompress_v1/build_materializer_submission_closure/20260527T181754Z_fbd12c4c3e8d010a.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "pid": 58900,
+      "processes": [],
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_materializer_submission_closure",
+      "target_kind": "packet_member_recompress_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:55Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+      ],
+      "worker_run_id": "fbd12c4c3e8d010a"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_recompress_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/harvest_report.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 16279,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:54Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/source_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/source_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7344,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:54Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/harvest_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/harvest_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_recompress_v1/harvest_materializer_chains/20260527T181753Z_af63404fcdd7d5c2.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "pid": 58897,
+      "processes": [],
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "harvest_materializer_chains",
+      "target_kind": "packet_member_recompress_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:54Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+      ],
+      "worker_run_id": "af63404fcdd7d5c2"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_recompress_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/sweep.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/observations.jsonl",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1",
+        "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7886,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/sweep.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/sweep.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_completion_contract",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7886,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/sweep.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/sweep.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_completion_contract"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [
+              "jsonl_false_authority_read_failed:PermissionError",
+              "jsonl_false_authority_empty"
+            ],
+            "jsonl_false_authority": {
+              "blockers": [
+                "jsonl_false_authority_read_failed:PermissionError",
+                "jsonl_false_authority_empty"
+              ],
+              "row_count": 0,
+              "schema": "observer_jsonl_false_authority_revalidation.v1",
+              "valid": false
+            },
+            "postcondition_type": "jsonl_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": false
+          },
+          "artifact_revalidation_blockers": [
+            "jsonl_false_authority_read_failed:PermissionError",
+            "jsonl_false_authority_empty"
+          ],
+          "bytes": 5504,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/observations.jsonl",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/observations.jsonl'",
+          "postcondition_passed": false,
+          "postcondition_schema_equals": "family_agnostic_materializer_empirical_observation.v1",
+          "postcondition_type": "jsonl_false_authority"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_recompress_v1/materialize_local_proof_chain/20260527T181753Z_9e199fa7b40b7144.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "pid": 58891,
+      "processes": [],
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "materialize_local_proof_chain",
+      "target_kind": "packet_member_recompress_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:53Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+      ],
+      "worker_run_id": "9e199fa7b40b7144"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_recompress_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/exact_readiness"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 3091,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_recompress_v1/exact_eval_handoff/exact_readiness_bridge_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_recompress_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_recompress_v1/run_materializer_exact_readiness_bridge/20260527T181755Z_ab74d3ece7e96709.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_recompress_adapter",
+      "operation_family": "member_recompress",
+      "pid": 58908,
+      "processes": [],
+      "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "run_materializer_exact_readiness_bridge",
+      "target_kind": "packet_member_recompress_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:55Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_recompress_v1"
+      ],
+      "worker_run_id": "ab74d3ece7e96709"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_zip_header_elide_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_plan.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_queue.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 2593,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:56Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_plan.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_plan.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1595,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:56Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/build_exact_eval_dispatch_plan/20260527T181755Z_65408bf3c6bb44bb.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "pid": 58910,
+      "processes": [],
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_exact_eval_dispatch_plan",
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:56Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "worker_run_id": "65408bf3c6bb44bb"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_zip_header_elide_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 27656,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 15948,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission_closure_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/build_materializer_submission_closure/20260527T181754Z_e0b2307b69f80e25.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "pid": 58899,
+      "processes": [],
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "build_materializer_submission_closure",
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:55Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "worker_run_id": "e0b2307b69f80e25"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_zip_header_elide_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/harvest_report.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 16435,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:54Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 7127,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:54Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/harvest_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/harvest_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/harvest_materializer_chains/20260527T181753Z_d88a02ff57f70f89.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "pid": 58896,
+      "processes": [],
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "harvest_materializer_chains",
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:54Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "worker_run_id": "d88a02ff57f70f89"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_zip_header_elide_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/sweep.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/observations.jsonl",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1",
+        "experiments/results/v14_v2_dqs1_plus_fec10_substituted_20260526T023000Z/submission_dir/archive.zip"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 8379,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/sweep.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/sweep.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_completion_contract",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 8379,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/sweep.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/sweep.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_completion_contract"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [
+              "jsonl_false_authority_read_failed:PermissionError",
+              "jsonl_false_authority_empty"
+            ],
+            "jsonl_false_authority": {
+              "blockers": [
+                "jsonl_false_authority_read_failed:PermissionError",
+                "jsonl_false_authority_empty"
+              ],
+              "row_count": 0,
+              "schema": "observer_jsonl_false_authority_revalidation.v1",
+              "valid": false
+            },
+            "postcondition_type": "jsonl_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": false
+          },
+          "artifact_revalidation_blockers": [
+            "jsonl_false_authority_read_failed:PermissionError",
+            "jsonl_false_authority_empty"
+          ],
+          "bytes": 5820,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:53Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/observations.jsonl",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/observations.jsonl'",
+          "postcondition_passed": false,
+          "postcondition_schema_equals": "family_agnostic_materializer_empirical_observation.v1",
+          "postcondition_type": "jsonl_false_authority"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/materialize_local_proof_chain/20260527T181753Z_59c70ab05a86db48.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "pid": 58890,
+      "processes": [],
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "materialize_local_proof_chain",
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:53Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "worker_run_id": "59c70ab05a86db48"
+    },
+    {
+      "attempts": 1,
+      "backlog_keys": [
+        "frontier_rate_attack:packet_member_zip_header_elide_v1"
+      ],
+      "candidate_saved_bytes_sum": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+        "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 3121,
+          "exists": true,
+          "mtime_utc": "2026-05-27T18:17:55Z",
+          "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "postcondition_error": "PermissionError: [Errno 1] Operation not permitted: '/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_queue_owned_20260527Tnow/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.0,
+      "experiment_id": "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1",
+      "log_exists": true,
+      "log_path": ".omx/state/experiment_queue_logs/frontier_final_rate_attack_queue_owned_20260527Tnow/materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1/run_materializer_exact_readiness_bridge/20260527T181755Z_30ad78d93bee7c58.log",
+      "log_tail": [],
+      "materializer_id": "packet_member_zip_header_elide_adapter",
+      "operation_family": "zip_header_elide",
+      "pid": 58906,
+      "processes": [],
+      "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "source_unit_ids": [
+        "current_contest_cpu_frontier"
+      ],
+      "status": "succeeded",
+      "step_id": "run_materializer_exact_readiness_bridge",
+      "target_kind": "packet_member_zip_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "packet_member",
+      "updated_at_utc": "2026-05-27T18:17:55Z",
+      "work_ids": [
+        "materializer_work_frontier_rate_attack_packet_member_zip_header_elide_v1"
+      ],
+      "worker_run_id": "30ad78d93bee7c58"
+    }
+  ],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

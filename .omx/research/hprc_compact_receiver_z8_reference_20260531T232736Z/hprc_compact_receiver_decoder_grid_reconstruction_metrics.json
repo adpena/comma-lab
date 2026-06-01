@@ -1,0 +1,14 @@
+{
+  "channels": 3,
+  "frames": 1200,
+  "height": 96,
+  "mae_rgb255": 4.297382315176504,
+  "max_abs_rgb255": 233.0,
+  "metric_scope": "decoder_grid_lowres_advisory_not_contest_score",
+  "mse_rgb255": 67.43166517469618,
+  "promotion_eligible": false,
+  "psnr_rgb255_db": 29.84216476480419,
+  "schema": "hprc_compact_receiver_decoder_grid_reconstruction_metrics.v1",
+  "score_claim": false,
+  "width": 128
+}

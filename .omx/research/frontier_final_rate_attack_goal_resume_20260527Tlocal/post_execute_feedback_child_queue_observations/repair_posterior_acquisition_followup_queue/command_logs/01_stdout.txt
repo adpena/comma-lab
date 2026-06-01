@@ -1,0 +1,133 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "json.tool",
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/targeted_component_correction_response_harvest.json"
+      ],
+      "experiment_id": "repair_posterior_followup_harvest_targeted_component_response_rows",
+      "priority": 1,
+      "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+      "resource_kind": "local_cpu",
+      "step_hashes": {
+        "command_hash": "59ea3b191cc9a880e96c6821376395dc3239cccf8b71cd9151f3a48d09953785",
+        "definition_hash": "4ce79c606759ce5b76ce61779784ac2fb752427bd839623fa9d484f8d8a52ad9",
+        "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "step_id": "inspect_harvest_targeted_component_response_rows_targeted_component_correction_response_harvest"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/frontier_final_rate_attack_goal_resume_20260527Tlocal/post_execute_feedback_refresh/targeted_component_correction_queue.json",
+        "validate"
+      ],
+      "experiment_id": "repair_posterior_followup_harvest_targeted_component_response_rows",
+      "priority": 1,
+      "queue_id": "frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup",
+      "resource_kind": "local_cpu",
+      "step_hashes": {
+        "command_hash": "554d72ac593cda144cc6bb485e6bcdd3376a1d08b2e2852324ee1690e7c4e70a",
+        "definition_hash": "deaee3cbb68a87dc669ffca4c86e57d6ed470a1087fa19d4f21059fb4c915880",
+        "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "step_id": "validate_harvest_targeted_component_response_rows_targeted_component_correction_queue"
+    }
+  ],
+  "schema": "experiment_queue_summary.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_goal_resume_20260527Tlocal_post_execute_feedback_repair_posterior_acquisition_followup.sqlite",
+  "status_counts": {
+    "queued": 8
+  },
+  "step_count": 8,
+  "steps": [
+    {
+      "attempts": 0,
+      "experiment_id": "repair_posterior_followup_harvest_targeted_component_response_rows",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "inspect_harvest_targeted_component_response_rows_targeted_component_correction_response_harvest",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:59:04Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "repair_posterior_followup_harvest_targeted_component_response_rows",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_harvest_targeted_component_response_rows_targeted_component_correction_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:59:04Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "repair_posterior_followup_harvest_targeted_component_response_rows",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_harvest_targeted_component_response_rows_targeted_component_correction_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:59:04Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "repair_posterior_followup_materialize_missing_local_mlx_custody",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_materialize_missing_local_mlx_custody_repair_campaign_score_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:59:04Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "repair_posterior_followup_materialize_missing_local_mlx_custody",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_materialize_missing_local_mlx_custody_repair_campaign_score_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:59:04Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "repair_posterior_followup_route_component_response_to_exact_axis_replay",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "inspect_route_component_response_to_exact_axis_replay_targeted_component_correction_response_harvest",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:59:04Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "repair_posterior_followup_route_component_response_to_exact_axis_replay",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_route_component_response_to_exact_axis_replay_targeted_component_correction_queue_bounded_local",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:59:04Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "repair_posterior_followup_route_component_response_to_exact_axis_replay",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_route_component_response_to_exact_axis_replay_targeted_component_correction_queue",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:59:04Z"
+    }
+  ]
+}

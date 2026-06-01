@@ -1,0 +1,135 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+  "ready_steps": [],
+  "schema": "experiment_queue_summary.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+  "status_counts": {
+    "queued": 15
+  },
+  "step_count": 15,
+  "steps": [
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_autonomous_chain_work_order",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_autonomous_chain_work_order",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_portfolio_materializer_context_closure_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_autonomous_chain_work_order",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue",
+      "updated_at_utc": "2026-05-27T19:33:05Z"
+    }
+  ]
+}

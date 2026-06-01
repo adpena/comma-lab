@@ -1,0 +1,446 @@
+{
+  "action": "run_worker",
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "automation_blockers": [],
+  "execute": true,
+  "final_reason_if_stopping": "max_ticks_reached",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "generated_at_utc": "2026-05-28T19:38:18Z",
+  "max_parallel": 1,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recovery_result": null,
+  "schema": "experiment_queue_supervisor_tick.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 1,
+        "resource_limits": {
+          "local_io_heavy": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_io_heavy"
+      ],
+      "with_cloud": {
+        "max_parallel": 1,
+        "resource_limits": {
+          "local_io_heavy": 1
+        }
+      }
+    },
+    "automation_blockers": [],
+    "automation_verdict": "safe_to_resume_or_continue",
+    "blocked_steps": [],
+    "blocker_count": 0,
+    "blockers": [],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": true,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_io_heavy": {
+          "artifact_record_bytes_mean": 12346.809523809523,
+          "artifact_record_bytes_sum": 259283,
+          "artifact_record_count": 12,
+          "artifact_record_raw_bytes_mean": 12346.809523809523,
+          "artifact_record_raw_bytes_sum": 259283,
+          "candidate_ids": [
+            "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+            "autonomous_chain_portfolio_materializer_context_closure_campaign",
+            "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+          ],
+          "dominant_resource_kind": "local_io_heavy",
+          "elapsed_seconds_max": 13.55660424999951,
+          "elapsed_seconds_mean": 3.0072834049032755,
+          "elapsed_seconds_min": 0.6957658329993137,
+          "elapsed_seconds_sum": 63.15295150296879,
+          "experiment_ids": [
+            "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+            "autonomous_chain_portfolio_materializer_context_closure_campaign",
+            "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 9412.190476190477,
+          "log_bytes_sum": 197656,
+          "resource_kind_counts": {
+            "local_io_heavy": 21
+          },
+          "run_count": 21,
+          "step_ids": [
+            "emit_autonomous_chain_work_order",
+            "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+            "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local",
+            "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+            "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+            "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue",
+            "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+          ],
+          "success_count": 21
+        }
+      },
+      "event_count": 21,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization",
+    "queue_path": ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+    "queued_step_count": 0,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_io_heavy": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_io_heavy": 900
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-28T05:46:00Z",
+      "event_count": 71,
+      "max_event_id": 71,
+      "max_step_updated_at_utc": "2026-05-28T19:38:18Z",
+      "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+      "step_state_count": 21
+    },
+    "status_counts": {
+      "succeeded": 21
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "8",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "tick_index": 1,
+  "worker_result": {
+    "command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/autonomous_chain_optimization_queue.json",
+      "--state",
+      ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8",
+      "--max-parallel",
+      "1",
+      "--noncanonical-state-rationale",
+      "queue_supervisor_explicit_state_path_prevents_default_worker_collision"
+    ],
+    "elapsed_seconds": 12.310221000007004,
+    "failed": false,
+    "json_payload": {
+      "allow_cloud": false,
+      "claim_refused_count": 0,
+      "execute": true,
+      "failure_count": 0,
+      "idle_cycles": 1,
+      "max_experiments": null,
+      "max_parallel": 1,
+      "noncanonical_state_rationale": "queue_supervisor_explicit_state_path_prevents_default_worker_collision",
+      "orphaned_state_rationale": null,
+      "planned_steps": [],
+      "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization",
+      "requested_max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      },
+      "schema": "experiment_queue_worker_result.v1",
+      "stale_running_reconciliations": [],
+      "started_at_utc": "2026-05-28T19:38:06Z",
+      "started_experiment_ids": [
+        "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+      ],
+      "state": ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+      "step_results": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "12",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+            "--output",
+            "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+          ],
+          "elapsed_seconds": 10.186857958004111,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedb_d13c7771f70f796e/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_sco_7aff530233a603b1/20260528T193806Z_945773e5fa7182ad.log",
+          "pid": 87364,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/experiment_queue.py",
+              "--queue",
+              ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/repair_campaign_score_queue.json",
+              "run-worker",
+              "--execute",
+              "--max-steps",
+              "12",
+              "--max-experiments",
+              "2",
+              "--max-parallel",
+              "1",
+              "--output",
+              "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json"
+            ],
+            "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+            "priority": 3,
+            "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization",
+            "resource_kind": "local_io_heavy",
+            "step_hashes": {
+              "command_hash": "11f3989976a3663f3c606c1813d4c0411749299cc4545195ea235e1463870c8e",
+              "definition_hash": "42ae119620342b3c30de71238a2b771f04d764d9abf132170e4c8a6a8c510848",
+              "postcondition_hash": "3378bfb522e80ad156e14a704de5969e3799d41293b4458ca3619ff340e30e99"
+            },
+            "step_id": "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local"
+          },
+          "resource_kind": "local_io_heavy",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 47206,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:38:16Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_worker_result.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 47206,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "945773e5fa7182ad"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+            "validate"
+          ],
+          "elapsed_seconds": 0.7693255420017522,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedb_d13c7771f70f796e/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acqu_6c9e6141140816ba/20260528T193816Z_b65f4199b6751659.log",
+          "pid": 87610,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/experiment_queue.py",
+              "--queue",
+              ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+              "validate"
+            ],
+            "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+            "priority": 3,
+            "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization",
+            "resource_kind": "local_io_heavy",
+            "step_hashes": {
+              "command_hash": "2bd74fe1f7cf60f7c11e381d5a25edbab5ecb036797dee6f1e5b5e479677f7ba",
+              "definition_hash": "67c2706f00ba55dd9d5418d44dd4bbbcff6c02b08f597ce5dd93553efdb9fa46",
+              "postcondition_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "step_id": "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue"
+          },
+          "resource_kind": "local_io_heavy",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 0,
+            "artifact_records": [],
+            "log_bytes": 508,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "b65f4199b6751659"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "12",
+            "--max-experiments",
+            "4",
+            "--max-parallel",
+            "2",
+            "--output",
+            "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json"
+          ],
+          "elapsed_seconds": 0.7706917499890551,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedb_d13c7771f70f796e/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisiti_c7d69d07895a952c/20260528T193817Z_94c094d2d8e580bc.log",
+          "pid": 87615,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/experiment_queue.py",
+              "--queue",
+              ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json",
+              "run-worker",
+              "--execute",
+              "--max-steps",
+              "12",
+              "--max-experiments",
+              "4",
+              "--max-parallel",
+              "2",
+              "--output",
+              "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json"
+            ],
+            "experiment_id": "autonomous_chain_segnet_posenet_geometry_drop_many_campaign",
+            "priority": 3,
+            "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization",
+            "resource_kind": "local_io_heavy",
+            "step_hashes": {
+              "command_hash": "fd9003d5645eb64263bfa9eedcadf913c76093a64d1ee3a2b270d9777e954182",
+              "definition_hash": "d182df808e86e04aa0aa1ef8c91520782f262150757ecc16fcd87c86c620efe2",
+              "postcondition_hash": "04b5a993a2f202ab8011b3ab543246552e76303f6f90dd108d0eb162c8fdf1a3"
+            },
+            "step_id": "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local"
+          },
+          "resource_kind": "local_io_heavy",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 1,
+            "artifact_records": [
+              {
+                "bytes": 990,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-28T19:38:18Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json",
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 990,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "94c094d2d8e580bc"
+        }
+      ],
+      "steps_started": 3,
+      "stop_reason": "idle_limit_reached",
+      "stop_signals": [],
+      "success_count": 3
+    },
+    "label": "run_worker",
+    "returncode": 0,
+    "stderr_tail": "",
+    "stdout_tail": "ion_followup_queue.json\",\n        \"run-worker\",\n        \"--execute\",\n        \"--max-steps\",\n        \"12\",\n        \"--max-experiments\",\n        \"4\",\n        \"--max-parallel\",\n        \"2\",\n        \"--output\",\n        \"/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json\"\n      ],\n      \"elapsed_seconds\": 0.7706917499890551,\n      \"executed\": true,\n      \"execution_error\": null,\n      \"failed_postconditions\": [],\n      \"log_path\": \"/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedb_d13c7771f70f796e/autonomous_chain_segnet_posenet_geometry_drop_many_campaign/run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisiti_c7d69d07895a952c/20260528T193817Z_94c094d2d8e580bc.log\",\n      \"pid\": 87615,\n      \"postcondition_errors\": [],\n      \"ready_step\": {\n        \"command\": [\n          \".venv/bin/python\",\n          \"tools/experiment_queue.py\",\n          \"--queue\",\n          \".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/post_execute_feedback_refresh/repair_posterior_acquisition_followup_queue.json\",\n          \"run-worker\",\n          \"--execute\",\n          \"--max-steps\",\n          \"12\",\n          \"--max-experiments\",\n          \"4\",\n          \"--max-parallel\",\n          \"2\",\n          \"--output\",\n          \"/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json\"\n        ],\n        \"experiment_id\": \"autonomous_chain_segnet_posenet_geometry_drop_many_campaign\",\n        \"priority\": 3,\n        \"queue_id\": \"frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_autonomous_chain_optimization\",\n        \"resource_kind\": \"local_io_heavy\",\n        \"step_hashes\": {\n          \"command_hash\": \"fd9003d5645eb64263bfa9eedcadf913c76093a64d1ee3a2b270d9777e954182\",\n          \"definition_hash\": \"d182df808e86e04aa0aa1ef8c91520782f262150757ecc16fcd87c86c620efe2\",\n          \"postcondition_hash\": \"04b5a993a2f202ab8011b3ab543246552e76303f6f90dd108d0eb162c8fdf1a3\"\n        },\n        \"step_id\": \"run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local\"\n      },\n      \"resource_kind\": \"local_io_heavy\",\n      \"returncode\": 0,\n      \"succeeded\": true,\n      \"telemetry\": {\n        \"artifact_record_count\": 1,\n        \"artifact_records\": [\n          {\n            \"bytes\": 990,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-28T19:38:18Z\",\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/frontier_final_rate_attack/frontier_autonomous_chain_optimization/frontier_final_rate_attack_feca_default_exec2_20260528tlocal_post_execute_feedback_autonomous_chain_optimization/segnet_posenet_geometry_drop_many_campaign/run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_worker_result.json\",\n            \"source\": \"step.telemetry.artifact_paths\"\n          }\n        ],\n        \"log_bytes\": 990,\n        \"recursive_truncated\": false,\n        \"schema\": \"experiment_queue_step_telemetry.v1\"\n      },\n      \"timed_out\": false,\n      \"worker_run_id\": \"94c094d2d8e580bc\"\n    }\n  ],\n  \"steps_started\": 3,\n  \"stop_reason\": \"idle_limit_reached\",\n  \"stop_signals\": [],\n  \"success_count\": 3\n}\n"
+  }
+}

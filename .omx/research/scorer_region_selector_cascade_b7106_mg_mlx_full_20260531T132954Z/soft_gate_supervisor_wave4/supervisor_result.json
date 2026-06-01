@@ -1,0 +1,287 @@
+{
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "auto_resume_paused": true,
+  "execute": true,
+  "final_reason": "unsafe_state_after_recovery",
+  "final_summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 5,
+        "resource_limits": {
+          "local_cpu": 2,
+          "local_io_heavy": 2,
+          "local_mlx": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu",
+        "local_io_heavy",
+        "local_mlx"
+      ],
+      "with_cloud": {
+        "max_parallel": 5,
+        "resource_limits": {
+          "local_cpu": 2,
+          "local_io_heavy": 2,
+          "local_mlx": 1
+        }
+      }
+    },
+    "automation_blockers": [
+      "queue_observation_unhealthy"
+    ],
+    "automation_verdict": "needs_recovery_or_operator_attention",
+    "blocked_steps": [],
+    "blocker_count": 1,
+    "blockers": [
+      "experiment_queue_observation_artifact_postcondition_failures:2"
+    ],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": false,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_cpu": {
+          "artifact_record_bytes_mean": 1061695212.75,
+          "artifact_record_bytes_sum": 8493561702,
+          "artifact_record_count": 19,
+          "artifact_record_raw_bytes_mean": 1061698256.5,
+          "artifact_record_raw_bytes_sum": 8493586052,
+          "candidate_ids": [
+            "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch"
+          ],
+          "dominant_resource_kind": "local_cpu",
+          "elapsed_seconds_max": 604.4104830409633,
+          "elapsed_seconds_mean": 259.1364230626132,
+          "elapsed_seconds_min": 0.3123408340034075,
+          "elapsed_seconds_sum": 2073.0913845009054,
+          "experiment_ids": [
+            "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch"
+          ],
+          "failure_count": 2,
+          "log_bytes_mean": 2933.75,
+          "log_bytes_sum": 23470,
+          "resource_kind_counts": {
+            "local_cpu": 8
+          },
+          "run_count": 8,
+          "step_ids": [
+            "build_mlx_component_cache",
+            "build_scorer_response_dataset",
+            "mlx_cpu_spend_gate",
+            "prove_receiver_patch_full_frame_output_change"
+          ],
+          "success_count": 6
+        },
+        "local_mlx": {
+          "artifact_record_bytes_mean": 16845.25,
+          "artifact_record_bytes_sum": 67381,
+          "artifact_record_count": 8,
+          "artifact_record_raw_bytes_mean": 16845.25,
+          "artifact_record_raw_bytes_sum": 67381,
+          "candidate_ids": [
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch"
+          ],
+          "dominant_resource_kind": "local_mlx",
+          "elapsed_seconds_max": 310.80675316700945,
+          "elapsed_seconds_mean": 121.03648301049543,
+          "elapsed_seconds_min": 42.04718612501165,
+          "elapsed_seconds_sum": 484.1459320419817,
+          "experiment_ids": [
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 452.0,
+          "log_bytes_sum": 1808,
+          "resource_kind_counts": {
+            "local_mlx": 4
+          },
+          "run_count": 4,
+          "step_ids": [
+            "local_mlx_component_response"
+          ],
+          "success_count": 4
+        }
+      },
+      "event_count": 12,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+    "queue_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+    "queued_step_count": 341,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [
+      {
+        "action": "run_worker",
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "8"
+        ],
+        "rank": 50,
+        "reason": "341_queued_steps_available"
+      }
+    ],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_cpu": 18,
+        "local_io_heavy": 2,
+        "local_mlx": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_cpu": 7800,
+        "local_io_heavy": 1200,
+        "local_mlx": 933
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-31T15:00:42Z",
+      "event_count": 5350,
+      "max_event_id": 5350,
+      "max_step_updated_at_utc": "2026-05-31T15:00:23Z",
+      "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "step_state_count": 412
+    },
+    "status_counts": {
+      "queued": 341,
+      "succeeded": 71
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "8",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "finished_at_utc": "2026-05-31T15:00:44Z",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "heartbeat_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/soft_gate_supervisor_wave4/heartbeat.json",
+  "last_tick": {
+    "action": "recover",
+    "automation_verdict": "needs_recovery_or_operator_attention",
+    "final_reason_if_stopping": "unsafe_state_after_recovery",
+    "promotion_eligible": false,
+    "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_supervisor_tick.v1",
+    "score_claim": false,
+    "status_counts": {
+      "queued": 341,
+      "succeeded": 71
+    },
+    "tick_artifact": {
+      "bytes": 31190,
+      "path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/soft_gate_supervisor_wave4/tick_0000/tick.json",
+      "sha256": "3a98a4a7a9835f76d231579eb9c2db5309f8d397dacac25550629f27cd286f09"
+    },
+    "tick_index": 0
+  },
+  "lock_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/soft_gate_supervisor_wave4/supervisor.lock",
+  "output_dir": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/soft_gate_supervisor_wave4",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+  "queue_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_supervisor_run.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "started_at_utc": "2026-05-31T15:00:41Z",
+  "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+  "tick_count": 1,
+  "ticks_jsonl": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/soft_gate_supervisor_wave4/ticks.jsonl"
+}

@@ -1,0 +1,79 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal_post_execute_feedback_receiver_repair",
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_receiver_repair_work_order.py",
+        "--receiver-repair-backlog",
+        ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/post_execute_feedback_refresh/receiver_repair_backlog.json",
+        "--repair-id",
+        "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+        "--work-order-out",
+        "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527tlocal_post_execute_feedback_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json",
+        "--overwrite"
+      ],
+      "experiment_id": "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+      "priority": 1,
+      "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal_post_execute_feedback_receiver_repair",
+      "resource_kind": "local_io_heavy",
+      "step_hashes": {
+        "command_hash": "cbd39cb0e3f20d7beb1a99f26dfbe238997c9e502798df84cb5ba4da36df4b40",
+        "definition_hash": "42ff92b84312e61d02617e18351b4db44e5841c2fceef383bca00b6ee83e6d11",
+        "postcondition_hash": "5b90a691e25aee47d9d9d3801e4b0dbfda093edf22fcdbcf31335f1107209822"
+      },
+      "step_id": "emit_receiver_repair_work_order"
+    }
+  ],
+  "schema": "experiment_queue_summary.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal_post_execute_feedback_receiver_repair.sqlite",
+  "status_counts": {
+    "queued": 4
+  },
+  "step_count": 4,
+  "steps": [
+    {
+      "attempts": 0,
+      "experiment_id": "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_repair_work_order",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:12:30Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_repair_work_order",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:12:30Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_repair_work_order",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:12:30Z"
+    },
+    {
+      "attempts": 0,
+      "experiment_id": "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "experiment_status": "queued",
+      "last_event": null,
+      "status": "queued",
+      "step_id": "emit_receiver_repair_work_order",
+      "stored_status": "queued",
+      "updated_at_utc": "2026-05-27T20:12:30Z"
+    }
+  ]
+}

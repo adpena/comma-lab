@@ -1,0 +1,64 @@
+{
+  "archive_bytes": 230670,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage1_archive_cpuparity_smoke_20260528Tlocal/pr95_public_archive.zip",
+  "archive_sha256": "ab856f79ce04727a34fa9d575f0624b5c0073bae3d3c207b8e5ad01406cbc626",
+  "archive_zip_bytes": 230670,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage1_archive_cpuparity_smoke_20260528Tlocal/pr95_public_archive.zip",
+  "archive_zip_sha256": "ab856f79ce04727a34fa9d575f0624b5c0073bae3d3c207b8e5ad01406cbc626",
+  "bytes": 230670,
+  "candidate_archive": {
+    "bytes": 230670,
+    "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage1_archive_cpuparity_smoke_20260528Tlocal/pr95_public_archive.zip",
+    "sha256": "ab856f79ce04727a34fa9d575f0624b5c0073bae3d3c207b8e5ad01406cbc626"
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "gpu_launched": false,
+  "member": "0.bin",
+  "member_bytes": 230562,
+  "member_compress_type": 0,
+  "member_name": "0.bin",
+  "member_sha256": "e76bc74fbcbff6105230bb75dc402db902da61cedac1369c66223d7df1ae7a3b",
+  "parsed_latent_shape": [
+    8,
+    28
+  ],
+  "parsed_meta": {
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 8
+  },
+  "parsed_state_dict_tensor_count": 28,
+  "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage1_archive_cpuparity_smoke_20260528Tlocal/pr95_public_archive.zip",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_proof_present": true,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "runtime_consumption_proof_bytes": 5068,
+  "runtime_consumption_proof_path": ".omx/research/pr95_mlx_stage1_archive_cpuparity_smoke_20260528Tlocal/runtime_consumption_proof.json",
+  "runtime_consumption_proof_present": true,
+  "runtime_consumption_proof_sha256": "b9540aeec9be6f3df3a0acb41cec0783027158417a6dafbc50d92690d0b62fd5",
+  "runtime_consumption_proven": true,
+  "schema": "pr95_hnerv_archive_export.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "sha256": "ab856f79ce04727a34fa9d575f0624b5c0073bae3d3c207b8e5ad01406cbc626"
+}

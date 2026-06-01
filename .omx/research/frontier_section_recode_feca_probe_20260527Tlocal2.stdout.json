@@ -1,0 +1,19 @@
+{
+  "artifacts": {
+    "bootstrap": ".omx/research/frontier_section_recode_feca_probe_20260527Tlocal2/frontier_rate_attack_bootstrap.json",
+    "derived_section_manifests": ".omx/research/frontier_section_recode_feca_probe_20260527Tlocal2/derived_section_manifests.json",
+    "experiment_queue": ".omx/research/frontier_section_recode_feca_probe_20260527Tlocal2/experiment_queue.json",
+    "materializer_backlog": ".omx/research/frontier_section_recode_feca_probe_20260527Tlocal2/materializer_backlog.json",
+    "materializer_contexts": ".omx/research/frontier_section_recode_feca_probe_20260527Tlocal2/materializer_contexts.json",
+    "materializer_work_queue": ".omx/research/frontier_section_recode_feca_probe_20260527Tlocal2/materializer_work_queue.json"
+  },
+  "execute": false,
+  "execution_report": null,
+  "output_dir": ".omx/research/frontier_section_recode_feca_probe_20260527Tlocal2",
+  "promotion_eligible": false,
+  "queue_id": "frontier_section_recode_feca_probe_20260527Tlocal2",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_final_rate_attack_queue_builder_result.v1",
+  "score_claim": false
+}

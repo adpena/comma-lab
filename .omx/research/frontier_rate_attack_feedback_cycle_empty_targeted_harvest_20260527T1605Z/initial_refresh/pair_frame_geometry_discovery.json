@@ -1,0 +1,117 @@
+{
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "discovered_lattice_count": 2,
+  "discovered_lattices": [
+    {
+      "candidate_ids": [
+        "pairset_geometry_lowimpact_k003_h9dfec80f80",
+        "pairset_geometry_lowimpact_k004_h3d2fc811a7",
+        "pairset_geometry_lowimpact_k006_h7ce3073a1a",
+        "pairset_geometry_lowimpact_k008_hc4a555f7ab",
+        "pairset_geometry_lowimpact_k012_hc4a6f54207",
+        "pairset_geometry_lowimpact_k016_he503d277f6"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "drop_counts": [
+        3,
+        4,
+        6,
+        8,
+        12,
+        16
+      ],
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "path": ".omx/research/codex_dqs1_pair_frame_geometry_auto_refresh_20260525T170139Z/pair_frame_scorer_geometry_lattice.json",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "request_count": 6,
+      "schema": "frontier_rate_attack_discovered_pair_frame_geometry_lattice.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    },
+    {
+      "candidate_ids": [
+        "pairset_geometry_lowimpact_k003_h26140419e5",
+        "pairset_geometry_lowimpact_k004_h8b2ce76737",
+        "pairset_geometry_lowimpact_k006_h2866d55ee6",
+        "pairset_geometry_lowimpact_k008_h5122a378ca",
+        "pairset_geometry_lowimpact_k012_h4bdbac6259",
+        "pairset_geometry_lowimpact_k016_h33130b677c"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "drop_counts": [
+        3,
+        4,
+        6,
+        8,
+        12,
+        16
+      ],
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "path": ".omx/research/codex_pair_frame_geometry_lattice_20260525T151102Z/pair_frame_scorer_geometry_lattice.json",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "request_count": 6,
+      "schema": "frontier_rate_attack_discovered_pair_frame_geometry_lattice.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    }
+  ],
+  "dispatch_attempted": false,
+  "duplicate_request_count": 6,
+  "exact_cuda_auth_eval": false,
+  "explicit_pair_frame_geometry_paths": [],
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "frontier_artifact_roots": [
+    ".omx/research"
+  ],
+  "gpu_launched": false,
+  "ignored_lattices": [
+    {
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "path": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T071254Z_generated_pair_frame_lattice/pair_frame_scorer_geometry_lattice.json",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "duplicate_pair_frame_geometry_requests",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_executable_request_count": 12,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "scanned_candidate_path_count": 3,
+  "schema": "frontier_rate_attack_pair_frame_geometry_discovery.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

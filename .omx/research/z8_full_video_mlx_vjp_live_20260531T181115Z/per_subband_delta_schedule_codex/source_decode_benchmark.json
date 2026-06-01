@@ -1,0 +1,39 @@
+{
+  "archive_bytes": 28406255,
+  "archive_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_contest_rate_export/0.bin",
+  "auth_eval_window_fraction_best": 0.02410846324113663,
+  "auth_eval_window_seconds": 1800.0,
+  "axis_tag": "[macOS-CPU advisory]",
+  "blockers": [],
+  "decode_seconds_best": 43.39523383404594,
+  "decode_seconds_mean": 43.73407819467442,
+  "detail_codec_summary": {
+    "detail_codec_method_counts": {
+      "qi16_static_range": 7200
+    },
+    "detail_codec_payload_bytes": {
+      "qi16_static_range": 19670586
+    },
+    "float32_detail_subband_count": 0,
+    "num_pairs": 600,
+    "pair_blob_schema_counts": {
+      "2": 600
+    },
+    "quantized_or_preconditioned_detail_subband_count": 7200,
+    "schema": "z8_wavelet_detail_codec_summary.v1",
+    "total_detail_coefficients": 41472000,
+    "total_detail_payload_bytes": 19670586,
+    "total_detail_subbands": 7200
+  },
+  "evidence_grade": "macOS-CPU-advisory",
+  "pair_count": 600,
+  "pairs_per_second_best": 13.826403201202874,
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "Decode-throughput budget check for Z8 detail entropy codecs.",
+  "ready_for_exact_eval_dispatch": false,
+  "repeat": 3,
+  "schema": "z8_wavelet_blob_decode_benchmark.v1",
+  "score_claim": false,
+  "wavelet_blob_bytes": 28376254
+}

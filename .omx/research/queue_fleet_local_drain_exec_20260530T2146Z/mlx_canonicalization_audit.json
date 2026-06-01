@@ -1,0 +1,3360 @@
+{
+  "allowed_use": "local_mlx_canonicalization_audit_only",
+  "blockers": [
+    "mlx_canonicalization_review_required:src/tac/substrates/boost_nerv_pr110_residual/architecture.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/boost_nerv_pr110_residual/long_training_adapter.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/cascade_c_prime_frame_1_segnet_waterfill/trainer.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/coin_pp_implicit_neural_representation/mlx_renderer.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/faiss_ivf_pq_residual/mlx_renderer.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/hinton_distilled_scorer_surrogate/catalyst_cascade.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/hinton_distilled_scorer_surrogate/mlx_loss.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/mdl_ibps_j_discrete_categorical_mine_hybrid/long_training_adapter.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/mdl_ibps_j_discrete_categorical_mine_hybrid/mlx_renderer.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/nirvana_cascading_nerv/long_training_adapter.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/nscs06_v8_chroma_lut/long_training_adapter.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/nscs06_v8_chroma_lut/mlx_iteration.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/time_traveler_l5_z6/long_training_adapter.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_native.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py",
+    "mlx_canonicalization_review_required:src/tac/substrates/z7_mamba2_v2_fresh_substrate/long_training_adapter.py",
+    "mlx_canonicalization_review_required:tools/cascade_b_catalyst_cascade_composition_5th_order_mlx_local_anchor.py",
+    "mlx_canonicalization_review_required:tools/cascade_b_catalyst_sister_wave_2_production_scale_post_train_qat_real_segnet_20260526.py",
+    "mlx_canonicalization_review_required:tools/cascade_b_path_a_learnable_head_smoke.py",
+    "mlx_canonicalization_review_required:tools/export_pact_nerv_ia3_mlx_to_pytorch_state_dict.py",
+    "mlx_canonicalization_review_required:tools/export_pact_nerv_selector_v2_mlx_to_pytorch_state_dict.py",
+    "mlx_canonicalization_review_required:tools/export_pact_nerv_selector_v3_mlx_to_pytorch_state_dict.py",
+    "mlx_canonicalization_review_required:tools/export_pact_nerv_selector_v4_mlx_to_pytorch_state_dict.py",
+    "mlx_canonicalization_review_required:tools/export_pact_nerv_vq_mlx_to_pytorch_state_dict.py",
+    "mlx_canonicalization_review_required:tools/export_z6_v2_cargo_cult_unwind_mlx_to_pytorch_state_dict.py",
+    "mlx_canonicalization_review_required:tools/extract_master_gradient_mlx.py",
+    "mlx_canonicalization_review_required:tools/gate_mlx_candidate_contest_equivalence_pact_nerv_ia3.py",
+    "mlx_canonicalization_review_required:tools/gate_mlx_candidate_contest_equivalence_pact_nerv_selector_v3.py",
+    "mlx_canonicalization_review_required:tools/gate_mlx_candidate_contest_equivalence_pact_nerv_selector_v4.py",
+    "mlx_canonicalization_review_required:tools/gate_mlx_candidate_contest_equivalence_pact_nerv_vq.py",
+    "mlx_canonicalization_review_required:tools/gate_mlx_candidate_contest_equivalence_z6.py",
+    "mlx_canonicalization_review_required:tools/gate_mlx_candidate_contest_equivalence_z6_v2.py",
+    "mlx_canonicalization_review_required:tools/mlx_bitnet_158_pilot.py",
+    "mlx_canonicalization_review_required:tools/nscs06_v8_chroma_lut_hinton_distill_600pair_long_mlx.py",
+    "mlx_canonicalization_review_required:tools/smoke_kahan_ema_vs_naive_z6.py",
+    "mlx_canonicalization_review_required:tools/uniward_6th_order_into_boostnerv_capacity_constrained_sweep_20260526.py",
+    "mlx_canonicalization_review_required:tools/uniward_per_pixel_n_plus_1_real_scorer_anchored_sweep_20260526.py"
+  ],
+  "canonical_helper_import_prefixes": [
+    "tac.local_acceleration.pr95_hnerv_mlx",
+    "tac.local_acceleration.pr95_hnerv_mlx_training",
+    "tac.local_acceleration.pr95_hnerv_mlx_long_training",
+    "tac.local_acceleration.deterministic_primitives",
+    "tac.portable_primitives",
+    "tac.framework_agnostic",
+    "tac.substrates._shared.mamba2_ssd",
+    "tac.substrates._shared.mlx_score_aware"
+  ],
+  "canonical_source_prefixes": [
+    "src/tac/local_acceleration/",
+    "src/tac/portable_primitives/",
+    "src/tac/framework_agnostic/",
+    "src/tac/substrates/_shared/mamba2_ssd/",
+    "src/tac/substrates/_shared/mlx_score_aware/",
+    "src/tac/tests/"
+  ],
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "exclude_path_parts": [
+    "/tests/",
+    "/__pycache__/"
+  ],
+  "forbidden_use": "score_claim_or_exact_dispatch_authority",
+  "gpu_launched": false,
+  "mlx_canonicalization_ready": false,
+  "mlx_file_count": 84,
+  "producer": "tac.local_acceleration.mlx_canonicalization_audit",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "review_required_count": 37,
+  "review_required_rows": [
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.nn",
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/boost_nerv_pr110_residual/architecture.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "25feffabd61a1c8b1fc5811bdf72400d363a104483cf60935239ff6229a2212a",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/boost_nerv_pr110_residual/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "b03dfec3ca76d3b677183434d04dc3697871e8d25768778fc04e7206489be0de",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/cascade_c_prime_frame_1_segnet_waterfill/trainer.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f4ebad9619c3ea0efd8fd97552c3fe91bb53ad653a11b1b6efeb49a631100826",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/coin_pp_implicit_neural_representation/mlx_renderer.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "6184b804bc037a779e6f11b34b514f082f018a7e113a5d0f2c7c2ca542857f4b",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/faiss_ivf_pq_residual/mlx_renderer.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "0d53ce327746332f3996679d538e9704189a4d00b077c827c2cfceb5a3747311",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/hinton_distilled_scorer_surrogate/catalyst_cascade.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "557eee9e8b7e689aab1d84b0e4cb0f79a3ec3c1eaaee8b5a36e27990cf332daa",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/hinton_distilled_scorer_surrogate/mlx_loss.py",
+      "primitive_tokens": [
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "8e1b8525095ad347683237107e58357e2c9d24b468364fe7e6b244bdaf991a48",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/mdl_ibps_j_discrete_categorical_mine_hybrid/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "68f62e442bfa947eb545e22e81353761b21bfabb081cd234f4807dacc3e9799f",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/mdl_ibps_j_discrete_categorical_mine_hybrid/mlx_renderer.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "6aa6642645daca4e5656a6dfb893c93225a4e3b9dfeac9650df85ce6f56bf83a",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/nirvana_cascading_nerv/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f296f1d507f6557cc6a99c21e9d1eade88dbfe811b70e6df1554ab50b3aa080d",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/nscs06_v8_chroma_lut/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "2fb51620f9ae5c999b41061395ad14c8ffedeb7f584bdbf913acee3475d5f30f",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/nscs06_v8_chroma_lut/mlx_iteration.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "381a91150d340f7ed0ca5442610965e897d3c497cf4ccad3598a2b375f277c14",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.optimizers"
+      ],
+      "path": "src/tac/substrates/time_traveler_l5_z6/long_training_adapter.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "10ed10465200025bd8431954ae32b7ccba82a7e0eac227d67dd5cdeaef3fb7a5",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_native.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "dccc1c136a5994d95e5297fe529ef35a7c510ea5f6c2a3277756427581e5ef53",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "259b1f86d00266b456f0506c16abe40ac4d8f045a4859deb0ac91fa03c5a5c3e",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/z7_mamba2_v2_fresh_substrate/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "c2b1b3a6a5ce7a03eb21e4682bcd11fc16861183d841d4463d74a6a964a8fbfa",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/cascade_b_catalyst_cascade_composition_5th_order_mlx_local_anchor.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "482fc9d030a6f133f896ca8531046503177ad68be9196dd5d74243bc9315d9e5",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/cascade_b_catalyst_sister_wave_2_production_scale_post_train_qat_real_segnet_20260526.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "6ddb6fc1aebae66ad2eb4e2145430d6d58b5369911866dd3804f017f0208cd89",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/cascade_b_path_a_learnable_head_smoke.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "26592a3e875ee1cee59224b5205fc171e3954c5881a18c2144cdbe2246515498",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_ia3_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "5f28dc6ada89f0e573b5e508b1b028d9c6379b4b2317b1d37176a59c7f5e3fd1",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_selector_v2_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "8f0d88109bb2bae6d66ef0b10a8d1464bb9bbf4cc3a82af501ac328aa4ff3e6d",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_selector_v3_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "588ac969c762356bf8ec476375ad8f0d2c1e139938bceac544fa8d3cdc3a7752",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_selector_v4_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "97e4ed807b9681e926ac69cb976c77fb31476b8b80690b4924064aa0e0c9d4ab",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_vq_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "4b4b5bfa75b3c1ec64ef7cd339463e32022c72fc47a2ae220beec356ddb14588",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_z6_v2_cargo_cult_unwind_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "92bf957d6274bffd9027a2b0d8928312fc5f6d4f0cda86b99e1d0d51687640a2",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/extract_master_gradient_mlx.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "b281b16f508ec9c5f54835f9201bb2842e33d8dff29a8b719797bbe9436baea9",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_pact_nerv_ia3.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "012bc37118d45b2a615ff7da00ee6ae82acef6ebaf90f4406b159625d01e6e03",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_pact_nerv_selector_v3.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "1708ac2b240b6ea934e4515688d27c7fb082dcd697f7e8b71c9039b0dc546a4b",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_pact_nerv_selector_v4.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "49863c7089c473bf8206d66ad791d8190ef902527732d588999418fdb6b7906a",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_pact_nerv_vq.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "4f25e1308f0a207e5d0da5df75442ed431a45e4b21ad367acf8c1e134eeb1819",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_z6.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "d54d53be210a25c75e5f2cff63d24a62b8a81f48216ea6c6e26611945057288a",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_z6_v2.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "a57b3004a726c8034fcf49bc78699b6c9c6cf7de9412f1146c26227616503a31",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.optimizers"
+      ],
+      "path": "tools/mlx_bitnet_158_pilot.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "b1f28aad36115f120ded041466f66d0665fae930330c3cc13251ca3c327dd189",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/nscs06_v8_chroma_lut_hinton_distill_600pair_long_mlx.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "d11126057fa365c74934e2b699b65c7cfcae33c23a9cccaedf00e96b6b86d0a0",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.utils"
+      ],
+      "path": "tools/smoke_kahan_ema_vs_naive_z6.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "d85a3151fc85bf011efaf3616a949d512a94842d976c9161b51d98d20a933d71",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/uniward_6th_order_into_boostnerv_capacity_constrained_sweep_20260526.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "140774e9cb83aff3b6233cad6f703920c089c52f5f119d9881eee9b7d62f23ee",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.optimizers"
+      ],
+      "path": "tools/uniward_per_pixel_n_plus_1_real_scorer_anchored_sweep_20260526.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f218042403466a337adfe95962c296c01e2c8aa66edc6324cf2834d160e23eb7",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    }
+  ],
+  "routed_or_canonical_count": 47,
+  "rows": [
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [],
+      "path": "src/tac/local_acceleration/mlx_canonicalization_audit.py",
+      "primitive_tokens": [
+        "mx.compile",
+        "mx.eval",
+        "mlx.nn.Conv",
+        "mlx.nn.Conv2d",
+        "mlx.nn.BatchNorm",
+        "mlx.nn.LayerNorm",
+        "mlx.nn.Linear",
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample",
+        "conv_transpose"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "8def37d3f116381d25c6d0a35f4b649f0ec084eea4bbc93dcce7a1f09bebd83f",
+      "status": "canonical_source_root",
+      "uses_mlx": false,
+      "waiver_lines": [
+        7,
+        24
+      ]
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_integration.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "057107152519ff06f6a3e70bf3712a70cc69ffb446aa43ce00d35e934cb3de03",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/local_acceleration/mlx_scorer_adapters.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "5f335b85a79f5bdb263c84767bb67683237cab11e2a1261485e4d0f4b3cc11d8",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_scorer_torch_parity.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "d820899f56271e5c25b4d2151c5c122c3b72e27c111e3eb519d1ada0b1a26337",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_segnet_cross_input_probe.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "066538b13476eb1d7acf40c7d08a63b1cc3628f37dd4fb8ea8625b21e15f422f",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_segnet_prefix_reset_probe.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f4975a5769f6dc04700843cee71476f1f4cbbb1e6b770bcdfff577ae68256a5f",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_segnet_repaired_se_probe.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "eb0170af95a0741ce04e1530a8669ae00f976e3b5354d83d537684c75615177f",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_segnet_se_conv_variants.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "34fb7e975068b74c8843c8d859c222aaafc0d19e6ed7a29e74894ff77638f680",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_segnet_se_pool_variants.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "0e14d89fea8bca2442eabc846f6c534a518ff6a42d8a05c0c51b5a6b3f1e2ad0",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_segnet_se_trace.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "7a576f9e238c3ad20fb797abf2b410a96539a845c054f8f74706efdc8ae477cc",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/mlx_yuv6_primitive_parity.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "8f2d3257c34cd5afe21526d826ace361407c364b6925086aabc851d631384e8d",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/pact_nerv_ia3_export_parity.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "959655abe4f7bdafbef77b6dcf5f31648b05805d34bf39be1fe33d0594c14499",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx_training"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/local_acceleration/pr95_hnerv_mlx.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f4a2dca53d61b65f4d4f72d621489ebe1b38375d9528fc1a4a9255aac9cdc12f",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.optimizers"
+      ],
+      "path": "src/tac/local_acceleration/pr95_hnerv_mlx_long_training.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "7605a83ab42e0472a70024619cf6b67448f44e467adebe2e61e6a91b3de503b4",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/local_acceleration/pr95_hnerv_mlx_stage_losses.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "0fcd43e9a546ee4dd3823c616961627f89fa9253a64ed6e920329a18de8c68e3",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/portable_primitives/backend.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "4e42befd9f82d11370a5d8796dd522fbaf0ecb8f21782f6a6b35d38e6b4f0386",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/portable_primitives/loss.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "09f6866a1ae1be12cdc7bb8ee88bfdbfdd771331eaee786ab60e36d78de4635a",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/portable_primitives/nn.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "250d9770a9a958eae7aab2405a416d65e2fea1bcdceff8eebc04db28a3cbd39c",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend",
+        "tac.portable_primitives.nn",
+        "tac.portable_primitives.nn_extended"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/portable_primitives/nn_attention.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "9766050a6507e6c4f8f96fcbc5357e6c70ccfd3eaa7cc30a920c07441b4c6f2b",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/portable_primitives/nn_extended.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "mlx.nn.Conv",
+        "mlx.nn.Conv2d"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "ede5cb3eca3ad419ce517d1b402b3f7bec65243e1b508da7330fca3494d2c783",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend",
+        "tac.portable_primitives.nn",
+        "tac.portable_primitives.nn_attention",
+        "tac.portable_primitives.nn_extended"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/portable_primitives/nn_fastvit.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "16d5995b6d6279da0c1ec939f25012a8259cbaf9e16bfb18b621c43ac6be3651",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend",
+        "tac.portable_primitives.nn",
+        "tac.portable_primitives.nn_extended"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/portable_primitives/nn_segnet.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "889e9be8c6a015aac86ad37a796c1953a71b411ad3be9ebc34e72acc4e93e0de",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/portable_primitives/optim.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "bef1091427071d02accdcb6f7b510de9c8b3f202eb1cc1c5b86123b7b6efea47",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend",
+        "tac.portable_primitives.nn_segnet",
+        "tac.portable_primitives.nn_fastvit"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/portable_primitives/pr101_state_dict_loader.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "7f57671045d89011fb9529b85ca55d86e05b55790199e71058b0cc5429cd2674",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives.backend"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/portable_primitives/tensor.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f39dd34c3bf09669ebc2de0f19c486235a50cef4e4d848ec78b261f4882b9507",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/_shared/mamba2_ssd/mlx_backend.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "a26e8173894191087c9689d7b5d34934d9ce2760ea98d9edb4e2d69819d909e7",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.substrates._shared.mlx_score_aware.device_gate",
+        "tac.substrates._shared.mlx_score_aware.loss",
+        "tac.substrates._shared.mlx_score_aware.bundle",
+        "tac.local_acceleration.pr95_hnerv_mlx",
+        "tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.nn",
+        "mlx.optimizers"
+      ],
+      "path": "src/tac/substrates/_shared/mlx_score_aware/adapter.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "403326334418e0fc6079467fc6d1a05366e42268ae6c1b167b93909c2745474a",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": true,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/_shared/mlx_score_aware/device_gate.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "1abb16d2bd13249dc9620bfef9a6332f3a74c91105c2277318ba503d9ed801e5",
+      "status": "canonical_source_root",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/atw_v2_cooperative_receiver_v2/mlx_renderer.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "7d0976a043915dc10eb203cd8a60f81ca3ade2e770fd035022cb0dafdd3b7b2b",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.nn",
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/boost_nerv_pr110_residual/architecture.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "25feffabd61a1c8b1fc5811bdf72400d363a104483cf60935239ff6229a2212a",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/boost_nerv_pr110_residual/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "b03dfec3ca76d3b677183434d04dc3697871e8d25768778fc04e7206489be0de",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/cascade_c_prime_frame_1_segnet_waterfill/trainer.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f4ebad9619c3ea0efd8fd97552c3fe91bb53ad653a11b1b6efeb49a631100826",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/coin_pp_implicit_neural_representation/mlx_renderer.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "6184b804bc037a779e6f11b34b514f082f018a7e113a5d0f2c7c2ca542857f4b",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/dreamer_v3_rssm/module.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "2050e8391e8e4dcced21e20d06f15da229c82ee8905f079544d2c2f5a8ed3ee9",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/faiss_ivf_pq_residual/mlx_renderer.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "0d53ce327746332f3996679d538e9704189a4d00b077c827c2cfceb5a3747311",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.portable_primitives"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/grayscale_lut/mlx_native.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f2e9e6d4254aa7474ff3ca419ed95d1442a498a10e17e950d5a12de8f073512c",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/hinton_distilled_scorer_surrogate/catalyst_cascade.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "557eee9e8b7e689aab1d84b0e4cb0f79a3ec3c1eaaee8b5a36e27990cf332daa",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/hinton_distilled_scorer_surrogate/mlx_loss.py",
+      "primitive_tokens": [
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "8e1b8525095ad347683237107e58357e2c9d24b468364fe7e6b244bdaf991a48",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/mdl_ibps_j_discrete_categorical_mine_hybrid/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "68f62e442bfa947eb545e22e81353761b21bfabb081cd234f4807dacc3e9799f",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/mdl_ibps_j_discrete_categorical_mine_hybrid/mlx_renderer.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "6aa6642645daca4e5656a6dfb893c93225a4e3b9dfeac9650df85ce6f56bf83a",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/nirvana_cascading_nerv/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f296f1d507f6557cc6a99c21e9d1eade88dbfe811b70e6df1554ab50b3aa080d",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/nirvana_cascading_nerv/mlx_renderer.py",
+      "primitive_tokens": [
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "84753f73a2c8a1fb7d21eb948baddfa4f0a8b441aa7af2a45df2ea7e672980c6",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/nscs06_v8_chroma_lut/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "2fb51620f9ae5c999b41061395ad14c8ffedeb7f584bdbf913acee3475d5f30f",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/nscs06_v8_chroma_lut/mlx_iteration.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "381a91150d340f7ed0ca5442610965e897d3c497cf4ccad3598a2b375f277c14",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/pact_nerv_ia3/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "9f2a773026e037bcf0c1a1dc9ebde91a512262895054131435d338e8fbc57782",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/pact_nerv_selector_v2/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "ce7ed43a04cc26a258820b0386a0319110abacbc6db6cc9bd2fd177b661ea98f",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/pact_nerv_selector_v3/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "8b11ea14e2baf2c4fef76e4d9659d982c8a371efd26f2048bd028068b694ae1e",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/pact_nerv_selector_v4/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "73542f3e1314d2269f08b4072afa074c0861361a484588b8cd9d77c48656305f",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/pact_nerv_vq/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "acbb6235d9d531a85ad30fba8d49a17f5c507aea586010cc731d0c72f17803c4",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/time_traveler_l5_z5/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "c9b6b77263a62949f9db142d4c29b9599eebd514ed35ddfceffa34724818fdc3",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.optimizers"
+      ],
+      "path": "src/tac/substrates/time_traveler_l5_z6/long_training_adapter.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "10ed10465200025bd8431954ae32b7ccba82a7e0eac227d67dd5cdeaef3fb7a5",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/time_traveler_l5_z6/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "c7279b426cd20f3a943b10ecfd31de7771b6df0bb2300b8ca52f35b961cebdac",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_module.py",
+      "primitive_tokens": [
+        "mlx.nn.Conv",
+        "mlx.nn.Conv2d",
+        "mlx.nn.Linear",
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "37f83cbf9d278794fb9a46c6ab48f32572647095d508ddcf8321a0eab1c0dd4a",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/time_traveler_l5_z7_mamba2/mlx_native.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "dccc1c136a5994d95e5297fe529ef35a7c510ea5f6c2a3277756427581e5ef53",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "259b1f86d00266b456f0506c16abe40ac4d8f045a4859deb0ac91fa03c5a5c3e",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.utils"
+      ],
+      "path": "src/tac/substrates/z6_v2_cargo_cult_unwind/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "7c1b4c9eff794d1d97a1e2620a44bef44b3324fecbea73dca0d3342f97b9a1a0",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "src/tac/substrates/z7_mamba2_v2_fresh_substrate/long_training_adapter.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "c2b1b3a6a5ce7a03eb21e4682bcd11fc16861183d841d4463d74a6a964a8fbfa",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "src/tac/substrates/z8_hierarchical_predictive_coding/mlx_renderer.py",
+      "primitive_tokens": [
+        "pixel_shuffle",
+        "bilinear_resize",
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "de3159c90916d4973c502c489298180d96f91d9e0e58c2951dc6910d6c8e22de",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx_long_training"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/build_hinton_mlx_numpy_pytorch_parity_proof.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "87526b7b243febb72b238e0df3d59ce51dcfa95b5be61c61ee23c33c0429dce7",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/cascade_b_catalyst_cascade_composition_5th_order_mlx_local_anchor.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "482fc9d030a6f133f896ca8531046503177ad68be9196dd5d74243bc9315d9e5",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/cascade_b_catalyst_sister_wave_2_production_scale_post_train_qat_real_segnet_20260526.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "6ddb6fc1aebae66ad2eb4e2145430d6d58b5369911866dd3804f017f0208cd89",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/cascade_b_path_a_learnable_head_smoke.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "26592a3e875ee1cee59224b5205fc171e3954c5881a18c2144cdbe2246515498",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_ia3_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "5f28dc6ada89f0e573b5e508b1b028d9c6379b4b2317b1d37176a59c7f5e3fd1",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_selector_v2_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "8f0d88109bb2bae6d66ef0b10a8d1464bb9bbf4cc3a82af501ac328aa4ff3e6d",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_selector_v3_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "588ac969c762356bf8ec476375ad8f0d2c1e139938bceac544fa8d3cdc3a7752",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_selector_v4_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "97e4ed807b9681e926ac69cb976c77fb31476b8b80690b4924064aa0e0c9d4ab",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_pact_nerv_vq_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "4b4b5bfa75b3c1ec64ef7cd339463e32022c72fc47a2ae220beec356ddb14588",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/export_z6_v2_cargo_cult_unwind_mlx_to_pytorch_state_dict.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "92bf957d6274bffd9027a2b0d8928312fc5f6d4f0cda86b99e1d0d51687640a2",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/extract_master_gradient_mlx.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "b281b16f508ec9c5f54835f9201bb2842e33d8dff29a8b719797bbe9436baea9",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_pact_nerv_ia3.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "012bc37118d45b2a615ff7da00ee6ae82acef6ebaf90f4406b159625d01e6e03",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_pact_nerv_selector_v3.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "1708ac2b240b6ea934e4515688d27c7fb082dcd697f7e8b71c9039b0dc546a4b",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_pact_nerv_selector_v4.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "49863c7089c473bf8206d66ad791d8190ef902527732d588999418fdb6b7906a",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_pact_nerv_vq.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "4f25e1308f0a207e5d0da5df75442ed431a45e4b21ad367acf8c1e134eeb1819",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_z6.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "d54d53be210a25c75e5f2cff63d24a62b8a81f48216ea6c6e26611945057288a",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/gate_mlx_candidate_contest_equivalence_z6_v2.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "a57b3004a726c8034fcf49bc78699b6c9c6cf7de9412f1146c26227616503a31",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/measure_pr95_mlx_pytorch_full_decoder_downstream_scorer_drift.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "2168cef352897b0e1590fe837dc18d9c1c80da39098488a626d775dfcf7b57e2",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.deterministic_primitives",
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn"
+      ],
+      "path": "tools/measure_pr95_mlx_pytorch_per_op_drift.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "pixel_shuffle",
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "bf48b2076cc1bbc643a5fb3c8adf36868642980ce66aa22bf53371d2eabc31a4",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.nn",
+        "mlx.optimizers"
+      ],
+      "path": "tools/mlx_bitnet_158_pilot.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "b1f28aad36115f120ded041466f66d0665fae930330c3cc13251ca3c327dd189",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/nscs06_v8_chroma_lut_hinton_distill_600pair_long_mlx.py",
+      "primitive_tokens": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "d11126057fa365c74934e2b699b65c7cfcae33c23a9cccaedf00e96b6b86d0a0",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/prove_pr95_public_archive_full_frame_parity.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f43b6de21dc5138c35ef19801f84c7128c7939fa17b74c59b8c47659646bea97",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [
+        "tac.local_acceleration.pr95_hnerv_mlx",
+        "tac.local_acceleration.pr95_hnerv_mlx_training"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/run_pr95_mlx_timing_smoke.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": false,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "cce4a878b08e3985ca9e3dc2c52279f0a0b6cd87c0125814fe5dc087993956d0",
+      "status": "routes_canonical_helper",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.utils"
+      ],
+      "path": "tools/smoke_kahan_ema_vs_naive_z6.py",
+      "primitive_tokens": [
+        "upsample"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "d85a3151fc85bf011efaf3616a949d512a94842d976c9161b51d98d20a933d71",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core"
+      ],
+      "path": "tools/uniward_6th_order_into_boostnerv_capacity_constrained_sweep_20260526.py",
+      "primitive_tokens": [
+        "mx.eval"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "140774e9cb83aff3b6233cad6f703920c089c52f5f119d9881eee9b7d62f23ee",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    },
+    {
+      "canonical_helper_imports": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "gpu_launched": false,
+      "in_canonical_source_root": false,
+      "mlx_imports": [
+        "mlx.core",
+        "mlx.optimizers"
+      ],
+      "path": "tools/uniward_per_pixel_n_plus_1_real_scorer_anchored_sweep_20260526.py",
+      "primitive_tokens": [
+        "mx.eval",
+        "bilinear_resize"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_review": true,
+      "schema": "mlx_canonicalization_audit_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "f218042403466a337adfe95962c296c01e2c8aa66edc6324cf2834d160e23eb7",
+      "status": "needs_canonical_helper_or_unique_method_waiver",
+      "uses_mlx": true,
+      "waiver_lines": []
+    }
+  ],
+  "scan_roots": [
+    "src/tac/substrates",
+    "src/tac/composition",
+    "src/tac/local_acceleration",
+    "src/tac/portable_primitives",
+    "tools"
+  ],
+  "schema": "mlx_canonicalization_audit.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "unique_waiver_count": 0,
+  "waiver_token": "MLX_PRIMITIVE_UNIQUE_BECAUSE_"
+}

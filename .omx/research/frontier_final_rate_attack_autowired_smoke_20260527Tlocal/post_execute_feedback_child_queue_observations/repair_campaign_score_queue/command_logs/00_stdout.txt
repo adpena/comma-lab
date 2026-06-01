@@ -1,0 +1,22 @@
+{
+  "auto_parallelism": {
+    "local_only": {
+      "max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1
+      }
+    },
+    "with_cloud": {
+      "max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1
+      }
+    }
+  },
+  "experiment_count": 3,
+  "queue_id": "frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_repair_campaign_score",
+  "step_count": 36,
+  "valid": true
+}

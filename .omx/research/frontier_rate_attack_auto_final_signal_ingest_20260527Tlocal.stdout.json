@@ -1,0 +1,140 @@
+{
+  "artifacts": {
+    "autonomous_chain_optimization": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/autonomous_chain_optimization.json",
+    "autonomous_chain_optimization_queue": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/autonomous_chain_optimization_queue.json",
+    "dqs1_observation_discovery": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/dqs1_observation_discovery.json",
+    "feedback_refresh_report": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/feedback_refresh_report.json",
+    "local_cpu_eureka_planning": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/local_cpu_eureka_planning.json",
+    "materializer_feedback_bridge": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/materializer_feedback_bridge.json",
+    "materializer_feedback_discovery": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/materializer_feedback_discovery.json",
+    "operation_chain_compiler_queue": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/operation_chain_compiler_queue.json",
+    "operation_chain_compiler_work_orders": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/operation_chain_compiler_work_orders.json",
+    "operation_materializer_backlog": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/operation_materializer_backlog.json",
+    "operation_materializer_bridge": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/operation_materializer_bridge.json",
+    "operation_materializer_contexts": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/operation_materializer_contexts.json",
+    "operation_materializer_work_queue": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/operation_materializer_work_queue.json",
+    "operation_portfolio": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/operation_portfolio.json",
+    "pair_frame_geometry_discovery": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/pair_frame_geometry_discovery.json",
+    "rate_budget_preservation_plan": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/rate_budget_preservation_plan.json",
+    "receiver_closed_correction_budget": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/receiver_closed_correction_budget.json",
+    "receiver_repair_backlog": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/receiver_repair_backlog.json",
+    "receiver_repair_queue": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/receiver_repair_queue.json",
+    "repair_budget_waterfill_queue": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/repair_budget_waterfill_queue.json",
+    "repair_campaign_score_queue": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/repair_campaign_score_queue.json",
+    "targeted_component_correction_acquisition": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/targeted_component_correction_acquisition.json",
+    "targeted_component_correction_chain_materializer_handoff": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/targeted_component_correction_chain_materializer_handoff.json",
+    "targeted_component_correction_chain_materializer_work_queue": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/targeted_component_correction_chain_materializer_work_queue.json",
+    "targeted_component_correction_materialization_requests": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/targeted_component_correction_materialization_requests.json",
+    "targeted_component_correction_operation_chain_work_orders": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/targeted_component_correction_operation_chain_work_orders.json",
+    "targeted_component_correction_queue": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/targeted_component_correction_queue.json",
+    "targeted_component_correction_response_harvest": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal/targeted_component_correction_response_harvest.json"
+  },
+  "autonomous_chain_optimization_summary": {
+    "chain_count": 2,
+    "registered_target_count": 0,
+    "target_classes": [
+      "archive_section",
+      "archive_zip_repack_v1",
+      "byte_range",
+      "inverse_scorer",
+      "packet_member",
+      "tensor"
+    ],
+    "top_chain_ids": [
+      "global_many_op_rate_distortion_receiver_campaign",
+      "portfolio_materializer_context_closure_campaign"
+    ]
+  },
+  "dqs1_observation_count": 0,
+  "generated_pair_frame_geometry_lattice": null,
+  "materializer_feedback_payload_count": 1,
+  "operation_portfolio_summary": {
+    "followup_signal_operation_count": 5,
+    "operation_count": 24,
+    "queue_executable_operation_count": 1,
+    "top_operation_ids": [
+      "chain_registered_multisurface_materializer_program",
+      "materializer_backlog_byte_range_entropy_recode_v1",
+      "materializer_backlog_archive_section_header_elide_v1",
+      "materializer_backlog_archive_section_reorder_v1",
+      "materializer_backlog_archive_section_proceduralize_v1",
+      "materializer_backlog_tensor_quantize_v1",
+      "materializer_backlog_tensor_prune_v1",
+      "materializer_backlog_tensor_shared_codebook_v1"
+    ],
+    "top_queue_executable_operation_ids": [
+      "pair_batch_full_video_low_impact_drop_surface"
+    ]
+  },
+  "output_dir": ".omx/research/frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal",
+  "pair_frame_5d_coverage_acquisition_queue_summary": null,
+  "pair_frame_geometry_queue_request_count": 0,
+  "promotion_eligible": false,
+  "queue_id": "frontier_rate_attack_auto_final_signal_ingest_20260527Tlocal",
+  "queue_summary": null,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_closed_correction_budget_summary": {
+    "active": false,
+    "receiver_closed_candidate_count": 0,
+    "receiver_closed_saved_bytes_total": 0
+  },
+  "receiver_repair_backlog_summary": {
+    "queue_actionable_repair_count": 32,
+    "row_count": 60,
+    "top_repair_families": [
+      "runtime_consumption_proof_repair"
+    ],
+    "top_repair_ids": [
+      "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+      "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_requires_single_composed_receiver_runtime_consumption_proof",
+      "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "receiver_repair_materializer_backlog_archive_section_proceduralize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "receiver_repair_materializer_backlog_tensor_quantize_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "receiver_repair_materializer_backlog_tensor_prune_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof"
+    ]
+  },
+  "repair_dynamics_prior_summary": {
+    "mode_count": null,
+    "repair_dynamics_palette_prior_present": false,
+    "repair_dynamics_prior_defaulted": false,
+    "repair_dynamics_prior_source_count": 0,
+    "zero_frame1_modes": null
+  },
+  "schema": "frontier_rate_attack_feedback_refresh_cli_result.v1",
+  "score_claim": false,
+  "selected_candidate_ids": [],
+  "targeted_component_correction_acquisition_summary": {
+    "active": false,
+    "queue_actionable_acquisition_count": 0,
+    "receiver_closed_saved_bytes_total": 0,
+    "repair_dynamics_palette_probe_count": 0,
+    "repair_dynamics_prior_active": false,
+    "row_count": 0,
+    "top_acquisition_ids": []
+  },
+  "targeted_component_correction_chain_materializer_handoff_summary": {
+    "executable_work_row_count": 0,
+    "unregistered_chain_target_count": 0,
+    "work_queue_row_count": 0
+  },
+  "targeted_component_correction_materialization_request_summary": {
+    "accepted_response_count": 0,
+    "active": false,
+    "ready_for_budget_spend_count": 0,
+    "row_count": 0
+  },
+  "targeted_component_correction_operation_chain_summary": {
+    "active": false,
+    "request_count": 0,
+    "work_order_count": 0
+  },
+  "targeted_component_correction_response_harvest_summary": {
+    "active": false,
+    "blocked_response_count": 0,
+    "local_acquisition_recommended_count": 0,
+    "row_count": 0
+  }
+}

@@ -1,0 +1,263 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 0,
+  "max_experiments": null,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": "bounded local MLX smoke for pact-nerv diffusionblocks queue validation",
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_cpu": 1,
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-28T03:26:37Z",
+  "started_experiment_ids": [
+    "pact_nerv_diffusion_blocks_mlx_smoke"
+  ],
+  "state": ".omx/research/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/queue_state.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_pact_nerv_diffusion_blocks_schedule.py",
+        "--output",
+        "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/diffusion_blocks_schedule.json",
+        "--block-count",
+        "3",
+        "--difficulty-mass-source",
+        "scorer_region_waterfill_and_master_gradient",
+        "--overlap-fraction",
+        "0.0",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.525709708002978,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": ".omx/research/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/logs/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pact_nerv_diffusion_blocks_mlx_smoke/emit_diffusion_blocks_schedule/20260528T032637Z_52eeca615d0378bb.log",
+      "pid": 97402,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_pact_nerv_diffusion_blocks_schedule.py",
+          "--output",
+          "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/diffusion_blocks_schedule.json",
+          "--block-count",
+          "3",
+          "--difficulty-mass-source",
+          "scorer_region_waterfill_and_master_gradient",
+          "--overlap-fraction",
+          "0.0",
+          "--overwrite"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "5e3da7123a5e31847e4be8c023fe171d9a9465e791633e196e87a4897ba18739",
+          "definition_hash": "d4e99f562acafcae9cda9e618d81dbe4f485b4161761aadebbcbc94875ee6527",
+          "postcondition_hash": "ba323f17fb2368fa9ee3960c2dea9a879473ffc7b1ed1dfcb74a2eb7aa5b66f0"
+        },
+        "step_id": "emit_diffusion_blocks_schedule"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 4134,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T03:26:38Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/diffusion_blocks_schedule.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 387,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "52eeca615d0378bb"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "experiments/train_substrate_pact_nerv_ia3_mlx_local.py",
+        "--smoke",
+        "--output-dir",
+        "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pact_nerv_ia3_mlx_renderer_smoke",
+        "--num-pairs",
+        "8"
+      ],
+      "elapsed_seconds": 0.5197232920036186,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": ".omx/research/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/logs/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pact_nerv_diffusion_blocks_mlx_smoke/run_pact_nerv_ia3_mlx_renderer_smoke/20260528T032638Z_4306459804af655e.log",
+      "pid": 97403,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "experiments/train_substrate_pact_nerv_ia3_mlx_local.py",
+          "--smoke",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pact_nerv_ia3_mlx_renderer_smoke",
+          "--num-pairs",
+          "8"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "7ecfcce6630b7c3e45bf5cae56084e838239ebc204592c0edad3fb47c9899f4b",
+          "definition_hash": "91316946d1b8677858b4d3ee69c880e70ea2c95d13d70598c1a78a39f3caf5e5",
+          "postcondition_hash": "815232f5495c9ee08c2673188aef4e631e9607c3091805b6b4404f6ef1cf29b5"
+        },
+        "step_id": "run_pact_nerv_ia3_mlx_renderer_smoke"
+      },
+      "resource_kind": "local_mlx",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 96,
+            "exists": true,
+            "is_dir": true,
+            "is_file": false,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T03:23:06Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pact_nerv_ia3_mlx_renderer_smoke",
+            "recursive_bytes": 1706,
+            "recursive_entry_count": 1,
+            "recursive_entry_limit": 64,
+            "recursive_truncated": false,
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 1706,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T03:26:38Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pact_nerv_ia3_mlx_renderer_smoke/smoke_manifest.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 316,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "4306459804af655e"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/run_pr95_mlx_long_training.py",
+        "--output-report",
+        "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pr95_mlx_blockwise_control_plan.json",
+        "--source-video-path",
+        "upstream/videos/0.mkv",
+        "--checkpoint-root",
+        "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pr95_mlx_blockwise_checkpoints",
+        "--telemetry-path",
+        "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pr95_mlx_blockwise_telemetry.jsonl",
+        "--operator-run-label",
+        "diffusionblocks_blockwise_control",
+        "--smoke-mode",
+        "--smoke-epochs-per-stage",
+        "1",
+        "--max-frames",
+        "16",
+        "--hash-source-video",
+        "--execute-smoke"
+      ],
+      "elapsed_seconds": 1.5509332090005046,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": ".omx/research/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/logs/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pact_nerv_diffusion_blocks_mlx_smoke/run_pr95_mlx_blockwise_control_smoke/20260528T032638Z_73ccd241b81158bf.log",
+      "pid": 97405,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_pr95_mlx_long_training.py",
+          "--output-report",
+          "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pr95_mlx_blockwise_control_plan.json",
+          "--source-video-path",
+          "upstream/videos/0.mkv",
+          "--checkpoint-root",
+          "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pr95_mlx_blockwise_checkpoints",
+          "--telemetry-path",
+          "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pr95_mlx_blockwise_telemetry.jsonl",
+          "--operator-run-label",
+          "diffusionblocks_blockwise_control",
+          "--smoke-mode",
+          "--smoke-epochs-per-stage",
+          "1",
+          "--max-frames",
+          "16",
+          "--hash-source-video",
+          "--execute-smoke"
+        ],
+        "experiment_id": "pact_nerv_diffusion_blocks_mlx_smoke",
+        "priority": 1,
+        "queue_id": "pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "a8b2759d6cb42d39930d53bbae16dedec26770b758aa814e1f3929a1e716be0d",
+          "definition_hash": "f44fffb61522a07b0e2bf53e0f20dd998fa34b1739a23abfc99046182f1dbdab",
+          "postcondition_hash": "727c3e5ad2148fe245a757c9e69d76e32f0a06a8b66cfd47288c0b777c78eb52"
+        },
+        "step_id": "run_pr95_mlx_blockwise_control_smoke"
+      },
+      "resource_kind": "local_mlx",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 37069,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-28T03:26:40Z",
+            "path": "/Volumes/VertigoDataTier/experiments/results/pact_nerv_diffusion_blocks_mlx_smoke_20260528Tlocal/pr95_mlx_blockwise_control_plan.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 740,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "73ccd241b81158bf"
+    }
+  ],
+  "steps_started": 3,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 3
+}

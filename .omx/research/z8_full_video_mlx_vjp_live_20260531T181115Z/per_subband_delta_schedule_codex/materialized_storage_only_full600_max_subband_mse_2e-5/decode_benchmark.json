@@ -1,0 +1,44 @@
+{
+  "archive_bytes": 28284642,
+  "archive_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_storage_only_full600_max_subband_mse_2e-5/0.bin",
+  "auth_eval_window_seconds": 1800.0,
+  "axis_tag": "[macOS-CPU advisory]",
+  "benchmark_scope": "wavelet_blob_parser_only_not_full_contest_inflate",
+  "blockers": [
+    "full_contest_inflate_sh_runtime_not_measured"
+  ],
+  "detail_codec_summary": {
+    "detail_codec_method_counts": {
+      "qi16_constriction_range": 3637,
+      "zigzag_u16_byteplane": 3563
+    },
+    "detail_codec_payload_bytes": {
+      "qi16_constriction_range": 15323670,
+      "zigzag_u16_byteplane": 16418304
+    },
+    "float32_detail_subband_count": 0,
+    "num_pairs": 600,
+    "pair_blob_schema_counts": {
+      "2": 600
+    },
+    "quantized_or_preconditioned_detail_subband_count": 7200,
+    "schema": "z8_wavelet_detail_codec_summary.v1",
+    "total_detail_coefficients": 41472000,
+    "total_detail_payload_bytes": 31741974,
+    "total_detail_subbands": 7200
+  },
+  "evidence_grade": "macOS-CPU-advisory",
+  "pair_count": 600,
+  "pairs_per_second_best": 544.7149503003703,
+  "parser_only_auth_eval_window_fraction_best": 0.0006119408566802223,
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "Wavelet-blob parser throughput check for Z8 detail entropy codecs.",
+  "ready_for_exact_eval_dispatch": false,
+  "repeat": 3,
+  "schema": "z8_wavelet_blob_parse_benchmark.v1",
+  "score_claim": false,
+  "wavelet_blob_bytes": 28254140,
+  "wavelet_blob_parse_seconds_best": 1.1014935420244,
+  "wavelet_blob_parse_seconds_mean": 1.1061703613377176
+}

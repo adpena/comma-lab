@@ -1,0 +1,24 @@
+{
+  "auto_parallelism": {
+    "local_only": {
+      "max_parallel": 5,
+      "resource_limits": {
+        "local_cpu": 2,
+        "local_io_heavy": 2,
+        "local_mlx": 1
+      }
+    },
+    "with_cloud": {
+      "max_parallel": 5,
+      "resource_limits": {
+        "local_cpu": 2,
+        "local_io_heavy": 2,
+        "local_mlx": 1
+      }
+    }
+  },
+  "experiment_count": 28,
+  "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+  "step_count": 412,
+  "valid": true
+}

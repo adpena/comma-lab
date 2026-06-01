@@ -1,0 +1,253 @@
+{
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_contest_rate_export/0.bin",
+  "archive_sha256": "c82125e45c617df2bc3b7a0d0829581e974e45f9b85d423d04b9d3eaa59223e9",
+  "archive_total_bytes": 28406255,
+  "axis_tag": "[macOS-CPU advisory]",
+  "evidence_grade": "macOS-CPU-advisory",
+  "headline_by_quant_step": [
+    {
+      "current_detail_bytes": 89443.0,
+      "headroom_bytes": 21927.0,
+      "headroom_fraction": 0.2452,
+      "mean_distortion_mse": 2.1970057536198814e-08,
+      "quant_step": 0.00390625,
+      "structured_shannon_floor_detail_bytes": 66100.9,
+      "v2_codec_detail_bytes": 67516.0,
+      "v2_vs_floor_gap_bytes": 1415.1
+    },
+    {
+      "current_detail_bytes": 89443.0,
+      "headroom_bytes": 35902.0,
+      "headroom_fraction": 0.4014,
+      "mean_distortion_mse": 2.9693723869665217e-05,
+      "quant_step": 0.015625,
+      "structured_shannon_floor_detail_bytes": 52291.3,
+      "v2_codec_detail_bytes": 53541.0,
+      "v2_vs_floor_gap_bytes": 1249.7
+    }
+  ],
+  "interpretation": {
+    "current_default": "detail blob default schema = raw float32 -> brotli q=11",
+    "headroom_definition": "current_detail_bytes - v2_codec_detail_bytes at matched distortion",
+    "no_signal_loss": "quantization is the ONLY lossy step; all coders round-trip bijectively; LL stays float32",
+    "static_range_note": "static_range_bytes_per_coeff measures the native Rust-backed constriction range coder on a capped sample; compare it against the selected live mode to decide whether fractional-bit coding beats Brotli-aware RLE/byte-plane modes",
+    "v2_vs_floor_gap": "how far the live per-subband mode is above the structured Shannon floor"
+  },
+  "pairs_measured": 2,
+  "per_subband": [
+    {
+      "byteshuffle_brotli_bytes_per_coeff": 1.08558,
+      "coeff_abs_max": 0.4235294461250305,
+      "coeff_abs_mean": 0.01749132014811039,
+      "current_raw_f32_brotli_bytes_per_coeff": 0.60376,
+      "n_coeffs": 36864,
+      "quant_sweep": [
+        {
+          "distortion_mse": 1.1821192025252003e-08,
+          "live_codec_brotli_bytes_per_coeff": 0.45567,
+          "live_codec_bytes_per_coeff": 0.4624,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.80561,
+          "quant_step": 0.00390625,
+          "shannon_floor_order0_bytes_per_coeff": 0.44917,
+          "shannon_floor_structured_bytes_per_coeff": 0.44917,
+          "static_range_bytes_per_coeff": null
+        },
+        {
+          "distortion_mse": 2.9471157176885754e-05,
+          "live_codec_brotli_bytes_per_coeff": 0.35707,
+          "live_codec_bytes_per_coeff": 0.3597,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.80561,
+          "quant_step": 0.015625,
+          "shannon_floor_order0_bytes_per_coeff": 0.35218,
+          "shannon_floor_structured_bytes_per_coeff": 0.35218,
+          "static_range_bytes_per_coeff": null
+        }
+      ],
+      "raw_f32_uncompressed_bytes_per_coeff": 4.0,
+      "subband": "L0_hh"
+    },
+    {
+      "byteshuffle_brotli_bytes_per_coeff": 1.16528,
+      "coeff_abs_max": 0.729411780834198,
+      "coeff_abs_mean": 0.021757133305072784,
+      "current_raw_f32_brotli_bytes_per_coeff": 0.63959,
+      "n_coeffs": 36864,
+      "quant_sweep": [
+        {
+          "distortion_mse": 2.0611718554164327e-08,
+          "live_codec_brotli_bytes_per_coeff": 0.49314,
+          "live_codec_bytes_per_coeff": 0.50331,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.83355,
+          "quant_step": 0.00390625,
+          "shannon_floor_order0_bytes_per_coeff": 0.48485,
+          "shannon_floor_structured_bytes_per_coeff": 0.48485,
+          "static_range_bytes_per_coeff": null
+        },
+        {
+          "distortion_mse": 2.9912247555330396e-05,
+          "live_codec_brotli_bytes_per_coeff": 0.38984,
+          "live_codec_bytes_per_coeff": 0.39491,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.83355,
+          "quant_step": 0.015625,
+          "shannon_floor_order0_bytes_per_coeff": 0.38398,
+          "shannon_floor_structured_bytes_per_coeff": 0.38398,
+          "static_range_bytes_per_coeff": null
+        }
+      ],
+      "raw_f32_uncompressed_bytes_per_coeff": 4.0,
+      "subband": "L0_hl"
+    },
+    {
+      "byteshuffle_brotli_bytes_per_coeff": 1.10571,
+      "coeff_abs_max": 0.6196078658103943,
+      "coeff_abs_mean": 0.01848852075636387,
+      "current_raw_f32_brotli_bytes_per_coeff": 0.6141,
+      "n_coeffs": 36864,
+      "quant_sweep": [
+        {
+          "distortion_mse": 1.403478577799433e-08,
+          "live_codec_brotli_bytes_per_coeff": 0.46533,
+          "live_codec_bytes_per_coeff": 0.47358,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.81475,
+          "quant_step": 0.00390625,
+          "shannon_floor_order0_bytes_per_coeff": 0.45771,
+          "shannon_floor_structured_bytes_per_coeff": 0.45771,
+          "static_range_bytes_per_coeff": null
+        },
+        {
+          "distortion_mse": 2.9778078896924853e-05,
+          "live_codec_brotli_bytes_per_coeff": 0.36504,
+          "live_codec_bytes_per_coeff": 0.36914,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.81475,
+          "quant_step": 0.015625,
+          "shannon_floor_order0_bytes_per_coeff": 0.35963,
+          "shannon_floor_structured_bytes_per_coeff": 0.35963,
+          "static_range_bytes_per_coeff": null
+        }
+      ],
+      "raw_f32_uncompressed_bytes_per_coeff": 4.0,
+      "subband": "L0_lh"
+    },
+    {
+      "byteshuffle_brotli_bytes_per_coeff": 1.18142,
+      "coeff_abs_max": 0.7137255072593689,
+      "coeff_abs_mean": 0.024297047406435013,
+      "current_raw_f32_brotli_bytes_per_coeff": 0.71918,
+      "n_coeffs": 9216,
+      "quant_sweep": [
+        {
+          "distortion_mse": 2.897085416009304e-08,
+          "live_codec_brotli_bytes_per_coeff": 0.52973,
+          "live_codec_bytes_per_coeff": 0.56293,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.8431,
+          "quant_step": 0.00390625,
+          "shannon_floor_order0_bytes_per_coeff": 0.49885,
+          "shannon_floor_structured_bytes_per_coeff": 0.49885,
+          "static_range_bytes_per_coeff": null
+        },
+        {
+          "distortion_mse": 2.9706538043683395e-05,
+          "live_codec_brotli_bytes_per_coeff": 0.4171,
+          "live_codec_bytes_per_coeff": 0.43251,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.8431,
+          "quant_step": 0.015625,
+          "shannon_floor_order0_bytes_per_coeff": 0.39663,
+          "shannon_floor_structured_bytes_per_coeff": 0.39663,
+          "static_range_bytes_per_coeff": null
+        }
+      ],
+      "raw_f32_uncompressed_bytes_per_coeff": 4.0,
+      "subband": "L1_hh"
+    },
+    {
+      "byteshuffle_brotli_bytes_per_coeff": 1.3674,
+      "coeff_abs_max": 1.3803921937942505,
+      "coeff_abs_mean": 0.04132965952157974,
+      "current_raw_f32_brotli_bytes_per_coeff": 0.80697,
+      "n_coeffs": 9216,
+      "quant_sweep": [
+        {
+          "distortion_mse": 7.347968278281769e-08,
+          "live_codec_brotli_bytes_per_coeff": 0.58898,
+          "live_codec_bytes_per_coeff": 2.0,
+          "live_codec_method": "zigzag_u16_byteplane",
+          "nonzero_fraction": 0.89041,
+          "quant_step": 0.00390625,
+          "shannon_floor_order0_bytes_per_coeff": 0.58924,
+          "shannon_floor_structured_bytes_per_coeff": 0.58924,
+          "static_range_bytes_per_coeff": null
+        },
+        {
+          "distortion_mse": 2.942695027741138e-05,
+          "live_codec_brotli_bytes_per_coeff": 0.50618,
+          "live_codec_bytes_per_coeff": 0.53255,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.89041,
+          "quant_step": 0.015625,
+          "shannon_floor_order0_bytes_per_coeff": 0.48026,
+          "shannon_floor_structured_bytes_per_coeff": 0.48026,
+          "static_range_bytes_per_coeff": null
+        }
+      ],
+      "raw_f32_uncompressed_bytes_per_coeff": 4.0,
+      "subband": "L1_hl"
+    },
+    {
+      "byteshuffle_brotli_bytes_per_coeff": 1.27083,
+      "coeff_abs_max": 1.0274510383605957,
+      "coeff_abs_mean": 0.02806202508509159,
+      "current_raw_f32_brotli_bytes_per_coeff": 0.74924,
+      "n_coeffs": 9216,
+      "quant_sweep": [
+        {
+          "distortion_mse": 4.122954067042883e-08,
+          "live_codec_brotli_bytes_per_coeff": 0.55067,
+          "live_codec_bytes_per_coeff": 0.59592,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.85276,
+          "quant_step": 0.00390625,
+          "shannon_floor_order0_bytes_per_coeff": 0.51746,
+          "shannon_floor_structured_bytes_per_coeff": 0.51746,
+          "static_range_bytes_per_coeff": null
+        },
+        {
+          "distortion_mse": 2.9626435207319446e-05,
+          "live_codec_brotli_bytes_per_coeff": 0.43848,
+          "live_codec_bytes_per_coeff": 0.46159,
+          "live_codec_method": "qi16_constriction_range",
+          "nonzero_fraction": 0.85276,
+          "quant_step": 0.015625,
+          "shannon_floor_order0_bytes_per_coeff": 0.41392,
+          "shannon_floor_structured_bytes_per_coeff": 0.41392,
+          "static_range_bytes_per_coeff": null
+        }
+      ],
+      "raw_f32_uncompressed_bytes_per_coeff": 4.0,
+      "subband": "L1_lh"
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "Measurable per-subband entropy headroom on the REAL Z8HPC1 wavelet detail blob: (raw f32 -> brotli) vs (quantize + per-subband mode) vs Shannon floor, at matched distortion. Grounds the v2 pair-blob codec's per-subband mode + step selection (codex's lane). Read-only; no codec edit.",
+  "quant_steps": [
+    0.00390625,
+    0.015625
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "z8_detail_coeff_entropy_headroom_report.v1",
+  "score_claim": false,
+  "static_range_measured": false,
+  "tool": "z8_detail_coeff_entropy_headroom_report",
+  "total_detail_coeffs_measured": 138240,
+  "total_pairs_in_archive": 600,
+  "wavelet_blob_bytes": 28376254,
+  "workers": 2
+}

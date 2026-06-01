@@ -1,0 +1,99 @@
+{
+  "archive_packet": {
+    "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_cpuparity_gpu_drift_combined_20260528Tlocal/pr95_public_archive.zip",
+    "archive_zip_sha256": "e6caa63c3b9292f2ae69fd6306cfaa20f67a33c82046661c4c6ec117cce6bfb0",
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "gpu_launched": false,
+    "latent_shape": [
+      8,
+      28
+    ],
+    "member_bytes": 230570,
+    "member_compress_type": 0,
+    "member_name": "0.bin",
+    "member_sha256": "6c923ae07de987568fa5a7774d915340e92bc3c610a7fdade7930b296eac4e85",
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 8
+    },
+    "pr95_1to1_reproduction_claim": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reproduction_claim": false,
+    "reproduction_equivalence": false,
+    "schema": "pr95_hnerv_public_archive_packet.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "state_dict_tensor_count": 28,
+    "submission": "hnerv_muon"
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "elapsed_seconds": 0.08029254100256367,
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "exact_readiness_refusal": {
+    "blockers": [
+      "local_mlx_forward_parity_probe_is_not_contest_auth_eval",
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+      "pytorch_mlx_forward_drift_exceeds_configured_tolerance"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "generated_utc": "2026-05-28T06:24:39.672122+00:00",
+  "gpu_launched": false,
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "mlx_device": "gpu",
+  "mlx_output_shape": [
+    2,
+    2,
+    3,
+    384,
+    512
+  ],
+  "parity": {
+    "atol_max": 0.002,
+    "atol_mean": 0.0001,
+    "max_abs": 0.0046539306640625,
+    "mean_abs": 0.0005879671080037951,
+    "p999_abs": 0.002790107624605298,
+    "p99_abs": 0.00205230712890625,
+    "passed": false
+  },
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "sample_count": 2,
+  "sample_indices": [
+    0,
+    3
+  ],
+  "schema": "pr95_hnerv_public_archive_mlx_forward_parity.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_pr": 95,
+  "submission": "hnerv_muon",
+  "torch_output_shape": [
+    2,
+    2,
+    3,
+    384,
+    512
+  ]
+}

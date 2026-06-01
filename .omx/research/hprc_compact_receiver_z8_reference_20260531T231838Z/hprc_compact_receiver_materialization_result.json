@@ -1,0 +1,15 @@
+{
+  "archive_zip_bytes": 1159406,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T231838Z/archive.zip",
+  "archive_zip_sha256": "854027ae3b336bba89ecb01e99570ed877eaece31ebc935bf0699d1e9471e076",
+  "byte_ledger_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T231838Z/hprc_archive_byte_ledger.json",
+  "exact_axis_blocker": "contest_cpu_cuda_exact_eval_not_executed",
+  "hprc_0bin_bytes": 3008245,
+  "hprc_0bin_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T231838Z/0.bin",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T231838Z/receiver_proof/hprc_receiver_proof.json",
+  "schema": "hprc_compact_receiver_candidate_materialization_result.v1",
+  "score_claim": false,
+  "source_manifest_path": "/Users/adpena/Projects/pact/.omx/research/hprc_compact_receiver_z8_reference_20260531T231838Z/hprc_compact_receiver_source_manifest.json"
+}

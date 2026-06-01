@@ -1,0 +1,1806 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu",
+      "local_io_heavy"
+    ],
+    "with_cloud": {
+      "max_parallel": 2,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-05-28T05:35:18Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign": {
+        "artifact_record_bytes_mean": 16306.4375,
+        "artifact_record_bytes_sum": 260903,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 16306.4375,
+        "artifact_record_raw_bytes_sum": 260903,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 6.620439375001297,
+        "elapsed_seconds_mean": 1.1577942293129126,
+        "elapsed_seconds_min": 0.2597337080005673,
+        "elapsed_seconds_sum": 18.524707669006602,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2774.5625,
+        "log_bytes_sum": 44393,
+        "resource_kind_counts": {
+          "local_cpu": 13,
+          "local_io_heavy": 3
+        },
+        "run_count": 16,
+        "step_ids": [
+          "append_blocked_repair_campaign_learning_posterior",
+          "assert_repair_budget_waterfill_work_order_materialized",
+          "build_repair_campaign_blocked_learning_signals",
+          "build_repair_campaign_byte_closed_materialization_queue",
+          "build_repair_campaign_entropy_stage_chain_contract",
+          "build_repair_campaign_stackability_queue",
+          "build_repair_cascade_mlx_probe_queue",
+          "run_repair_budget_waterfill_source_queue",
+          "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+          "run_repair_campaign_stackability_queue_bounded_local",
+          "run_repair_cascade_mlx_probe_queue_bounded_local",
+          "score_repair_campaign_from_typed_ledger",
+          "validate_repair_budget_waterfill_source_queue",
+          "validate_repair_campaign_byte_closed_materialization_queue",
+          "validate_repair_campaign_stackability_queue",
+          "validate_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 16
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign": {
+        "artifact_record_bytes_mean": 15661.75,
+        "artifact_record_bytes_sum": 250588,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 15661.75,
+        "artifact_record_raw_bytes_sum": 250588,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 4.090650500002084,
+        "elapsed_seconds_mean": 0.8341081303119608,
+        "elapsed_seconds_min": 0.2592773330034106,
+        "elapsed_seconds_sum": 13.345730084991374,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1907.0,
+        "log_bytes_sum": 30512,
+        "resource_kind_counts": {
+          "local_cpu": 13,
+          "local_io_heavy": 3
+        },
+        "run_count": 16,
+        "step_ids": [
+          "append_blocked_repair_campaign_learning_posterior",
+          "assert_repair_budget_waterfill_work_order_materialized",
+          "build_repair_campaign_blocked_learning_signals",
+          "build_repair_campaign_byte_closed_materialization_queue",
+          "build_repair_campaign_entropy_stage_chain_contract",
+          "build_repair_campaign_stackability_queue",
+          "build_repair_cascade_mlx_probe_queue",
+          "run_repair_budget_waterfill_source_queue",
+          "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+          "run_repair_campaign_stackability_queue_bounded_local",
+          "run_repair_cascade_mlx_probe_queue_bounded_local",
+          "score_repair_campaign_from_typed_ledger",
+          "validate_repair_budget_waterfill_source_queue",
+          "validate_repair_campaign_byte_closed_materialization_queue",
+          "validate_repair_campaign_stackability_queue",
+          "validate_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 16
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign": {
+        "artifact_record_bytes_mean": 15650.375,
+        "artifact_record_bytes_sum": 250406,
+        "artifact_record_count": 11,
+        "artifact_record_raw_bytes_mean": 15650.375,
+        "artifact_record_raw_bytes_sum": 250406,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.7903079999960028,
+        "elapsed_seconds_mean": 0.8440698932495252,
+        "elapsed_seconds_min": 0.2585078749980312,
+        "elapsed_seconds_sum": 13.505118291992403,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1888.25,
+        "log_bytes_sum": 30212,
+        "resource_kind_counts": {
+          "local_cpu": 13,
+          "local_io_heavy": 3
+        },
+        "run_count": 16,
+        "step_ids": [
+          "append_blocked_repair_campaign_learning_posterior",
+          "assert_repair_budget_waterfill_work_order_materialized",
+          "build_repair_campaign_blocked_learning_signals",
+          "build_repair_campaign_byte_closed_materialization_queue",
+          "build_repair_campaign_entropy_stage_chain_contract",
+          "build_repair_campaign_stackability_queue",
+          "build_repair_cascade_mlx_probe_queue",
+          "run_repair_budget_waterfill_source_queue",
+          "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+          "run_repair_campaign_stackability_queue_bounded_local",
+          "run_repair_cascade_mlx_probe_queue_bounded_local",
+          "score_repair_campaign_from_typed_ledger",
+          "validate_repair_budget_waterfill_source_queue",
+          "validate_repair_campaign_byte_closed_materialization_queue",
+          "validate_repair_campaign_stackability_queue",
+          "validate_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 16
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 5341.179487179487,
+        "artifact_record_bytes_sum": 208306,
+        "artifact_record_count": 24,
+        "artifact_record_raw_bytes_mean": 5341.179487179487,
+        "artifact_record_raw_bytes_sum": 208306,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 4.090650500002084,
+        "elapsed_seconds_mean": 0.874734822768518,
+        "elapsed_seconds_min": 0.2585078749980312,
+        "elapsed_seconds_sum": 34.1146580879722,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2128.153846153846,
+        "log_bytes_sum": 82998,
+        "resource_kind_counts": {
+          "local_cpu": 39
+        },
+        "run_count": 39,
+        "step_ids": [
+          "append_blocked_repair_campaign_learning_posterior",
+          "assert_repair_budget_waterfill_work_order_materialized",
+          "build_repair_campaign_blocked_learning_signals",
+          "build_repair_campaign_byte_closed_materialization_queue",
+          "build_repair_campaign_entropy_stage_chain_contract",
+          "build_repair_campaign_stackability_queue",
+          "build_repair_cascade_mlx_probe_queue",
+          "run_repair_campaign_stackability_queue_bounded_local",
+          "run_repair_cascade_mlx_probe_queue_bounded_local",
+          "validate_repair_budget_waterfill_source_queue",
+          "validate_repair_campaign_byte_closed_materialization_queue",
+          "validate_repair_campaign_stackability_queue",
+          "validate_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 39
+      },
+      "local_io_heavy": {
+        "artifact_record_bytes_mean": 61510.11111111111,
+        "artifact_record_bytes_sum": 553591,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 61510.11111111111,
+        "artifact_record_raw_bytes_sum": 553591,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 6.620439375001297,
+        "elapsed_seconds_mean": 1.2512108842242418,
+        "elapsed_seconds_min": 0.2589321250052308,
+        "elapsed_seconds_sum": 11.260897958018177,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign",
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign",
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 2457.6666666666665,
+        "log_bytes_sum": 22119,
+        "resource_kind_counts": {
+          "local_io_heavy": 9
+        },
+        "run_count": 9,
+        "step_ids": [
+          "run_repair_budget_waterfill_source_queue",
+          "run_repair_campaign_byte_closed_materialization_queue_bounded_local",
+          "score_repair_campaign_from_typed_ledger"
+        ],
+        "success_count": 9
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.append_blocked_repair_campaign_learning_posterior": {
+        "artifact_record_bytes_mean": 1487.0,
+        "artifact_record_bytes_sum": 1487,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 1487.0,
+        "artifact_record_raw_bytes_sum": 1487,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.26007100000424543,
+        "elapsed_seconds_mean": 0.26007100000424543,
+        "elapsed_seconds_min": 0.26007100000424543,
+        "elapsed_seconds_sum": 0.26007100000424543,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1072.0,
+        "log_bytes_sum": 1072,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "append_blocked_repair_campaign_learning_posterior"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.assert_repair_budget_waterfill_work_order_materialized": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2599481669967645,
+        "elapsed_seconds_mean": 0.2599481669967645,
+        "elapsed_seconds_min": 0.2599481669967645,
+        "elapsed_seconds_sum": 0.2599481669967645,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 525.0,
+        "log_bytes_sum": 525,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "assert_repair_budget_waterfill_work_order_materialized"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.build_repair_campaign_blocked_learning_signals": {
+        "artifact_record_bytes_mean": 9943.0,
+        "artifact_record_bytes_sum": 9943,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 9943.0,
+        "artifact_record_raw_bytes_sum": 9943,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2597337080005673,
+        "elapsed_seconds_mean": 0.2597337080005673,
+        "elapsed_seconds_min": 0.2597337080005673,
+        "elapsed_seconds_sum": 0.2597337080005673,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 983.0,
+        "log_bytes_sum": 983,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_blocked_learning_signals"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.build_repair_campaign_byte_closed_materialization_queue": {
+        "artifact_record_bytes_mean": 7531.0,
+        "artifact_record_bytes_sum": 7531,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7531.0,
+        "artifact_record_raw_bytes_sum": 7531,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7652092089992948,
+        "elapsed_seconds_mean": 0.7652092089992948,
+        "elapsed_seconds_min": 0.7652092089992948,
+        "elapsed_seconds_sum": 0.7652092089992948,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1464.0,
+        "log_bytes_sum": 1464,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_byte_closed_materialization_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.build_repair_campaign_entropy_stage_chain_contract": {
+        "artifact_record_bytes_mean": 3662.0,
+        "artifact_record_bytes_sum": 3662,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 3662.0,
+        "artifact_record_raw_bytes_sum": 3662,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2600382499949774,
+        "elapsed_seconds_mean": 0.2600382499949774,
+        "elapsed_seconds_min": 0.2600382499949774,
+        "elapsed_seconds_sum": 0.2600382499949774,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 826.0,
+        "log_bytes_sum": 826,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_entropy_stage_chain_contract"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.build_repair_campaign_stackability_queue": {
+        "artifact_record_bytes_mean": 7082.0,
+        "artifact_record_bytes_sum": 7082,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7082.0,
+        "artifact_record_raw_bytes_sum": 7082,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7699447089980822,
+        "elapsed_seconds_mean": 0.7699447089980822,
+        "elapsed_seconds_min": 0.7699447089980822,
+        "elapsed_seconds_sum": 0.7699447089980822,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1049.0,
+        "log_bytes_sum": 1049,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_stackability_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.build_repair_cascade_mlx_probe_queue": {
+        "artifact_record_bytes_mean": 20816.0,
+        "artifact_record_bytes_sum": 20816,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 20816.0,
+        "artifact_record_raw_bytes_sum": 20816,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7690781249984866,
+        "elapsed_seconds_mean": 0.7690781249984866,
+        "elapsed_seconds_min": 0.7690781249984866,
+        "elapsed_seconds_sum": 0.7690781249984866,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1042.0,
+        "log_bytes_sum": 1042,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.run_repair_budget_waterfill_source_queue": {
+        "artifact_record_bytes_mean": 14770.0,
+        "artifact_record_bytes_sum": 14770,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 14770.0,
+        "artifact_record_raw_bytes_sum": 14770,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 6.620439375001297,
+        "elapsed_seconds_mean": 6.620439375001297,
+        "elapsed_seconds_min": 6.620439375001297,
+        "elapsed_seconds_sum": 6.620439375001297,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 14770.0,
+        "log_bytes_sum": 14770,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_budget_waterfill_source_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.run_repair_campaign_byte_closed_materialization_queue_bounded_local": {
+        "artifact_record_bytes_mean": 891.0,
+        "artifact_record_bytes_sum": 891,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 891.0,
+        "artifact_record_raw_bytes_sum": 891,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.7677108340067207,
+        "elapsed_seconds_mean": 0.7677108340067207,
+        "elapsed_seconds_min": 0.7677108340067207,
+        "elapsed_seconds_sum": 0.7677108340067207,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 891.0,
+        "log_bytes_sum": 891,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_campaign_byte_closed_materialization_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.run_repair_campaign_stackability_queue_bounded_local": {
+        "artifact_record_bytes_mean": 861.0,
+        "artifact_record_bytes_sum": 861,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 861.0,
+        "artifact_record_raw_bytes_sum": 861,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7767347920016618,
+        "elapsed_seconds_mean": 0.7767347920016618,
+        "elapsed_seconds_min": 0.7767347920016618,
+        "elapsed_seconds_sum": 0.7767347920016618,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 861.0,
+        "log_bytes_sum": 861,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_campaign_stackability_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.run_repair_cascade_mlx_probe_queue_bounded_local": {
+        "artifact_record_bytes_mean": 18272.0,
+        "artifact_record_bytes_sum": 18272,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 18272.0,
+        "artifact_record_raw_bytes_sum": 18272,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.652186792001885,
+        "elapsed_seconds_mean": 3.652186792001885,
+        "elapsed_seconds_min": 3.652186792001885,
+        "elapsed_seconds_sum": 3.652186792001885,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 18272.0,
+        "log_bytes_sum": 18272,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_cascade_mlx_probe_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.score_repair_campaign_from_typed_ledger": {
+        "artifact_record_bytes_mean": 175588.0,
+        "artifact_record_bytes_sum": 175588,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 175588.0,
+        "artifact_record_raw_bytes_sum": 175588,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.26005166600225493,
+        "elapsed_seconds_mean": 0.26005166600225493,
+        "elapsed_seconds_min": 0.26005166600225493,
+        "elapsed_seconds_sum": 0.26005166600225493,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 936.0,
+        "log_bytes_sum": 936,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "score_repair_campaign_from_typed_ledger"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.validate_repair_budget_waterfill_source_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.771724375001213,
+        "elapsed_seconds_mean": 0.771724375001213,
+        "elapsed_seconds_min": 0.771724375001213,
+        "elapsed_seconds_sum": 0.771724375001213,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 488.0,
+        "log_bytes_sum": 488,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_budget_waterfill_source_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.validate_repair_campaign_byte_closed_materialization_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7675729589973344,
+        "elapsed_seconds_mean": 0.7675729589973344,
+        "elapsed_seconds_min": 0.7675729589973344,
+        "elapsed_seconds_sum": 0.7675729589973344,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 413.0,
+        "log_bytes_sum": 413,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_campaign_byte_closed_materialization_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.validate_repair_campaign_stackability_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7797442080045585,
+        "elapsed_seconds_mean": 0.7797442080045585,
+        "elapsed_seconds_min": 0.7797442080045585,
+        "elapsed_seconds_sum": 0.7797442080045585,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 398.0,
+        "log_bytes_sum": 398,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_campaign_stackability_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign.validate_repair_cascade_mlx_probe_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7845194999972591,
+        "elapsed_seconds_mean": 0.7845194999972591,
+        "elapsed_seconds_min": 0.7845194999972591,
+        "elapsed_seconds_sum": 0.7845194999972591,
+        "experiment_ids": [
+          "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 403.0,
+        "log_bytes_sum": 403,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.append_blocked_repair_campaign_learning_posterior": {
+        "artifact_record_bytes_mean": 1486.0,
+        "artifact_record_bytes_sum": 1486,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 1486.0,
+        "artifact_record_raw_bytes_sum": 1486,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2592773330034106,
+        "elapsed_seconds_mean": 0.2592773330034106,
+        "elapsed_seconds_min": 0.2592773330034106,
+        "elapsed_seconds_sum": 0.2592773330034106,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1070.0,
+        "log_bytes_sum": 1070,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "append_blocked_repair_campaign_learning_posterior"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.assert_repair_budget_waterfill_work_order_materialized": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.26603174999763723,
+        "elapsed_seconds_mean": 0.26603174999763723,
+        "elapsed_seconds_min": 0.26603174999763723,
+        "elapsed_seconds_sum": 0.26603174999763723,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 524.0,
+        "log_bytes_sum": 524,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "assert_repair_budget_waterfill_work_order_materialized"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.build_repair_campaign_blocked_learning_signals": {
+        "artifact_record_bytes_mean": 9941.0,
+        "artifact_record_bytes_sum": 9941,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 9941.0,
+        "artifact_record_raw_bytes_sum": 9941,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.25996416700218106,
+        "elapsed_seconds_mean": 0.25996416700218106,
+        "elapsed_seconds_min": 0.25996416700218106,
+        "elapsed_seconds_sum": 0.25996416700218106,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 981.0,
+        "log_bytes_sum": 981,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_blocked_learning_signals"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.build_repair_campaign_byte_closed_materialization_queue": {
+        "artifact_record_bytes_mean": 7523.0,
+        "artifact_record_bytes_sum": 7523,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7523.0,
+        "artifact_record_raw_bytes_sum": 7523,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.765170083999692,
+        "elapsed_seconds_mean": 0.765170083999692,
+        "elapsed_seconds_min": 0.765170083999692,
+        "elapsed_seconds_sum": 0.765170083999692,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1460.0,
+        "log_bytes_sum": 1460,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_byte_closed_materialization_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.build_repair_campaign_entropy_stage_chain_contract": {
+        "artifact_record_bytes_mean": 3661.0,
+        "artifact_record_bytes_sum": 3661,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 3661.0,
+        "artifact_record_raw_bytes_sum": 3661,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.261672249995172,
+        "elapsed_seconds_mean": 0.261672249995172,
+        "elapsed_seconds_min": 0.261672249995172,
+        "elapsed_seconds_sum": 0.261672249995172,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 824.0,
+        "log_bytes_sum": 824,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_entropy_stage_chain_contract"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.build_repair_campaign_stackability_queue": {
+        "artifact_record_bytes_mean": 7075.0,
+        "artifact_record_bytes_sum": 7075,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7075.0,
+        "artifact_record_raw_bytes_sum": 7075,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.766709916999389,
+        "elapsed_seconds_mean": 0.766709916999389,
+        "elapsed_seconds_min": 0.766709916999389,
+        "elapsed_seconds_sum": 0.766709916999389,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1046.0,
+        "log_bytes_sum": 1046,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_stackability_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.build_repair_cascade_mlx_probe_queue": {
+        "artifact_record_bytes_mean": 20777.0,
+        "artifact_record_bytes_sum": 20777,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 20777.0,
+        "artifact_record_raw_bytes_sum": 20777,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7662971669997205,
+        "elapsed_seconds_mean": 0.7662971669997205,
+        "elapsed_seconds_min": 0.7662971669997205,
+        "elapsed_seconds_sum": 0.7662971669997205,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1039.0,
+        "log_bytes_sum": 1039,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.run_repair_budget_waterfill_source_queue": {
+        "artifact_record_bytes_mean": 948.0,
+        "artifact_record_bytes_sum": 948,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 948.0,
+        "artifact_record_raw_bytes_sum": 948,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.7754283329995815,
+        "elapsed_seconds_mean": 0.7754283329995815,
+        "elapsed_seconds_min": 0.7754283329995815,
+        "elapsed_seconds_sum": 0.7754283329995815,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 948.0,
+        "log_bytes_sum": 948,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_budget_waterfill_source_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.run_repair_campaign_byte_closed_materialization_queue_bounded_local": {
+        "artifact_record_bytes_mean": 889.0,
+        "artifact_record_bytes_sum": 889,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 889.0,
+        "artifact_record_raw_bytes_sum": 889,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.7677647079981398,
+        "elapsed_seconds_mean": 0.7677647079981398,
+        "elapsed_seconds_min": 0.7677647079981398,
+        "elapsed_seconds_sum": 0.7677647079981398,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 889.0,
+        "log_bytes_sum": 889,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_campaign_byte_closed_materialization_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.run_repair_campaign_stackability_queue_bounded_local": {
+        "artifact_record_bytes_mean": 859.0,
+        "artifact_record_bytes_sum": 859,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 859.0,
+        "artifact_record_raw_bytes_sum": 859,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0232294169982197,
+        "elapsed_seconds_mean": 1.0232294169982197,
+        "elapsed_seconds_min": 1.0232294169982197,
+        "elapsed_seconds_sum": 1.0232294169982197,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 859.0,
+        "log_bytes_sum": 859,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_campaign_stackability_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.run_repair_cascade_mlx_probe_queue_bounded_local": {
+        "artifact_record_bytes_mean": 18239.0,
+        "artifact_record_bytes_sum": 18239,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 18239.0,
+        "artifact_record_raw_bytes_sum": 18239,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 4.090650500002084,
+        "elapsed_seconds_mean": 4.090650500002084,
+        "elapsed_seconds_min": 4.090650500002084,
+        "elapsed_seconds_sum": 4.090650500002084,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 18239.0,
+        "log_bytes_sum": 18239,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_cascade_mlx_probe_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.score_repair_campaign_from_typed_ledger": {
+        "artifact_record_bytes_mean": 179190.0,
+        "artifact_record_bytes_sum": 179190,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 179190.0,
+        "artifact_record_raw_bytes_sum": 179190,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.27019658400240587,
+        "elapsed_seconds_mean": 0.27019658400240587,
+        "elapsed_seconds_min": 0.27019658400240587,
+        "elapsed_seconds_sum": 0.27019658400240587,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 934.0,
+        "log_bytes_sum": 934,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "score_repair_campaign_from_typed_ledger"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.validate_repair_budget_waterfill_source_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7767373329988914,
+        "elapsed_seconds_mean": 0.7767373329988914,
+        "elapsed_seconds_min": 0.7767373329988914,
+        "elapsed_seconds_sum": 0.7767373329988914,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 488.0,
+        "log_bytes_sum": 488,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_budget_waterfill_source_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.validate_repair_campaign_byte_closed_materialization_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7639376660008566,
+        "elapsed_seconds_mean": 0.7639376660008566,
+        "elapsed_seconds_min": 0.7639376660008566,
+        "elapsed_seconds_sum": 0.7639376660008566,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 412.0,
+        "log_bytes_sum": 412,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_campaign_byte_closed_materialization_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.validate_repair_campaign_stackability_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7643742919972283,
+        "elapsed_seconds_mean": 0.7643742919972283,
+        "elapsed_seconds_min": 0.7643742919972283,
+        "elapsed_seconds_sum": 0.7643742919972283,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 397.0,
+        "log_bytes_sum": 397,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_campaign_stackability_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign.validate_repair_cascade_mlx_probe_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7682885839967639,
+        "elapsed_seconds_mean": 0.7682885839967639,
+        "elapsed_seconds_min": 0.7682885839967639,
+        "elapsed_seconds_sum": 0.7682885839967639,
+        "experiment_ids": [
+          "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 402.0,
+        "log_bytes_sum": 402,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.append_blocked_repair_campaign_learning_posterior": {
+        "artifact_record_bytes_mean": 1481.0,
+        "artifact_record_bytes_sum": 1481,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 1481.0,
+        "artifact_record_raw_bytes_sum": 1481,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2585078749980312,
+        "elapsed_seconds_mean": 0.2585078749980312,
+        "elapsed_seconds_min": 0.2585078749980312,
+        "elapsed_seconds_sum": 0.2585078749980312,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1060.0,
+        "log_bytes_sum": 1060,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "append_blocked_repair_campaign_learning_posterior"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.assert_repair_budget_waterfill_work_order_materialized": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2627066669956548,
+        "elapsed_seconds_mean": 0.2627066669956548,
+        "elapsed_seconds_min": 0.2627066669956548,
+        "elapsed_seconds_sum": 0.2627066669956548,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 519.0,
+        "log_bytes_sum": 519,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "assert_repair_budget_waterfill_work_order_materialized"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.build_repair_campaign_blocked_learning_signals": {
+        "artifact_record_bytes_mean": 9931.0,
+        "artifact_record_bytes_sum": 9931,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 9931.0,
+        "artifact_record_raw_bytes_sum": 9931,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2627984170030686,
+        "elapsed_seconds_mean": 0.2627984170030686,
+        "elapsed_seconds_min": 0.2627984170030686,
+        "elapsed_seconds_sum": 0.2627984170030686,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 971.0,
+        "log_bytes_sum": 971,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_blocked_learning_signals"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.build_repair_campaign_byte_closed_materialization_queue": {
+        "artifact_record_bytes_mean": 7483.0,
+        "artifact_record_bytes_sum": 7483,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7483.0,
+        "artifact_record_raw_bytes_sum": 7483,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0129183750032098,
+        "elapsed_seconds_mean": 1.0129183750032098,
+        "elapsed_seconds_min": 1.0129183750032098,
+        "elapsed_seconds_sum": 1.0129183750032098,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1440.0,
+        "log_bytes_sum": 1440,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_byte_closed_materialization_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.build_repair_campaign_entropy_stage_chain_contract": {
+        "artifact_record_bytes_mean": 3656.0,
+        "artifact_record_bytes_sum": 3656,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 3656.0,
+        "artifact_record_raw_bytes_sum": 3656,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.26083512499462813,
+        "elapsed_seconds_mean": 0.26083512499462813,
+        "elapsed_seconds_min": 0.26083512499462813,
+        "elapsed_seconds_sum": 0.26083512499462813,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 814.0,
+        "log_bytes_sum": 814,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_entropy_stage_chain_contract"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.build_repair_campaign_stackability_queue": {
+        "artifact_record_bytes_mean": 7040.0,
+        "artifact_record_bytes_sum": 7040,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 7040.0,
+        "artifact_record_raw_bytes_sum": 7040,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7640229999960866,
+        "elapsed_seconds_mean": 0.7640229999960866,
+        "elapsed_seconds_min": 0.7640229999960866,
+        "elapsed_seconds_sum": 0.7640229999960866,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1031.0,
+        "log_bytes_sum": 1031,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_campaign_stackability_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.build_repair_cascade_mlx_probe_queue": {
+        "artifact_record_bytes_mean": 20582.0,
+        "artifact_record_bytes_sum": 20582,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 20582.0,
+        "artifact_record_raw_bytes_sum": 20582,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.75811750000139,
+        "elapsed_seconds_mean": 0.75811750000139,
+        "elapsed_seconds_min": 0.75811750000139,
+        "elapsed_seconds_sum": 0.75811750000139,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 1024.0,
+        "log_bytes_sum": 1024,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "build_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.run_repair_budget_waterfill_source_queue": {
+        "artifact_record_bytes_mean": 948.0,
+        "artifact_record_bytes_sum": 948,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 948.0,
+        "artifact_record_raw_bytes_sum": 948,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.7757731660021818,
+        "elapsed_seconds_mean": 0.7757731660021818,
+        "elapsed_seconds_min": 0.7757731660021818,
+        "elapsed_seconds_sum": 0.7757731660021818,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 948.0,
+        "log_bytes_sum": 948,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_budget_waterfill_source_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.run_repair_campaign_byte_closed_materialization_queue_bounded_local": {
+        "artifact_record_bytes_mean": 879.0,
+        "artifact_record_bytes_sum": 879,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 879.0,
+        "artifact_record_raw_bytes_sum": 879,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.7646011670003645,
+        "elapsed_seconds_mean": 0.7646011670003645,
+        "elapsed_seconds_min": 0.7646011670003645,
+        "elapsed_seconds_sum": 0.7646011670003645,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 879.0,
+        "log_bytes_sum": 879,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_campaign_byte_closed_materialization_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.run_repair_campaign_stackability_queue_bounded_local": {
+        "artifact_record_bytes_mean": 849.0,
+        "artifact_record_bytes_sum": 849,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 849.0,
+        "artifact_record_raw_bytes_sum": 849,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7662088329961989,
+        "elapsed_seconds_mean": 0.7662088329961989,
+        "elapsed_seconds_min": 0.7662088329961989,
+        "elapsed_seconds_sum": 0.7662088329961989,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 849.0,
+        "log_bytes_sum": 849,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_campaign_stackability_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.run_repair_cascade_mlx_probe_queue_bounded_local": {
+        "artifact_record_bytes_mean": 18069.0,
+        "artifact_record_bytes_sum": 18069,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 18069.0,
+        "artifact_record_raw_bytes_sum": 18069,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 3.7903079999960028,
+        "elapsed_seconds_mean": 3.7903079999960028,
+        "elapsed_seconds_min": 3.7903079999960028,
+        "elapsed_seconds_sum": 3.7903079999960028,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 18069.0,
+        "log_bytes_sum": 18069,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_repair_cascade_mlx_probe_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.score_repair_campaign_from_typed_ledger": {
+        "artifact_record_bytes_mean": 179488.0,
+        "artifact_record_bytes_sum": 179488,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 179488.0,
+        "artifact_record_raw_bytes_sum": 179488,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.2589321250052308,
+        "elapsed_seconds_mean": 0.2589321250052308,
+        "elapsed_seconds_min": 0.2589321250052308,
+        "elapsed_seconds_sum": 0.2589321250052308,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 924.0,
+        "log_bytes_sum": 924,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "score_repair_campaign_from_typed_ledger"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.validate_repair_budget_waterfill_source_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7661952500056941,
+        "elapsed_seconds_mean": 0.7661952500056941,
+        "elapsed_seconds_min": 0.7661952500056941,
+        "elapsed_seconds_sum": 0.7661952500056941,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 488.0,
+        "log_bytes_sum": 488,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_budget_waterfill_source_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.validate_repair_campaign_byte_closed_materialization_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0145294579997426,
+        "elapsed_seconds_mean": 1.0145294579997426,
+        "elapsed_seconds_min": 1.0145294579997426,
+        "elapsed_seconds_sum": 1.0145294579997426,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 407.0,
+        "log_bytes_sum": 407,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_campaign_byte_closed_materialization_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.validate_repair_campaign_stackability_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 1.0231327499932377,
+        "elapsed_seconds_mean": 1.0231327499932377,
+        "elapsed_seconds_min": 1.0231327499932377,
+        "elapsed_seconds_sum": 1.0231327499932377,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 392.0,
+        "log_bytes_sum": 392,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_campaign_stackability_queue"
+        ],
+        "success_count": 1
+      },
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign.validate_repair_cascade_mlx_probe_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.7655305840016808,
+        "elapsed_seconds_mean": 0.7655305840016808,
+        "elapsed_seconds_min": 0.7655305840016808,
+        "elapsed_seconds_sum": 0.7655305840016808,
+        "experiment_ids": [
+          "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 397.0,
+        "log_bytes_sum": 397,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_repair_cascade_mlx_probe_queue"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign": [
+        "score_repair_campaign_global_many_op_rate_distortion_receiver_campaign"
+      ],
+      "score_repair_campaign_portfolio_materializer_context_closure_campaign": [
+        "score_repair_campaign_portfolio_materializer_context_closure_campaign"
+      ],
+      "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign": [
+        "score_repair_campaign_segnet_posenet_geometry_drop_many_campaign"
+      ]
+    },
+    "event_count": 48,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_repair_campaign_score",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_repair_campaign_score",
+  "queue_sha256": "12cfd7345f9708d2f67c522cb89e05fb9251ba3d398e8cc210f2ea98449d4955",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 1
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 48,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_repair_campaign_score",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18,
+      "local_io_heavy": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 900,
+      "local_io_heavy": 600
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 900,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.7661952500056941,
+        "elapsed_seconds_p95": 3.7903079999960028,
+        "observed_failure_count": 0,
+        "observed_run_count": 39,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 900,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      },
+      "local_io_heavy": {
+        "advisory_only": true,
+        "concurrency_reason": "cap_io_heavy_pressure",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 600,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.7677108340067207,
+        "elapsed_seconds_p95": 6.620439375001297,
+        "observed_failure_count": 0,
+        "observed_run_count": 9,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 600,
+        "resource_kind": "local_io_heavy",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_repair_campaign_score.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-28T05:34:15Z",
+    "event_count": 156,
+    "max_event_id": 156,
+    "max_step_updated_at_utc": "2026-05-28T05:35:13Z",
+    "queue_id": "frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_repair_campaign_score",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_repair_campaign_score.sqlite",
+    "step_state_count": 48
+  },
+  "status_counts": {
+    "succeeded": 48
+  },
+  "step_count": 48,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

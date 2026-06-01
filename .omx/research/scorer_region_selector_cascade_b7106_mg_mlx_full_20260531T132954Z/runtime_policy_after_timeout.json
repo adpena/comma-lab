@@ -1,0 +1,107 @@
+{
+  "advisory_only": true,
+  "apply_requires_explicit_call": true,
+  "backpressure": {
+    "local_io_heavy": {
+      "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+      "recommended_concurrency": 2
+    }
+  },
+  "current_max_concurrency": {
+    "local_cpu": 4,
+    "local_io_heavy": 2,
+    "local_mlx": 1
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "generated_from_schema": "experiment_queue_performance_summary.v1",
+  "gpu_launched": false,
+  "input_event_count": 60,
+  "machine_capacity": {
+    "local_cpu": 18,
+    "local_io_heavy": 4,
+    "local_mlx": 1,
+    "local_mps": 1
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_max_concurrency": {
+    "local_cpu": 2,
+    "local_io_heavy": 2,
+    "local_mlx": 1
+  },
+  "recommended_timeout_seconds_by_resource": {
+    "local_cpu": 7800,
+    "local_io_heavy": 1200,
+    "local_mlx": 900
+  },
+  "resource_policies": {
+    "local_cpu": {
+      "advisory_only": true,
+      "concurrency_reason": "backoff_after_failures",
+      "current_concurrency": 4,
+      "current_timeout_seconds_max": 3900,
+      "dispatch_packet_ready": false,
+      "elapsed_seconds_p50": 0.4438598330016248,
+      "elapsed_seconds_p95": 600.0612415409996,
+      "observed_failure_count": 5,
+      "observed_run_count": 60,
+      "observed_timeout_count": 4,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_concurrency": 2,
+      "recommended_timeout_seconds": 7800,
+      "resource_kind": "local_cpu",
+      "score_claim": false,
+      "timeout_multiplier": 3.0
+    },
+    "local_io_heavy": {
+      "advisory_only": true,
+      "concurrency_reason": "cap_io_heavy_pressure",
+      "current_concurrency": 2,
+      "current_timeout_seconds_max": 1200,
+      "dispatch_packet_ready": false,
+      "elapsed_seconds_p50": null,
+      "elapsed_seconds_p95": null,
+      "observed_failure_count": 0,
+      "observed_run_count": 0,
+      "observed_timeout_count": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_concurrency": 2,
+      "recommended_timeout_seconds": 1200,
+      "resource_kind": "local_io_heavy",
+      "score_claim": false,
+      "timeout_multiplier": 3.0
+    },
+    "local_mlx": {
+      "advisory_only": true,
+      "concurrency_reason": "single_local_accelerator_default",
+      "current_concurrency": 1,
+      "current_timeout_seconds_max": 900,
+      "dispatch_packet_ready": false,
+      "elapsed_seconds_p50": null,
+      "elapsed_seconds_p95": null,
+      "observed_failure_count": 0,
+      "observed_run_count": 0,
+      "observed_timeout_count": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_concurrency": 1,
+      "recommended_timeout_seconds": 900,
+      "resource_kind": "local_mlx",
+      "score_claim": false,
+      "timeout_multiplier": 3.0
+    }
+  },
+  "schema": "scheduler_runtime_policy.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "telemetry_only": true
+}

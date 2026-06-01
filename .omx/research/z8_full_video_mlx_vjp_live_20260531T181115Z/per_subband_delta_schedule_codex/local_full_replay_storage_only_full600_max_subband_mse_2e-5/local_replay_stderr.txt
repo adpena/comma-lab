@@ -1,0 +1,2 @@
+ERROR: missing inflated file: /Users/adpena/Projects/pact/.omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/local_full_replay_storage_only_full600_max_subband_mse_2e-5/submission/inflated/0.raw
+ERROR: 1 video(s) not inflated

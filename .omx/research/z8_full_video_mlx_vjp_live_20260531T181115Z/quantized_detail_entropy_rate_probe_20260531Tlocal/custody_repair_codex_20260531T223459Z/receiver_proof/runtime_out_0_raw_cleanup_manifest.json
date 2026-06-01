@@ -1,0 +1,14 @@
+{
+  "bytes": 3662409600,
+  "cleanup_action": "delete_rebuildable_raw_output_after_certification",
+  "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/receiver_proof/runtime_out/0.raw",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reason": "receiver proof raw output is rebuildable from archive.zip plus submission/inflate.sh and is not needed as durable evidence after hash certification",
+  "receiver_proof": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/receiver_proof/z8_hpc1_receiver_proof.json",
+  "schema": "certified_rebuildable_bulk_cleanup_manifest.v1",
+  "score_claim": false,
+  "sha256": "af7722de728de738b2bb25a7a66899fa8fe35ba0aac3feeffc723dc0a358399b",
+  "source_archive_zip": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/quantized_detail_entropy_rate_probe_20260531Tlocal/custody_repair_codex_20260531T223459Z/archive.zip",
+  "source_archive_zip_sha256": "4c28fac07768eb1234e184cabaff570baa359c3f17c48d0b12d5d3e791aedeed"
+}

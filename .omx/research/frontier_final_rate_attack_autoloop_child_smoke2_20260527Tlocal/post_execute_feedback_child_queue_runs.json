@@ -1,0 +1,150 @@
+{
+  "allowed_use": "post_feedback_bounded_local_autoloop_custody_only",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "executed_queue_count": 1,
+  "failed_command_count": 0,
+  "failed_queue_count": 0,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-27T19:28:56Z",
+  "gpu_launched": false,
+  "limit": 1,
+  "max_parallel": 1,
+  "max_steps": 3,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_runs": [
+    {
+      "allowed_use": "bounded_local_post_feedback_queue_execution_only",
+      "artifact_key": "operation_chain_compiler_queue",
+      "charged_bits_changed": false,
+      "commands": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+            "validate"
+          ],
+          "elapsed_seconds": 0.5389834999987215,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 440,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/command_logs/00_stdout.txt",
+          "stdout_sha256": "aeee0f3e61929660e80f4bcb0f6559af65339eb07fae9189a8eb073281c012b5"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+            "init"
+          ],
+          "elapsed_seconds": 0.5371869160007918,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 2409,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/command_logs/01_stdout.txt",
+          "stdout_sha256": "48fa3eba4aeb85d943979e48df8d5b224b021e744cba94b3fbd2853632b33a60"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "3",
+            "--max-parallel",
+            "1",
+            "--poll-interval-seconds",
+            "0.05",
+            "--idle-sleep-seconds",
+            "0.0",
+            "--max-idle-cycles",
+            "1"
+          ],
+          "elapsed_seconds": 1.6263813330006087,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 9048,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/command_logs/02_stdout.txt",
+          "stdout_sha256": "417dd25b8187981957bec2f0c1b3bae9770b7149f3c5242e970384eca050e957"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+            "--state",
+            ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+            "observe",
+            "--format",
+            "json"
+          ],
+          "elapsed_seconds": 0.5658359170010954,
+          "returncode": 0,
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 10026,
+          "stdout_path": ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/command_logs/03_stdout.txt",
+          "stdout_sha256": "fc06c0a657fe11959f0ff8a1a06f3b6eca62dab2359cdf73661a1f9bd4158c93"
+        }
+      ],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "failed_command_count": 0,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+      "gpu_launched": false,
+      "observer_revalidation_path": ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_child_queue_observations/operation_chain_compiler_queue/observer_revalidation.json",
+      "promotable": false,
+      "promotion_eligible": false,
+      "queue_blockers": [],
+      "queue_healthy": true,
+      "queue_id": "frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal_post_execute_feedback_chain_compiler",
+      "queue_path": ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json",
+      "queue_status_counts": {
+        "succeeded": 2
+      },
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "frontier_final_rate_attack_post_feedback_child_queue_run.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite"
+    }
+  ],
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_final_rate_attack_post_feedback_child_queue_runs.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_queue_count": 1,
+  "selected_queues": [
+    {
+      "artifact_key": "operation_chain_compiler_queue",
+      "queue_path": ".omx/research/frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal/post_execute_feedback_refresh/operation_chain_compiler_queue.json"
+    }
+  ]
+}

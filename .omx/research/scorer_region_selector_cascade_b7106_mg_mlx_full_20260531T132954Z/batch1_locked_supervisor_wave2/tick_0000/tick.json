@@ -1,0 +1,757 @@
+{
+  "action": "run_worker",
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "automation_blockers": [],
+  "execute": true,
+  "final_reason_if_stopping": "max_ticks_reached",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "generated_at_utc": "2026-05-31T14:41:38Z",
+  "max_parallel": 5,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recovery_result": null,
+  "schema": "experiment_queue_supervisor_tick.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 5,
+        "resource_limits": {
+          "local_cpu": 2,
+          "local_io_heavy": 2,
+          "local_mlx": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu",
+        "local_io_heavy",
+        "local_mlx"
+      ],
+      "with_cloud": {
+        "max_parallel": 5,
+        "resource_limits": {
+          "local_cpu": 2,
+          "local_io_heavy": 2,
+          "local_mlx": 1
+        }
+      }
+    },
+    "automation_blockers": [],
+    "automation_verdict": "safe_to_resume_or_continue",
+    "blocked_steps": [],
+    "blocker_count": 0,
+    "blockers": [],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": true,
+    "mode": "paused",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {
+        "local_cpu": {
+          "artifact_record_bytes_mean": 1415593050.5,
+          "artifact_record_bytes_sum": 2831186101,
+          "artifact_record_count": 5,
+          "artifact_record_raw_bytes_mean": 1415600984.5,
+          "artifact_record_raw_bytes_sum": 2831201969,
+          "candidate_ids": [
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch"
+          ],
+          "dominant_resource_kind": "local_cpu",
+          "elapsed_seconds_max": 480.83280387497507,
+          "elapsed_seconds_mean": 441.88235962498584,
+          "elapsed_seconds_min": 402.9319153749966,
+          "elapsed_seconds_sum": 883.7647192499717,
+          "experiment_ids": [
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 6590.0,
+          "log_bytes_sum": 13180,
+          "resource_kind_counts": {
+            "local_cpu": 2
+          },
+          "run_count": 2,
+          "step_ids": [
+            "build_mlx_component_cache",
+            "prove_receiver_patch_full_frame_output_change"
+          ],
+          "success_count": 2
+        },
+        "local_mlx": {
+          "artifact_record_bytes_mean": 16767.5,
+          "artifact_record_bytes_sum": 33535,
+          "artifact_record_count": 4,
+          "artifact_record_raw_bytes_mean": 16767.5,
+          "artifact_record_raw_bytes_sum": 33535,
+          "candidate_ids": [
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch"
+          ],
+          "dominant_resource_kind": "local_mlx",
+          "elapsed_seconds_max": 73.29753337497823,
+          "elapsed_seconds_mean": 65.64599637498031,
+          "elapsed_seconds_min": 57.9944593749824,
+          "elapsed_seconds_sum": 131.29199274996063,
+          "experiment_ids": [
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch"
+          ],
+          "failure_count": 0,
+          "log_bytes_mean": 432.5,
+          "log_bytes_sum": 865,
+          "resource_kind_counts": {
+            "local_mlx": 2
+          },
+          "run_count": 2,
+          "step_ids": [
+            "local_mlx_component_response"
+          ],
+          "success_count": 2
+        }
+      },
+      "event_count": 4,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+    "queue_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.locked_cache_batch1_runtime_policy_applied.json",
+    "queued_step_count": 347,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [
+      {
+        "action": "resume_queue",
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+          "control",
+          "running",
+          "--reason",
+          "operator_resume_after_queue_control_status"
+        ],
+        "rank": 40,
+        "reason": "queue_mode_paused_with_347_queued_steps"
+      }
+    ],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_cpu": 18,
+        "local_io_heavy": 2,
+        "local_mlx": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_cpu": 7800,
+        "local_io_heavy": 1200,
+        "local_mlx": 900
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+    "state_watermark": {
+      "control_mode": "paused",
+      "control_updated_at_utc": "2026-05-31T14:36:17Z",
+      "event_count": 78,
+      "max_event_id": 78,
+      "max_step_updated_at_utc": "2026-05-31T14:41:37Z",
+      "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "step_state_count": 412
+    },
+    "status_counts": {
+      "queued": 347,
+      "succeeded": 65
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "8",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "tick_index": 0,
+  "worker_result": {
+    "command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "8",
+      "--max-parallel",
+      "5",
+      "--log-root",
+      ".omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked",
+      "--noncanonical-state-rationale",
+      "queue_supervisor_explicit_state_path_prevents_default_worker_collision"
+    ],
+    "elapsed_seconds": 481.7616227079998,
+    "failed": false,
+    "json_payload": {
+      "allow_cloud": false,
+      "claim_refused_count": 0,
+      "execute": true,
+      "failure_count": 0,
+      "idle_cycles": 1,
+      "max_experiments": null,
+      "max_parallel": 5,
+      "noncanonical_state_rationale": "queue_supervisor_explicit_state_path_prevents_default_worker_collision",
+      "orphaned_state_rationale": null,
+      "planned_steps": [],
+      "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "requested_max_parallel": 5,
+      "resource_limits": {
+        "local_cpu": 2,
+        "local_io_heavy": 2,
+        "local_mlx": 1
+      },
+      "schema": "experiment_queue_worker_result.v1",
+      "stale_running_reconciliations": [],
+      "started_at_utc": "2026-05-31T14:33:36Z",
+      "started_experiment_ids": [
+        "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+        "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+        "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch"
+      ],
+      "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked.sqlite",
+      "step_results": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/run_mlx_scorer_response_from_cache.py",
+            "--reference-cache-dir",
+            "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+            "--candidate-cache-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache",
+            "--archive",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip",
+            "--output",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+            "--repo-root",
+            ".",
+            "--batch-pairs",
+            "1",
+            "--device",
+            "gpu",
+            "--allow-unaudited-candidate-cache-debug",
+            "--components-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components",
+            "--response-family",
+            "scorer_region_frame1_waterfill_patch",
+            "--allow-gpu-research-signal"
+          ],
+          "elapsed_seconds": 73.29753337497823,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": ".omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/local_mlx_component_response/20260531T143336Z_9b6b6218eb06a7ab.log",
+          "pid": 63444,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/run_mlx_scorer_response_from_cache.py",
+              "--reference-cache-dir",
+              "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+              "--candidate-cache-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache",
+              "--archive",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip",
+              "--output",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+              "--repo-root",
+              ".",
+              "--batch-pairs",
+              "1",
+              "--device",
+              "gpu",
+              "--allow-unaudited-candidate-cache-debug",
+              "--components-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components",
+              "--response-family",
+              "scorer_region_frame1_waterfill_patch",
+              "--allow-gpu-research-signal"
+            ],
+            "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+            "priority": 2,
+            "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+            "resource_kind": "local_mlx",
+            "step_hashes": {
+              "command_hash": "80d0c3e9836d549ce82cebaf05f9b95c4cd2ffe2e109ac3c4abc1eb94df437ed",
+              "definition_hash": "4e7fc86ef1683de7880e57bc6d49c44d39749f30353b623e702147da2ec18ab3",
+              "postcondition_hash": "30081ee886ed8e50d2b74e8f65768ffa28df04e7c305178a9b6f45989ff08785"
+            },
+            "step_id": "local_mlx_component_response"
+          },
+          "resource_kind": "local_mlx",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 2,
+            "artifact_records": [
+              {
+                "bytes": 11698,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:34:49Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 128,
+                "exists": true,
+                "is_dir": true,
+                "is_file": false,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:34:49Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components",
+                "recursive_bytes": 5056,
+                "recursive_entry_count": 2,
+                "recursive_entry_limit": 64,
+                "recursive_truncated": false,
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 429,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "9b6b6218eb06a7ab"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/run_mlx_scorer_response_from_cache.py",
+            "--reference-cache-dir",
+            "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+            "--candidate-cache-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache",
+            "--archive",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip",
+            "--output",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+            "--repo-root",
+            ".",
+            "--batch-pairs",
+            "1",
+            "--device",
+            "gpu",
+            "--allow-unaudited-candidate-cache-debug",
+            "--components-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components",
+            "--response-family",
+            "scorer_region_frame1_waterfill_patch",
+            "--allow-gpu-research-signal"
+          ],
+          "elapsed_seconds": 57.9944593749824,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": ".omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/local_mlx_component_response/20260531T143450Z_d1ce2f9d92534ce4.log",
+          "pid": 70811,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/run_mlx_scorer_response_from_cache.py",
+              "--reference-cache-dir",
+              "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+              "--candidate-cache-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache",
+              "--archive",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip",
+              "--output",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+              "--repo-root",
+              ".",
+              "--batch-pairs",
+              "1",
+              "--device",
+              "gpu",
+              "--allow-unaudited-candidate-cache-debug",
+              "--components-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components",
+              "--response-family",
+              "scorer_region_frame1_waterfill_patch",
+              "--allow-gpu-research-signal"
+            ],
+            "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch",
+            "priority": 4,
+            "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+            "resource_kind": "local_mlx",
+            "step_hashes": {
+              "command_hash": "c8037051a4fa8e7f7dc127bf1aefff755031ba4250f9dbbe9980d556bdcbd1aa",
+              "definition_hash": "6e7c2caca90d93b7fcdac547a3690b29b34630352c7f950e3b578489922af8c1",
+              "postcondition_hash": "768213599e1363e758b2b6d1694f7e6f0e387a163b39887182c98d5ff6d49e9a"
+            },
+            "step_id": "local_mlx_component_response"
+          },
+          "resource_kind": "local_mlx",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 2,
+            "artifact_records": [
+              {
+                "bytes": 11725,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:35:47Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_response.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 128,
+                "exists": true,
+                "is_dir": true,
+                "is_file": false,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:35:47Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_adaptive_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_components",
+                "recursive_bytes": 5056,
+                "recursive_entry_count": 2,
+                "recursive_entry_limit": 64,
+                "recursive_truncated": false,
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 436,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "d1ce2f9d92534ce4"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/prove_shell_inflate_output_change.py",
+            "--left-selected-archive-chain-report",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+            "--left-submission-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p11_selector_context_recode/submission_dir",
+            "--right-archive",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip",
+            "--right-submission-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir",
+            "--full-frame-file-list-claim",
+            "--expected-full-frame-file-list-sha256",
+            "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+            "--expected-full-frame-entry-count",
+            "1",
+            "--full-frame-file-list-source",
+            "contest_sample:upstream/videos/0.mkv",
+            "--parity-scope-kind",
+            "contest_full_sample",
+            "--python-bin",
+            ".venv/bin/python",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/full_frame_output_change_proof",
+            "--require-output-change",
+            "--overwrite",
+            "--left-cache-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/_shell_inflate_left_cache",
+            "--file-list-entry",
+            "0.mkv",
+            "--contest-full-sample-claim"
+          ],
+          "elapsed_seconds": 402.9319153749966,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": ".omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/prove_receiver_patch_full_frame_output_change/20260531T143336Z_ac6c2e75937073fe.log",
+          "pid": 63448,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/prove_shell_inflate_output_change.py",
+              "--left-selected-archive-chain-report",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/scorer_region_selector_chain_report.json",
+              "--left-submission-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p11_selector_context_recode/submission_dir",
+              "--right-archive",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip",
+              "--right-submission-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir",
+              "--full-frame-file-list-claim",
+              "--expected-full-frame-file-list-sha256",
+              "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+              "--expected-full-frame-entry-count",
+              "1",
+              "--full-frame-file-list-source",
+              "contest_sample:upstream/videos/0.mkv",
+              "--parity-scope-kind",
+              "contest_full_sample",
+              "--python-bin",
+              ".venv/bin/python",
+              "--output-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/full_frame_output_change_proof",
+              "--require-output-change",
+              "--overwrite",
+              "--left-cache-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/_shell_inflate_left_cache",
+              "--file-list-entry",
+              "0.mkv",
+              "--contest-full-sample-claim"
+            ],
+            "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+            "priority": 3,
+            "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "22f3b4a1af504343a3bed1ecaaa443464af9c3597908404eae57114b01fb5354",
+              "definition_hash": "fe39fa66a402019d8cac2d273ccfc663d81f01ed22f69b816d217e73089b6d23",
+              "postcondition_hash": "8f085e200b56b95cd8ecf6a35eaa189bc3698104349705ae19d897b64599d864"
+            },
+            "step_id": "prove_receiver_patch_full_frame_output_change"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 2,
+            "artifact_records": [
+              {
+                "bytes": 11311,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:40:19Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/full_frame_output_change_proof/shell_inflate_output_change.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 160,
+                "exists": true,
+                "is_dir": true,
+                "is_file": false,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:40:19Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/full_frame_output_change_proof",
+                "recursive_bytes": 12106,
+                "recursive_entry_count": 3,
+                "recursive_entry_limit": 512,
+                "recursive_truncated": false,
+                "source": "step.telemetry.artifact_paths"
+              }
+            ],
+            "log_bytes": 11349,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "ac6c2e75937073fe"
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_mlx_scorer_cache_from_submission.py",
+            "--archive",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip",
+            "--submission-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--output-cache-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_first_inflate_only_work",
+            "--report-output",
+            "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_first_cache_materialization.json",
+            "--inflate-timeout",
+            "1800",
+            "--batch-pairs",
+            "8",
+            "--allow-large-tensor-cache",
+            "--force"
+          ],
+          "elapsed_seconds": 480.83280387497507,
+          "executed": true,
+          "execution_error": null,
+          "failed_postconditions": [],
+          "log_path": ".omx/state/experiment_queue_logs/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batch1_locked/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_44d14939ec8f7c0e/build_mlx_component_cache/20260531T143336Z_06993dd4a9261512.log",
+          "pid": 63454,
+          "postcondition_errors": [],
+          "ready_step": {
+            "command": [
+              ".venv/bin/python",
+              "tools/materialize_mlx_scorer_cache_from_submission.py",
+              "--archive",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir/archive.zip",
+              "--submission-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/submission_dir",
+              "--upstream-dir",
+              "upstream",
+              "--video-names-file",
+              "upstream/public_test_video_names.txt",
+              "--output-cache-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache",
+              "--work-dir",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_first_inflate_only_work",
+              "--report-output",
+              "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_first_cache_materialization.json",
+              "--inflate-timeout",
+              "1800",
+              "--batch-pairs",
+              "8",
+              "--allow-large-tensor-cache",
+              "--force"
+            ],
+            "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch",
+            "priority": 5,
+            "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+            "resource_kind": "local_cpu",
+            "step_hashes": {
+              "command_hash": "d20280732d0589215f7a43f2656542801ea5966a90d52952201b2a21bae46b1a",
+              "definition_hash": "97dc1856a56d8923a1ba8c17d2e26a20a868cd0e4e0519e21c8f7b3b4048ea9b",
+              "postcondition_hash": "ea88c86a2fad961257f666e3a49d88c5c2a5df7e57c7ad320c73d1551f1336b0"
+            },
+            "step_id": "build_mlx_component_cache"
+          },
+          "resource_kind": "local_cpu",
+          "returncode": 0,
+          "succeeded": true,
+          "telemetry": {
+            "artifact_record_count": 3,
+            "artifact_records": [
+              {
+                "bytes": 224,
+                "exists": true,
+                "is_dir": true,
+                "is_file": false,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:41:37Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache",
+                "recursive_bytes": 2831169874,
+                "recursive_entry_count": 5,
+                "recursive_entry_limit": 16,
+                "recursive_truncated": false,
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 4121,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:41:37Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_first_cache_materialization.json",
+                "source": "step.telemetry.artifact_paths"
+              },
+              {
+                "bytes": 4557,
+                "exists": true,
+                "is_dir": false,
+                "is_file": true,
+                "is_symlink": false,
+                "mtime_utc": "2026-05-31T14:41:37Z",
+                "path": "/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache/manifest.json",
+                "source": "step.postconditions.path"
+              }
+            ],
+            "log_bytes": 1831,
+            "recursive_truncated": false,
+            "schema": "experiment_queue_step_telemetry.v1"
+          },
+          "timed_out": false,
+          "worker_run_id": "06993dd4a9261512"
+        }
+      ],
+      "steps_started": 4,
+      "stop_reason": "idle_limit_reached",
+      "stop_signals": [],
+      "success_count": 4
+    },
+    "label": "run_worker",
+    "returncode": 0,
+    "stderr_tail": "",
+    "stdout_tail": "late_only_work\",\n          \"--report-output\",\n          \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_first_cache_materialization.json\",\n          \"--inflate-timeout\",\n          \"1800\",\n          \"--batch-pairs\",\n          \"8\",\n          \"--allow-large-tensor-cache\",\n          \"--force\"\n        ],\n        \"experiment_id\": \"nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch\",\n        \"priority\": 5,\n        \"queue_id\": \"scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z\",\n        \"resource_kind\": \"local_cpu\",\n        \"step_hashes\": {\n          \"command_hash\": \"d20280732d0589215f7a43f2656542801ea5966a90d52952201b2a21bae46b1a\",\n          \"definition_hash\": \"97dc1856a56d8923a1ba8c17d2e26a20a868cd0e4e0519e21c8f7b3b4048ea9b\",\n          \"postcondition_hash\": \"ea88c86a2fad961257f666e3a49d88c5c2a5df7e57c7ad320c73d1551f1336b0\"\n        },\n        \"step_id\": \"build_mlx_component_cache\"\n      },\n      \"resource_kind\": \"local_cpu\",\n      \"returncode\": 0,\n      \"succeeded\": true,\n      \"telemetry\": {\n        \"artifact_record_count\": 3,\n        \"artifact_records\": [\n          {\n            \"bytes\": 224,\n            \"exists\": true,\n            \"is_dir\": true,\n            \"is_file\": false,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-31T14:41:37Z\",\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache\",\n            \"recursive_bytes\": 2831169874,\n            \"recursive_entry_count\": 5,\n            \"recursive_entry_limit\": 16,\n            \"recursive_truncated\": false,\n            \"source\": \"step.telemetry.artifact_paths\"\n          },\n          {\n            \"bytes\": 4121,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-31T14:41:37Z\",\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_first_cache_materialization.json\",\n            \"source\": \"step.telemetry.artifact_paths\"\n          },\n          {\n            \"bytes\": 4557,\n            \"exists\": true,\n            \"is_dir\": false,\n            \"is_file\": true,\n            \"is_symlink\": false,\n            \"mtime_utc\": \"2026-05-31T14:41:37Z\",\n            \"path\": \"/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_fec8_markov_static_order1_fec8_markov_adaptive_order1_fec8_markov_static_order2_p11_then_p15_then_receiver_patch/frame1_region_waterfill_runtime_patch/local_component_spot_check/mlx_scorer_input_cache/manifest.json\",\n            \"source\": \"step.postconditions.path\"\n          }\n        ],\n        \"log_bytes\": 1831,\n        \"recursive_truncated\": false,\n        \"schema\": \"experiment_queue_step_telemetry.v1\"\n      },\n      \"timed_out\": false,\n      \"worker_run_id\": \"06993dd4a9261512\"\n    }\n  ],\n  \"steps_started\": 4,\n  \"stop_reason\": \"idle_limit_reached\",\n  \"stop_signals\": [],\n  \"success_count\": 4\n}\n"
+  }
+}

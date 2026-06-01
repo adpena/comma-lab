@@ -1,0 +1,77 @@
+{
+  "axis": "[macOS-MLX research-signal]",
+  "byte_closed_candidate_emitted": true,
+  "byte_tax": {
+    "archive_zip_bytes": 26235,
+    "pia3_0_bin_bytes": 14631,
+    "raw_state_dict_bytes": 40949
+  },
+  "candidate_0_bin": {
+    "bytes": 14631,
+    "path": ".omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/candidate/0.bin",
+    "sha256": "4e8abe4f5cbf474ec163428bafe6e89065e2d7245bf9ae1e2b7c532e6fa00cb2"
+  },
+  "candidate_archive": {
+    "bytes": 26235,
+    "path": ".omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/candidate/archive.zip",
+    "sha256": "ffd251fc052ff880fa29317e1893c26855807d99fedc6ec48bcd7d0af288a8fe"
+  },
+  "candidate_archive_bytes": 26235,
+  "candidate_archive_path": ".omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/candidate/archive.zip",
+  "candidate_archive_sha256": "ffd251fc052ff880fa29317e1893c26855807d99fedc6ec48bcd7d0af288a8fe",
+  "candidate_runtime_adapter_blocker_cleared": true,
+  "candidate_runtime_dir": ".omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/candidate/submission",
+  "candidate_runtime_tree_sha256": "af3eed76fe42b76169328e44fa8dca2ef49a1b2f7087e738134cb5912e183e69",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "macos_mlx_research_signal_has_no_score_authority",
+    "smoke_candidate_not_full_contest_video",
+    "contest_cpu_or_cuda_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "expected_candidate_runtime_tree_sha256": "af3eed76fe42b76169328e44fa8dca2ef49a1b2f7087e738134cb5912e183e69",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "full_frame_inflate_parity_satisfied": true,
+  "gpu_launched": false,
+  "label": "direct_smoke_from_replay_parity",
+  "parity_report": {
+    "bytes": 12074,
+    "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.json",
+    "sha256": "e82749a50832d5e71e3d6155c41d229ab5caac3f4e69ec12d93d0e1802fa289b"
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "pytorch_state_dict": {
+    "bytes": 40949,
+    "path": ".omx/research/pact_nerv_diffusion_blocks_replay_parity_smoke_20260528Tlocal/outputs/pact_nerv_ia3_mlx_pytorch_forward_parity.pt",
+    "sha256": "6d7b72c843faf5193d5c7b0f641d94738a86382f4eff27618d632b0fa00545df"
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_inflate_proof_path": ".omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/candidate/receiver_inflate_proof.json",
+  "receiver_inflate_proof_sha256": "f0fb22c0171f68ac58c48fb188a378c7396ead1fde5ca608131e2755e40e224c",
+  "receiver_verification": {
+    "candidate_runtime_adapter_blocker_cleared": true,
+    "candidate_runtime_dir": ".omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/candidate/submission",
+    "candidate_runtime_tree_sha256": "af3eed76fe42b76169328e44fa8dca2ef49a1b2f7087e738134cb5912e183e69",
+    "expected_candidate_runtime_tree_sha256": "af3eed76fe42b76169328e44fa8dca2ef49a1b2f7087e738134cb5912e183e69",
+    "proof_bytes": 4616,
+    "proof_path": ".omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/candidate/receiver_inflate_proof.json",
+    "proof_present": true,
+    "proof_sha256": "f0fb22c0171f68ac58c48fb188a378c7396ead1fde5ca608131e2755e40e224c",
+    "receiver_contract_satisfied": true,
+    "runtime_adapter_ready": true,
+    "runtime_consumption_proof_passed": true
+  },
+  "runtime_adapter_ready": true,
+  "runtime_consumption_proof_path": ".omx/research/pact_nerv_ia3_byte_closed_direct_smoke_20260528Tlocal/candidate/receiver_inflate_proof.json",
+  "runtime_consumption_proof_sha256": "f0fb22c0171f68ac58c48fb188a378c7396ead1fde5ca608131e2755e40e224c",
+  "schema": "pact_nerv_ia3_byte_closed_candidate.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

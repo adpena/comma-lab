@@ -1,0 +1,190 @@
+{
+  "wave_id": "wave_n34_pr110_opt_4_7_11_triple_20260528",
+  "lane_id": "lane_wave_n34_pr110_opt_4_7_11_triple_20260528",
+  "subagent_id": "wave_n34_pr110_opt_4_7_11_triple_20260528",
+  "task_id": "wave_n34_pr110_opt_4_7_11_triple_analytical_investigator_20260528",
+  "axis_tag": "[macOS-CPU advisory]",
+  "promotion_blockers": [
+    "non_promotable_per_macos_cpu_advisory_grade",
+    "analytical_upper_bound_only_not_byte_closed",
+    "wave_n33_byte_identity_pre_check_passed_each_opt_modifies_distinct_wire_region",
+    "requires_paired_cuda_ratification_per_catalog_246_before_promotion"
+  ],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "evidence_grade": "macOS-CPU-advisory",
+  "source_per_pair_rows": "experiments/results/frame_exploit_segnet_posenet_20260514_pr101_mps600_codex/pair_component_rows.jsonl",
+  "n_modes_in_source": 21,
+  "n_pairs_in_source": 600,
+  "fec6_baseline_wire_bytes": 249,
+  "live_frontier_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+  "live_frontier_bytes": 178493,
+  "live_frontier_score_cpu": 0.19198533626623068,
+  "opt_4_grouped_calibration": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "promotion_blockers": [
+      "non_promotable_per_macos_cpu_advisory_grade",
+      "analytical_upper_bound_only_not_byte_closed",
+      "requires_full_widened_catalog_to_validate_grouping_assumption"
+    ],
+    "n_pairs": 600,
+    "n_modes_in_22_mode_catalog": 21,
+    "groups_total_G": 17,
+    "shannon_entropy_bits": 3.3313203895039005,
+    "shannon_floor_bits": 1998.7922337023404,
+    "fixed_width_bits": 3000,
+    "grouped_wire_bytes_shannon": 258,
+    "grouped_wire_bytes_fixed": 383,
+    "fec6_baseline_wire_bytes": 249,
+    "delta_bytes_vs_fec6_shannon": 9,
+    "delta_bytes_vs_fec6_fixed": 134,
+    "rate_delta_S_shannon": 5.9927305780995425e-06,
+    "rate_delta_S_fixed": 8.922509971837096e-05,
+    "mean_per_pair_component_delta_S": -0.0011704843740551626,
+    "aggregate_component_delta_S_proxy_per_pair": -0.0011704843740551626,
+    "top_5_groups_by_count": [
+      {
+        "mode_id": "none",
+        "n_pairs_in_group": 132,
+        "fraction": 0.22
+      },
+      {
+        "mode_id": "frame0_blue_chroma_amp_3",
+        "n_pairs_in_group": 119,
+        "fraction": 0.19833333333333333
+      },
+      {
+        "mode_id": "frame0_rgb_bias_p2_m1_m1",
+        "n_pairs_in_group": 91,
+        "fraction": 0.15166666666666667
+      },
+      {
+        "mode_id": "frame0_rgb_bias_m2_p1_p1",
+        "n_pairs_in_group": 70,
+        "fraction": 0.11666666666666667
+      },
+      {
+        "mode_id": "frame0_blue_chroma_amp_1",
+        "n_pairs_in_group": 25,
+        "fraction": 0.041666666666666664
+      }
+    ],
+    "verdict": "IMPLEMENTATION_FALSIFIED",
+    "verdict_rationale": "Grouped wire estimate: 258B (Shannon-coded) or 383B (fixed-width) vs FEC6 baseline 249B. With G=17 unique best-modes from 22-mode catalog over 600 pairs, Shannon entropy 3.33 bits/pair vs FEC6 measured ~3.32 bits/pair. Bayesian honesty: this is an UPPER BOUND on grouping savings \u2014 true wire may be higher due to header + per-group menu overhead."
+  },
+  "opt_7_uniward_inverse_scorer": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "promotion_blockers": [
+      "non_promotable_per_macos_cpu_advisory_grade",
+      "analytical_upper_bound_only_not_byte_closed",
+      "uniward_canonical_formulation_reduces_to_opt_12_posenet_null_sister"
+    ],
+    "n_pairs": 600,
+    "unweighted_aggregate_delta_S": -0.0011704843740551621,
+    "uniward_weighted_aggregate_delta_S": -0.0009103568688898632,
+    "improvement_ratio": -0.22223919509842144,
+    "top_decile_uniward_aggregate_delta_S": -0.0004764121800100148,
+    "uniward_concentration_factor": 0.40702139265599685,
+    "sparse_selector_K100_wire_bytes_estimate": 103,
+    "sparse_selector_K100_delta_bytes_vs_fec6": -146,
+    "sparse_selector_K100_proportional_savings": -7.940203000166914e-05,
+    "canonical_citation": "Holub-Fridrich-Denemark 2014 + Sallee 2003 UNIWARD inverse-scorer-sensitivity weighting",
+    "canonical_observation": "UNIWARD canonical cost function 1/(epsilon + scorer_response) applied to PoseNet baseline distortion ANALYTICALLY REDUCES TO OPT-12 PoseNet-null catalog (both select for low-baseline-pose pairs). The UNIWARD framework PARADIGM-VALIDATES the OPT-12 design but does NOT yield new bytes beyond what OPT-12 already explores.",
+    "verdict": "UNIWARD_WEIGHTING_WORSE_THAN_UNWEIGHTED_IMPLEMENTATION_FALSIFIED",
+    "verdict_rationale": "UNIWARD weighting yields -22.22% improvement over unweighted. The sparse-selector K=100 wire estimate 103B yields -146B vs FEC6=249B baseline. The proportional score savings -0.000079 reflect that ONLY 100/600 pairs are perturbed; the remaining 500 pairs receive 0 perturbation under sparse selector."
+  },
+  "opt_11_multi_mode_composition": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "promotion_blockers": [
+      "non_promotable_per_macos_cpu_advisory_grade",
+      "analytical_additive_upper_bound_only_not_actual_composed_forward_pass",
+      "dykstra_polytope_feasibility_unverified_per_catalog_373",
+      "requires_full_widened_catalog_composed_smoke_to_validate"
+    ],
+    "n_pairs": 600,
+    "single_mode_aggregate_delta_S": -0.0011704843740551626,
+    "multi_mode_additive_upper_bound_delta_S": -0.0018119874682041071,
+    "compound_ratio_upper_bound": 1.5480663461797841,
+    "score_savings_upper_bound_per_pair": -0.0006415030941489446,
+    "score_savings_aggregate_proxy_upper_bound": -0.0006415030941489446,
+    "multi_wire_lower_bound_bytes": 428,
+    "multi_wire_upper_bound_bytes": 608,
+    "rate_axis_delta_S_estimate": 0.00011918875260886867,
+    "net_score_delta_upper_bound_estimate": -0.0005223143415400759,
+    "orthogonal_family_pairs_examined": 6,
+    "top_5_composition_examples": [
+      {
+        "pair_id": 2,
+        "single_best_mode": "frame0_rgb_bias_m4_p2_p2",
+        "single_best_delta": -0.011759553436771888,
+        "multi_modes": [
+          "frame0_luma_bias_+2",
+          "frame0_rgb_bias_m4_p2_p2"
+        ],
+        "multi_upper_bound_delta": -0.021782271860153427
+      },
+      {
+        "pair_id": 502,
+        "single_best_mode": "frame0_luma_bias_-1",
+        "single_best_delta": -0.010669159569430792,
+        "multi_modes": [
+          "frame0_luma_bias_-1",
+          "frame0_rgb_bias_p0_m2_p2"
+        ],
+        "multi_upper_bound_delta": -0.02035868972638709
+      },
+      {
+        "pair_id": 515,
+        "single_best_mode": "frame0_rgb_bias_p4_m2_m2",
+        "single_best_delta": -0.0091422701156956,
+        "multi_modes": [
+          "frame0_luma_bias_-1",
+          "frame0_rgb_bias_p4_m2_m2"
+        ],
+        "multi_upper_bound_delta": -0.018076424076883243
+      },
+      {
+        "pair_id": 546,
+        "single_best_mode": "frame0_rgb_bias_p4_m2_m2",
+        "single_best_delta": -0.009222123537491814,
+        "multi_modes": [
+          "frame0_luma_bias_-1",
+          "frame0_rgb_bias_p4_m2_m2"
+        ],
+        "multi_upper_bound_delta": -0.017915904327034785
+      },
+      {
+        "pair_id": 379,
+        "single_best_mode": "frame0_luma_bias_-1",
+        "single_best_delta": -0.00806820755159239,
+        "multi_modes": [
+          "frame0_luma_bias_-1",
+          "frame0_rgb_bias_p4_m2_m2"
+        ],
+        "multi_upper_bound_delta": -0.015453496985159326
+      }
+    ],
+    "verdict": "PROCEED_CANDIDATE_FOR_EMPIRICAL_VALIDATION",
+    "verdict_rationale": "Compound ratio upper-bound = 1.548x single-mode. Score savings upper bound (additive composition assumption): -0.000642. Wire cost increase (+179B = +0.000119 rate-axis \u0394S). Net score delta upper bound: -0.000522. ADDITIVE composition is the UPPER BOUND; true Dykstra-projected polytope intersection per Catalog #373 will yield SUB-ADDITIVE results \u2014 actual savings will be LESS than this upper bound."
+  },
+  "composition_analysis": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "promotion_blockers": [
+      "non_promotable_per_macos_cpu_advisory_grade",
+      "qualitative_composition_analysis_not_empirical_paired_smoke"
+    ],
+    "orthogonality_matrix": {
+      "opt_4_opt_7": "PARTIALLY_COMPATIBLE_DIFFERENT_SURFACES_OPT_4_REDUCES_ALPHABET_OPT_7_SPARSIFIES_SELECTOR",
+      "opt_4_opt_11": "MUTUALLY_EXCLUSIVE_OPT_4_REDUCES_ALPHABET_OPT_11_EXPANDS_TO_K_SQUARED",
+      "opt_7_opt_11": "POSSIBLY_COMPOSABLE_SPARSE_PLUS_MULTI_MODE_PER_ACTIVE_PAIR"
+    },
+    "byte_distinctness_per_wave_n33": "Each OPT modifies a DIFFERENT byte region of the FEC6 wire: OPT-4 reduces the 6-byte K=16 menu header to G-entry menu; OPT-7 modifies the bitmap+selector stream length; OPT-11 doubles the selector stream length. Byte-distinctness verified ANALYTICALLY (each OPT touches distinct wire region). NO BYTE-IDENTITY ARTIFACT RISK per Wave N+33 anti-pattern.",
+    "composition_alpha_per_catalog_322_safety": "Per Catalog #322 sister + Catalog #356 AxisDecomposition + Catalog #372 Dykstra Pareto polytope feasibility: composition_alpha for OPT-4+OPT-7+OPT-11 stack CANNOT be assumed additive. Empirical paired-smoke required BEFORE alpha is consumed by autopilot cascade. This wave does NOT register alpha; canonical anti-pattern A (cross_paradigm_stacking_additive_compounding_without_dykstra_feasibility) remains binding.",
+    "verdict": "OPT_4_AND_OPT_11_MUTUALLY_EXCLUSIVE_BY_DESIGN_PER_SELECTOR_ALPHABET_SURFACE"
+  },
+  "next_wave_op_routable": [
+    "If OPT-4 verdict=PROCEED_CANDIDATE: spawn full widened-catalog 600-pair sweep + grouped-encoder paired-comparison smoke",
+    "OPT-7 paradigm-validates OPT-12 PoseNet-null per canonical Holub-Fridrich-Denemark 2014 formulation; canonical equation registration recommended",
+    "If OPT-11 net upper-bound > -1e-5: empirical composed-mode paired smoke required to verify additivity assumption per Catalog #373 Dykstra Pareto polytope feasibility"
+  ]
+}

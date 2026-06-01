@@ -1,0 +1,45 @@
+{
+  "allowed_use": "local_final_rate_attack_planning_feedback_only",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+  "materializer_archive_delta_status_counts": {
+    "no_realized_delta": 3,
+    "zero_delta": 7
+  },
+  "materializer_blocking_feedback_count": 10,
+  "materializer_observation_count": 10,
+  "materializer_rate_nonpositive_count": 10,
+  "materializer_rate_positive_count": 0,
+  "materializer_saved_bytes_max": 0,
+  "materializer_saved_bytes_sum": 0,
+  "materializer_target_kind_counts": {
+    "archive_zip_repack_v1": 3,
+    "packet_member_recompress_v1": 3,
+    "packet_member_zip_header_elide_v1": 3,
+    "selector_stream_context_recode_v1": 1
+  },
+  "observation_count": 31,
+  "observation_kind_counts": {
+    "family_agnostic_materializer_empirical_observation": 3,
+    "materializer_chain_archive_delta": 7,
+    "queue_observation_health_blocker": 4,
+    "queue_performance_step": 17
+  },
+  "observer_revalidation_path": ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/observer_revalidation.json",
+  "promotion_eligible": false,
+  "queue_blockers": [
+    "experiment_queue_observation_failed_steps:1",
+    "experiment_queue_observation_artifact_postcondition_failures:3"
+  ],
+  "queue_healthy": false,
+  "queue_id": "frontier_final_rate_attack_feca_default_exec2_20260528Tlocal",
+  "queue_status_counts": {
+    "failed": 1,
+    "queued": 3,
+    "succeeded": 16
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_final_rate_attack_signal_harvest.v1",
+  "score_claim": false,
+  "signal_observations_path": ".omx/research/frontier_final_rate_attack_feca_default_exec2_20260528Tlocal/materializer_signal_observations.jsonl"
+}

@@ -1,0 +1,1 @@
+FATAL: scorer-region follow-up queue compile failed: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/experiments/results/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/acquisition_policy.json'

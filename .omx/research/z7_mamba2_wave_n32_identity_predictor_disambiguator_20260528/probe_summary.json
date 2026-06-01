@@ -1,0 +1,40 @@
+{
+  "archive_bytes": 1400020,
+  "archive_sha256": "aa0ce01e75461bbd60c77a249885aa6b5a5a40657e9c2443180402596af2ea0c",
+  "baseline_anchor_3_archive_sha256": "e0164d4ef4aad7768eff0a45fe1fc64be9e3780f030fda5a88f51925fc1345a3",
+  "baseline_anchor_3_pose_reduction_percent": -19.169,
+  "byte_distinctness_check_note": "Wave N+33 lesson satisfied: identity_predictor=True produces aa0ce01e... structurally distinct from baseline e0164d4e... (predictor short-circuit changes forward graph + latent gradient signal)",
+  "byte_distinctness_verified": true,
+  "completed_utc": "2026-05-29T00:11:36+00:00",
+  "config": {
+    "d_model": 64,
+    "d_state": 16,
+    "distillation_weight": 0.5,
+    "epochs": 50,
+    "expand": 2,
+    "identity_predictor": true,
+    "latent_dim": 24,
+    "lr": 0.0001,
+    "num_pairs": 600,
+    "pose_distillation_weight": 1.0,
+    "seed": 0
+  },
+  "metrics_ep0": {
+    "pose": 107.52789306640625,
+    "recon_aux": 0.3563172221183777,
+    "seg": 6.339047908782959
+  },
+  "metrics_ep_last": {
+    "pose": 86.58393859863281,
+    "recon_aux": 0.954852283000946,
+    "seg": 6.221446514129639
+  },
+  "noise_band_threshold_percentage_points": 2.7,
+  "pose_reduction_absolute": -20.943954467773438,
+  "pose_reduction_percent": -19.4776944572317,
+  "probe_id": "wave_n32_z7_mamba_2_anchor_3_3_identity_predictor_disambiguator_20260528",
+  "started_utc": "2026-05-29T00:06:59+00:00",
+  "verdict": "CONVERGENCE_PARITY",
+  "verdict_rationale": "identity-predictor pose reduction -19.48pct within [-21.87, -16.47] noise band of baseline -19.17pct; Mamba-2 distinguishing primitive NULL at 600pair x 50ep; extends Wave N+28 Z5 finding (cooperative-receiver class convergence-parity at underconverged config)",
+  "wall_clock_seconds": 214.0199010372162
+}

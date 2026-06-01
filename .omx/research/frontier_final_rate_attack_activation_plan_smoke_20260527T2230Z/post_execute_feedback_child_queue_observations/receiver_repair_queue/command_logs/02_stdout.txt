@@ -1,0 +1,96 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 0,
+  "max_experiments": null,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_io_heavy": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-27T20:14:01Z",
+  "started_experiment_ids": [
+    "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof"
+  ],
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_receiver_repair_work_order.py",
+        "--receiver-repair-backlog",
+        ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/post_execute_feedback_refresh/receiver_repair_backlog.json",
+        "--repair-id",
+        "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+        "--work-order-out",
+        "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.5450721249981143,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_fe_a515162b989f69ca/receiver_repair_chain_registered_multisurface_materializer_program_runtime_cons_674be29ff1ff8f44/emit_receiver_repair_work_order/20260527T201401Z_e022600cdbea8af8.log",
+      "pid": 10851,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_receiver_repair_work_order.py",
+          "--receiver-repair-backlog",
+          ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/post_execute_feedback_refresh/receiver_repair_backlog.json",
+          "--repair-id",
+          "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+          "--work-order-out",
+          "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json",
+          "--overwrite"
+        ],
+        "experiment_id": "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+        "priority": 1,
+        "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair",
+        "resource_kind": "local_io_heavy",
+        "step_hashes": {
+          "command_hash": "b26222aef344d3ba5053e591c9b134c3ebf1c46aed7e6191b41c3b9f28821ca1",
+          "definition_hash": "dd8e87696840f43bcb365a49f0d9ecaa32a2359e0a1aeab3c91d0b156c6800f9",
+          "postcondition_hash": "fd3058e24987f8ba285db24f879c900dd3d5ec08691aa062bee5c21e5cbca1da"
+        },
+        "step_id": "emit_receiver_repair_work_order"
+      },
+      "resource_kind": "local_io_heavy",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 5398,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-27T20:14:02Z",
+            "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 910,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "e022600cdbea8af8"
+    }
+  ],
+  "steps_started": 1,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 1
+}

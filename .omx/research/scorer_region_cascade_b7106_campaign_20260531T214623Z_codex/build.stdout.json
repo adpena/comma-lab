@@ -1,0 +1,12 @@
+{
+  "bytes_written": 482176,
+  "experiment_count": 10,
+  "promotion_eligible": false,
+  "queue_id": "scorer_region_cascade_b7106_campaign_20260531T214623Z",
+  "queue_out": ".omx/research/scorer_region_cascade_b7106_campaign_20260531T214623Z_codex/queue.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "scorer_region_selector_cascade_campaign_queue_cli_result.v1",
+  "score_claim": false,
+  "variant_count": 6
+}

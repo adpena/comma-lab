@@ -1,0 +1,475 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {
+      "local_cpu": 1
+    },
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_io_heavy"
+    ],
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-05-27T20:14:02Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof": {
+        "artifact_record_bytes_mean": 5398.0,
+        "artifact_record_bytes_sum": 5398,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 5398.0,
+        "artifact_record_raw_bytes_sum": 5398,
+        "candidate_ids": [
+          "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5450721249981143,
+        "elapsed_seconds_mean": 0.5450721249981143,
+        "elapsed_seconds_min": 0.5450721249981143,
+        "elapsed_seconds_sum": 0.5450721249981143,
+        "experiment_ids": [
+          "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 910.0,
+        "log_bytes_sum": 910,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_receiver_repair_work_order"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_resource_kind": {
+      "local_io_heavy": {
+        "artifact_record_bytes_mean": 5398.0,
+        "artifact_record_bytes_sum": 5398,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 5398.0,
+        "artifact_record_raw_bytes_sum": 5398,
+        "candidate_ids": [
+          "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5450721249981143,
+        "elapsed_seconds_mean": 0.5450721249981143,
+        "elapsed_seconds_min": 0.5450721249981143,
+        "elapsed_seconds_sum": 0.5450721249981143,
+        "experiment_ids": [
+          "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 910.0,
+        "log_bytes_sum": 910,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_receiver_repair_work_order"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof.emit_receiver_repair_work_order": {
+        "artifact_record_bytes_mean": 5398.0,
+        "artifact_record_bytes_sum": 5398,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 5398.0,
+        "artifact_record_raw_bytes_sum": 5398,
+        "candidate_ids": [
+          "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5450721249981143,
+        "elapsed_seconds_mean": 0.5450721249981143,
+        "elapsed_seconds_min": 0.5450721249981143,
+        "elapsed_seconds_sum": 0.5450721249981143,
+        "experiment_ids": [
+          "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 910.0,
+        "log_bytes_sum": 910,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_receiver_repair_work_order"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof": [
+        "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof"
+      ]
+    },
+    "event_count": 1,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair",
+  "queue_sha256": "67c5d440a2292f464c6a033c8927f84b728a0f3e0669b6cdd39d8895093d52f2",
+  "queued_steps": [
+    {
+      "attempts": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+        ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/post_execute_feedback_refresh/receiver_repair_backlog.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_false_authority"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "experiment_id": "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "experiment_status": "queued",
+      "log_exists": false,
+      "log_path": null,
+      "pid": null,
+      "processes": [],
+      "resource_kind": "local_io_heavy",
+      "status": "queued",
+      "step_id": "emit_receiver_repair_work_order",
+      "stored_status": "queued",
+      "target_kind": "materializer_backlog_archive_section_header_elide_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-27T20:14:01Z",
+      "worker_run_id": null
+    },
+    {
+      "attempts": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+        ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/post_execute_feedback_refresh/receiver_repair_backlog.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_false_authority"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "experiment_id": "receiver_repair_materializer_backlog_archive_section_reorder_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "experiment_status": "queued",
+      "log_exists": false,
+      "log_path": null,
+      "pid": null,
+      "processes": [],
+      "resource_kind": "local_io_heavy",
+      "status": "queued",
+      "step_id": "emit_receiver_repair_work_order",
+      "stored_status": "queued",
+      "target_kind": "materializer_backlog_archive_section_reorder_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-27T20:14:01Z",
+      "worker_run_id": null
+    },
+    {
+      "attempts": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+        ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/post_execute_feedback_refresh/receiver_repair_backlog.json"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_false_authority",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_false_authority"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "experiment_id": "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "experiment_status": "queued",
+      "log_exists": false,
+      "log_path": null,
+      "pid": null,
+      "processes": [],
+      "resource_kind": "local_io_heavy",
+      "status": "queued",
+      "step_id": "emit_receiver_repair_work_order",
+      "stored_status": "queued",
+      "target_kind": "materializer_backlog_byte_range_entropy_recode_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-05-27T20:14:01Z",
+      "worker_run_id": null
+    }
+  ],
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_frontier_receiver_repair_work_order.py",
+        "--receiver-repair-backlog",
+        ".omx/research/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/post_execute_feedback_refresh/receiver_repair_backlog.json",
+        "--repair-id",
+        "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+        "--work-order-out",
+        "/Volumes/VertigoDataTier/pact/frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z/frontier_receiver_repair/frontier_final_rate_attack_activation_plan_smoke_20260527t2230z_post_execute_feedback_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+        "--overwrite"
+      ],
+      "experiment_id": "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "priority": 2,
+      "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair",
+      "resource_kind": "local_io_heavy",
+      "step_hashes": {
+        "command_hash": "237e037680a4c92952f459e012a18cc9a669f93547b538ee85f4a9761b7b0de1",
+        "definition_hash": "cdd4e55ff36d972e7a9d2e76a786cdc84ce5706386bd6b589c233c48b8220ec5",
+        "postcondition_hash": "d1a20141c3adbaa20b15ca89d3025819ea9aac691330d7c3038cf168789c3476"
+      },
+      "step_id": "emit_receiver_repair_work_order"
+    }
+  ],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 1
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 0,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 1,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_io_heavy": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_io_heavy": 120
+    },
+    "resource_policies": {
+      "local_io_heavy": {
+        "advisory_only": true,
+        "concurrency_reason": "cap_io_heavy_pressure",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 120,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.5450721249981143,
+        "elapsed_seconds_p95": 0.5450721249981143,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 120,
+        "resource_kind": "local_io_heavy",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-27T20:14:01Z",
+    "event_count": 6,
+    "max_event_id": 6,
+    "max_step_updated_at_utc": "2026-05-27T20:14:02Z",
+    "queue_id": "frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_receiver_repair.sqlite",
+    "step_state_count": 4
+  },
+  "status_counts": {
+    "queued": 3,
+    "succeeded": 1
+  },
+  "step_count": 4,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

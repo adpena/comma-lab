@@ -1,0 +1,190 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 0,
+  "max_experiments": null,
+  "max_parallel": 2,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "z8_rd_waterfill_full600_mlx_prefilter_gate",
+  "requested_max_parallel": 0,
+  "resource_limits": {
+    "local_cpu": 1,
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "skip_count": 0,
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-31T21:08:04Z",
+  "started_experiment_ids": [
+    "z8_mlx_prefilter_0000_rd_waterfill_full600_max_weighted_mse_5e_5"
+  ],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_z8_rd_waterfill_full600_mlx_prefilter_gate.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/replay_z8_full_video_mlx_candidate.py",
+        "--candidate-archive-bin",
+        ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/0.bin",
+        "--reference-pairs-npy",
+        ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/reference_pairs_rgb255.npy",
+        "--out-json",
+        ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/queue_owned_prefilter/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+        "--upstream-dir",
+        "upstream",
+        "--pair-chunk-size",
+        "32",
+        "--scorer-hw",
+        "384,512",
+        "--device",
+        "cpu",
+        "--archive-zip",
+        ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/archive.zip"
+      ],
+      "elapsed_seconds": 38.18137516599381,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/z8_rd_waterfill_full600_mlx_prefilter_gate/z8_mlx_prefilter_0000_rd_waterfill_full600_max_weighted_mse_5e_5/run_z8_full_video_mlx_replay/20260531T210804Z_211e9aa2ba3b789b.log",
+      "pid": 15351,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/replay_z8_full_video_mlx_candidate.py",
+          "--candidate-archive-bin",
+          ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/0.bin",
+          "--reference-pairs-npy",
+          ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/reference_pairs_rgb255.npy",
+          "--out-json",
+          ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/queue_owned_prefilter/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+          "--upstream-dir",
+          "upstream",
+          "--pair-chunk-size",
+          "32",
+          "--scorer-hw",
+          "384,512",
+          "--device",
+          "cpu",
+          "--archive-zip",
+          ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/archive.zip"
+        ],
+        "experiment_id": "z8_mlx_prefilter_0000_rd_waterfill_full600_max_weighted_mse_5e_5",
+        "priority": 10,
+        "queue_id": "z8_rd_waterfill_full600_mlx_prefilter_gate",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "4781d60dfe0c23c4c09418b27be97d35c819cbdf0e7a3b37fef3ddae0b3723a1",
+          "definition_hash": "aaee825f41d7b33be4579304db5a56c4187803f9263d0d00cbf312b88a5e6159",
+          "postcondition_hash": "018e66ebad49f7d4322d79718ad244e4067c2d4da2062e89e48206f549d066f6"
+        },
+        "step_id": "run_z8_full_video_mlx_replay"
+      },
+      "resource_kind": "local_mlx",
+      "returncode": 0,
+      "skip_reason": null,
+      "skipped": false,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 1707,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T21:08:41Z",
+            "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/queue_owned_prefilter/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 1629,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "211e9aa2ba3b789b"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/gate_local_candidate_for_exact_auth.py",
+        "--mlx-prefilter-summary-json",
+        ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/queue_owned_prefilter/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+        "--auth-frontier-score",
+        "0.1919853363",
+        "--mlx-target-action",
+        "0.1919853363",
+        "--out-json",
+        ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/queue_owned_prefilter/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+        "--success-on-blocked"
+      ],
+      "elapsed_seconds": 0.2620892919949256,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/z8_rd_waterfill_full600_mlx_prefilter_gate/z8_mlx_prefilter_0000_rd_waterfill_full600_max_weighted_mse_5e_5/gate_mlx_prefilter_for_exact_auth/20260531T210842Z_c1715bcf97ab3eb1.log",
+      "pid": 21188,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/gate_local_candidate_for_exact_auth.py",
+          "--mlx-prefilter-summary-json",
+          ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/queue_owned_prefilter/rd_waterfill_full600_max_weighted_mse_5e_5/full_video_mlx_replay.json",
+          "--auth-frontier-score",
+          "0.1919853363",
+          "--mlx-target-action",
+          "0.1919853363",
+          "--out-json",
+          ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/queue_owned_prefilter/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+          "--success-on-blocked"
+        ],
+        "experiment_id": "z8_mlx_prefilter_0000_rd_waterfill_full600_max_weighted_mse_5e_5",
+        "priority": 10,
+        "queue_id": "z8_rd_waterfill_full600_mlx_prefilter_gate",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "38b8c6b72a8dee0a39a0e68c1929c419ca35e07d9ff6227b9f985620efbc9783",
+          "definition_hash": "f4db24be9683f7e632196f2927fc93bc72eeeefa30006337aedf30765ac35f98",
+          "postcondition_hash": "e4a6d60af8720d4d6c0ff5e2e1665f44242e7ab57aefb172b81cf12b8adfe094"
+        },
+        "step_id": "gate_mlx_prefilter_for_exact_auth"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "skip_reason": null,
+      "skipped": false,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 2117,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T21:08:42Z",
+            "path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/per_subband_delta_schedule_codex/materialized_rd_waterfill_full600_max_weighted_mse_5e-5/queue_owned_prefilter/rd_waterfill_full600_max_weighted_mse_5e_5/mlx_prefilter_exact_auth_gate.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 2117,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "c1715bcf97ab3eb1"
+    }
+  ],
+  "steps_started": 2,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 2
+}

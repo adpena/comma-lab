@@ -1,0 +1,71 @@
+{
+  "basis_count": 5,
+  "decoder_grid_height": 96,
+  "decoder_grid_width": 128,
+  "frames": 1200,
+  "hprc_payload_section_bytes": 3007829,
+  "low_hanging_fruit": [
+    {
+      "bytes": 2764820,
+      "next_action": "entropy-code residual int8 tokens with significance map or learned prior",
+      "reason": "block residual stream dominates compact HPRC payload",
+      "target": "residual_rc"
+    },
+    {
+      "bytes": 12017,
+      "next_action": "delta-code pair latents and range/ANS code residual symbols",
+      "reason": "dense int16 latent stream is small but still directly optimizable",
+      "target": "latents_rc"
+    },
+    {
+      "bytes": 3007829,
+      "next_action": "sweep decoder grid and residual grid under exact replay before demotion",
+      "reason": "96x128 grid is low enough for rate but risks SegNet/PoseNet loss after camera upsample",
+      "target": "decoder_grid"
+    }
+  ],
+  "pairs": 600,
+  "promotion_eligible": false,
+  "receiver_mode": "compact_numpy_receiver_v1",
+  "residual_grid_height": 24,
+  "residual_grid_width": 32,
+  "schema": "hprc_compact_receiver_section_byte_profile.v1",
+  "score_claim": false,
+  "section_rows": [
+    {
+      "bytes": 2764820,
+      "section": "residual_rc",
+      "share_of_hprc_payload": 0.91920784
+    },
+    {
+      "bytes": 221204,
+      "section": "decoder_qw",
+      "share_of_hprc_payload": 0.07354274
+    },
+    {
+      "bytes": 12017,
+      "section": "latents_rc",
+      "share_of_hprc_payload": 0.00399524
+    },
+    {
+      "bytes": 7216,
+      "section": "receiver_state",
+      "share_of_hprc_payload": 0.00239907
+    },
+    {
+      "bytes": 1211,
+      "section": "selectors_rc",
+      "share_of_hprc_payload": 0.00040262
+    },
+    {
+      "bytes": 1102,
+      "section": "manifest_json",
+      "share_of_hprc_payload": 0.00036638
+    },
+    {
+      "bytes": 259,
+      "section": "rdo_plan",
+      "share_of_hprc_payload": 8.611e-05
+    }
+  ]
+}

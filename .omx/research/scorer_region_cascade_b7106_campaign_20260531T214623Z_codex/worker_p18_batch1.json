@@ -1,0 +1,340 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 0,
+  "max_experiments": null,
+  "max_parallel": 4,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "scorer_region_cascade_b7106_campaign_20260531T214623Z",
+  "requested_max_parallel": 4,
+  "resource_limits": {
+    "local_cpu": 4,
+    "local_io_heavy": 1,
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "skip_count": 0,
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-31T21:50:12Z",
+  "started_experiment_ids": [
+    "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+    "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+    "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+    "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch"
+  ],
+  "state": ".omx/state/experiment_queue_scorer_region_cascade_b7106_campaign_20260531T214623Z.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_p18_segnet_region_waterfill.py",
+        "--posenet-null-pairs",
+        "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+        "--segnet-softmax-16",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+        "--segnet-softmax-256",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+        "--output",
+        "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+        "--top-regions-per-pair",
+        "2",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.36033520800992846,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/materialize_p18_segnet_region_waterfill/20260531T215012Z_222369bffca069ca.log",
+      "pid": 79562,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_p18_segnet_region_waterfill.py",
+          "--posenet-null-pairs",
+          "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+          "--segnet-softmax-16",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+          "--segnet-softmax-256",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+          "--output",
+          "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+          "--top-regions-per-pair",
+          "2",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 2,
+        "queue_id": "scorer_region_cascade_b7106_campaign_20260531T214623Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "2ccde47512f98aa394d8a4c41bce10d430358e956dfabf591db11ca4cab26f85",
+          "definition_hash": "c62fc3682c9827dcd696f202b21b9b865e11ca54e817274916a056fe9dd4754c",
+          "postcondition_hash": "bc15f39f073cc0f3e1f350ae8d9370b8a1dc80cea24ea91833808238d5eb712c"
+        },
+        "step_id": "materialize_p18_segnet_region_waterfill"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "skip_reason": null,
+      "skipped": false,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 40213,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T21:50:13Z",
+            "path": "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 494,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "222369bffca069ca"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_p18_segnet_region_waterfill.py",
+        "--posenet-null-pairs",
+        "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+        "--segnet-softmax-16",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+        "--segnet-softmax-256",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+        "--output",
+        "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+        "--top-regions-per-pair",
+        "2",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.34321324998745695,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/materialize_p18_segnet_region_waterfill/20260531T215012Z_403709c59f1c40a6.log",
+      "pid": 79573,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_p18_segnet_region_waterfill.py",
+          "--posenet-null-pairs",
+          "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+          "--segnet-softmax-16",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+          "--segnet-softmax-256",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+          "--output",
+          "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+          "--top-regions-per-pair",
+          "2",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+        "priority": 3,
+        "queue_id": "scorer_region_cascade_b7106_campaign_20260531T214623Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "04ee293fe9ad2e7f6ab2a3014645edc5ccce3332b51fc2300072fb678d708cf0",
+          "definition_hash": "6ae18b7a720e7de6666c12228d6344a633b656b559f81dee6a2c522ad6de02c3",
+          "postcondition_hash": "7897c2adb7dce743076c6bc4a17984316092c4316401ef7e6935c9213030fe1a"
+        },
+        "step_id": "materialize_p18_segnet_region_waterfill"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "skip_reason": null,
+      "skipped": false,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 40218,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T21:50:13Z",
+            "path": "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb__1__1__1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 499,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "403709c59f1c40a6"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_p18_segnet_region_waterfill.py",
+        "--posenet-null-pairs",
+        "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+        "--segnet-softmax-16",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+        "--segnet-softmax-256",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+        "--output",
+        "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+        "--top-regions-per-pair",
+        "2",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.32879379199584946,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/materialize_p18_segnet_region_waterfill/20260531T215012Z_b5fdab9a60011cec.log",
+      "pid": 79585,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_p18_segnet_region_waterfill.py",
+          "--posenet-null-pairs",
+          "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+          "--segnet-softmax-16",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+          "--segnet-softmax-256",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+          "--output",
+          "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+          "--top-regions-per-pair",
+          "2",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch",
+        "priority": 4,
+        "queue_id": "scorer_region_cascade_b7106_campaign_20260531T214623Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "cc4c6be78d53cf485d7463d7d6d1ed1cecb598bef80540219d7fe6630b78a716",
+          "definition_hash": "02a8c69562f03772d00ba2aa873d260163f709f3f2e97b2ea4fbfb56cb27d3d9",
+          "postcondition_hash": "910df30c7020b632e0d9d462ce2d95e2800aa91217afb01fe4219cb7478104b2"
+        },
+        "step_id": "materialize_p18_segnet_region_waterfill"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "skip_reason": null,
+      "skipped": false,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 40210,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T21:50:13Z",
+            "path": "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 491,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "b5fdab9a60011cec"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_p18_segnet_region_waterfill.py",
+        "--posenet-null-pairs",
+        "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+        "--segnet-softmax-16",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+        "--segnet-softmax-256",
+        "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+        "--output",
+        "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+        "--top-regions-per-pair",
+        "2",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 0.315225750033278,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/materialize_p18_segnet_region_waterfill/20260531T215013Z_f9378d033c4f1329.log",
+      "pid": 79590,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_p18_segnet_region_waterfill.py",
+          "--posenet-null-pairs",
+          "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+          "--segnet-softmax-16",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+          "--segnet-softmax-256",
+          "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+          "--output",
+          "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+          "--top-regions-per-pair",
+          "2",
+          "--overwrite"
+        ],
+        "experiment_id": "nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch",
+        "priority": 5,
+        "queue_id": "scorer_region_cascade_b7106_campaign_20260531T214623Z",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "5210c611e877aa40494e4a9883c7473f42c0bdc403d04df5c66516c3ae9f8ca8",
+          "definition_hash": "9721c65160e1ce3963d6e698d53d1717532af91305db0d469f2394aba0221c9d",
+          "postcondition_hash": "c93b40a71ebbb0c780bdce2a46d677c613ed0445a570931eeeeeab4470aaee85"
+        },
+        "step_id": "materialize_p18_segnet_region_waterfill"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "skip_reason": null,
+      "skipped": false,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 1,
+        "artifact_records": [
+          {
+            "bytes": 40215,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-31T21:50:13Z",
+            "path": "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec8_markov_static_order1_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 496,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "f9378d033c4f1329"
+    }
+  ],
+  "steps_started": 4,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 4
+}

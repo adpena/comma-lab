@@ -1,0 +1,64 @@
+{
+  "archive_bytes": 230678,
+  "archive_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_archive_parity_smoke_20260528Tlocal/pr95_public_archive.zip",
+  "archive_sha256": "e6caa63c3b9292f2ae69fd6306cfaa20f67a33c82046661c4c6ec117cce6bfb0",
+  "archive_zip_bytes": 230678,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_archive_parity_smoke_20260528Tlocal/pr95_public_archive.zip",
+  "archive_zip_sha256": "e6caa63c3b9292f2ae69fd6306cfaa20f67a33c82046661c4c6ec117cce6bfb0",
+  "bytes": 230678,
+  "candidate_archive": {
+    "bytes": 230678,
+    "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_archive_parity_smoke_20260528Tlocal/pr95_public_archive.zip",
+    "sha256": "e6caa63c3b9292f2ae69fd6306cfaa20f67a33c82046661c4c6ec117cce6bfb0"
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "gpu_launched": false,
+  "member": "0.bin",
+  "member_bytes": 230570,
+  "member_compress_type": 0,
+  "member_name": "0.bin",
+  "member_sha256": "6c923ae07de987568fa5a7774d915340e92bc3c610a7fdade7930b296eac4e85",
+  "parsed_latent_shape": [
+    8,
+    28
+  ],
+  "parsed_meta": {
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 8
+  },
+  "parsed_state_dict_tensor_count": 28,
+  "path": "/Users/adpena/Projects/pact/.omx/research/pr95_mlx_stage8_archive_parity_smoke_20260528Tlocal/pr95_public_archive.zip",
+  "pr95_1to1_reproduction_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_proof_present": true,
+  "reproduction_claim": false,
+  "reproduction_equivalence": false,
+  "runtime_consumption_proof_bytes": 5047,
+  "runtime_consumption_proof_path": ".omx/research/pr95_mlx_stage8_archive_parity_smoke_20260528Tlocal/runtime_consumption_proof.json",
+  "runtime_consumption_proof_present": true,
+  "runtime_consumption_proof_sha256": "1fe39f3e48c37b451f0385265ab3fe2533a62da61c56d2b56b33a83c383c2af5",
+  "runtime_consumption_proven": true,
+  "schema": "pr95_hnerv_archive_export.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "sha256": "e6caa63c3b9292f2ae69fd6306cfaa20f67a33c82046661c4c6ec117cce6bfb0"
+}

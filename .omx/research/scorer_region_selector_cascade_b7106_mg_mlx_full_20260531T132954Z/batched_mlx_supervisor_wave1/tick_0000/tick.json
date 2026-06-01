@@ -1,0 +1,491 @@
+{
+  "action": "recover",
+  "allowed_use": "queue_supervisor_local_execution_telemetry_only",
+  "auto_resume_paused": true,
+  "automation_blockers": [
+    "queue_observation_unhealthy"
+  ],
+  "execute": true,
+  "final_reason_if_stopping": "unsafe_state_after_recovery",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+  "generated_at_utc": "2026-05-31T16:05:40Z",
+  "max_parallel": 5,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recovery_result": {
+    "command": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "tools/queue_control.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "recover",
+      "--reason",
+      "queue_supervisor_tick_0_recovery",
+      "--stale-after-seconds",
+      "300.0",
+      "--max-steps",
+      "4",
+      "--output",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/batched_mlx_supervisor_wave1/tick_0000/recovery.json",
+      "--resume-after-recovery"
+    ],
+    "elapsed_seconds": 2.0111432090052404,
+    "failed": false,
+    "json_payload": {
+      "after": {
+        "mode": "running",
+        "status_counts": {
+          "queued": 340,
+          "succeeded": 78
+        }
+      },
+      "after_auto_recovery": {
+        "mode": "paused",
+        "status_counts": {
+          "queued": 340,
+          "succeeded": 78
+        }
+      },
+      "after_reconcile": {
+        "mode": "paused",
+        "status_counts": {
+          "queued": 340,
+          "succeeded": 78
+        }
+      },
+      "allowed_use": "operator_crash_recovery_and_resume_planning_only",
+      "artifact": {
+        "bytes": 9751,
+        "path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/batched_mlx_supervisor_wave1/tick_0000/recovery.json",
+        "sha256": "9d33cd0f2999baa6488ffe7680527bfe6879ee8836e851f262b930a676527f8a"
+      },
+      "auto_recovery_rewinds": {
+        "allowed_use": "local_queue_recovery_state_mutation_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recovery_plan_schema": "queue_observation_recovery_plan.v1",
+        "recovery_required": true,
+        "rewind_count": 0,
+        "rewound_steps": [],
+        "schema": "experiment_queue_auto_recovery_rewinds.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "skipped_count": 0,
+        "skipped_steps": [],
+        "source_blockers": [
+          "experiment_queue_observation_artifact_postcondition_failures:6"
+        ],
+        "source_observation_generated_at_utc": "2026-05-31T16:05:39Z"
+      },
+      "before": {
+        "mode": "running",
+        "status_counts": {
+          "queued": 340,
+          "succeeded": 78
+        }
+      },
+      "control_summary": {
+        "allowed_use": "operator_queue_control_and_local_telemetry_only",
+        "auto_parallelism": {
+          "idle_declared_resources": {},
+          "local_only": {
+            "max_parallel": 5,
+            "resource_limits": {
+              "local_cpu": 2,
+              "local_io_heavy": 2,
+              "local_mlx": 1
+            }
+          },
+          "used_resource_kinds": [
+            "local_cpu",
+            "local_io_heavy",
+            "local_mlx"
+          ],
+          "with_cloud": {
+            "max_parallel": 5,
+            "resource_limits": {
+              "local_cpu": 2,
+              "local_io_heavy": 2,
+              "local_mlx": 1
+            }
+          }
+        },
+        "automation_blockers": [
+          "queue_observation_unhealthy"
+        ],
+        "automation_verdict": "needs_recovery_or_operator_attention",
+        "blocked_steps": [],
+        "blocker_count": 1,
+        "blockers": [
+          "experiment_queue_observation_artifact_postcondition_failures:6"
+        ],
+        "failed_steps": [],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+        "healthy": false,
+        "mode": "running",
+        "orphaned_step_count": 0,
+        "pause_command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+          "control",
+          "paused",
+          "--reason",
+          "operator_pause_from_queue_control"
+        ],
+        "performance": {
+          "by_resource_kind": {},
+          "event_count": 0,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "experiment_queue_performance_summary.v1",
+          "score_claim": false,
+          "telemetry_only": true
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+        "queue_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+        "queued_step_count": 340,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_actions": [
+          {
+            "action": "run_worker",
+            "command": [
+              ".venv/bin/python",
+              "tools/experiment_queue.py",
+              "--queue",
+              ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+              "--state",
+              ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+              "run-worker",
+              "--execute",
+              "--max-steps",
+              "4"
+            ],
+            "rank": 50,
+            "reason": "340_queued_steps_available"
+          }
+        ],
+        "resume_command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "4"
+        ],
+        "running_steps": [],
+        "runtime_policy": {
+          "advisory_only": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "recommended_max_concurrency": {
+            "local_cpu": 18,
+            "local_io_heavy": 2,
+            "local_mlx": 1
+          },
+          "recommended_timeout_seconds_by_resource": {
+            "local_cpu": 7800,
+            "local_io_heavy": 1200,
+            "local_mlx": 3600
+          },
+          "schema": "scheduler_runtime_policy.v1",
+          "score_claim": false
+        },
+        "schema": "experiment_queue_control_surface.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+        "state_watermark": {
+          "control_mode": "running",
+          "control_updated_at_utc": "2026-05-31T16:05:39Z",
+          "event_count": 81,
+          "max_event_id": 81,
+          "max_step_updated_at_utc": "2026-05-31T16:05:23Z",
+          "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+          "schema": "experiment_queue_state_watermark.v1",
+          "state_path": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+          "step_state_count": 418
+        },
+        "status_counts": {
+          "queued": 340,
+          "succeeded": 78
+        },
+        "stop_command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+          "control",
+          "frozen",
+          "--reason",
+          "operator_stop_freeze_from_queue_control"
+        ],
+        "supervise_command": [
+          ".venv/bin/python",
+          "tools/queue_supervisor.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+          "--output-dir",
+          ".omx/research/queue_supervisor_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+          "--max-ticks",
+          "16",
+          "--max-steps-per-tick",
+          "4",
+          "--max-parallel",
+          "auto",
+          "--execute"
+        ]
+      },
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+      "left_paused": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "queue_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "queue_supervisor_tick_0_recovery",
+      "recovery_blockers": [
+        "queue_observation_unhealthy"
+      ],
+      "recovery_verdict": "blocked",
+      "resume_command": [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+        "--state",
+        ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "4"
+      ],
+      "schema": "experiment_queue_crash_recovery.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "stale_reconciliation": {
+        "dependency_skipped_reconciliation": {
+          "promotion_eligible": false,
+          "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "experiment_queue_skipped_dependency_reconciliation.v1",
+          "score_claim": false,
+          "skipped_step_count": 0,
+          "skipped_steps": []
+        },
+        "inspected_running_step_count": 0,
+        "promotion_eligible": false,
+        "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reconciled_step_count": 0,
+        "reconciled_steps": [],
+        "schema": "experiment_queue_stale_running_reconciliation.v1",
+        "score_claim": false,
+        "skipped_step_count": 0,
+        "skipped_steps": []
+      },
+      "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite"
+    },
+    "label": "recover",
+    "returncode": 0,
+    "stderr_tail": "",
+    "stdout_tail": ":39Z\",\n      \"event_count\": 81,\n      \"max_event_id\": 81,\n      \"max_step_updated_at_utc\": \"2026-05-31T16:05:23Z\",\n      \"queue_id\": \"scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z\",\n      \"schema\": \"experiment_queue_state_watermark.v1\",\n      \"state_path\": \".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite\",\n      \"step_state_count\": 418\n    },\n    \"status_counts\": {\n      \"queued\": 340,\n      \"succeeded\": 78\n    },\n    \"stop_command\": [\n      \".venv/bin/python\",\n      \"tools/experiment_queue.py\",\n      \"--queue\",\n      \".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json\",\n      \"--state\",\n      \".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite\",\n      \"control\",\n      \"frozen\",\n      \"--reason\",\n      \"operator_stop_freeze_from_queue_control\"\n    ],\n    \"supervise_command\": [\n      \".venv/bin/python\",\n      \"tools/queue_supervisor.py\",\n      \"--queue\",\n      \".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json\",\n      \"--state\",\n      \".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite\",\n      \"--output-dir\",\n      \".omx/research/queue_supervisor_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z\",\n      \"--max-ticks\",\n      \"16\",\n      \"--max-steps-per-tick\",\n      \"4\",\n      \"--max-parallel\",\n      \"auto\",\n      \"--execute\"\n    ]\n  },\n  \"forbidden_use\": \"score_claim_or_promotion_or_rank_kill_or_exact_eval_authority\",\n  \"left_paused\": false,\n  \"promotable\": false,\n  \"promotion_eligible\": false,\n  \"queue_id\": \"scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z\",\n  \"queue_path\": \".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json\",\n  \"rank_or_kill_eligible\": false,\n  \"ready_for_exact_eval_dispatch\": false,\n  \"reason\": \"queue_supervisor_tick_0_recovery\",\n  \"recovery_blockers\": [\n    \"queue_observation_unhealthy\"\n  ],\n  \"recovery_verdict\": \"blocked\",\n  \"resume_command\": [\n    \".venv/bin/python\",\n    \"tools/experiment_queue.py\",\n    \"--queue\",\n    \".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json\",\n    \"--state\",\n    \".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite\",\n    \"run-worker\",\n    \"--execute\",\n    \"--max-steps\",\n    \"4\"\n  ],\n  \"schema\": \"experiment_queue_crash_recovery.v1\",\n  \"score_claim\": false,\n  \"score_claim_valid\": false,\n  \"stale_reconciliation\": {\n    \"dependency_skipped_reconciliation\": {\n      \"promotion_eligible\": false,\n      \"queue_id\": \"scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z\",\n      \"rank_or_kill_eligible\": false,\n      \"ready_for_exact_eval_dispatch\": false,\n      \"schema\": \"experiment_queue_skipped_dependency_reconciliation.v1\",\n      \"score_claim\": false,\n      \"skipped_step_count\": 0,\n      \"skipped_steps\": []\n    },\n    \"inspected_running_step_count\": 0,\n    \"promotion_eligible\": false,\n    \"queue_id\": \"scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z\",\n    \"rank_or_kill_eligible\": false,\n    \"ready_for_exact_eval_dispatch\": false,\n    \"reconciled_step_count\": 0,\n    \"reconciled_steps\": [],\n    \"schema\": \"experiment_queue_stale_running_reconciliation.v1\",\n    \"score_claim\": false,\n    \"skipped_step_count\": 0,\n    \"skipped_steps\": []\n  },\n  \"state\": \".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite\"\n}\n"
+  },
+  "resume_result": null,
+  "schema": "experiment_queue_supervisor_tick.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "allowed_use": "operator_queue_control_and_local_telemetry_only",
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 5,
+        "resource_limits": {
+          "local_cpu": 2,
+          "local_io_heavy": 2,
+          "local_mlx": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu",
+        "local_io_heavy",
+        "local_mlx"
+      ],
+      "with_cloud": {
+        "max_parallel": 5,
+        "resource_limits": {
+          "local_cpu": 2,
+          "local_io_heavy": 2,
+          "local_mlx": 1
+        }
+      }
+    },
+    "automation_blockers": [
+      "queue_observation_unhealthy"
+    ],
+    "automation_verdict": "needs_recovery_or_operator_attention",
+    "blocked_steps": [],
+    "blocker_count": 1,
+    "blockers": [
+      "experiment_queue_observation_artifact_postcondition_failures:6"
+    ],
+    "failed_steps": [],
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_exact_eval_authority",
+    "healthy": false,
+    "mode": "running",
+    "orphaned_step_count": 0,
+    "pause_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "control",
+      "paused",
+      "--reason",
+      "operator_pause_from_queue_control"
+    ],
+    "performance": {
+      "by_resource_kind": {},
+      "event_count": 0,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "telemetry_only": true
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+    "queue_path": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+    "queued_step_count": 340,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_actions": [
+      {
+        "action": "run_worker",
+        "command": [
+          ".venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+          "--state",
+          ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+          "run-worker",
+          "--execute",
+          "--max-steps",
+          "4"
+        ],
+        "rank": 50,
+        "reason": "340_queued_steps_available"
+      }
+    ],
+    "resume_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "run-worker",
+      "--execute",
+      "--max-steps",
+      "4"
+    ],
+    "running_steps": [],
+    "runtime_policy": {
+      "advisory_only": true,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_max_concurrency": {
+        "local_cpu": 18,
+        "local_io_heavy": 2,
+        "local_mlx": 1
+      },
+      "recommended_timeout_seconds_by_resource": {
+        "local_cpu": 7800,
+        "local_io_heavy": 1200,
+        "local_mlx": 3600
+      },
+      "schema": "scheduler_runtime_policy.v1",
+      "score_claim": false
+    },
+    "schema": "experiment_queue_control_surface.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "state": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+    "state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-31T16:05:39Z",
+      "event_count": 81,
+      "max_event_id": 81,
+      "max_step_updated_at_utc": "2026-05-31T16:05:23Z",
+      "queue_id": "scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "step_state_count": 418
+    },
+    "status_counts": {
+      "queued": 340,
+      "succeeded": 78
+    },
+    "stop_command": [
+      ".venv/bin/python",
+      "tools/experiment_queue.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "control",
+      "frozen",
+      "--reason",
+      "operator_stop_freeze_from_queue_control"
+    ],
+    "supervise_command": [
+      ".venv/bin/python",
+      "tools/queue_supervisor.py",
+      "--queue",
+      ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.batched_mlx_preinflated_soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+      "--state",
+      ".omx/state/experiment_queue_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z_batched_preinflated.sqlite",
+      "--output-dir",
+      ".omx/research/queue_supervisor_scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z",
+      "--max-ticks",
+      "16",
+      "--max-steps-per-tick",
+      "4",
+      "--max-parallel",
+      "auto",
+      "--execute"
+    ]
+  },
+  "tick_index": 0,
+  "worker_result": null
+}

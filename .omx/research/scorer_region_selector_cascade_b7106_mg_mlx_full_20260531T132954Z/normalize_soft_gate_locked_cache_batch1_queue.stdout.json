@@ -1,0 +1,10 @@
+{
+  "changed_command_count": 24,
+  "output": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.soft_gate_locked_cache_batch1_runtime_policy_applied.json",
+  "promotion_eligible": false,
+  "queue": ".omx/research/scorer_region_selector_cascade_b7106_mg_mlx_full_20260531T132954Z/queue.locked_cache_batch1_runtime_policy_applied.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_mlx_response_batch_normalizer_result.v1",
+  "score_claim": false
+}

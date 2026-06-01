@@ -1,0 +1,926 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_io_heavy"
+    ],
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_io_heavy": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-05-27T21:16:04Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign": {
+        "artifact_record_bytes_mean": 17316.714285714286,
+        "artifact_record_bytes_sum": 121217,
+        "artifact_record_count": 4,
+        "artifact_record_raw_bytes_mean": 17316.714285714286,
+        "artifact_record_raw_bytes_sum": 121217,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 15.709614167000836,
+        "elapsed_seconds_mean": 5.179566749857519,
+        "elapsed_seconds_min": 0.5398068750000675,
+        "elapsed_seconds_sum": 36.25696724900263,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 14346.57142857143,
+        "log_bytes_sum": 100426,
+        "resource_kind_counts": {
+          "local_io_heavy": 7
+        },
+        "run_count": 7,
+        "step_ids": [
+          "emit_autonomous_chain_work_order",
+          "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local",
+          "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+          "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue",
+          "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+        ],
+        "success_count": 7
+      },
+      "autonomous_chain_portfolio_materializer_context_closure_campaign": {
+        "artifact_record_bytes_mean": 9784.142857142857,
+        "artifact_record_bytes_sum": 68489,
+        "artifact_record_count": 4,
+        "artifact_record_raw_bytes_mean": 9784.142857142857,
+        "artifact_record_raw_bytes_sum": 68489,
+        "candidate_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 14.727015832999314,
+        "elapsed_seconds_mean": 2.566079494143196,
+        "elapsed_seconds_min": 0.5331770420016255,
+        "elapsed_seconds_sum": 17.96255645900237,
+        "experiment_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 6821.571428571428,
+        "log_bytes_sum": 47751,
+        "resource_kind_counts": {
+          "local_io_heavy": 7
+        },
+        "run_count": 7,
+        "step_ids": [
+          "emit_autonomous_chain_work_order",
+          "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local",
+          "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+          "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue",
+          "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+        ],
+        "success_count": 7
+      },
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign": {
+        "artifact_record_bytes_mean": 3582.4285714285716,
+        "artifact_record_bytes_sum": 25077,
+        "artifact_record_count": 4,
+        "artifact_record_raw_bytes_mean": 3582.4285714285716,
+        "artifact_record_raw_bytes_sum": 25077,
+        "candidate_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.6001583750003192,
+        "elapsed_seconds_mean": 0.5740363035708599,
+        "elapsed_seconds_min": 0.5298296669971023,
+        "elapsed_seconds_sum": 4.0182541249960195,
+        "experiment_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 722.1428571428571,
+        "log_bytes_sum": 5055,
+        "resource_kind_counts": {
+          "local_io_heavy": 7
+        },
+        "run_count": 7,
+        "step_ids": [
+          "emit_autonomous_chain_work_order",
+          "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local",
+          "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+          "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue",
+          "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+        ],
+        "success_count": 7
+      }
+    },
+    "by_resource_kind": {
+      "local_io_heavy": {
+        "artifact_record_bytes_mean": 10227.761904761905,
+        "artifact_record_bytes_sum": 214783,
+        "artifact_record_count": 12,
+        "artifact_record_raw_bytes_mean": 10227.761904761905,
+        "artifact_record_raw_bytes_sum": 214783,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+          "autonomous_chain_portfolio_materializer_context_closure_campaign",
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 15.709614167000836,
+        "elapsed_seconds_mean": 2.7732275158571915,
+        "elapsed_seconds_min": 0.5298296669971023,
+        "elapsed_seconds_sum": 58.23777783300102,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign",
+          "autonomous_chain_portfolio_materializer_context_closure_campaign",
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 7296.761904761905,
+        "log_bytes_sum": 153232,
+        "resource_kind_counts": {
+          "local_io_heavy": 21
+        },
+        "run_count": 21,
+        "step_ids": [
+          "emit_autonomous_chain_work_order",
+          "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local",
+          "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local",
+          "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local",
+          "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue",
+          "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue",
+          "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+        ],
+        "success_count": 21
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign.emit_autonomous_chain_work_order": {
+        "artifact_record_bytes_mean": 22960.0,
+        "artifact_record_bytes_sum": 22960,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 22960.0,
+        "artifact_record_raw_bytes_sum": 22960,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5417102499995963,
+        "elapsed_seconds_mean": 0.5417102499995963,
+        "elapsed_seconds_min": 0.5417102499995963,
+        "elapsed_seconds_sum": 0.5417102499995963,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 679.0,
+        "log_bytes_sum": 679,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_autonomous_chain_work_order"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign.run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local": {
+        "artifact_record_bytes_mean": 29811.0,
+        "artifact_record_bytes_sum": 29811,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 29811.0,
+        "artifact_record_raw_bytes_sum": 29811,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 11.271543500002736,
+        "elapsed_seconds_mean": 11.271543500002736,
+        "elapsed_seconds_min": 11.271543500002736,
+        "elapsed_seconds_sum": 11.271543500002736,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29811.0,
+        "log_bytes_sum": 29811,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign.run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local": {
+        "artifact_record_bytes_mean": 24456.0,
+        "artifact_record_bytes_sum": 24456,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 24456.0,
+        "artifact_record_raw_bytes_sum": 24456,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 7.108575916001428,
+        "elapsed_seconds_mean": 7.108575916001428,
+        "elapsed_seconds_min": 7.108575916001428,
+        "elapsed_seconds_sum": 7.108575916001428,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 24456.0,
+        "log_bytes_sum": 24456,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign.run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local": {
+        "artifact_record_bytes_mean": 43990.0,
+        "artifact_record_bytes_sum": 43990,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 43990.0,
+        "artifact_record_raw_bytes_sum": 43990,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 15.709614167000836,
+        "elapsed_seconds_mean": 15.709614167000836,
+        "elapsed_seconds_min": 15.709614167000836,
+        "elapsed_seconds_sum": 15.709614167000836,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 43990.0,
+        "log_bytes_sum": 43990,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign.validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5419098749989644,
+        "elapsed_seconds_mean": 0.5419098749989644,
+        "elapsed_seconds_min": 0.5419098749989644,
+        "elapsed_seconds_sum": 0.5419098749989644,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 493.0,
+        "log_bytes_sum": 493,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign.validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5398068750000675,
+        "elapsed_seconds_mean": 0.5398068750000675,
+        "elapsed_seconds_min": 0.5398068750000675,
+        "elapsed_seconds_sum": 0.5398068750000675,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 506.0,
+        "log_bytes_sum": 506,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign.validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.543806665999,
+        "elapsed_seconds_mean": 0.543806665999,
+        "elapsed_seconds_min": 0.543806665999,
+        "elapsed_seconds_sum": 0.543806665999,
+        "experiment_ids": [
+          "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 491.0,
+        "log_bytes_sum": 491,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_portfolio_materializer_context_closure_campaign.emit_autonomous_chain_work_order": {
+        "artifact_record_bytes_mean": 22905.0,
+        "artifact_record_bytes_sum": 22905,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 22905.0,
+        "artifact_record_raw_bytes_sum": 22905,
+        "candidate_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5441900410005474,
+        "elapsed_seconds_mean": 0.5441900410005474,
+        "elapsed_seconds_min": 0.5441900410005474,
+        "elapsed_seconds_sum": 0.5441900410005474,
+        "experiment_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 677.0,
+        "log_bytes_sum": 677,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_autonomous_chain_work_order"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_portfolio_materializer_context_closure_campaign.run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local": {
+        "artifact_record_bytes_mean": 958.0,
+        "artifact_record_bytes_sum": 958,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 958.0,
+        "artifact_record_raw_bytes_sum": 958,
+        "candidate_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.534794500003045,
+        "elapsed_seconds_mean": 0.534794500003045,
+        "elapsed_seconds_min": 0.534794500003045,
+        "elapsed_seconds_sum": 0.534794500003045,
+        "experiment_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 958.0,
+        "log_bytes_sum": 958,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_portfolio_materializer_context_closure_campaign.run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local": {
+        "artifact_record_bytes_mean": 986.0,
+        "artifact_record_bytes_sum": 986,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 986.0,
+        "artifact_record_raw_bytes_sum": 986,
+        "candidate_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5447678749987972,
+        "elapsed_seconds_mean": 0.5447678749987972,
+        "elapsed_seconds_min": 0.5447678749987972,
+        "elapsed_seconds_sum": 0.5447678749987972,
+        "experiment_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 986.0,
+        "log_bytes_sum": 986,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_portfolio_materializer_context_closure_campaign.run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local": {
+        "artifact_record_bytes_mean": 43640.0,
+        "artifact_record_bytes_sum": 43640,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 43640.0,
+        "artifact_record_raw_bytes_sum": 43640,
+        "candidate_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 14.727015832999314,
+        "elapsed_seconds_mean": 14.727015832999314,
+        "elapsed_seconds_min": 14.727015832999314,
+        "elapsed_seconds_sum": 14.727015832999314,
+        "experiment_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 43640.0,
+        "log_bytes_sum": 43640,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_portfolio_materializer_context_closure_campaign.validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5410949590004748,
+        "elapsed_seconds_mean": 0.5410949590004748,
+        "elapsed_seconds_min": 0.5410949590004748,
+        "elapsed_seconds_sum": 0.5410949590004748,
+        "experiment_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 493.0,
+        "log_bytes_sum": 493,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_portfolio_materializer_context_closure_campaign.validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5331770420016255,
+        "elapsed_seconds_mean": 0.5331770420016255,
+        "elapsed_seconds_min": 0.5331770420016255,
+        "elapsed_seconds_sum": 0.5331770420016255,
+        "experiment_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 506.0,
+        "log_bytes_sum": 506,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_portfolio_materializer_context_closure_campaign.validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5375162089985679,
+        "elapsed_seconds_mean": 0.5375162089985679,
+        "elapsed_seconds_min": 0.5375162089985679,
+        "elapsed_seconds_sum": 0.5375162089985679,
+        "experiment_ids": [
+          "autonomous_chain_portfolio_materializer_context_closure_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 491.0,
+        "log_bytes_sum": 491,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign.emit_autonomous_chain_work_order": {
+        "artifact_record_bytes_mean": 22179.0,
+        "artifact_record_bytes_sum": 22179,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 22179.0,
+        "artifact_record_raw_bytes_sum": 22179,
+        "candidate_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5298296669971023,
+        "elapsed_seconds_mean": 0.5298296669971023,
+        "elapsed_seconds_min": 0.5298296669971023,
+        "elapsed_seconds_sum": 0.5298296669971023,
+        "experiment_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 667.0,
+        "log_bytes_sum": 667,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "emit_autonomous_chain_work_order"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign.run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local": {
+        "artifact_record_bytes_mean": 958.0,
+        "artifact_record_bytes_sum": 958,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 958.0,
+        "artifact_record_raw_bytes_sum": 958,
+        "candidate_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.6001583750003192,
+        "elapsed_seconds_mean": 0.6001583750003192,
+        "elapsed_seconds_min": 0.6001583750003192,
+        "elapsed_seconds_sum": 0.6001583750003192,
+        "experiment_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 958.0,
+        "log_bytes_sum": 958,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign.run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local": {
+        "artifact_record_bytes_mean": 986.0,
+        "artifact_record_bytes_sum": 986,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 986.0,
+        "artifact_record_raw_bytes_sum": 986,
+        "candidate_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5865170830002171,
+        "elapsed_seconds_mean": 0.5865170830002171,
+        "elapsed_seconds_min": 0.5865170830002171,
+        "elapsed_seconds_sum": 0.5865170830002171,
+        "experiment_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 986.0,
+        "log_bytes_sum": 986,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign.run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local": {
+        "artifact_record_bytes_mean": 954.0,
+        "artifact_record_bytes_sum": 954,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 954.0,
+        "artifact_record_raw_bytes_sum": 954,
+        "candidate_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5802175000026182,
+        "elapsed_seconds_mean": 0.5802175000026182,
+        "elapsed_seconds_min": 0.5802175000026182,
+        "elapsed_seconds_sum": 0.5802175000026182,
+        "experiment_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 954.0,
+        "log_bytes_sum": 954,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue_bounded_local"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign.validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5445390419990872,
+        "elapsed_seconds_mean": 0.5445390419990872,
+        "elapsed_seconds_min": 0.5445390419990872,
+        "elapsed_seconds_sum": 0.5445390419990872,
+        "experiment_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 493.0,
+        "log_bytes_sum": 493,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_fit_segnet_posenet_repair_waterfill_policy_repair_budget_waterfill_queue"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign.validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5941773749982531,
+        "elapsed_seconds_mean": 0.5941773749982531,
+        "elapsed_seconds_min": 0.5941773749982531,
+        "elapsed_seconds_sum": 0.5941773749982531,
+        "experiment_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 506.0,
+        "log_bytes_sum": 506,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_run_repair_posterior_acquisition_followup_routes_repair_posterior_acquisition_followup_queue"
+        ],
+        "success_count": 1
+      },
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign.validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue": {
+        "artifact_record_bytes_mean": 0.0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_count": 0,
+        "artifact_record_raw_bytes_mean": 0.0,
+        "artifact_record_raw_bytes_sum": 0,
+        "candidate_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 0.5828150829984224,
+        "elapsed_seconds_mean": 0.5828150829984224,
+        "elapsed_seconds_min": 0.5828150829984224,
+        "elapsed_seconds_sum": 0.5828150829984224,
+        "experiment_ids": [
+          "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 491.0,
+        "log_bytes_sum": 491,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "validate_score_repair_campaign_and_update_stackability_posterior_repair_campaign_score_queue"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "autonomous_chain_global_many_op_rate_distortion_receiver_campaign": [
+        "autonomous_chain_global_many_op_rate_distortion_receiver_campaign"
+      ],
+      "autonomous_chain_portfolio_materializer_context_closure_campaign": [
+        "autonomous_chain_portfolio_materializer_context_closure_campaign"
+      ],
+      "autonomous_chain_segnet_posenet_geometry_drop_many_campaign": [
+        "autonomous_chain_segnet_posenet_geometry_drop_many_campaign"
+      ]
+    },
+    "event_count": 21,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_autowired_smoke2_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "frontier_final_rate_attack_autowired_smoke2_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+  "queue_sha256": "d09028e89569423cc617cdf8ed5d7685514787fb24ba6c13f27027d29938f786",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 1
+      }
+    },
+    "current_max_concurrency": {
+      "local_io_heavy": 1
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 21,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "frontier_final_rate_attack_autowired_smoke2_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_io_heavy": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_io_heavy": 900
+    },
+    "resource_policies": {
+      "local_io_heavy": {
+        "advisory_only": true,
+        "concurrency_reason": "cap_io_heavy_pressure",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 900,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.5445390419990872,
+        "elapsed_seconds_p95": 14.727015832999314,
+        "observed_failure_count": 0,
+        "observed_run_count": 21,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 900,
+        "resource_kind": "local_io_heavy",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_frontier_final_rate_attack_autowired_smoke2_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-27T21:15:05Z",
+    "event_count": 67,
+    "max_event_id": 67,
+    "max_step_updated_at_utc": "2026-05-27T21:16:04Z",
+    "queue_id": "frontier_final_rate_attack_autowired_smoke2_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_frontier_final_rate_attack_autowired_smoke2_20260527Tlocal_post_execute_feedback_autonomous_chain_optimization.sqlite",
+    "step_state_count": 21
+  },
+  "status_counts": {
+    "succeeded": 21
+  },
+  "step_count": 21,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

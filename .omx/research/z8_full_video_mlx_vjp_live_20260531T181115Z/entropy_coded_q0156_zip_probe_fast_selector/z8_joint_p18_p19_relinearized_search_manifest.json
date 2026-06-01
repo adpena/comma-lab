@@ -1,0 +1,348 @@
+{
+  "accept_reject_authority": "full_video_local_replay_when_local_replay_evaluator_is_provided_else_receiver_mse_proxy",
+  "accepted_candidates": [
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 0,
+        "dead_zoned_fraction": 0.0,
+        "eligible_coefficients": 0,
+        "eligible_fraction": 0.0,
+        "mutated_pair_count": 600,
+        "pair_count": 600,
+        "total_detail_coefficients": 41472000
+      },
+      "cumulative_distortion_report": {
+        "blocker": "cumulative_receiver_mse_proxy_skipped_by_full_video_local_replay",
+        "mae": null,
+        "max_abs_delta": null,
+        "mse": 0.0,
+        "receiver_tensor_values": null,
+        "small_receiver_distortion_measured": false
+      },
+      "dispatch_attempted": false,
+      "full_video_local_replay_blockers": [],
+      "full_video_local_replay_prefilter_top_k": null,
+      "full_video_local_replay_report": null,
+      "full_video_local_replay_required": false,
+      "full_video_surface_coverage_report": {
+        "archive_num_pairs": 600,
+        "blocker": null,
+        "full_video_surface_coverage": true,
+        "joint_surface_declared_pair_count": 600,
+        "joint_surface_shape": [
+          600,
+          2,
+          96,
+          128,
+          3
+        ],
+        "max_pairs": null,
+        "rate_attack_deadzone_mask_declared_pair_count": 600,
+        "rate_attack_deadzone_mask_shape": [
+          600,
+          2,
+          96,
+          128,
+          3
+        ],
+        "required_pair_count": 600,
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1"
+      },
+      "gpu_launched": false,
+      "guard_ok": true,
+      "hard_archive_projection_replay_executed": false,
+      "incremental_distortion_report": {
+        "blocker": "receiver_mse_proxy_skipped_by_full_video_local_replay",
+        "mae": null,
+        "max_abs_delta": null,
+        "mse": 0.0,
+        "receiver_tensor_values": null,
+        "small_receiver_distortion_measured": false
+      },
+      "iteration_index": 0,
+      "joint_weight_quantile": 0.35,
+      "mutated_archive_sha256": "a1d472141d5bf036c5fadc6a65dfc341946cb20d7295a8a3b0598b584aeab86b",
+      "objective_source": "receiver_mse_rate_proxy",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 3.8269209254564154,
+      "quantization_step": 0.015625,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 23278362,
+        "after_detail_codec_summary": {
+          "detail_codec_method_counts": {
+            "qi16_constriction_range": 5974,
+            "zigzag_u16_byteplane": 1226
+          },
+          "detail_codec_payload_bytes": {
+            "qi16_constriction_range": 13102738,
+            "zigzag_u16_byteplane": 5649408
+          },
+          "float32_detail_subband_count": 0,
+          "num_pairs": 600,
+          "pair_blob_schema_counts": {
+            "2": 600
+          },
+          "quantized_or_preconditioned_detail_subband_count": 7200,
+          "schema": "z8_wavelet_detail_codec_summary.v1",
+          "total_detail_coefficients": 41472000,
+          "total_detail_payload_bytes": 18752146,
+          "total_detail_subbands": 7200
+        },
+        "after_wavelet_blob_bytes": 23248258,
+        "archive_byte_delta": -128791425,
+        "archive_rate_ratio": 0.1530768370182566,
+        "before_archive_bytes": 152069787,
+        "before_detail_codec_summary": {
+          "detail_codec_method_counts": {
+            "float32_raw": 7200
+          },
+          "detail_codec_payload_bytes": {
+            "float32_raw": 165888000
+          },
+          "float32_detail_subband_count": 7200,
+          "num_pairs": 600,
+          "pair_blob_schema_counts": {
+            "1": 600
+          },
+          "quantized_or_preconditioned_detail_subband_count": 0,
+          "schema": "z8_wavelet_detail_codec_summary.v1",
+          "total_detail_coefficients": 41472000,
+          "total_detail_payload_bytes": 165888000,
+          "total_detail_subbands": 7200
+        },
+        "before_wavelet_blob_bytes": 152040265,
+        "entropy_code_quantized_details": true,
+        "entropy_detail_quantization_step": 0.015625,
+        "entropy_detail_quantization_steps": {},
+        "lossless_brotli_precondition_details": false,
+        "mutate_coefficients": true,
+        "wavelet_blob_byte_delta": -128792007,
+        "wavelet_blob_rate_ratio": 0.1529085601107049
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_mse_proxy_measured": false,
+      "receiver_proxy_objective": 3.8269209254564154,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "323e3d4a74d376496ff703125137ef3234b1564dba8133b4cf8261ae300b4e68",
+      "surface_freshness_report": {
+        "blockers": [],
+        "current_archive_sha256": "eb5d371c8d3c5afe0bff4b28b0ff98bc67bd562ea57d1aeef6b450c368ab9498",
+        "evidence_scope": "full_video",
+        "fresh_for_current_archive": true,
+        "linearization_archive_sha": "eb5d371c8d3c5afe0bff4b28b0ff98bc67bd562ea57d1aeef6b450c368ab9498",
+        "schema": "z8_joint_p18_p19_surface_freshness_report.v1"
+      },
+      "surface_gradient_reduction_report": {
+        "blockers": [],
+        "budget_spend_authority": true,
+        "exact_full_video_gradient_reduction": true,
+        "full_video_reduction_complete": true,
+        "gradient_reduction_authority": true,
+        "gradient_reduction_semantics": "full_video_exact_accumulation",
+        "optimizer_update_authority": true,
+        "optimizer_update_semantics": "single_update_after_all_pair_shards_reduce",
+        "schema": "z8_joint_p18_p19_surface_gradient_reduction_report.v1"
+      }
+    }
+  ],
+  "allowed_use": "local_z8_rate_attack_acquisition_and_materialization_signal",
+  "archive_zip_bytes": 23376927,
+  "archive_zip_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0156_zip_probe_fast_selector/archive.zip",
+  "archive_zip_sha256": "2c076bddb53df13b25ecf57dc0660fb9b5f0a758603a0ac833154a8cf99da3bd",
+  "axis_tag": "[macOS-CPU advisory]",
+  "candidate_bin_bytes": 23278362,
+  "candidate_bin_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0156_zip_probe_fast_selector/0.bin",
+  "candidate_bin_sha256": "a1d472141d5bf036c5fadc6a65dfc341946cb20d7295a8a3b0598b584aeab86b",
+  "candidate_count": 1,
+  "candidate_grid": [
+    {
+      "coefficient_deadzone_quantile": 0.5,
+      "coefficient_summary": {
+        "dead_zoned_coefficients": 0,
+        "dead_zoned_fraction": 0.0,
+        "eligible_coefficients": 0,
+        "eligible_fraction": 0.0,
+        "mutated_pair_count": 600,
+        "pair_count": 600,
+        "total_detail_coefficients": 41472000
+      },
+      "cumulative_distortion_report": {
+        "blocker": "cumulative_receiver_mse_proxy_skipped_by_full_video_local_replay",
+        "mae": null,
+        "max_abs_delta": null,
+        "mse": 0.0,
+        "receiver_tensor_values": null,
+        "small_receiver_distortion_measured": false
+      },
+      "dispatch_attempted": false,
+      "full_video_local_replay_blockers": [],
+      "full_video_local_replay_prefilter_top_k": null,
+      "full_video_local_replay_report": null,
+      "full_video_local_replay_required": false,
+      "full_video_surface_coverage_report": {
+        "archive_num_pairs": 600,
+        "blocker": null,
+        "full_video_surface_coverage": true,
+        "joint_surface_declared_pair_count": 600,
+        "joint_surface_shape": [
+          600,
+          2,
+          96,
+          128,
+          3
+        ],
+        "max_pairs": null,
+        "rate_attack_deadzone_mask_declared_pair_count": 600,
+        "rate_attack_deadzone_mask_shape": [
+          600,
+          2,
+          96,
+          128,
+          3
+        ],
+        "required_pair_count": 600,
+        "schema": "z8_joint_p18_p19_full_video_surface_coverage.v1"
+      },
+      "gpu_launched": false,
+      "guard_ok": true,
+      "hard_archive_projection_replay_executed": false,
+      "incremental_distortion_report": {
+        "blocker": "receiver_mse_proxy_skipped_by_full_video_local_replay",
+        "mae": null,
+        "max_abs_delta": null,
+        "mse": 0.0,
+        "receiver_tensor_values": null,
+        "small_receiver_distortion_measured": false
+      },
+      "iteration_index": 0,
+      "joint_weight_quantile": 0.35,
+      "mutated_archive_sha256": "a1d472141d5bf036c5fadc6a65dfc341946cb20d7295a8a3b0598b584aeab86b",
+      "objective_source": "receiver_mse_rate_proxy",
+      "promotable": false,
+      "promotion_eligible": false,
+      "proxy_objective": 3.8269209254564154,
+      "quantization_step": 0.015625,
+      "rank_or_kill_eligible": false,
+      "rate_report": {
+        "after_archive_bytes": 23278362,
+        "after_detail_codec_summary": {
+          "detail_codec_method_counts": {
+            "qi16_constriction_range": 5974,
+            "zigzag_u16_byteplane": 1226
+          },
+          "detail_codec_payload_bytes": {
+            "qi16_constriction_range": 13102738,
+            "zigzag_u16_byteplane": 5649408
+          },
+          "float32_detail_subband_count": 0,
+          "num_pairs": 600,
+          "pair_blob_schema_counts": {
+            "2": 600
+          },
+          "quantized_or_preconditioned_detail_subband_count": 7200,
+          "schema": "z8_wavelet_detail_codec_summary.v1",
+          "total_detail_coefficients": 41472000,
+          "total_detail_payload_bytes": 18752146,
+          "total_detail_subbands": 7200
+        },
+        "after_wavelet_blob_bytes": 23248258,
+        "archive_byte_delta": -128791425,
+        "archive_rate_ratio": 0.1530768370182566,
+        "before_archive_bytes": 152069787,
+        "before_detail_codec_summary": {
+          "detail_codec_method_counts": {
+            "float32_raw": 7200
+          },
+          "detail_codec_payload_bytes": {
+            "float32_raw": 165888000
+          },
+          "float32_detail_subband_count": 7200,
+          "num_pairs": 600,
+          "pair_blob_schema_counts": {
+            "1": 600
+          },
+          "quantized_or_preconditioned_detail_subband_count": 0,
+          "schema": "z8_wavelet_detail_codec_summary.v1",
+          "total_detail_coefficients": 41472000,
+          "total_detail_payload_bytes": 165888000,
+          "total_detail_subbands": 7200
+        },
+        "before_wavelet_blob_bytes": 152040265,
+        "entropy_code_quantized_details": true,
+        "entropy_detail_quantization_step": 0.015625,
+        "entropy_detail_quantization_steps": {},
+        "lossless_brotli_precondition_details": false,
+        "mutate_coefficients": true,
+        "wavelet_blob_byte_delta": -128792007,
+        "wavelet_blob_rate_ratio": 0.1529085601107049
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_mse_proxy_measured": false,
+      "receiver_proxy_objective": 3.8269209254564154,
+      "schema": "z8_joint_p18_p19_relinearized_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "surface_digest": "323e3d4a74d376496ff703125137ef3234b1564dba8133b4cf8261ae300b4e68",
+      "surface_freshness_report": {
+        "blockers": [],
+        "current_archive_sha256": "eb5d371c8d3c5afe0bff4b28b0ff98bc67bd562ea57d1aeef6b450c368ab9498",
+        "evidence_scope": "full_video",
+        "fresh_for_current_archive": true,
+        "linearization_archive_sha": "eb5d371c8d3c5afe0bff4b28b0ff98bc67bd562ea57d1aeef6b450c368ab9498",
+        "schema": "z8_joint_p18_p19_surface_freshness_report.v1"
+      },
+      "surface_gradient_reduction_report": {
+        "blockers": [],
+        "budget_spend_authority": true,
+        "exact_full_video_gradient_reduction": true,
+        "full_video_reduction_complete": true,
+        "gradient_reduction_authority": true,
+        "gradient_reduction_semantics": "full_video_exact_accumulation",
+        "optimizer_update_authority": true,
+        "optimizer_update_semantics": "single_update_after_all_pair_shards_reduce",
+        "schema": "z8_joint_p18_p19_surface_gradient_reduction_report.v1"
+      }
+    }
+  ],
+  "cumulative_rate_report": {
+    "archive_byte_delta": -128791425,
+    "archive_rate_ratio": 0.1530768370182566,
+    "final_archive_bytes": 23278362,
+    "original_archive_bytes": 152069787
+  },
+  "dispatch_attempted": false,
+  "exact_axis_blocker": "receiver_proof_and_contest_cpu_cuda_eval_not_executed",
+  "final_archive_sha256": "a1d472141d5bf036c5fadc6a65dfc341946cb20d7295a8a3b0598b584aeab86b",
+  "final_blocker": null,
+  "final_distortion_report": {
+    "mae": 0.0034421898078130894,
+    "max_abs_delta": 0.018753711134195328,
+    "mse": 1.8297662624349017e-05,
+    "receiver_tensor_values": 44236800,
+    "small_receiver_distortion_measured": true
+  },
+  "forbidden_use": "score_claim_or_exact_promotion_without_contest_eval",
+  "full_video_surface_contract": "joint_and_pose_null_surfaces_must_cover_the_full_archive_pair_grid",
+  "gpu_launched": false,
+  "interaction_penalty": "penalize_cumulative_mse_increase_between_relinearization_steps",
+  "iterations_accepted": 1,
+  "iterations_requested": 1,
+  "manifest_path": ".omx/research/z8_full_video_mlx_vjp_live_20260531T181115Z/entropy_coded_q0156_zip_probe_fast_selector/z8_joint_p18_p19_relinearized_search_manifest.json",
+  "pose_guard": "pose_null_mask_and_mahalanobis_ail_weights_consumed",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_executed": false,
+  "role": "project_joint_p18_p19_pixel_pair_surface_to_mallat_detail_subbands_then_dead_zone_low_joint_weight_pose_null_coefficients",
+  "schema": "z8_joint_p18_p19_coefficient_relinearized_search.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "ste_boundary": "straight_through_deadzone_quantization_proxy",
+  "surface_refresh_contract": "fresh_joint_p18_p19_surface_per_iteration_from_mlx_scorer_vjp"
+}

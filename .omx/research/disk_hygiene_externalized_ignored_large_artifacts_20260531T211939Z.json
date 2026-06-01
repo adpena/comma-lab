@@ -1,0 +1,110 @@
+{
+  "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact",
+  "contract": {
+    "copy_verified_by_sha256_before_local_unlink": true,
+    "no_signal_loss": true,
+    "original_access_path_preserved_by_symlink": true,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "source_set_limited_to_gitignored_large_artifacts": true
+  },
+  "externalized_bytes": 11316378894,
+  "externalized_count": 7,
+  "generated_at_utc": "20260531T211939Z",
+  "repo_root": "/Users/adpena/Projects/pact",
+  "rows": [
+    {
+      "bytes": 943735027,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/dist/raft_flow.pt",
+      "cold_store_sha256": "1cdb72869e4476ea96f712d0e678375a37463f844302a3ffd8d43339d91b3023",
+      "mode_before_octal": "0o644",
+      "mtime_ns_before": 1776117337431236163,
+      "repo_relative_path": "dist/raft_flow.pt",
+      "source_is_symlink_after": true,
+      "source_path": "/Users/adpena/Projects/pact/dist/raft_flow.pt",
+      "source_sha256": "1cdb72869e4476ea96f712d0e678375a37463f844302a3ffd8d43339d91b3023",
+      "status": "externalized_symlinked",
+      "symlink_target": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/dist/raft_flow.pt"
+    },
+    {
+      "bytes": 943735027,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/experiments/raft_flow.pt",
+      "cold_store_sha256": "1cdb72869e4476ea96f712d0e678375a37463f844302a3ffd8d43339d91b3023",
+      "mode_before_octal": "0o644",
+      "mtime_ns_before": 1776089665277322515,
+      "repo_relative_path": "experiments/raft_flow.pt",
+      "source_is_symlink_after": true,
+      "source_path": "/Users/adpena/Projects/pact/experiments/raft_flow.pt",
+      "source_sha256": "1cdb72869e4476ea96f712d0e678375a37463f844302a3ffd8d43339d91b3023",
+      "status": "externalized_symlinked",
+      "symlink_target": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/experiments/raft_flow.pt"
+    },
+    {
+      "bytes": 3662411205,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/comp_frames.pt",
+      "cold_store_sha256": "fa88c5175d599a8cd42d49247b8d6d5f75ec46653bff878a4090f1eed2b3b9f2",
+      "mode_before_octal": "0o644",
+      "mtime_ns_before": 1775854144052793841,
+      "repo_relative_path": "precomputed_local/comp_frames.pt",
+      "source_is_symlink_after": true,
+      "source_path": "/Users/adpena/Projects/pact/precomputed_local/comp_frames.pt",
+      "source_sha256": "fa88c5175d599a8cd42d49247b8d6d5f75ec46653bff878a4090f1eed2b3b9f2",
+      "status": "externalized_symlinked",
+      "symlink_target": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/comp_frames.pt"
+    },
+    {
+      "bytes": 3662411191,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/gt_frames.pt",
+      "cold_store_sha256": "1cf5f6e186b30beaa55eb308733a39d4b8836ab72ce4743663f0259d54dcec71",
+      "mode_before_octal": "0o644",
+      "mtime_ns_before": 1775854146451363616,
+      "repo_relative_path": "precomputed_local/gt_frames.pt",
+      "source_is_symlink_after": true,
+      "source_path": "/Users/adpena/Projects/pact/precomputed_local/gt_frames.pt",
+      "source_sha256": "1cf5f6e186b30beaa55eb308733a39d4b8836ab72ce4743663f0259d54dcec71",
+      "status": "externalized_symlinked",
+      "symlink_target": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/gt_frames.pt"
+    },
+    {
+      "bytes": 1887438299,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/masks.pt",
+      "cold_store_sha256": "4d59270347ef4c45e5f6890edfeb419806b470e692b400cb32b5eead28a07e9a",
+      "mode_before_octal": "0o644",
+      "mtime_ns_before": 1775948259420112985,
+      "repo_relative_path": "precomputed_local/masks.pt",
+      "source_is_symlink_after": true,
+      "source_path": "/Users/adpena/Projects/pact/precomputed_local/masks.pt",
+      "source_sha256": "4d59270347ef4c45e5f6890edfeb419806b470e692b400cb32b5eead28a07e9a",
+      "status": "externalized_symlinked",
+      "symlink_target": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/masks.pt"
+    },
+    {
+      "bytes": 122081904,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/saliency.pt",
+      "cold_store_sha256": "e322bf4a5b1d4f8c7ed973f34f08656561fda1f4447e9bbe7ea6ead1481565a1",
+      "mode_before_octal": "0o644",
+      "mtime_ns_before": 1775945176164126205,
+      "repo_relative_path": "precomputed_local/saliency.pt",
+      "source_is_symlink_after": true,
+      "source_path": "/Users/adpena/Projects/pact/precomputed_local/saliency.pt",
+      "source_sha256": "e322bf4a5b1d4f8c7ed973f34f08656561fda1f4447e9bbe7ea6ead1481565a1",
+      "status": "externalized_symlinked",
+      "symlink_target": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/saliency.pt"
+    },
+    {
+      "bytes": 94566241,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/scorer_weights.pt",
+      "cold_store_sha256": "4db0ed6f4e6d1c234d0ef40f8a29a589a177d5358b71e4c92a9f104e49225f22",
+      "mode_before_octal": "0o644",
+      "mtime_ns_before": 1775945176235447451,
+      "repo_relative_path": "precomputed_local/scorer_weights.pt",
+      "source_is_symlink_after": true,
+      "source_path": "/Users/adpena/Projects/pact/precomputed_local/scorer_weights.pt",
+      "source_sha256": "4db0ed6f4e6d1c234d0ef40f8a29a589a177d5358b71e4c92a9f104e49225f22",
+      "status": "externalized_symlinked",
+      "symlink_target": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/scorer_weights.pt"
+    }
+  ],
+  "schema": "pact.disk_hygiene_externalized_ignored_large_artifacts.v1"
+}
