@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 import tac.substrates.hprc.archive_candidate as hprc_archive_candidate
-from tac.substrates.hprc.archive import parse_hprc_packet
+from tac.substrates.hprc.archive import HprcSectionKind, parse_hprc_packet
 from tac.substrates.hprc.learned_receiver import (
     COMPACT_RECEIVER_MODE,
     compact_receiver_reconstruction_metrics,
@@ -75,6 +75,11 @@ def test_hprc_training_adapter_conforms_and_exports_packet(tmp_path: Path, monke
     compact = decode_compact_receiver_packet(packet)
     assert compact.manifest["hprc_receiver_mode"] == COMPACT_RECEIVER_MODE
     assert compact.manifest["trained_renderer_export_ready"] is True
+    rdo = json.loads(packet.section_map()[HprcSectionKind.RDO_PLAN])
+    assert rdo["output_resize"] == "bilinear"
+    assert rdo["output_resize_alignment"] == "bilinear_align_corners_false"
+    assert rdo["residual_grid_h"] == 4
+    assert rdo["residual_grid_w"] == 5
     metrics = compact_receiver_reconstruction_metrics(compact, _frames())
     assert metrics["score_claim"] is False
     assert metrics["mse_rgb255"] < before

@@ -16,6 +16,11 @@ def test_hprc_campaign_queue_scales_and_gates_full_video(tmp_path: Path) -> None
     storage_root = tmp_path / "ssd"
     queue_path = tmp_path / "hprc_queue.json"
     plan_path = tmp_path / "hprc_plan.json"
+    p19_artifact = repo_root / ".omx" / "research" / "p19_posenet_null_pairs.json"
+    p18_artifact = repo_root / ".omx" / "research" / "p18_segnet_region_waterfill.json"
+    p19_artifact.parent.mkdir(parents=True)
+    p19_artifact.write_text("{}")
+    p18_artifact.write_text("{}")
 
     exit_code = builder.main(
         [
@@ -39,6 +44,18 @@ def test_hprc_campaign_queue_scales_and_gates_full_video(tmp_path: Path) -> None
             "123",
             "--auth-frontier-score",
             "0.19",
+            "--hprc-rate-collapse-residual-collapse-schedule",
+            "dz0_qd10",
+            "--hprc-rate-collapse-p19-posenet-null-pairs",
+            p19_artifact.as_posix(),
+            "--hprc-rate-collapse-p18-segnet-region-waterfill",
+            p18_artifact.as_posix(),
+            "--hprc-rate-collapse-importance-coarsen-quantile",
+            "0.9",
+            "--hprc-rate-collapse-importance-selection-domain",
+            "global_weighted",
+            "--hprc-rate-collapse-importance-protected-spec",
+            "dz0_qd1",
             "--storage-tier",
             f"test={storage_root.as_posix()}",
             "--storage-expected-bytes",
@@ -59,32 +76,87 @@ def test_hprc_campaign_queue_scales_and_gates_full_video(tmp_path: Path) -> None
     partial_steps = [step["id"] for step in queue["experiments"][0]["steps"]]
     assert partial_steps == [
         "run_local_training",
+        "transcode_hprc_rate_collapse",
         "write_hprc_campaign_followup_report",
     ]
     full_steps = [step["id"] for step in queue["experiments"][2]["steps"]]
     assert full_steps == [
         "run_local_training",
+        "transcode_hprc_rate_collapse",
         "write_hprc_campaign_followup_report",
         "gate_archive_rate_before_local_replay",
+        "prove_hprc_rate_collapsed_receiver",
         "run_local_cpu_replay",
         "gate_exact_cpu_after_local_replay",
+        "write_hprc_campaign_post_replay_report",
     ]
     train_command = queue["experiments"][2]["steps"][0]["command"]
-    assert "--skip-runtime-consumption-proof" not in train_command
+    assert "--skip-runtime-consumption-proof" in train_command
     train_postconditions = queue["experiments"][2]["steps"][0]["postconditions"]
-    assert any(
+    assert not any(
         condition["type"] == "path_exists"
         and condition["path"].endswith("receiver_proof/hprc_receiver_proof.json")
         for condition in train_postconditions
     )
-    rate_gate = queue["experiments"][2]["steps"][2]
+    rate_collapse = queue["experiments"][2]["steps"][1]
+    assert "--skip-receiver-proof" in rate_collapse["command"]
+    assert "--enable-lossy-residual-collapse" in rate_collapse["command"]
+    assert "--target-rate-term" in rate_collapse["command"]
+    assert rate_collapse["command"][rate_collapse["command"].index("--target-rate-term") + 1] == "0.15"
+    assert "--residual-collapse-schedule" in rate_collapse["command"]
+    assert (
+        rate_collapse["command"][rate_collapse["command"].index("--residual-collapse-schedule") + 1]
+        == "dz0_qd10"
+    )
+    assert "--p19-posenet-null-pairs" in rate_collapse["command"]
+    assert "--p18-segnet-region-waterfill" in rate_collapse["command"]
+    assert "--importance-coarsen-quantile" in rate_collapse["command"]
+    assert (
+        rate_collapse["command"][rate_collapse["command"].index("--importance-coarsen-quantile") + 1]
+        == "0.9"
+    )
+    assert "--importance-selection-domain" in rate_collapse["command"]
+    assert (
+        rate_collapse["command"][rate_collapse["command"].index("--importance-selection-domain") + 1]
+        == "global_weighted"
+    )
+    assert "--importance-protected-spec" in rate_collapse["command"]
+    assert (
+        rate_collapse["command"][rate_collapse["command"].index("--importance-protected-spec") + 1]
+        == "dz0_qd1"
+    )
+    rate_gate = queue["experiments"][2]["steps"][3]
     assert rate_gate["on_postcondition_failure"] == "skipped"
     assert rate_gate["postconditions"][-1]["key"] == "local_replay_recommended"
-    replay_step = queue["experiments"][2]["steps"][3]
-    assert replay_step["requires"] == ["gate_archive_rate_before_local_replay"]
-    gate_command = queue["experiments"][2]["steps"][4]["command"]
+    assert rate_gate["requires"] == ["write_hprc_campaign_followup_report"]
+    assert rate_gate["command"][rate_gate["command"].index("--min-local-improvement") + 1] == "0.04"
+    proof_step = queue["experiments"][2]["steps"][4]
+    assert proof_step["requires"] == ["gate_archive_rate_before_local_replay"]
+    assert "--skip-receiver-proof" not in proof_step["command"]
+    proof_conditions = {(row["path"], row.get("key")) for row in proof_step["postconditions"]}
+    proof_path = next(
+        row["path"]
+        for row in proof_step["postconditions"]
+        if row.get("path", "").endswith("receiver_proof/hprc_receiver_proof.json")
+    )
+    assert (proof_path, "receiver_contract_satisfied") in proof_conditions
+    assert (proof_path, "runtime_consumption_proof_ready") in proof_conditions
+    assert (proof_path, "blockers") in proof_conditions
+    replay_step = queue["experiments"][2]["steps"][5]
+    assert replay_step["requires"] == ["prove_hprc_rate_collapsed_receiver"]
+    assert any(
+        command_part.endswith("hprc_rate_collapse/best_archive_export/archive.zip")
+        for command_part in replay_step["command"]
+    )
+    gate_command = queue["experiments"][2]["steps"][6]["command"]
     assert "--success-on-blocked" in gate_command
     assert "--auth-frontier-score" in gate_command
+    post_replay = queue["experiments"][2]["steps"][7]
+    assert post_replay["requires"] == ["gate_exact_cpu_after_local_replay"]
+    assert any(
+        command_part.endswith("hprc_queue_post_replay_report.json")
+        for command_part in post_replay["command"]
+    )
 
 
 def test_hprc_campaign_queue_binds_optional_z8_followups(tmp_path: Path) -> None:
@@ -128,6 +200,7 @@ def test_hprc_campaign_queue_binds_optional_z8_followups(tmp_path: Path) -> None
 
     queue = json.loads(queue_path.read_text())
     step_ids = [step["id"] for step in queue["experiments"][0]["steps"]]
+    assert "transcode_hprc_rate_collapse" in step_ids
     assert "build_z8_full_video_p18_p19_allocator_plan" in step_ids
     assert "materialize_z8_p18_p19_allocator_candidate" in step_ids
     materializer = next(

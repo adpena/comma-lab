@@ -79,7 +79,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=600,
         help="Campaigns at or above this pair count get full local CPU replay and exact-auth gating.",
     )
-    parser.add_argument("--local-replay-device", default="cpu", choices=("cpu", "cuda", "mps"))
+    parser.add_argument("--local-replay-device", default="cpu", choices=("cpu",))
     parser.add_argument("--auth-frontier-score", type=float)
     parser.add_argument("--local-baseline-score", type=float)
     parser.add_argument("--min-local-improvement", type=float, default=0.0)
@@ -107,6 +107,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument("--hprc-rate-collapse-brotli-quality", type=int, default=11)
+    parser.add_argument(
+        "--hprc-rate-collapse-residual-collapse-schedule",
+        action="append",
+        default=[],
+        help=(
+            "Repeat or comma-separate residual-token collapse specs passed through "
+            "to the HPRC transcode materializer, e.g. dz0_qd10."
+        ),
+    )
+    parser.add_argument(
+        "--hprc-rate-collapse-residual-importance-npy",
+        type=Path,
+        help="Optional residual-token importance .npy consumed by the rate-collapse materializer.",
+    )
+    parser.add_argument(
+        "--hprc-rate-collapse-p19-posenet-null-pairs",
+        type=Path,
+        help="Optional P19 PoseNet-null artifact consumed by the rate-collapse materializer.",
+    )
+    parser.add_argument(
+        "--hprc-rate-collapse-p18-segnet-region-waterfill",
+        type=Path,
+        help="Optional P18 SegNet-region artifact consumed by the rate-collapse materializer.",
+    )
+    parser.add_argument("--hprc-rate-collapse-importance-coarsen-quantile", type=float)
+    parser.add_argument(
+        "--hprc-rate-collapse-importance-selection-domain",
+        choices=("global_weighted", "eligible_low"),
+    )
+    parser.add_argument("--hprc-rate-collapse-importance-protected-spec")
     parser.add_argument(
         "--hprc-rate-collapse-distortion-reserve",
         type=float,
@@ -466,6 +496,7 @@ def _append_campaign_followup_steps(
         local_replay_summary = output_dir / "local_cpu_replay" / "local_submission_replay_summary.json"
         exact_gate = output_dir / "exact_auth_gate_cpu.json"
         followup_report = output_dir / "hprc_queue_followup_report.json"
+        post_replay_report = output_dir / "hprc_queue_post_replay_report.json"
 
         if not bool(args.disable_hprc_rate_collapse):
             experiment["steps"].append(
@@ -500,6 +531,7 @@ def _append_campaign_followup_steps(
 
         experiment["steps"].append(
             _hprc_followup_report_step(
+                step_id="write_hprc_campaign_followup_report",
                 training_result=candidate_result,
                 report_path=followup_report,
                 decode_pairs=decode_pairs,
@@ -560,6 +592,23 @@ def _append_campaign_followup_steps(
                     replay_summary_json=local_replay_summary,
                     gate_json=exact_gate,
                     args=args,
+                    timeout_seconds=timeout_seconds,
+                )
+            )
+            experiment["steps"].append(
+                _hprc_followup_report_step(
+                    step_id="write_hprc_campaign_post_replay_report",
+                    training_result=candidate_result,
+                    report_path=post_replay_report,
+                    decode_pairs=decode_pairs,
+                    full_replay_min_pairs=full_replay_min_pairs,
+                    local_replay_summary=local_replay_summary,
+                    exact_gate=exact_gate,
+                    z8_archive_bin=args.z8_archive_bin,
+                    z8_surface=args.z8_surface,
+                    z8_reference_pairs_npy=args.z8_reference_pairs_npy,
+                    repo_root=repo_root,
+                    requires=["gate_exact_cpu_after_local_replay"],
                     timeout_seconds=timeout_seconds,
                 )
             )
@@ -702,6 +751,7 @@ def _hprc_rate_collapse_step(
     skip_receiver_proof: bool,
     requires: list[str],
 ) -> dict[str, Any]:
+    repo_root = Path(args.repo_root).expanduser().resolve(strict=False)
     command = [
         ".venv/bin/python",
         "tools/transcode_hprc_compact_receiver_rate_collapse.py",
@@ -710,7 +760,7 @@ def _hprc_rate_collapse_step(
         "--output-dir",
         output_dir.as_posix(),
         "--repo-root",
-        Path(args.repo_root).expanduser().resolve(strict=False).as_posix(),
+        repo_root.as_posix(),
         "--brotli-quality",
         str(int(args.hprc_rate_collapse_brotli_quality)),
         "--out-json",
@@ -719,6 +769,64 @@ def _hprc_rate_collapse_step(
     ]
     for raw in args.hprc_rate_collapse_sections or []:
         command.extend(["--sections", str(raw)])
+    for raw in args.hprc_rate_collapse_residual_collapse_schedule or []:
+        command.extend(["--residual-collapse-schedule", str(raw)])
+    if _rate_collapse_requests_lossy_residual(args):
+        command.append("--enable-lossy-residual-collapse")
+    if args.hprc_rate_collapse_residual_importance_npy is not None:
+        importance_npy = _resolve_path(
+            args.hprc_rate_collapse_residual_importance_npy,
+            repo_root=repo_root,
+        )
+        command.extend(
+            [
+                "--residual-importance-npy",
+                _repo_rel_or_abs(importance_npy, repo_root),
+            ]
+        )
+    if args.hprc_rate_collapse_p19_posenet_null_pairs is not None:
+        p19_path = _resolve_path(
+            args.hprc_rate_collapse_p19_posenet_null_pairs,
+            repo_root=repo_root,
+        )
+        command.extend(
+            [
+                "--p19-posenet-null-pairs",
+                _repo_rel_or_abs(p19_path, repo_root),
+            ]
+        )
+    if args.hprc_rate_collapse_p18_segnet_region_waterfill is not None:
+        p18_path = _resolve_path(
+            args.hprc_rate_collapse_p18_segnet_region_waterfill,
+            repo_root=repo_root,
+        )
+        command.extend(
+            [
+                "--p18-segnet-region-waterfill",
+                _repo_rel_or_abs(p18_path, repo_root),
+            ]
+        )
+    if args.hprc_rate_collapse_importance_coarsen_quantile is not None:
+        command.extend(
+            [
+                "--importance-coarsen-quantile",
+                repr(float(args.hprc_rate_collapse_importance_coarsen_quantile)),
+            ]
+        )
+    if args.hprc_rate_collapse_importance_selection_domain is not None:
+        command.extend(
+            [
+                "--importance-selection-domain",
+                str(args.hprc_rate_collapse_importance_selection_domain),
+            ]
+        )
+    if args.hprc_rate_collapse_importance_protected_spec is not None:
+        command.extend(
+            [
+                "--importance-protected-spec",
+                str(args.hprc_rate_collapse_importance_protected_spec),
+            ]
+        )
     if skip_receiver_proof:
         command.append("--skip-receiver-proof")
     target_rate_term = _rate_collapse_target_rate_term(args)
@@ -741,6 +849,31 @@ def _hprc_rate_collapse_step(
         postconditions.extend(
             [
                 {"type": "path_exists", "path": receiver_proof.as_posix()},
+                {"type": "json_false_authority", "path": receiver_proof.as_posix()},
+                {
+                    "type": "json_equals",
+                    "path": receiver_proof.as_posix(),
+                    "key": "schema",
+                    "equals": "hprc_generated_receiver_proof.v1",
+                },
+                {
+                    "type": "json_equals",
+                    "path": receiver_proof.as_posix(),
+                    "key": "receiver_contract_satisfied",
+                    "equals": True,
+                },
+                {
+                    "type": "json_equals",
+                    "path": receiver_proof.as_posix(),
+                    "key": "runtime_consumption_proof_ready",
+                    "equals": True,
+                },
+                {
+                    "type": "json_equals",
+                    "path": receiver_proof.as_posix(),
+                    "key": "blockers",
+                    "equals": [],
+                },
                 {
                     "type": "json_equals",
                     "path": report_path.as_posix(),
@@ -764,6 +897,15 @@ def _hprc_rate_collapse_step(
             "max_recursive_entries": 256,
         },
     }
+
+
+def _rate_collapse_requests_lossy_residual(args: argparse.Namespace) -> bool:
+    return bool(
+        args.hprc_rate_collapse_residual_collapse_schedule
+        or args.hprc_rate_collapse_residual_importance_npy is not None
+        or args.hprc_rate_collapse_p19_posenet_null_pairs is not None
+        or args.hprc_rate_collapse_p18_segnet_region_waterfill is not None
+    )
 
 
 def _rate_gate_margin(args: argparse.Namespace) -> float:
@@ -836,6 +978,7 @@ def _exact_auth_gate_step(
 
 def _hprc_followup_report_step(
     *,
+    step_id: str,
     training_result: Path,
     report_path: Path,
     decode_pairs: int,
@@ -875,7 +1018,7 @@ def _hprc_followup_report_step(
     if z8_reference_pairs_npy is not None:
         command.extend(["--z8-reference-pairs-npy", z8_reference_pairs_npy.as_posix()])
     return {
-        "id": "write_hprc_campaign_followup_report",
+        "id": step_id,
         "kind": "command",
         "requires": requires,
         "command": command,

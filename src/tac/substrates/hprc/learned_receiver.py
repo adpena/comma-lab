@@ -703,6 +703,45 @@ def _nearest_resize_batch(frames: np.ndarray, height: int, width: int) -> np.nda
     return frames[:, y_idx[:, None], x_idx[None, :], :]
 
 
+def _bilinear_resize_batch(frames: np.ndarray, height: int, width: int) -> np.ndarray:
+    arr = np.asarray(frames, dtype=np.float32)
+    src_h, src_w = int(arr.shape[1]), int(arr.shape[2])
+    if src_h == height and src_w == width:
+        return arr.copy()
+    y = ((np.arange(height, dtype=np.float32) + 0.5) * (float(src_h) / float(height))) - 0.5
+    x = ((np.arange(width, dtype=np.float32) + 0.5) * (float(src_w) / float(width))) - 0.5
+    y = np.clip(y, 0.0, float(src_h - 1))
+    x = np.clip(x, 0.0, float(src_w - 1))
+    y0 = np.floor(y).astype(np.int64).clip(0, src_h - 1)
+    x0 = np.floor(x).astype(np.int64).clip(0, src_w - 1)
+    y1 = np.minimum(y0 + 1, src_h - 1)
+    x1 = np.minimum(x0 + 1, src_w - 1)
+    wy = (y - y0.astype(np.float32)).reshape((1, height, 1, 1))
+    wx = (x - x0.astype(np.float32)).reshape((1, 1, width, 1))
+    top = arr[:, y0, :, :] * (1.0 - wy) + arr[:, y1, :, :] * wy
+    return top[:, :, x0, :] * (1.0 - wx) + top[:, :, x1, :] * wx
+
+
+def _resize_output_batch(frames: np.ndarray, height: int, width: int, *, mode: str) -> np.ndarray:
+    if mode == "nearest":
+        return _nearest_resize_batch(frames, height, width)
+    if mode == "bilinear":
+        return _bilinear_resize_batch(frames, height, width)
+    raise HprcCompactReceiverError(f"unsupported compact receiver output_resize mode: {mode!r}")
+
+
+def _output_resize_mode(rdo: dict[str, Any]) -> str:
+    mode = str(rdo.get("output_resize", "nearest"))
+    if mode == "bilinear":
+        alignment = str(rdo.get("output_resize_alignment", ""))
+        if alignment != "bilinear_align_corners_false":
+            raise HprcCompactReceiverError(
+                "compact receiver bilinear output_resize requires "
+                "output_resize_alignment='bilinear_align_corners_false'"
+            )
+    return mode
+
+
 def _residual_to_decoder_grid(residual: CompactResidual, decoder: CompactDecoder, frame_index: int) -> np.ndarray:
     low = residual.q[frame_index].astype(np.float32) * residual.scale
     return _nearest_resize(low, decoder.height, decoder.width)
@@ -763,8 +802,10 @@ def _render_compact_receiver_frame_batch(
         )
         if state.shape[1] >= 3:
             frame += state_gain * state[:, :3].reshape((frame_count, 1, 1, 3))
-    out_low = np.clip(np.rint(frame), 0, 255).astype(np.uint8)
-    return _nearest_resize_batch(out_low, height, width)
+    output_resize = _output_resize_mode(rdo)
+    out_low = np.clip(frame, 0, 255)
+    out = _resize_output_batch(out_low, height, width, mode=output_resize)
+    return np.clip(np.rint(out), 0, 255).astype(np.uint8)
 
 
 def render_compact_receiver_frame_batch(
@@ -823,8 +864,10 @@ def render_compact_receiver_frame(
         state = compact.receiver_state.q[pair_index].astype(np.float32) * compact.receiver_state.scale
         if state.shape[0] >= 3:
             frame += state_gain * state[:3].reshape((1, 1, 3))
-    out_low = np.clip(np.rint(frame), 0, 255).astype(np.uint8)
-    return _nearest_resize(out_low, height, width)
+    output_resize = _output_resize_mode(rdo)
+    out_low = np.clip(frame, 0, 255)
+    out = _resize_output_batch(out_low[None, ...], height, width, mode=output_resize)[0]
+    return np.clip(np.rint(out), 0, 255).astype(np.uint8)
 
 
 def build_compact_preview_digest(
@@ -1205,6 +1248,8 @@ def build_compact_receiver_packet_from_lowres_frames(
         "basis_count": basis_count,
         "residual_grid_h": int(residual_grid_h),
         "residual_grid_w": int(residual_grid_w),
+        "output_resize": "bilinear",
+        "output_resize_alignment": "bilinear_align_corners_false",
         "score_claim": False,
         "promotion_eligible": False,
     }

@@ -5,13 +5,16 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 import tac.substrates.hprc.archive_candidate as hprc_candidate
+import tac.substrates.hprc.learned_receiver as hprc_receiver
 from tac.substrates.hprc.archive import HprcSectionKind, pack_hprc_packet, parse_hprc_packet
 from tac.substrates.hprc.inflate import CAMERA_H, CAMERA_W, hprc_preview_digest, inflate_one_video
 from tac.substrates.hprc.learned_receiver import (
     COMPACT_NUMPY_DECODER_FAMILY_ID,
     COMPACT_RECEIVER_MODE,
+    HprcCompactReceiverError,
     build_compact_receiver_packet_from_lowres_frames,
     compact_receiver_reconstruction_metrics,
     compact_receiver_section_byte_profile,
@@ -65,12 +68,15 @@ def test_compact_receiver_packet_decodes_semantic_sections() -> None:
     packet = parse_hprc_packet(packet_bytes)
     compact = decode_compact_receiver_packet(packet)
     manifest = json.loads(packet.section_map()[HprcSectionKind.MANIFEST_JSON])
+    rdo = json.loads(packet.section_map()[HprcSectionKind.RDO_PLAN])
 
     assert packet.config.decoder_family_id == COMPACT_NUMPY_DECODER_FAMILY_ID
     assert packet.config.frames == 4
     assert packet.config.height == 8
     assert packet.config.width == 10
     assert manifest["hprc_receiver_mode"] == COMPACT_RECEIVER_MODE
+    assert rdo["output_resize"] == "bilinear"
+    assert rdo["output_resize_alignment"] == "bilinear_align_corners_false"
     rendered = render_compact_receiver_frame(compact, 0, height=16, width=20)
     assert rendered.shape == (16, 20, 3)
     assert rendered.dtype == np.uint8
@@ -82,6 +88,39 @@ def test_compact_receiver_packet_decodes_semantic_sections() -> None:
     rows = {row["section"]: row for row in byte_profile["section_rows"]}
     assert rows["residual_rc"]["bytes"] > rows["latents_rc"]["bytes"]
     assert byte_profile["score_claim"] is False
+
+
+def test_compact_receiver_bilinear_resize_matches_align_corners_false_geometry() -> None:
+    row = np.array([[[[0.0], [100.0]]]], dtype=np.float32)
+
+    resized = hprc_receiver._bilinear_resize_batch(row, 1, 4)[0, 0, :, 0]
+
+    np.testing.assert_allclose(resized, np.array([0.0, 25.0, 75.0, 100.0]), atol=1e-5)
+
+
+def test_compact_receiver_bilinear_resize_alignment_is_fail_closed() -> None:
+    packet_bytes = build_compact_receiver_packet_from_lowres_frames(
+        _frames(),
+        basis_count=3,
+        residual_grid_h=2,
+        residual_grid_w=3,
+    )
+    packet = parse_hprc_packet(packet_bytes)
+    section_map = packet.section_map()
+    rdo = json.loads(section_map[HprcSectionKind.RDO_PLAN])
+    rdo.pop("output_resize_alignment")
+    mutated = dict(section_map)
+    mutated[HprcSectionKind.RDO_PLAN] = json.dumps(
+        rdo,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    compact = decode_compact_receiver_packet(
+        parse_hprc_packet(pack_hprc_packet(mutated, config=packet.config))
+    )
+
+    with pytest.raises(HprcCompactReceiverError, match="output_resize_alignment"):
+        render_compact_receiver_frame(compact, 0, height=16, width=20)
 
 
 def test_compact_receiver_entropy_wrapped_sections_roundtrip_pixels() -> None:

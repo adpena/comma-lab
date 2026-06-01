@@ -179,6 +179,7 @@ def run_generated_inflate_receiver_proof(
         "stdout": stdout,
         "stderr": stderr,
         "runtime_consumption_proof_ready": passed,
+        "runtime_consumption_proof_passed": passed,
         "receiver_contract_satisfied": passed,
         "blockers": blockers,
         **FALSE_AUTHORITY,

@@ -1,0 +1,618 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "local_training_0000_hprc_compact_receiver_hprc_importance_q90_replay_20260601t051209z_pairs0600",
+      "lane_id": "lane_hprc_compact_receiver_training",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "hprc_compact_receiver_hprc_importance_q90_replay_20260601T051209Z_pairs0600",
+        "device": "local_numpy",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-06-01T05:12:24Z",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hprc",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_plan_schema": "hprc_compact_receiver_training_plan.v1",
+        "substrate_family": "hierarchical_predictive_coding",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "local_numpy"
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_hprc_compact_receiver_training.py",
+            "--video-path",
+            "upstream/videos/0.mkv",
+            "--decode-pairs",
+            "600",
+            "--decode-height",
+            "192",
+            "--decode-width",
+            "256",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z",
+            "--output-manifest",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json",
+            "--storage-plan-path",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_storage_plan.json",
+            "--epochs",
+            "8",
+            "--batch-pair-indices-per-step",
+            "16",
+            "--learning-rate",
+            "0.005",
+            "--basis-count",
+            "3",
+            "--residual-grid-h",
+            "24",
+            "--residual-grid-w",
+            "32",
+            "--skip-runtime-consumption-proof"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/training_artifact.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/training_artifact.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_export.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "hprc_compact_receiver_training_run_result.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "contest_video_decode",
+              "key": "source_manifest.source_kind",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json",
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/training_artifact.json",
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_export.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "upstream/videos/0.mkv"
+            ],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 2400
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/transcode_hprc_compact_receiver_rate_collapse.py",
+            "--training-result",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--brotli-quality",
+            "11",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+            "--allow-overwrite",
+            "--residual-collapse-schedule",
+            "dz0_qd10",
+            "--p19-posenet-null-pairs",
+            "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+            "--p18-segnet-region-waterfill",
+            "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+            "--importance-coarsen-quantile",
+            "0.9",
+            "--importance-protected-spec",
+            "dz0_qd1",
+            "--skip-receiver-proof",
+            "--target-rate-term",
+            "0.1519853363"
+          ],
+          "id": "transcode_hprc_rate_collapse",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "hprc_rate_collapse_report.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "run_local_training"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse",
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 2400
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/write_hprc_queue_followup_report.py",
+            "--training-result",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+            "--decode-pairs",
+            "600",
+            "--full-replay-min-pairs",
+            "600",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_followup_report.json",
+            "--allow-overwrite",
+            "--local-replay-summary-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json",
+            "--exact-auth-gate-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/exact_auth_gate_cpu.json"
+          ],
+          "id": "write_hprc_campaign_followup_report",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_followup_report.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_followup_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "hprc_queue_followup_report.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_followup_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "transcode_hprc_rate_collapse"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_followup_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 2400
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/gate_archive_rate_for_local_replay.py",
+            "--training-result",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+            "--min-local-improvement",
+            "0.04",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/archive_rate_local_replay_gate.json",
+            "--allow-overwrite",
+            "--success-on-blocked",
+            "--auth-frontier-score",
+            "0.1919853363"
+          ],
+          "id": "gate_archive_rate_before_local_replay",
+          "kind": "command",
+          "on_postcondition_failure": "skipped",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/archive_rate_local_replay_gate.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/archive_rate_local_replay_gate.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "archive_rate_local_replay_gate.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/archive_rate_local_replay_gate.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "local_replay_recommended",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/archive_rate_local_replay_gate.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "write_hprc_campaign_followup_report"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/archive_rate_local_replay_gate.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 2400
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/transcode_hprc_compact_receiver_rate_collapse.py",
+            "--training-result",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--brotli-quality",
+            "11",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+            "--allow-overwrite",
+            "--residual-collapse-schedule",
+            "dz0_qd10",
+            "--p19-posenet-null-pairs",
+            "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p19_posenet_null_pairs.json",
+            "--p18-segnet-region-waterfill",
+            "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch/p18_segnet_region_waterfill.json",
+            "--importance-coarsen-quantile",
+            "0.9",
+            "--importance-protected-spec",
+            "dz0_qd1",
+            "--target-rate-term",
+            "0.1519853363"
+          ],
+          "id": "prove_hprc_rate_collapsed_receiver",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "hprc_rate_collapse_report.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/receiver_proof/hprc_receiver_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/receiver_proof/hprc_receiver_proof.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "hprc_generated_receiver_proof.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/receiver_proof/hprc_receiver_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "receiver_contract_satisfied",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/receiver_proof/hprc_receiver_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_ready",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/receiver_proof/hprc_receiver_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": [],
+              "key": "blockers",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/receiver_proof/hprc_receiver_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "artifact.receiver_proof_present",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "gate_archive_rate_before_local_replay"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse",
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_compact_receiver_training_run_result.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 2400
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_local_submission_replay.py",
+            "--runtime-submission-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/submission",
+            "--archive-zip",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/archive.zip",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay",
+            "--summary-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json",
+            "--device",
+            "cpu",
+            "--force"
+          ],
+          "id": "run_local_cpu_replay",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "local_submission_replay.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "prove_hprc_rate_collapsed_receiver"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/best_archive_export/archive.zip"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 2400
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/gate_local_candidate_for_exact_auth.py",
+            "--local-replay-summary-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json",
+            "--exact-auth-axis",
+            "[contest-CPU]",
+            "--min-local-improvement",
+            "0.0",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/exact_auth_gate_cpu.json",
+            "--auth-frontier-score",
+            "0.1919853363",
+            "--success-on-blocked"
+          ],
+          "id": "gate_exact_cpu_after_local_replay",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/exact_auth_gate_cpu.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/exact_auth_gate_cpu.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "local_candidate_exact_auth_gate.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/exact_auth_gate_cpu.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "run_local_cpu_replay"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/exact_auth_gate_cpu.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 2400
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/write_hprc_queue_followup_report.py",
+            "--training-result",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json",
+            "--decode-pairs",
+            "600",
+            "--full-replay-min-pairs",
+            "600",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--out-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_post_replay_report.json",
+            "--allow-overwrite",
+            "--local-replay-summary-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/local_cpu_replay/local_submission_replay_summary.json",
+            "--exact-auth-gate-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/exact_auth_gate_cpu.json"
+          ],
+          "id": "write_hprc_campaign_post_replay_report",
+          "kind": "command",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_post_replay_report.json",
+              "type": "path_exists"
+            },
+            {
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_post_replay_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "hprc_queue_followup_report.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_post_replay_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "gate_exact_cpu_after_local_replay"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_queue_post_replay_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_importance_q90_replay_20260601T051209Z/hprc_rate_collapse/hprc_rate_collapse_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 2400
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "hprc_importance_q90_replay_20260601T051209Z",
+  "schema": "experiment_queue.v1"
+}

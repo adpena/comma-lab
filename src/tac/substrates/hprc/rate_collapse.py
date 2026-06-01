@@ -54,6 +54,7 @@ DEFAULT_RESIDUAL_TOKEN_COLLAPSE_SPECS: tuple[str, ...] = (
     "dz96_qd16",
     "dz126_qd1",
 )
+DEFAULT_IMPORTANCE_PROTECTED_RESIDUAL_TOKEN_COLLAPSE_SPEC = "dz0_qd1"
 
 _SECTION_ALIASES: dict[str, HprcSectionKind] = {
     "decoder": HprcSectionKind.DECODER_QW,
@@ -281,6 +282,56 @@ def transcode_compact_receiver_residual_tokens(
     return out, rows, metrics
 
 
+def transcode_compact_receiver_importance_weighted_residual_tokens(
+    packet_bytes: bytes | bytearray | memoryview,
+    *,
+    low_importance_spec: ResidualTokenCollapseSpec,
+    high_importance_spec: ResidualTokenCollapseSpec,
+    importance: np.ndarray,
+    coarsen_quantile: float,
+    eligible_mask: np.ndarray | None = None,
+    selection_domain: str = "global_weighted",
+    sections: Iterable[HprcSectionKind] = DEFAULT_RATE_COLLAPSE_SECTIONS,
+    brotli_quality: int = 11,
+) -> tuple[bytes, list[dict[str, Any]], dict[str, Any]]:
+    """Coarsen only low-importance residual tokens, then entropy-wrap sections.
+
+    ``importance`` is a scorer/allocation surface. Low values are treated as
+    expendable rate budget; high values are protected. This keeps the rate
+    actuator generic enough for P19 PoseNet-null, P18 SegNet-region, master
+    gradient, or future full-video VJP surfaces without hardcoding one scorer
+    artifact schema into the receiver codec.
+    """
+
+    packet = parse_hprc_packet(packet_bytes)
+    compact = decode_compact_receiver_packet(packet)
+    section_map = packet.section_map()
+    original_q = np.asarray(compact.residual.q, dtype=np.int16)
+    collapsed_q, metrics = collapse_residual_tokens_with_importance(
+        original_q,
+        low_importance_spec=low_importance_spec,
+        high_importance_spec=high_importance_spec,
+        importance=importance,
+        coarsen_quantile=coarsen_quantile,
+        eligible_mask=eligible_mask,
+        selection_domain=selection_domain,
+    )
+    section_map[HprcSectionKind.RESIDUAL_RC] = pack_compact_residual_quantized(
+        collapsed_q,
+        scale=compact.residual.scale,
+    )
+    collapsed_packet = pack_hprc_packet(section_map, config=packet.config)
+    out, rows = transcode_compact_receiver_sections(
+        collapsed_packet,
+        sections=sections,
+        brotli_quality=brotli_quality,
+        force=False,
+    )
+    metrics["residual_scale"] = float(compact.residual.scale)
+    decode_compact_receiver_packet(parse_hprc_packet(out))
+    return out, rows, metrics
+
+
 def collapse_residual_tokens(
     q: np.ndarray,
     *,
@@ -295,6 +346,129 @@ def collapse_residual_tokens(
         divisor = int(spec.quant_divisor)
         values = np.rint(values.astype(np.float32) / float(divisor)).astype(np.int16) * divisor
     return values.clip(-127, 127).astype(np.int16)
+
+
+def collapse_residual_tokens_with_importance(
+    q: np.ndarray,
+    *,
+    low_importance_spec: ResidualTokenCollapseSpec,
+    high_importance_spec: ResidualTokenCollapseSpec,
+    importance: np.ndarray,
+    coarsen_quantile: float,
+    eligible_mask: np.ndarray | None = None,
+    selection_domain: str = "global_weighted",
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Apply two residual-collapse specs using a low-importance coarsening mask."""
+
+    if not (0.0 < float(coarsen_quantile) <= 1.0):
+        raise ValueError("coarsen_quantile must be in (0, 1]")
+    if selection_domain not in {"global_weighted", "eligible_low"}:
+        raise ValueError("selection_domain must be 'global_weighted' or 'eligible_low'")
+    values = np.asarray(q, dtype=np.int16)
+    imp = _broadcast_importance(np.asarray(importance, dtype=np.float32), values.shape)
+    finite = imp[np.isfinite(imp)]
+    if finite.size == 0:
+        raise ValueError("importance surface contains no finite values")
+    finite_imp = np.where(np.isfinite(imp), imp, np.inf).reshape(-1)
+    if eligible_mask is None:
+        eligible = np.isfinite(finite_imp)
+    else:
+        eligible = _broadcast_importance(
+            np.asarray(eligible_mask, dtype=np.float32),
+            values.shape,
+        ).reshape(-1) > 0.5
+        eligible &= np.isfinite(finite_imp)
+    if not bool(eligible.any()):
+        raise ValueError("importance surface selected no eligible residual tokens")
+    if selection_domain == "eligible_low":
+        eligible_indices = np.flatnonzero(eligible)
+        coarsen_count = max(1, int(np.ceil(float(eligible_indices.size) * float(coarsen_quantile))))
+        coarsen_count = min(coarsen_count, int(eligible_indices.size))
+        local_order = np.argsort(finite_imp[eligible_indices], kind="stable")
+        selected = eligible_indices[local_order[:coarsen_count]]
+    else:
+        coarsen_count = max(1, int(np.ceil(float(finite.size) * float(coarsen_quantile))))
+        coarsen_count = min(coarsen_count, int(finite.size))
+        order = np.argsort(finite_imp, kind="stable")
+        finite_order = order[np.isfinite(finite_imp[order])]
+        selected = finite_order[:coarsen_count]
+    if selected.size == 0:
+        raise ValueError("importance surface selected no residual tokens")
+    threshold = float(finite_imp[selected[-1]])
+    coarsen_mask_flat = np.zeros(finite_imp.shape, dtype=bool)
+    coarsen_mask_flat[selected] = True
+    coarsen_mask = coarsen_mask_flat.reshape(imp.shape)
+    low = collapse_residual_tokens(values, spec=low_importance_spec)
+    high = collapse_residual_tokens(values, spec=high_importance_spec)
+    out = np.where(coarsen_mask, low, high).clip(-127, 127).astype(np.int16)
+    delta = out.astype(np.int16) - values.astype(np.int16)
+    changed = delta != 0
+    coarsened = int(coarsen_mask.sum())
+    protected = int(coarsen_mask.size - coarsened)
+    metrics = {
+        "schema": "hprc_importance_weighted_residual_token_collapse_metrics.v1",
+        "variant_id": (
+            "residual_tokens_iw_"
+            f"q{_quantile_slug(coarsen_quantile)}_"
+            f"lo_{low_importance_spec.variant_id}_"
+            f"hi_{high_importance_spec.variant_id}"
+        ),
+        "importance_weighted": True,
+        "coarsen_quantile": float(coarsen_quantile),
+        "selection_domain": selection_domain,
+        "importance_threshold": threshold,
+        "low_importance_spec": {
+            "variant_id": low_importance_spec.variant_id,
+            "deadzone": int(low_importance_spec.deadzone),
+            "quant_divisor": int(low_importance_spec.quant_divisor),
+        },
+        "high_importance_spec": {
+            "variant_id": high_importance_spec.variant_id,
+            "deadzone": int(high_importance_spec.deadzone),
+            "quant_divisor": int(high_importance_spec.quant_divisor),
+        },
+        "token_count": int(values.size),
+        "eligible_token_count": int(eligible.sum()),
+        "eligible_token_fraction": float(eligible.sum() / max(values.size, 1)),
+        "coarsened_token_count": coarsened,
+        "protected_token_count": protected,
+        "coarsened_token_fraction": float(coarsened / max(values.size, 1)),
+        "protected_token_fraction": float(protected / max(values.size, 1)),
+        "tokens_changed": int(changed.sum()),
+        "tokens_changed_fraction": float(changed.sum() / max(values.size, 1)),
+        "original_nonzero_tokens": int((values != 0).sum()),
+        "collapsed_nonzero_tokens": int((out != 0).sum()),
+        "residual_q_l1": float(np.mean(np.abs(delta))) if delta.size else 0.0,
+        "residual_q_mse": float(np.mean(delta.astype(np.float32) ** 2)) if delta.size else 0.0,
+        "importance_shape": [int(dim) for dim in np.asarray(importance).shape],
+        "broadcast_importance_shape": [int(dim) for dim in imp.shape],
+        "importance_min": float(np.min(finite)),
+        "importance_max": float(np.max(finite)),
+    }
+    return out, metrics
+
+
+def _broadcast_importance(importance: np.ndarray, q_shape: tuple[int, ...]) -> np.ndarray:
+    if importance.shape == q_shape:
+        return importance.astype(np.float32, copy=False)
+    if importance.shape == q_shape[:-1]:
+        return np.broadcast_to(importance[..., None], q_shape).astype(np.float32, copy=False)
+    if importance.ndim == 1 and importance.shape[0] == q_shape[0]:
+        return np.broadcast_to(
+            importance.reshape((q_shape[0], 1, 1, 1)),
+            q_shape,
+        ).astype(np.float32, copy=False)
+    try:
+        return np.broadcast_to(importance, q_shape).astype(np.float32, copy=False)
+    except ValueError as exc:
+        raise ValueError(
+            "importance surface shape is not broadcastable to residual tokens: "
+            f"importance={importance.shape} residual={q_shape}"
+        ) from exc
+
+
+def _quantile_slug(value: float) -> str:
+    return str(round(float(value) * 10000)).zfill(5)
 
 
 def build_rate_collapse_exact_execution_report(
@@ -346,6 +520,20 @@ def build_rate_collapse_exact_execution_report(
     )
     best_is_lossy = bool(best_variant.get("lossy_residual_token_collapse"))
     saved = int(report.get("rate_collapse_archive_bytes_saved") or 0)
+    cleanup_record = report.get("cleanup_manifest") if isinstance(report.get("cleanup_manifest"), dict) else {}
+    cleanup_path_value = cleanup_record.get("path")
+    cleanup_path = (
+        _resolve(cleanup_path_value, root)
+        if isinstance(cleanup_path_value, str) and cleanup_path_value
+        else None
+    )
+    source_mlx_incremental = dict(source_mlx)
+    if best_is_lossy:
+        source_mlx_incremental = {
+            "pre_rate_collapse_mlx_advisory_summary": source_mlx,
+            "post_rate_collapse_local_replay_required": True,
+            "post_rate_collapse_local_replay_status": "missing",
+        }
     return {
         "schema": HPRC_RATE_COLLAPSE_EXACT_EXECUTION_SCHEMA,
         "repo_root": root.as_posix(),
@@ -390,14 +578,15 @@ def build_rate_collapse_exact_execution_report(
             "blockers": list(receiver_proof.get("blockers") or []),
         },
         "cleanup": {
-            "status": "planned",
-            "plan_path": None,
+            "status": "manifest_linked" if cleanup_path is not None else "planned",
+            "plan_path": cleanup_path.as_posix() if cleanup_path is not None else None,
+            "plan_sha256": sha256_file(cleanup_path) if cleanup_path is not None and cleanup_path.is_file() else None,
             "blocked_bytes_retained": 0,
-            "reclaimable_bytes": 0,
-            "blockers": [],
+            "reclaimable_bytes": int(cleanup_record.get("reclaimable_non_best_variant_bytes") or 0),
+            "blockers": [] if cleanup_path is not None else ["rate_collapse_cleanup_manifest_missing"],
         },
         "incremental_summary": {
-            **source_mlx,
+            **source_mlx_incremental,
             "archive_bytes_removed_vs_baseline": (
                 int(source_archive.get("bytes") or 0)
                 - int(artifact.get("archive_bytes") or 0)
@@ -421,6 +610,7 @@ def build_rate_collapse_exact_execution_report(
 
 
 __all__ = [
+    "DEFAULT_IMPORTANCE_PROTECTED_RESIDUAL_TOKEN_COLLAPSE_SPEC",
     "DEFAULT_RATE_COLLAPSE_SECTIONS",
     "DEFAULT_RESIDUAL_TOKEN_COLLAPSE_SPECS",
     "HPRC_RATE_COLLAPSE_EXACT_EXECUTION_SCHEMA",
@@ -429,9 +619,11 @@ __all__ = [
     "ResidualTokenCollapseSpec",
     "build_rate_collapse_exact_execution_report",
     "collapse_residual_tokens",
+    "collapse_residual_tokens_with_importance",
     "parse_rate_collapse_sections",
     "parse_residual_token_collapse_specs",
     "rate_collapse_variant_groups",
+    "transcode_compact_receiver_importance_weighted_residual_tokens",
     "transcode_compact_receiver_residual_tokens",
     "transcode_compact_receiver_sections",
 ]
