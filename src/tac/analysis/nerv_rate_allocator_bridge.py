@@ -387,6 +387,64 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                 )
             )
             continue
+        if unit_type == "archive_ladder_replay_result":
+            row_id = str(unit.get("row_id") or "unknown")
+            orders.append(
+                _work_order(
+                    work_order_id=f"score_{family}_{row_id}_full_video_mlx_replay",
+                    work_order_type="receiver_proven_archive_full_video_mlx_replay",
+                    target_consumers=[
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "sensitivity_map",
+                        "cathedral_autopilot",
+                    ],
+                    planner_action=(
+                        "materialize_direct_receiver_cache_and_run_full_video_mlx_response"
+                    ),
+                    source_unit_id=str(unit.get("unit_id") or ""),
+                    priority=6,
+                    receiver_precision_modes=[
+                        "fp16_protected",
+                        "int8_protected",
+                        "int4",
+                        "int2",
+                        "zero",
+                    ],
+                    rationale=(
+                        "price receiver-proof compact HiNeRV archive rows by "
+                        "full-video SegNet/PoseNet MLX response before any "
+                        "decoder-byte cut, protect, or exact dispatch decision"
+                    ),
+                    payload={
+                        "family": family,
+                        "row_id": row_id,
+                        "report_path": unit.get("report_path"),
+                        "archive_bytes": unit.get("archive_bytes"),
+                        "archive_sha256": unit.get("archive_sha256"),
+                        "archive_path": unit.get("archive_path"),
+                        "submission_dir": unit.get("submission_dir"),
+                        "spine_manifest_path": unit.get("spine_manifest_path"),
+                        "receiver_proof_path": unit.get("receiver_proof_path"),
+                        "decoder_weight_waterfill_plan_path": unit.get(
+                            "decoder_weight_waterfill_plan_path"
+                        ),
+                        "replay_report_path": unit.get("replay_report_path"),
+                        "replay_report_sha256": unit.get("replay_report_sha256"),
+                        "receiver_proof_ready": unit.get("receiver_proof_ready"),
+                        "archive_export_backend_counts": dict(
+                            unit.get("archive_export_backend_counts") or {}
+                        ),
+                    },
+                    blockers=[
+                        *blockers,
+                        "full_video_mlx_scorer_response_missing",
+                        "section_value_profile_missing",
+                        "paired_contest_cpu_cuda_auth_eval_missing",
+                    ],
+                )
+            )
+            continue
         if unit_type == "decoder_mode_assignment_route":
             row_id = str(unit.get("row_id") or "unknown")
             modes = _receiver_precision_modes_from_unit(unit)

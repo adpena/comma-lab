@@ -63,6 +63,15 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional false-authority HiNeRV archive-ladder decoder-waterfill JSON.",
     )
     parser.add_argument(
+        "--hinerv-archive-ladder-replay-actuator-json",
+        default=None,
+        type=Path,
+        help=(
+            "Optional false-authority HiNeRV archive-ladder replay actuator "
+            "JSON."
+        ),
+    )
+    parser.add_argument(
         "--snerv-trained-ladder-waterfill-json",
         default=None,
         type=Path,
@@ -99,6 +108,11 @@ def main(argv: list[str] | None = None) -> int:
         pattern="hinerv_archive_ladder_waterfill*.json",
         schema="hinerv_archive_ladder_waterfill.v1",
     )
+    hinerv_archive_ladder_replay_actuator_report = _load_optional_report(
+        args.hinerv_archive_ladder_replay_actuator_json,
+        pattern="hinerv_archive_ladder_replay_actuator*.json",
+        schema="hinerv_archive_ladder_replay_actuator.v1",
+    )
     snerv_trained_ladder_waterfill_report = _load_optional_report(
         args.snerv_trained_ladder_waterfill_json,
         pattern="snerv_trained_ladder_waterfill*.json",
@@ -125,6 +139,9 @@ def main(argv: list[str] | None = None) -> int:
         hinerv_archive_size_ladder_report=hinerv_archive_size_ladder_report,
         hinerv_archive_ladder_waterfill_report=(
             hinerv_archive_ladder_waterfill_report
+        ),
+        hinerv_archive_ladder_replay_actuator_report=(
+            hinerv_archive_ladder_replay_actuator_report
         ),
         snerv_trained_ladder_waterfill_report=(
             snerv_trained_ladder_waterfill_report

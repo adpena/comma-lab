@@ -239,6 +239,7 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     )
     assert "bind_hi_nerv_decoder_weight_saliency_to_waterfill" in orders
     assert "replay_hi_nerv_hi_nerv_local_tiny_decoder_weight_waterfill" in orders
+    assert "score_hi_nerv_hi_nerv_local_tiny_full_video_mlx_replay" in orders
     assert "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill" in orders
     assert "compile_snerv_snerv_local_tiny_decoder_modes_to_receiver" in orders
     assert "replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust" in orders
@@ -275,6 +276,16 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     assert "full_video_decoder_weight_saliency_replay_missing" in waterfill_order[
         "blockers"
     ]
+    full_video_order = orders["score_hi_nerv_hi_nerv_local_tiny_full_video_mlx_replay"]
+    assert (
+        full_video_order["work_order_type"]
+        == "receiver_proven_archive_full_video_mlx_replay"
+    )
+    assert full_video_order["payload"]["archive_bytes"] == 134_908
+    assert full_video_order["payload"]["archive_path"].endswith("/archive.zip")
+    assert full_video_order["payload"]["submission_dir"].endswith("/submission")
+    assert full_video_order["payload"]["receiver_proof_ready"] is True
+    assert "full_video_mlx_scorer_response_missing" in full_video_order["blockers"]
     snerv_waterfill_order = orders[
         "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill"
     ]
@@ -392,6 +403,51 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         == "tools/build_nerv_modelsize_archive_curve.py"
         for row in modelsize_rows
     )
+    full_video_row = rows["score_hi_nerv_hi_nerv_local_tiny_full_video_mlx_replay"]
+    assert (
+        full_video_row["planner_ingest"]["ingest_kind"]
+        == "receiver_proven_archive_full_video_mlx_replay"
+    )
+    assert full_video_row["planner_ingest"][
+        "local_full_video_mlx_replay_runnable_now"
+    ] is True
+    assert full_video_row["planner_ingest"]["runnable_now"] is False
+    assert full_video_row["planner_ingest"]["archive_bytes"] == 134_908
+    cache_argv = full_video_row["planner_ingest"][
+        "local_full_video_cache_command_argv"
+    ]
+    response_argv = full_video_row["planner_ingest"][
+        "local_full_video_response_command_argv"
+    ]
+    assert cache_argv[:3] == [
+        ".venv/bin/python",
+        "tools/materialize_mlx_scorer_cache_from_submission.py",
+        "--archive",
+    ]
+    assert "--receiver-direct-cache" in cache_argv
+    assert cache_argv[cache_argv.index("--archive") + 1].endswith(
+        "/hi_nerv_local_tiny/archive.zip"
+    )
+    assert "tools/run_mlx_scorer_response_cache.py" in response_argv
+    assert response_argv[response_argv.index("--archive-size-bytes") + 1] == "134908"
+    assert "--allow-unaudited-candidate-cache-debug" in response_argv
+    assert (
+        full_video_row["planner_ingest"][
+            "local_full_video_response_cache_identity_mode"
+        ]
+        == "receiver_direct_unaudited_debug_override"
+    )
+    assert (
+        "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+        in response_argv
+    )
+    assert (
+        full_video_row["planner_ingest"][
+            "local_full_video_output_is_promotion_authority"
+        ]
+        is False
+    )
+    assert "full_video_mlx_scorer_response_missing" in full_video_row["blockers"]
     gate_row = rows["close_snerv_receiver_rate_promotion_gates"]
     assert gate_row["status"] == "blocked_until_prerequisite_evidence"
     assert gate_row["planner_ingest"]["runnable_now"] is False
@@ -591,6 +647,58 @@ def _synthetic_rate_bridge() -> dict:
                 ],
                 "blockers": ["sample_pair_count_below_full600"],
             },
+        },
+        "archive_ladder_replay_actuator_reports": {
+            "hi_nerv": {
+                "schema": "hinerv_archive_ladder_replay_actuator.v1",
+                "report_path": ".omx/research/hinerv_archive_ladder_replay_actuator.json",
+                "row_count": 1,
+                "receiver_proof_ready_row_count": 1,
+                "replay_rows": [
+                    {
+                        "row_id": "hi_nerv_local_tiny",
+                        "status": "existing_report_loaded_false_authority",
+                        "archive_bytes": 134_908,
+                        "archive_sha256": "a" * 64,
+                        "archive_path": (
+                            "/Volumes/VertigoDataTier/pact/"
+                            "hinerv_archive_ladder_waterfill_replay/"
+                            "hi_nerv_local_tiny/archive.zip"
+                        ),
+                        "submission_dir": (
+                            "/Volumes/VertigoDataTier/pact/"
+                            "hinerv_archive_ladder_waterfill_replay/"
+                            "hi_nerv_local_tiny/submission"
+                        ),
+                        "spine_manifest_path": (
+                            "/Volumes/VertigoDataTier/pact/"
+                            "hinerv_archive_ladder_waterfill_replay/"
+                            "hi_nerv_local_tiny/spine_manifest.json"
+                        ),
+                        "receiver_proof_path": (
+                            "/Volumes/VertigoDataTier/pact/"
+                            "hinerv_archive_ladder_waterfill_replay/"
+                            "hi_nerv_local_tiny/receiver_proof.json"
+                        ),
+                        "decoder_weight_waterfill_plan_path": (
+                            "/Volumes/VertigoDataTier/pact/"
+                            "hinerv_archive_ladder_waterfill_replay/"
+                            "hi_nerv_local_tiny/waterfill_plan.json"
+                        ),
+                        "replay_report_path": (
+                            ".omx/research/"
+                            "hinerv_archive_size_ladder_replay_tiny.json"
+                        ),
+                        "replay_report_sha256": "b" * 64,
+                        "receiver_proof_ready": True,
+                        "archive_export_backend_counts": {"mlx": 1},
+                        "blockers": [
+                            "hinerv_archive_size_row_has_no_nonrate_score"
+                        ],
+                    }
+                ],
+                "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+            }
         },
         "decoder_mode_assignment_reports": {
             "snerv": {

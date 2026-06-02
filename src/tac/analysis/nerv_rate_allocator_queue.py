@@ -26,6 +26,9 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 SCHEMA = "nerv_rate_allocator_work_queue.v1"
 AXIS_TAG = "[planning/control]"
 DEFAULT_QUEUE_ID = "nerv_rate_allocator_work_queue"
+DEFAULT_MLX_REFERENCE_CACHE = (
+    "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+)
 
 QUEUE_FALSE_AUTHORITY = {
     **FALSE_AUTHORITY,
@@ -260,6 +263,58 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "archive_sha256": payload.get("archive_sha256"),
             "runnable_now": False,
         }
+    if work_order_type == "receiver_proven_archive_full_video_mlx_replay":
+        payload = (
+            work_order.get("payload", {})
+            if isinstance(work_order.get("payload"), Mapping)
+            else {}
+        )
+        family = str(payload.get("family") or "")
+        row_id = str(payload.get("row_id") or "unknown")
+        archive_path = str(payload.get("archive_path") or "")
+        submission_dir = str(payload.get("submission_dir") or "")
+        archive_bytes = payload.get("archive_bytes")
+        cache_command = _full_video_cache_command(
+            family=family,
+            row_id=row_id,
+            archive_path=archive_path,
+            submission_dir=submission_dir,
+        )
+        response_command = _full_video_response_command(
+            family=family,
+            row_id=row_id,
+            archive_bytes=archive_bytes,
+        )
+        runnable = bool(
+            cache_command
+            and response_command
+            and archive_path
+            and submission_dir
+            and archive_bytes
+        )
+        return {
+            "ingest_kind": "receiver_proven_archive_full_video_mlx_replay",
+            "planner_action": planner_action,
+            "producer_tool": "tools/materialize_mlx_scorer_cache_from_submission.py",
+            "existing_tool_ingress": "tools/run_mlx_scorer_response_cache.py",
+            "section_value_profile_tool": "tools/profile_compact_renderer_mlx_section_value.py",
+            "missing_tool_or_proof": (
+                "full_video_mlx_response_and_section_value_profile"
+            ),
+            "local_full_video_mlx_replay_runnable_now": runnable,
+            "local_full_video_cache_command_argv": cache_command,
+            "local_full_video_response_command_argv": response_command,
+            "local_full_video_response_cache_identity_mode": (
+                "receiver_direct_unaudited_debug_override"
+            ),
+            "local_full_video_output_is_promotion_authority": False,
+            "archive_bytes": archive_bytes,
+            "archive_sha256": payload.get("archive_sha256"),
+            "archive_path": archive_path or None,
+            "submission_dir": submission_dir or None,
+            "receiver_proof_ready": payload.get("receiver_proof_ready") is True,
+            "runnable_now": False,
+        }
     if work_order_type == "receiver_visible_decoder_mode_assignment":
         payload = (
             work_order.get("payload", {})
@@ -346,6 +401,101 @@ def _waterfill_replay_tools(family: str) -> tuple[str, str]:
             "tools/prove_snerv_receiver_archive.py",
         )
     return ("unknown_decoder_weight_waterfill_producer", "unknown_receiver_replay_tool")
+
+
+def _full_video_cache_command(
+    *,
+    family: str,
+    row_id: str,
+    archive_path: str,
+    submission_dir: str,
+) -> list[str]:
+    if family not in {"hi_nerv", "hinerv"} or not archive_path or not submission_dir:
+        return []
+    root = (
+        "/Volumes/VertigoDataTier/pact/"
+        f"hinerv_full_video_mlx_replay/{_safe_token(row_id)}"
+    )
+    return [
+        ".venv/bin/python",
+        "tools/materialize_mlx_scorer_cache_from_submission.py",
+        "--archive",
+        archive_path,
+        "--submission-dir",
+        submission_dir,
+        "--output-cache-dir",
+        f"{root}/candidate_cache",
+        "--work-dir",
+        f"{root}/cache_work",
+        "--report-output",
+        (
+            ".omx/research/"
+            f"hinerv_full_video_mlx_cache_{_safe_token(row_id)}_false_authority.json"
+        ),
+        "--receiver-direct-cache",
+        "--batch-pairs",
+        "1",
+        "--max-pairs",
+        "600",
+        "--allow-large-tensor-cache",
+        "--force",
+    ]
+
+
+def _full_video_response_command(
+    *,
+    family: str,
+    row_id: str,
+    archive_bytes: Any,
+) -> list[str]:
+    try:
+        bytes_int = int(archive_bytes)
+    except (TypeError, ValueError):
+        return []
+    if family not in {"hi_nerv", "hinerv"} or bytes_int <= 0:
+        return []
+    root = (
+        "/Volumes/VertigoDataTier/pact/"
+        f"hinerv_full_video_mlx_replay/{_safe_token(row_id)}"
+    )
+    return [
+        ".venv/bin/python",
+        "tools/run_mlx_scorer_response_cache.py",
+        "--reference-cache-dir",
+        DEFAULT_MLX_REFERENCE_CACHE,
+        "--candidate-cache-dir",
+        f"{root}/candidate_cache",
+        "--archive-size-bytes",
+        str(bytes_int),
+        "--output",
+        (
+            ".omx/research/"
+            f"hinerv_full_video_mlx_response_{_safe_token(row_id)}_false_authority.json"
+        ),
+        "--repo-root",
+        ".",
+        "--batch-pairs",
+        "1",
+        "--max-pairs",
+        "600",
+        "--device",
+        "gpu",
+        "--allow-gpu-research-signal",
+        "--allow-unaudited-candidate-cache-debug",
+        "--allow-local-cpu-advisory-cache-identity",
+        "--cache-integrity-mode",
+        "manifest",
+        "--response-family",
+        f"hi_nerv_{_safe_token(row_id)}",
+    ]
+
+
+def _safe_token(value: str) -> str:
+    text = "".join(
+        ch if ch.isalnum() or ch in {"-", "_"} else "_"
+        for ch in str(value)
+    ).strip("_")
+    return text or "row"
 
 
 def _target_consumer_index(rows: Sequence[Mapping[str, Any]]) -> dict[str, list[str]]:

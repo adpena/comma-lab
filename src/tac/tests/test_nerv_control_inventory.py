@@ -67,17 +67,38 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
 
     source_ids = {row["id"] for row in report["upstream_sources_checked"]}
     assert {
+        "comma_leaderboard_video_compression",
+        "pr95_public_control",
         "hnerv_official",
         "hinerv_official",
         "snerv_official",
+        "snerv_scalable_disambiguation",
         "sr_nerv_paper",
         "rnerv_paper",
         "ffnerv_paper",
+        "ffnerv_project",
         "nervplusplus_paper",
         "c3_paper",
         "cool_chic_docs",
         "nvrc_paper",
+        "rnerv_vinrb_oss",
+        "boost_nerv_official",
+        "c3_project",
     }.issubset(source_ids)
+    assert report["source_review_policy"]["schema"] == "nerv_source_review_policy.v1"
+    assert report["source_review_policy"]["score_claim"] is False
+    hard_rules = set(report["source_review_policy"]["hard_rules"])
+    assert any("SNeRV means spectra-preserving" in rule for rule in hard_rules)
+    assert any("HiNeRV and HNeRV are distinct" in rule for rule in hard_rules)
+    assert any("PR95 is the same-axis public control arm" in rule for rule in hard_rules)
+    assert any("CPU, CUDA, and MLX observations stay separate" in rule for rule in hard_rules)
+    transfers = {
+        row["from_family"]: row for row in report["stack_transfer_matrix"]
+    }
+    assert "C1a entropy-shaping regularizer before brotli" in transfers[
+        "PR95/HNeRV"
+    ]["transfers"]
+    assert "CPU/CUDA axis custody" in transfers["PR95/HNeRV"]["guard"]
 
     surfaces = report["local_binding_surfaces"]
     assert "src/tac/analysis/score_exact_saliency.py" in surfaces["scorer_and_saliency"]
@@ -290,6 +311,59 @@ def test_nerv_control_inventory_accepts_hinerv_archive_ladder_waterfill_report()
         "/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_tiny"
     )
     assert measured["waterfill_rows"][0]["waterfill_summary"]["group_count"] == 2
+
+
+def test_nerv_control_inventory_accepts_hinerv_replay_actuator_report() -> None:
+    replay_report = {
+        "schema": "hinerv_archive_ladder_replay_actuator.v1",
+        "report_path": ".omx/research/hinerv_archive_ladder_replay_actuator_fake.json",
+        "execution_requested": True,
+        "load_existing_requested": False,
+        "row_count": 1,
+        "loaded_replay_report_count": 1,
+        "receiver_proof_ready_row_count": 1,
+        "archive_bytes_by_row_id": {"hi_nerv_local_tiny": 134908},
+        "rows": [
+            {
+                "row_id": "hi_nerv_local_tiny",
+                "status": "executed_report_loaded_false_authority",
+                "archive_bytes": 134908,
+                "archive_sha256": "a" * 64,
+                "archive_path": "/Volumes/VertigoDataTier/pact/tiny/archive.zip",
+                "submission_dir": "/Volumes/VertigoDataTier/pact/tiny/submission",
+                "spine_manifest_path": "/Volumes/VertigoDataTier/pact/tiny/spine.json",
+                "receiver_proof_path": "/Volumes/VertigoDataTier/pact/tiny/proof.json",
+                "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/tiny/plan.json",
+                "replay_report_path": ".omx/research/tiny_replay.json",
+                "replay_report_sha256": "b" * 64,
+                "receiver_proof_ready": True,
+                "archive_export_backend_counts": {"mlx": 1},
+                "blockers": ["hinerv_archive_size_row_has_no_nonrate_score"],
+            }
+        ],
+        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("hi_nerv",),
+        hinerv_archive_ladder_replay_actuator_report=replay_report,
+    )
+
+    measured = report["archive_ladder_replay_actuator_reports"]["hi_nerv"]
+    assert measured["schema"] == "hinerv_archive_ladder_replay_actuator.v1"
+    assert measured["score_claim"] is False
+    assert measured["row_count"] == 1
+    assert measured["receiver_proof_ready_row_count"] == 1
+    row = measured["replay_rows"][0]
+    assert row["archive_bytes"] == 134908
+    assert row["submission_dir"].endswith("/tiny/submission")
+    assert row["spine_manifest_path"].endswith("/tiny/spine.json")
+    assert row["receiver_proof_path"].endswith("/tiny/proof.json")
+    assert row["decoder_weight_waterfill_plan_path"].endswith("/tiny/plan.json")
+    markdown = render_nerv_control_inventory_markdown(report)
+    assert "## Archive Ladder Replay Actuators" in markdown
 
 
 def test_nerv_control_inventory_accepts_snerv_trained_ladder_waterfill_report() -> None:
@@ -583,6 +657,64 @@ def test_build_nerv_control_inventory_cli_auto_discovers_latest_waterfill_report
     assert measured["waterfill_rows"][0]["row_id"] == "hi_nerv_auto"
     assert measured["waterfill_rows"][0]["waterfill_summary"]["group_count"] == 5
     assert payload["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_hinerv_replay_actuator_report(
+    tmp_path: Path,
+) -> None:
+    replay_path = tmp_path / "replay_actuator.json"
+    output_json = tmp_path / "inventory.json"
+    replay_path.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_ladder_replay_actuator.v1",
+                "report_path": ".omx/research/hinerv_archive_ladder_replay_actuator_fake.json",
+                "execution_requested": True,
+                "load_existing_requested": False,
+                "row_count": 1,
+                "loaded_replay_report_count": 1,
+                "receiver_proof_ready_row_count": 1,
+                "archive_bytes_by_row_id": {"hi_nerv_local_tiny": 134908},
+                "rows": [
+                    {
+                        "row_id": "hi_nerv_local_tiny",
+                        "status": "executed_report_loaded_false_authority",
+                        "archive_bytes": 134908,
+                        "archive_sha256": "a" * 64,
+                        "archive_path": "/Volumes/VertigoDataTier/pact/tiny/archive.zip",
+                        "submission_dir": "/Volumes/VertigoDataTier/pact/tiny/submission",
+                        "receiver_proof_path": "/Volumes/VertigoDataTier/pact/tiny/proof.json",
+                        "receiver_proof_ready": True,
+                        "blockers": ["hinerv_archive_size_row_has_no_nonrate_score"],
+                    }
+                ],
+                "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "hi_nerv",
+            "--repo-root",
+            str(REPO),
+            "--hinerv-archive-ladder-replay-actuator-json",
+            str(replay_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    measured = payload["archive_ladder_replay_actuator_reports"]["hi_nerv"]
+    assert measured["row_count"] == 1
+    assert measured["replay_rows"][0]["archive_bytes"] == 134908
+    assert measured["score_claim"] is False
 
 
 def test_build_nerv_control_inventory_cli_accepts_snerv_waterfill_report(

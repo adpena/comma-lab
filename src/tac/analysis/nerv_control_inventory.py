@@ -33,6 +33,7 @@ def build_nerv_control_inventory(
     repo_root: str | Path | None = None,
     hinerv_archive_size_ladder_report: Mapping[str, Any] | None = None,
     hinerv_archive_ladder_waterfill_report: Mapping[str, Any] | None = None,
+    hinerv_archive_ladder_replay_actuator_report: Mapping[str, Any] | None = None,
     snerv_trained_ladder_waterfill_report: Mapping[str, Any] | None = None,
     hinerv_decoder_weight_saliency_report: Mapping[str, Any] | None = None,
     snerv_waterfill_mode_assignment_report: Mapping[str, Any] | None = None,
@@ -56,6 +57,7 @@ def build_nerv_control_inventory(
         "authority": "false_authority_control_inventory_no_score_claim",
         "objective_authority": SCORER_ONLY_OBJECTIVE_AUTHORITY,
         "upstream_sources_checked": _upstream_sources(),
+        "source_review_policy": _source_review_policy(),
         "rate_constraint": _rate_constraint(),
         "runner_spend_rule": _runner_spend_rule(),
         "stack_transfer_matrix": _stack_transfer_matrix(),
@@ -73,6 +75,14 @@ def build_nerv_control_inventory(
                 snerv_trained_ladder_waterfill_report
             ),
             focus_families=focus,
+        ),
+        "archive_ladder_replay_actuator_reports": (
+            _archive_ladder_replay_actuator_reports(
+                hinerv_archive_ladder_replay_actuator_report=(
+                    hinerv_archive_ladder_replay_actuator_report
+                ),
+                focus_families=focus,
+            )
         ),
         "decoder_weight_saliency_replays": _decoder_weight_saliency_replays(
             hinerv_decoder_weight_saliency_report=(
@@ -170,6 +180,16 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
                 f"({waterfill_row.get('row_count', 0)} rows, "
                 f"{waterfill_row.get('section_value_row_count', 0)} section values)"
             )
+    replay_actuators = report.get("archive_ladder_replay_actuator_reports")
+    if isinstance(replay_actuators, Mapping):
+        lines.extend(["", "## Archive Ladder Replay Actuators", ""])
+        for family, replay_row in replay_actuators.items():
+            lines.append(
+                f"- `{family}`: `{replay_row.get('status')}` "
+                f"({replay_row.get('row_count', 0)} rows, "
+                f"{replay_row.get('receiver_proof_ready_row_count', 0)} "
+                "receiver-proof ready)"
+            )
     saliency_replays = report.get("decoder_weight_saliency_replays")
     if isinstance(saliency_replays, Mapping):
         lines.extend(["", "## Decoder-Weight Saliency Replays", ""])
@@ -198,6 +218,11 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
                 f"score `{probe_row.get('best_plan_score_linf_advisory')}` "
                 f"({probe_row.get('candidate_count', 0)} candidates)"
             )
+    policy = report.get("source_review_policy")
+    if isinstance(policy, Mapping):
+        lines.extend(["", "## Source Review Policy", ""])
+        for rule in policy.get("hard_rules", []):
+            lines.append(f"- {rule}")
     lines.extend(["", "## Sources", ""])
     for source in report.get("upstream_sources_checked", []):
         lines.append(f"- [{source['id']}]({source['url']}): {source['control_signal']}")
@@ -386,6 +411,66 @@ def _decoder_weight_waterfill_reports(
                     "decoder_payload_schema": row.get("decoder_payload_schema"),
                     "decoder_state_group_count": row.get("decoder_state_group_count"),
                     "waterfill_summary": row.get("waterfill_summary"),
+                    "blockers": list(row.get("blockers") or ()),
+                }
+                for row in report.get("rows", ())
+                if isinstance(row, Mapping)
+            ],
+            "blockers": list(report.get("blockers") or ()),
+            **FALSE_AUTHORITY,
+        }
+    return rows
+
+
+def _archive_ladder_replay_actuator_reports(
+    *,
+    hinerv_archive_ladder_replay_actuator_report: Mapping[str, Any] | None,
+    focus_families: Iterable[str],
+) -> dict[str, Any]:
+    focus = {str(family) for family in focus_families}
+    rows: dict[str, Any] = {}
+    if hinerv_archive_ladder_replay_actuator_report is not None and (
+        not focus or "hi_nerv" in focus
+    ):
+        report = hinerv_archive_ladder_replay_actuator_report
+        rows["hi_nerv"] = {
+            "schema": report.get("schema"),
+            "status": (
+                "archive_ladder_replay_rows_available_false_authority"
+            ),
+            "report_path": report.get("report_path"),
+            "execution_requested": bool(report.get("execution_requested")),
+            "load_existing_requested": bool(report.get("load_existing_requested")),
+            "row_count": int(report.get("row_count", 0) or 0),
+            "loaded_replay_report_count": int(
+                report.get("loaded_replay_report_count", 0) or 0
+            ),
+            "receiver_proof_ready_row_count": int(
+                report.get("receiver_proof_ready_row_count", 0) or 0
+            ),
+            "archive_bytes_by_row_id": dict(
+                report.get("archive_bytes_by_row_id") or {}
+            ),
+            "replay_rows": [
+                {
+                    "row_id": row.get("row_id"),
+                    "status": row.get("status"),
+                    "archive_bytes": row.get("archive_bytes"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "archive_path": row.get("archive_path"),
+                    "submission_dir": row.get("submission_dir"),
+                    "spine_manifest_path": row.get("spine_manifest_path"),
+                    "receiver_proof_path": row.get("receiver_proof_path"),
+                    "decoder_weight_waterfill_plan_path": row.get(
+                        "decoder_weight_waterfill_plan_path"
+                    ),
+                    "output_dir": row.get("output_dir"),
+                    "replay_report_path": row.get("replay_report_path"),
+                    "replay_report_sha256": row.get("replay_report_sha256"),
+                    "receiver_proof_ready": bool(row.get("receiver_proof_ready")),
+                    "archive_export_backend_counts": dict(
+                        row.get("archive_export_backend_counts") or {}
+                    ),
                     "blockers": list(row.get("blockers") or ()),
                 }
                 for row in report.get("rows", ())
@@ -642,9 +727,15 @@ def _control_rows() -> list[dict[str, Any]]:
             "cross_stack",
             upstream="HNeRV/NeRV use architecture size, pruning, quant_bit, model parameter bpp",
             local="PR95 HNeRV MLX + modelsize_budget_plan",
-            scorer="PR95 control replay + MLX/PyTorch render parity",
+            scorer=(
+                "PR95 public control replay + MLX/PyTorch render parity + "
+                "explicit CPU/CUDA axis separation"
+            ),
             allocator="fixed contest byte price; spend size only if marginal distortion drops enough",
-            archive="PR95-style byte-closed archive/runtime",
+            archive=(
+                "PR95-style byte-closed archive/runtime with staged QAT, "
+                "C1a entropy shaping, sigma sweep, and Muon"
+            ),
             status="control_baseline_available",
             missing=["feed_pr95_hnerv_measured_ladder_into_all_carrier_plans"],
         ),
@@ -1243,11 +1334,16 @@ def _stack_transfer_matrix() -> list[dict[str, Any]]:
             "to_families": ["hi_nerv", "snerv"],
             "transfers": [
                 "modelsize-budgeted decoder bytes",
-                "PR95-style staged optimizer/curriculum",
+                "PR95-style 8-stage scorer/rate curriculum",
+                "C1a entropy-shaping regularizer before brotli",
+                "QAT plus sigma sweep plus Muon optimizer final stage",
                 "quantized decoder and latent packet grammar",
                 "same-axis control replay discipline",
             ],
-            "guard": "source/runtime parity before beat claims or method negatives",
+            "guard": (
+                "source/runtime parity and CPU/CUDA axis custody before beat "
+                "claims or method negatives"
+            ),
         },
         {
             "from_family": "SR-NeRV",
@@ -1414,6 +1510,23 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
 def _upstream_sources() -> list[dict[str, str]]:
     return [
         {
+            "id": "comma_leaderboard_video_compression",
+            "url": "https://comma.ai/leaderboard",
+            "control_signal": (
+                "public frontier ordering; PR95/98/101/103/105/106 remain "
+                "same-axis control inputs, not inferred-equivalence authority"
+            ),
+        },
+        {
+            "id": "pr95_public_control",
+            "url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+            "control_signal": (
+                "HNeRV-shaped contest specialization: 178417-byte archive, "
+                "8-stage scorer/rate curriculum, C1a entropy shaping, QAT, "
+                "sigma sweep, Muon, and documented CPU/CUDA discrepancy"
+            ),
+        },
+        {
             "id": "hnerv_official",
             "url": "https://github.com/haochen-rye/HNeRV",
             "control_signal": "architecture size, pruning, quantization, model bpp",
@@ -1421,7 +1534,10 @@ def _upstream_sources() -> list[dict[str, str]]:
         {
             "id": "hinerv_official",
             "url": "https://github.com/hmkx/HiNeRV",
-            "control_signal": "HiNeRV S/M/L configs, patch size, bitstream-q",
+            "control_signal": (
+                "HiNeRV S/M/L configs, patch/frame flexibility, deepspeed/timm/"
+                "torchac code path, pruning, quantization, and bitstream-q"
+            ),
         },
         {
             "id": "hinerv_paper",
@@ -1431,12 +1547,24 @@ def _upstream_sources() -> list[dict[str, str]]:
         {
             "id": "snerv_official",
             "url": "https://github.com/qwertja/SNeRV",
-            "control_signal": "DWT LF/HF, enc/dec strides, fc_dim, emb_size, temporal extension",
+            "control_signal": (
+                "spectra-preserving SNeRV: Haar/DWT LF/HF, enc/dec strides, "
+                "fc_dim, emb_size, MFU, HFR, and temporal extension"
+            ),
         },
         {
             "id": "snerv_paper",
             "url": "https://arxiv.org/abs/2501.01681",
             "control_signal": "spectral split, HFR/MFU/TUB controls",
+        },
+        {
+            "id": "snerv_scalable_disambiguation",
+            "url": "https://openreview.net/forum?id=ZqN4bnXSSY",
+            "control_signal": (
+                "separate Scalable Neural Representation paper; useful for "
+                "layered bitstream thinking, not the spectra-preserving "
+                "DWT/MFU/HFR carrier target"
+            ),
         },
         {
             "id": "sr_nerv_paper",
@@ -1454,9 +1582,33 @@ def _upstream_sources() -> list[dict[str, str]]:
             "control_signal": "per-video design and training search over NeRV components",
         },
         {
+            "id": "rnerv_vinrb_oss",
+            "url": "https://github.com/mgwillia/vinrb",
+            "control_signal": (
+                "official VINRB/RNeRV implementation and ablation framework; "
+                "use as source-parity input for NeRV-family component controls"
+            ),
+        },
+        {
             "id": "ffnerv_paper",
             "url": "https://arxiv.org/abs/2212.12294",
             "control_signal": "flow-guided temporal redundancy and compact convolutional architecture",
+        },
+        {
+            "id": "ffnerv_project",
+            "url": "https://maincold2.github.io/ffnerv/",
+            "control_signal": (
+                "project/code surface for flow-guided pose-channel enhancer "
+                "and compact grouped/pointwise convolution ideas"
+            ),
+        },
+        {
+            "id": "boost_nerv_official",
+            "url": "https://github.com/Xinjie-Q/Boosting-NeRV",
+            "control_signal": (
+                "conditional decoder and temporal-aware affine enhancer; "
+                "treat as a carrier enhancer only after receiver-byte custody"
+            ),
         },
         {
             "id": "nervplusplus_paper",
@@ -1469,6 +1621,14 @@ def _upstream_sources() -> list[dict[str, str]]:
             "control_signal": "overfitted hierarchical latents and entropy-model bytes",
         },
         {
+            "id": "c3_project",
+            "url": "https://c3-neural-compression.github.io/",
+            "control_signal": (
+                "per-video small-model latent/entropy-model codec; useful "
+                "for section-value-priced latent/codebook controls"
+            ),
+        },
+        {
             "id": "cool_chic_docs",
             "url": "https://orange-opensource.github.io/Cool-Chic/encoding/architecture.html",
             "control_signal": "hierarchical latent grids and autoregressive entropy model",
@@ -1479,6 +1639,42 @@ def _upstream_sources() -> list[dict[str, str]]:
             "control_signal": "end-to-end neural representation quantization and entropy coding",
         },
     ]
+
+
+def _source_review_policy() -> dict[str, Any]:
+    return {
+        "schema": "nerv_source_review_policy.v1",
+        "purpose": (
+            "force every online paper or OSS finding into a carrier control, "
+            "enhancer, baseline/control, or explicit no-go/disambiguation row"
+        ),
+        "refresh_triggers": [
+            "before changing official HiNeRV or SNeRV architecture/export code",
+            "before interpreting any bad HiNeRV/SNeRV score as method evidence",
+            "before beat-PR95 claims or PR95-derived config changes",
+            "when adding an enhancer from HNeRV/SR-NeRV/RNeRV/FFNeRV/BoostNeRV/NeRV++",
+        ],
+        "hard_rules": [
+            "paper/OSS evidence is research context only until tiny forward parity and receiver byte grammar pass",
+            "SNeRV means spectra-preserving DWT/MFU/HFR/TUB carrier unless a row explicitly says scalable-layered SNeRV",
+            "HiNeRV and HNeRV are distinct; HNeRV/PR95 transfers must be priced as controls, not source parity",
+            "PR95 is the same-axis public control arm; reproduce its archive/runtime/eval axis before beat claims",
+            "CPU, CUDA, and MLX observations stay separate even when the archive and report text look identical",
+        ],
+        "disambiguations": [
+            {
+                "term": "SNeRV",
+                "primary_for_this_stack": "spectra_preserving_snerv_eccv_2024",
+                "not_primary": "scalable_layered_snerv_neurips_compression_workshop_2024",
+            },
+            {
+                "term": "HiNeRV_vs_HNeRV",
+                "primary_for_hi_nerv": "hierarchical_encoding_based_neural_representation",
+                "baseline_control": "PR95_HNeRV_hnerv_muon_public_submission",
+            },
+        ],
+        **FALSE_AUTHORITY,
+    }
 
 
 def _runner_policy(controls: list[dict[str, Any]]) -> dict[str, Any]:

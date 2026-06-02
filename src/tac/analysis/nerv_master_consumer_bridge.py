@@ -326,6 +326,60 @@ def _control_inventory_evidence_units(
                 }
             )
     for family, report in _mapping_items(
+        control_inventory.get("archive_ladder_replay_actuator_reports")
+    ):
+        rows = _mapping_list(report.get("replay_rows"))
+        for index, row in enumerate(rows):
+            row_id = str(row.get("row_id") or f"replay_row_{index:04d}")
+            blockers = _string_list(report.get("blockers")) + _string_list(
+                row.get("blockers")
+            )
+            if row.get("receiver_proof_ready") is not True:
+                blockers.append("receiver_proof_not_ready_for_archive_replay_row")
+            if not row.get("archive_path"):
+                blockers.append("archive_path_missing_for_archive_replay_row")
+            if not row.get("submission_dir"):
+                blockers.append("submission_dir_missing_for_archive_replay_row")
+            if not row.get("archive_bytes"):
+                blockers.append("archive_bytes_missing_for_archive_replay_row")
+            units.append(
+                {
+                    "unit_id": f"{family}_{row_id}_archive_replay_result",
+                    "unit_type": "archive_ladder_replay_result",
+                    "family": str(family),
+                    "row_id": row_id,
+                    "report_path": report.get("report_path"),
+                    "status": row.get("status"),
+                    "archive_bytes": row.get("archive_bytes"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "archive_path": row.get("archive_path"),
+                    "submission_dir": row.get("submission_dir"),
+                    "spine_manifest_path": row.get("spine_manifest_path"),
+                    "receiver_proof_path": row.get("receiver_proof_path"),
+                    "decoder_weight_waterfill_plan_path": row.get(
+                        "decoder_weight_waterfill_plan_path"
+                    ),
+                    "replay_report_path": row.get("replay_report_path"),
+                    "replay_report_sha256": row.get("replay_report_sha256"),
+                    "receiver_proof_ready": bool(row.get("receiver_proof_ready")),
+                    "archive_export_backend_counts": dict(
+                        row.get("archive_export_backend_counts") or {}
+                    ),
+                    "target_consumers": [
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "sensitivity_map",
+                        "cathedral_autopilot",
+                    ],
+                    "planner_action": (
+                        "run_full_video_mlx_scorer_replay_for_archive_row"
+                    ),
+                    "blockers": _unique(blockers),
+                    "predicted_delta_adjustment": 0.0,
+                    **FALSE_AUTHORITY,
+                }
+            )
+    for family, report in _mapping_items(
         control_inventory.get("decoder_weight_saliency_replays")
     ):
         blockers = _string_list(report.get("blockers"))
