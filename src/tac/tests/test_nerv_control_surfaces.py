@@ -21,6 +21,7 @@ from tac.analysis.nerv_modelsize_archive_curve import (
     parse_byte_caps,
 )
 from tac.analysis.nerv_rate_allocator_bridge import build_nerv_rate_allocator_bridge
+from tac.analysis.nerv_rate_allocator_queue import build_nerv_rate_allocator_work_queue
 from tac.cathedral.consumer_contract import validate_consumer_module
 from tac.cathedral_consumers import nerv_top_priority_stack_consumer
 
@@ -213,6 +214,82 @@ def test_master_consumer_bridge_and_cathedral_consumer_are_no_authority() -> Non
 
 
 def test_rate_allocator_bridge_routes_units_without_authority() -> None:
+    rate_bridge = _synthetic_rate_bridge()
+
+    assert rate_bridge["schema"] == "nerv_rate_allocator_bridge.v1"
+    assert rate_bridge["score_claim"] is False
+    assert rate_bridge["promotion_eligible"] is False
+    assert rate_bridge["ready_for_exact_eval_dispatch"] is False
+    modes = {row["mode"] for row in rate_bridge["receiver_precision_mode_policy"]}
+    assert {
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only",
+    } <= modes
+    orders = {row["work_order_id"]: row for row in rate_bridge["rate_allocator_work_orders"]}
+    assert "close_snerv_receiver_rate_promotion_gates" in orders
+    assert "route_bitmask_and_zero_packing_to_rate_allocator" in orders
+    assert "route_master_gradient_xray_stack_to_rate_allocator" in orders
+    assert any(
+        row["work_order_type"] == "measured_modelsize_budget_ladder"
+        for row in orders.values()
+    )
+    zero_order = orders["route_bitmask_and_zero_packing_to_rate_allocator"]
+    assert {"zero", "rle_only", "int2", "int4"} <= set(
+        zero_order["receiver_precision_modes"]
+    )
+    for order in orders.values():
+        assert order["score_claim"] is False
+        assert order["score_claim_valid"] is False
+        assert order["promotion_eligible"] is False
+        assert order["ready_for_exact_eval_dispatch"] is False
+
+
+def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
+    rate_bridge = _synthetic_rate_bridge()
+    queue = build_nerv_rate_allocator_work_queue(
+        rate_bridge=rate_bridge,
+        queue_id="test_nerv_rate_allocator_queue",
+    )
+
+    assert queue["schema"] == "nerv_rate_allocator_work_queue.v1"
+    assert queue["queue_kind"] == "planner_queue_not_experiment_queue"
+    assert queue["queue_row_count"] == rate_bridge["work_order_count"]
+    assert queue["blocked_queue_row_count"] > 0
+    assert queue["local_planning_ready_row_count"] >= 0
+    assert queue["score_claim"] is False
+    assert queue["score_claim_valid"] is False
+    assert queue["promotion_eligible"] is False
+    assert queue["ready_for_exact_eval_dispatch"] is False
+    assert queue["exact_or_full_video_cuda_allowed"] is False
+    assert queue["dispatch_allowed"] is False
+    assert queue["activation_policy"]["planner_rows_are_executable_experiments"] is False
+    assert "final_rate_attack" in queue["target_consumer_index"]
+    assert "bit_allocator" in queue["target_consumer_index"]
+    assert {"fp16_protected", "int8_protected", "int4", "int2", "zero", "rle_only"} <= set(
+        queue["precision_mode_index"]
+    )
+
+    rows = {row["work_order_id"]: row for row in queue["queue_rows"]}
+    zero_row = rows["route_bitmask_and_zero_packing_to_rate_allocator"]
+    assert zero_row["planner_ingest"]["ingest_kind"] == "reuse_existing_control_binding"
+    assert {"zero", "rle_only"} <= set(zero_row["receiver_precision_modes"])
+    gate_row = rows["close_snerv_receiver_rate_promotion_gates"]
+    assert gate_row["status"] == "blocked_until_prerequisite_evidence"
+    assert gate_row["planner_ingest"]["runnable_now"] is False
+    for row in queue["queue_rows"]:
+        assert row["score_claim"] is False
+        assert row["score_claim_valid"] is False
+        assert row["promotion_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert row["dispatch_allowed"] is False
+        assert row["exact_or_full_video_cuda_allowed"] is False
+
+
+def _synthetic_rate_bridge() -> dict:
     seam = {
         "schema": "nerv_top_priority_stack_seam.v1",
         "axis_tag": "[planning/control]",
@@ -278,38 +355,7 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
         modelsize_curve=modelsize_curve,
     )
 
-    rate_bridge = build_nerv_rate_allocator_bridge(master_bridge=bridge)
-
-    assert rate_bridge["schema"] == "nerv_rate_allocator_bridge.v1"
-    assert rate_bridge["score_claim"] is False
-    assert rate_bridge["promotion_eligible"] is False
-    assert rate_bridge["ready_for_exact_eval_dispatch"] is False
-    modes = {row["mode"] for row in rate_bridge["receiver_precision_mode_policy"]}
-    assert {
-        "fp16_protected",
-        "int8_protected",
-        "int4",
-        "int2",
-        "zero",
-        "rle_only",
-    } <= modes
-    orders = {row["work_order_id"]: row for row in rate_bridge["rate_allocator_work_orders"]}
-    assert "close_snerv_receiver_rate_promotion_gates" in orders
-    assert "route_bitmask_and_zero_packing_to_rate_allocator" in orders
-    assert "route_master_gradient_xray_stack_to_rate_allocator" in orders
-    assert any(
-        row["work_order_type"] == "measured_modelsize_budget_ladder"
-        for row in orders.values()
-    )
-    zero_order = orders["route_bitmask_and_zero_packing_to_rate_allocator"]
-    assert {"zero", "rle_only", "int2", "int4"} <= set(
-        zero_order["receiver_precision_modes"]
-    )
-    for order in orders.values():
-        assert order["score_claim"] is False
-        assert order["score_claim_valid"] is False
-        assert order["promotion_eligible"] is False
-        assert order["ready_for_exact_eval_dispatch"] is False
+    return build_nerv_rate_allocator_bridge(master_bridge=bridge)
 
 
 def _minimal_repo_root(root: Path) -> Path:

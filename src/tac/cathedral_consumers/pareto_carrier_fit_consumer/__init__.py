@@ -290,11 +290,13 @@ def parse_carrier_fit_rows(
             raise CarrierFitConsumerError(
                 f"carrier-fit row[{i}].modelsize_bytes={bytes_value!r} not int"
             ) from exc
+        d_seg = _required_numeric_axis(row, "d_seg", i)
+        d_pose = _required_numeric_axis(row, "d_pose", i)
         fit_row = CarrierFitRow(
             carrier_id=str(row.get("carrier_id", "")),
             modelsize_bytes=modelsize_bytes,
-            d_seg=float(row.get("d_seg", 0.0)),
-            d_pose=float(row.get("d_pose", 0.0)),
+            d_seg=d_seg,
+            d_pose=d_pose,
             budget_id=str(row.get("budget_id", "")),
             fixture_not_real=bool(row.get("fixture_not_real", False)),
             source=dict(row.get("source", {})),
@@ -317,6 +319,28 @@ def parse_carrier_fit_rows(
                 )
         parsed.append(fit_row)
     return parsed
+
+
+def _required_numeric_axis(
+    row: Mapping[str, Any],
+    field_name: str,
+    row_index: int,
+) -> float:
+    if field_name not in row:
+        raise CarrierFitConsumerError(
+            f"carrier-fit row[{row_index}] missing required {field_name}"
+        )
+    value = row[field_name]
+    if isinstance(value, bool) or value is None:
+        raise CarrierFitConsumerError(
+            f"carrier-fit row[{row_index}].{field_name}={value!r} not numeric"
+        )
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise CarrierFitConsumerError(
+            f"carrier-fit row[{row_index}].{field_name}={value!r} not numeric"
+        ) from exc
 
 
 @dataclass(frozen=True)
