@@ -11,6 +11,7 @@ from tac.analysis.nerv_top_priority_stack_seam import (
     FULL_STACK_COMPONENTS,
     SCHEMA,
     build_nerv_top_priority_stack_seam,
+    build_source_faithfulness_matrix,
     discover_dispatch_blockers,
 )
 
@@ -38,12 +39,29 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
             "state": "MERGED",
             "headRefOid": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
         },
+        oss_source_metadata={
+            "snerv": {
+                "repo_url": "https://github.com/qwertja/SNeRV.git",
+                "head_sha": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+                "audit_root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV",
+            },
+            "hinerv": {
+                "repo_url": "https://github.com/hmkx/HiNeRV.git",
+                "head_sha": "fdb92ec22492246f800621dfd454f6a5c62ab75b",
+                "audit_root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV",
+            },
+            "hnerv_pr95_control": {
+                "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+                "head_sha": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+                "audit_root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HNeRV",
+            },
+        },
         generated_utc="2026-06-02T03:40:00+00:00",
     )
 
     assert payload["schema"] == SCHEMA
     assert payload["go_no_go_verdict"] == (
-        "GO_LOCAL_STACK_OPTIMIZATION__NO_GO_EXACT_PROMOTION_OR_SCORE_CLAIM"
+        "GO_LOCAL_STACK_OPTIMIZATION__NO_GO_PRODUCTION_HARDENED_OR_EXACT_CLAIM"
     )
     assert payload["top_priority_carriers"] == ["snerv", "hinerv"]
     assert payload["priority_policy"]["individually_fractally_optimized_full_stacks"]
@@ -62,6 +80,49 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
     assert payload["rank_or_kill_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["exact_or_full_video_launched"] is False
+    assert payload["production_hardened_claim"] is False
+    assert payload["source_faithful_stack_claim"] is False
+    assert payload["priority_policy"]["no_fake_implementations_allowed"] is True
+    assert payload["modelsize_archive_budget_policy"]["verdict"] == (
+        "NO_GO_FULL_LEVERAGE_UNTIL_MODEL_SIZE_TO_ARCHIVE_BYTES_CURVE_EXISTS"
+    )
+    assert "--modelsize" in payload["modelsize_archive_budget_policy"][
+        "official_controls_to_bind"
+    ]
+    assert payload["modelsize_archive_budget_policy"]["contest_inversion_target"][
+        "byte_caps_to_sweep"
+    ] == [36_000, 72_000, 120_000, 150_000, 178_417]
+    assert "nerv_modelsize_to_archive_bytes_curve_missing" in payload[
+        "modelsize_archive_budget_policy"
+    ]["production_blockers"]
+    assert payload["source_faithfulness"]["policy"][
+        "bad_scores_from_non_source_faithful_stacks_are_bug_signals"
+    ]
+    assert payload["source_faithfulness"]["production_hardened_claim"] is False
+    official = {
+        row["stack_id"]: row
+        for row in payload["source_faithfulness"]["official_sources"]
+    }
+    assert official["snerv"]["observed_source"]["head_sha"] == (
+        "0844a08f9591eea9625f8b961ed91d08030e06d1"
+    )
+    assert official["snerv"]["parity_status"] == (
+        "oss_snapshot_observed_not_yet_contest_parity_proven"
+    )
+    local_audit = {
+        row["stack_id"]: row
+        for row in payload["source_faithfulness"]["local_implementation_audit"]
+    }
+    assert local_audit["snerv"]["status"] == (
+        "simplified_contest_adapter_not_source_faithful"
+    )
+    assert "official_MFU_multi_resolution_fusion_blocks" in local_audit["snerv"][
+        "missing_source_features"
+    ]
+    assert local_audit["hinerv"]["status"] == "l0_sketch_not_source_faithful"
+    assert "official_hierarchical_feature_grid_encoding" in local_audit["hinerv"][
+        "missing_source_features"
+    ]
     assert payload["synergy_enhancers"][0]["enhancer_id"] == (
         "sr_nerv_trained_scorer_aware"
     )
@@ -96,6 +157,8 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
         if action["id"] == "snerv_pair_robust_decoder_qat_continuation"
     )
     assert "--search-mode nes_pair_robust" in snerv_qat["command"]
+    assert "--byte-pressure-multiplier 8.0" in snerv_qat["command"]
+    assert "--max-archive-byte-growth 0" in snerv_qat["command"]
     assert "--seg-slack 0.00005" in snerv_qat["command"]
     assert "--pose-hard-guard" not in snerv_qat["command"]
     assert (
@@ -106,6 +169,10 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
         "full_600_byte_closed_receiver_proof_missing_for_snerv_and_hinerv"
         in payload["blockers"]
     )
+    assert "snerv_simplified_contest_adapter_not_source_faithful" in payload[
+        "blockers"
+    ]
+    assert "hinerv_l0_sketch_not_source_faithful" in payload["blockers"]
 
 
 def test_missing_pr95_intake_blocks_baseline_authority(tmp_path: Path) -> None:
@@ -126,6 +193,22 @@ def test_missing_pr95_intake_blocks_baseline_authority(tmp_path: Path) -> None:
     assert "pr95_public_intake_root_missing" in payload["baseline"]["blockers"]
     assert "pr95_public_intake_root_missing" in payload["blockers"]
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_source_faithfulness_matrix_blocks_missing_oss_and_sketch_claims() -> None:
+    payload = build_source_faithfulness_matrix({})
+
+    assert payload["verdict"].startswith("NO_GO_PRODUCTION_HARDENED_CLAIM")
+    assert payload["production_hardened_claim"] is False
+    assert payload["source_faithful_stack_claim"] is False
+    assert payload["policy"]["minimal_or_sketch_adapters_are_local_only"] is True
+    assert "snerv_official_oss_snapshot_missing" in payload["blockers"]
+    assert "hinerv_official_oss_snapshot_missing" in payload["blockers"]
+    assert "hnerv_pr95_control_official_oss_snapshot_missing" in payload["blockers"]
+    assert "snerv_simplified_contest_adapter_not_source_faithful" in payload[
+        "blockers"
+    ]
+    assert "hinerv_l0_sketch_not_source_faithful" in payload["blockers"]
 
 
 def test_nongit_upstream_blocks_baseline_authority(tmp_path: Path) -> None:

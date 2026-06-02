@@ -61,6 +61,14 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pr95-pr-state")
     parser.add_argument("--pr95-head-sha")
     parser.add_argument("--pr95-head-ref")
+    parser.add_argument("--snerv-oss-head-sha")
+    parser.add_argument("--hinerv-oss-head-sha")
+    parser.add_argument("--hnerv-oss-head-sha")
+    parser.add_argument(
+        "--oss-audit-root",
+        type=Path,
+        help="SSD-backed source-audit root containing official NeRV repo snapshots.",
+    )
     parser.add_argument("--lane-id", default=DEFAULT_LANE_ID)
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument(
@@ -90,12 +98,33 @@ def main(argv: list[str] | None = None) -> int:
     if flag_metadata:
         pr95_pr_metadata = {**(pr95_pr_metadata or {}), **flag_metadata}
 
+    oss_source_metadata = {}
+    oss_audit_root = args.oss_audit_root.resolve() if args.oss_audit_root else None
+    for stack_id, head_sha, repo_name, repo_url in (
+        ("snerv", args.snerv_oss_head_sha, "SNeRV", "https://github.com/qwertja/SNeRV.git"),
+        ("hinerv", args.hinerv_oss_head_sha, "HiNeRV", "https://github.com/hmkx/HiNeRV.git"),
+        (
+            "hnerv_pr95_control",
+            args.hnerv_oss_head_sha,
+            "HNeRV",
+            "https://github.com/haochen-rye/HNeRV.git",
+        ),
+    ):
+        row = {"repo_url": repo_url}
+        if head_sha:
+            row["head_sha"] = head_sha
+        if oss_audit_root is not None:
+            row["audit_root"] = (oss_audit_root / "repos" / repo_name).as_posix()
+        if len(row) > 1:
+            oss_source_metadata[stack_id] = row
+
     payload = build_nerv_top_priority_stack_seam(
         repo_root=args.repo_root,
         upstream_repo_dir=args.upstream_repo_dir,
         pr95_intake_root=args.pr95_intake_root,
         active_claims_path=args.active_claims_path,
         pr95_pr_metadata=pr95_pr_metadata,
+        oss_source_metadata=oss_source_metadata,
         lane_id=args.lane_id,
     )
     out_path = args.out or _default_out()

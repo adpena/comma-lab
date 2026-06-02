@@ -50,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
         default="random_signed",
     )
     parser.add_argument("--perturb-scale", type=float, default=0.02)
+    parser.add_argument("--byte-pressure-multiplier", type=float, default=1.0)
+    parser.add_argument("--max-archive-byte-growth", type=int, default=None)
     parser.add_argument("--pose-slack", type=float, default=0.0)
     parser.add_argument("--seg-slack", type=float, default=0.0)
     parser.add_argument("--pair-guard-min-score-improved-fraction", type=float, default=0.0)
@@ -72,6 +74,8 @@ def main(argv: list[str] | None = None) -> int:
         max_trials=args.max_trials,
         search_mode=args.search_mode,
         perturb_scale=args.perturb_scale,
+        byte_pressure_multiplier=args.byte_pressure_multiplier,
+        max_archive_byte_growth=args.max_archive_byte_growth,
         pose_slack=args.pose_slack,
         seg_slack=args.seg_slack,
         pair_guard_min_score_improved_fraction=(
@@ -97,6 +101,12 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  evaluations: {result.scorer_loop_evaluations}")
     print(f"  baseline_score_linf: {result.baseline.score_linf}")
     print(f"  best_score_linf: {result.best.score_linf}")
+    print(f"  byte_pressure_multiplier: {result.byte_pressure_multiplier}")
+    print(f"  max_archive_byte_growth: {result.max_archive_byte_growth}")
+    print(
+        "  best_rate_aware_objective_linf: "
+        f"{result.best.rate_aware_objective_linf}"
+    )
     print(f"  accepted_improvement: {result.accepted_improvement}")
     print(f"  ready_for_pose_guard_gate: {result.ready_for_pose_guard_gate}")
     print(f"  ready_for_exact_eval_dispatch: {result.ready_for_exact_eval_dispatch}")

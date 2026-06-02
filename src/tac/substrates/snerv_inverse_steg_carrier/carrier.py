@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""SNeRV carrier — store LF coefficients, GENERATE HF detail (super-small rate).
+"""SNeRV-inspired carrier — store LF coefficients, GENERATE HF detail.
 
 The SNeRV (Scalable NeRV, arXiv 2501.01681) carrier represents a frame as a
 multi-level orthonormal 2D wavelet pyramid and:
@@ -19,18 +19,21 @@ the LF approximation already captures the low-frequency structure SegNet's
 stride-2 stem actually sees, and the L-inf pose-Fisher allocation (``allocation.py``)
 spends the LF bit budget exactly where the detector is sensitive.
 
-Decoder generation model (faithful, not toy): at each pyramid level the HF detail
-tuple ``(LH, HL, HH)`` is GENERATED from the current approximation ``LL`` via a
-learned 3x3 separable linear predictor per subband. This is the minimal SNeRV
-"generate-HF-from-LF" decoder that is (a) numpy-portable for the inflate path
-(no torch/scorer at the receiver per ``tac.contest_eval_contract``), (b)
-deterministic CPU-or-CUDA-agnostic, (c) byte-cheap (9 weights x 3 subbands x L
-levels x 3 channels). The decoder is trained ($0 MLX/MPS local) to minimize the
-SCORE-AWARE reconstruction objective on real ``upstream/videos/0.mkv`` frames.
+Decoder generation model (contest adapter, not official parity): at each pyramid
+level the HF detail tuple ``(LH, HL, HH)`` is GENERATED from the current
+approximation ``LL`` via a learned 3x3 separable linear predictor per subband.
+This is a local SNeRV-inspired "generate-HF-from-LF" decoder chosen for the
+numpy-portable inflate path: no torch/scorer at the receiver, deterministic
+CPU-or-CUDA-agnostic, byte-cheap (9 weights x 3 subbands x L levels x 3
+channels). It is NOT the official SNeRV implementation until the official
+encoder/decoder stride stack, MFU, HFR heads, SNeRV_T temporal path, modelsize
+budgeting, and quantized checkpoint replay pass the source-faithfulness gate in
+``tac.analysis.nerv_top_priority_stack_seam``. Current bad advisory scores are
+therefore implementation/config/wiring evidence, not a method-negative verdict.
 
-[verified-against: SNeRV arXiv 2501.01681 store-LF/generate-HF; the DWT adjoint
-exactness in ``dwt.py`` (rel-residual 0.0); the bit-exact CPU scorer mirror
-``tac.analysis.score_exact_saliency.load_score_exact_scorers``.]
+[verified-local: DWT adjoint exactness in ``dwt.py`` and deterministic receiver
+roundtrip surfaces. Source-faithful SNeRV parity remains blocked until the
+official OSS/paper gates pass.]
 
 Catalog #290 (canonical-vs-unique): the DWT is ADOPTED canonical (``dwt.py`` uses
 pywt). The HF-generation decoder is FORK_PRINCIPLED — SNeRV's distinguishing

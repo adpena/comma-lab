@@ -110,6 +110,7 @@ class SnervDecoderEval:
     d_seg_linf: float
     d_pose_linf: float
     score_linf: float
+    rate_aware_objective_linf: float
     rate_term: float
     receiver_archive_replay_verified: bool
     accepted: bool
@@ -138,6 +139,8 @@ class SnervScorerLoopDecoderQatSmokeResult:
     max_trials: int
     search_mode: str
     perturb_scale: float
+    byte_pressure_multiplier: float
+    max_archive_byte_growth: int | None
     pose_slack: float
     seg_slack: float
     pair_guard_min_score_improved_fraction: float
@@ -212,6 +215,8 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     max_trials: int = 2,
     search_mode: str = "random_signed",
     perturb_scale: float = 0.02,
+    byte_pressure_multiplier: float = 1.0,
+    max_archive_byte_growth: int | None = None,
     pose_slack: float = 0.0,
     seg_slack: float = 0.0,
     pair_guard_min_score_improved_fraction: float = 0.0,
@@ -240,6 +245,14 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         raise SnervScorerLoopDecoderQatError("max_trials must be >= 0")
     if perturb_scale < 0:
         raise SnervScorerLoopDecoderQatError("perturb_scale must be >= 0")
+    if byte_pressure_multiplier < 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "byte_pressure_multiplier must be >= 1.0"
+        )
+    if max_archive_byte_growth is not None and max_archive_byte_growth < 0:
+        raise SnervScorerLoopDecoderQatError(
+            "max_archive_byte_growth must be >= 0 when provided"
+        )
     if pose_slack < 0:
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
     if seg_slack < 0:
@@ -288,6 +301,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         label="least_squares_qat_baseline",
         iteration=0,
         accepted=True,
+        byte_pressure_multiplier=byte_pressure_multiplier,
     )
     best_decoder = prepared.baseline_decoder
     best_eval = baseline
@@ -317,6 +331,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 label=f"{direction_label}_plus_probe",
                 iteration=trial,
                 accepted=False,
+                byte_pressure_multiplier=byte_pressure_multiplier,
             )
             minus_row = _evaluate_decoder(
                 _vector_to_decoder(current_vec - scale * direction, layout),
@@ -327,12 +342,15 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 label=f"{direction_label}_minus_probe",
                 iteration=trial,
                 accepted=False,
+                byte_pressure_multiplier=byte_pressure_multiplier,
             )
             plus_objective = _nes_pair_robust_objective(
                 plus_row,
                 best_eval,
                 pose_slack=pose_slack,
                 seg_slack=seg_slack,
+                byte_pressure_multiplier=byte_pressure_multiplier,
+                max_archive_byte_growth=max_archive_byte_growth,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -345,6 +363,8 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 best_eval,
                 pose_slack=pose_slack,
                 seg_slack=seg_slack,
+                byte_pressure_multiplier=byte_pressure_multiplier,
+                max_archive_byte_growth=max_archive_byte_growth,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -367,6 +387,12 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                                         best_eval,
                                         pose_slack=pose_slack,
                                         seg_slack=seg_slack,
+                                        byte_pressure_multiplier=(
+                                            byte_pressure_multiplier
+                                        ),
+                                        max_archive_byte_growth=(
+                                            max_archive_byte_growth
+                                        ),
                                         pair_guard_min_score_improved_fraction=(
                                             pair_guard_min_score_improved_fraction
                                         ),
@@ -392,12 +418,15 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 label="nes_pair_robust_update",
                 iteration=max_trials + 1,
                 accepted=False,
+                byte_pressure_multiplier=byte_pressure_multiplier,
             )
             accepted = decoder_trial_passes_pose_guard(
                 row,
                 best_eval,
                 pose_slack=pose_slack,
                 seg_slack=seg_slack,
+                byte_pressure_multiplier=byte_pressure_multiplier,
+                max_archive_byte_growth=max_archive_byte_growth,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -418,6 +447,8 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                         best_eval,
                         pose_slack=pose_slack,
                         seg_slack=seg_slack,
+                        byte_pressure_multiplier=byte_pressure_multiplier,
+                        max_archive_byte_growth=max_archive_byte_growth,
                         pair_guard_min_score_improved_fraction=(
                             pair_guard_min_score_improved_fraction
                         ),
@@ -443,12 +474,15 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     label=f"{direction_label}_{'plus' if sign > 0 else 'minus'}",
                     iteration=trial,
                     accepted=False,
+                    byte_pressure_multiplier=byte_pressure_multiplier,
                 )
                 accepted = decoder_trial_passes_pose_guard(
                     row,
                     best_eval,
                     pose_slack=pose_slack,
                     seg_slack=seg_slack,
+                    byte_pressure_multiplier=byte_pressure_multiplier,
+                    max_archive_byte_growth=max_archive_byte_growth,
                     pair_guard_min_score_improved_fraction=(
                         pair_guard_min_score_improved_fraction
                     ),
@@ -469,6 +503,8 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                             best_eval,
                             pose_slack=pose_slack,
                             seg_slack=seg_slack,
+                            byte_pressure_multiplier=byte_pressure_multiplier,
+                            max_archive_byte_growth=max_archive_byte_growth,
                             pair_guard_min_score_improved_fraction=(
                                 pair_guard_min_score_improved_fraction
                             ),
@@ -504,6 +540,12 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         max_trials=int(max_trials),
         search_mode=search_mode,
         perturb_scale=float(perturb_scale),
+        byte_pressure_multiplier=float(byte_pressure_multiplier),
+        max_archive_byte_growth=(
+            None
+            if max_archive_byte_growth is None
+            else int(max_archive_byte_growth)
+        ),
         pose_slack=float(pose_slack),
         seg_slack=float(seg_slack),
         pair_guard_min_score_improved_fraction=float(
@@ -591,6 +633,8 @@ def decoder_trial_passes_pose_guard(
     *,
     pose_slack: float = 0.0,
     seg_slack: float = 0.0,
+    byte_pressure_multiplier: float = 1.0,
+    max_archive_byte_growth: int | None = None,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
 ) -> bool:
@@ -600,6 +644,14 @@ def decoder_trial_passes_pose_guard(
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
     if seg_slack < 0:
         raise SnervScorerLoopDecoderQatError("seg_slack must be >= 0")
+    if byte_pressure_multiplier < 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "byte_pressure_multiplier must be >= 1.0"
+        )
+    if max_archive_byte_growth is not None and max_archive_byte_growth < 0:
+        raise SnervScorerLoopDecoderQatError(
+            "max_archive_byte_growth must be >= 0 when provided"
+        )
     pair_guard_blockers = _pair_guard_blockers(
         candidate,
         current_best,
@@ -612,6 +664,19 @@ def decoder_trial_passes_pose_guard(
         and candidate.d_pose_linf <= current_best.d_pose_linf + float(pose_slack)
         and candidate.d_seg_linf <= current_best.d_seg_linf + float(seg_slack)
         and candidate.score_linf < current_best.score_linf
+        and _rate_aware_eval_objective(
+            candidate,
+            byte_pressure_multiplier=byte_pressure_multiplier,
+        )
+        < _rate_aware_eval_objective(
+            current_best,
+            byte_pressure_multiplier=byte_pressure_multiplier,
+        )
+        and (
+            max_archive_byte_growth is None
+            or candidate.archive_bytes
+            <= current_best.archive_bytes + int(max_archive_byte_growth)
+        )
         and not pair_guard_blockers
     )
 
@@ -670,6 +735,8 @@ def _trial_blockers(
     *,
     pose_slack: float,
     seg_slack: float,
+    byte_pressure_multiplier: float = 1.0,
+    max_archive_byte_growth: int | None = None,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
 ) -> tuple[str, ...]:
@@ -682,6 +749,20 @@ def _trial_blockers(
         blockers.append("seg_gate_failed")
     if candidate.score_linf >= current_best.score_linf:
         blockers.append("score_gate_failed")
+    if _rate_aware_eval_objective(
+        candidate,
+        byte_pressure_multiplier=byte_pressure_multiplier,
+    ) >= _rate_aware_eval_objective(
+        current_best,
+        byte_pressure_multiplier=byte_pressure_multiplier,
+    ):
+        blockers.append("rate_aware_score_gate_failed")
+    if (
+        max_archive_byte_growth is not None
+        and candidate.archive_bytes
+        > current_best.archive_bytes + int(max_archive_byte_growth)
+    ):
+        blockers.append("byte_growth_guard_failed")
     blockers.extend(
         _pair_guard_blockers(
             candidate,
@@ -738,8 +819,10 @@ def _nes_pair_robust_objective(
     *,
     pose_slack: float,
     seg_slack: float,
-    pair_guard_min_score_improved_fraction: float,
-    pair_guard_max_pose_worsened_fraction: float,
+    byte_pressure_multiplier: float = 1.0,
+    max_archive_byte_growth: int | None = None,
+    pair_guard_min_score_improved_fraction: float = 0.0,
+    pair_guard_max_pose_worsened_fraction: float = 1.0,
 ) -> float:
     """Return a lower-is-better local objective for NES probe ranking.
 
@@ -748,11 +831,24 @@ def _nes_pair_robust_objective(
     over-penalizes pair-local luck and PoseNet regressions.
     """
 
-    score = float(candidate.score_linf)
+    score = _rate_aware_eval_objective(
+        candidate,
+        byte_pressure_multiplier=byte_pressure_multiplier,
+    )
     objective = score if np.isfinite(score) else 1.0e12
     penalty = 0.0
     if not candidate.receiver_archive_replay_verified:
         penalty += 1.0e9
+    if (
+        max_archive_byte_growth is not None
+        and candidate.archive_bytes
+        > current_best.archive_bytes + int(max_archive_byte_growth)
+    ):
+        penalty += 1.0e6 * float(
+            candidate.archive_bytes
+            - current_best.archive_bytes
+            - int(max_archive_byte_growth)
+        )
     penalty += 1.0e6 * max(
         0.0,
         float(candidate.d_pose_linf)
@@ -808,6 +904,20 @@ def _nes_pair_robust_objective(
         + 0.25 * float(np.mean(score_deltas))
         + 0.25 * float(np.max(score_deltas))
     )
+
+
+def _rate_aware_eval_objective(
+    row: SnervDecoderEval,
+    *,
+    byte_pressure_multiplier: float,
+) -> float:
+    if byte_pressure_multiplier < 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "byte_pressure_multiplier must be >= 1.0"
+        )
+    return float(row.score_linf) + (
+        float(byte_pressure_multiplier) - 1.0
+    ) * float(row.rate_term)
 
 
 def _decoder_search_directions(
@@ -979,6 +1089,7 @@ def _evaluate_decoder(
     label: str,
     iteration: int,
     accepted: bool,
+    byte_pressure_multiplier: float,
 ) -> SnervDecoderEval:
     quantized, qstats = quantize_decoder_for_qat(decoder, bits=qat_bits)
     archive = _pack_receiver_archive(prepared, quantized)
@@ -1019,6 +1130,9 @@ def _evaluate_decoder(
     rate = CONTEST_BYTE_PRICE * archive.total_bytes
     score = 100.0 * d_seg + float(np.sqrt(10.0 * max(d_pose, 0.0))) + rate
     blockers = () if replay_ok else ("receiver_archive_replay_failed",)
+    rate_aware_objective = score + (
+        float(byte_pressure_multiplier) - 1.0
+    ) * float(rate)
     return SnervDecoderEval(
         label=label,
         iteration=int(iteration),
@@ -1027,6 +1141,7 @@ def _evaluate_decoder(
         d_seg_linf=d_seg,
         d_pose_linf=d_pose,
         score_linf=score,
+        rate_aware_objective_linf=float(rate_aware_objective),
         rate_term=rate,
         receiver_archive_replay_verified=bool(replay_ok),
         accepted=bool(accepted),
@@ -1107,6 +1222,7 @@ def _replace_eval_acceptance(
         d_seg_linf=row.d_seg_linf,
         d_pose_linf=row.d_pose_linf,
         score_linf=row.score_linf,
+        rate_aware_objective_linf=row.rate_aware_objective_linf,
         rate_term=row.rate_term,
         receiver_archive_replay_verified=row.receiver_archive_replay_verified,
         accepted=accepted,
@@ -1132,6 +1248,8 @@ def _eval_as_gate_row(row: SnervDecoderEval) -> dict[str, Any]:
         "d_seg_mean_linf": row.d_seg_linf,
         "d_pose_mean_linf": row.d_pose_linf,
         "score_linf": row.score_linf,
+        "rate_aware_objective_linf": row.rate_aware_objective_linf,
+        "rate_term": row.rate_term,
         "accepted": row.accepted,
         "blockers": list(row.blockers),
         "pair_count": len(row.per_pair),
