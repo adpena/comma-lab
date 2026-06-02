@@ -2860,6 +2860,7 @@ def _family_agnostic_materializer_sweep_command(
         blockers.append(f"family_agnostic_materializer_sweep_target_unknown:{target_kind}")
     input_paths = [_sweep_input_path_from_archive_spec(spec) for spec in archive_specs]
     command: list[str] = []
+    source_runtime_for_contract: str | None = None
     if not blockers:
         assert output_dir is not None
         assert output_json is not None
@@ -2878,6 +2879,15 @@ def _family_agnostic_materializer_sweep_command(
         ]
         for spec in archive_specs:
             command.extend(["--archive", spec])
+        source_runtime = _path_context_value(context, "source_runtime_dir")
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "source_submission_dir")
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "inflate_runtime_dir")
+        if source_runtime is not None:
+            source_runtime_for_contract = source_runtime
+            input_paths.append(source_runtime)
+            command.extend(["--source-runtime-dir", source_runtime])
 
     if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
         section_manifest = _path_context_value(context, "section_manifest")
@@ -3097,6 +3107,11 @@ def _family_agnostic_materializer_sweep_command(
                 "target_kind": target_kind,
                 "output_json": output_json,
                 "observation_jsonl": observation_jsonl,
+                **(
+                    {"source_runtime_dir": source_runtime_for_contract}
+                    if source_runtime_for_contract is not None
+                    else {}
+                ),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,

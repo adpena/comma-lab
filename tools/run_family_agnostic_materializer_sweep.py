@@ -131,6 +131,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--packet-member-manifest", type=Path)
     parser.add_argument("--merge-contract", type=Path)
     parser.add_argument("--merged-member-name")
+    parser.add_argument("--source-runtime-dir", type=Path)
     parser.add_argument("--packet-member-merge-source-runtime-dir", type=Path)
     parser.add_argument(
         "--allow-packet-member-merge-runtime-sidecars",
@@ -173,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
             factorization_contract=args.factorization_contract,
             merge_contract=args.merge_contract,
             merged_member_name=args.merged_member_name,
+            source_runtime_dir=args.source_runtime_dir,
             packet_member_merge_source_runtime_dir=(
                 args.packet_member_merge_source_runtime_dir
             ),
@@ -240,6 +242,7 @@ def build_materializer_empirical_sweep(
     packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
     merge_contract: str | Path | Mapping[str, Any] | None = None,
     merged_member_name: str | None = None,
+    source_runtime_dir: str | Path | None = None,
     packet_member_merge_source_runtime_dir: str | Path | None = None,
     allow_packet_member_merge_runtime_sidecars: bool = False,
     payload_member_name: str = "p",
@@ -283,6 +286,7 @@ def build_materializer_empirical_sweep(
     if not archive_specs:
         raise FamilyAgnosticMaterializerError("at least one archive is required")
     output_root = _resolve(output_dir)
+    runtime_context = _runtime_context_fields(source_runtime_dir)
     rows: list[dict[str, Any]] = []
     for index, (label, archive_path) in enumerate(archive_specs, start=1):
         archive = _resolve(archive_path)
@@ -321,6 +325,7 @@ def build_materializer_empirical_sweep(
             allow_overwrite=allow_overwrite,
             min_free_bytes=min_free_bytes,
         )
+        result.update(runtime_context)
         write_json_artifact(
             manifest_path,
             result,
@@ -650,6 +655,34 @@ def _target_materializer_id(target_kind: str) -> str:
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         return TENSOR_FACTORIZE_MATERIALIZER_ID
     raise FamilyAgnosticMaterializerError(f"unsupported target kind: {target_kind}")
+
+
+def _runtime_context_fields(source_runtime_dir: str | Path | None) -> dict[str, Any]:
+    if source_runtime_dir is None:
+        return {}
+    runtime_dir = _resolve(source_runtime_dir)
+    inflate_sh = runtime_dir / "inflate.sh"
+    blockers: list[str] = []
+    if not runtime_dir.is_dir():
+        blockers.append("source_runtime_dir_missing")
+    if not inflate_sh.is_file():
+        blockers.append("source_runtime_inflate_sh_missing")
+    if blockers:
+        return {
+            "source_runtime_dir": runtime_dir.as_posix(),
+            "source_submission_dir": runtime_dir.as_posix(),
+            "inflate_runtime_dir": runtime_dir.as_posix(),
+            "source_runtime_context_blockers": blockers,
+        }
+    runtime_tree_sha = tree_sha256(runtime_dir)
+    return {
+        "source_runtime_dir": runtime_dir.as_posix(),
+        "source_submission_dir": runtime_dir.as_posix(),
+        "inflate_runtime_dir": runtime_dir.as_posix(),
+        "source_inflate_sh_path": inflate_sh.as_posix(),
+        "runtime_tree_sha256": runtime_tree_sha,
+        "expected_runtime_tree_sha256": runtime_tree_sha,
+    }
 
 
 def _observation_from_manifest(

@@ -163,6 +163,15 @@ def test_materializer_submission_closure_clears_static_readiness_blockers(
             }
         ],
     }
+    source_queue["top_k"][0].update(
+        archive_bound_candidate_contract_fields_for_row(
+            source_queue["top_k"][0],
+            repo_root=repo,
+            selected_transform_kind="packet_member_zip_header_elide_v1",
+            family_id="unit_test",
+            candidate_chain_id="zip_header_fixture",
+        )
+    )
     source_queue_path.write_text(json.dumps(source_queue), encoding="utf-8")
 
     report = build_materializer_submission_runtime_closure(
@@ -188,6 +197,12 @@ def test_materializer_submission_closure_clears_static_readiness_blockers(
     )
     closed_row = closed_queue["top_k"][0]
     assert closed_row["candidate_archive_path"] == "closure/submission/archive.zip"
+    assert closed_row["archive_bound_candidate_contract"]["candidate_archive"][
+        "path"
+    ] == "closure/submission/archive.zip"
+    assert closed_row["materializer_preclosure_archive_bound_candidate_contract"][
+        "candidate_archive"
+    ]["path"] == "artifacts/candidate.zip"
     assert closed_row["archive_manifest_path"] == (
         "closure/submission/archive_manifest.json"
     )

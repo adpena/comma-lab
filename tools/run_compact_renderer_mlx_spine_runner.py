@@ -478,12 +478,30 @@ def _compact_queue_id_token(value: str, *, fallback: str = "carrier") -> str:
     return token.strip("._-") or fallback
 
 
+def _runnable_runtime_submission_dir(
+    runtime_submission_dir: str | Path | None,
+    *,
+    repo_root: Path,
+) -> tuple[Path | None, list[str]]:
+    """Return a runtime dir only when it can actually feed ``inflate.sh``."""
+
+    if runtime_submission_dir is None:
+        return None, []
+    runtime_dir = _resolve(runtime_submission_dir, base=repo_root)
+    if not runtime_dir.is_dir():
+        return None, ["carrier_post_export_runtime_submission_dir_missing"]
+    if not (runtime_dir / "inflate.sh").is_file():
+        return None, ["carrier_post_export_runtime_submission_dir_missing_inflate_sh"]
+    return runtime_dir, []
+
+
 def _compile_carrier_post_export_materializer_plan(
     *,
     output_dir: str | Path,
     archive_path: str | Path | None,
     archive_sha256: Any = None,
     archive_bytes: Any = None,
+    runtime_submission_dir: str | Path | None = None,
     family: str,
     repo_root: str | Path = REPO_ROOT,
     local_cpu_concurrency: int = 2,
@@ -507,6 +525,10 @@ def _compile_carrier_post_export_materializer_plan(
     result_root = out / "carrier_post_export_materializers"
     plan_path = result_root / "post_export_materializer_plan.json"
     family_token = _compact_queue_id_token(str(family), fallback="carrier")
+    effective_runtime_dir, runtime_context_blockers = _runnable_runtime_submission_dir(
+        runtime_submission_dir,
+        repo_root=root,
+    )
     blockers: list[str] = []
     archive_bytes_int: int | None = None
     if archive_bytes is not None:
@@ -521,6 +543,15 @@ def _compile_carrier_post_export_materializer_plan(
         "archive_path": str(archive_path) if archive_path is not None else None,
         "archive_sha256": str(archive_sha256) if archive_sha256 else None,
         "archive_bytes": archive_bytes_int,
+        "runtime_submission_dir": (
+            str(runtime_submission_dir) if runtime_submission_dir is not None else None
+        ),
+        "effective_runtime_submission_dir": (
+            effective_runtime_dir.as_posix()
+            if effective_runtime_dir is not None
+            else None
+        ),
+        "runtime_context_blockers": list(runtime_context_blockers),
         "materializer_results_root": result_root.as_posix(),
         "plan_path": plan_path.as_posix(),
         "queue_launch_executed": False,
@@ -552,6 +583,7 @@ def _compile_carrier_post_export_materializer_plan(
             source_kind="compact_carrier_byte_closed_export",
             expected_sha256=expected_sha,
             expected_bytes=archive_bytes_int,
+            source_runtime_dir=effective_runtime_dir,
         )
         queue_id = (
             f"carrier_post_export_{family_token}_{str(record['sha256'])[:12]}"
@@ -603,7 +635,7 @@ def _compile_carrier_post_export_materializer_plan(
             "experiment_count": payloads["bootstrap"].get("experiment_count"),
             "step_count": payloads["bootstrap"].get("step_count"),
             "target_coverage": payloads["target_coverage"],
-            "blockers": [],
+            "blockers": _dedupe(runtime_context_blockers),
         }
     except (
         FrontierRateAttackBootstrapError,
@@ -1557,6 +1589,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         archive_sha256=row.get("candidate_archive_sha256"),
         archive_bytes=row.get("candidate_archive_bytes"),
         family="snerv",
+        runtime_submission_dir=package_dir / "submission",
         repo_root=root,
     )
     post_export_materializer_execution = (
@@ -2230,6 +2263,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
         archive_sha256=artifact_dict.get("archive_sha256"),
         archive_bytes=artifact_dict.get("archive_bytes"),
         family="pr95_hnerv",
+        runtime_submission_dir=receiver_proof_runtime_dir,
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])
@@ -2651,6 +2685,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
         archive_sha256=artifact_dict.get("archive_sha256"),
         archive_bytes=artifact_dict.get("archive_bytes"),
         family="pact_nerv_vq",
+        runtime_submission_dir=training_dir / "submission",
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])
@@ -2938,6 +2973,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         archive_sha256=artifact_dict.get("archive_sha256"),
         archive_bytes=artifact_dict.get("archive_bytes"),
         family="hi_nerv",
+        runtime_submission_dir=training_dir / "submission",
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])
@@ -3228,6 +3264,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
         archive_sha256=artifact_dict.get("archive_sha256"),
         archive_bytes=artifact_dict.get("archive_bytes"),
         family="pact_nerv_selector_v4",
+        runtime_submission_dir=training_dir / "submission",
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])

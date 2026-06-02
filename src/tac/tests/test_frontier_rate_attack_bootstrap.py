@@ -271,6 +271,54 @@ def test_frontier_bootstrap_builds_queue_with_experiment_metadata(tmp_path: Path
         assert metadata["exact_readiness_followup_requested"] is False
 
 
+def test_frontier_bootstrap_propagates_source_runtime_context(
+    tmp_path: Path,
+) -> None:
+    archive = _write_archive(tmp_path / "source" / "archive.zip")
+    runtime = tmp_path / "source" / "submission"
+    runtime.mkdir(parents=True)
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    (runtime / "inflate.py").write_text("print('inflate')\n", encoding="utf-8")
+    record = archive_record(
+        label="carrier",
+        archive_path=archive,
+        repo_root=tmp_path,
+        source_kind="compact_carrier_byte_closed_export",
+        source_runtime_dir=runtime,
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="carrier_runtime_context",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=[ARCHIVE_ZIP_REPACK_TARGET_KIND],
+        include_optional_target_blockers=False,
+        source_work_queue_path=tmp_path / "results" / "work_queue.json",
+        include_exact_readiness_followup=True,
+    )
+
+    context = payloads["contexts"]["rows"][0]["context"]
+    assert context["source_runtime_dir"] == "source/submission"
+    assert context["source_submission_dir"] == "source/submission"
+    assert context["source_inflate_sh_path"] == "source/submission/inflate.sh"
+    assert context["inflate_runtime_dir"] == "source/submission"
+    assert context["packet_member_merge_source_runtime_dir"] == "source/submission"
+    assert context["renderer_payload_dfl1_source_runtime_dir"] == "source/submission"
+    assert context["tensor_factorize_source_runtime_dir"] == "source/submission"
+    assert len(context["runtime_tree_sha256"]) == 64
+    work_row = payloads["work_queue"]["rows"][0]
+    command = work_row["command"]
+    assert "--source-runtime-dir" in command
+    assert command[command.index("--source-runtime-dir") + 1] == "source/submission"
+    assert (
+        work_row["telemetry"]["family_agnostic_materializer_sweep_contract"][
+            "source_runtime_dir"
+        ]
+        == "source/submission"
+    )
+
+
 def test_frontier_bootstrap_default_targets_include_archive_zip_repack(
     tmp_path: Path,
 ) -> None:

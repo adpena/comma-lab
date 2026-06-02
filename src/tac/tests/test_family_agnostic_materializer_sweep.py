@@ -123,6 +123,10 @@ def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
 ) -> None:
     positive = tmp_path / "header_overhead.zip"
     zero = tmp_path / "plain.zip"
+    runtime = tmp_path / "submission"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    (runtime / "inflate.py").write_text("print('inflate')\n", encoding="utf-8")
     _write_zip(positive, payload=b"A" * 256, header_overhead=True)
     _write_zip(zero, payload=b"B" * 256, header_overhead=False)
 
@@ -130,6 +134,7 @@ def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
         target_kind="packet_member_zip_header_elide_v1",
         archives=[f"positive={positive}", f"zero={zero}"],
         output_dir=tmp_path / "sweep",
+        source_runtime_dir=runtime,
     )
 
     assert payload["schema"] == SWEEP_SCHEMA
@@ -148,6 +153,14 @@ def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
     assert rows["positive"]["observed_rate_gain"] == rows["positive"]["observed_score_gain"]
     assert rows["positive"]["rate_positive"] is True
     assert rows["positive"]["receiver_contract_satisfied"] is True
+    assert rows["positive"]["source_runtime_dir"] == runtime.resolve().as_posix()
+    assert rows["positive"]["source_inflate_sh_path"] == (
+        runtime / "inflate.sh"
+    ).resolve().as_posix()
+    assert len(rows["positive"]["runtime_tree_sha256"]) == 64
+    assert rows["positive"]["expected_runtime_tree_sha256"] == rows["positive"][
+        "runtime_tree_sha256"
+    ]
     assert rows["positive"]["recommended_planner_action"] == (
         "keep_rate_positive_candidate_for_inflate_parity_gate"
     )

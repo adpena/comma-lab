@@ -23,6 +23,7 @@ from typing import Any
 
 from tac.optimization.archive_bound_candidate_contract import (
     ArchiveBoundCandidateContractError,
+    archive_bound_candidate_contract_fields_for_row,
     has_archive_bound_candidate_contract_payload,
     selected_archive_bound_candidate_contract_from_payload,
 )
@@ -108,6 +109,14 @@ SOURCE_JSON_SKIP_NAMES = {
     "runtime_consumption_proof.json",
     "runtime_packet_manifest.json",
 }
+ARCHIVE_BOUND_CONTRACT_ROW_FIELDS = (
+    "archive_bound_candidate_contract_schema",
+    "archive_bound_candidate_contract",
+    "archive_bound_candidate_contract_surface_schema",
+    "archive_bound_candidate_contract_surface",
+    "archive_bound_candidate_contract_blockers",
+    "archive_bound_candidate_contract_valid",
+)
 
 class MaterializerSubmissionClosureError(ValueError):
     """Raised when a materializer source row cannot be closed safely."""
@@ -283,6 +292,53 @@ def _row_archive_bound_contract(
         return selected_archive_bound_candidate_contract_from_payload(row, label=label)
     except ArchiveBoundCandidateContractError as exc:
         raise MaterializerSubmissionClosureError(str(exc)) from exc
+
+
+def _refresh_archive_bound_contract_for_closed_row(
+    closed_row: dict[str, Any],
+    *,
+    source_row: Mapping[str, Any],
+    repo_root: Path,
+) -> None:
+    """Make the shared archive-bound contract describe the closed submission.
+
+    Materializer rows often arrive with a contract for the materializer sidecar
+    archive.  Submission closure copies those bytes into a contest-shaped
+    ``submission/archive.zip``.  Downstream exact readiness must validate that
+    closed packet, while the pre-closure contract remains provenance only.
+    """
+
+    source_contract = _mapping(source_row.get("archive_bound_candidate_contract"))
+    if source_contract:
+        closed_row["materializer_preclosure_archive_bound_candidate_contract"] = dict(
+            source_contract
+        )
+    source_surface = _mapping(source_row.get("archive_bound_candidate_contract_surface"))
+    if source_surface:
+        closed_row[
+            "materializer_preclosure_archive_bound_candidate_contract_surface"
+        ] = dict(source_surface)
+    for key in ARCHIVE_BOUND_CONTRACT_ROW_FIELDS:
+        closed_row.pop(key, None)
+    closed_row.setdefault("byte_closed_candidate_emitted", True)
+    closed_row["byte_closed_candidate_materialized"] = True
+    closed_row["candidate_archive_materialized"] = True
+    closed_row.update(
+        archive_bound_candidate_contract_fields_for_row(
+            closed_row,
+            repo_root=repo_root,
+            selected_transform_kind=str(
+                closed_row.get("target_kind")
+                or closed_row.get("schema")
+                or "materializer_submission_closure"
+            ),
+            family_id=str(
+                closed_row.get("candidate_family")
+                or "materializer_submission_closure"
+            ),
+            candidate_chain_id=str(closed_row.get("candidate_id") or ""),
+        )
+    )
 
 
 def _candidate_archive_path(
@@ -846,6 +902,11 @@ def _write_runtime_refused_submission_closure(
             **FALSE_AUTHORITY,
         }
     )
+    _refresh_archive_bound_contract_for_closed_row(
+        closed_row,
+        source_row=row,
+        repo_root=repo,
+    )
     closed_queue = _closed_queue_payload(
         source_queue=queue_payload,
         source_row=row,
@@ -1318,6 +1379,7 @@ def build_materializer_submission_runtime_closure(
             ],
             "runtime_consumption_proof_path": _repo_rel(proof_out, repo),
             "runtime_consumption_proof_status": "present",
+            "receiver_contract_satisfied": True,
             "materializer_submission_closure_report_path": _repo_rel(
                 closure_report_path,
                 repo,
@@ -1333,6 +1395,11 @@ def build_materializer_submission_runtime_closure(
             ),
             **FALSE_AUTHORITY,
         }
+    )
+    _refresh_archive_bound_contract_for_closed_row(
+        closed_row,
+        source_row=row,
+        repo_root=repo,
     )
     if runtime_adapter_ready:
         closed_row.update(
@@ -1350,6 +1417,11 @@ def build_materializer_submission_runtime_closure(
             closed_row["tensor_factorize_receiver_runtime"] = dict(adapter_manifest)
         elif adapter_schema == "renderer_payload_dfl1_receiver_runtime.v1":
             closed_row["renderer_payload_dfl1_receiver_runtime"] = dict(adapter_manifest)
+        _refresh_archive_bound_contract_for_closed_row(
+            closed_row,
+            source_row=row,
+            repo_root=repo,
+        )
     closed_queue = _closed_queue_payload(
         source_queue=queue_payload,
         source_row=row,

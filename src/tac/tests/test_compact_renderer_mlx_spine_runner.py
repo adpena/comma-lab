@@ -1161,6 +1161,20 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert post_export["queue_launch_executed"] is False
     assert post_export["experiment_count"] > 0
     assert Path(post_export["experiment_queue_path"]).is_file()
+    assert post_export["archive_record"]["source_runtime_dir"].endswith(
+        "/hi_nerv_mlx_training/submission"
+    )
+    assert post_export["archive_record"]["source_inflate_sh_path"].endswith(
+        "/hi_nerv_mlx_training/submission/inflate.sh"
+    )
+    contexts = json.loads(Path(post_export["materializer_contexts_path"]).read_text())
+    first_context = contexts["rows"][0]["context"]
+    assert first_context["source_runtime_dir"].endswith(
+        "/hi_nerv_mlx_training/submission"
+    )
+    assert first_context["packet_member_merge_source_runtime_dir"].endswith(
+        "/hi_nerv_mlx_training/submission"
+    )
     queue = json.loads(Path(post_export["experiment_queue_path"]).read_text())
     assert queue["schema"] == "experiment_queue.v1"
     assert post_export["experiment_queue_state_path"].endswith(
@@ -1785,6 +1799,20 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert post_export["queue_launch_executed"] is False
     assert post_export["experiment_count"] > 0
     assert Path(post_export["experiment_queue_path"]).is_file()
+    assert post_export["archive_record"]["source_runtime_dir"].endswith(
+        "/snerv_archive_bound_package/submission"
+    )
+    assert post_export["archive_record"]["source_inflate_sh_path"].endswith(
+        "/snerv_archive_bound_package/submission/inflate.sh"
+    )
+    contexts = json.loads(Path(post_export["materializer_contexts_path"]).read_text())
+    first_context = contexts["rows"][0]["context"]
+    assert first_context["source_runtime_dir"].endswith(
+        "/snerv_archive_bound_package/submission"
+    )
+    assert first_context["packet_member_merge_source_runtime_dir"].endswith(
+        "/snerv_archive_bound_package/submission"
+    )
     queue = json.loads(Path(post_export["experiment_queue_path"]).read_text())
     harvest_step = queue["experiments"][0]["steps"][1]
     state_arg_index = harvest_step["command"].index("--state") + 1

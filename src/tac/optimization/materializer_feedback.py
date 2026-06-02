@@ -43,6 +43,17 @@ FACTUAL_MATERIALIZER_EFFECT_FLAGS = (
     "score_affecting_payload_changed",
     "charged_bits_changed",
 )
+RUNTIME_CUSTODY_OBSERVATION_KEYS = (
+    "source_runtime_dir",
+    "source_submission_dir",
+    "inflate_runtime_dir",
+    "source_inflate_sh_path",
+    "runtime_tree_sha256",
+    "expected_runtime_tree_sha256",
+    "candidate_runtime_tree_sha256",
+    "expected_candidate_runtime_tree_sha256",
+    "source_runtime_context_blockers",
+)
 
 
 def _slug(value: Any, *, fallback: str = "materializer_feedback") -> str:
@@ -274,6 +285,11 @@ def materializer_observation_from_manifest(
         source_unit_ids = selected_member_names[:1]
     if not source_unit_ids:
         source_unit_ids = [candidate_id]
+    runtime_custody = {
+        key: result.get(key)
+        for key in RUNTIME_CUSTODY_OBSERVATION_KEYS
+        if result.get(key) not in (None, "", [])
+    }
 
     return {
         "schema": FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA,
@@ -354,6 +370,7 @@ def materializer_observation_from_manifest(
         "source_selection_ids": _string_sequence(result.get("source_selection_ids")),
         "work_ids": _string_sequence(result.get("work_ids")),
         "backlog_keys": _string_sequence(result.get("backlog_keys")),
+        **runtime_custody,
         "observation_feedback_is_not_score_authority": True,
         **MATERIALIZER_FALSE_AUTHORITY,
     }

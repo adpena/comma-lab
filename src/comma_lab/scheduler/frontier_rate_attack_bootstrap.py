@@ -739,6 +739,7 @@ def archive_record(
     source_kind: str,
     expected_sha256: str | None = None,
     expected_bytes: int | None = None,
+    source_runtime_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return a checked archive record with ZIP member metadata."""
 
@@ -757,7 +758,7 @@ def archive_record(
             f"{archive}: sha256 mismatch expected={expected_sha256} actual={digest}"
         )
     members = _zip_member_records(archive)
-    return {
+    record = {
         "schema": FRONTIER_ARCHIVE_RECORD_SCHEMA,
         "label": _clean_id(label, fallback="archive"),
         "path": _repo_rel(archive, repo),
@@ -769,6 +770,29 @@ def archive_record(
         "zip_members": members,
         **FALSE_AUTHORITY,
     }
+    if source_runtime_dir is not None:
+        runtime = _resolve_path(source_runtime_dir, repo_root=repo)
+        if not runtime.is_dir():
+            raise FrontierRateAttackBootstrapError(
+                f"source runtime dir not found: {runtime}"
+            )
+        inflate_sh = runtime / "inflate.sh"
+        if not inflate_sh.is_file():
+            raise FrontierRateAttackBootstrapError(
+                f"source runtime dir missing inflate.sh: {runtime}"
+            )
+        runtime_tree_sha = tree_sha256(runtime)
+        record.update(
+            {
+                "source_runtime_dir": _repo_rel(runtime, repo),
+                "source_submission_dir": _repo_rel(runtime, repo),
+                "source_inflate_sh_path": _repo_rel(inflate_sh, repo),
+                "inflate_runtime_dir": _repo_rel(runtime, repo),
+                "runtime_tree_sha256": runtime_tree_sha,
+                "expected_runtime_tree_sha256": runtime_tree_sha,
+            }
+        )
+    return record
 
 
 def parse_archive_spec(spec: str, *, repo_root: str | Path) -> dict[str, Any]:
@@ -1354,6 +1378,7 @@ def _target_context(
         "allow_overwrite": allow_overwrite,
         **FALSE_AUTHORITY,
     }
+    context.update(_shared_runtime_context_from_archive_records(archive_records))
     blockers: list[str] = []
     if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
         if member_name is None:
@@ -1455,6 +1480,53 @@ def _target_context(
     else:
         blockers.append(f"unsupported_frontier_rate_attack_target:{target_kind}")
     return (None, blockers) if blockers else (context, [])
+
+
+def _unique_nonempty_text(
+    records: Sequence[Mapping[str, Any]],
+    key: str,
+) -> str | None:
+    values = ordered_unique(
+        str(record.get(key) or "").strip()
+        for record in records
+        if str(record.get(key) or "").strip()
+    )
+    return values[0] if len(values) == 1 else None
+
+
+def _shared_runtime_context_from_archive_records(
+    records: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Return source-runtime context common to all source archive records."""
+
+    runtime_dir = _unique_nonempty_text(records, "source_runtime_dir")
+    if runtime_dir is None:
+        runtime_dir = _unique_nonempty_text(records, "source_submission_dir")
+    inflate_sh = _unique_nonempty_text(records, "source_inflate_sh_path")
+    runtime_tree_sha = _unique_nonempty_text(records, "runtime_tree_sha256")
+    expected_runtime_tree_sha = _unique_nonempty_text(
+        records,
+        "expected_runtime_tree_sha256",
+    )
+    context: dict[str, Any] = {}
+    if runtime_dir is not None:
+        context.update(
+            {
+                "source_runtime_dir": runtime_dir,
+                "source_submission_dir": runtime_dir,
+                "inflate_runtime_dir": runtime_dir,
+                "packet_member_merge_source_runtime_dir": runtime_dir,
+                "renderer_payload_dfl1_source_runtime_dir": runtime_dir,
+                "tensor_factorize_source_runtime_dir": runtime_dir,
+            }
+        )
+    if inflate_sh is not None:
+        context["source_inflate_sh_path"] = inflate_sh
+    if runtime_tree_sha is not None:
+        context["runtime_tree_sha256"] = runtime_tree_sha
+    if expected_runtime_tree_sha is not None:
+        context["expected_runtime_tree_sha256"] = expected_runtime_tree_sha
+    return context
 
 
 def build_frontier_rate_attack_payloads(
