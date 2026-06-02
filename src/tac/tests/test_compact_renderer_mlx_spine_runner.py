@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import struct
 import sys
 import zipfile
@@ -297,6 +298,87 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         rows[("pact_nerv_selector_v4", 178_000)]["ready_for_exact_eval_dispatch"]
         is False
     )
+
+
+def test_active_campaign_lock_identity_excludes_output_dir(tmp_path: Path) -> None:
+    weight = tmp_path / "weights.npz"
+    np.savez_compressed(weight, weight=np.ones((1,), dtype=np.float32))
+    source = tmp_path / "0.mkv"
+    source.write_bytes(b"video")
+    args_a = _parse_args([
+        "--execute-family",
+        "hi_nerv",
+        "--output-dir",
+        str(tmp_path / "a"),
+        "--num-pairs",
+        "600",
+        "--epochs",
+        "8",
+        "--recon-pixel-weight-path",
+        str(weight),
+    ])
+    args_b = _parse_args([
+        "--execute-family",
+        "hi_nerv",
+        "--output-dir",
+        str(tmp_path / "b"),
+        "--num-pairs",
+        "600",
+        "--epochs",
+        "8",
+        "--recon-pixel-weight-path",
+        str(weight),
+    ])
+
+    payload_a = runner_mod._active_campaign_lock_payload(
+        args_a,
+        source_video_path=source,
+        hard_byte_ceilings=(178_000,),
+    )
+    payload_b = runner_mod._active_campaign_lock_payload(
+        args_b,
+        source_video_path=source,
+        hard_byte_ceilings=(178_000,),
+    )
+
+    assert payload_a == payload_b
+    assert payload_a["recon_pixel_weight_sha256"]
+    assert runner_mod._campaign_lock_digest(payload_a) == (
+        runner_mod._campaign_lock_digest(payload_b)
+    )
+
+
+def test_active_campaign_lock_refuses_duplicate_active_pid(tmp_path: Path) -> None:
+    source = tmp_path / "0.mkv"
+    source.write_bytes(b"video")
+    args = _parse_args([
+        "--execute-family",
+        "hi_nerv",
+        "--num-pairs",
+        "600",
+        "--epochs",
+        "8",
+    ])
+
+    lock_path = runner_mod._acquire_active_campaign_lock(
+        output_dir=tmp_path / "a",
+        args=args,
+        source_video_path=source,
+        hard_byte_ceilings=(178_000,),
+    )
+    assert lock_path is not None
+    assert lock_path.is_file()
+    try:
+        with pytest.raises(SystemExit, match="duplicate active"):
+            runner_mod._acquire_active_campaign_lock(
+                output_dir=tmp_path / "b",
+                args=args,
+                source_video_path=source,
+                hard_byte_ceilings=(178_000,),
+            )
+    finally:
+        runner_mod._release_active_campaign_lock(lock_path, os.getpid())
+    assert not lock_path.exists()
 
 
 def test_pact_vq_runner_forwards_pr95_curriculum_kwargs() -> None:

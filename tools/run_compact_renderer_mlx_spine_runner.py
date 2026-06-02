@@ -12,6 +12,7 @@ grants score authority; exact CPU/CUDA still owns promotion.
 from __future__ import annotations
 
 import argparse
+import atexit
 import hashlib
 import json
 import os
@@ -63,6 +64,7 @@ from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
 )
 
 COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA = "compact_renderer_mlx_spine_runner.v1"
+ACTIVE_CAMPAIGN_LOCK_SCHEMA = "compact_renderer_active_campaign_lock.v1"
 DEFAULT_SSD_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact"),
     Path("/Volumes/APDataStore/pact"),
@@ -3949,6 +3951,137 @@ def _default_output_dir() -> Path:
     )
 
 
+def _jsonable_lock_value(value: Any) -> Any:
+    if isinstance(value, Path):
+        return value.expanduser().resolve(strict=False).as_posix()
+    if isinstance(value, tuple | list):
+        return [_jsonable_lock_value(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            str(key): _jsonable_lock_value(item)
+            for key, item in sorted(value.items(), key=lambda kv: str(kv[0]))
+        }
+    return value
+
+
+def _active_campaign_lock_payload(
+    args: argparse.Namespace,
+    *,
+    source_video_path: Path,
+    hard_byte_ceilings: tuple[int, ...],
+) -> dict[str, Any]:
+    """Return a normalized campaign identity, excluding artifact destination."""
+
+    excluded = {"allow_duplicate_campaign", "output_dir", "overwrite", "repo_root"}
+    argv_payload = {
+        key: _jsonable_lock_value(value)
+        for key, value in sorted(vars(args).items())
+        if key not in excluded
+    }
+    recon_weight = getattr(args, "recon_pixel_weight_path", None)
+    recon_weight_sha256 = None
+    if recon_weight is not None:
+        recon_path = Path(recon_weight).expanduser().resolve(strict=False)
+        if recon_path.is_file():
+            recon_weight_sha256 = _sha256_file(recon_path)
+    return {
+        "schema": "compact_renderer_campaign_identity.v1",
+        "argv": argv_payload,
+        "hard_byte_ceilings": [int(value) for value in hard_byte_ceilings],
+        "source_video_path_resolved": source_video_path.as_posix(),
+        "recon_pixel_weight_sha256": recon_weight_sha256,
+    }
+
+
+def _campaign_lock_digest(payload: Mapping[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _pid_is_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _release_active_campaign_lock(lock_path: Path, pid: int) -> None:
+    try:
+        payload = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return
+    if int(payload.get("pid") or -1) == int(pid):
+        lock_path.unlink(missing_ok=True)
+
+
+def _acquire_active_campaign_lock(
+    *,
+    output_dir: Path,
+    args: argparse.Namespace,
+    source_video_path: Path,
+    hard_byte_ceilings: tuple[int, ...],
+) -> Path | None:
+    """Acquire an atomic duplicate-campaign lock for expensive runs."""
+
+    if bool(getattr(args, "allow_duplicate_campaign", False)):
+        return None
+    payload = _active_campaign_lock_payload(
+        args,
+        source_video_path=source_video_path,
+        hard_byte_ceilings=hard_byte_ceilings,
+    )
+    digest = _campaign_lock_digest(payload)
+    lock_dir = output_dir.parent / ".active_compact_renderer_campaign_locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = lock_dir / f"{digest}.json"
+    manifest = {
+        "schema": ACTIVE_CAMPAIGN_LOCK_SCHEMA,
+        "digest": digest,
+        "pid": os.getpid(),
+        "created_utc": datetime.now(UTC).isoformat(),
+        "output_dir": output_dir.as_posix(),
+        "identity": payload,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    while True:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                existing = json.loads(lock_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise SystemExit(
+                    f"active campaign lock is unreadable: {lock_path}; "
+                    "refusing duplicate launch"
+                ) from exc
+            existing_pid = int(existing.get("pid") or -1)
+            if not _pid_is_alive(existing_pid):
+                stale_path = lock_path.with_suffix(f".stale_{_stamp()}.json")
+                lock_path.replace(stale_path)
+                continue
+            raise SystemExit(
+                "duplicate active compact-renderer campaign refused: "
+                f"lock={lock_path} existing_pid={existing_pid} "
+                f"existing_output={existing.get('output_dir')}; pass "
+                "--allow-duplicate-campaign only when this is intentional"
+            ) from None
+        else:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(manifest, fh, indent=2, sort_keys=True)
+                fh.write("\n")
+            break
+    atexit.register(_release_active_campaign_lock, lock_path, os.getpid())
+    return lock_path
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path)
@@ -4228,6 +4361,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
+    parser.add_argument(
+        "--allow-duplicate-campaign",
+        action="store_true",
+        help=(
+            "Allow another active campaign with identical normalized args. "
+            "Default refuses duplicate expensive MLX/replay runs even when "
+            "they target different output dirs."
+        ),
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
@@ -4257,6 +4399,12 @@ def main(argv: list[str] | None = None) -> int:
         args.source_video_path,
         base=Path(args.repo_root).expanduser().resolve(strict=False),
         upstream_dir=scorer_upstream_dir,
+    )
+    _acquire_active_campaign_lock(
+        output_dir=Path(output_dir).expanduser().resolve(strict=False),
+        args=args,
+        source_video_path=source_video_path,
+        hard_byte_ceilings=ceilings,
     )
     if args.execute_pr95_mlx_smoke:
         report = execute_pr95_mlx_smoke_and_adapt(
