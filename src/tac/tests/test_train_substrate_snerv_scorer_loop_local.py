@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -118,16 +119,25 @@ def test_snerv_scorer_loop_trainer_builds_false_authority_report(
         ["--score-loop", "--output-dir", str(tmp_path), "--allow-local-output-dir"]
     )
 
+    result = _FakeResult()
+    materialization = trainer._materialize_best_packet(result, tmp_path)
     report = trainer._build_report(
-        result=_FakeResult(),
+        result=result,
         args=args,
         output_dir=tmp_path,
         storage_payload={"schema": "storage.v1", "score_claim": False},
         launch_path=tmp_path / "launch.json",
+        best_packet_materialization=materialization,
     )
 
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["best_packet_materialized"] is True
+    assert report["best_packet_bytes"] == len(_FakeResult.best_packet)
+    assert report["best_packet_sha256"] == hashlib.sha256(
+        _FakeResult.best_packet
+    ).hexdigest()
+    assert Path(report["best_packet_path"]).read_bytes() == _FakeResult.best_packet
     assert report["baseline_archive_bytes"] == 1000
     assert report["best_archive_bytes"] == 980
     assert report["snerv_model_size_adapter"] == SNERV_SPECTRA_PRESERVING_ADAPTER
@@ -193,15 +203,29 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     assert payload["schema"] == trainer.TRAINER_SCHEMA
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["best_packet_materialized"] is True
+    assert payload["best_packet_bytes"] == len(_FakeResult.best_packet)
+    assert payload["best_packet_sha256"] == hashlib.sha256(
+        _FakeResult.best_packet
+    ).hexdigest()
+    assert Path(payload["best_packet_path"]).read_bytes() == _FakeResult.best_packet
+    assert payload["best_packet_materialization"]["materialized"] is True
+    assert (
+        "snerv_native_scorer_loop_best_packet_not_materialized"
+        not in payload["blockers"]
+    )
     assert payload["result_sha256"]
     assert research_md.read_text(encoding="utf-8").startswith(
         "# SNeRV scorer-loop QAT local trainer"
     )
     assert (output_dir / "snerv_scorer_loop_qat_launch_preflight.json").exists()
     assert (output_dir / "snerv_scorer_loop_qat_result.json").exists()
+    assert (output_dir / "best_packet.snar").read_bytes() == _FakeResult.best_packet
 
 
 class _FakeResult:
+    best_packet = b"SNAR1-test-best-packet"
+
     def as_jsonable(self) -> dict[str, Any]:
         return {
             "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
@@ -231,6 +255,8 @@ class _FakeResult:
                 "d_pose_linf": 0.19,
             },
             "accepted_improvement": True,
+            "best_packet_bytes": len(self.best_packet),
+            "best_packet_sha256": hashlib.sha256(self.best_packet).hexdigest(),
             "ready_for_pose_guard_gate": True,
             "receiver_contract_satisfied": True,
             "blockers": ["local_smoke_only_not_full_600_pairs"],

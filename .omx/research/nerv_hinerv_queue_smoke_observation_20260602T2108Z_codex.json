@@ -1,0 +1,77 @@
+{
+  "archive_bytes": 44954,
+  "archive_sha256": "cf4af356cd3aa9df2212173c2ba4b7b9f8e1a436e3c5804fcc3ce7286ed8c4f1",
+  "artifacts": {
+    "mlx_prefilter_progress": {
+      "bytes": 1133,
+      "exists": true,
+      "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_nojoint_20260602T2108Z/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl",
+      "sha256": "68dcc323a38af103262adc027de8c1ebd65ba0c2f870fccfdc9e32df64bcf66a"
+    },
+    "report": {
+      "bytes": 1504068,
+      "exists": true,
+      "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_nojoint_20260602T2108Z/compact_renderer_mlx_spine_runner_report.json",
+      "sha256": "9b205040aab50b0f33c839016e9a6192b9d48a8034110195973dcfc0c116a1e2"
+    },
+    "startup_marker": {
+      "bytes": 6666,
+      "exists": true,
+      "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_nojoint_20260602T2108Z/compact_renderer_mlx_spine_runner_startup.json",
+      "sha256": "b02d902446d88360130543c82a67cbd67d2f2d0caf5d7df3e28cdde2d7b2452c"
+    },
+    "training_telemetry": {
+      "bytes": 1187,
+      "exists": true,
+      "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_nojoint_20260602T2108Z/hi_nerv_mlx_training/telemetry.jsonl",
+      "sha256": "fe67675107839a19c24d763110d54f0c19df8b4d588cea9500ca74a62bbe12e2"
+    },
+    "worker_result": {
+      "bytes": 6945,
+      "exists": true,
+      "path": ".omx/research/nerv_hinerv_gpu_alias_fixed_queue_smoke_nojoint_worker_result_20260602T2108Z.json",
+      "sha256": "f3cc13ead3bdc9026449d73adf29b73120ba4643fb7bf2e23b92469daa8d530b"
+    }
+  },
+  "authority": "false-authority macOS local MLX/PyTorch launch-path smoke; not a contest score, rank, kill, or promotion signal",
+  "blockers": [
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "hinerv_candidate_curriculum_requires_min_8_epochs",
+    "hinerv_candidate_curriculum_recon_pixel_weight_missing",
+    "hinerv_candidate_curriculum_full600_required_for_promotion",
+    "partial_pair_byte_feedback_only",
+    "hi_nerv_pr95_staged_curriculum_missing",
+    "hi_nerv_muon_adamw_partition_missing",
+    "hi_nerv_archive_in_loop_byte_oracle_missing",
+    "hi_nerv_full_video_local_prefilter_missing",
+    "hi_nerv_local_cpu_replay_gate_missing",
+    "local_cpu_replay_not_run_partial_pair_coverage",
+    "hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs",
+    "full_video_mlx_scorer_replay_not_attached",
+    "sampled_mlx_prefilter_requires_full_video_rerun",
+    "mlx_profile_not_full_video_executed",
+    "mlx_profile_pair_count_below_full_video",
+    "mlx_profile_batch_pairs_not_singleton",
+    "no_full_coverage_compact_base_candidate",
+    "no_full_coverage_candidate_under_any_hard_ceiling"
+  ],
+  "disabled_for_probe_only": [
+    "auto_joint_recon_pixel_weight"
+  ],
+  "disabled_rationale": "one-pair plumbing smoke has no verified joint P18/P19 surface; full campaigns must keep or provide verified surfaces",
+  "distillation_device": "mps",
+  "family": "hi_nerv",
+  "generated_utc": "2026-06-02T21:07:02Z",
+  "mlx_prefilter_scorer_device": "gpu",
+  "promotion_eligible": false,
+  "queue_id": "nerv_hinerv_gpu_alias_fixed_queue_smoke_nojoint_20260602T2108Z.v1",
+  "ready_for_exact_eval_dispatch": false,
+  "report_mode": "executed_hi_nerv_mlx_scoreaware_and_exported",
+  "requested_distillation_device": "gpu",
+  "schema": "nerv_hinerv_queue_smoke_observation.v1",
+  "scope": "queue_owned_launch_path_smoke_after_gpu_alias_and_requested_device_kwarg_fix",
+  "score_claim": false,
+  "training_executed": true,
+  "worker_failure_count": 0,
+  "worker_success_count": 1
+}

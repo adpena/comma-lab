@@ -51,6 +51,7 @@ DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaign
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
 DEFAULT_LEARNING_RATE = 1.0e-3
+DEFAULT_HINERV_TELEMETRY_FLUSH_INTERVAL_EPOCHS = 1
 # Do not classify the first 9e-5 pose-spike as repeated low-LR failure: its
 # telemetry explicitly requested a 2.7e-5 recovery run. The Huber path is real,
 # but it is reserved for repeated instability at or below that recovered regime;
@@ -385,6 +386,8 @@ def _hinerv_campaign_row(
         str(int(batch_pairs)),
         "--mlx-prefilter-progress-every",
         "10",
+        "--telemetry-flush-interval-epochs",
+        str(DEFAULT_HINERV_TELEMETRY_FLUSH_INTERVAL_EPOCHS),
         "--run-post-export-materializers",
         "--output-dir",
         (output_root / output_dir_basename).as_posix(),
@@ -714,7 +717,12 @@ def _experiment_for_row(
     blockers: Sequence[str],
     score_lowering_gate: Mapping[str, Any],
 ) -> dict[str, Any]:
-    output_json = _row_output_report_path(command_argv)
+    output_dir = _row_output_dir(command_argv)
+    output_json = (output_dir / "compact_renderer_mlx_spine_runner_report.json").as_posix()
+    telemetry_artifacts = _row_observable_artifacts(
+        family=str(family),
+        output_dir=output_dir,
+    )
     postconditions = [
         {
             "type": "json_equals",
@@ -799,6 +807,10 @@ def _experiment_for_row(
                     "max_parallel_group": "local_mlx_training",
                 },
                 "postconditions": postconditions,
+                "telemetry": {
+                    "artifact_paths": telemetry_artifacts,
+                    "include_postcondition_paths": True,
+                },
                 "on_postcondition_failure": "failed",
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -812,12 +824,34 @@ def _experiment_for_row(
 
 
 def _row_output_report_path(command_argv: Sequence[str]) -> str:
+    return (_row_output_dir(command_argv) / "compact_renderer_mlx_spine_runner_report.json").as_posix()
+
+
+def _row_output_dir(command_argv: Sequence[str]) -> Path:
     argv = [str(value) for value in command_argv]
     try:
         out_dir = argv[argv.index("--output-dir") + 1]
     except (ValueError, IndexError):
         out_dir = DEFAULT_OUTPUT_ROOT
-    return (Path(out_dir) / "compact_renderer_mlx_spine_runner_report.json").as_posix()
+    return Path(out_dir)
+
+
+def _row_observable_artifacts(*, family: str, output_dir: Path) -> list[str]:
+    artifacts = [
+        (output_dir / "compact_renderer_mlx_spine_runner_startup.json").as_posix()
+    ]
+    if str(family) == "hi_nerv":
+        artifacts.extend(
+            [
+                (output_dir / "hi_nerv_mlx_training" / "telemetry.jsonl").as_posix(),
+                (
+                    output_dir
+                    / "hi_nerv_mlx_training"
+                    / "local_mlx_prefilter_progress.jsonl"
+                ).as_posix(),
+            ]
+        )
+    return artifacts
 
 
 def _score_lowering_gate(
@@ -956,17 +990,21 @@ def _candidate_feedback_index(
     return {
         key: sorted(
             rows,
-            key=lambda row: (
-                bool(row.get("scope_matches_candidate")),
-                int(row.get("measured_num_pairs") or 0),
-                bool(row.get("receiver_proof_attached")),
-                bool(row.get("full_video_local_prefilter_attached")),
-                bool(row.get("local_cpu_replay_gate_attached")),
-            ),
+            key=_candidate_feedback_sort_key,
             reverse=True,
         )
         for key, rows in index.items()
     }
+
+
+def _candidate_feedback_sort_key(row: Mapping[str, Any]) -> tuple[bool, int, bool, bool, bool]:
+    return (
+        bool(row.get("scope_matches_candidate")),
+        int(row.get("measured_num_pairs") or 0),
+        bool(row.get("receiver_proof_attached")),
+        bool(row.get("full_video_local_prefilter_attached")),
+        bool(row.get("local_cpu_replay_gate_attached")),
+    )
 
 
 def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str, Any]:
@@ -1046,8 +1084,101 @@ def _candidate_feedback_for(
     candidate_id = str(candidate.get("candidate_id") or "").strip()
     if not candidate_id:
         return {}
-    rows = list((index or {}).get((_family_key(family), candidate_id)) or [])
-    return dict(rows[0]) if rows else {}
+    family_key = _family_key(family)
+    rows = list((index or {}).get((family_key, candidate_id)) or [])
+    if rows:
+        out = dict(rows[0])
+        out.setdefault("candidate_id_match", True)
+        out.setdefault("feedback_match_scope", "candidate")
+        return out
+    fallback_rows = _family_level_candidate_feedback_rows(
+        candidate=candidate,
+        family=family_key,
+        index=index,
+    )
+    if not fallback_rows:
+        return {}
+    return _sanitize_family_level_candidate_feedback(
+        row=fallback_rows[0],
+        target_candidate_id=candidate_id,
+    )
+
+
+def _family_level_candidate_feedback_rows(
+    *,
+    candidate: Mapping[str, Any],
+    family: str,
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+) -> list[dict[str, Any]]:
+    family_key = _family_key(family)
+    rows: list[dict[str, Any]] = []
+    for (row_family, _row_candidate_id), candidate_rows in (index or {}).items():
+        if row_family != family_key:
+            continue
+        for row in candidate_rows:
+            if _family_level_candidate_feedback_applicable(
+                candidate=candidate,
+                family=family_key,
+                row=row,
+            ):
+                rows.append(dict(row))
+    return sorted(rows, key=_candidate_feedback_sort_key, reverse=True)
+
+
+def _family_level_candidate_feedback_applicable(
+    *,
+    candidate: Mapping[str, Any],
+    family: str,
+    row: Mapping[str, Any],
+) -> bool:
+    # Only reuse optimizer-stability telemetry across sibling HiNeRV candidates.
+    # Archive, receiver, and replay evidence remain candidate-specific.
+    if _family_key(family) != "hi_nerv":
+        return False
+    target_candidate_id = str(candidate.get("candidate_id") or "").strip()
+    source_candidate_id = str(row.get("candidate_id") or "").strip()
+    if not target_candidate_id or not source_candidate_id:
+        return False
+    if source_candidate_id == target_candidate_id:
+        return False
+    if str(row.get("feedback_kind") or "").strip() != "training_telemetry":
+        return False
+    if str(row.get("feedback_scope") or "").strip() != "full600_training_telemetry":
+        return False
+    if row.get("pose_instability_detected") is not True:
+        return False
+    recommended = _float_or_none(row.get("recommended_learning_rate"))
+    if recommended is None or recommended <= 0.0:
+        return False
+    target_num_pairs = int(candidate.get("num_pairs") or 0)
+    measured_num_pairs = int(row.get("measured_num_pairs") or 0)
+    if target_num_pairs <= 0 or measured_num_pairs != target_num_pairs:
+        return False
+    return True
+
+
+def _sanitize_family_level_candidate_feedback(
+    *,
+    row: Mapping[str, Any],
+    target_candidate_id: str,
+) -> dict[str, Any]:
+    out = dict(row)
+    source_candidate_id = str(row.get("candidate_id") or "").strip()
+    out["source_candidate_id"] = source_candidate_id
+    out["target_candidate_id"] = str(target_candidate_id)
+    out["candidate_id_match"] = False
+    out["feedback_match_scope"] = "family_training_telemetry"
+    out["family_scope_matches_target"] = True
+    out["scope_matches_candidate"] = False
+    out["receiver_proof_attached"] = False
+    out["full_video_local_prefilter_attached"] = False
+    out["local_cpu_replay_gate_attached"] = False
+    out["measured_archive_bytes"] = None
+    out["measured_payload_bytes"] = None
+    out["feedback_reuse_policy"] = (
+        "optimizer_stability_only_no_archive_receiver_or_replay_authority"
+    )
+    return out
 
 
 def _decoder_weight_waterfill_index(

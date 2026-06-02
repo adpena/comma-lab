@@ -1,0 +1,33 @@
+{
+  "cmd": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "tools/experiment_queue.py",
+    "--queue",
+    "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_admitted_queue_20260602T205349Z_hinerv_observable_fixed_codex.json",
+    "run-worker",
+    "--execute",
+    "--max-experiments",
+    "1",
+    "--max-parallel",
+    "1",
+    "--max-steps",
+    "1",
+    "--log-root",
+    "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_observable_fixed_29650ep_worker_20260602T205703Z",
+    "--output",
+    "/Users/adpena/Projects/pact/.omx/research/nerv_hinerv_observable_fixed_long_worker_result_20260602T205703Z.json"
+  ],
+  "created_utc": "2026-06-02T20:57:04.065476+00:00",
+  "instance_job_id": "nerv_hinerv_observable_fixed_29650ep_worker_20260602T205703Z",
+  "lane_id": "lane_nerv_hinerv_observable_fixed_long_mlx_20260602",
+  "log_root": "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_observable_fixed_29650ep_worker_20260602T205703Z",
+  "pid": 18893,
+  "promotion_eligible": false,
+  "queue": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_admitted_queue_20260602T205349Z_hinerv_observable_fixed_codex.json",
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "nerv_hinerv_observable_fixed_long_launch.v1",
+  "score_claim": false,
+  "stderr_path": "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_observable_fixed_29650ep_worker_20260602T205703Z/queue_worker_stderr.log",
+  "stdout_path": "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_observable_fixed_29650ep_worker_20260602T205703Z/queue_worker_stdout.log",
+  "worker_output": "/Users/adpena/Projects/pact/.omx/research/nerv_hinerv_observable_fixed_long_worker_result_20260602T205703Z.json"
+}

@@ -252,7 +252,8 @@ def test_compact_family_startup_marker_records_mlx_custody(
         execute_family="hi_nerv",
         planner_row_id="hi_nerv::candidate::adamw",
         modelsize_candidate_id="candidate",
-        distillation_device="gpu",
+        distillation_device="mps",
+        requested_distillation_device="gpu",
         mlx_prefilter_scorer_device="gpu",
         mlx_prefilter_scorer_batch_pairs=8,
         mlx_prefilter_progress_every=10,
@@ -272,12 +273,168 @@ def test_compact_family_startup_marker_records_mlx_custody(
     assert payload["schema"] == "compact_carrier_startup_marker.v1"
     assert payload["execute_family"] == "hi_nerv"
     assert payload["planner_row_id"] == "hi_nerv::candidate::adamw"
-    assert payload["distillation_device"] == "gpu"
+    assert payload["distillation_device"] == "mps"
+    assert payload["requested_distillation_device"] == "gpu"
     assert payload["mlx_prefilter_scorer_device"] == "gpu"
     assert payload["mlx_prefilter_scorer_batch_pairs"] == 8
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+    assert (
+        runner_mod._has_disallowed_existing_output_artifacts(
+            tmp_path,
+            allow_startup_marker_only=True,
+        )
+        is False
+    )
+
+    (tmp_path / "foreign_artifact.json").write_text("{}", encoding="utf-8")
+    assert (
+        runner_mod._has_disallowed_existing_output_artifacts(
+            tmp_path,
+            allow_startup_marker_only=True,
+        )
+        is True
+    )
+
+
+def test_startup_marker_only_output_dir_is_not_dirty(tmp_path: Path) -> None:
+    out = tmp_path / "candidate"
+    out.mkdir()
+    marker = out / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+    marker.write_text("{}", encoding="utf-8")
+
+    assert (
+        runner_mod._has_disallowed_existing_output_artifacts(
+            out,
+            allow_startup_marker_only=True,
+        )
+        is False
+    )
+
+    (out / "hi_nerv_mlx_training").mkdir()
+    assert (
+        runner_mod._has_disallowed_existing_output_artifacts(
+            out,
+            allow_startup_marker_only=True,
+        )
+        is False
+    )
+
+    (out / "hi_nerv_mlx_training" / "telemetry.jsonl").write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    assert (
+        runner_mod._has_disallowed_existing_output_artifacts(
+            out,
+            allow_startup_marker_only=True,
+        )
+        is True
+    )
+
+
+def test_torch_scorer_device_alias_resolves_gpu_to_concrete_backend() -> None:
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: False),
+        backends=SimpleNamespace(
+            mps=SimpleNamespace(is_available=lambda: True),
+        ),
+    )
+
+    assert (
+        runner_mod._resolve_torch_scorer_device_alias(
+            "gpu",
+            torch_module=fake_torch,
+        )
+        == "mps"
+    )
+
+    fake_cuda = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: True),
+        backends=SimpleNamespace(
+            mps=SimpleNamespace(is_available=lambda: True),
+        ),
+    )
+    assert (
+        runner_mod._resolve_torch_scorer_device_alias(
+            "gpu",
+            torch_module=fake_cuda,
+        )
+        == "cuda"
+    )
+    assert runner_mod._resolve_torch_scorer_device_alias("metal") == "mps"
+
+
+def test_torch_scorer_device_alias_fails_closed_without_gpu() -> None:
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: False),
+        backends=SimpleNamespace(
+            mps=SimpleNamespace(is_available=lambda: False),
+        ),
+    )
+
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match=r"neither torch\.cuda nor torch\.backends\.mps",
+    ):
+        runner_mod._resolve_torch_scorer_device_alias(
+            "gpu",
+            torch_module=fake_torch,
+        )
+
+
+def test_hinerv_execute_allows_runner_startup_marker_only_dir(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    output_dir = tmp_path / "hinerv_marker_only"
+    output_dir.mkdir()
+    marker = output_dir / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+    marker.write_text("{}", encoding="utf-8")
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=output_dir,
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        distillation_device="mps",
+        requested_distillation_device="gpu",
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs
+    assert captured_train_kwargs["distillation_device"] == "mps"
+    assert captured_train_kwargs["requested_distillation_device"] == "gpu"
+    assert out["execute_family"] == "hi_nerv"
+    assert out["training_executed"] is True
+    assert marker.is_file()
 
 
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
@@ -1248,6 +1405,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "gpu",
             "--mlx-prefilter-progress-every",
             "10",
+            "--telemetry-flush-interval-epochs",
+            "1",
             "--run-post-export-materializers",
             "--post-export-materializer-max-steps",
             "3",
@@ -1314,6 +1473,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.mlx_prefilter_scorer_batch_pairs == 8
     assert hi.mlx_prefilter_scorer_device == "gpu"
     assert hi.mlx_prefilter_progress_every == 10
+    assert hi.telemetry_flush_interval_epochs == 1
     assert hi.run_post_export_materializers is True
     assert hi.post_export_materializer_max_steps == 3
     assert hi.post_export_materializer_max_parallel == 2

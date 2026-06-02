@@ -1,0 +1,551 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 3,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1,
+        "local_mlx": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu",
+      "local_io_heavy",
+      "local_mlx"
+    ],
+    "with_cloud": {
+      "max_parallel": 3,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1,
+        "local_mlx": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-06-02T20:48:59Z",
+  "healthy": true,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "nerv_campaign_storage_preflight": {
+        "artifact_record_bytes_mean": 26011.0,
+        "artifact_record_bytes_sum": 52022,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 26011.0,
+        "artifact_record_raw_bytes_sum": 52022,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 45.38829695794266,
+        "elapsed_seconds_mean": 22.824153895955533,
+        "elapsed_seconds_min": 0.2600108339684084,
+        "elapsed_seconds_sum": 45.648307791911066,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3086.5,
+        "log_bytes_sum": 6173,
+        "resource_kind_counts": {
+          "local_cpu": 1,
+          "local_io_heavy": 1
+        },
+        "run_count": 2,
+        "step_ids": [
+          "proactive_cleanup",
+          "storage_tier_plan"
+        ],
+        "success_count": 2
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 6173.0,
+        "artifact_record_bytes_sum": 6173,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 6173.0,
+        "artifact_record_raw_bytes_sum": 6173,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2600108339684084,
+        "elapsed_seconds_mean": 0.2600108339684084,
+        "elapsed_seconds_min": 0.2600108339684084,
+        "elapsed_seconds_sum": 0.2600108339684084,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 6173.0,
+        "log_bytes_sum": 6173,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "storage_tier_plan"
+        ],
+        "success_count": 1
+      },
+      "local_io_heavy": {
+        "artifact_record_bytes_mean": 45849.0,
+        "artifact_record_bytes_sum": 45849,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 45849.0,
+        "artifact_record_raw_bytes_sum": 45849,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 45.38829695794266,
+        "elapsed_seconds_mean": 45.38829695794266,
+        "elapsed_seconds_min": 45.38829695794266,
+        "elapsed_seconds_sum": 45.38829695794266,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 0.0,
+        "log_bytes_sum": 0,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "proactive_cleanup"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "nerv_campaign_storage_preflight.proactive_cleanup": {
+        "artifact_record_bytes_mean": 45849.0,
+        "artifact_record_bytes_sum": 45849,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 45849.0,
+        "artifact_record_raw_bytes_sum": 45849,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 45.38829695794266,
+        "elapsed_seconds_mean": 45.38829695794266,
+        "elapsed_seconds_min": 45.38829695794266,
+        "elapsed_seconds_sum": 45.38829695794266,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 0.0,
+        "log_bytes_sum": 0,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "proactive_cleanup"
+        ],
+        "success_count": 1
+      },
+      "nerv_campaign_storage_preflight.storage_tier_plan": {
+        "artifact_record_bytes_mean": 6173.0,
+        "artifact_record_bytes_sum": 6173,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 6173.0,
+        "artifact_record_raw_bytes_sum": 6173,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2600108339684084,
+        "elapsed_seconds_mean": 0.2600108339684084,
+        "elapsed_seconds_min": 0.2600108339684084,
+        "elapsed_seconds_sum": 0.2600108339684084,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 6173.0,
+        "log_bytes_sum": 6173,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "storage_tier_plan"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "nerv_campaign_storage_preflight": [
+        "nerv_campaign_storage_preflight"
+      ]
+    },
+    "event_count": 2,
+    "promotion_eligible": false,
+    "queue_id": "nerv_hinerv_fresh_output_first_row_20260602T2048Z.v1",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "nerv_hinerv_fresh_output_first_row_20260602T2048Z.v1",
+  "queue_sha256": "e32919ce3574d0e104fa613fdbb91da3a82e366f8b7c80ae4bd5619681700b00",
+  "queued_steps": [
+    {
+      "attempts": 0,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_startup.json",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/hi_nerv_mlx_training/telemetry.jsonl",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/compact_renderer_mlx_spine_runner_startup.json",
+          "telemetry_only": true
+        },
+        {
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/hi_nerv_mlx_training/telemetry.jsonl",
+          "telemetry_only": true
+        },
+        {
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl",
+          "telemetry_only": true
+        }
+      ],
+      "experiment_id": "hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw",
+      "experiment_status": "queued",
+      "log_exists": false,
+      "log_path": null,
+      "pid": null,
+      "postcondition_failure_policy": "failed",
+      "processes": [],
+      "resource_kind": "local_mlx",
+      "status": "queued",
+      "step_id": "run_mlx_first_campaign_row",
+      "stored_status": "queued",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-06-02T20:47:50Z",
+      "worker_run_id": null
+    }
+  ],
+  "ready_steps": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--extra",
+        "dev",
+        "--extra",
+        "runtime",
+        "--extra",
+        "mlx",
+        "python",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        "--execute-family",
+        "hi_nerv",
+        "--planner-row-id",
+        "hi_nerv::hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000::adamw",
+        "--num-pairs",
+        "600",
+        "--epochs",
+        "29650",
+        "--batch-pairs",
+        "8",
+        "--learning-rate",
+        "9e-05",
+        "--distillation-device",
+        "gpu",
+        "--modelsize-candidate-id",
+        "hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000",
+        "--segnet-distillation-weight",
+        "1.0",
+        "--pose-distillation-weight",
+        "1.0",
+        "--coder-aware-qat",
+        "--coder-qat-quant-bits",
+        "8",
+        "--optimizer-kind",
+        "adamw",
+        "--mlx-prefilter-scorer-device",
+        "gpu",
+        "--mlx-prefilter-scorer-batch-pairs",
+        "8",
+        "--mlx-prefilter-progress-every",
+        "10",
+        "--run-post-export-materializers",
+        "--output-dir",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_lr2p7e5_fresh_20260602T2048Z/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw",
+        "--auto-joint-recon-pixel-weight"
+      ],
+      "experiment_id": "hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw",
+      "priority": 10,
+      "queue_id": "nerv_hinerv_fresh_output_first_row_20260602T2048Z.v1",
+      "resource_kind": "local_mlx",
+      "step_hashes": {
+        "command_hash": "d7bb7d025b2210fa3f5481289391ee09a22bc42d053d33dae0c1932fad45bc0a",
+        "definition_hash": "5ab0ce25d6d1bc6f9b2946b559f70b2a61155f7e9094281681bca5af43580fdc",
+        "postcondition_hash": "27eb326d2e5ba28a586674dd7ce4aa2cbabcef0b0f96897cc64352d1e1481f12"
+      },
+      "step_id": "run_mlx_first_campaign_row"
+    }
+  ],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 1
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 1
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 2,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "nerv_hinerv_fresh_output_first_row_20260602T2048Z.v1",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18,
+      "local_io_heavy": 1,
+      "local_mlx": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 120,
+      "local_io_heavy": 1200,
+      "local_mlx": 43200
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 120,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.2600108339684084,
+        "elapsed_seconds_p95": 0.2600108339684084,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 120,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      },
+      "local_io_heavy": {
+        "advisory_only": true,
+        "concurrency_reason": "cap_io_heavy_pressure",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 1200,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 45.38829695794266,
+        "elapsed_seconds_p95": 45.38829695794266,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 1200,
+        "resource_kind": "local_io_heavy",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      },
+      "local_mlx": {
+        "advisory_only": true,
+        "concurrency_reason": "single_local_accelerator_default",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 43200,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": null,
+        "elapsed_seconds_p95": null,
+        "observed_failure_count": 0,
+        "observed_run_count": 0,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 43200,
+        "resource_kind": "local_mlx",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_nerv_hinerv_fresh_output_first_row_20260602T2048Z.v1.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-06-02T20:47:50Z",
+    "event_count": 9,
+    "max_event_id": 9,
+    "max_step_updated_at_utc": "2026-06-02T20:48:36Z",
+    "queue_id": "nerv_hinerv_fresh_output_first_row_20260602T2048Z.v1",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_nerv_hinerv_fresh_output_first_row_20260602T2048Z.v1.sqlite",
+    "step_state_count": 3
+  },
+  "status_counts": {
+    "queued": 1,
+    "succeeded": 2
+  },
+  "step_count": 3,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "control_status": ".venv/bin/python tools/queue_control.py --queue <queue-path> status",
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute",
+    "stop_freeze": ".venv/bin/python tools/queue_control.py --queue <queue-path> stop --reason '<reason>'",
+    "supervise": ".venv/bin/python tools/queue_supervisor.py --queue <queue-path> --output-dir <output-dir> --execute",
+    "tail_logs": ".venv/bin/python tools/queue_control.py --queue <queue-path> tail-logs --lines 80"
+  }
+}

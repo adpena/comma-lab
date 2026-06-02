@@ -77,12 +77,14 @@ def _score_loop_main(args: argparse.Namespace) -> int:
     result = run_snerv_scorer_loop_decoder_qat_smoke(
         **_score_loop_kwargs_from_args(args)
     )
+    best_packet_materialization = _materialize_best_packet(result, output_dir)
     report = _build_report(
         result=result,
         args=args,
         output_dir=output_dir,
         storage_payload=storage_payload,
         launch_path=launch_path,
+        best_packet_materialization=best_packet_materialization,
     )
     result_path = output_dir / "snerv_scorer_loop_qat_result.json"
     report["result_path"] = result_path.as_posix()
@@ -231,11 +233,27 @@ def _build_report(
     output_dir: Path,
     storage_payload: dict[str, Any],
     launch_path: Path,
+    best_packet_materialization: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload = result.as_jsonable()
+    best_packet_materialization = best_packet_materialization or {
+        "schema": "snerv_scorer_loop_best_packet_materialization.v1",
+        "materialized": False,
+        "blockers": ["snerv_native_scorer_loop_best_packet_not_materialized"],
+        **FALSE_AUTHORITY,
+    }
+    if best_packet_materialization.get("materialized"):
+        reported_bytes = payload.get("best_packet_bytes")
+        materialized_bytes = best_packet_materialization.get("best_packet_bytes")
+        if reported_bytes is not None and int(reported_bytes) != int(materialized_bytes):
+            raise ValueError(
+                "snerv_best_packet_materialization_mismatch: "
+                f"reported={reported_bytes} materialized={materialized_bytes}"
+            )
     result_blockers = list(payload.get("blockers") or ())
     blockers = [
         *result_blockers,
+        *(best_packet_materialization.get("blockers") or ()),
         "full_600_pair_receiver_proof_missing",
         "paired_contest_cpu_cuda_pass_missing",
         "official_snerv_mfu_hfr_tub_parity_not_proven",
@@ -269,6 +287,13 @@ def _build_report(
         "accepted_improvement": bool(payload.get("accepted_improvement")),
         "ready_for_pose_guard_gate": bool(payload.get("ready_for_pose_guard_gate")),
         "receiver_contract_satisfied": bool(payload.get("receiver_contract_satisfied")),
+        "best_packet_materialized": bool(
+            best_packet_materialization.get("materialized")
+        ),
+        "best_packet_path": best_packet_materialization.get("best_packet_path"),
+        "best_packet_bytes": best_packet_materialization.get("best_packet_bytes"),
+        "best_packet_sha256": best_packet_materialization.get("best_packet_sha256"),
+        "best_packet_materialization": best_packet_materialization,
         "result": payload,
         "blockers": list(dict.fromkeys(blockers)),
         "forbidden_next_actions": [
@@ -299,6 +324,10 @@ def render_snerv_scorer_loop_local_markdown(report: dict[str, Any]) -> str:
         f"Best score: `{report.get('best_score_linf')}`",
         f"Accepted improvement: `{report.get('accepted_improvement')}`",
         f"Receiver contract satisfied: `{report.get('receiver_contract_satisfied')}`",
+        f"Best packet materialized: `{report.get('best_packet_materialized')}`",
+        f"Best packet bytes: `{report.get('best_packet_bytes')}`",
+        f"Best packet SHA-256: `{report.get('best_packet_sha256')}`",
+        f"Best packet path: `{report.get('best_packet_path')}`",
         "",
         "## Blockers",
         "",
@@ -355,6 +384,40 @@ def _resolve_output_dir(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]
     payload["selected_workload_root"] = output.as_posix()
     payload.update(FALSE_AUTHORITY)
     return output, payload
+
+
+def _materialize_best_packet(result: Any, output_dir: Path) -> dict[str, Any]:
+    raw_packet = getattr(result, "best_packet", None)
+    if raw_packet is None:
+        return _missing_best_packet_materialization("best_packet_attr_missing")
+    packet = bytes(raw_packet)
+    if not packet:
+        return _missing_best_packet_materialization("best_packet_empty")
+
+    path = output_dir / "best_packet.snar"
+    path.write_bytes(packet)
+    return {
+        "schema": "snerv_scorer_loop_best_packet_materialization.v1",
+        "materialized": True,
+        "best_packet_path": path.as_posix(),
+        "best_packet_bytes": path.stat().st_size,
+        "best_packet_sha256": sha256_file(path),
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _missing_best_packet_materialization(reason: str) -> dict[str, Any]:
+    return {
+        "schema": "snerv_scorer_loop_best_packet_materialization.v1",
+        "materialized": False,
+        "best_packet_path": None,
+        "best_packet_bytes": 0,
+        "best_packet_sha256": None,
+        "missing_reason": reason,
+        "blockers": ["snerv_native_scorer_loop_best_packet_not_materialized"],
+        **FALSE_AUTHORITY,
+    }
 
 
 def _research_json_path(args: argparse.Namespace) -> Path:
@@ -419,6 +482,10 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         "baseline_score_linf": report.get("baseline_score_linf"),
         "best_score_linf": report.get("best_score_linf"),
         "accepted_improvement": report.get("accepted_improvement"),
+        "best_packet_materialized": report.get("best_packet_materialized"),
+        "best_packet_path": report.get("best_packet_path"),
+        "best_packet_bytes": report.get("best_packet_bytes"),
+        "best_packet_sha256": report.get("best_packet_sha256"),
         "score_claim": report.get("score_claim"),
         "ready_for_exact_eval_dispatch": report.get("ready_for_exact_eval_dispatch"),
         "blockers": report.get("blockers"),
@@ -436,6 +503,7 @@ __all__ = [
     "TRAINER_SCHEMA",
     "_build_parser",
     "_build_report",
+    "_materialize_best_packet",
     "_resolve_output_dir",
     "_score_loop_kwargs_from_args",
     "main",

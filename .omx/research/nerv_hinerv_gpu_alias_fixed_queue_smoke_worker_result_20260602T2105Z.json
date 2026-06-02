@@ -1,0 +1,206 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 1,
+  "idle_cycles": 0,
+  "max_experiments": 1,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "nerv_hinerv_gpu_alias_fixed_queue_smoke_20260602T2105Z.v1",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "skip_count": 0,
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-06-02T21:02:26Z",
+  "started_experiment_ids": [
+    "hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z"
+  ],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_nerv_hinerv_gpu_alias_fixed_queue_smoke_20260602T2105Z.v1.sqlite",
+  "step_results": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--extra",
+        "dev",
+        "--extra",
+        "runtime",
+        "--extra",
+        "mlx",
+        "python",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        "--execute-family",
+        "hi_nerv",
+        "--planner-row-id",
+        "hi_nerv::hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000::adamw",
+        "--num-pairs",
+        "1",
+        "--epochs",
+        "1",
+        "--batch-pairs",
+        "1",
+        "--learning-rate",
+        "2.7e-05",
+        "--distillation-device",
+        "gpu",
+        "--modelsize-candidate-id",
+        "hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000",
+        "--segnet-distillation-weight",
+        "1.0",
+        "--pose-distillation-weight",
+        "1.0",
+        "--coder-aware-qat",
+        "--coder-qat-quant-bits",
+        "4",
+        "--optimizer-kind",
+        "adamw",
+        "--mlx-prefilter-scorer-device",
+        "gpu",
+        "--mlx-prefilter-scorer-batch-pairs",
+        "8",
+        "--mlx-prefilter-progress-every",
+        "10",
+        "--output-dir",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z",
+        "--auto-joint-recon-pixel-weight"
+      ],
+      "elapsed_seconds": 5.006934416014701,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [
+        {
+          "equals": true,
+          "key": "training_executed",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+          "type": "json_equals"
+        }
+      ],
+      "log_path": "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_gpu_alias_fixed_queue_smoke_20260602T2105Z/nerv_hinerv_gpu_alias_fixed_queue_smoke_20260602T2105Z.v1/hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z/run_mlx_first_campaign_row/20260602T210226Z_b31778d4fc37a402.log",
+      "pid": 72002,
+      "postcondition_errors": [
+        {
+          "condition": "{\"equals\":true,\"key\":\"training_executed\",\"path\":\"/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json\",\"type\":\"json_equals\"}",
+          "error": "ExperimentQueueError: json key not found: training_executed"
+        }
+      ],
+      "ready_step": {
+        "command": [
+          "uv",
+          "run",
+          "--extra",
+          "dev",
+          "--extra",
+          "runtime",
+          "--extra",
+          "mlx",
+          "python",
+          "tools/run_compact_renderer_mlx_spine_runner.py",
+          "--execute-family",
+          "hi_nerv",
+          "--planner-row-id",
+          "hi_nerv::hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000::adamw",
+          "--num-pairs",
+          "1",
+          "--epochs",
+          "1",
+          "--batch-pairs",
+          "1",
+          "--learning-rate",
+          "2.7e-05",
+          "--distillation-device",
+          "gpu",
+          "--modelsize-candidate-id",
+          "hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000",
+          "--segnet-distillation-weight",
+          "1.0",
+          "--pose-distillation-weight",
+          "1.0",
+          "--coder-aware-qat",
+          "--coder-qat-quant-bits",
+          "4",
+          "--optimizer-kind",
+          "adamw",
+          "--mlx-prefilter-scorer-device",
+          "gpu",
+          "--mlx-prefilter-scorer-batch-pairs",
+          "8",
+          "--mlx-prefilter-progress-every",
+          "10",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z",
+          "--auto-joint-recon-pixel-weight"
+        ],
+        "experiment_id": "hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z",
+        "priority": 10,
+        "queue_id": "nerv_hinerv_gpu_alias_fixed_queue_smoke_20260602T2105Z.v1",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "ff0e0ba3b6c89ac1903f80156ba060fd31482d6d0a048e45ef2f88336c62adab",
+          "definition_hash": "6b381a9aedfadc28b6f9d7503654513138e862b3a5f5c4aca612f31213467ba8",
+          "postcondition_hash": "6c66d18461a651388c2e684ba06913316dededb64d43b65098570a3fb289726d"
+        },
+        "step_id": "run_mlx_first_campaign_row"
+      },
+      "resource_kind": "local_mlx",
+      "returncode": 2,
+      "skip_reason": null,
+      "skipped": false,
+      "succeeded": false,
+      "telemetry": {
+        "artifact_record_count": 5,
+        "artifact_records": [
+          {
+            "exists": false,
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z/compact_renderer_mlx_spine_runner_report.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 6649,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-06-02T21:02:29Z",
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z/compact_renderer_mlx_spine_runner_startup.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "exists": false,
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z/hi_nerv_mlx_training/telemetry.jsonl",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "exists": false,
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_20260602T2105Z/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 1412444,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-06-02T20:51:23Z",
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+            "source": "step.postconditions.path"
+          }
+        ],
+        "log_bytes": 231,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "b31778d4fc37a402"
+    }
+  ],
+  "steps_started": 1,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 0
+}

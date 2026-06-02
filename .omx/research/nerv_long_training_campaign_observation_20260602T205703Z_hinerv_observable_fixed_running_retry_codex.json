@@ -1,0 +1,659 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 3,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1,
+        "local_mlx": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu",
+      "local_io_heavy",
+      "local_mlx"
+    ],
+    "with_cloud": {
+      "max_parallel": 3,
+      "resource_limits": {
+        "local_cpu": 1,
+        "local_io_heavy": 1,
+        "local_mlx": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 2,
+  "blockers": [
+    "experiment_queue_observation_failed_steps:1",
+    "experiment_queue_observation_artifact_postcondition_failures:1"
+  ],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "disabled_steps": [],
+  "failed_steps": [
+    {
+      "attempts": 2,
+      "expected_artifact_paths": [
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_startup.json",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/hi_nerv_mlx_training/telemetry.jsonl",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl"
+      ],
+      "expected_artifacts": [
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1412471,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "compact_renderer_mlx_spine_runner.v1",
+          "mtime_utc": "2026-06-02T20:57:37Z",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1412471,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "compact_renderer_mlx_spine_runner.v1",
+          "mtime_utc": "2026-06-02T20:57:37Z",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1412471,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "compact_renderer_mlx_spine_runner.v1",
+          "mtime_utc": "2026-06-02T20:57:37Z",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1412471,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "compact_renderer_mlx_spine_runner.v1",
+          "mtime_utc": "2026-06-02T20:57:37Z",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1412471,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "compact_renderer_mlx_spine_runner.v1",
+          "mtime_utc": "2026-06-02T20:57:37Z",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_passed": true,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false
+        },
+        {
+          "artifact_revalidation": {
+            "blockers": [],
+            "postcondition_type": "json_equals",
+            "schema": "experiment_queue_observer_artifact_revalidation.v1",
+            "valid": true
+          },
+          "bytes": 1412471,
+          "dispatch_attempted": false,
+          "exists": true,
+          "gpu_launched": false,
+          "json_schema": "compact_renderer_mlx_spine_runner.v1",
+          "mtime_utc": "2026-06-02T20:57:37Z",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false
+        },
+        {
+          "bytes": 6996,
+          "exists": true,
+          "json_schema": "compact_carrier_startup_marker.v1",
+          "mtime_utc": "2026-06-02T20:57:31Z",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_startup.json",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "telemetry_only": true
+        },
+        {
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/hi_nerv_mlx_training/telemetry.jsonl",
+          "telemetry_only": true
+        },
+        {
+          "exists": false,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl",
+          "telemetry_only": true
+        }
+      ],
+      "experiment_id": "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw",
+      "experiment_status": "queued",
+      "log_exists": true,
+      "log_path": "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_observable_fixed_29650ep_worker_20260602T205703Z/nerv_hinerv_observable_fixed_20260602T205349Z_admitted.v1/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw/run_mlx_first_campaign_row/20260602T205704Z_4cd160632c71caea.log",
+      "log_tail": [
+        "{\"blockers\": [\"hi_nerv_mlx_scoreaware_or_export_failed\"], \"mode\": \"hi_nerv_mlx_scoreaware_failed\", \"ready_for_exact_eval_dispatch\": false, \"report_path\": \"/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_observable_fixed_20260602T205349Z/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f/compact_renderer_mlx_spine_runner_report.json\", \"schema\": \"compact_renderer_mlx_spine_runner.v1\", \"score_claim\": false}"
+      ],
+      "pid": 18989,
+      "postcondition_failure_policy": "failed",
+      "processes": [
+        {
+          "command": "/bin/zsh -c UTC=$(.venv/bin/python - <<'PY'\\012from datetime import datetime, timezone\\012print(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ'))\\012PY\\012)\\012QUEUE=\".omx/research/nerv_long_training_campaign_admitted_queue_20260602T205349Z_hinerv_observable_fixed_codex.json\"\\012EXP=\"hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw\"\\012STEP=\"run_mlx_first_campaign_row\"\\012.venv/bin/python tools/claim_lane_dispatch.py claim \\\\012  --lane-id lane_nerv_hinerv_observable_fixed_long_mlx_20260602 \\\\012  --platform local_mlx \\\\012  --instance-job-id nerv_hinerv_observable_fixed_29650ep_worker_20260602T205532Z \\\\012  --agent codex:gpt-5 \\\\012  --status stopped_duplicate_active_family_smoke_refusal \\\\012  --notes \"Long worker refused before launch because a separate 1-pair HiNeRV gpu-device-alias smoke was active for ~6s; no long-run artifacts, no score claim. Rewinding after ps shows no same-family process.\" \\\\012  --force\\012.venv/bin/python tools/experiment_queue.py --queue \"$QUEUE\" rewind \"$EXP\" \"$STEP\" --reason \"duplicate active-family smoke ended; no long-run artifacts created; retry after ps clean\"\\012TRAIN_LANE=\"lane_nerv_hinerv_observable_fixed_long_mlx_20260602\"\\012TRAIN_JOB=\"nerv_hinerv_observable_fixed_29650ep_worker_${UTC}\"\\012.venv/bin/python tools/claim_lane_dispatch.py claim \\\\012  --lane-id \"$TRAIN_LANE\" \\\\012  --platform local_mlx \\\\012  --instance-job-id \"$TRAIN_JOB\" \\\\012  --agent codex:gpt-5 \\\\012  --status active_local_mlx_training \\\\012  --predicted-eta-utc \"$(date -u -v+12H '+%Y-%m-%dT%H:%M:%SZ')\" \\\\012  --notes \"Retry fixed observable 600-pair HiNeRV lr=2.7e-5 29650ep local MLX row after duplicate-smoke collision cleared; false-authority until receiver proof/local replay/exact gates.\"\\012LOG_ROOT=\"/Volumes/VertigoDataTier/pact/queue_logs/${TRAIN_JOB}\"\\012mkdir -p \"$LOG_ROOT\"\\012LAUNCH_JSON=\".omx/research/nerv_hinerv_observable_fixed_long_launch_${UTC}.json\"\\012WORKER_OUT=\".omx/research/nerv_hinerv_observable_fixed_long_worker_result_${UTC}.json\"\\012.venv/bin/python - <<PY\\012import json, subprocess, sys\\012from datetime import datetime, timezone\\012from pathlib import Path\\012repo=Path('/Users/adpena/Projects/pact')\\012queue=repo / '$QUEUE'\\012worker_out=repo / '$WORKER_OUT'\\012log_root=Path('$LOG_ROOT')\\012stdout_path=log_root / 'queue_worker_stdout.log'\\012stderr_path=log_root / 'queue_worker_stderr.log'\\012stdout=open(stdout_path,'ab')\\012stderr=open(stderr_path,'ab')\\012cmd=[sys.executable,'tools/experiment_queue.py','--queue',str(queue),'run-worker','--execute','--max-experiments','1','--max-parallel','1','--max-steps','1','--log-root',str(log_root),'--output',str(worker_out)]\\012proc=subprocess.Popen(cmd, cwd=repo, stdout=stdout, stderr=stderr, start_new_session=True)\\012Path('$LAUNCH_JSON').write_text(json.dumps({\\012 'schema':'nerv_hinerv_observable_fixed_long_launch.v1',\\012 'created_utc':datetime.now(timezone.utc).isoformat(),\\012 'pid':proc.pid,\\012 'cmd':cmd,\\012 'queue':str(queue),\\012 'worker_output':str(worker_out),\\012 'log_root':str(log_root),\\012 'stdout_path':str(stdout_path),\\012 'stderr_path':str(stderr_path),\\012 'lane_id':'$TRAIN_LANE',\\012 'instance_job_id':'$TRAIN_JOB',\\012 'score_claim':False,\\012 'promotion_eligible':False,\\012 'ready_for_exact_eval_dispatch':False,\\012}, indent=2, sort_keys=True)+'\\n')\\012print(json.dumps({'launch_json':'$LAUNCH_JSON','pid':proc.pid,'worker_output':'$WORKER_OUT','log_root':str(log_root)}, sort_keys=True))\\012PY\\012sleep 35\\012.venv/bin/python tools/experiment_queue.py --queue \"$QUEUE\" observe --format json --output \".omx/research/nerv_long_training_campaign_observation_${UTC}_hinerv_observable_fixed_running_retry_codex.json\"\\012.venv/bin/python - <<PY\\012import json\\012from pathlib import Path\\012p=Path('.omx/research/nerv_long_training_campaign_observation_${UTC}_hinerv_observable_fixed_running_retry_codex.json')\\012data=json.loads(p.read_text())\\012print('obs', p)\\012print('healthy', data.get('healthy'), 'blockers', data.get('blockers'), 'status_counts', data.get('status_counts'))\\012print('running', len(data.get('running_steps') or []), 'failed', len(data.get('failed_steps') or []), 'ready', len(data.get('ready_steps') or []))\\012for item in (data.get('running_steps') or data.get('failed_steps') or data.get('queued_steps') or [])[:1]:\\012    print('step', item.get('experiment_id'), item.get('status'), 'pid', item.get('pid'), 'timeout', item.get('timeout_seconds'))\\012    print('log_tail', item.get('log_tail'))\\012    for art in item.get('expected_artifacts', [])[-4:]:\\012        print('artifact', art.get('path'), 'exists', art.get('exists'), 'bytes', art.get('bytes'), 'jsonl', art.get('jsonl_summary'))\\012PY",
+          "etime": "00:36",
+          "pid": "18726"
+        }
+      ],
+      "resource_kind": "local_mlx",
+      "status": "failed",
+      "step_id": "run_mlx_first_campaign_row",
+      "stored_status": "failed",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "updated_at_utc": "2026-06-02T20:57:38Z",
+      "worker_run_id": "4cd160632c71caea"
+    }
+  ],
+  "frozen_steps": [],
+  "generated_at_utc": "2026-06-02T20:57:39Z",
+  "healthy": false,
+  "local_training_signal_observation_count": 0,
+  "local_training_signal_observations": [],
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "paused_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw": {
+        "artifact_record_bytes_mean": 709733.5,
+        "artifact_record_bytes_sum": 1419467,
+        "artifact_record_count": 8,
+        "artifact_record_raw_bytes_mean": 709733.5,
+        "artifact_record_raw_bytes_sum": 1419467,
+        "candidate_ids": [
+          "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 33.36917662504129,
+        "elapsed_seconds_mean": 17.198664687515702,
+        "elapsed_seconds_min": 1.028152749990113,
+        "elapsed_seconds_sum": 34.397329375031404,
+        "experiment_ids": [
+          "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+        ],
+        "failure_count": 2,
+        "log_bytes_mean": 457.0,
+        "log_bytes_sum": 914,
+        "resource_kind_counts": {
+          "local_mlx": 2
+        },
+        "run_count": 2,
+        "step_ids": [
+          "run_mlx_first_campaign_row"
+        ],
+        "success_count": 0
+      },
+      "nerv_campaign_storage_preflight": {
+        "artifact_record_bytes_mean": 26023.5,
+        "artifact_record_bytes_sum": 52047,
+        "artifact_record_count": 3,
+        "artifact_record_raw_bytes_mean": 26023.5,
+        "artifact_record_raw_bytes_sum": 52047,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 46.420149000012316,
+        "elapsed_seconds_mean": 23.34164125000825,
+        "elapsed_seconds_min": 0.2631335000041872,
+        "elapsed_seconds_sum": 46.6832825000165,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3099.0,
+        "log_bytes_sum": 6198,
+        "resource_kind_counts": {
+          "local_cpu": 1,
+          "local_io_heavy": 1
+        },
+        "run_count": 2,
+        "step_ids": [
+          "proactive_cleanup",
+          "storage_tier_plan"
+        ],
+        "success_count": 2
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 6198.0,
+        "artifact_record_bytes_sum": 6198,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 6198.0,
+        "artifact_record_raw_bytes_sum": 6198,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2631335000041872,
+        "elapsed_seconds_mean": 0.2631335000041872,
+        "elapsed_seconds_min": 0.2631335000041872,
+        "elapsed_seconds_sum": 0.2631335000041872,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 6198.0,
+        "log_bytes_sum": 6198,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "storage_tier_plan"
+        ],
+        "success_count": 1
+      },
+      "local_io_heavy": {
+        "artifact_record_bytes_mean": 45849.0,
+        "artifact_record_bytes_sum": 45849,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 45849.0,
+        "artifact_record_raw_bytes_sum": 45849,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 46.420149000012316,
+        "elapsed_seconds_mean": 46.420149000012316,
+        "elapsed_seconds_min": 46.420149000012316,
+        "elapsed_seconds_sum": 46.420149000012316,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 0.0,
+        "log_bytes_sum": 0,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "proactive_cleanup"
+        ],
+        "success_count": 1
+      },
+      "local_mlx": {
+        "artifact_record_bytes_mean": 709733.5,
+        "artifact_record_bytes_sum": 1419467,
+        "artifact_record_count": 8,
+        "artifact_record_raw_bytes_mean": 709733.5,
+        "artifact_record_raw_bytes_sum": 1419467,
+        "candidate_ids": [
+          "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 33.36917662504129,
+        "elapsed_seconds_mean": 17.198664687515702,
+        "elapsed_seconds_min": 1.028152749990113,
+        "elapsed_seconds_sum": 34.397329375031404,
+        "experiment_ids": [
+          "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+        ],
+        "failure_count": 2,
+        "log_bytes_mean": 457.0,
+        "log_bytes_sum": 914,
+        "resource_kind_counts": {
+          "local_mlx": 2
+        },
+        "run_count": 2,
+        "step_ids": [
+          "run_mlx_first_campaign_row"
+        ],
+        "success_count": 0
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw.run_mlx_first_campaign_row": {
+        "artifact_record_bytes_mean": 709733.5,
+        "artifact_record_bytes_sum": 1419467,
+        "artifact_record_count": 8,
+        "artifact_record_raw_bytes_mean": 709733.5,
+        "artifact_record_raw_bytes_sum": 1419467,
+        "candidate_ids": [
+          "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 33.36917662504129,
+        "elapsed_seconds_mean": 17.198664687515702,
+        "elapsed_seconds_min": 1.028152749990113,
+        "elapsed_seconds_sum": 34.397329375031404,
+        "experiment_ids": [
+          "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+        ],
+        "failure_count": 2,
+        "log_bytes_mean": 457.0,
+        "log_bytes_sum": 914,
+        "resource_kind_counts": {
+          "local_mlx": 2
+        },
+        "run_count": 2,
+        "step_ids": [
+          "run_mlx_first_campaign_row"
+        ],
+        "success_count": 0
+      },
+      "nerv_campaign_storage_preflight.proactive_cleanup": {
+        "artifact_record_bytes_mean": 45849.0,
+        "artifact_record_bytes_sum": 45849,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 45849.0,
+        "artifact_record_raw_bytes_sum": 45849,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_io_heavy",
+        "elapsed_seconds_max": 46.420149000012316,
+        "elapsed_seconds_mean": 46.420149000012316,
+        "elapsed_seconds_min": 46.420149000012316,
+        "elapsed_seconds_sum": 46.420149000012316,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 0.0,
+        "log_bytes_sum": 0,
+        "resource_kind_counts": {
+          "local_io_heavy": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "proactive_cleanup"
+        ],
+        "success_count": 1
+      },
+      "nerv_campaign_storage_preflight.storage_tier_plan": {
+        "artifact_record_bytes_mean": 6198.0,
+        "artifact_record_bytes_sum": 6198,
+        "artifact_record_count": 1,
+        "artifact_record_raw_bytes_mean": 6198.0,
+        "artifact_record_raw_bytes_sum": 6198,
+        "candidate_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2631335000041872,
+        "elapsed_seconds_mean": 0.2631335000041872,
+        "elapsed_seconds_min": 0.2631335000041872,
+        "elapsed_seconds_sum": 0.2631335000041872,
+        "experiment_ids": [
+          "nerv_campaign_storage_preflight"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 6198.0,
+        "log_bytes_sum": 6198,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "storage_tier_plan"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw": [
+        "hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+      ],
+      "nerv_campaign_storage_preflight": [
+        "nerv_campaign_storage_preflight"
+      ]
+    },
+    "event_count": 4,
+    "promotion_eligible": false,
+    "queue_id": "nerv_hinerv_observable_fixed_20260602T205349Z_admitted.v1",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "nerv_hinerv_observable_fixed_20260602T205349Z_admitted.v1",
+  "queue_sha256": "4a8fe83a4cd01568f080510a5d60cefb9ae413cfe136c567b9ad41f6df00de20",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 1
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 1
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 4,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "nerv_hinerv_observable_fixed_20260602T205349Z_admitted.v1",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18,
+      "local_io_heavy": 1,
+      "local_mlx": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 120,
+      "local_io_heavy": 1200,
+      "local_mlx": 43200
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 120,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 0.2631335000041872,
+        "elapsed_seconds_p95": 0.2631335000041872,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 120,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      },
+      "local_io_heavy": {
+        "advisory_only": true,
+        "concurrency_reason": "cap_io_heavy_pressure",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 1200,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 46.420149000012316,
+        "elapsed_seconds_p95": 46.420149000012316,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 1200,
+        "resource_kind": "local_io_heavy",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      },
+      "local_mlx": {
+        "advisory_only": true,
+        "concurrency_reason": "single_local_accelerator_default",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 43200,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 33.36917662504129,
+        "elapsed_seconds_p95": 33.36917662504129,
+        "observed_failure_count": 2,
+        "observed_run_count": 2,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 43200,
+        "resource_kind": "local_mlx",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_nerv_hinerv_observable_fixed_20260602T205349Z_admitted.v1.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-06-02T20:54:00Z",
+    "event_count": 22,
+    "max_event_id": 22,
+    "max_step_updated_at_utc": "2026-06-02T20:57:38Z",
+    "queue_id": "nerv_hinerv_observable_fixed_20260602T205349Z_admitted.v1",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_nerv_hinerv_observable_fixed_20260602T205349Z_admitted.v1.sqlite",
+    "step_state_count": 3
+  },
+  "status_counts": {
+    "failed": 1,
+    "succeeded": 2
+  },
+  "step_count": 3,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "succeeded_signal_steps": [],
+  "suggested_commands": {
+    "control_status": ".venv/bin/python tools/queue_control.py --queue <queue-path> status",
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute",
+    "stop_freeze": ".venv/bin/python tools/queue_control.py --queue <queue-path> stop --reason '<reason>'",
+    "supervise": ".venv/bin/python tools/queue_supervisor.py --queue <queue-path> --output-dir <output-dir> --execute",
+    "tail_logs": ".venv/bin/python tools/queue_control.py --queue <queue-path> tail-logs --lines 80"
+  }
+}

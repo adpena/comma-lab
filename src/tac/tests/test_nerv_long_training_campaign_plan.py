@@ -65,6 +65,17 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         for row in hi_rows
     )
     assert all("--mlx-prefilter-progress-every" in row["command_argv"] for row in hi_rows)
+    assert all(
+        "--telemetry-flush-interval-epochs" in row["command_argv"]
+        for row in hi_rows
+    )
+    assert all(
+        row["command_argv"][
+            row["command_argv"].index("--telemetry-flush-interval-epochs") + 1
+        ]
+        == "1"
+        for row in hi_rows
+    )
     assert all(row["local_mlx_launch_command_ready"] is True for row in hi_rows)
     assert all(row["local_mlx_executable"] is True for row in hi_rows)
     assert all("--auto-joint-recon-pixel-weight" in row["command_argv"] for row in hi_rows)
@@ -104,6 +115,20 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     )
     hi_step = hi_rows[0]["experiment_queue_entry"]["steps"][0]
     assert hi_step["command"] == hi_rows[0]["command_argv"]
+    assert "telemetry" in hi_step
+    assert hi_step["telemetry"]["include_postcondition_paths"] is True
+    assert any(
+        path.endswith("compact_renderer_mlx_spine_runner_startup.json")
+        for path in hi_step["telemetry"]["artifact_paths"]
+    )
+    assert any(
+        path.endswith("hi_nerv_mlx_training/telemetry.jsonl")
+        for path in hi_step["telemetry"]["artifact_paths"]
+    )
+    assert any(
+        path.endswith("hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl")
+        for path in hi_step["telemetry"]["artifact_paths"]
+    )
     assert "--planner-row-id" in hi_rows[0]["command_argv"]
     assert (
         hi_rows[0]["command_argv"][
@@ -478,6 +503,68 @@ def test_long_training_campaign_plan_applies_hinerv_lr9e5_recovery_feedback(
     )
     assert "--pose-distillation-loss" not in hi["command_argv"]
     assert "--pose-distillation-huber-delta" not in hi["command_argv"]
+
+
+def test_long_training_campaign_plan_applies_hinerv_family_pose_instability_feedback(
+) -> None:
+    hinerv_budget = _hinerv_budget()
+    sibling = dict(hinerv_budget["selected_candidates"][0])
+    sibling["candidate_id"] = "hinerv_sibling"
+    sibling["decoder_codec"] = "portfolio_auto"
+    hinerv_budget["selected_candidates"] = [sibling]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=hinerv_budget,
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=9.0e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_previous_full600",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "receiver_proof_attached": True,
+                "full_video_local_prefilter_attached": True,
+                "local_cpu_replay_gate_attached": True,
+                "measured_archive_bytes": 111_000,
+                "feedback_ready": False,
+                "pose_instability_detected": True,
+                "observed_learning_rate": 9.0e-5,
+                "recommended_learning_rate": 2.7e-5,
+                "recommended_launch_mutations": [
+                    "lower_learning_rate_from_pose_instability_telemetry"
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    feedback = hi["candidate_feedback"]
+    assert feedback["feedback_match_scope"] == "family_training_telemetry"
+    assert feedback["candidate_id_match"] is False
+    assert feedback["source_candidate_id"] == "hinerv_previous_full600"
+    assert feedback["target_candidate_id"] == "hinerv_sibling"
+    assert feedback["receiver_proof_attached"] is False
+    assert feedback["full_video_local_prefilter_attached"] is False
+    assert feedback["local_cpu_replay_gate_attached"] is False
+    assert feedback["measured_archive_bytes"] is None
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["applied"] is True
+    assert adjustment["learning_rate"] == 2.7e-5
+    assert hi["command_argv"][hi["command_argv"].index("--learning-rate") + 1] == (
+        "2.7e-05"
+    )
+    assert hi["curriculum_plan"]["byte_oracle_logging"]["feedback_ready"] is False
+    assert "hinerv_pose_instability_feedback_unapplied" not in hi["blockers"]
+    assert "hi_nerv_receiver_proof_missing" in hi["blockers"]
 
 
 def test_long_training_campaign_plan_blocks_repeated_low_lr_pose_instability(

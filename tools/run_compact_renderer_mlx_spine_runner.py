@@ -153,6 +153,9 @@ EXECUTABLE_FAMILIES = (
 PLANNER_GATED_FAMILIES: tuple[str, ...] = ()
 CLI_EXECUTE_FAMILIES = (*EXECUTABLE_FAMILIES, *PLANNER_GATED_FAMILIES)
 PLANNER_ROW_REQUIRED_FAMILIES = ("hi_nerv", "snerv")
+COMPACT_FAMILY_STARTUP_MARKER_FILENAME = (
+    "compact_renderer_mlx_spine_runner_startup.json"
+)
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
         "canonical_family": "pr95_hnerv",
@@ -1209,6 +1212,50 @@ def _require_scorer_upstream_dir_for_distillation(
             "real scorer distillation requires --upstream-dir to point at the "
             "pinned contest upstream snapshot; missing: " + ", ".join(missing)
         )
+
+
+def _resolve_torch_scorer_device_alias(
+    requested_device: str,
+    *,
+    torch_module: Any | None = None,
+) -> str:
+    """Resolve planner-level scorer device aliases to real PyTorch devices."""
+
+    requested = str(requested_device or "cpu").strip().lower()
+    if requested in {"cpu", "cuda", "mps"}:
+        return requested
+    if requested == "metal":
+        return "mps"
+    if requested != "gpu":
+        raise CompactRendererMlxSpineRunnerError(
+            f"unsupported scorer distillation device: {requested_device!r}"
+        )
+    torch = torch_module
+    if torch is None:
+        try:
+            import torch as torch  # type: ignore[no-redef]
+        except Exception as exc:  # pragma: no cover - import failure is environment.
+            raise CompactRendererMlxSpineRunnerError(
+                "distillation_device='gpu' requires PyTorch to resolve a concrete "
+                "scorer teacher device"
+            ) from exc
+    cuda = getattr(torch, "cuda", None)
+    cuda_available = bool(
+        getattr(cuda, "is_available", lambda: False)()
+    )
+    if cuda_available:
+        return "cuda"
+    backends = getattr(torch, "backends", None)
+    mps = getattr(backends, "mps", None)
+    mps_available = bool(
+        getattr(mps, "is_available", lambda: False)()
+    )
+    if mps_available:
+        return "mps"
+    raise CompactRendererMlxSpineRunnerError(
+        "distillation_device='gpu' requested, but neither torch.cuda nor "
+        "torch.backends.mps is available"
+    )
 
 
 def adapt_pr95_mlx_report_to_spine(
@@ -2355,7 +2402,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     out = Path(output_dir).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
-    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+    if (
+        _has_disallowed_existing_output_artifacts(
+            out,
+            allow_startup_marker_only=True,
+        )
+        and not allow_overwrite
+    ):
         raise CompactRendererMlxSpineRunnerError(
             f"output dir is non-empty; pass --overwrite: {out}"
         )
@@ -3222,6 +3275,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     distillation_device: str,
+    requested_distillation_device: str | None,
     allow_segnet_only_research: bool,
     random_seed: int,
     scorer_upstream_dir: Path,
@@ -3250,6 +3304,12 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     )
 
     pairs = int(num_pairs)
+    requested_distillation_device = str(
+        requested_distillation_device or distillation_device
+    )
+    resolved_distillation_device = _resolve_torch_scorer_device_alias(
+        str(distillation_device)
+    )
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
     if segnet_distillation_weight < 0.0:
@@ -3352,7 +3412,14 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             "distillation_temperature": float(distillation_temperature),
             "segnet_tau_boundary": float(segnet_tau_boundary),
             "segnet_hinge_margin": float(segnet_hinge_margin),
-            "distillation_device": distillation_device,
+            "distillation_device": resolved_distillation_device,
+            "requested_distillation_device": requested_distillation_device,
+            "distillation_device_resolution": {
+                "schema": "compact_runner_torch_scorer_device_resolution.v1",
+                "requested": requested_distillation_device,
+                "resolved": resolved_distillation_device,
+                "scope": "real_pytorch_segnet_posenet_teacher_cache",
+            },
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
@@ -3383,7 +3450,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         scorer_teacher = build_mlx_segnet_pair_teacher(
             teacher_probe_bundle,
             upstream_dir=scorer_upstream_dir,
-            device=distillation_device,
+            device=resolved_distillation_device,
         )
         learnable_student_head = build_learnable_student_head(
             num_classes=int(scorer_teacher.num_classes),
@@ -3393,7 +3460,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
             upstream_dir=scorer_upstream_dir,
-            device=distillation_device,
+            device=resolved_distillation_device,
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
             pose_dims=int(pose_scorer_teacher.pose_dims),
@@ -3466,6 +3533,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
+    requested_distillation_device: str | None = None,
     allow_segnet_only_research: bool = False,
     scorer_upstream_dir: str | Path | None = None,
     run_receiver_proof: bool = False,
@@ -3511,6 +3579,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
             distillation_device=distillation_device,
+            requested_distillation_device=requested_distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
@@ -3950,6 +4019,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
+    requested_distillation_device: str | None = None,
     allow_segnet_only_research: bool = False,
     scorer_upstream_dir: str | Path | None = None,
     coder_aware_qat: bool = False,
@@ -4193,6 +4263,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
+    requested_distillation_device: str | None = None,
     allow_segnet_only_research: bool = False,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
@@ -4208,6 +4279,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_scorer_device: str | None = None,
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
+    telemetry_flush_interval_epochs: int = 1,
     optimizer_kind: str = "adamw",
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
@@ -4227,7 +4299,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     out = Path(output_dir).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
-    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+    effective_requested_distillation_device = str(
+        requested_distillation_device or distillation_device
+    )
+    if (
+        _has_disallowed_existing_output_artifacts(
+            out,
+            allow_startup_marker_only=True,
+        )
+        and not allow_overwrite
+    ):
         raise CompactRendererMlxSpineRunnerError(
             f"output dir is non-empty; pass --overwrite: {out}"
         )
@@ -4482,6 +4563,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
             distillation_device=distillation_device,
+            requested_distillation_device=effective_requested_distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
             coder_aware_qat=effective_coder_aware_qat,
             coder_qat_quant_bits=effective_coder_qat_quant_bits,
@@ -4497,6 +4579,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             mlx_prefilter_scorer_device=mlx_prefilter_scorer_device,
             mlx_prefilter_scorer_batch_pairs=mlx_prefilter_scorer_batch_pairs,
             mlx_prefilter_progress_every=mlx_prefilter_progress_every,
+            telemetry_flush_interval_epochs=telemetry_flush_interval_epochs,
             optimizer_kind=str(optimizer_kind),
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
@@ -4513,6 +4596,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         blocker_report.update(
             {
                 "execute_family": "hi_nerv",
+                "training_executed": False,
+                "trainer_launch_allowed": True,
+                "requested_distillation_device": effective_requested_distillation_device,
+                "distillation_device": str(distillation_device),
                 "failure": repr(exc),
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
@@ -4904,6 +4991,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
+    requested_distillation_device: str | None = None,
     allow_segnet_only_research: bool = False,
     scorer_upstream_dir: str | Path | None = None,
     coder_aware_qat: bool = False,
@@ -6249,6 +6337,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     distillation_device: str,
+    requested_distillation_device: str | None,
     allow_segnet_only_research: bool,
     coder_aware_qat: bool,
     coder_qat_quant_bits: int,
@@ -6264,6 +6353,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     mlx_prefilter_scorer_device: str | None,
     mlx_prefilter_scorer_batch_pairs: int,
     mlx_prefilter_progress_every: int,
+    telemetry_flush_interval_epochs: int,
     optimizer_kind: str,
     random_seed: int,
     scorer_upstream_dir: Path,
@@ -6290,8 +6380,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
 
     pairs = int(num_pairs)
+    requested_distillation_device = str(
+        requested_distillation_device or distillation_device
+    )
+    resolved_distillation_device = _resolve_torch_scorer_device_alias(
+        str(distillation_device)
+    )
     effective_prefilter_scorer_device = str(
-        mlx_prefilter_scorer_device or distillation_device
+        mlx_prefilter_scorer_device or requested_distillation_device
     )
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
@@ -6423,7 +6519,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "distillation_temperature": float(distillation_temperature),
             "segnet_tau_boundary": float(segnet_tau_boundary),
             "segnet_hinge_margin": float(segnet_hinge_margin),
-            "distillation_device": distillation_device,
+            "distillation_device": resolved_distillation_device,
+            "requested_distillation_device": requested_distillation_device,
+            "distillation_device_resolution": {
+                "schema": "compact_runner_torch_scorer_device_resolution.v1",
+                "requested": requested_distillation_device,
+                "resolved": resolved_distillation_device,
+                "scope": "real_pytorch_segnet_posenet_teacher_cache",
+            },
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "optimizer_kind": str(optimizer_kind),
@@ -6527,7 +6630,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         scorer_teacher = build_mlx_segnet_pair_teacher(
             teacher_probe_bundle,
             upstream_dir=scorer_upstream_dir,
-            device=distillation_device,
+            device=resolved_distillation_device,
         )
         learnable_student_head = build_learnable_student_head(
             num_classes=int(scorer_teacher.num_classes),
@@ -6552,7 +6655,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
             upstream_dir=scorer_upstream_dir,
-            device=distillation_device,
+            device=resolved_distillation_device,
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
             pose_dims=int(pose_scorer_teacher.pose_dims),
@@ -6594,7 +6697,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=max(1, int(epochs)),
-        telemetry_flush_interval_epochs=1,
+        telemetry_flush_interval_epochs=max(1, int(telemetry_flush_interval_epochs)),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
         ema_archive_selection_enabled=True,
@@ -7579,6 +7682,14 @@ def _write_compact_family_startup_marker(
         "output_dir": output_dir.as_posix(),
         "source_video_path": source_video_path.as_posix(),
         "hard_byte_ceilings": list(hard_byte_ceilings),
+        "requested_distillation_device": str(
+            getattr(
+                args,
+                "requested_distillation_device",
+                getattr(args, "distillation_device", ""),
+            )
+            or ""
+        ),
         "distillation_device": str(getattr(args, "distillation_device", "") or ""),
         "mlx_prefilter_scorer_device": str(
             getattr(args, "mlx_prefilter_scorer_device", "") or ""
@@ -7594,7 +7705,7 @@ def _write_compact_family_startup_marker(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
-    path = output_dir / "compact_renderer_mlx_spine_runner_startup.json"
+    path = output_dir / COMPACT_FAMILY_STARTUP_MARKER_FILENAME
     _write_json(path, payload)
     return path
 
@@ -8061,6 +8172,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--telemetry-flush-interval-epochs",
+        default=1,
+        type=int,
+        help=(
+            "HiNeRV long-training JSONL flush interval. Queue-owned long runs "
+            "default to 1 so observers can see progress before the terminal "
+            "runner report exists."
+        ),
+    )
+    parser.add_argument(
         "--coder-aware-qat",
         action="store_true",
         help=(
@@ -8265,6 +8386,10 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    args.requested_distillation_device = str(args.distillation_device)
+    args.distillation_device = _resolve_torch_scorer_device_alias(
+        args.distillation_device
+    )
     modes = [
         args.execute_pr95_mlx_smoke,
         args.execute_pr95_stage8_source,
@@ -8454,6 +8579,11 @@ def main(argv: list[str] | None = None) -> int:
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
+            requested_distillation_device=getattr(
+                args,
+                "requested_distillation_device",
+                args.distillation_device,
+            ),
             allow_segnet_only_research=args.allow_segnet_only_research,
             scorer_upstream_dir=scorer_upstream_dir,
             run_receiver_proof=args.run_receiver_proof,
@@ -8498,6 +8628,11 @@ def main(argv: list[str] | None = None) -> int:
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
+            requested_distillation_device=getattr(
+                args,
+                "requested_distillation_device",
+                args.distillation_device,
+            ),
             allow_segnet_only_research=args.allow_segnet_only_research,
             scorer_upstream_dir=scorer_upstream_dir,
             coder_aware_qat=args.coder_aware_qat,
@@ -8649,6 +8784,11 @@ def main(argv: list[str] | None = None) -> int:
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
+            requested_distillation_device=getattr(
+                args,
+                "requested_distillation_device",
+                args.distillation_device,
+            ),
             allow_segnet_only_research=args.allow_segnet_only_research,
             allow_unscored_research_smoke=args.allow_unscored_research_smoke,
             modelsize_budget_json_paths=tuple(args.modelsize_budget_json),
@@ -8673,6 +8813,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             mlx_prefilter_scorer_device=args.mlx_prefilter_scorer_device,
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
+            telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             optimizer_kind=args.optimizer_kind,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
@@ -8790,6 +8931,35 @@ def _load_json(path: Path) -> dict[str, Any]:
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _has_disallowed_existing_output_artifacts(
+    output_dir: Path,
+    *,
+    allow_startup_marker_only: bool = False,
+) -> bool:
+    """Return whether output_dir contains artifacts that should block a launch."""
+
+    if not output_dir.exists():
+        return False
+    entries = list(output_dir.iterdir())
+    if not entries:
+        return False
+    if allow_startup_marker_only:
+        for entry in entries:
+            if (
+                entry.is_file()
+                and entry.name == COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+            ):
+                continue
+            if entry.is_dir() and not any(
+                child.is_file() or child.is_symlink()
+                for child in entry.rglob("*")
+            ):
+                continue
+            return True
+        return False
+    return True
 
 
 def _sha256_file(path: Path) -> str:
