@@ -3839,6 +3839,7 @@ dependencies = [
     { name = "numpy" },
     { name = "optuna" },
     { name = "pydantic" },
+    { name = "pywavelets" },
     { name = "torch" },
 ]
 
@@ -3918,6 +3919,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-subtests", marker = "extra == 'dev'", specifier = ">=0.12" },
     { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.0" },
+    { name = "pywavelets", specifier = ">=1.6,<2.0" },
     { name = "pywavelets", marker = "extra == 'dev'", specifier = ">=1.6,<2.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
     { name = "safetensors", marker = "extra == 'runtime'", specifier = ">=0.4,<1.0" },

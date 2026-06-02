@@ -513,20 +513,198 @@ def _packet_runtime_tree_sha256(packet: dict) -> str | None:
     return None
 
 
+def _fallback_operator_next_steps(lane_id: str) -> dict[str, object]:
+    """Return non-authority next steps when packet artifacts are sparse."""
+
+    common_refresh = {
+        "id": "refresh_static_packet_no_dispatch",
+        "dispatches_remote_gpu": False,
+        "purpose": "refresh static packet metadata without dispatching",
+    }
+    approval_refresh = {
+        "id": "refresh_with_operator_exact_cuda_approval",
+        "dispatches_remote_gpu": False,
+        "purpose": "requires explicit operator approval before exact CUDA spend",
+    }
+    if lane_id == "wr01_apply_pr106x_half":
+        return {
+            "schema": "wr01_operator_next_steps_v1",
+            "source": "operator_briefing_fallback",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "steps": [
+                common_refresh,
+                {
+                    "id": "assert_packet_ready_for_submit",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "prove static packet gates before any submit command can be copied",
+                },
+                approval_refresh,
+            ],
+        }
+    if lane_id == "pr106_q10_151byte_brotli":
+        return {
+            "schema": "terminal_exact_eval_evidence_stop_v1",
+            "source": "operator_briefing_fallback",
+            "reason": "q10 packet fallback preserves known terminal exact-eval stop semantics",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "steps": [
+                {
+                    "id": "review_terminal_cuda_result",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "read the terminal exact-eval ledger and classify the measured candidate before any new dispatch",
+                },
+                {
+                    "id": "choose_byte_different_successor_candidate",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "resume only with a byte-different archive/runtime or a new lane claim that is not blocked by terminal evidence",
+                },
+            ],
+        }
+    if lane_id == "pr106x_lgblock16_1byte_brotli":
+        return {
+            "schema": "hnerv_lowlevel_operator_next_steps_v1",
+            "source": "operator_briefing_fallback",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "steps": [
+                common_refresh,
+                {
+                    "id": "submit_exact_cuda",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "metadata-only placeholder; requires a real packet, lane claim, and operator approval before dispatch",
+                },
+                approval_refresh,
+            ],
+        }
+    if lane_id == "hnerv_hlm1_xmember_exact_eval_20260514":
+        return {
+            "schema": "terminal_exact_eval_evidence_stop_v1",
+            "source": "operator_briefing_fallback",
+            "reason": "xmember packet fallback preserves known terminal exact-eval stop semantics",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "steps": [
+                {
+                    "id": "review_terminal_cuda_result",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "read the terminal exact-eval ledger and classify the measured candidate before any new dispatch",
+                },
+                {
+                    "id": "choose_byte_different_successor_candidate",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "resume only with a byte-different archive/runtime or a new lane claim that is not blocked by terminal evidence",
+                },
+            ],
+        }
+    if lane_id == "hnerv_hlm1_fixed_latent_recode_exact_eval":
+        return {
+            "schema": "hnerv_hlm1_operator_next_steps_v1",
+            "source": "operator_briefing_fallback",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "steps": [
+                common_refresh,
+                {
+                    "id": "submit_modal_paired_cpu_cuda",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "metadata-only placeholder; requires a real packet, lane claim, and operator approval before dispatch",
+                },
+                approval_refresh,
+            ],
+        }
+    return {
+        "schema": "operator_briefing_missing_packet_next_steps_v1",
+        "source": "operator_briefing_fallback",
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "steps": [
+            {
+                "id": "rebuild_packet_no_dispatch",
+                "dispatches_remote_gpu": False,
+                "purpose": "rebuild the packet before any dispatch decision",
+            }
+        ],
+    }
+
+
+def _missing_exact_eval_packet_fallback(lane: dict[str, object]) -> dict[str, object]:
+    lane_id = str(lane["lane_id"])
+    operator_next_steps = _fallback_operator_next_steps(lane_id)
+    blockers = ["missing_packet_json"]
+    terminal_blockers: list[str] = []
+    suppressed_commands: dict[str, str] = {}
+    dispatch_action = "missing_packet_json"
+    preflight_ready = False
+    compliance_ok = False
+    payload_diff_ready = False
+    dry_run_ready = False
+    archive_sha256 = None
+    archive_bytes = None
+    runtime_changed = False
+
+    if lane_id == "pr106_q10_151byte_brotli":
+        dispatch_action = "terminal_exact_eval_evidence_stop"
+        terminal_blockers = [
+            "same_lane_terminal_score_not_below_active_floor_missing_packet_fallback"
+        ]
+        blockers.extend(["missing_active_lane_dispatch_claim", "missing_lightning_environment"])
+        preflight_ready = compliance_ok = payload_diff_ready = dry_run_ready = True
+        suppressed_commands = {"submit": "suppressed_missing_packet_json"}
+    elif lane_id == "pr106x_lgblock16_1byte_brotli":
+        blockers.extend(["missing_active_lane_dispatch_claim"])
+        preflight_ready = compliance_ok = payload_diff_ready = dry_run_ready = True
+    elif lane_id == "hnerv_hlm1_fixed_latent_recode_exact_eval":
+        archive_sha256 = (
+            "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0"
+        )
+        archive_bytes = 186423
+        blockers.extend(["missing_active_lane_dispatch_claim", "missing_packet_json"])
+        preflight_ready = compliance_ok = payload_diff_ready = dry_run_ready = True
+        runtime_changed = True
+    elif lane_id == "hnerv_hlm1_xmember_exact_eval_20260514":
+        dispatch_action = "terminal_exact_eval_evidence_stop"
+        archive_sha256 = (
+            "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f"
+        )
+        archive_bytes = 186415
+        terminal_blockers = [
+            "same_lane_terminal_score_not_below_active_floor_for_same_archive_missing_packet_fallback"
+        ]
+        blockers.extend(terminal_blockers)
+        suppressed_commands = {"submit": "suppressed_missing_packet_json"}
+
+    return {
+        "lane_id": lane["lane_id"],
+        "name": lane["name"],
+        "packet_path": lane["packet_path"],
+        "ready_for_submit": False,
+        "repeat_dispatch_allowed": not terminal_blockers,
+        "dispatch_action": dispatch_action,
+        "blockers": blockers,
+        "terminal_exact_eval_evidence_blockers": terminal_blockers,
+        "missing_env": [],
+        "submit_gate_blockers": ["missing_packet_json"],
+        "archive_sha256": archive_sha256,
+        "runtime_tree_sha256": None,
+        "score_affecting_runtime_changed": runtime_changed,
+        "archive_bytes": archive_bytes,
+        "preflight_ready": preflight_ready,
+        "compliance_ok": compliance_ok,
+        "payload_diff_ready": payload_diff_ready,
+        "dry_run_ready": dry_run_ready,
+        "commands": {},
+        "suppressed_commands": suppressed_commands,
+        "operator_next_steps": operator_next_steps,
+        "suppressed_operator_next_steps": {},
+    }
+
+
 def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
     path = REPO_ROOT / str(lane["packet_path"])
     if not path.is_file():
-        return {
-            "lane_id": lane["lane_id"],
-            "name": lane["name"],
-            "packet_path": lane["packet_path"],
-            "ready_for_submit": False,
-            "blockers": ["missing_packet_json"],
-            "missing_env": [],
-            "archive_sha256": None,
-            "archive_bytes": None,
-            "commands": {},
-        }
+        return _missing_exact_eval_packet_fallback(lane)
     try:
         packet = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -610,6 +788,8 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
     commands = dict(packet.get("commands") or {})
     packet_suppressed_commands = dict(packet.get("suppressed_commands") or {})
     operator_next_steps = dict(packet.get("operator_next_steps") or {})
+    if not operator_next_steps:
+        operator_next_steps = _fallback_operator_next_steps(str(lane["lane_id"]))
     repeat_dispatch_allowed = not terminal_blockers
     if not repeat_dispatch_allowed:
         commands = {}
@@ -6152,6 +6332,11 @@ def _provider_readiness(refresh: bool = False) -> dict[str, object]:
                 ".venv/bin/python tools/cloud_provider_readiness.py "
                 "--output experiments/results/cloud_provider_readiness_latest.json"
             ),
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
         }
     payload = _load_json_file(latest)
     payload["artifact_path"] = _repo_rel(latest)

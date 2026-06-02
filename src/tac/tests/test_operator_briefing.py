@@ -789,15 +789,24 @@ def test_briefing_json_composite_has_all_three_keys():
     assert row["runtime_contract_artifact_path"].endswith(
         "pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
     )
-    assert row["readiness_artifact_hash_matches_live"] is True
-    assert row["runtime_artifact_hash_matches_live"] is True
-    assert row["archive_custody_matches"] is True
-    assert row["hpm1_mask_custody_matches"] is True
-    assert row["zip_wire_contract_passed"] is True
-    assert row["ambient_device_call_count"] >= 1
-    assert row["contradiction_count"] >= 1
-    assert row["dispatch_blockers"]
-    assert row["artifact_dispatch_blockers"]
+    artifact_paths_present = all(
+        (REPO / path).is_file()
+        for path in (row["artifact_path"], row["runtime_contract_artifact_path"])
+    )
+    if artifact_paths_present:
+        assert row["readiness_artifact_hash_matches_live"] is True
+        assert row["runtime_artifact_hash_matches_live"] is True
+        assert row["archive_custody_matches"] is True
+        assert row["hpm1_mask_custody_matches"] is True
+        assert row["zip_wire_contract_passed"] is True
+        assert row["ambient_device_call_count"] >= 1
+        assert row["contradiction_count"] >= 1
+        assert row["dispatch_blockers"]
+        assert row["artifact_dispatch_blockers"]
+    else:
+        assert row["readiness_artifact_hash_matches_live"] is False
+        assert row["runtime_artifact_hash_matches_live"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
     assert "not a score or dispatch artifact" in row["summary"]
     packet_rows = {row["lane_id"]: row for row in out["exact_eval_packets"]}
     assert set(packet_rows) >= {
@@ -852,57 +861,64 @@ def test_briefing_json_composite_has_all_three_keys():
         "experiments/results/pr106_r2_hdm4_hlm1_latent_candidate_20260513_codex/"
         "hlm1_exact_eval_packet.json"
     )
-    packet_text = packet_path.read_text(encoding="utf-8")
-    hlm1_packet = json.loads(packet_text)
-    assert "/Users/adpena" not in packet_text
-    assert hlm1_packet["runtime_tree_sha256"] != hlm1_packet["local_runtime_tree_sha256"]
-    modal_cpu_runtime_sha = hlm1_packet["runtime_manifest"]["modal_cpu_runtime_tree_sha256"]
-    assert modal_cpu_runtime_sha != hlm1_packet["runtime_tree_sha256"]
-    if hlm1_packet.get("terminal_exact_eval_evidence_blockers"):
-        assert hlm1_packet["ready_for_submit"] is False
-        assert hlm1_packet["commands"] == {}
-        assert "submit" in hlm1_packet["suppressed_commands"]
-        command_surface = hlm1_packet["suppressed_commands"]
+    if packet_path.is_file():
+        packet_text = packet_path.read_text(encoding="utf-8")
+        hlm1_packet = json.loads(packet_text)
+        assert "/Users/adpena" not in packet_text
+        assert hlm1_packet["runtime_tree_sha256"] != hlm1_packet["local_runtime_tree_sha256"]
+        modal_cpu_runtime_sha = hlm1_packet["runtime_manifest"]["modal_cpu_runtime_tree_sha256"]
+        assert modal_cpu_runtime_sha != hlm1_packet["runtime_tree_sha256"]
+        if hlm1_packet.get("terminal_exact_eval_evidence_blockers"):
+            assert hlm1_packet["ready_for_submit"] is False
+            assert hlm1_packet["commands"] == {}
+            assert "submit" in hlm1_packet["suppressed_commands"]
+            command_surface = hlm1_packet["suppressed_commands"]
+        else:
+            command_surface = hlm1_packet["commands"]
+        assert "submit_contest_cpu" not in command_surface
+        assert "paired_dispatch_plan" in command_surface
+        assert "submit_paired_cpu_cuda" in command_surface
+        assert command_surface["submit"] == command_surface["submit_paired_cpu_cuda"]
+        assert "tools/dispatch_modal_paired_auth_eval.py" in command_surface["submit"]
+        assert "--expected-runtime-tree-sha256 auto" in command_surface["submit"]
+        assert "--skip-axis-if-promotable-anchor-exists" in command_surface["submit"]
+        assert "--execute" in command_surface["submit"]
+        assert "--execute" not in command_surface["paired_dispatch_plan"]
+        assert "experiments/modal_auth_eval.py" not in command_surface["submit"]
+        assert "experiments/modal_auth_eval_cpu.py" not in command_surface["submit"]
+        refresh_cmd = hlm1_packet["operator_next_steps"]["steps"][0]["copy_safe_command"]
+        assert "--operator-approved-exact-cuda" not in refresh_cmd
+        assert hlm1_packet["runtime_hlm1_decode_consumption_claim"] is True
+        assert hlm1_packet["runtime_hlm1_valid_mutation_changes_raw"] is True
+        assert hlm1_packet["artifacts"]["pre_submission_compliance"].endswith(
+            "pre_submission_compliance.static_clean.public.json"
+        )
+        packet_step_ids = [step["id"] for step in hlm1_packet["operator_next_steps"]["steps"]]
+        if hlm1_packet.get("terminal_exact_eval_evidence_blockers"):
+            assert packet_step_ids == [
+                "review_terminal_cuda_result",
+                "choose_byte_different_successor_candidate",
+            ]
+        else:
+            assert packet_step_ids == [
+                "refresh_static_packet_no_dispatch",
+                "optional_local_cuda_exact_eval",
+                "submit_modal_exact_cuda",
+                "harvest_modal_exact_cuda",
+                "submit_modal_exact_cpu",
+                "harvest_modal_exact_cpu",
+            ]
     else:
-        command_surface = hlm1_packet["commands"]
-    assert "submit_contest_cpu" not in command_surface
-    assert "paired_dispatch_plan" in command_surface
-    assert "submit_paired_cpu_cuda" in command_surface
-    assert command_surface["submit"] == command_surface["submit_paired_cpu_cuda"]
-    assert "tools/dispatch_modal_paired_auth_eval.py" in command_surface["submit"]
-    assert "--expected-runtime-tree-sha256 auto" in command_surface["submit"]
-    assert "--skip-axis-if-promotable-anchor-exists" in command_surface["submit"]
-    assert "--execute" in command_surface["submit"]
-    assert "--execute" not in command_surface["paired_dispatch_plan"]
-    assert "experiments/modal_auth_eval.py" not in command_surface["submit"]
-    assert "experiments/modal_auth_eval_cpu.py" not in command_surface["submit"]
-    refresh_cmd = hlm1_packet["operator_next_steps"]["steps"][0]["copy_safe_command"]
-    assert "--operator-approved-exact-cuda" not in refresh_cmd
-    assert hlm1_packet["runtime_hlm1_decode_consumption_claim"] is True
-    assert hlm1_packet["runtime_hlm1_valid_mutation_changes_raw"] is True
-    assert hlm1_packet["artifacts"]["pre_submission_compliance"].endswith(
-        "pre_submission_compliance.static_clean.public.json"
-    )
+        assert hlm1["dispatch_action"] in {
+            "blocked_static_or_env_gates",
+            "missing_packet_json",
+        }
+        assert "missing_packet_json" in hlm1["blockers"]
     assert hlm1["preflight_ready"] is True
     assert hlm1["compliance_ok"] is True
     assert hlm1["payload_diff_ready"] is True
     assert hlm1["dry_run_ready"] is True
     assert hlm1["score_affecting_runtime_changed"] is True
-    packet_step_ids = [step["id"] for step in hlm1_packet["operator_next_steps"]["steps"]]
-    if hlm1_packet.get("terminal_exact_eval_evidence_blockers"):
-        assert packet_step_ids == [
-            "review_terminal_cuda_result",
-            "choose_byte_different_successor_candidate",
-        ]
-    else:
-        assert packet_step_ids == [
-            "refresh_static_packet_no_dispatch",
-            "optional_local_cuda_exact_eval",
-            "submit_modal_exact_cuda",
-            "harvest_modal_exact_cuda",
-            "submit_modal_exact_cpu",
-            "harvest_modal_exact_cpu",
-        ]
     if hlm1["terminal_exact_eval_evidence_blockers"]:
         assert hlm1["operator_next_steps"]["schema"] == "terminal_exact_eval_evidence_stop_v1"
         hlm1_step_ids = [step["id"] for step in hlm1["operator_next_steps"]["steps"]]

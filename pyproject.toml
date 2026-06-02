@@ -95,6 +95,10 @@ dependencies = [
     # the compliance gate. The wheel is ~3MB on standard wheels and has
     # binary builds for T4 / 4090 / macOS — no native compile required.
     "cryptography>=41.0",
+    # SNeRV inverse-steg carrier uses orthonormal DWT/IDWT via `pywt`.
+    # Keep PyWavelets in the default local-dev/runtime dependency set so
+    # `uv run` fresh environments can collect and run the carrier tests.
+    "PyWavelets>=1.6,<2.0",
     # CMA-ES black-box optimizer used by tools/meta_lagrangian_search_cli.py
     # for deterministic CPU-planning sweeps over candidate parameter spaces.
     # Pure Python, small wheel, no native build dependencies.
@@ -250,6 +254,7 @@ external = [
 known-first-party = ["tac", "comma_lab"]
 
 [tool.pytest.ini_options]
+pythonpath = [".", "src"]
 testpaths = ["tests", "src/tac/tests"]
 timeout = 60
 markers = [

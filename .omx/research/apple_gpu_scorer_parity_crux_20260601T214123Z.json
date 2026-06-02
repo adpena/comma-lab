@@ -1,0 +1,165 @@
+{
+  "advisory_tag": "[macOS-CPU advisory]",
+  "backend": "mps",
+  "chosen_path": "A_pytorch_mps_op_fix",
+  "evidence_grade": "macOS-MPS-diagnostic",
+  "faithfulness_proof": {
+    "advisory_tag": "[macOS-CPU advisory]",
+    "apple_pose_after": 0.004450025036931038,
+    "apple_pose_before": 0.013776588253676891,
+    "apple_seg_after": 0.00010501479846425354,
+    "apple_seg_before": 0.00042825378477573395,
+    "backend_trained_on": "mps",
+    "evidence_grade": "macOS-MPS-diagnostic",
+    "promotion_eligible": false,
+    "score_claim": false,
+    "steps": 25,
+    "true_cpu_pose_after": 0.004450250416994095,
+    "true_cpu_pose_before": 0.013776793144643307,
+    "true_cpu_seg_after": 0.00010501479846425354,
+    "true_cpu_seg_before": 0.0004282541631255299,
+    "true_pose_reduced": true,
+    "true_seg_reduced": true,
+    "unlock": true
+  },
+  "forward_backward_parity": {
+    "backend": "mps",
+    "backward_faithful": true,
+    "cliff_fix_applied": "cpu_wrap",
+    "evidence_grade": "macOS-MPS-diagnostic",
+    "forward_faithful": true,
+    "grad_cosine_cpu_vs_apple": 1.0,
+    "grad_max_abs": 6.514601409435272e-07,
+    "grad_norm_ratio": 0.9999982714653015,
+    "num_ops_above_cliff": 0,
+    "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]",
+    "posenet_scored_slice_l_inf": 3.814697265625e-06,
+    "posenet_scored_slice_rel": 1.0998645076912657e-07,
+    "posenet_worst_l_inf": 0.00038242340087890625,
+    "posenet_worst_op": "vision.stages.0.blocks.1.mlp.conv.bn.drop",
+    "promotion_eligible": false,
+    "residual_drift_factor_vs_stale_23x": 1.0998645076912656,
+    "score_claim": false,
+    "segnet_argmax_flip_rate": 0.0,
+    "segnet_logits_l_inf": 3.457069396972656e-05,
+    "segnet_worst_l_inf": 0.00042724609375,
+    "segnet_worst_op": "decoder.blocks.0.conv1.0"
+  },
+  "generated_at_utc": "20260601T214123Z",
+  "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]",
+  "posenet_top_ops": [
+    {
+      "above_cliff": false,
+      "l_2": 2.5206019132852057e-05,
+      "l_inf": 0.00038242340087890625,
+      "layer_class": "Identity",
+      "layer_name": "vision.stages.0.blocks.1.mlp.conv.bn.drop",
+      "mean_rel": 3.637034958493134e-05,
+      "model": "posenet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    },
+    {
+      "above_cliff": false,
+      "l_2": 2.5206019132852057e-05,
+      "l_inf": 0.00038242340087890625,
+      "layer_class": "Identity",
+      "layer_name": "vision.stages.0.blocks.1.mlp.conv.bn.act",
+      "mean_rel": 3.637034958493134e-05,
+      "model": "posenet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    },
+    {
+      "above_cliff": false,
+      "l_2": 2.5206019132852057e-05,
+      "l_inf": 0.00038242340087890625,
+      "layer_class": "BatchNormAct2d",
+      "layer_name": "vision.stages.0.blocks.1.mlp.conv.bn",
+      "mean_rel": 3.637034958493134e-05,
+      "model": "posenet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    },
+    {
+      "above_cliff": false,
+      "l_2": 2.5206019132852057e-05,
+      "l_inf": 0.00038242340087890625,
+      "layer_class": "ConvNormAct",
+      "layer_name": "vision.stages.0.blocks.1.mlp.conv",
+      "mean_rel": 3.637034958493134e-05,
+      "model": "posenet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    },
+    {
+      "above_cliff": false,
+      "l_2": 1.9811918906566277e-05,
+      "l_inf": 0.0003662109375,
+      "layer_class": "Identity",
+      "layer_name": "vision.stages.0.blocks.0.token_mixer.mixer.se",
+      "mean_rel": 1.0877427936460918e-05,
+      "model": "posenet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    }
+  ],
+  "promotion_eligible": false,
+  "schema_version": "apple_gpu_scorer_parity_crux_v1",
+  "score_claim": false,
+  "segnet_top_ops_after_fix": [
+    {
+      "above_cliff": false,
+      "l_2": 5.4395204054159356e-05,
+      "l_inf": 0.00042724609375,
+      "layer_class": "_CPUWrapConv2d",
+      "layer_name": "decoder.blocks.0.conv1.0",
+      "mean_rel": 4.716108538749865e-06,
+      "model": "segnet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    },
+    {
+      "above_cliff": false,
+      "l_2": 1.218291565762389e-05,
+      "l_inf": 0.0003662109375,
+      "layer_class": "Conv2d",
+      "layer_name": "encoder.model.conv_stem",
+      "mean_rel": 1.2728251125904569e-06,
+      "model": "segnet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    },
+    {
+      "above_cliff": false,
+      "l_2": 2.304937155724276e-05,
+      "l_inf": 0.0002899169921875,
+      "layer_class": "Conv2d",
+      "layer_name": "decoder.blocks.1.conv1.0",
+      "mean_rel": 4.200484936379388e-06,
+      "model": "segnet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    },
+    {
+      "above_cliff": false,
+      "l_2": 3.95313168632061e-06,
+      "l_inf": 0.0002446174621582031,
+      "layer_class": "Identity",
+      "layer_name": "encoder.model.blocks.1.2.bn2.drop",
+      "mean_rel": 7.400187026046934e-06,
+      "model": "segnet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    },
+    {
+      "above_cliff": false,
+      "l_2": 2.13102122567664e-05,
+      "l_inf": 0.0002288818359375,
+      "layer_class": "Conv2d",
+      "layer_name": "encoder.model.blocks.2.0.conv_pw",
+      "mean_rel": 8.356942601505961e-06,
+      "model": "segnet",
+      "parity_tag": "[Apple-GPU vs PyTorch-CPU parity, exact-measured]"
+    }
+  ],
+  "stale_anchor_corrected": {
+    "current_pose_drift_factor": 1.0998645076912656,
+    "current_torch": "2.11.0",
+    "stale_anchor_date": "2026-04-25",
+    "stale_equation": "mps_drift_architecture_class_dependent_v1",
+    "stale_pose_drift_factor": 23.0
+  },
+  "torch_version": "2.11.0"
+}
