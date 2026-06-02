@@ -4670,6 +4670,13 @@ def test_snerv_native_export_bypasses_pr95_prelaunch_only_for_local_proof(
     assert out["execute_family"] == "snerv"
     assert "pr95_long_campaign_prelaunch_gate_failed" in out["blockers"]
     assert "snerv_pr95_staged_curriculum_missing" in out["blockers"]
+    assert out["candidate_curriculum_plan"]["training_plan"][
+        "native_mlx_long_training_bound"
+    ] is True
+    assert (
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+        not in out["candidate_curriculum_plan"]["blockers"]
+    )
     assert out["score_claim"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
 

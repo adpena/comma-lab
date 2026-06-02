@@ -2862,6 +2862,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         native_mlx_train_export_attached=bool(
             snerv_mlx_native_export.get("executed")
         ),
+        native_mlx_long_training_bound=bool(
+            snerv_mlx_native_export.get("executed")
+            and int(num_pairs) >= CONTEST_PAIR_COUNT
+            and int(epochs) >= 8
+        ),
         native_mlx_receiver_proof_passed=snerv_mlx_native_export_verified,
         native_mlx_full600_campaign_ready=bool(
             snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")
