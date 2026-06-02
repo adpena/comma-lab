@@ -100,6 +100,50 @@ def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
     return archive.packet
 
 
+def _write_verified_joint_recon_weight(
+    root: Path,
+    *,
+    pairs: int,
+    name: str,
+) -> tuple[Path, Path]:
+    out = root / "experiments" / "results" / name
+    out.mkdir(parents=True)
+    weight = np.ones((pairs, 2, 384, 512, 1), dtype=np.float32)
+    weight_path = out / "joint_p18_p19_recon_pixel_weight.npz"
+    np.savez_compressed(weight_path, weight=weight)
+    sha = runner_mod._sha256_file(weight_path)
+    manifest_path = out / "joint_p18_p19_recon_pixel_weight_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "joint_p18_p19_recon_pixel_weight_manifest.v1",
+                "weight_path": weight_path.as_posix(),
+                "weight_sha256": sha,
+                "config": {
+                    "num_pairs": pairs,
+                    "scorer_hw": [384, 512],
+                },
+                "metadata": {
+                    "schema": "joint_p18_p19_recon_pixel_weight.v1",
+                    "blockers": [],
+                    "training_consumption_recommended": True,
+                    "gradient_health": {
+                        "schema": "joint_recon_pixel_weight_gradient_health.v1",
+                        "status": "pass_finite",
+                        "component_count": 1,
+                        "components_with_nonfinite": 0,
+                        "total_nonfinite_values": 0,
+                        "consumption_recommended": True,
+                    },
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return weight_path, manifest_path
+
+
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
     tmp_path: Path,
 ) -> None:
@@ -752,6 +796,48 @@ def test_explicit_scorer_upstream_does_not_fallback(
     assert resolved == explicit_upstream.resolve(strict=False)
 
 
+def test_auto_joint_recon_pixel_weight_discovers_verified_pair_count(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_verified_joint_recon_weight(root, pairs=32, name="weight_32")
+    weight_600, manifest_600 = _write_verified_joint_recon_weight(
+        root,
+        pairs=600,
+        name="weight_600",
+    )
+    monkeypatch.setattr(runner_mod, "DEFAULT_SSD_ROOTS", ())
+
+    discovered, metadata = runner_mod._discover_joint_recon_pixel_weight_path(
+        repo_root=root,
+        num_pairs=600,
+    )
+
+    assert discovered == weight_600.resolve(strict=False)
+    assert metadata["selected_manifest_path"] == manifest_600.as_posix()
+    assert metadata["selected_weight_sha256"] == runner_mod._sha256_file(weight_600)
+    assert metadata["candidate_count"] == 1
+    assert metadata["score_claim"] is False
+
+
+def test_auto_joint_recon_pixel_weight_refuses_missing_pair_count(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    _write_verified_joint_recon_weight(root, pairs=32, name="weight_32")
+    monkeypatch.setattr(runner_mod, "DEFAULT_SSD_ROOTS", ())
+
+    with pytest.raises(runner_mod.CompactRendererMlxSpineRunnerError, match="600"):
+        runner_mod._discover_joint_recon_pixel_weight_path(
+            repo_root=root,
+            num_pairs=600,
+        )
+
+
 def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     args = _parse_args(
         [
@@ -894,6 +980,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--retain-failed-local-replay-scratch",
             "--recon-pixel-weight-path",
             "weights.npz",
+            "--auto-joint-recon-pixel-weight",
             "--auto-segnet-boundary-recon-weight",
             "--recon-pixel-weight-tau",
             "0.75",
@@ -901,6 +988,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "none",
             "--mlx-prefilter-scorer-batch-pairs",
             "8",
+            "--mlx-prefilter-scorer-device",
+            "gpu",
             "--mlx-prefilter-progress-every",
             "10",
             "--run-post-export-materializers",
@@ -922,10 +1011,12 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.keep_local_replay_inflated is True
     assert hi.retain_failed_local_replay_scratch is True
     assert hi.recon_pixel_weight_path == Path("weights.npz")
+    assert hi.auto_joint_recon_pixel_weight is True
     assert hi.auto_segnet_boundary_recon_weight is True
     assert hi.recon_pixel_weight_tau == 0.75
     assert hi.recon_pixel_weight_normalize == "none"
     assert hi.mlx_prefilter_scorer_batch_pairs == 8
+    assert hi.mlx_prefilter_scorer_device == "gpu"
     assert hi.mlx_prefilter_progress_every == 10
     assert hi.run_post_export_materializers is True
     assert hi.post_export_materializer_max_steps == 3
@@ -1613,9 +1704,11 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert captured_train_kwargs["mlx_prefilter_progress_every"] == 7
     assert out["score_aware_training"]["local_mlx_prefilter"] == {
         "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
+        "scorer_device": "cpu",
         "scorer_batch_pairs": 4,
         "progress_every": 7,
         "singleton_required_for_local_cpu_replay_unlock": True,
+        "gpu_profiles_are_prefilter_only": False,
         "batched_profiles_are_prefilter_only": True,
         "authority": "macos_mlx_research_signal_false_authority",
     }
@@ -2029,6 +2122,96 @@ def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
     assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is True
     assert out["local_cpu_replay_gate"]["local_replay_mlx_prefilter_passed"] is True
     assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
+    assert "hi_nerv_full_video_local_prefilter_missing" not in out["blockers"]
+    assert "hi_nerv_local_cpu_replay_gate_missing" not in out["blockers"]
+    assert "hi_nerv_full_video_local_prefilter_missing" not in out[
+        "candidate_feedback"
+    ]["row"]["pr95_stack_binding_blockers"]
+    assert "hi_nerv_local_cpu_replay_gate_missing" not in out["candidate_feedback"][
+        "row"
+    ]["pr95_stack_binding_blockers"]
+
+
+def test_hinerv_auto_joint_recon_weight_flows_to_training(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    weight_path, _manifest_path = _write_verified_joint_recon_weight(
+        tmp_path / "repo",
+        pairs=2,
+        name="weight_2",
+    )
+    discovery = {
+        "schema": "compact_auto_joint_recon_pixel_weight_discovery.v1",
+        "status": "selected_verified_joint_p18_p19_weight",
+        "num_pairs": 2,
+        "selected_weight_path": weight_path.as_posix(),
+        "selected_weight_sha256": runner_mod._sha256_file(weight_path),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    captured: dict[str, object] = {}
+
+    def fake_discover(**kwargs):
+        assert kwargs["num_pairs"] == 2
+        return weight_path, discovery
+
+    def fake_train(**kwargs):
+        captured.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "score_aware_training": {
+                    "recon_pixel_weight": {
+                        "schema": "compact_recon_pixel_weight.v1",
+                        "enabled": True,
+                        "source_kind": "auto_discovered_joint_p18_p19_file",
+                        "path": weight_path.as_posix(),
+                        "auto_discovery": discovery,
+                        "authority": "false_macos_mlx_research_signal",
+                    }
+                }
+            },
+        }
+
+    monkeypatch.setattr(runner_mod, "_discover_joint_recon_pixel_weight_path", fake_discover)
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_auto_joint",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        auto_joint_recon_pixel_weight=True,
+        mlx_prefilter_scorer_device="gpu",
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured["recon_pixel_weight_path"] == weight_path
+    assert captured["recon_pixel_weight_auto_discovery"] == discovery
+    assert captured["auto_segnet_boundary_recon_weight"] is False
+    assert captured["mlx_prefilter_scorer_device"] == "gpu"
+    assert out["score_aware_training"]["recon_pixel_weight"]["source_kind"] == (
+        "auto_discovered_joint_p18_p19_file"
+    )
+    assert "hinerv_candidate_curriculum_recon_pixel_weight_missing" not in out[
+        "blockers"
+    ]
 
 
 def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(

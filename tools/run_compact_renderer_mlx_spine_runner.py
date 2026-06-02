@@ -3567,9 +3567,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     coder_qat_magnitude_weight: float = 0.0,
     coder_qat_delta_weight: float = 0.0,
     recon_pixel_weight_path: str | Path | None = None,
+    auto_joint_recon_pixel_weight: bool = False,
     auto_segnet_boundary_recon_weight: bool = False,
     recon_pixel_weight_tau: float = 1.0,
     recon_pixel_weight_normalize: str = "mean",
+    mlx_prefilter_scorer_device: str | None = None,
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
     random_seed: int = 0,
@@ -3673,6 +3675,30 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
     launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
     launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
+    effective_recon_pixel_weight_path = recon_pixel_weight_path
+    recon_pixel_weight_auto_discovery: dict[str, Any] | None = None
+    enabled_recon_weight_modes = sum(
+        int(bool(value))
+        for value in (
+            recon_pixel_weight_path is not None,
+            auto_joint_recon_pixel_weight,
+            auto_segnet_boundary_recon_weight,
+        )
+    )
+    if enabled_recon_weight_modes > 1:
+        raise CompactRendererMlxSpineRunnerError(
+            "choose exactly one recon weight source: --recon-pixel-weight-path, "
+            "--auto-joint-recon-pixel-weight, or "
+            "--auto-segnet-boundary-recon-weight"
+        )
+    if auto_joint_recon_pixel_weight:
+        (
+            effective_recon_pixel_weight_path,
+            recon_pixel_weight_auto_discovery,
+        ) = _discover_joint_recon_pixel_weight_path(
+            repo_root=root,
+            num_pairs=int(num_pairs),
+        )
     launch_curriculum_plan = build_hinerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
@@ -3682,7 +3708,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         coder_aware_qat=bool(coder_aware_qat),
         coder_qat_quant_bits=int(coder_qat_quant_bits),
         recon_pixel_weight_attached=bool(
-            recon_pixel_weight_path is not None or auto_segnet_boundary_recon_weight
+            effective_recon_pixel_weight_path is not None
+            or auto_segnet_boundary_recon_weight
         ),
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
@@ -3772,10 +3799,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
-            recon_pixel_weight_path=recon_pixel_weight_path,
+            recon_pixel_weight_path=effective_recon_pixel_weight_path,
+            recon_pixel_weight_auto_discovery=recon_pixel_weight_auto_discovery,
             auto_segnet_boundary_recon_weight=auto_segnet_boundary_recon_weight,
             recon_pixel_weight_tau=recon_pixel_weight_tau,
             recon_pixel_weight_normalize=recon_pixel_weight_normalize,
+            mlx_prefilter_scorer_device=mlx_prefilter_scorer_device,
             mlx_prefilter_scorer_batch_pairs=mlx_prefilter_scorer_batch_pairs,
             mlx_prefilter_progress_every=mlx_prefilter_progress_every,
             random_seed=random_seed,
@@ -3848,27 +3877,6 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     )
     projection_paths = [spine_manifest] if spine_manifest.is_file() else []
     receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
-    candidate_curriculum_plan = build_hinerv_candidate_curriculum_plan(
-        candidate=candidate or None,
-        requested_epochs=int(epochs),
-        num_pairs=int(num_pairs),
-        segnet_distillation_weight=float(segnet_distillation_weight),
-        pose_distillation_weight=float(pose_distillation_weight),
-        coder_aware_qat=bool(coder_aware_qat),
-        coder_qat_quant_bits=int(coder_qat_quant_bits),
-        recon_pixel_weight_attached=bool(
-            recon_pixel_weight_path is not None or auto_segnet_boundary_recon_weight
-        ),
-        eval_roundtrip_ste_attached=True,
-        differentiable_pose_preprocess_attached=True,
-        ema_archive_selection_attached=True,
-        receiver_proof_attached=bool(receiver_proof_paths),
-        measured_archive_bytes=(
-            int(artifact_dict["archive_bytes"])
-            if artifact_dict.get("archive_bytes") is not None
-            else None
-        ),
-    )
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
         effective_mlx_profile_paths,
         root=root,
@@ -3900,6 +3908,30 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
             repo_root=root,
         )
+    candidate_curriculum_plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate or None,
+        requested_epochs=int(epochs),
+        num_pairs=int(num_pairs),
+        segnet_distillation_weight=float(segnet_distillation_weight),
+        pose_distillation_weight=float(pose_distillation_weight),
+        coder_aware_qat=bool(coder_aware_qat),
+        coder_qat_quant_bits=int(coder_qat_quant_bits),
+        recon_pixel_weight_attached=bool(
+            effective_recon_pixel_weight_path is not None
+            or auto_segnet_boundary_recon_weight
+        ),
+        eval_roundtrip_ste_attached=True,
+        differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
+        receiver_proof_attached=bool(receiver_proof_paths),
+        full_video_local_prefilter_attached=has_full_video_mlx_prefilter,
+        local_cpu_replay_gate_attached=local_cpu_replay_summary is not None,
+        measured_archive_bytes=(
+            int(artifact_dict["archive_bytes"])
+            if artifact_dict.get("archive_bytes") is not None
+            else None
+        ),
+    )
     acquisition_path = out / "hprc_spine_acquisition_report.json"
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
     selected_runner_rows: list[dict[str, Any]] = []
@@ -4037,9 +4069,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 ),
                 "local_mlx_prefilter": {
                     "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
+                    "scorer_device": (
+                        mlx_prefilter_scorer_device or distillation_device
+                    ),
                     "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
                     "progress_every": int(mlx_prefilter_progress_every),
                     "singleton_required_for_local_cpu_replay_unlock": True,
+                    "gpu_profiles_are_prefilter_only": (
+                        str(mlx_prefilter_scorer_device or distillation_device)
+                        != "cpu"
+                    ),
                     "batched_profiles_are_prefilter_only": (
                         int(mlx_prefilter_scorer_batch_pairs) != 1
                     ),
@@ -4689,6 +4728,115 @@ def _load_recon_pixel_weight(
     return weight, metadata
 
 
+def _discover_joint_recon_pixel_weight_path(
+    *,
+    repo_root: str | Path,
+    num_pairs: int,
+) -> tuple[Path, dict[str, Any]]:
+    """Find the latest verified joint P18/P19 recon-weight artifact.
+
+    Discovery is intentionally strict. It only returns artifacts generated by
+    the finite-gradient joint-scorer surface producer, for the exact requested
+    pair count, with the manifest's SHA matching the NPZ bytes. Anything else is
+    ignored here and will remain a manual ``--recon-pixel-weight-path`` choice.
+    """
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    search_roots = [
+        root / "experiments" / "results",
+        *(ssd / "experiments" / "results" for ssd in DEFAULT_SSD_ROOTS),
+    ]
+    candidates: list[tuple[str, Path, Path, str]] = []
+    rejected: list[dict[str, Any]] = []
+    seen: set[Path] = set()
+    for search_root in search_roots:
+        resolved_root = search_root.expanduser().resolve(strict=False)
+        if resolved_root in seen:
+            continue
+        seen.add(resolved_root)
+        if not resolved_root.is_dir():
+            continue
+        for manifest_path in sorted(
+            resolved_root.rglob("joint_p18_p19_recon_pixel_weight_manifest.json")
+        ):
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if not isinstance(manifest, dict):
+                    raise ValueError("manifest_not_object")
+                config = manifest.get("config")
+                metadata = manifest.get("metadata")
+                if not isinstance(config, dict) or not isinstance(metadata, dict):
+                    raise ValueError("manifest_missing_config_or_metadata")
+                if int(config.get("num_pairs", -1)) != int(num_pairs):
+                    raise ValueError("num_pairs_mismatch")
+                health = metadata.get("gradient_health")
+                if not isinstance(health, dict):
+                    raise ValueError("gradient_health_missing")
+                blockers = list(metadata.get("blockers") or [])
+                if health.get("status") != "pass_finite":
+                    raise ValueError("gradient_health_not_pass_finite")
+                if not bool(metadata.get("training_consumption_recommended")):
+                    raise ValueError("training_consumption_not_recommended")
+                if blockers:
+                    raise ValueError("manifest_has_blockers")
+                weight_path_value = manifest.get("weight_path")
+                if weight_path_value is None:
+                    raise ValueError("weight_path_missing")
+                weight_path = _resolve_existing(
+                    weight_path_value,
+                    base=manifest_path.parent,
+                )
+                expected_sha = str(manifest.get("weight_sha256") or "")
+                actual_sha = _sha256_file(weight_path)
+                if expected_sha and expected_sha != actual_sha:
+                    raise ValueError("weight_sha256_mismatch")
+                candidates.append(
+                    (
+                        manifest_path.parent.as_posix(),
+                        manifest_path,
+                        weight_path,
+                        actual_sha,
+                    )
+                )
+            except Exception as exc:
+                rejected.append(
+                    {
+                        "manifest_path": manifest_path.as_posix(),
+                        "reason": f"{type(exc).__name__}:{exc!s}",
+                    }
+                )
+    if not candidates:
+        raise CompactRendererMlxSpineRunnerError(
+            "no verified joint P18/P19 recon_pixel_weight artifact found for "
+            f"num_pairs={int(num_pairs)}; build one with "
+            "tools/build_joint_recon_pixel_weight_surface.py or pass "
+            "--recon-pixel-weight-path explicitly"
+        )
+    _sort_key, manifest_path, weight_path, weight_sha = sorted(candidates)[-1]
+    discovery = {
+        "schema": "compact_auto_joint_recon_pixel_weight_discovery.v1",
+        "status": "selected_verified_joint_p18_p19_weight",
+        "num_pairs": int(num_pairs),
+        "search_roots": [
+            path.expanduser().resolve(strict=False).as_posix()
+            for path in search_roots
+        ],
+        "candidate_count": len(candidates),
+        "rejected_count": len(rejected),
+        "selected_manifest_path": manifest_path.as_posix(),
+        "selected_manifest_sha256": _sha256_file(manifest_path),
+        "selected_weight_path": weight_path.as_posix(),
+        "selected_weight_sha256": weight_sha,
+        "authority": "false_macos_mlx_research_signal",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if rejected:
+        discovery["rejected_manifests"] = rejected[:16]
+    return weight_path, discovery
+
+
 def _recon_pixel_weight_producer_manifest(
     weight_path: Path,
     *,
@@ -5240,9 +5388,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     coder_qat_magnitude_weight: float,
     coder_qat_delta_weight: float,
     recon_pixel_weight_path: str | Path | None,
+    recon_pixel_weight_auto_discovery: Mapping[str, Any] | None,
     auto_segnet_boundary_recon_weight: bool,
     recon_pixel_weight_tau: float,
     recon_pixel_weight_normalize: str,
+    mlx_prefilter_scorer_device: str | None,
     mlx_prefilter_scorer_batch_pairs: int,
     mlx_prefilter_progress_every: int,
     random_seed: int,
@@ -5270,6 +5420,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
 
     pairs = int(num_pairs)
+    effective_prefilter_scorer_device = str(
+        mlx_prefilter_scorer_device or distillation_device
+    )
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
     if segnet_distillation_weight < 0.0:
@@ -5404,9 +5557,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
                 "local_mlx_prefilter": {
                 "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
+                "scorer_device": effective_prefilter_scorer_device,
                 "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
                 "progress_every": int(mlx_prefilter_progress_every),
                 "singleton_required_for_local_cpu_replay_unlock": True,
+                "gpu_profiles_are_prefilter_only": (
+                    effective_prefilter_scorer_device != "cpu"
+                ),
                 "batched_profiles_are_prefilter_only": (
                     int(mlx_prefilter_scorer_batch_pairs) != 1
                 ),
@@ -5441,6 +5598,17 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             expected_pairs=pairs,
             normalize=recon_pixel_weight_normalize,
         )
+        if recon_pixel_weight_auto_discovery is not None:
+            recon_metadata["source_kind"] = "auto_discovered_joint_p18_p19_file"
+            recon_metadata["auto_discovery"] = (
+                strip_candidate_curriculum_authority_fields(
+                    recon_pixel_weight_auto_discovery
+                )
+            )
+            recon_metadata["scorer_terms"] = {
+                "p18_segnet": "auto_discovered_joint_torch_exact_vjp",
+                "p19_posenet": "auto_discovered_joint_torch_exact_vjp",
+            }
         artifact_metadata["score_aware_training"]["recon_pixel_weight"] = (
             recon_metadata
         )
@@ -5550,7 +5718,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             archive_bytes=int(archive_bytes),
             archive_sha256=str(archive_sha256),
             upstream_dir=scorer_upstream_dir,
-            scorer_device=distillation_device,
+            scorer_device=effective_prefilter_scorer_device,
             scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
             run_id="compact_runner_hi_nerv_mlx_local_prefilter",
             source_video_path=source_video_path,
@@ -6196,12 +6364,29 @@ def _active_campaign_lock_payload(
         recon_path = Path(recon_weight).expanduser().resolve(strict=False)
         if recon_path.is_file():
             recon_weight_sha256 = _sha256_file(recon_path)
+    auto_joint_recon_weight = getattr(args, "auto_joint_recon_pixel_weight", False)
+    auto_joint_recon_weight_sha256 = None
+    auto_joint_recon_weight_path = None
+    auto_joint_recon_weight_error = None
+    if auto_joint_recon_weight:
+        try:
+            discovered, _discovery = _discover_joint_recon_pixel_weight_path(
+                repo_root=getattr(args, "repo_root", REPO_ROOT),
+                num_pairs=int(getattr(args, "num_pairs", 0)),
+            )
+            auto_joint_recon_weight_path = discovered.as_posix()
+            auto_joint_recon_weight_sha256 = _sha256_file(discovered)
+        except Exception as exc:
+            auto_joint_recon_weight_error = f"{type(exc).__name__}:{exc!s}"
     return {
         "schema": "compact_renderer_campaign_identity.v1",
         "argv": argv_payload,
         "hard_byte_ceilings": [int(value) for value in hard_byte_ceilings],
         "source_video_path_resolved": source_video_path.as_posix(),
         "recon_pixel_weight_sha256": recon_weight_sha256,
+        "auto_joint_recon_pixel_weight_path": auto_joint_recon_weight_path,
+        "auto_joint_recon_pixel_weight_sha256": auto_joint_recon_weight_sha256,
+        "auto_joint_recon_pixel_weight_error": auto_joint_recon_weight_error,
     }
 
 
@@ -6727,6 +6912,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--mlx-prefilter-scorer-device",
+        choices=("cpu", "gpu"),
+        default=None,
+        help=(
+            "Device for the automatic MLX renderer prefilter. Defaults to "
+            "--distillation-device for backward compatibility. Use gpu only "
+            "for local acquisition speed; CPU replay and exact auth remain the "
+            "promotion gates."
+        ),
+    )
+    parser.add_argument(
         "--mlx-prefilter-progress-every",
         default=50,
         type=int,
@@ -6759,6 +6955,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "File-backed P18/P19 recon_pixel_weight map (.npy or .npz). "
             "Must be shaped (384,512), (384,512,1/3), "
             "(1|N,384,512,1/3), or (N,2,384,512,1/3)."
+        ),
+    )
+    parser.add_argument(
+        "--auto-joint-recon-pixel-weight",
+        action="store_true",
+        help=(
+            "Auto-discover a verified joint P18/P19 recon_pixel_weight artifact "
+            "for the requested pair count from canonical SSD/local experiment "
+            "results. Fails closed if no finite-gradient manifest matches."
         ),
     )
     parser.add_argument(
@@ -7156,6 +7361,7 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
             recon_pixel_weight_path=args.recon_pixel_weight_path,
+            auto_joint_recon_pixel_weight=args.auto_joint_recon_pixel_weight,
             auto_segnet_boundary_recon_weight=(
                 args.auto_segnet_boundary_recon_weight
             ),
@@ -7164,6 +7370,7 @@ def main(argv: list[str] | None = None) -> int:
             mlx_prefilter_scorer_batch_pairs=(
                 args.mlx_prefilter_scorer_batch_pairs
             ),
+            mlx_prefilter_scorer_device=args.mlx_prefilter_scorer_device,
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,

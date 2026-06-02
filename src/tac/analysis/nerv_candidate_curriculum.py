@@ -147,6 +147,8 @@ def build_hinerv_candidate_curriculum_plan(
     differentiable_pose_preprocess_attached: bool = False,
     ema_archive_selection_attached: bool = False,
     receiver_proof_attached: bool = False,
+    full_video_local_prefilter_attached: bool = False,
+    local_cpu_replay_gate_attached: bool = False,
     measured_archive_bytes: int | None = None,
 ) -> dict[str, Any]:
     """Bind a HiNeRV modelsize candidate to its required training pressure."""
@@ -219,6 +221,8 @@ def build_hinerv_candidate_curriculum_plan(
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
             receiver_proof=bool(receiver_proof_attached),
+            full_video_local_prefilter=bool(full_video_local_prefilter_attached),
+            local_cpu_replay_gate=bool(local_cpu_replay_gate_attached),
         ),
     )
     long_campaign_prelaunch_gate = build_pr95_long_campaign_prelaunch_gate(
