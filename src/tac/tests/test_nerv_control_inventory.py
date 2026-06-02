@@ -117,6 +117,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "src/tac/analysis/hinerv_archive_ladder_waterfill.py" in surfaces[
         "section_value_and_codebook"
     ]
+    assert "src/tac/analysis/hinerv_archive_backend_drift.py" in surfaces[
+        "section_value_and_codebook"
+    ]
     assert "src/tac/analysis/snerv_trained_ladder_waterfill.py" in surfaces[
         "section_value_and_codebook"
     ]
@@ -127,6 +130,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "section_value_and_codebook"
     ]
     assert "tools/build_hinerv_archive_ladder_waterfill.py" in surfaces[
+        "section_value_and_codebook"
+    ]
+    assert "tools/build_hinerv_archive_backend_drift.py" in surfaces[
         "section_value_and_codebook"
     ]
     assert "tools/build_snerv_trained_ladder_waterfill.py" in surfaces[
@@ -364,6 +370,52 @@ def test_nerv_control_inventory_accepts_hinerv_replay_actuator_report() -> None:
     assert row["decoder_weight_waterfill_plan_path"].endswith("/tiny/plan.json")
     markdown = render_nerv_control_inventory_markdown(report)
     assert "## Archive Ladder Replay Actuators" in markdown
+
+
+def test_nerv_control_inventory_accepts_hinerv_archive_backend_drift_report() -> None:
+    drift_report = {
+        "schema": "hinerv_archive_backend_drift.v1",
+        "status": "local_backend_drift_within_tolerance_false_authority",
+        "report_path": ".omx/research/hinerv_archive_backend_drift_fake.json",
+        "reference_json_path": ".omx/research/fallback.json",
+        "reference_json_sha256": "a" * 64,
+        "candidate_json_path": ".omx/research/mlx.json",
+        "candidate_json_sha256": "b" * 64,
+        "reference_label": "pytorch_portable_fallback",
+        "candidate_label": "mlx_metal",
+        "row_count": 4,
+        "matched_row_count": 4,
+        "byte_ready_row_count": 4,
+        "reference_receiver_proof_ready_row_count": 4,
+        "candidate_receiver_proof_ready_row_count": 4,
+        "max_abs_byte_delta_allowed": 1024,
+        "max_abs_byte_delta_observed": 81,
+        "sum_byte_delta_candidate_minus_reference": -194,
+        "sum_rate_score_delta_candidate_minus_reference": -0.000129185,
+        "within_byte_drift_tolerance": True,
+        "local_dev_velocity_ready": True,
+        "ready_backend_for_local_iteration": "mlx_metal",
+        "blockers": ["hinerv_archive_backend_drift_local_dev_velocity_only"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("hi_nerv",),
+        hinerv_archive_backend_drift_report=drift_report,
+    )
+
+    measured = report["archive_backend_drift_reports"]["hi_nerv"]
+    assert measured["schema"] == "hinerv_archive_backend_drift.v1"
+    assert measured["score_claim"] is False
+    assert measured["local_dev_velocity_ready"] is True
+    assert measured["max_abs_byte_delta_observed"] == 81
+    assert measured["candidate_json_sha256"] == "b" * 64
+    assert "hinerv_archive_backend_drift_local_dev_velocity_only" in measured[
+        "blockers"
+    ]
+    markdown = render_nerv_control_inventory_markdown(report)
+    assert "## Archive Backend Drift" in markdown
 
 
 def test_nerv_control_inventory_accepts_snerv_trained_ladder_waterfill_report() -> None:
@@ -714,6 +766,64 @@ def test_build_nerv_control_inventory_cli_accepts_hinerv_replay_actuator_report(
     measured = payload["archive_ladder_replay_actuator_reports"]["hi_nerv"]
     assert measured["row_count"] == 1
     assert measured["replay_rows"][0]["archive_bytes"] == 134908
+    assert measured["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_hinerv_backend_drift_report(
+    tmp_path: Path,
+) -> None:
+    drift_path = tmp_path / "backend_drift.json"
+    output_json = tmp_path / "inventory.json"
+    drift_path.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_backend_drift.v1",
+                "status": "local_backend_drift_within_tolerance_false_authority",
+                "report_path": ".omx/research/hinerv_archive_backend_drift_fake.json",
+                "reference_json_path": ".omx/research/fallback.json",
+                "reference_json_sha256": "a" * 64,
+                "candidate_json_path": ".omx/research/mlx.json",
+                "candidate_json_sha256": "b" * 64,
+                "reference_label": "pytorch_portable_fallback",
+                "candidate_label": "mlx_metal",
+                "row_count": 4,
+                "matched_row_count": 4,
+                "byte_ready_row_count": 4,
+                "reference_receiver_proof_ready_row_count": 4,
+                "candidate_receiver_proof_ready_row_count": 4,
+                "max_abs_byte_delta_allowed": 1024,
+                "max_abs_byte_delta_observed": 81,
+                "sum_byte_delta_candidate_minus_reference": -194,
+                "sum_rate_score_delta_candidate_minus_reference": -0.000129185,
+                "within_byte_drift_tolerance": True,
+                "local_dev_velocity_ready": True,
+                "ready_backend_for_local_iteration": "mlx_metal",
+                "blockers": ["hinerv_archive_backend_drift_local_dev_velocity_only"],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "hi_nerv",
+            "--repo-root",
+            str(REPO),
+            "--hinerv-archive-backend-drift-json",
+            str(drift_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    measured = payload["archive_backend_drift_reports"]["hi_nerv"]
+    assert measured["local_dev_velocity_ready"] is True
+    assert measured["max_abs_byte_delta_observed"] == 81
     assert measured["score_claim"] is False
 
 

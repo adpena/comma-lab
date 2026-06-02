@@ -72,6 +72,15 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--hinerv-archive-backend-drift-json",
+        default=None,
+        type=Path,
+        help=(
+            "Optional false-authority HiNeRV archive backend byte-drift "
+            "comparison JSON."
+        ),
+    )
+    parser.add_argument(
         "--snerv-trained-ladder-waterfill-json",
         default=None,
         type=Path,
@@ -113,6 +122,11 @@ def main(argv: list[str] | None = None) -> int:
         pattern="hinerv_archive_ladder_replay_actuator*.json",
         schema="hinerv_archive_ladder_replay_actuator.v1",
     )
+    hinerv_archive_backend_drift_report = _load_optional_report(
+        args.hinerv_archive_backend_drift_json,
+        pattern="hinerv_archive_backend_drift*.json",
+        schema="hinerv_archive_backend_drift.v1",
+    )
     snerv_trained_ladder_waterfill_report = _load_optional_report(
         args.snerv_trained_ladder_waterfill_json,
         pattern="snerv_trained_ladder_waterfill*.json",
@@ -143,6 +157,7 @@ def main(argv: list[str] | None = None) -> int:
         hinerv_archive_ladder_replay_actuator_report=(
             hinerv_archive_ladder_replay_actuator_report
         ),
+        hinerv_archive_backend_drift_report=hinerv_archive_backend_drift_report,
         snerv_trained_ladder_waterfill_report=(
             snerv_trained_ladder_waterfill_report
         ),

@@ -34,6 +34,7 @@ def build_nerv_control_inventory(
     hinerv_archive_size_ladder_report: Mapping[str, Any] | None = None,
     hinerv_archive_ladder_waterfill_report: Mapping[str, Any] | None = None,
     hinerv_archive_ladder_replay_actuator_report: Mapping[str, Any] | None = None,
+    hinerv_archive_backend_drift_report: Mapping[str, Any] | None = None,
     snerv_trained_ladder_waterfill_report: Mapping[str, Any] | None = None,
     hinerv_decoder_weight_saliency_report: Mapping[str, Any] | None = None,
     snerv_waterfill_mode_assignment_report: Mapping[str, Any] | None = None,
@@ -83,6 +84,10 @@ def build_nerv_control_inventory(
                 ),
                 focus_families=focus,
             )
+        ),
+        "archive_backend_drift_reports": _archive_backend_drift_reports(
+            hinerv_archive_backend_drift_report=hinerv_archive_backend_drift_report,
+            focus_families=focus,
         ),
         "decoder_weight_saliency_replays": _decoder_weight_saliency_replays(
             hinerv_decoder_weight_saliency_report=(
@@ -189,6 +194,15 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
                 f"({replay_row.get('row_count', 0)} rows, "
                 f"{replay_row.get('receiver_proof_ready_row_count', 0)} "
                 "receiver-proof ready)"
+            )
+    drift_reports = report.get("archive_backend_drift_reports")
+    if isinstance(drift_reports, Mapping):
+        lines.extend(["", "## Archive Backend Drift", ""])
+        for family, drift_row in drift_reports.items():
+            lines.append(
+                f"- `{family}`: `{drift_row.get('status')}` "
+                f"(local velocity `{drift_row.get('local_dev_velocity_ready')}`, "
+                f"max byte drift `{drift_row.get('max_abs_byte_delta_observed')}`)"
             )
     saliency_replays = report.get("decoder_weight_saliency_replays")
     if isinstance(saliency_replays, Mapping):
@@ -476,6 +490,62 @@ def _archive_ladder_replay_actuator_reports(
                 for row in report.get("rows", ())
                 if isinstance(row, Mapping)
             ],
+            "blockers": list(report.get("blockers") or ()),
+            **FALSE_AUTHORITY,
+        }
+    return rows
+
+
+def _archive_backend_drift_reports(
+    *,
+    hinerv_archive_backend_drift_report: Mapping[str, Any] | None,
+    focus_families: Iterable[str],
+) -> dict[str, Any]:
+    focus = {str(family) for family in focus_families}
+    rows: dict[str, Any] = {}
+    if hinerv_archive_backend_drift_report is not None and (
+        not focus or "hi_nerv" in focus
+    ):
+        report = hinerv_archive_backend_drift_report
+        rows["hi_nerv"] = {
+            "schema": report.get("schema"),
+            "status": report.get("status")
+            or "archive_backend_drift_report_available_false_authority",
+            "report_path": report.get("report_path"),
+            "reference_json_path": report.get("reference_json_path"),
+            "reference_json_sha256": report.get("reference_json_sha256"),
+            "candidate_json_path": report.get("candidate_json_path"),
+            "candidate_json_sha256": report.get("candidate_json_sha256"),
+            "reference_label": report.get("reference_label"),
+            "candidate_label": report.get("candidate_label"),
+            "row_count": int(report.get("row_count", 0) or 0),
+            "matched_row_count": int(report.get("matched_row_count", 0) or 0),
+            "byte_ready_row_count": int(report.get("byte_ready_row_count", 0) or 0),
+            "reference_receiver_proof_ready_row_count": int(
+                report.get("reference_receiver_proof_ready_row_count", 0) or 0
+            ),
+            "candidate_receiver_proof_ready_row_count": int(
+                report.get("candidate_receiver_proof_ready_row_count", 0) or 0
+            ),
+            "max_abs_byte_delta_allowed": report.get("max_abs_byte_delta_allowed"),
+            "max_abs_byte_delta_observed": report.get(
+                "max_abs_byte_delta_observed"
+            ),
+            "sum_byte_delta_candidate_minus_reference": report.get(
+                "sum_byte_delta_candidate_minus_reference"
+            ),
+            "sum_rate_score_delta_candidate_minus_reference": report.get(
+                "sum_rate_score_delta_candidate_minus_reference"
+            ),
+            "within_byte_drift_tolerance": bool(
+                report.get("within_byte_drift_tolerance")
+            ),
+            "local_dev_velocity_ready": bool(
+                report.get("local_dev_velocity_ready")
+            ),
+            "ready_backend_for_local_iteration": report.get(
+                "ready_backend_for_local_iteration"
+            ),
             "blockers": list(report.get("blockers") or ()),
             **FALSE_AUTHORITY,
         }
@@ -1485,11 +1555,13 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "src/tac/analysis/scorer_conditional_mdl.py",
             "src/tac/analysis/nerv_decoder_weight_waterfill.py",
             "src/tac/analysis/hinerv_archive_ladder_waterfill.py",
+            "src/tac/analysis/hinerv_archive_backend_drift.py",
             "src/tac/analysis/snerv_trained_ladder_waterfill.py",
             "src/tac/analysis/hinerv_decoder_weight_saliency_replay.py",
             "src/tac/analysis/snerv_waterfill_mode_assignment.py",
             "tools/build_nerv_decoder_weight_waterfill_plan.py",
             "tools/build_hinerv_archive_ladder_waterfill.py",
+            "tools/build_hinerv_archive_backend_drift.py",
             "tools/build_snerv_trained_ladder_waterfill.py",
             "tools/build_hinerv_decoder_weight_saliency_replay.py",
             "tools/build_snerv_waterfill_mode_assignment.py",
