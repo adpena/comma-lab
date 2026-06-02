@@ -66,6 +66,9 @@ HINERV_POSE_INSTABILITY_POLICY_LOGIC = (
 )
 HINERV_POSE_PROTECTED_LOSS = "huber"
 HINERV_POSE_PROTECTED_HUBER_DELTA = 1.0
+HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION = (
+    "switch_to_hinerv_official_feature_grid_convnext_controls"
+)
 DEFAULT_OPTIMIZER_KINDS = (
     "adamw",
     "lion",
@@ -316,6 +319,10 @@ def _hinerv_campaign_row(
         feedback=feedback,
         learning_rate=float(learning_rate),
     )
+    source_faithfulness_controls = _hinerv_source_faithfulness_controls(
+        candidate=candidate,
+        feedback=feedback,
+    )
     effective_learning_rate = float(
         launch_feedback_adjustment.get("learning_rate") or learning_rate
     )
@@ -489,6 +496,7 @@ def _hinerv_campaign_row(
             ),
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
+            "source_faithfulness_controls": source_faithfulness_controls,
             "output_dir_basename": output_dir_basename,
             "output_dir_reuse_policy": (
                 "fresh_feedback_mutation_path"
@@ -702,6 +710,7 @@ def _row(
             local_mlx_launch_command_ready=local_mlx_launch_command_ready,
             blockers=blockers,
             score_lowering_gate=score_gate,
+            row_metadata=_experiment_row_metadata(extra),
         ),
         "curriculum_plan": dict(curriculum_plan),
         "score_lowering_gate": score_gate,
@@ -749,6 +758,7 @@ def _experiment_for_row(
     local_mlx_launch_command_ready: bool,
     blockers: Sequence[str],
     score_lowering_gate: Mapping[str, Any],
+    row_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     output_dir = _row_output_dir(command_argv)
     output_json = (output_dir / "compact_renderer_mlx_spine_runner_report.json").as_posix()
@@ -828,6 +838,11 @@ def _experiment_for_row(
         "status": "queued" if bool(local_mlx_launch_command_ready) else "disabled",
         "blocked": not bool(local_mlx_launch_command_ready),
         "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
+        "metadata": {
+            "schema": "nerv_long_training_campaign_experiment_metadata.v1",
+            **dict(row_metadata or {}),
+            **FALSE_AUTHORITY,
+        },
         "score_lowering_gate": dict(score_lowering_gate),
         "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
         "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
@@ -991,6 +1006,8 @@ def _selected_candidates(
     ]
     if family == "snerv":
         rows.sort(key=_snerv_long_training_candidate_sort_key)
+    elif family == "hi_nerv":
+        rows.sort(key=_hinerv_long_training_candidate_sort_key)
     deduped: dict[str, dict[str, Any]] = {}
     for row in rows:
         candidate_id = str(row.get("candidate_id") or "")
@@ -1018,6 +1035,21 @@ def _snerv_long_training_candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any
     total = int(row.get("nominal_total_payload_bytes") or 0)
     return (
         0 if under else 1,
+        headroom if under else abs(headroom),
+        ceiling,
+        total,
+        str(row.get("candidate_id") or ""),
+    )
+
+
+def _hinerv_long_training_candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
+    under = row.get("nominal_under_ceiling") is True
+    ceiling = int(row.get("hard_byte_ceiling") or 0)
+    headroom = _candidate_byte_headroom(row)
+    total = int(row.get("nominal_total_payload_bytes") or 0)
+    return (
+        0 if under else 1,
+        -_hinerv_official_control_score(row),
         headroom if under else abs(headroom),
         ceiling,
         total,
@@ -1233,7 +1265,7 @@ def _candidate_feedback_for(
         return {}
     return _sanitize_family_level_candidate_feedback(
         row=fallback_rows[0],
-        target_candidate_id=candidate_id,
+        target_candidate=candidate,
     )
 
 
@@ -1301,10 +1333,14 @@ def _family_level_candidate_feedback_applicable(
 def _sanitize_family_level_candidate_feedback(
     *,
     row: Mapping[str, Any],
-    target_candidate_id: str,
+    target_candidate: Mapping[str, Any],
 ) -> dict[str, Any]:
     out = dict(row)
     source_candidate_id = str(row.get("candidate_id") or "").strip()
+    target_candidate_id = str(target_candidate.get("candidate_id") or "").strip()
+    source_official_score = _hinerv_feedback_official_control_score(row)
+    target_official_score = _hinerv_official_control_score(target_candidate)
+    source_official_superseded = bool(target_official_score > source_official_score)
     out["source_candidate_id"] = source_candidate_id
     out["target_candidate_id"] = str(target_candidate_id)
     out["candidate_id_match"] = False
@@ -1316,9 +1352,21 @@ def _sanitize_family_level_candidate_feedback(
     out["local_cpu_replay_gate_attached"] = False
     out["measured_archive_bytes"] = None
     out["measured_payload_bytes"] = None
+    out["source_official_control_score"] = int(source_official_score)
+    out["target_official_control_score"] = int(target_official_score)
+    out["source_official_control_superseded"] = source_official_superseded
     out["feedback_reuse_policy"] = (
         "optimizer_stability_only_no_archive_receiver_or_replay_authority"
     )
+    if source_official_superseded:
+        mutations = [
+            str(item)
+            for item in (out.get("recommended_launch_mutations") or [])
+            if str(item).strip()
+        ]
+        if HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION not in mutations:
+            mutations.append(HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION)
+        out["recommended_launch_mutations"] = mutations
     return out
 
 
@@ -1489,10 +1537,18 @@ def _hinerv_feedback_launch_adjustment(
             for mutation in (feedback.get("recommended_launch_mutations") or [])
             if mutation not in launch_mutations
         )
+    official_control_superseded = bool(
+        feedback.get("source_official_control_superseded")
+    )
+    if official_control_superseded and (
+        HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION not in launch_mutations
+    ):
+        launch_mutations.append(HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION)
     applied = bool(
         lower_learning_rate_applied
         or pose_protected_pathway_applied
         or segnet_weight_applied
+        or official_control_superseded
     )
     return {
         "schema": "hinerv_feedback_launch_adjustment.v1",
@@ -1500,6 +1556,7 @@ def _hinerv_feedback_launch_adjustment(
         "lower_learning_rate_applied": lower_learning_rate_applied,
         "pose_protected_pathway_applied": pose_protected_pathway_applied,
         "segnet_weight_applied": segnet_weight_applied,
+        "official_control_superseded": official_control_superseded,
         "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
         "reason": (
             "pose_instability_recommended_lower_learning_rate"
@@ -1511,9 +1568,13 @@ def _hinerv_feedback_launch_adjustment(
                     "segnet_stagnation_recommended_higher_segnet_weight"
                     if segnet_weight_applied
                     else (
-                        "pose_instability_feedback_without_lower_lr"
-                        if pose_instability
-                        else "feedback_does_not_request_launch_adjustment"
+                        "official_hinerv_controls_supersede_source_feedback_run"
+                        if official_control_superseded
+                        else (
+                            "pose_instability_feedback_without_lower_lr"
+                            if pose_instability
+                            else "feedback_does_not_request_launch_adjustment"
+                        )
                     )
                 )
             )
@@ -1544,6 +1605,71 @@ def _hinerv_feedback_launch_adjustment(
         ),
         "launch_mutations": launch_mutations,
         **FALSE_AUTHORITY,
+    }
+
+
+def _hinerv_source_faithfulness_controls(
+    *,
+    candidate: Mapping[str, Any],
+    feedback: Mapping[str, Any],
+) -> dict[str, Any]:
+    target_score = _hinerv_official_control_score(candidate)
+    source_score = (
+        _hinerv_feedback_official_control_score(feedback) if feedback else target_score
+    )
+    return {
+        "schema": "hinerv_source_faithfulness_controls.v1",
+        "target_candidate_id": str(candidate.get("candidate_id") or ""),
+        "target_uses_hierarchical_feature_grid": bool(
+            candidate.get("use_hierarchical_feature_grid")
+        ),
+        "target_uses_convnext_blocks": bool(candidate.get("use_convnext_blocks")),
+        "target_official_control_score": int(target_score),
+        "source_feedback_candidate_id": str(
+            feedback.get("source_candidate_id")
+            or feedback.get("candidate_id")
+            or ""
+        ),
+        "source_official_control_score": int(source_score),
+        "source_official_control_superseded": bool(
+            feedback.get("source_official_control_superseded")
+            or source_score < target_score
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hinerv_official_control_score(row: Mapping[str, Any]) -> int:
+    return int(bool(row.get("use_hierarchical_feature_grid"))) + int(
+        bool(row.get("use_convnext_blocks"))
+    )
+
+
+def _hinerv_feedback_official_control_score(row: Mapping[str, Any]) -> int:
+    nested = row.get("candidate")
+    if isinstance(nested, Mapping):
+        nested_score = _hinerv_official_control_score(nested)
+        if nested_score:
+            return nested_score
+    explicit_score = _hinerv_official_control_score(row)
+    if explicit_score:
+        return explicit_score
+    candidate_id = str(
+        row.get("source_candidate_id") or row.get("candidate_id") or ""
+    ).lower()
+    return int("_hfg" in candidate_id) + int("_cnx" in candidate_id)
+
+
+def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "feedback_launch_adjustment",
+        "source_faithfulness_controls",
+        "output_dir_reuse_policy",
+    )
+    return {
+        key: dict(extra[key]) if isinstance(extra.get(key), Mapping) else extra[key]
+        for key in keys
+        if key in extra
     }
 
 

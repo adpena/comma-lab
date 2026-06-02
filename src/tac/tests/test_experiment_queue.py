@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import subprocess
 import sys
 import time
@@ -32,8 +31,8 @@ from src.comma_lab.scheduler.experiment_queue import (
     queue_resource_kinds,
     queue_summary,
     ready_steps,
-    reconcile_skipped_dependency_steps,
     reconcile_satisfied_queued_steps,
+    reconcile_skipped_dependency_steps,
     reconcile_stale_running_steps,
     resolve_worker_max_parallel,
     retire_orphaned_steps,
@@ -2441,6 +2440,92 @@ def test_experiment_queue_worker_records_failure_telemetry(tmp_path: Path) -> No
         ]
         assert "step_failed" in events
         assert "worker_step_failed" in events
+
+
+def test_experiment_queue_worker_infers_compact_renderer_artifacts_from_command(
+    tmp_path: Path,
+) -> None:
+    old_out = tmp_path / "old_output"
+    new_out = tmp_path / "new_output"
+    script = (
+        "import pathlib, sys; "
+        "out = pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1]); "
+        "out.mkdir(parents=True, exist_ok=True); "
+        "(out / 'compact_renderer_mlx_spine_runner_startup.json').write_text("
+        "'{\"schema\":\"startup\"}\\n', encoding='utf-8'); "
+        "sys.exit(7)"
+    )
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "compact_renderer_infer_artifacts",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "snerv_candidate",
+                    "steps": [
+                        {
+                            "id": "run",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                script,
+                                "tools/run_compact_renderer_mlx_spine_runner.py",
+                                "--execute-family",
+                                "snerv",
+                                "--output-dir",
+                                str(new_out),
+                            ],
+                            "resources": {"kind": "local_cpu"},
+                            "telemetry": {
+                                "artifact_paths": [
+                                    str(
+                                        old_out
+                                        / "compact_renderer_mlx_spine_runner_startup.json"
+                                    )
+                                ],
+                                "include_postcondition_paths": False,
+                            },
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=1,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+
+    step = result["step_results"][0]
+    assert step["returncode"] == 7
+    def record_key(record: dict[str, object]) -> Path:
+        path = Path(str(record["path"]))
+        return (path if path.is_absolute() else tmp_path / path).resolve(strict=False)
+
+    records = {record_key(record): record for record in step["telemetry"]["artifact_records"]}
+    new_startup = new_out / "compact_renderer_mlx_spine_runner_startup.json"
+    new_report = new_out / "compact_renderer_mlx_spine_runner_report.json"
+    assert records[new_startup.resolve(strict=False)]["exists"] is True
+    assert records[new_startup.resolve(strict=False)]["source"] == (
+        "step.command.inferred_compact_renderer_output_artifacts"
+    )
+    assert records[new_report.resolve(strict=False)]["exists"] is False
+    assert records[new_report.resolve(strict=False)]["source"] == (
+        "step.command.inferred_compact_renderer_output_artifacts"
+    )
+    assert (
+        new_out / "snerv_mlx_training" / "telemetry.jsonl"
+    ).resolve(strict=False) in records
 
 
 def test_experiment_queue_execute_requires_canonical_state_path(tmp_path: Path) -> None:

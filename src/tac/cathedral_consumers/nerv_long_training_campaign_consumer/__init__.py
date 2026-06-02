@@ -240,6 +240,7 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
     steps = _mapping_list(experiment.get("steps"))
     first_step = steps[0] if steps else {}
     gate = _mapping(experiment.get("score_lowering_gate"))
+    metadata = _mapping(experiment.get("metadata"))
     return {
         "id": _experiment_id(experiment, index),
         "family": str(experiment.get("family") or "unknown"),
@@ -264,10 +265,35 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
             "exact_auth_gate_required": gate.get("exact_auth_gate_required") is True,
             "promotion_blockers": _string_list(gate.get("promotion_blockers")),
         },
+        "metadata": _compact_metadata(metadata),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _compact_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    keep: dict[str, Any] = {
+        "schema": "nerv_long_training_campaign_consumer_metadata.v1"
+    }
+    for key in (
+        "feedback_launch_adjustment",
+        "source_faithfulness_controls",
+        "output_dir_reuse_policy",
+    ):
+        value = metadata.get(key)
+        if isinstance(value, Mapping):
+            keep[key] = dict(value)
+        elif value is not None:
+            keep[key] = value
+    keep.update(
+        {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    )
+    return keep
 
 
 def _family_summary(experiments: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, int]]:

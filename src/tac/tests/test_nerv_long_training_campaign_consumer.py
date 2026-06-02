@@ -46,6 +46,31 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
     assert first["score_lowering_gate"]["cpu_replay_ready"] is False
 
 
+def test_long_training_campaign_consumer_preserves_hinerv_supersession_metadata(
+) -> None:
+    plan = _hinerv_official_supersession_campaign_plan()
+
+    verdict = consumer.consume_candidate(plan["experiment_queue"])
+
+    selected = verdict["selected_local_mlx_experiments"][0]
+    metadata = selected["metadata"]
+    assert metadata["schema"] == "nerv_long_training_campaign_consumer_metadata.v1"
+    assert metadata["source_faithfulness_controls"][
+        "source_official_control_superseded"
+    ] is True
+    assert metadata["source_faithfulness_controls"][
+        "target_official_control_score"
+    ] == 2
+    assert metadata["feedback_launch_adjustment"][
+        "official_control_superseded"
+    ] is True
+    assert "switch_to_hinerv_official_feature_grid_convnext_controls" in metadata[
+        "feedback_launch_adjustment"
+    ]["launch_mutations"]
+    assert selected["score_claim"] is False
+    assert selected["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_consumer_accepts_extracted_experiment_queue() -> None:
     queue = _campaign_plan()["experiment_queue"]
 
@@ -127,6 +152,66 @@ def _campaign_plan() -> dict:
         learning_rate=3.0e-4,
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
         max_candidates_per_family=1,
+    )
+
+
+def _hinerv_official_supersession_campaign_plan() -> dict:
+    hinerv_budget = _hinerv_budget()
+    generic = dict(hinerv_budget["selected_candidates"][0])
+    generic.update(
+        {
+            "candidate_id": "hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000",
+            "decoder_codec": "int8_mixed",
+            "nominal_total_payload_bytes": 90_000,
+            "byte_headroom": 88_000,
+            "use_hierarchical_feature_grid": False,
+            "use_convnext_blocks": False,
+        }
+    )
+    official = dict(generic)
+    official.update(
+        {
+            "candidate_id": "hinerv_np600_ld4_ed16_dc8_hfg_cnx_int2_mixed_ceil36000",
+            "decoder_codec": "int2_mixed",
+            "nominal_total_payload_bytes": 110_000,
+            "byte_headroom": 68_000,
+            "use_hierarchical_feature_grid": True,
+            "use_convnext_blocks": True,
+            "local_grid_levels": 2,
+            "local_grid_channels": 4,
+            "convnext_mlp_ratio": 2,
+            "convnext_kernel_size": 3,
+        }
+    )
+    hinerv_budget["selected_candidates"] = [generic, official]
+    return build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=hinerv_budget,
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=16,
+        batch_pairs=4,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": generic["candidate_id"],
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "seg_stagnation_detected": True,
+                "observed_learning_rate": 2.7e-5,
+                "recommended_segnet_distillation_weight": 2.0,
+                "recommended_launch_mutations": [
+                    "increase_segnet_distillation_weight_from_stagnation_telemetry"
+                ],
+            },
+        ),
     )
 
 

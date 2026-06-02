@@ -2106,7 +2106,6 @@ def reconcile_stale_running_steps(
         )
         if terminal_status == "succeeded" and not bool(step.get("postconditions")):
             terminal_status = "failed"
-        succeeded = terminal_status == "succeeded"
         recovery_event = {
             **event,
             "stale_running_reconciled": True,
@@ -2968,12 +2967,60 @@ def _step_artifact_telemetry(
     ):
         add(artifact_path, source="step.telemetry.artifact_paths", recursive_path=recursive)
 
+    for artifact_path in _inferred_compact_renderer_artifact_paths(step):
+        add(
+            artifact_path,
+            source="step.command.inferred_compact_renderer_output_artifacts",
+            recursive_path=False,
+        )
+
     if bool(telemetry.get("include_postcondition_paths", True)):
         for condition in [dict(condition) for condition in step.get("postconditions", [])]:
             path_value = condition.get("path")
             if isinstance(path_value, str) and path_value:
                 add(path_value, source="step.postconditions.path", recursive_path=False)
     return records
+
+
+def _inferred_compact_renderer_artifact_paths(step: Mapping[str, Any]) -> list[str]:
+    command = [str(item) for item in step.get("command") or []]
+    if not command or not any(
+        "run_compact_renderer_mlx_spine_runner.py" in item for item in command
+    ):
+        return []
+    output_dir = _command_arg_value(command, "--output-dir")
+    if not output_dir:
+        return []
+    family = _command_arg_value(command, "--execute-family") or ""
+    root = Path(output_dir)
+    paths = [
+        root / "compact_renderer_mlx_spine_runner_startup.json",
+        root / "compact_renderer_mlx_spine_runner_report.json",
+    ]
+    if family == "hi_nerv":
+        paths.extend(
+            [
+                root / "hi_nerv_mlx_training" / "telemetry.jsonl",
+                root / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
+            ]
+        )
+    elif family == "snerv":
+        paths.extend(
+            [
+                root / "snerv_mlx_training" / "telemetry.jsonl",
+                root / "snerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
+            ]
+        )
+    return [path.as_posix() for path in paths]
+
+
+def _command_arg_value(command: Sequence[str], flag: str) -> str | None:
+    try:
+        value = command[command.index(flag) + 1]
+    except (ValueError, IndexError):
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _step_telemetry_event(
@@ -4845,8 +4892,8 @@ __all__ = [
     "queue_resource_kinds",
     "queue_summary",
     "ready_steps",
-    "reconcile_skipped_dependency_steps",
     "reconcile_satisfied_queued_steps",
+    "reconcile_skipped_dependency_steps",
     "reconcile_stale_running_steps",
     "resolve_worker_max_parallel",
     "retire_orphaned_steps",
