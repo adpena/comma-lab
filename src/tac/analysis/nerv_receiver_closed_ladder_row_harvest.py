@@ -219,6 +219,9 @@ def _harvest_row(
             "d_seg_mean_linf",
             "avg_segnet_dist",
             "seg_distortion",
+            ("score_aware_training", "d_seg_mean_linf"),
+            ("score_aware_training", "d_seg"),
+            ("score_aware_training", "d_seg_linf"),
         ),
     )
     d_pose = _first_float(
@@ -230,6 +233,9 @@ def _harvest_row(
             "d_pose_mean_linf",
             "avg_posenet_dist",
             "pose_distortion",
+            ("score_aware_training", "d_pose_mean_linf"),
+            ("score_aware_training", "d_pose"),
+            ("score_aware_training", "d_pose_linf"),
         ),
     )
     nonrate_score = _first_float(
@@ -250,17 +256,64 @@ def _harvest_row(
             ("official_controls", "--modelsize"),
             ("solved_budget", "modelsize_mparams"),
             ("solved_budget", "official_controls", "--modelsize"),
+            ("modelsize_candidate_selection", "candidate", "modelsize_mparams"),
         ),
     )
     modelsize_scale = _first_float(
         candidate,
         source_payload,
-        keys=("modelsize_scale", ("solved_budget", "modelsize_scale")),
+        keys=(
+            "modelsize_scale",
+            ("solved_budget", "modelsize_scale"),
+            ("modelsize_candidate_selection", "candidate", "modelsize_scale"),
+        ),
     )
     fc_dim = _first_int(
         candidate,
         source_payload,
-        keys=("fc_dim", ("derived", "fc_dim"), ("solved_budget", "derived", "fc_dim")),
+        keys=(
+            "fc_dim",
+            ("derived", "fc_dim"),
+            ("solved_budget", "derived", "fc_dim"),
+            ("modelsize_candidate_selection", "candidate", "fc_dim"),
+        ),
+    )
+    snerv_levels = _first_int(
+        candidate,
+        source_payload,
+        keys=(
+            "levels",
+            ("modelsize_candidate_selection", "candidate", "levels"),
+            ("score_aware_training", "levels"),
+        ),
+    )
+    snerv_bits_per_coeff = _first_float(
+        candidate,
+        source_payload,
+        keys=(
+            "bits_per_coeff",
+            "target_bits_per_coeff",
+            ("modelsize_candidate_selection", "candidate", "bits_per_coeff"),
+            ("score_aware_training", "target_bits_per_coeff"),
+        ),
+    )
+    snerv_step_map_bits_per_coeff = _first_float(
+        candidate,
+        source_payload,
+        keys=(
+            "step_map_bits_per_coeff",
+            ("modelsize_candidate_selection", "candidate", "step_map_bits_per_coeff"),
+            ("score_aware_training", "step_map_waterfill_bits_per_coeff"),
+        ),
+    )
+    decoder_payload_codec = _first_string(
+        candidate,
+        source_payload,
+        keys=(
+            "decoder_payload_codec",
+            ("modelsize_candidate_selection", "candidate", "decoder_payload_codec"),
+            ("score_aware_training", "decoder_payload_codec"),
+        ),
     )
     local_receiver_replay = _truthy_first(
         candidate,
@@ -270,6 +323,14 @@ def _harvest_row(
             "receiver_contract_satisfied",
             "runtime_consumption_proof_ready",
             "receiver_matches_direct",
+            "receiver_proof_report_paths",
+            ("score_aware_training", "receiver_archive_replay_verified"),
+            ("score_aware_training", "receiver_contract_satisfied"),
+            ("score_aware_training", "mlx_native_receiver_proof_passed"),
+            ("snerv_mlx_native_export", "receiver_proof_passed"),
+            ("snerv_mlx_native_export", "receiver_contract_satisfied"),
+            ("hi_nerv_mlx_export", "receiver_proof_passed"),
+            ("hi_nerv_mlx_export", "receiver_contract_satisfied"),
         ),
     )
     accepted = _accepted(candidate)
@@ -289,7 +350,14 @@ def _harvest_row(
         blockers.append("archive_sha256_missing")
     if nonrate_score is None:
         blockers.append("nonrate_score_or_component_distortions_missing")
-    if modelsize is None and fc_dim is None and modelsize_scale is None:
+    has_capacity_axis = _capacity_axis_present(
+        modelsize_mparams=modelsize,
+        modelsize_scale=modelsize_scale,
+        fc_dim=fc_dim,
+        snerv_levels=snerv_levels,
+        snerv_bits_per_coeff=snerv_bits_per_coeff,
+    )
+    if not has_capacity_axis:
         blockers.append("modelsize_or_fc_dim_missing")
     if not local_receiver_replay:
         blockers.append("receiver_replay_or_contract_missing")
@@ -314,6 +382,10 @@ def _harvest_row(
         "modelsize_mparams": modelsize,
         "modelsize_scale": modelsize_scale,
         "fc_dim": fc_dim,
+        "snerv_levels": snerv_levels,
+        "snerv_bits_per_coeff": snerv_bits_per_coeff,
+        "snerv_step_map_bits_per_coeff": snerv_step_map_bits_per_coeff,
+        "decoder_payload_codec": decoder_payload_codec,
         "archive_bytes": archive_bytes,
         "archive_sha256": archive_sha,
         "d_seg": d_seg,
@@ -388,10 +460,28 @@ def _source_family(payload: Mapping[str, Any]) -> str | None:
 
 
 def _row_has_capacity_axis(row: Mapping[str, Any]) -> bool:
+    return _capacity_axis_present(
+        modelsize_mparams=row.get("modelsize_mparams"),
+        modelsize_scale=row.get("modelsize_scale"),
+        fc_dim=row.get("fc_dim"),
+        snerv_levels=row.get("snerv_levels"),
+        snerv_bits_per_coeff=row.get("snerv_bits_per_coeff"),
+    )
+
+
+def _capacity_axis_present(
+    *,
+    modelsize_mparams: Any,
+    modelsize_scale: Any,
+    fc_dim: Any,
+    snerv_levels: Any,
+    snerv_bits_per_coeff: Any,
+) -> bool:
     return (
-        row.get("modelsize_mparams") is not None
-        or row.get("modelsize_scale") is not None
-        or row.get("fc_dim") is not None
+        modelsize_mparams is not None
+        or modelsize_scale is not None
+        or fc_dim is not None
+        or (snerv_levels is not None and snerv_bits_per_coeff is not None)
     )
 
 
@@ -489,6 +579,8 @@ def _lookup(row: Mapping[str, Any], key: Any) -> Any:
 def _truthy(value: Any) -> bool:
     if value is True:
         return True
+    if isinstance(value, list | tuple | set | dict):
+        return bool(value)
     if isinstance(value, int | float) and not isinstance(value, bool):
         return value != 0
     if isinstance(value, str):

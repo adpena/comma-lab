@@ -1,0 +1,78 @@
+{
+  "axis_tag": "[planning/control:false-authority]",
+  "blockers": [
+    "fewer_than_two_full600_receiver_modelsize_rows",
+    "no_full600_receiver_proof_rows",
+    "row:compact_renderer_mlx_spine_runner_report:row_0000:local_smoke_only_not_full600_receiver_proof",
+    "harvest_rows_are_false_authority_until_ladder_and_full600_replay_pass"
+  ],
+  "carrier_id": "snerv",
+  "frontier_score_claim": false,
+  "full_pair_count": 600,
+  "full_scope_row_count": 0,
+  "harvested_row_count": 1,
+  "harvested_rows": [
+    {
+      "accepted": true,
+      "archive_bytes": 57892,
+      "archive_sha256": "f2cada9821017ce11909c51e4ffec9a35ab52709e1771c03ba947440fe245662",
+      "carrier_id": "snerv",
+      "d_pose": 196.59091186523438,
+      "d_seg": 0.27360280603170395,
+      "decoder_payload_codec": "int8_symmetric",
+      "family": "snerv",
+      "fc_dim": null,
+      "full600_receiver_proof": false,
+      "harvest_blockers": [
+        "local_smoke_only_not_full600_receiver_proof"
+      ],
+      "local_receiver_archive_replay_verified": true,
+      "modelsize_mparams": null,
+      "modelsize_scale": null,
+      "nonrate_score": 71.69885431334225,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_replay_verified_local_only": true,
+      "receiver_closed": false,
+      "receiver_proof_passed": false,
+      "row_id": "compact_renderer_mlx_spine_runner_report:row_0000",
+      "sample_pair_count": 2,
+      "sample_scope": "local_pair_smoke",
+      "score_claim": false,
+      "snerv_bits_per_coeff": 1.5,
+      "snerv_levels": 5,
+      "snerv_step_map_bits_per_coeff": 0.5,
+      "source_artifact_path": "/Volumes/VertigoDataTier/pact/nerv_local_smokes/snerv_bounded_smoke_20260602T183755Z/compact_renderer_mlx_spine_runner_report.json",
+      "source_axis_tag": null,
+      "source_candidate_index": 0,
+      "source_label": null,
+      "source_schema": "compact_renderer_mlx_spine_runner.v1"
+    }
+  ],
+  "ladder_candidate_row_count": 0,
+  "local_receiver_replay_row_count": 1,
+  "modelsize_present_row_count": 1,
+  "production_hardened_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_receiver_closed_modelsize_ladder": false,
+  "receiver_proof_row_count": 0,
+  "schema": "nerv_receiver_closed_ladder_row_harvest.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_count": 1,
+  "source_summaries": [
+    {
+      "candidate_count": 1,
+      "source_artifact_path": "/Volumes/VertigoDataTier/pact/nerv_local_smokes/snerv_bounded_smoke_20260602T183755Z/compact_renderer_mlx_spine_runner_report.json",
+      "source_axis_tag": null,
+      "source_family": null,
+      "source_index": 0,
+      "source_schema": "compact_renderer_mlx_spine_runner.v1"
+    }
+  ],
+  "status": "receiver_closed_ladder_rows_blocked",
+  "verdict": "NO_GO_LADDER_INPUT__FULL600_RECEIVER_ROWS_MISSING"
+}

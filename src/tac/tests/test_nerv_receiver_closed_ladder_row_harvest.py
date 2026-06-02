@@ -131,6 +131,61 @@ def test_prefilter_profile_records_preserve_full_scope_without_receiver_proof() 
     assert payload["ready_for_receiver_closed_modelsize_ladder"] is False
 
 
+def test_compact_runner_nested_snerv_evidence_is_harvested_without_signal_loss() -> None:
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "compact_renderer_mlx_spine_runner.v1",
+                "execute_family": "snerv",
+                "num_pairs": 2,
+                "archive_bytes": 57_892,
+                "archive_sha256": "a" * 64,
+                "receiver_proof_report_paths": ["/ssd/receiver_proof.json"],
+                "modelsize_candidate_selection": {
+                    "candidate": {
+                        "family": "snerv",
+                        "levels": 5,
+                        "bits_per_coeff": 1.5,
+                        "step_map_bits_per_coeff": 0.5,
+                        "decoder_payload_codec": "int8_symmetric",
+                    }
+                },
+                "score_aware_training": {
+                    "d_seg_mean_linf": 0.273602806,
+                    "d_pose_mean_linf": 196.590911865,
+                    "receiver_archive_replay_verified": True,
+                    "target_bits_per_coeff": 1.5,
+                },
+                "snerv_mlx_native_export": {
+                    "receiver_proof_passed": True,
+                    "receiver_contract_satisfied": True,
+                },
+            }
+        ],
+        carrier_id="snerv",
+    )
+
+    row = payload["harvested_rows"][0]
+    assert row["sample_pair_count"] == 2
+    assert row["sample_scope"] == "local_pair_smoke"
+    assert row["archive_bytes"] == 57_892
+    assert row["d_seg"] == 0.273602806
+    assert row["d_pose"] == 196.590911865
+    assert row["nonrate_score"] is not None
+    assert row["snerv_levels"] == 5
+    assert row["snerv_bits_per_coeff"] == 1.5
+    assert row["snerv_step_map_bits_per_coeff"] == 0.5
+    assert row["decoder_payload_codec"] == "int8_symmetric"
+    assert row["local_receiver_archive_replay_verified"] is True
+    assert row["receiver_proof_passed"] is False
+    assert "modelsize_or_fc_dim_missing" not in row["harvest_blockers"]
+    assert "receiver_replay_or_contract_missing" not in row["harvest_blockers"]
+    assert "nonrate_score_or_component_distortions_missing" not in row[
+        "harvest_blockers"
+    ]
+    assert "local_smoke_only_not_full600_receiver_proof" in row["harvest_blockers"]
+
+
 def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis() -> None:
     payload = build_nerv_receiver_closed_ladder_row_harvest(
         [

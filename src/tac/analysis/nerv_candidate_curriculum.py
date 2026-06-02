@@ -153,6 +153,7 @@ def build_hinerv_candidate_curriculum_plan(
     full_video_local_prefilter_attached: bool = False,
     local_cpu_replay_gate_attached: bool = False,
     measured_archive_bytes: int | None = None,
+    measured_num_pairs: int | None = None,
 ) -> dict[str, Any]:
     """Bind a HiNeRV modelsize candidate to its required training pressure."""
 
@@ -188,7 +189,9 @@ def build_hinerv_candidate_curriculum_plan(
         blockers.append("hinerv_modelsize_candidate_not_selected_manual_probe")
     byte_feedback = _base_byte_feedback(
         candidate=candidate_row,
-        measured_num_pairs=int(num_pairs),
+        measured_num_pairs=(
+            int(num_pairs) if measured_num_pairs is None else int(measured_num_pairs)
+        ),
         measured_archive_bytes=measured_archive_bytes,
     ) if candidate_selected else {
         "schema": BYTE_FEEDBACK_SCHEMA,
@@ -309,6 +312,7 @@ def build_snerv_candidate_curriculum_plan(
     native_mlx_scorer_loop_qat_ready_for_pose_guard_gate: bool = False,
     native_mlx_scorer_loop_qat_accepted_improvement: bool = False,
     native_mlx_scorer_loop_qat_best_materialized: bool = False,
+    measured_num_pairs: int | None = None,
 ) -> dict[str, Any]:
     """Bind a SNeRV receiver-grammar candidate to byte feedback and blockers."""
 
@@ -357,7 +361,9 @@ def build_snerv_candidate_curriculum_plan(
     decoder_codec = str(candidate_row.get("decoder_payload_codec", "manual_cli"))
     byte_feedback = _base_byte_feedback(
         candidate=candidate_row,
-        measured_num_pairs=int(num_pairs),
+        measured_num_pairs=(
+            int(num_pairs) if measured_num_pairs is None else int(measured_num_pairs)
+        ),
         measured_payload_bytes=measured_packet_bytes,
         measured_archive_bytes=measured_archive_bytes,
     ) if candidate_selected else {
@@ -389,7 +395,9 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
     if not effective_scorer_loop_attached:
         blockers.append("snerv_scorer_loop_qat_not_attached")
-    blockers.append("snerv_score_aware_curriculum_not_native_mlx_yet")
+    blockers.append(
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+    )
     if not native_mlx_full600_campaign_ready:
         blockers.append("snerv_mlx_native_full600_campaign_not_ready")
     if (

@@ -571,6 +571,35 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert sn["decoder_payload_codec"] == "int2_symmetric"
 
 
+def test_pose_instability_epoch_monitor_requires_sustained_bad_pose() -> None:
+    monitor = runner_mod._PoseInstabilityEpochMonitor(
+        min_epoch=2,
+        consecutive_bad_epochs=2,
+        pose_loss_threshold=100.0,
+        pose_axis_threshold=100.0,
+    )
+    ok = SimpleNamespace(
+        epoch=2,
+        loss_components={"loss_part_pose_distill": 99.0},
+        per_axis_decomposition={"pose": 99.0},
+    )
+    bad_a = SimpleNamespace(
+        epoch=3,
+        loss_components={"loss_part_pose_distill": 101.0},
+        per_axis_decomposition={"pose": 10.0},
+    )
+    bad_b = SimpleNamespace(
+        epoch=4,
+        loss_components={"loss_part_pose_distill": 101.0},
+        per_axis_decomposition={"pose": 101.0},
+    )
+
+    monitor(ok)
+    monitor(bad_a)
+    with pytest.raises(runner_mod.LongTrainingStopRequested):
+        monitor(bad_b)
+
+
 def test_active_campaign_lock_identity_excludes_output_dir(tmp_path: Path) -> None:
     weight = tmp_path / "weights.npz"
     np.savez_compressed(weight, weight=np.ones((1,), dtype=np.float32))
@@ -3502,7 +3531,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         "blockers"
     ]
     assert "snerv_mlx_native_export_partial_pair_coverage" in out["blockers"]
-    assert "snerv_score_aware_curriculum_not_native_mlx_yet" in out["blockers"]
+    assert (
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+        in out["blockers"]
+    )
 
 
 def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(

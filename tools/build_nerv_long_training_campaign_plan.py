@@ -54,6 +54,17 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--candidate-feedback-source",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Runner report or nerv_candidate_feedback_row JSON to feed measured "
+            "archive/proof/prefilter/replay evidence back into campaign rows. "
+            "Repeatable."
+        ),
+    )
+    parser.add_argument(
         "--output-root",
         default="/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
     )
@@ -70,6 +81,9 @@ def main(argv: list[str] | None = None) -> int:
         output_root=args.output_root,
         max_candidates_per_family=args.max_candidates_per_family,
         joint_recon_weight_manifest_paths=tuple(args.joint_recon_weight_manifest),
+        candidate_feedback_sources=tuple(
+            _load_feedback_sources(args.candidate_feedback_source)
+        ),
     )
     write_json_artifact(
         args.output_json,
@@ -122,6 +136,37 @@ def _load(path: Path) -> dict:
     if not isinstance(payload, dict):
         raise TypeError(f"{path}: expected JSON object")
     return payload
+
+
+def _load_feedback_sources(paths: list[Path]) -> list[dict]:
+    out: list[dict] = []
+    for path in paths:
+        if path.suffix == ".jsonl":
+            with path.open("r", encoding="utf-8") as fh:
+                for line_no, line in enumerate(fh, start=1):
+                    text = line.strip()
+                    if not text:
+                        continue
+                    payload = json.loads(text)
+                    if not isinstance(payload, dict):
+                        raise TypeError(f"{path}:{line_no}: expected JSON object")
+                    out.append(_feedback_payload_with_path(payload, path))
+            continue
+        payload = _load(path)
+        row = payload.get("row")
+        if payload.get("schema") == "nerv_candidate_byte_feedback_ledger.v1":
+            if not isinstance(row, dict):
+                raise TypeError(f"{path}: ledger wrapper missing feedback row")
+            out.append(_feedback_payload_with_path(row, path))
+        else:
+            out.append(_feedback_payload_with_path(payload, path))
+    return out
+
+
+def _feedback_payload_with_path(payload: dict, path: Path) -> dict:
+    out = dict(payload)
+    out.setdefault("_candidate_feedback_source_path", path.as_posix())
+    return out
 
 
 if __name__ == "__main__":  # pragma: no cover

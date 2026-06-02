@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,7 @@ import pytest
 from comma_lab.storage_tiers import StorageTierError
 from tac.analysis.hinerv_archive_size_ladder import (
     HINERV_ARCHIVE_SIZE_LADDER_SCHEMA,
+    attach_hinerv_archive_ladder_score_rows,
     build_hinerv_archive_size_ladder,
     hinerv_modelsize_increment_section_value_rows,
     render_hinerv_archive_size_ladder_markdown,
@@ -20,6 +22,7 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
     NERV_BYTE_PRICE_CONTROLLER_SCHEMA,
     build_nerv_byte_price_plan,
 )
+from tools import attach_hinerv_archive_ladder_scores as attach_cli
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -168,3 +171,181 @@ def test_hinerv_modelsize_increment_rows_feed_byte_price_controller() -> None:
     assert plan_row["delta_total_score"] is None
     assert "delta_nonrate_score_missing" in plan_row["blockers"]
     assert "receiver_proof_not_satisfied" in plan_row["blockers"]
+
+
+def test_hinerv_archive_ladder_score_attachment_prices_measured_increments() -> None:
+    ladder = _ladder_for_score_attachment()
+
+    attached = attach_hinerv_archive_ladder_score_rows(
+        ladder,
+        {
+            "schema": "hinerv_full_video_mlx_score_rows.v1",
+            "axis_tag": "[macOS-MLX research-signal]",
+            "score_rows": [
+                {
+                    "row_id": "tiny",
+                    "nonrate_score": 0.230,
+                    "avg_segnet_dist": 0.001,
+                    "avg_posenet_dist": 0.00169,
+                    "num_pairs": 600,
+                },
+                {
+                    "row_id": "small",
+                    "nonrate_score": 0.180,
+                    "avg_segnet_dist": 0.0007,
+                    "avg_posenet_dist": 0.00121,
+                    "num_pairs": 600,
+                },
+            ],
+        },
+        score_source_path="/Volumes/VertigoDataTier/pact/hinerv_scores.json",
+    )
+
+    rows = {row["row_id"]: row for row in attached["archive_rows"]}
+    assert rows["tiny"]["nonrate_score"] == pytest.approx(0.230)
+    assert rows["small"]["measured_score_full_video_coverage"] is True
+    assert "hinerv_archive_size_row_has_no_nonrate_score" not in rows["tiny"][
+        "blockers"
+    ]
+    assert attached["score_attachment"]["matched_archive_row_count"] == 2
+    assert attached["score_attachment"]["matched_full_video_row_count"] == 2
+    section = attached["section_value_rows"][0]
+    assert section["section_id"] == "hinerv_modelsize_increment:tiny->small"
+    assert section["delta_nonrate_score"] == pytest.approx(-0.05)
+    assert section["byte_delta"] == 10_000
+    assert section["receiver_proof_status"] == "runtime_consumption_proof_ready"
+    assert section["full_video_coverage"] is True
+    assert section["blockers"] == []
+    plan_row = attached["byte_price_plan"]["decision_rows"][0]
+    assert plan_row["delta_nonrate_score"] == pytest.approx(-0.05)
+    assert plan_row["delta_rate_score"] > 0.0
+    assert plan_row["economic_decision"] in {"admit", "retrain"}
+    assert plan_row["decision"] == DEMOTE
+    assert "advisory_or_proxy_axis_not_promotion_authority" in plan_row["blockers"]
+    assert attached["score_claim"] is False
+    assert attached["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_archive_ladder_score_attachment_blocks_partial_scores() -> None:
+    ladder = _ladder_for_score_attachment()
+
+    attached = attach_hinerv_archive_ladder_score_rows(
+        ladder,
+        [
+            {
+                "row_id": "tiny",
+                "d_seg": 0.001,
+                "d_pose": 0.001,
+                "num_pairs": 16,
+                "axis_tag": "[macOS-MLX research-signal]",
+            }
+        ],
+    )
+
+    rows = {row["row_id"]: row for row in attached["archive_rows"]}
+    assert rows["tiny"]["nonrate_score"] == pytest.approx(0.1 + (0.01 ** 0.5))
+    assert "hinerv_archive_size_row_measured_score_not_full_video" in rows["tiny"][
+        "blockers"
+    ]
+    assert "hinerv_archive_size_row_measured_score_missing" in rows["small"][
+        "blockers"
+    ]
+    assert "hinerv_archive_size_ladder_full_video_scores_incomplete" in attached[
+        "blockers"
+    ]
+    section = attached["section_value_rows"][0]
+    assert section["delta_nonrate_score"] is None
+    assert "hinerv_modelsize_increment_measured_nonrate_missing" in section[
+        "blockers"
+    ]
+    assert "hinerv_modelsize_increment_full_video_score_missing" in section[
+        "blockers"
+    ]
+    plan_row = attached["byte_price_plan"]["decision_rows"][0]
+    assert plan_row["decision"] == DEMOTE
+    assert "delta_nonrate_score_missing" in plan_row["blockers"]
+
+
+def test_attach_hinerv_archive_ladder_scores_cli_writes_artifact(tmp_path: Path) -> None:
+    ladder_path = tmp_path / "ladder.json"
+    score_path = tmp_path / "scores.json"
+    output_path = tmp_path / "attached.json"
+    ladder_path.write_text(json.dumps(_ladder_for_score_attachment()), encoding="utf-8")
+    score_path.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_full_video_mlx_score_rows.v1",
+                "score_rows": [
+                    {"row_id": "tiny", "nonrate_score": 0.23, "num_pairs": 600},
+                    {"row_id": "small", "nonrate_score": 0.18, "num_pairs": 600},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = attach_cli.main(
+        [
+            "--ladder-json",
+            str(ladder_path),
+            "--score-json",
+            str(score_path),
+            "--output-json",
+            str(output_path),
+        ]
+    )
+
+    assert rc == 0
+    attached = json.loads(output_path.read_text(encoding="utf-8"))
+    assert attached["score_attachment"]["matched_archive_row_count"] == 2
+    assert attached["section_value_rows"][0]["delta_nonrate_score"] == pytest.approx(
+        -0.05
+    )
+    assert attached["score_claim"] is False
+
+
+def _ladder_for_score_attachment() -> dict:
+    return {
+        "schema": HINERV_ARCHIVE_SIZE_LADDER_SCHEMA,
+        "family": "hi_nerv",
+        "axis_tag": "[planning/control]",
+        "archive_rows": [
+            {
+                "family": "hi_nerv",
+                "row_id": "tiny",
+                "modelsize_scale": 0.25,
+                "archive_bytes": 20_000,
+                "archive_sha256": "a" * 64,
+                "runtime_consumption_proof_ready": True,
+                "blockers": [
+                    "hinerv_archive_size_row_has_no_nonrate_score",
+                    "contest_cpu_cuda_exact_eval_not_executed",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            {
+                "family": "hi_nerv",
+                "row_id": "small",
+                "modelsize_scale": 0.5,
+                "archive_bytes": 30_000,
+                "archive_sha256": "b" * 64,
+                "runtime_consumption_proof_ready": True,
+                "blockers": [
+                    "hinerv_archive_size_row_has_no_nonrate_score",
+                    "contest_cpu_cuda_exact_eval_not_executed",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ],
+        "blockers": [
+            "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }

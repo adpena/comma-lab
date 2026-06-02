@@ -33,6 +33,7 @@ from tac.training.long_training_canonical import (
     CurriculumStage,
     KahanCompensatedPolyakEMAShadow,
     LongTrainingConfig,
+    LongTrainingStopRequested,
     MultiArmDispatchResult,
     OOMSafeStepRunner,
     PerEpochMetrics,
@@ -691,6 +692,24 @@ def test_run_long_training_emits_telemetry_jsonl(tmp_path: Path) -> None:
         assert "epoch" in row
         assert "stage_name" in row
         assert "loss" in row
+
+
+def test_run_long_training_typed_callback_stop_preserves_artifact(
+    tmp_path: Path,
+) -> None:
+    config = _make_simple_config(tmp_path, epochs=8, checkpoint_interval=2)
+    adapter = _MockSubstrateAdapter()
+
+    def stop_after_epoch_2(metrics: PerEpochMetrics) -> None:
+        if metrics.epoch == 2:
+            raise LongTrainingStopRequested("unit_pose_instability_guard")
+
+    artifact = run_long_training(adapter, config, on_epoch_end=stop_after_epoch_2)
+
+    assert artifact.early_stopped is True
+    assert artifact.early_stop_reason == "unit_pose_instability_guard"
+    assert artifact.total_epochs_completed == 3
+    assert artifact.telemetry_path.is_file()
 
 
 def test_run_long_training_emits_canonical_archive(tmp_path: Path) -> None:

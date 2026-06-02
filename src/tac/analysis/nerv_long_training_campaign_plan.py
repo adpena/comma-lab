@@ -21,6 +21,12 @@ from tac.analysis.nerv_candidate_curriculum import (
     build_hinerv_candidate_curriculum_plan,
     build_snerv_candidate_curriculum_plan,
 )
+from tac.analysis.nerv_candidate_feedback import (
+    SCHEMA as NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA,
+)
+from tac.analysis.nerv_candidate_feedback import (
+    build_nerv_candidate_feedback_row,
+)
 from tac.analysis.nerv_modelsize_budget import (
     decoder_codec_nominal_bits,
     snerv_decoder_codec_nominal_bits,
@@ -64,6 +70,7 @@ def build_nerv_long_training_campaign_plan(
     output_root: str | Path = DEFAULT_OUTPUT_ROOT,
     max_candidates_per_family: int = 3,
     joint_recon_weight_manifest_paths: Sequence[str | Path] = (),
+    candidate_feedback_sources: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build the shared HiNeRV/SNeRV long-training campaign matrix."""
 
@@ -87,6 +94,7 @@ def build_nerv_long_training_campaign_plan(
     joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(
         joint_recon_weight_manifest_paths
     )
+    candidate_feedback_index = _candidate_feedback_index(candidate_feedback_sources)
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -110,6 +118,7 @@ def build_nerv_long_training_campaign_plan(
                     learning_rate=float(learning_rate),
                     output_root=Path(output_root),
                     joint_recon_weight_artifacts=joint_recon_weight_artifacts,
+                    candidate_feedback_index=candidate_feedback_index,
                 )
             )
     for candidate in snerv_candidates:
@@ -118,6 +127,7 @@ def build_nerv_long_training_campaign_plan(
                 candidate=candidate,
                 epochs=int(epochs),
                 output_root=Path(output_root),
+                candidate_feedback_index=candidate_feedback_index,
             )
         )
 
@@ -147,6 +157,10 @@ def build_nerv_long_training_campaign_plan(
         "output_root": Path(output_root).as_posix(),
         "joint_recon_weight_artifacts": list(joint_recon_weight_artifacts.values()),
         "joint_recon_weight_artifact_count": len(joint_recon_weight_artifacts),
+        "candidate_feedback_source_count": len(candidate_feedback_sources),
+        "candidate_feedback_row_count": sum(
+            len(rows_for_key) for rows_for_key in candidate_feedback_index.values()
+        ),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
         "experiment_queue": experiment_queue,
@@ -230,12 +244,20 @@ def _hinerv_campaign_row(
     learning_rate: float,
     output_root: Path,
     joint_recon_weight_artifacts: Mapping[int, Mapping[str, Any]] | None = None,
+    candidate_feedback_index: (
+        Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
+    ) = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
     num_pairs = int(candidate.get("num_pairs") or 600)
     joint_recon_weight = dict(
         (joint_recon_weight_artifacts or {}).get(num_pairs) or {}
+    )
+    feedback = _candidate_feedback_for(
+        candidate=candidate,
+        family="hi_nerv",
+        index=candidate_feedback_index,
     )
     curriculum = build_hinerv_candidate_curriculum_plan(
         candidate=candidate,
@@ -249,6 +271,15 @@ def _hinerv_campaign_row(
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
+        receiver_proof_attached=bool(feedback.get("receiver_proof_attached")),
+        full_video_local_prefilter_attached=bool(
+            feedback.get("full_video_local_prefilter_attached")
+        ),
+        local_cpu_replay_gate_attached=bool(
+            feedback.get("local_cpu_replay_gate_attached")
+        ),
+        measured_archive_bytes=feedback.get("measured_archive_bytes"),
+        measured_num_pairs=feedback.get("measured_num_pairs"),
     )
     row_id = f"hi_nerv::{candidate_id}::{optimizer_kind}"
     command = [
@@ -324,6 +355,7 @@ def _hinerv_campaign_row(
             "optimizer_kind": str(optimizer_kind),
             "quant_bits": int(quant_bits),
             "joint_recon_pixel_weight_artifact": joint_recon_weight or None,
+            "candidate_feedback": feedback or None,
         },
     )
 
@@ -333,8 +365,16 @@ def _snerv_campaign_row(
     candidate: Mapping[str, Any],
     epochs: int,
     output_root: Path,
+    candidate_feedback_index: (
+        Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
+    ) = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
+    feedback = _candidate_feedback_for(
+        candidate=candidate,
+        family="snerv",
+        index=candidate_feedback_index,
+    )
     execution_epochs = min(int(epochs), 3)
     quant_bits = min(
         8,
@@ -346,9 +386,35 @@ def _snerv_campaign_row(
         num_pairs=int(candidate.get("num_pairs") or 600),
         step_map_coder_mode="waterfill",
         native_mlx_train_export_attached=True,
-        native_mlx_receiver_proof_passed=False,
-        native_mlx_full600_campaign_ready=False,
+        native_mlx_receiver_proof_passed=bool(
+            feedback.get("native_mlx_receiver_proof_passed")
+        ),
+        native_mlx_full600_campaign_ready=bool(
+            feedback.get("native_mlx_full600_campaign_ready")
+        ),
         native_mlx_scorer_loop_qat_attached=True,
+        native_mlx_scorer_loop_qat_receiver_contract_satisfied=bool(
+            feedback.get("native_mlx_scorer_loop_qat_receiver_contract_satisfied")
+        ),
+        native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=bool(
+            feedback.get("native_mlx_scorer_loop_qat_ready_for_pose_guard_gate")
+        ),
+        native_mlx_scorer_loop_qat_accepted_improvement=bool(
+            feedback.get("native_mlx_scorer_loop_qat_accepted_improvement")
+        ),
+        native_mlx_scorer_loop_qat_best_materialized=bool(
+            feedback.get("native_mlx_scorer_loop_qat_best_materialized")
+        ),
+        receiver_proof_attached=bool(feedback.get("receiver_proof_attached")),
+        full_video_local_prefilter_attached=bool(
+            feedback.get("full_video_local_prefilter_attached")
+        ),
+        local_cpu_replay_gate_attached=bool(
+            feedback.get("local_cpu_replay_gate_attached")
+        ),
+        measured_packet_bytes=feedback.get("measured_payload_bytes"),
+        measured_archive_bytes=feedback.get("measured_archive_bytes"),
+        measured_num_pairs=feedback.get("measured_num_pairs"),
     )
     row_id = f"snerv::{candidate_id}::native_rate_aware_training"
     command = [
@@ -406,6 +472,7 @@ def _snerv_campaign_row(
             "planned_long_training_epochs": int(epochs),
             "execution_epochs": int(execution_epochs),
             "current_command_is_bounded_proof_not_long_training": True,
+            "candidate_feedback": feedback or None,
         },
     )
 
@@ -552,7 +619,10 @@ def _experiment_for_row(
                     "type": "json_array_contains",
                     "path": output_json,
                     "key": "blockers",
-                    "contains": "snerv_score_aware_curriculum_not_native_mlx_yet",
+                    "contains": (
+                        "snerv_scoreaware_long_training_not_bound_"
+                        "bounded_native_export_stage_only"
+                    ),
                 },
             ]
         )
@@ -716,6 +786,125 @@ def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
     if not out:
         raise NervLongTrainingCampaignPlanError("at least one optimizer is required")
     return tuple(out)
+
+
+def _candidate_feedback_index(
+    sources: Sequence[Mapping[str, Any]],
+) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    index: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for source in sources:
+        row = _normalize_candidate_feedback_source(source)
+        family = _feedback_family(row)
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if not family or not candidate_id:
+            continue
+        index.setdefault((family, candidate_id), []).append(row)
+    return {
+        key: sorted(
+            rows,
+            key=lambda row: (
+                bool(row.get("scope_matches_candidate")),
+                int(row.get("measured_num_pairs") or 0),
+                bool(row.get("receiver_proof_attached")),
+                bool(row.get("full_video_local_prefilter_attached")),
+                bool(row.get("local_cpu_replay_gate_attached")),
+            ),
+            reverse=True,
+        )
+        for key, rows in index.items()
+    }
+
+
+def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str, Any]:
+    if source.get("schema") == NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA:
+        row = dict(source)
+    elif source.get("schema") == "compact_renderer_mlx_spine_runner.v1":
+        row = build_nerv_candidate_feedback_row(
+            runner_report=source,
+            source_report_path=source.get("_candidate_feedback_source_path"),
+        )
+    else:
+        row = dict(source)
+    return _augment_feedback_row(row, source)
+
+
+def _augment_feedback_row(
+    row: Mapping[str, Any],
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    out = dict(row)
+    native = source.get("snerv_mlx_native_export")
+    if isinstance(native, Mapping):
+        out.setdefault(
+            "native_mlx_receiver_proof_passed",
+            bool(
+                native.get("receiver_proof_passed")
+                and native.get("receiver_contract_satisfied")
+            ),
+        )
+        out.setdefault(
+            "native_mlx_full600_campaign_ready",
+            bool(native.get("native_mlx_full600_campaign_ready")),
+        )
+        out.setdefault(
+            "native_mlx_scorer_loop_qat_receiver_contract_satisfied",
+            bool(native.get("scorer_loop_qat_receiver_contract_satisfied")),
+        )
+        out.setdefault(
+            "native_mlx_scorer_loop_qat_ready_for_pose_guard_gate",
+            bool(native.get("scorer_loop_qat_ready_for_pose_guard_gate")),
+        )
+        out.setdefault(
+            "native_mlx_scorer_loop_qat_accepted_improvement",
+            bool(native.get("scorer_loop_qat_accepted_improvement")),
+        )
+        out.setdefault(
+            "native_mlx_scorer_loop_qat_best_materialized",
+            bool(native.get("scorer_loop_qat_best_materialized")),
+        )
+    if "receiver_proof_attached" not in out:
+        receiver_paths = out.get("receiver_proof_report_paths")
+        out["receiver_proof_attached"] = bool(
+            out.get("scope_matches_candidate")
+            and (
+                out.get("native_mlx_receiver_proof_passed")
+                or (isinstance(receiver_paths, list) and len(receiver_paths) > 0)
+            )
+        )
+    if "full_video_local_prefilter_attached" not in out:
+        out["full_video_local_prefilter_attached"] = bool(
+            out.get("mlx_prefilter_has_full_video")
+        )
+    if "local_cpu_replay_gate_attached" not in out:
+        out["local_cpu_replay_gate_attached"] = bool(
+            out.get("local_cpu_replay_gate_executed")
+            or out.get("local_cpu_replay_summary_present")
+        )
+    return out
+
+
+def _candidate_feedback_for(
+    *,
+    candidate: Mapping[str, Any],
+    family: str,
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+) -> dict[str, Any]:
+    candidate_id = str(candidate.get("candidate_id") or "").strip()
+    if not candidate_id:
+        return {}
+    rows = list((index or {}).get((_family_key(family), candidate_id)) or [])
+    return dict(rows[0]) if rows else {}
+
+
+def _feedback_family(row: Mapping[str, Any]) -> str:
+    return _family_key(str(row.get("family") or row.get("execute_family") or ""))
+
+
+def _family_key(value: str) -> str:
+    text = str(value).strip().lower().replace("-", "_")
+    if text == "hinerv":
+        return "hi_nerv"
+    return text
 
 
 def _load_verified_joint_recon_weight_artifacts(

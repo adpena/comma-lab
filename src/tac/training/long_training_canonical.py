@@ -132,6 +132,7 @@ __all__ = [
     "CurriculumStage",
     "KahanCompensatedPolyakEMAShadow",
     "LongTrainingConfig",
+    "LongTrainingStopRequested",
     "MultiArmDispatchResult",
     "OOMSafeStepRunner",
     "PerEpochMetrics",
@@ -778,6 +779,23 @@ class PerEpochMetrics:
             "learning_rate": float(self.learning_rate),
             "captured_at_utc": self.captured_at_utc,
         }
+
+
+class LongTrainingStopRequested(RuntimeError):
+    """Typed callback request to stop canonical long training.
+
+    Ordinary ``on_epoch_end`` callback errors remain observability warnings.
+    This exception is reserved for intentional fail-closed monitors such as
+    scorer-axis instability guards that should stop a doomed expensive run while
+    preserving canonical telemetry, checkpoints, and artifact provenance.
+    """
+
+    def __init__(self, reason: str) -> None:
+        reason_text = str(reason).strip()
+        if not reason_text:
+            reason_text = "long_training_stop_requested"
+        self.reason = reason_text
+        super().__init__(reason_text)
 
 
 @dataclass(frozen=True)
@@ -2436,6 +2454,10 @@ def run_long_training(
         if on_epoch_end is not None:
             try:
                 on_epoch_end(metrics)
+            except LongTrainingStopRequested as exc:
+                early_stopped = True
+                early_stop_reason = exc.reason
+                break
             except Exception as exc:
                 print(f"[long_training_canonical] WARN: on_epoch_end callback failed: {exc!r}")
 

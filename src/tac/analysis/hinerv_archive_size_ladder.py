@@ -9,6 +9,7 @@ keeps non-rate scorer authority closed until a scorer replay is attached.
 from __future__ import annotations
 
 import json
+import math
 import zlib
 from collections.abc import Iterable, Mapping, Sequence
 from itertools import pairwise
@@ -469,6 +470,355 @@ def hinerv_modelsize_increment_section_value_rows(
     return out
 
 
+def attach_hinerv_archive_ladder_score_rows(
+    ladder_report: Mapping[str, Any],
+    score_artifacts_or_rows: Sequence[Mapping[str, Any]] | Mapping[str, Any],
+    *,
+    score_source_path: str | Path | None = None,
+    require_full_video: bool = True,
+) -> dict[str, Any]:
+    """Attach measured non-rate scorer rows to a HiNeRV archive-size ladder.
+
+    The archive ladder is byte authority only. This helper makes the next step
+    explicit: a measured scorer artifact provides per-row non-rate scores, then
+    modelsize increments become byte-priced section-value rows. It never creates
+    score authority; MLX/advisory rows remain blocked from promotion by the byte
+    price controller until exact replay lands.
+    """
+
+    report = dict(ladder_report)
+    if report.get("schema") != HINERV_ARCHIVE_SIZE_LADDER_SCHEMA:
+        raise ValueError(
+            "expected hinerv archive-size ladder schema; got "
+            f"{report.get('schema')!r}"
+        )
+    score_rows = _score_rows_from_artifacts(score_artifacts_or_rows)
+    score_by_row = _score_rows_by_id(score_rows)
+    updated_rows = []
+    rows_with_score = 0
+    rows_with_full_video = 0
+    for row in report.get("archive_rows", ()):
+        updated = dict(row)
+        row_id = str(updated.get("row_id") or "")
+        score = score_by_row.get(row_id)
+        blockers = [
+            str(blocker) for blocker in updated.get("blockers") or () if blocker
+        ]
+        if score is None:
+            blockers.append("hinerv_archive_size_row_measured_score_missing")
+        else:
+            rows_with_score += 1
+            updated.update(
+                {
+                    "nonrate_score": score["nonrate_score"],
+                    "avg_segnet_dist": score.get("avg_segnet_dist"),
+                    "avg_posenet_dist": score.get("avg_posenet_dist"),
+                    "measured_score_axis_tag": score["axis_tag"],
+                    "measured_score_full_video_coverage": score["full_video_coverage"],
+                    "measured_score_source_row_id": score["source_row_id"],
+                    "measured_score_source_schema": score.get("source_schema"),
+                    "measured_score_source_path": (
+                        None
+                        if score_source_path is None
+                        else Path(score_source_path).expanduser().as_posix()
+                    ),
+                }
+            )
+            if score["full_video_coverage"]:
+                rows_with_full_video += 1
+                blockers = [
+                    blocker
+                    for blocker in blockers
+                    if blocker != "hinerv_archive_size_row_has_no_nonrate_score"
+                ]
+            else:
+                blockers.append("hinerv_archive_size_row_measured_score_not_full_video")
+        updated["blockers"] = _ordered_unique(blockers)
+        updated_rows.append(updated)
+
+    marginal_gates = _marginal_archive_gates(updated_rows)
+    section_rows = _measured_hinerv_increment_section_value_rows(
+        marginal_gates,
+        archive_rows=updated_rows,
+        require_full_video=bool(require_full_video),
+    )
+    blockers = [
+        str(blocker) for blocker in report.get("blockers") or () if blocker
+    ]
+    if rows_with_score:
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != "hinerv_archive_size_ladder_false_authority_no_nonrate_score"
+        ]
+    else:
+        blockers.append("hinerv_archive_size_ladder_measured_scores_missing")
+    if require_full_video and rows_with_full_video != len(updated_rows):
+        blockers.append("hinerv_archive_size_ladder_full_video_scores_incomplete")
+    report.update(
+        {
+            "archive_rows": updated_rows,
+            "marginal_archive_gates": marginal_gates,
+            "section_value_rows": section_rows,
+            "score_attachment": {
+                "schema": "hinerv_archive_size_ladder_score_attachment.v1",
+                "source_path": (
+                    None
+                    if score_source_path is None
+                    else Path(score_source_path).expanduser().as_posix()
+                ),
+                "input_score_row_count": len(score_rows),
+                "matched_archive_row_count": rows_with_score,
+                "matched_full_video_row_count": rows_with_full_video,
+                "require_full_video": bool(require_full_video),
+                **FALSE_AUTHORITY,
+            },
+            "blockers": _ordered_unique(blockers),
+            **FALSE_AUTHORITY,
+        }
+    )
+    report["byte_price_plan"] = build_nerv_byte_price_plan(report)
+    return report
+
+
+def _measured_hinerv_increment_section_value_rows(
+    gates: Sequence[Mapping[str, Any]],
+    *,
+    archive_rows: Sequence[Mapping[str, Any]],
+    require_full_video: bool,
+) -> list[dict[str, Any]]:
+    by_row = {str(row.get("row_id")): row for row in archive_rows}
+    out = []
+    for gate in gates:
+        from_row_id = str(gate["from_row_id"])
+        to_row_id = str(gate["to_row_id"])
+        from_row = by_row.get(from_row_id, {})
+        to_row = by_row.get(to_row_id, {})
+        from_nonrate = _finite_float(from_row.get("nonrate_score"))
+        to_nonrate = _finite_float(to_row.get("nonrate_score"))
+        from_full = from_row.get("measured_score_full_video_coverage") is True
+        to_full = to_row.get("measured_score_full_video_coverage") is True
+        proof_ready = (
+            from_row.get("runtime_consumption_proof_ready") is True
+            and to_row.get("runtime_consumption_proof_ready") is True
+        )
+        blockers: list[str] = []
+        if from_nonrate is None or to_nonrate is None:
+            blockers.append("hinerv_modelsize_increment_measured_nonrate_missing")
+        if require_full_video and not (from_full and to_full):
+            blockers.append("hinerv_modelsize_increment_full_video_score_missing")
+        if not proof_ready:
+            blockers.append("hinerv_modelsize_increment_receiver_proof_missing")
+        delta_nonrate = (
+            None
+            if from_nonrate is None or to_nonrate is None
+            else float(to_nonrate) - float(from_nonrate)
+        )
+        out.append(
+            {
+                "row_id": f"hinerv_modelsize_increment_{from_row_id}_to_{to_row_id}",
+                "section_id": f"hinerv_modelsize_increment:{from_row_id}->{to_row_id}",
+                "family": "hi_nerv",
+                "scope": "modelsize_increment",
+                "row_kind": "new_residual_or_sidecar",
+                "from_row_id": from_row_id,
+                "to_row_id": to_row_id,
+                "from_nonrate_score": from_nonrate,
+                "to_nonrate_score": to_nonrate,
+                "delta_nonrate_score": delta_nonrate,
+                "required_nonrate_score_improvement": float(
+                    gate["required_nonrate_score_improvement"]
+                ),
+                "bytes": int(gate["bytes_added"]),
+                "byte_delta": int(gate["bytes_added"]),
+                "archive_sha256": to_row.get("archive_sha256"),
+                "axis_tag": _score_axis_for_increment(from_row, to_row),
+                "receiver_proof_status": (
+                    "runtime_consumption_proof_ready" if proof_ready else "missing"
+                ),
+                "full_video_coverage": bool(from_full and to_full),
+                "blockers": blockers,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return out
+
+
+def _score_axis_for_increment(
+    from_row: Mapping[str, Any],
+    to_row: Mapping[str, Any],
+) -> str:
+    for row in (to_row, from_row):
+        axis = row.get("measured_score_axis_tag")
+        if axis:
+            return str(axis)
+    return "[macOS-MLX research-signal]"
+
+
+def _score_rows_from_artifacts(
+    artifacts_or_rows: Sequence[Mapping[str, Any]] | Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if isinstance(artifacts_or_rows, Mapping):
+        return _score_rows_from_one_artifact(artifacts_or_rows)
+    rows: list[dict[str, Any]] = []
+    for item in artifacts_or_rows:
+        if isinstance(item, Mapping):
+            rows.extend(_score_rows_from_one_artifact(item))
+    return rows
+
+
+def _score_rows_from_one_artifact(artifact: Mapping[str, Any]) -> list[dict[str, Any]]:
+    for key in (
+        "archive_rows",
+        "modelsize_score_rows",
+        "score_rows",
+        "rows",
+        "section_value_rows",
+        "modelsize_budget_rows",
+        "normalized_rows",
+    ):
+        rows = artifact.get(key)
+        if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
+            out = []
+            for row in rows:
+                if isinstance(row, Mapping):
+                    normalized = _normalize_score_row(
+                        row,
+                        source_schema=artifact.get("schema"),
+                        artifact_axis=artifact.get("axis_tag"),
+                    )
+                    if normalized is not None:
+                        out.append(normalized)
+            return out
+    normalized = _normalize_score_row(
+        artifact,
+        source_schema=artifact.get("schema"),
+        artifact_axis=artifact.get("axis_tag"),
+    )
+    return [] if normalized is None else [normalized]
+
+
+def _normalize_score_row(
+    row: Mapping[str, Any],
+    *,
+    source_schema: Any,
+    artifact_axis: Any,
+) -> dict[str, Any] | None:
+    row_id = _first_string(
+        row,
+        (
+            "row_id",
+            "modelsize_row_id",
+            "candidate_id",
+            "id",
+            "to_row_id",
+            "source_row_id",
+        ),
+    )
+    if not row_id:
+        return None
+    d_seg = _finite_float_from_keys(
+        row,
+        ("avg_segnet_dist", "d_seg", "segnet_dist", "segnet_distance"),
+    )
+    d_pose = _finite_float_from_keys(
+        row,
+        ("avg_posenet_dist", "d_pose", "posenet_dist", "posenet_distance"),
+    )
+    nonrate = _finite_float_from_keys(
+        row,
+        (
+            "nonrate_score",
+            "nonrate_score_value",
+            "nonrate_score_advisory",
+            "score_linf_without_rate",
+        ),
+    )
+    if nonrate is None and d_seg is not None and d_pose is not None:
+        nonrate = float(100.0 * d_seg + math.sqrt(10.0 * d_pose))
+    if nonrate is None:
+        return None
+    return {
+        "source_row_id": str(row_id),
+        "nonrate_score": float(nonrate),
+        "avg_segnet_dist": d_seg,
+        "avg_posenet_dist": d_pose,
+        "full_video_coverage": _score_row_full_video(row),
+        "axis_tag": str(
+            row.get("axis_tag")
+            or row.get("score_axis")
+            or row.get("evidence_axis")
+            or artifact_axis
+            or "[macOS-MLX research-signal]"
+        ),
+        "source_schema": source_schema,
+    }
+
+
+def _score_rows_by_id(rows: Sequence[Mapping[str, Any]]) -> dict[str, Mapping[str, Any]]:
+    out = {}
+    for row in rows:
+        row_id = str(row.get("source_row_id") or "")
+        if row_id:
+            out[row_id] = row
+    return out
+
+
+def _score_row_full_video(row: Mapping[str, Any]) -> bool:
+    explicit = row.get("full_video_coverage")
+    if isinstance(explicit, bool):
+        return explicit
+    full_video = row.get("full_video")
+    if isinstance(full_video, bool):
+        return full_video
+    if isinstance(full_video, str):
+        return full_video.lower() in {"executed", "true", "full", "full_video"}
+    for key in (
+        "num_pairs",
+        "n_pairs",
+        "n_samples",
+        "num_samples",
+        "scored_pairs",
+        "evaluated_pairs",
+    ):
+        value = _positive_int(row.get(key))
+        if value is not None:
+            return value >= 600
+    return False
+
+
+def _first_string(row: Mapping[str, Any], keys: Sequence[str]) -> str | None:
+    for key in keys:
+        value = row.get(key)
+        if value is not None and str(value):
+            return str(value)
+    return None
+
+
+def _finite_float_from_keys(row: Mapping[str, Any], keys: Sequence[str]) -> float | None:
+    for key in keys:
+        value = _finite_float(row.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _finite_float(value: Any) -> float | None:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if math.isfinite(out) else None
+
+
+def _positive_int(value: Any) -> int | None:
+    try:
+        out = int(value)
+    except (TypeError, ValueError):
+        return None
+    return out if out > 0 else None
+
+
 def _config_snapshot(cfg: Any) -> dict[str, Any]:
     return {
         "latent_dim_coarse": int(cfg.latent_dim_coarse),
@@ -508,6 +858,7 @@ def _ordered_unique(items: Iterable[str]) -> list[str]:
 __all__ = [
     "HINERV_ARCHIVE_SIZE_LADDER_SCHEMA",
     "REQUIRED_ALLOCATOR_BINDINGS",
+    "attach_hinerv_archive_ladder_score_rows",
     "build_hinerv_archive_size_ladder",
     "hinerv_modelsize_increment_section_value_rows",
     "render_hinerv_archive_size_ladder_markdown",

@@ -208,6 +208,42 @@ def test_hinerv_candidate_curriculum_harvests_partial_bytes_without_readiness() 
     ]
 
 
+def test_hinerv_candidate_curriculum_keeps_partial_feedback_scope_on_full600_plan() -> None:
+    candidate = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        latent_dim=12,
+        embed_dim=24,
+        decoder_channel=32,
+        decoder_codec="int4_mixed",
+    ).as_dict()
+
+    plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=8,
+        num_pairs=600,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        recon_pixel_weight_attached=True,
+        measured_archive_bytes=57_892,
+        measured_num_pairs=2,
+    )
+
+    feedback = plan["byte_oracle_logging"]
+    assert feedback["candidate_num_pairs"] == 600
+    assert feedback["measured_num_pairs"] == 2
+    assert feedback["feedback_scope"] == "partial_pair_advisory"
+    assert feedback["scope_matches_candidate"] is False
+    assert feedback["feedback_ready"] is False
+    assert "partial_pair_byte_feedback_only" in plan["blockers"]
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in plan[
+        "blockers"
+    ]
+    assert "hi_nerv_archive_in_loop_byte_oracle_missing" in plan["blockers"]
+
+
 def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     candidate = analyze_snerv_modelsize_candidate(
         hard_byte_ceiling=216_000,
@@ -308,7 +344,10 @@ def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
         "blockers"
     ]
     assert plan["training_plan"]["native_mlx_adapter_surfaces_ready"] is True
-    assert "snerv_score_aware_curriculum_not_native_mlx_yet" in plan["blockers"]
+    assert (
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+        in plan["blockers"]
+    )
 
 
 def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence() -> None:
@@ -342,7 +381,10 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence() -> Non
         "blockers"
     ]
     assert "snerv_mlx_native_full600_campaign_not_ready" not in plan["blockers"]
-    assert "snerv_score_aware_curriculum_not_native_mlx_yet" in plan["blockers"]
+    assert (
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+        in plan["blockers"]
+    )
     assert "snerv_scorer_loop_qat_not_attached" in plan["blockers"]
 
 
@@ -394,7 +436,10 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_scorer_loop_without_over
     assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
         "blockers"
     ]
-    assert "snerv_score_aware_curriculum_not_native_mlx_yet" in plan["blockers"]
+    assert (
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+        in plan["blockers"]
+    )
     assert plan["score_claim"] is False
 
 
@@ -427,6 +472,47 @@ def test_snerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -
     assert feedback["measured_archive_bytes"] == 13_000
     assert "partial_pair_byte_feedback_only" in plan["blockers"]
     assert "snerv_snar1_byte_feedback_missing" not in plan["blockers"]
+
+
+def test_snerv_candidate_curriculum_keeps_partial_feedback_scope_on_full600_plan() -> None:
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=600,
+        levels=5,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+    ).as_dict()
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=3,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=10_441,
+        measured_archive_bytes=57_892,
+        measured_num_pairs=2,
+        native_mlx_train_export_attached=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_scorer_loop_qat_attached=True,
+        native_mlx_scorer_loop_qat_receiver_contract_satisfied=True,
+        native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=True,
+        native_mlx_scorer_loop_qat_accepted_improvement=True,
+        native_mlx_scorer_loop_qat_best_materialized=True,
+    )
+
+    feedback = plan["byte_oracle_logging"]
+    assert feedback["candidate_num_pairs"] == 600
+    assert feedback["measured_num_pairs"] == 2
+    assert feedback["feedback_scope"] == "partial_pair_advisory"
+    assert feedback["scope_matches_candidate"] is False
+    assert feedback["feedback_ready"] is False
+    assert "partial_pair_byte_feedback_only" in plan["blockers"]
+    assert "snerv_snar1_byte_feedback_missing" not in plan["blockers"]
+    assert "snerv_archive_in_loop_byte_oracle_missing" in plan["blockers"]
+    assert "snerv_native_scorer_loop_best_packet_not_materialized" not in plan[
+        "blockers"
+    ]
 
 
 def test_snerv_candidate_curriculum_blocks_non_waterfill_and_partial_coverage() -> None:

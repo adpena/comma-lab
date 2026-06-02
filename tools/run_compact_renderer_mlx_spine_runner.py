@@ -104,6 +104,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (  # noqa: E402
     build_snerv_mlx_native_adapter_contract,
 )
+from tac.training.long_training_canonical import LongTrainingStopRequested  # noqa: E402
 from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
     emit_compact_renderer_spine_adapter,
 )
@@ -4548,6 +4549,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers: list[Any] = [
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    if artifact_dict.get("early_stopped") is True:
+        early_reason = str(artifact_dict.get("early_stop_reason") or "unknown")
+        blockers.append(f"hi_nerv_training_early_stopped:{early_reason}")
+        if "pose_instability" in early_reason:
+            blockers.append("hi_nerv_pose_instability_guard_triggered")
     blockers.extend(config_gate.get("blockers") or [])
     blockers.extend(score_aware_training_plan.get("blockers") or [])
     blockers.extend(candidate_curriculum_plan.get("blockers") or [])
@@ -4708,6 +4714,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     ),
                     "authority": "macos_mlx_research_signal_false_authority",
                 },
+                "pose_instability_monitor": (
+                    _pose_instability_monitor_report_metadata(artifact_dict)
+                ),
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
@@ -5223,6 +5232,23 @@ def _pose_student_input_preprocess_report_metadata(
         "mode": "rgb",
         "differentiable": True,
         "authority": "macos_mlx_research_signal_false_authority",
+    }
+
+
+def _pose_instability_monitor_report_metadata(
+    artifact_dict: Mapping[str, Any],
+) -> dict[str, Any]:
+    score_training = _substrate_score_aware_training_from_artifact(artifact_dict)
+    value = score_training.get("pose_instability_monitor")
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {
+        "schema": "compact_pose_instability_epoch_monitor.v1",
+        "enabled": False,
+        "reason": "monitor_metadata_missing_from_training_artifact",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -5932,6 +5958,84 @@ def _compact_finite_float_from_keys(
     return None
 
 
+def _metric_mapping_float(
+    mapping: Mapping[str, Any] | None,
+    key: str,
+) -> float | None:
+    if mapping is None:
+        return None
+    try:
+        value = float(mapping.get(key))
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) else None
+
+
+class _PoseInstabilityEpochMonitor:
+    """Fail-fast monitor for full-video HiNeRV PoseNet instability."""
+
+    def __init__(
+        self,
+        *,
+        min_epoch: int = 64,
+        consecutive_bad_epochs: int = 8,
+        pose_loss_threshold: float = 1_000.0,
+        pose_axis_threshold: float = 1_000.0,
+    ) -> None:
+        self.min_epoch = max(0, int(min_epoch))
+        self.consecutive_bad_epochs = max(1, int(consecutive_bad_epochs))
+        self.pose_loss_threshold = float(pose_loss_threshold)
+        self.pose_axis_threshold = float(pose_axis_threshold)
+        self.bad_epoch_count = 0
+        self.last_reason = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "compact_pose_instability_epoch_monitor.v1",
+            "min_epoch": int(self.min_epoch),
+            "consecutive_bad_epochs": int(self.consecutive_bad_epochs),
+            "pose_loss_threshold": float(self.pose_loss_threshold),
+            "pose_axis_threshold": float(self.pose_axis_threshold),
+            "bad_epoch_count": int(self.bad_epoch_count),
+            "last_reason": self.last_reason,
+        }
+
+    def __call__(self, metrics: Any) -> None:
+        epoch = int(metrics.epoch)
+        if epoch < self.min_epoch:
+            return
+        loss_components = getattr(metrics, "loss_components", None)
+        per_axis = getattr(metrics, "per_axis_decomposition", None)
+        pose_loss = _metric_mapping_float(loss_components, "loss_part_pose_distill")
+        pose_axis = _metric_mapping_float(per_axis, "pose")
+        bad_loss = (
+            pose_loss is not None and pose_loss >= self.pose_loss_threshold
+        )
+        bad_axis = (
+            pose_axis is not None and pose_axis >= self.pose_axis_threshold
+        )
+        if bad_loss or bad_axis:
+            self.bad_epoch_count += 1
+            self.last_reason = (
+                f"hi_nerv_pose_instability_epoch_{epoch}:"
+                f"pose_loss={pose_loss}:pose_axis={pose_axis}:"
+                f"bad_epochs={self.bad_epoch_count}"
+            )
+        else:
+            self.bad_epoch_count = 0
+            self.last_reason = ""
+        if self.bad_epoch_count >= self.consecutive_bad_epochs:
+            raise LongTrainingStopRequested(
+                "hi_nerv_pose_instability_guard:"
+                f"epoch={epoch}:"
+                f"pose_loss={pose_loss}:"
+                f"pose_axis={pose_axis}:"
+                f"consecutive_bad_epochs={self.bad_epoch_count}:"
+                f"thresholds=loss>={self.pose_loss_threshold},"
+                f"axis>={self.pose_axis_threshold}"
+            )
+
+
 def _modelsize_budget_rows_from_plan(plan: Any) -> list[dict[str, Any]]:
     if not isinstance(plan, Mapping):
         return []
@@ -6119,6 +6223,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         enabled=bool(coder_qat_cfg.enabled),
         quant_bits=int(coder_qat_cfg.quant_bits),
     )
+    pose_instability_monitor = _PoseInstabilityEpochMonitor()
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
         return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
@@ -6204,6 +6309,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
+            "pose_instability_monitor": pose_instability_monitor.as_dict(),
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
@@ -6327,11 +6433,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         grad_clip_max_norm=1.0,
         weight_decay=1e-4,
         optimizer_kind=str(optimizer_kind),
+        on_epoch_end=pose_instability_monitor,
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
             "contest video targets, byte-closed archive export, receiver proof, "
             "PR95-faithful curriculum routing, and false-authority MLX evidence."
         ),
+    )
+    artifact_metadata["score_aware_training"]["pose_instability_monitor"] = (
+        pose_instability_monitor.as_dict()
     )
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     profile_path = output_dir / "local_mlx_prefilter_profile.json"
