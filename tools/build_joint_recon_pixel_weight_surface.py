@@ -29,12 +29,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--scorer-device", default="cpu")
     parser.add_argument(
         "--scorer-backend",
-        default="mlx",
+        default="auto",
         choices=tuple(sorted(VALID_SCORER_BACKENDS)),
         help=(
-            "Gradient backend. 'mlx' is the fast local acquisition path; "
-            "'torch' is the exact-CPU differentiable scorer fallback when MLX "
-            "direct scorer VJP emits nonfinite gradients."
+            "Gradient backend. 'auto' tries the fast local MLX acquisition "
+            "path first and falls back to the exact-CPU differentiable Torch "
+            "scorer with MLX failure metadata preserved."
         ),
     )
     parser.add_argument("--d-pose-operating-point", default=3.4e-5, type=float)

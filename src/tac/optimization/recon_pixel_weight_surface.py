@@ -37,7 +37,7 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "ready_for_exact_eval_dispatch": False,
     "dispatch_attempted": False,
 }
-VALID_SCORER_BACKENDS = frozenset({"mlx", "torch"})
+VALID_SCORER_BACKENDS = frozenset({"auto", "mlx", "torch"})
 
 
 @dataclass(frozen=True)
@@ -511,9 +511,9 @@ def build_joint_p18_p19_recon_pixel_weight_from_video(
     upstream_dir: str | Path,
     config: JointReconPixelWeightConfig,
     scorer_device: str = "cpu",
-    scorer_backend: str = "mlx",
+    scorer_backend: str = "auto",
 ) -> tuple[np.ndarray, dict[str, Any]]:
-    """Decode the real video, load the MLX scorer adapter, and build weights."""
+    """Decode the real video and build weights with MLX-first fallback."""
 
     from tac.local_acceleration.mlx_scorer_adapters import (
         load_mlx_distortion_scorer_adapter_from_upstream,
@@ -529,7 +529,8 @@ def build_joint_p18_p19_recon_pixel_weight_from_video(
     backend = str(scorer_backend)
     if backend not in VALID_SCORER_BACKENDS:
         raise ValueError(f"scorer_backend must be one of {sorted(VALID_SCORER_BACKENDS)}")
-    if backend == "torch":
+
+    def build_torch() -> tuple[np.ndarray, dict[str, Any]]:
         from tac.scorer import load_differentiable_scorers
 
         posenet, segnet = load_differentiable_scorers(
@@ -544,16 +545,71 @@ def build_joint_p18_p19_recon_pixel_weight_from_video(
             config=config,
             device=scorer_device,
         )
-    mlx_scorer = load_mlx_distortion_scorer_adapter_from_upstream(
-        str(upstream_dir),
-        device=scorer_device,
-    )
-    return build_joint_p18_p19_recon_pixel_weight(
-        target_rgb_0,
-        target_rgb_1,
-        mlx_scorer=mlx_scorer,
-        config=config,
-    )
+
+    if backend == "torch":
+        return build_torch()
+
+    def build_mlx() -> tuple[np.ndarray, dict[str, Any]]:
+        mlx_scorer = load_mlx_distortion_scorer_adapter_from_upstream(
+            str(upstream_dir),
+            device=scorer_device,
+        )
+        return build_joint_p18_p19_recon_pixel_weight(
+            target_rgb_0,
+            target_rgb_1,
+            mlx_scorer=mlx_scorer,
+            config=config,
+        )
+
+    if backend == "mlx":
+        return build_mlx()
+
+    try:
+        weight, metadata = build_mlx()
+    except Exception as exc:
+        fallback_record: dict[str, Any] = {
+            "schema": "joint_recon_pixel_weight_auto_backend_selection.v1",
+            "requested_backend": "auto",
+            "selected_backend": "torch",
+            "mlx_attempt": {
+                "status": "failed_exception",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            },
+            "fallback_reason": "mlx_direct_scorer_vjp_exception",
+        }
+        weight, metadata = build_torch()
+        metadata["auto_backend_selection"] = fallback_record
+        return weight, metadata
+
+    if bool(metadata.get("training_consumption_recommended")):
+        metadata["auto_backend_selection"] = {
+            "schema": "joint_recon_pixel_weight_auto_backend_selection.v1",
+            "requested_backend": "auto",
+            "selected_backend": "mlx",
+            "mlx_attempt": {
+                "status": "pass",
+                "gradient_health": metadata.get("gradient_health"),
+                "blockers": list(metadata.get("blockers") or []),
+            },
+            "fallback_reason": None,
+        }
+        return weight, metadata
+
+    fallback_record = {
+        "schema": "joint_recon_pixel_weight_auto_backend_selection.v1",
+        "requested_backend": "auto",
+        "selected_backend": "torch",
+        "mlx_attempt": {
+            "status": "not_recommended_for_training",
+            "gradient_health": metadata.get("gradient_health"),
+            "blockers": list(metadata.get("blockers") or []),
+        },
+        "fallback_reason": "mlx_direct_scorer_vjp_not_recommended",
+    }
+    weight, metadata = build_torch()
+    metadata["auto_backend_selection"] = fallback_record
+    return weight, metadata
 
 
 def write_joint_p18_p19_recon_pixel_weight_artifact(
@@ -563,7 +619,7 @@ def write_joint_p18_p19_recon_pixel_weight_artifact(
     upstream_dir: str | Path,
     config: JointReconPixelWeightConfig,
     scorer_device: str = "cpu",
-    scorer_backend: str = "mlx",
+    scorer_backend: str = "auto",
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     """Build and write a queue-consumable joint recon-pixel-weight artifact."""
