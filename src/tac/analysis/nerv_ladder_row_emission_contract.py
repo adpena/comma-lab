@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable, Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 SCHEMA = "nerv_ladder_row_emission_contract.v1"
@@ -145,16 +147,21 @@ def build_nerv_ladder_row_emission_contract(
     families: Iterable[str] = ("snerv", "hinerv"),
     source_parity_contract: Mapping[str, Any] | None = None,
     row_harvests: Sequence[Mapping[str, Any]] = (),
+    packet_probe_artifacts: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build a fail-closed contract for trainer/export row emission."""
 
     selected = tuple(dict.fromkeys(_family_key(family) for family in families))
     harvest_summaries = [_harvest_summary(harvest) for harvest in row_harvests]
+    packet_summaries = [
+        _packet_probe_summary(artifact) for artifact in packet_probe_artifacts
+    ]
     family_rows = [
         _family_contract_row(
             family,
             source_parity_contract=source_parity_contract,
             harvest_summaries=harvest_summaries,
+            packet_summaries=packet_summaries,
         )
         for family in selected
     ]
@@ -168,6 +175,7 @@ def build_nerv_ladder_row_emission_contract(
         "generic_required_field_groups": list(GENERIC_REQUIRED_GROUPS),
         "family_rows": family_rows,
         "row_harvest_summaries": harvest_summaries,
+        "receiver_packet_probe_summaries": packet_summaries,
         "ready_for_trained_ladder_row_emission": not blockers,
         "blockers": blockers,
         "next_actions": _next_actions(family_rows),
@@ -180,9 +188,10 @@ def _family_contract_row(
     *,
     source_parity_contract: Mapping[str, Any] | None,
     harvest_summaries: Sequence[Mapping[str, Any]],
+    packet_summaries: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     source_blockers = _source_parity_blockers(family, source_parity_contract)
-    harvest = _merge_harvest_summaries(family, harvest_summaries)
+    harvest = _merge_harvest_summaries(family, harvest_summaries, packet_summaries)
     missing = []
     if harvest["harvested_row_count"] == 0:
         missing.append("no_harvested_rows_observed")
@@ -237,21 +246,194 @@ def _harvest_summary(harvest: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _packet_probe_summary(artifact: Mapping[str, Any]) -> dict[str, Any]:
+    carrier = _packet_probe_carrier(artifact)
+    source_path = artifact.get("source_artifact_path") or artifact.get("report_path")
+    candidates = [
+        candidate
+        for candidate in artifact.get("candidates", ())
+        if isinstance(candidate, Mapping)
+    ]
+    packet_rows = [
+        _packet_export_row(candidate)
+        for candidate in candidates
+        if isinstance(candidate.get("receiver_archive_packet_export"), Mapping)
+    ]
+    verified_rows = [
+        row
+        for row in packet_rows
+        if row["file_exists"]
+        and row["sha256_matches_export"]
+        and row["bytes_match_export"]
+        and row["expected_sha256_matches"]
+    ]
+    return {
+        "schema": "nerv_receiver_packet_probe_summary.v1",
+        "source_schema": artifact.get("schema"),
+        "carrier_id": carrier,
+        "source_path": source_path,
+        "axis_tag": artifact.get("axis_tag"),
+        "n_pairs": _int(artifact.get("n_pairs")),
+        "candidate_count": len(candidates),
+        "receiver_packet_export_count": len(packet_rows),
+        "receiver_packet_export_verified_count": len(verified_rows),
+        "local_receiver_replay_verified_count": sum(
+            1
+            for candidate in candidates
+            if candidate.get("receiver_archive_replay_verified") is True
+        ),
+        "contest_archive_zip_export_count": sum(
+            1 for row in packet_rows if row["contest_archive_zip"]
+        ),
+        "receiver_packet_export_bytes_total": sum(
+            row["bytes_actual"] for row in verified_rows
+        ),
+        "full600_receiver_packet_export_count": (
+            len(verified_rows) if _int(artifact.get("n_pairs")) >= 600 else 0
+        ),
+        "packet_rows": packet_rows,
+        "blockers": _ordered_unique(
+            [
+                *(
+                    ("packet_probe_carrier_missing_or_unknown",)
+                    if carrier == "unknown"
+                    else ()
+                ),
+                *(
+                    "packet_export:" + blocker
+                    for row in packet_rows
+                    for blocker in row["blockers"]
+                ),
+                *(
+                    str(blocker)
+                    for candidate in candidates
+                    for blocker in candidate.get("blockers", ())
+                    if blocker
+                ),
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _packet_probe_carrier(artifact: Mapping[str, Any]) -> str:
+    explicit = artifact.get("family") or artifact.get("carrier_id")
+    if explicit:
+        return _family_key(explicit)
+    schema = str(artifact.get("schema") or "").lower()
+    source = str(
+        artifact.get("source_artifact_path") or artifact.get("report_path") or ""
+    ).lower()
+    haystack = f"{schema} {source}"
+    if "hinerv" in haystack or "hi_nerv" in haystack or "hi-nerv" in haystack:
+        return "hinerv"
+    if "snerv" in haystack:
+        return "snerv"
+    return "unknown"
+
+
+def _packet_export_row(candidate: Mapping[str, Any]) -> dict[str, Any]:
+    export = candidate.get("receiver_archive_packet_export")
+    if not isinstance(export, Mapping):
+        export = {}
+    path_text = str(export.get("path") or "")
+    path = Path(path_text).expanduser() if path_text else None
+    file_exists = bool(path and path.is_file())
+    bytes_declared = _int(export.get("bytes"))
+    sha_declared = str(export.get("sha256") or "")
+    expected_sha = str(export.get("expected_sha256") or "")
+    bytes_actual = path.stat().st_size if file_exists and path is not None else 0
+    sha_actual = _sha256_file(path) if file_exists and path is not None else ""
+    blockers = []
+    if not path_text:
+        blockers.append("receiver_packet_export_path_missing")
+    if not file_exists:
+        blockers.append("receiver_packet_export_file_missing")
+    if file_exists and not bytes_declared:
+        blockers.append("receiver_packet_export_bytes_missing")
+    if file_exists and not sha_declared:
+        blockers.append("receiver_packet_export_sha256_missing")
+    if file_exists and bytes_declared and bytes_actual != bytes_declared:
+        blockers.append("receiver_packet_export_bytes_mismatch")
+    if file_exists and sha_declared and sha_actual != sha_declared:
+        blockers.append("receiver_packet_export_sha256_mismatch")
+    if expected_sha and not sha_declared:
+        blockers.append("receiver_packet_export_expected_sha256_without_sha256")
+    if expected_sha and sha_declared and expected_sha != sha_declared:
+        blockers.append("receiver_packet_export_expected_sha256_mismatch")
+    if export.get("contest_archive_zip") is True:
+        blockers.append("receiver_packet_export_unexpected_contest_archive_zip")
+    return {
+        "label": candidate.get("label"),
+        "path": path_text or None,
+        "kind": export.get("kind"),
+        "bytes_declared": bytes_declared,
+        "bytes_actual": bytes_actual,
+        "sha256_declared": sha_declared or None,
+        "sha256_actual": sha_actual or None,
+        "expected_sha256": expected_sha or None,
+        "file_exists": file_exists,
+        "bytes_match_export": bool(
+            file_exists and bool(bytes_declared) and bytes_actual == bytes_declared
+        ),
+        "sha256_matches_export": bool(
+            file_exists and bool(sha_declared) and sha_actual == sha_declared
+        ),
+        "expected_sha256_matches": bool(
+            not expected_sha or (bool(sha_declared) and expected_sha == sha_declared)
+        ),
+        "contest_archive_zip": export.get("contest_archive_zip") is True,
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _merge_harvest_summaries(
     family: str,
     summaries: Sequence[Mapping[str, Any]],
+    packet_summaries: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     selected = [summary for summary in summaries if summary.get("carrier_id") == family]
+    selected_packets = [
+        summary for summary in packet_summaries if summary.get("carrier_id") == family
+    ]
+    packet_verified_count = sum(
+        _int(row.get("receiver_packet_export_verified_count"))
+        for row in selected_packets
+    )
     return {
         "harvest_payload_count": len(selected),
         "source_paths": _ordered_unique(
-            str(row["source_path"]) for row in selected if row.get("source_path")
+            [
+                *(str(row["source_path"]) for row in selected if row.get("source_path")),
+                *(
+                    str(row["source_path"])
+                    for row in selected_packets
+                    if row.get("source_path")
+                ),
+            ]
+        ),
+        "receiver_packet_probe_payload_count": len(selected_packets),
+        "receiver_packet_export_count": sum(
+            _int(row.get("receiver_packet_export_count")) for row in selected_packets
+        ),
+        "receiver_packet_export_verified_count": packet_verified_count,
+        "receiver_packet_export_bytes_total": sum(
+            _int(row.get("receiver_packet_export_bytes_total"))
+            for row in selected_packets
+        ),
+        "full600_receiver_packet_export_count": sum(
+            _int(row.get("full600_receiver_packet_export_count"))
+            for row in selected_packets
         ),
         "harvested_row_count": sum(_int(row.get("harvested_row_count")) for row in selected),
         "full_scope_row_count": sum(_int(row.get("full_scope_row_count")) for row in selected),
         "local_receiver_replay_row_count": sum(
             _int(row.get("local_receiver_replay_row_count")) for row in selected
-        ),
+        )
+        + packet_verified_count,
         "receiver_proof_row_count": sum(
             _int(row.get("receiver_proof_row_count")) for row in selected
         ),
@@ -311,6 +493,14 @@ def _int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _ordered_unique(values: Iterable[str]) -> list[str]:

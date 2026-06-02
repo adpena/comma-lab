@@ -49,6 +49,16 @@ def _build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Receiver-closed ladder-row harvest artifact. Repeatable.",
     )
+    parser.add_argument(
+        "--packet-probe-json",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Optional SNeRV receiver packet probe artifact. Repeatable; packet "
+            "exports are hashed and remain false-authority."
+        ),
+    )
     parser.add_argument("--out", type=Path)
     parser.add_argument(
         "--allow-overwrite",
@@ -69,6 +79,7 @@ def main(argv: list[str] | None = None) -> int:
         families=tuple(args.family or ("snerv", "hinerv")),
         source_parity_contract=source_parity,
         row_harvests=harvests,
+        packet_probe_artifacts=[_load_packet_probe(path) for path in args.packet_probe_json],
     )
     out_path = args.out or _default_out()
     if not out_path.is_absolute():
@@ -86,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
         f"{payload['ready_for_trained_ladder_row_emission']}"
     )
     print(f"  row_harvests: {len(payload['row_harvest_summaries'])}")
+    print(f"  packet_probe_summaries: {len(payload['receiver_packet_probe_summaries'])}")
     print(f"  blockers: {len(payload['blockers'])}")
     print(f"  wrote {result.path} ({result.bytes_written} bytes sha256={result.sha256})")
     return 0
@@ -100,6 +112,14 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _load_harvest(path: Path) -> dict[str, Any]:
+    payload = _load_json(path)
+    source = path if path.is_absolute() else REPO_ROOT / path
+    payload = dict(payload)
+    payload.setdefault("source_artifact_path", source.as_posix())
+    return payload
+
+
+def _load_packet_probe(path: Path) -> dict[str, Any]:
     payload = _load_json(path)
     source = path if path.is_absolute() else REPO_ROOT / path
     payload = dict(payload)

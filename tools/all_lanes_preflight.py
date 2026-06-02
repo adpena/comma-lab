@@ -234,6 +234,9 @@ NERV_TOP_PRIORITY_SEAM = TOOLS / "build_nerv_top_priority_stack_seam.py"
 NERV_MASTER_CONSUMER_BRIDGE = TOOLS / "build_nerv_master_consumer_bridge.py"
 NERV_RATE_ALLOCATOR_BRIDGE = TOOLS / "build_nerv_rate_allocator_bridge.py"
 NERV_RATE_ALLOCATOR_QUEUE = TOOLS / "build_nerv_rate_allocator_queue.py"
+NERV_LADDER_ROW_EMISSION_CONTRACT = (
+    TOOLS / "build_nerv_ladder_row_emission_contract.py"
+)
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -1668,6 +1671,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
         bridge = temp / "bridge.json"
         rate_bridge = temp / "rate_bridge.json"
         rate_queue = temp / "rate_queue.json"
+        ladder_row_contract = temp / "ladder_row_contract.json"
         oss_root = (
             Path("/Volumes/VertigoDataTier/pact/experiments/results")
             / "oss_nerv_source_audit_20260602T113720Z"
@@ -1728,6 +1732,12 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
                 "--out",
                 str(rate_queue),
             ],
+            [
+                sys.executable,
+                str(NERV_LADDER_ROW_EMISSION_CONTRACT),
+                "--out",
+                str(ladder_row_contract),
+            ],
         ]
         if oss_root.is_dir():
             commands[2][4:4] = ["--oss-audit-root", str(oss_root)]
@@ -1752,6 +1762,9 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             "master_consumer_bridge": _load_nerv_preflight_json(bridge),
             "rate_allocator_bridge": _load_nerv_preflight_json(rate_bridge),
             "rate_allocator_queue": _load_nerv_preflight_json(rate_queue),
+            "ladder_row_emission_contract": _load_nerv_preflight_json(
+                ladder_row_contract
+            ),
         }
         expected_schemas = {
             "modelsize_curve": "nerv_modelsize_archive_curve.v1",
@@ -1761,6 +1774,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             "master_consumer_bridge": "nerv_master_consumer_bridge.v1",
             "rate_allocator_bridge": "nerv_rate_allocator_bridge.v1",
             "rate_allocator_queue": "nerv_rate_allocator_work_queue.v1",
+            "ladder_row_emission_contract": "nerv_ladder_row_emission_contract.v1",
         }
         failures: list[str] = []
         for name, expected_schema in expected_schemas.items():
@@ -1879,6 +1893,35 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             failures.append(
                 "rate_allocator_queue:precision_modes_missing:"
                 + ",".join(missing_queue_modes)
+            )
+
+        ladder_contract_payload = payloads["ladder_row_emission_contract"]
+        family_rows = ladder_contract_payload.get("family_rows")
+        if not isinstance(family_rows, list) or not family_rows:
+            failures.append("ladder_row_emission_contract:family_rows_missing")
+            family_rows = []
+        for index, row in enumerate(family_rows):
+            if not isinstance(row, dict):
+                failures.append(
+                    f"ladder_row_emission_contract:family_row_{index}:not_object"
+                )
+                continue
+            _append_nerv_authority_failures(
+                failures,
+                f"ladder_row_emission_contract.family_row_{index}",
+                row,
+            )
+            if row.get("ready_for_trained_ladder_row_emission") is True:
+                failures.append(
+                    "ladder_row_emission_contract:"
+                    f"family_row_{index}:unexpected_ready_for_emission"
+                )
+        if (
+            ladder_contract_payload.get("ready_for_trained_ladder_row_emission")
+            is True
+        ):
+            failures.append(
+                "ladder_row_emission_contract:unexpected_ready_for_emission"
             )
 
         from tac.cathedral.consumer_contract import validate_consumer_module
