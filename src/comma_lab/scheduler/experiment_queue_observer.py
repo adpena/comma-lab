@@ -2431,6 +2431,17 @@ def observe_experiment_queue(
             "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
             "stop_freeze": ".venv/bin/python tools/queue_control.py --queue <queue-path> stop --reason '<reason>'",
             "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute",
+            "run_worker_detached": (
+                ".venv/bin/python tools/experiment_queue.py --queue <queue-path> "
+                "run-worker --execute --detach --output <worker-result.json> "
+                "--detach-launch-output <launch.json> --log-root <ssd-log-root>"
+            ),
+            "refresh_nerv_training_feedback": (
+                ".venv/bin/python tools/refresh_nerv_queue_training_feedback.py "
+                "--queue <queue-path> --output-dir <feedback-dir> "
+                "--output-json <refresh.json> --output-jsonl <feedback.jsonl> "
+                "--output-md <refresh.md>"
+            ),
         },
     }
 

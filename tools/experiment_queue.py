@@ -13,7 +13,9 @@ import argparse
 import json
 import signal
 import sqlite3
+import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 try:
@@ -57,6 +59,11 @@ from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 _PLACEHOLDER_RATIONALES = {"", "n/a", "na", "none", "test", "true", "yes", "because"}
 STATE_RECONCILIATION_SCHEMA = "experiment_queue_state_reconciliation.v1"
+DETACHED_WORKER_LAUNCH_SCHEMA = "experiment_queue_detached_worker_launch.v1"
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _json_print(payload: object) -> None:
@@ -67,6 +74,115 @@ def _load(args: argparse.Namespace) -> tuple[dict, Path]:
     queue = load_queue_definition(args.queue)
     state = Path(args.state) if args.state else default_state_path(REPO_ROOT, queue["queue_id"])
     return queue, state
+
+
+def _add_flag(argv: list[str], flag: str, value: object | None = None) -> None:
+    argv.append(flag)
+    if value is not None:
+        argv.append(str(value))
+
+
+def _detached_worker_child_argv(args: argparse.Namespace) -> list[str]:
+    argv = [sys.executable, str(Path(__file__).resolve()), "--queue", str(args.queue)]
+    if args.state is not None:
+        _add_flag(argv, "--state", args.state)
+    argv.append("run-worker")
+    if args.execute:
+        _add_flag(argv, "--execute")
+    if args.allow_cloud:
+        _add_flag(argv, "--allow-cloud")
+    if args.noncanonical_state_rationale is not None:
+        _add_flag(argv, "--noncanonical-state-rationale", args.noncanonical_state_rationale)
+    if args.orphaned_state_rationale is not None:
+        _add_flag(argv, "--orphaned-state-rationale", args.orphaned_state_rationale)
+    if args.log_root is not None:
+        _add_flag(argv, "--log-root", args.log_root)
+    _add_flag(argv, "--max-steps", args.max_steps)
+    if args.max_experiments is not None:
+        _add_flag(argv, "--max-experiments", args.max_experiments)
+    _add_flag(argv, "--max-parallel", args.max_parallel)
+    if args.no_reload_definition:
+        _add_flag(argv, "--no-reload-definition")
+    _add_flag(argv, "--idle-sleep-seconds", args.idle_sleep_seconds)
+    _add_flag(argv, "--poll-interval-seconds", args.poll_interval_seconds)
+    _add_flag(argv, "--max-idle-cycles", args.max_idle_cycles)
+    _add_flag(argv, "--stop-policy", args.stop_policy)
+    _add_flag(argv, "--shutdown-grace-seconds", args.shutdown_grace_seconds)
+    if args.output is not None:
+        _add_flag(argv, "--output", args.output)
+    if args.expected_output_sha256 is not None:
+        _add_flag(argv, "--expected-output-sha256", args.expected_output_sha256)
+    return argv
+
+
+def _detached_worker_log_dir(args: argparse.Namespace, queue_id: str) -> Path:
+    stamp = _utc_now().replace(":", "").replace("-", "")
+    if args.detach_log_root is not None:
+        return Path(args.detach_log_root)
+    if args.log_root is not None:
+        return Path(args.log_root) / f"detached_worker_{stamp}"
+    return REPO_ROOT / ".omx" / "state" / "experiment_queue_detached" / f"{queue_id}_{stamp}"
+
+
+def _launch_detached_worker(
+    args: argparse.Namespace,
+    *,
+    queue: dict,
+    state: Path,
+) -> dict[str, object]:
+    if args.output is None:
+        raise ExperimentQueueError(
+            "run-worker --detach requires --output so the detached worker has a durable result artifact"
+        )
+    log_dir = _detached_worker_log_dir(args, str(queue["queue_id"]))
+    log_dir.mkdir(parents=True, exist_ok=True)
+    stdout_path = log_dir / "worker.stdout.log"
+    stderr_path = log_dir / "worker.stderr.log"
+    child_argv = _detached_worker_child_argv(args)
+    with stdout_path.open("ab") as stdout_handle, stderr_path.open("ab") as stderr_handle:
+        process = subprocess.Popen(
+            child_argv,
+            cwd=REPO_ROOT,
+            stdin=subprocess.DEVNULL,
+            stdout=stdout_handle,
+            stderr=stderr_handle,
+            close_fds=True,
+            start_new_session=True,
+        )
+    payload: dict[str, object] = {
+        "schema": DETACHED_WORKER_LAUNCH_SCHEMA,
+        "queue_id": str(queue["queue_id"]),
+        "queue_path": str(args.queue),
+        "state": str(state),
+        "pid": int(process.pid),
+        "started_at_utc": _utc_now(),
+        "detach_mechanism": "subprocess.Popen(start_new_session=True)",
+        "portable_without_setsid": True,
+        "child_argv": child_argv,
+        "stdout_path": stdout_path.as_posix(),
+        "stderr_path": stderr_path.as_posix(),
+        "worker_result_path": str(args.output),
+        "execute": bool(args.execute),
+        "allow_cloud": bool(args.allow_cloud),
+        "score_claim": False,
+        "frontier_score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if args.detach_launch_output is not None:
+        artifact = write_json_artifact(
+            args.detach_launch_output,
+            payload,
+            allow_overwrite=args.expected_detach_launch_output_sha256 is not None,
+            expected_existing_sha256=args.expected_detach_launch_output_sha256,
+        )
+        payload["launch_artifact"] = {
+            "path": artifact.path,
+            "bytes": artifact.bytes_written,
+            "sha256": artifact.sha256,
+        }
+    return payload
 
 
 def _rationale_text(value: str | None, *, label: str) -> str | None:
@@ -316,6 +432,10 @@ def cmd_run_worker(args: argparse.Namespace) -> int:
             state,
             allow_noncanonical_state=noncanonical_rationale is not None,
         )
+    if args.detach:
+        payload = _launch_detached_worker(args, queue=queue, state=state)
+        _json_print(payload)
+        return 0
     stop_signals: list[int] = []
     previous_sigint = signal.getsignal(signal.SIGINT)
     previous_sigterm = signal.getsignal(signal.SIGTERM)
@@ -577,6 +697,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="execute ready steps in a bounded worker loop",
     )
     sp.add_argument("--execute", action="store_true", help="actually run selected commands")
+    sp.add_argument(
+        "--detach",
+        action="store_true",
+        help=(
+            "launch the bounded worker as a portable detached subprocess; requires "
+            "--output for durable child result custody"
+        ),
+    )
     sp.add_argument("--allow-cloud", action="store_true", help="include cloud resource steps")
     sp.add_argument(
         "--noncanonical-state-rationale",
@@ -589,6 +717,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="specific audit rationale allowing execute mode when SQLite retains blocking orphans",
     )
     sp.add_argument("--log-root", default=None, help="override command log root")
+    sp.add_argument(
+        "--detach-log-root",
+        type=Path,
+        default=None,
+        help=(
+            "directory for detached worker stdout/stderr logs; defaults under "
+            "--log-root or .omx/state/experiment_queue_detached"
+        ),
+    )
     sp.add_argument("--max-steps", type=int, default=1, help="maximum steps to start")
     sp.add_argument(
         "--max-experiments",
@@ -645,6 +782,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     sp.add_argument("--output", type=Path, default=None)
     sp.add_argument("--expected-output-sha256", default=None)
+    sp.add_argument("--detach-launch-output", type=Path, default=None)
+    sp.add_argument("--expected-detach-launch-output-sha256", default=None)
     sp.set_defaults(func=cmd_run_worker)
 
     sp = sub.add_parser("control")

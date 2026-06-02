@@ -3750,6 +3750,160 @@ def test_experiment_queue_cli_run_worker_exposes_max_experiments(
     assert not second.exists()
 
 
+def test_experiment_queue_cli_run_worker_detaches_portably_without_setsid(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    queue_path = tmp_path / "queue.json"
+    state = tmp_path / ".omx" / "state" / "experiment_queue_cli_detach.sqlite"
+    marker = tmp_path / "detached_marker.txt"
+    worker_result = tmp_path / "worker_result.json"
+    launch_output = tmp_path / "launch.json"
+    detach_log_root = tmp_path / "detached_logs"
+    command = (
+        "import pathlib, sys; "
+        f"pathlib.Path({str(marker)!r}).write_text('detached', encoding='utf-8'); "
+        "sys.stdout.write('done')"
+    )
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "cli_detached_worker",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "steps": [
+                            {
+                                "id": "write",
+                                "command": [sys.executable, "-c", command],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    launched = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "run-worker",
+            "--execute",
+            "--detach",
+            "--output",
+            str(worker_result),
+            "--detach-launch-output",
+            str(launch_output),
+            "--detach-log-root",
+            str(detach_log_root),
+            "--max-steps",
+            "1",
+            "--idle-sleep-seconds",
+            "0",
+            "--max-idle-cycles",
+            "0",
+            "--noncanonical-state-rationale",
+            "isolated cli unit test state",
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert launched.returncode == 0, launched.stderr
+    launch_payload = json.loads(launched.stdout)
+    assert launch_payload["schema"] == "experiment_queue_detached_worker_launch.v1"
+    assert launch_payload["portable_without_setsid"] is True
+    assert launch_payload["detach_mechanism"] == "subprocess.Popen(start_new_session=True)"
+    assert "--detach" not in launch_payload["child_argv"]
+    assert "run-worker" in launch_payload["child_argv"]
+    assert "--output" in launch_payload["child_argv"]
+    assert launch_payload["worker_result_path"] == str(worker_result)
+    assert Path(launch_payload["stdout_path"]).exists()
+    assert Path(launch_payload["stderr_path"]).exists()
+
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline and not worker_result.exists():
+        time.sleep(0.1)
+    assert worker_result.exists()
+
+    worker_payload = json.loads(worker_result.read_text(encoding="utf-8"))
+    assert worker_payload["success_count"] == 1
+    assert worker_payload["failure_count"] == 0
+    assert marker.read_text(encoding="utf-8") == "detached"
+
+    file_launch_payload = json.loads(launch_output.read_text(encoding="utf-8"))
+    assert file_launch_payload["schema"] == launch_payload["schema"]
+    assert file_launch_payload["pid"] == launch_payload["pid"]
+
+
+def test_experiment_queue_cli_run_worker_detach_requires_result_output(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    queue_path = tmp_path / "queue.json"
+    state = tmp_path / ".omx" / "state" / "experiment_queue_cli_detach_missing_output.sqlite"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "cli_detached_missing_output",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "steps": [
+                            {
+                                "id": "noop",
+                                "command": [sys.executable, "-c", "print('noop')"],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    refused = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "run-worker",
+            "--execute",
+            "--detach",
+            "--max-steps",
+            "1",
+            "--idle-sleep-seconds",
+            "0",
+            "--max-idle-cycles",
+            "0",
+            "--noncanonical-state-rationale",
+            "isolated cli unit test state",
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert refused.returncode == 2
+    assert "run-worker --detach requires --output" in refused.stderr
+
+
 def test_experiment_queue_cli_performance_is_read_only_on_definition_drift(
     tmp_path: Path,
 ) -> None:

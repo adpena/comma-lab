@@ -161,6 +161,11 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     assert observation["healthy"] is True
     assert observation["blockers"] == []
     assert observation["blocker_count"] == 0
+    assert observation["suggested_commands"]["run_worker_detached"] == (
+        ".venv/bin/python tools/experiment_queue.py --queue <queue-path> "
+        "run-worker --execute --detach --output <worker-result.json> "
+        "--detach-launch-output <launch.json> --log-root <ssd-log-root>"
+    )
     assert observation["auto_parallelism"]["local_only"] == {
         "max_parallel": 1,
         "resource_limits": {"local_cpu": 1},
