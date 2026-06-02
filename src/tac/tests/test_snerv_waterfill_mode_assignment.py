@@ -35,6 +35,19 @@ def test_waterfill_mode_assignment_compiles_archive_order_modes() -> None:
     assert row["ready_for_local_advisory_probe"] is True
     assert row["ready_for_receiver_mode_export"] is True
     assert row["mode_histogram"] == {"int2": 1, "int4": 1, "zero": 1}
+    assert row["probe_command_axis_tag"] == "[macOS-CPU advisory]"
+    assert row["probe_command_argv"] == [
+        ".venv/bin/python",
+        "tools/probe_snerv_decoder_mode_assignments.py",
+        "--levels",
+        "1",
+        "--mode-plan",
+        "int2,int4,zero",
+        "--receiver-packet-dir",
+        "/Volumes/VertigoDataTier/pact/snerv_decoder_mode_assignment_packets/row_a",
+    ]
+    assert row["probe_command_hint"] == " ".join(row["probe_command_argv"])
+    assert row["probe_receiver_packet_dir"].startswith("/Volumes/VertigoDataTier/")
 
 
 def test_fp32_protect_maps_to_fp16_but_blocks_export() -> None:
@@ -73,6 +86,8 @@ def test_missing_decoder_group_blocks_probe() -> None:
 
     row = report["rows"][0]
     assert row["ready_for_local_advisory_probe"] is False
+    assert row["probe_command_argv"] is None
+    assert row["probe_receiver_packet_dir"] is None
     assert "decoder_mode_group_missing:level0.HH" in row["blockers"]
 
 

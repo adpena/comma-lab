@@ -71,6 +71,16 @@ def main(argv: list[str] | None = None) -> int:
         default="combined",
     )
     ap.add_argument("--out", type=str, default=None)
+    ap.add_argument(
+        "--receiver-packet-dir",
+        type=str,
+        default=None,
+        help=(
+            "Optional directory for exported raw receiver .snar packets. "
+            "When omitted, the probe remains JSON-only and cannot feed "
+            "trained-ladder archive custody directly."
+        ),
+    )
     args = ap.parse_args(argv)
 
     mode_plans = args.mode_plan
@@ -100,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
         hf_decoder_fit_mode=args.hf_decoder_fit_mode,
         hf_decoder_saliency_gain=args.hf_decoder_saliency_gain,
         hf_decoder_saliency_component=args.hf_decoder_saliency_component,
+        receiver_packet_dir=args.receiver_packet_dir,
     )
     out_path = Path(args.out or _default_out())
     if not out_path.is_absolute():

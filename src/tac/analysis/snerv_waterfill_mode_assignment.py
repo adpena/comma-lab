@@ -16,6 +16,9 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import DECODER_SUBBANDS
 SNERV_WATERFILL_MODE_ASSIGNMENT_SCHEMA = "snerv_waterfill_mode_assignment.v1"
 SNERV_TRAINED_LADDER_WATERFILL_SCHEMA = "snerv_trained_ladder_waterfill.v1"
 PLANNING_AXIS = "[planning/control:false-authority]"
+DEFAULT_RECEIVER_PACKET_ROOT = (
+    "/Volumes/VertigoDataTier/pact/snerv_decoder_mode_assignment_packets"
+)
 _GROUP_RE = re.compile(r"^decoder\.level(?P<level>\d+)\.(?P<subband>LH|HL|HH)\.kernel$")
 
 
@@ -174,6 +177,11 @@ def _compile_row(
             "mode_assignment_is_false_authority_until_receiver_replay_and_exact_eval",
         }
     ]
+    probe_command_argv = (
+        _probe_command_argv(row_id=row_id, levels=levels, modes=modes)
+        if complete
+        else None
+    )
     return {
         "row_id": row_id,
         "candidate_id": f"{candidate_id}:{row_id}" if candidate_id else row_id,
@@ -189,11 +197,13 @@ def _compile_row(
         "mode_rows": mode_rows,
         "ready_for_local_advisory_probe": complete,
         "ready_for_receiver_mode_export": complete and not export_blockers,
+        "probe_command_axis_tag": "[macOS-CPU advisory]",
+        "probe_command_argv": probe_command_argv,
+        "probe_receiver_packet_dir": (
+            _probe_packet_dir(row_id) if complete else None
+        ),
         "probe_command_hint": (
-            "tools/probe_snerv_decoder_mode_assignments.py --mode-plan "
-            f"{','.join(modes)}"
-            if complete
-            else None
+            " ".join(probe_command_argv) if probe_command_argv else None
         ),
         "blockers": unique_blockers,
         **FALSE_AUTHORITY,
@@ -247,6 +257,9 @@ def _blocked_row(
         "mode_rows": [],
         "ready_for_local_advisory_probe": False,
         "ready_for_receiver_mode_export": False,
+        "probe_command_axis_tag": "[macOS-CPU advisory]",
+        "probe_command_argv": None,
+        "probe_receiver_packet_dir": None,
         "probe_command_hint": None,
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
@@ -281,6 +294,31 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
             seen.add(text)
             out.append(text)
     return out
+
+
+def _probe_command_argv(*, row_id: str, levels: int, modes: Sequence[str]) -> list[str]:
+    return [
+        ".venv/bin/python",
+        "tools/probe_snerv_decoder_mode_assignments.py",
+        "--levels",
+        str(int(levels)),
+        "--mode-plan",
+        ",".join(str(mode) for mode in modes),
+        "--receiver-packet-dir",
+        _probe_packet_dir(row_id),
+    ]
+
+
+def _probe_packet_dir(row_id: str) -> str:
+    return f"{DEFAULT_RECEIVER_PACKET_ROOT}/{_slug(row_id)}"
+
+
+def _slug(value: str) -> str:
+    text = "".join(
+        ch if ch.isalnum() or ch in {"-", "_"} else "_"
+        for ch in str(value)
+    ).strip("_")
+    return text or "row"
 
 
 def load_snerv_waterfill_mode_assignment_source(path: str | Path) -> dict[str, Any]:

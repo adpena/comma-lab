@@ -9,7 +9,9 @@ turning the local advisory score into promotion authority.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 from tac.substrates.snerv_inverse_steg_carrier.advisory import run_snerv_advisory
@@ -111,6 +113,7 @@ def run_snerv_decoder_mode_assignment_probe(
     hf_decoder_fit_mode: str = "least_squares",
     hf_decoder_saliency_gain: float = 1.0,
     hf_decoder_saliency_component: str = "combined",
+    receiver_packet_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """Run a local advisory-only race over decoder mode assignments."""
 
@@ -122,6 +125,13 @@ def run_snerv_decoder_mode_assignment_probe(
         parse_mode_plan(plan, levels=levels)
         for plan in plans
     ]
+    packet_dir = (
+        Path(receiver_packet_dir).expanduser().resolve(strict=False)
+        if receiver_packet_dir is not None
+        else None
+    )
+    if packet_dir is not None:
+        packet_dir.mkdir(parents=True, exist_ok=True)
     for label, modes in parsed_plans:
         result = run_snerv_advisory(
             n_pairs=n_pairs,
@@ -148,7 +158,15 @@ def run_snerv_decoder_mode_assignment_probe(
             decoder_payload_codec=MIXED_DECODER_CODEC,
             decoder_payload_mixed_modes=modes,
         )
-        candidates.append(candidate_summary_from_result(label, modes, result))
+        candidates.append(
+            candidate_summary_from_result(
+                label,
+                modes,
+                result,
+                receiver_packet_dir=packet_dir,
+                candidate_index=len(candidates),
+            )
+        )
 
     replay_verified = [
         candidate
@@ -203,6 +221,9 @@ def candidate_summary_from_result(
     label: str,
     modes: tuple[str, ...] | None,
     result: Any,
+    *,
+    receiver_packet_dir: Path | None = None,
+    candidate_index: int = 0,
 ) -> dict[str, Any]:
     """Extract the planner-relevant fields from one advisory result."""
 
@@ -213,6 +234,13 @@ def candidate_summary_from_result(
     packet = payload.get("receiver_archive_packet")
     packet_sha256 = packet.get("sha256") if isinstance(packet, dict) else None
     blockers = tuple(str(v) for v in payload.get("archive_byte_closure_blockers", ()))
+    packet_export, packet_blockers = _write_receiver_packet_if_requested(
+        result,
+        label=label,
+        packet_sha256=str(packet_sha256 or ""),
+        receiver_packet_dir=receiver_packet_dir,
+        candidate_index=candidate_index,
+    )
     return {
         "label": str(label),
         "modes": list(modes) if modes is not None else None,
@@ -224,6 +252,13 @@ def candidate_summary_from_result(
             payload.get("receiver_archive_packet_bytes")
         ),
         "receiver_archive_packet_sha256": packet_sha256,
+        "receiver_archive_packet_export": packet_export,
+        "receiver_archive_packet_path": packet_export.get("path"),
+        "receiver_archive_packet_file_sha256": packet_export.get("sha256"),
+        "receiver_archive_packet_is_contest_archive_zip": False,
+        "contest_archive_zip_path": None,
+        "candidate_archive_path": None,
+        "archive_path": None,
         "archive_bytes_total": _optional_int(payload.get("archive_bytes_total")),
         "receiver_archive_replay_verified": (
             payload.get("receiver_archive_replay_verified") is True
@@ -236,7 +271,7 @@ def candidate_summary_from_result(
         "d_pose_mean_l2": _optional_float(payload.get("d_pose_mean_l2")),
         "score_l2": _optional_float(payload.get("score_l2")),
         "rate_term": _optional_float(payload.get("rate_term")),
-        "blockers": list(blockers),
+        "blockers": [*blockers, *packet_blockers],
         "axis_tag": AXIS_TAG,
         "score_claim": False,
         "frontier_score_claim": False,
@@ -244,6 +279,40 @@ def candidate_summary_from_result(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _write_receiver_packet_if_requested(
+    result: Any,
+    *,
+    label: str,
+    packet_sha256: str,
+    receiver_packet_dir: Path | None,
+    candidate_index: int,
+) -> tuple[dict[str, Any], list[str]]:
+    if receiver_packet_dir is None:
+        return {}, []
+    packet_bytes = getattr(result, "receiver_archive_packet", None)
+    if not isinstance(packet_bytes, bytes):
+        return {}, ["receiver_packet_export_requested_but_raw_packet_missing"]
+    safe_label = "".join(
+        ch if ch.isalnum() or ch in {"-", "_"} else "_"
+        for ch in str(label)
+    ).strip("_") or "candidate"
+    out = receiver_packet_dir / f"{candidate_index:04d}_{safe_label}.snar"
+    out.write_bytes(packet_bytes)
+    file_sha256 = _sha256_file(out)
+    export = {
+        "schema": "snerv_receiver_packet_export.v1",
+        "kind": "snerv_receiver_packet_snar1_not_contest_archive_zip",
+        "path": out.as_posix(),
+        "bytes": int(out.stat().st_size),
+        "sha256": file_sha256,
+        "expected_sha256": packet_sha256 or None,
+        "contest_archive_zip": False,
+    }
+    if packet_sha256 and file_sha256 != packet_sha256:
+        return export, ["receiver_packet_export_sha256_mismatch"]
+    return export, []
 
 
 def _expected_mode_count(levels: int) -> int:
@@ -279,3 +348,11 @@ def _optional_float(value: Any) -> float | None:
     if value is None:
         return None
     return float(value)
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()

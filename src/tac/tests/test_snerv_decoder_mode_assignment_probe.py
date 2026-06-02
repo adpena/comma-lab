@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -97,6 +98,85 @@ def test_unverified_candidates_do_not_become_best(monkeypatch) -> None:
     assert payload["candidates"][0]["score_claim"] is False
 
 
+def test_probe_exports_receiver_packets_when_requested(tmp_path, monkeypatch) -> None:
+    def fake_run_snerv_advisory(**_kwargs):
+        return _fake_result(
+            label="explicit",
+            source="explicit",
+            histogram={"zero": 1, "int2": 1, "int4": 1, "int8": 0, "fp16": 0},
+            score=1.2,
+            verified=True,
+            packet=b"receiver-packet",
+        )
+
+    monkeypatch.setattr(probe, "run_snerv_advisory", fake_run_snerv_advisory)
+
+    payload = probe.run_snerv_decoder_mode_assignment_probe(
+        mode_plans=("zero,int2,int4",),
+        n_pairs=1,
+        levels=1,
+        receiver_packet_dir=tmp_path / "packets",
+    )
+
+    candidate = payload["candidates"][0]
+    packet_path = candidate["receiver_archive_packet_path"]
+    assert packet_path is not None
+    assert candidate["receiver_archive_packet_export"]["path"] == packet_path
+    assert candidate["receiver_archive_packet_export"]["bytes"] == len(
+        b"receiver-packet"
+    )
+    assert candidate["receiver_archive_packet_export"]["contest_archive_zip"] is False
+    assert (
+        candidate["receiver_archive_packet_export"]["kind"]
+        == "snerv_receiver_packet_snar1_not_contest_archive_zip"
+    )
+    assert candidate["receiver_archive_packet_is_contest_archive_zip"] is False
+    assert candidate["archive_path"] is None
+    assert candidate["candidate_archive_path"] is None
+    assert candidate["contest_archive_zip_path"] is None
+    assert candidate["blockers"] == [
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip",
+    ]
+    assert (tmp_path / "packets").is_dir()
+    assert Path(packet_path).read_bytes() == b"receiver-packet"
+
+
+def test_probe_packet_export_requires_raw_receiver_bytes(tmp_path, monkeypatch) -> None:
+    def fake_run_snerv_advisory(**_kwargs):
+        return _fake_result(
+            label="redacted",
+            source="explicit",
+            histogram={"zero": 0, "int2": 0, "int4": 3, "int8": 0, "fp16": 0},
+            score=1.2,
+            verified=True,
+            packet=None,
+        )
+
+    monkeypatch.setattr(probe, "run_snerv_advisory", fake_run_snerv_advisory)
+
+    payload = probe.run_snerv_decoder_mode_assignment_probe(
+        mode_plans=("int4,int4,int4",),
+        n_pairs=1,
+        levels=1,
+        receiver_packet_dir=tmp_path / "packets",
+    )
+
+    candidate = payload["candidates"][0]
+    assert candidate["receiver_archive_packet_path"] is None
+    assert candidate["receiver_archive_packet_export"] == {}
+    assert candidate["archive_path"] is None
+    assert candidate["candidate_archive_path"] is None
+    assert candidate["contest_archive_zip_path"] is None
+    assert "receiver_packet_export_requested_but_raw_packet_missing" in candidate[
+        "blockers"
+    ]
+    assert "receiver_packet_export_requested_but_raw_packet_missing" in payload[
+        "blockers"
+    ]
+
+
 def _fake_result(
     *,
     label: str,
@@ -104,8 +184,9 @@ def _fake_result(
     histogram: dict[str, int],
     score: float,
     verified: bool,
+    packet: bytes | None = b"fake-packet",
 ):
-    packet_sha = "a" * 64
+    packet_sha = probe.hashlib.sha256(packet or b"").hexdigest()
     payload = {
         "decoder_payload_header": {
             "mode_assignment_source": source,
@@ -131,4 +212,7 @@ def _fake_result(
             "not_packaged_as_contest_archive_zip",
         ],
     }
-    return SimpleNamespace(as_jsonable=lambda: {**payload, "source_label": label})
+    attrs = {"as_jsonable": lambda: {**payload, "source_label": label}}
+    if packet is not None:
+        attrs["receiver_archive_packet"] = packet
+    return SimpleNamespace(**attrs)
