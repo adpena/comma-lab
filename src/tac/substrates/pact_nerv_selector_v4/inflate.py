@@ -14,7 +14,11 @@ from tac.substrates._shared.inflate_runtime import (
     write_rgb_pair_to_raw,
 )
 
-from .architecture import PactNervSelectorV4Config, PactNervSelectorV4Substrate
+from .architecture import (
+    PactNervSelectorV4Config,
+    PactNervSelectorV4Substrate,
+    RunLengthSelectorCoder,
+)
 from .archive import parse_archive
 
 
@@ -38,10 +42,28 @@ def inflate_one_video(
     )
     model = PactNervSelectorV4Substrate(cfg).to(device).eval()
     model.load_state_dict(arc.decoder_state_dict, strict=False)
+    selector_values = RunLengthSelectorCoder(
+        palette_size=int(arc.palette_size),
+    ).decode(arc.selector_bytes)
+    if len(selector_values) != cfg.num_pairs:
+        raise ValueError(
+            f"selector stream length {len(selector_values)} != {cfg.num_pairs}"
+        )
+    selector_tensor = torch.tensor(
+        selector_values,
+        device=device,
+        dtype=model.selectors.dtype,
+    )
+    if bool(torch.any(selector_tensor != 0).item()):
+        raise ValueError(
+            "pact_nerv_selector_v4 nonzero selector stream is not promotion-safe: "
+            "runtime selector semantics are not implemented/proven to affect pixels"
+        )
     with torch.no_grad():
         model.latents.copy_(
             arc.latents.to(device=device, dtype=model.latents.dtype)
         )
+        model.selectors.copy_(selector_tensor)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with torch.no_grad(), output_path.open("wb") as fh:
         for pair_idx in range(cfg.num_pairs):

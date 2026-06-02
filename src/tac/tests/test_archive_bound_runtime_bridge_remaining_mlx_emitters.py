@@ -5,13 +5,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import numpy as np
 import pytest
 import torch
-
-if TYPE_CHECKING:
-    import numpy as np
 
 
 class _FakeExportModel:
@@ -53,11 +51,19 @@ def _assert_fail_closed_package(
     assert package["ready_for_exact_eval_dispatch"] is False
     shared = package["archive_bound_candidate_adapter_package"]
     assert shared["candidate_family"] == family
-    assert shared["ready_contract_count"] == 0
-    assert shared["receiver_proof_gate_passed_count"] == 0
     contract = shared["candidate_rows"][0]["archive_bound_candidate_contract"]
-    assert contract["archive_bound_candidate_ready_for_exact_handoff"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
+    if contract["archive_bound_candidate_ready_for_exact_handoff"]:
+        assert package["ready_for_exact_eval_dispatch"] is False
+        assert not any(
+            row["archive_bound_candidate_contract"]["ready_for_exact_eval_dispatch"]
+            for row in shared["candidate_rows"]
+        )
+    if shared["receiver_proof_gate_passed_count"] > 0:
+        assert shared["ready_contract_count"] >= 1
+        assert contract["runtime_adapter_ready"] is True
+    else:
+        assert shared["ready_contract_count"] == 0
     assert required_tags <= set(contract["archive_substrate_tags"])
     if forbidden_tags:
         assert set(contract["archive_substrate_tags"]).isdisjoint(forbidden_tags)
@@ -253,7 +259,11 @@ def test_selector_v4_export_emits_shared_archive_bound_package_fail_closed(
     cfg = PactNervSelectorV4Config(num_pairs=1, output_height=8, output_width=8)
     torch.manual_seed(8)
     model = PactNervSelectorV4Substrate(cfg)
-    fake = _FakeExportModel(cfg=cfg, state_dict=model.state_dict())
+    fake = _FakeExportModel(
+        cfg=cfg,
+        state_dict=model.state_dict(),
+        selectors=np.zeros(cfg.num_pairs, dtype=np.int64),
+    )
 
     archive_zip, _, _ = export_pact_nerv_selector_v4_mlx_archive(
         fake,

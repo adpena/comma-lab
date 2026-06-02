@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import torch
 
 from tac.substrates.pact_nerv_selector_v4.architecture import (
@@ -168,6 +169,82 @@ def test_archive_pack_scale_bundled_decoder_roundtrip() -> None:
     assert arc.decoder_state_dict.keys() == decoder_sd.keys()
     assert arc.meta["_decoder_state_codec"]["codec"] == "int8_scale_bundled"
     assert arc.selector_bytes == selector_bytes
+
+
+def test_archive_export_requires_selector_custody() -> None:
+    from tac.substrates.pact_nerv_selector_v4.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    cfg = _smoke_cfg()
+    torch.manual_seed(23)
+    model = PactNervSelectorV4Substrate(cfg)
+    exported = {
+        name: tensor.detach().cpu().numpy().copy()
+        for name, tensor in model.state_dict().items()
+        if name != "selectors"
+    }
+
+    try:
+        pack_archive_from_exported_state_dict(
+            exported_state_dict=exported,
+            cfg=cfg,
+        )
+    except ValueError as exc:
+        assert "requires explicit selectors" in str(exc)
+    else:
+        raise AssertionError("expected missing selectors to fail closed")
+
+
+def test_archive_export_marks_all_zero_selector_as_inert_control() -> None:
+    from tac.substrates.pact_nerv_selector_v4.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    cfg = _smoke_cfg()
+    torch.manual_seed(29)
+    model = PactNervSelectorV4Substrate(cfg)
+    exported = {
+        name: tensor.detach().cpu().numpy().copy()
+        for name, tensor in model.state_dict().items()
+    }
+
+    blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        cfg=cfg,
+        selectors=np.zeros(cfg.num_pairs, dtype=np.int64),
+    )
+    arc = parse_archive(blob)
+
+    assert arc.meta["selector_runtime_effect"] == "inert_all_zero_control"
+    assert arc.meta["selector_nonzero_count"] == 0
+    assert arc.meta["selector_runtime_forward_effect_proven"] is False
+
+
+def test_inflate_refuses_nonzero_selector_until_runtime_effect_proven(tmp_path) -> None:
+    from tac.substrates.pact_nerv_selector_v4.inflate import inflate_one_video
+
+    cfg = _smoke_cfg()
+    torch.manual_seed(31)
+    model = PactNervSelectorV4Substrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents", "selectors")}
+    latents = sd["latents"].clone()
+    selector_bytes = RunLengthSelectorCoder(palette_size=16).encode([0, 1, 0])
+    blob = pack_archive(
+        decoder_sd,
+        latents,
+        selector_bytes,
+        _smoke_meta(cfg),
+        palette_size=16,
+    )
+
+    try:
+        inflate_one_video(blob, tmp_path / "0.raw")
+    except ValueError as exc:
+        assert "nonzero selector stream" in str(exc)
+    else:
+        raise AssertionError("expected nonzero selector stream to fail closed")
 
 
 def test_archive_export_emits_hprc_representation_spine_projection(tmp_path) -> None:

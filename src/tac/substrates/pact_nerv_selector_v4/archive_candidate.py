@@ -99,7 +99,15 @@ def pack_archive_from_exported_state_dict(
     if "latents" not in exported_state_dict:
         raise ValueError("exported_state_dict missing latents")
     if selectors is None:
-        selectors = np.zeros(cfg.num_pairs, dtype=np.int64)
+        selectors = exported_state_dict.get("selectors")
+    if selectors is None:
+        raise ValueError(
+            "selector-v4 archive export requires explicit selectors; "
+            "silent all-zero selector defaults are inert and cannot carry "
+            "candidate authority"
+        )
+    if isinstance(selectors, torch.Tensor):
+        selectors = selectors.detach().cpu().numpy()
     selectors = np.asarray(selectors)
     if selectors.shape != (cfg.num_pairs,):
         raise ValueError(
@@ -112,6 +120,21 @@ def pack_archive_from_exported_state_dict(
         palette_size=int(cfg.selector_palette_size),
     )
     selector_bytes = coder.encode(selector_list)
+    selector_nonzero_count = sum(1 for value in selector_list if value != 0)
+    meta = selector_v4_meta_from_config(cfg)
+    meta.update(
+        {
+            "selector_codec": "run_length_varint_selector",
+            "selector_nonzero_count": int(selector_nonzero_count),
+            "selector_unique_count": len(set(selector_list)),
+            "selector_runtime_forward_effect_proven": False,
+            "selector_runtime_effect": (
+                "nonzero_selector_requires_runtime_semantics"
+                if selector_nonzero_count
+                else "inert_all_zero_control"
+            ),
+        }
+    )
     decoder_state: dict[str, torch.Tensor] = {}
     for name, arr in exported_state_dict.items():
         tensor = torch.from_numpy(np.asarray(arr).copy())
@@ -123,7 +146,7 @@ def pack_archive_from_exported_state_dict(
         decoder_state,
         latents,
         selector_bytes,
-        selector_v4_meta_from_config(cfg),
+        meta,
         palette_size=int(cfg.selector_palette_size),
         decoder_codec=decoder_codec,
     )
