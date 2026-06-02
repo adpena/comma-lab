@@ -229,6 +229,38 @@ def _source_features() -> tuple[SourceFeature, ...]:
         ),
         SourceFeature(
             family="hi_nerv",
+            feature_id="hi_nerv_official_feature_grid_convnext_trilinear",
+            official_source_id="hi_nerv_official_repo",
+            implementation_target=(
+                "official hierarchical feature grids, ConvNeXt blocks, and "
+                "trilinear multi-scale upsampling are bound or explicitly forked"
+            ),
+            required_source_markers=(
+                "HierarchicalFeatureGrid",
+                "ConvNeXtBlock",
+                "trilinear_upsample",
+            ),
+            blocker_if_missing=(
+                "hi_nerv_official_feature_grid_convnext_trilinear_missing"
+            ),
+        ),
+        SourceFeature(
+            family="hi_nerv",
+            feature_id="hi_nerv_official_prune_quantnoise_torchac_pipeline",
+            official_source_id="hi_nerv_official_repo",
+            implementation_target=(
+                "official pruning, QuantNoise/QAT, and arithmetic bitstream "
+                "pipeline are receiver-visible instead of generic packet bytes"
+            ),
+            required_source_markers=(
+                "QuantNoise",
+                "torchac",
+                "pruning_ratio",
+            ),
+            blocker_if_missing="hi_nerv_prune_quantnoise_torchac_pipeline_missing",
+        ),
+        SourceFeature(
+            family="hi_nerv",
             feature_id="hi_nerv_bitstream_quantization_roundtrip",
             official_source_id="hi_nerv_official_repo",
             implementation_target="receiver-visible compressed decoder and latent bitstream",
@@ -487,6 +519,7 @@ def _read_source(path: Path) -> str:
         return "\n".join(
             child.read_text(encoding="utf-8", errors="replace")
             for child in sorted(path.rglob("*.py"))
+            if child.name != "nerv_source_parity_contract.py"
         )
     if path.is_file():
         return path.read_text(encoding="utf-8", errors="replace")

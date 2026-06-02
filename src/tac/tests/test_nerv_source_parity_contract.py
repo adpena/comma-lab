@@ -32,6 +32,26 @@ def test_hinerv_generic_resize_path_is_no_longer_a_source_parity_blocker() -> No
     assert "hi_nerv_generic_resolution_path_missing" not in report["blockers"]
 
 
+def test_hinerv_official_source_parity_gaps_block_long_training() -> None:
+    report = build_nerv_source_parity_contract(
+        repo_root=REPO_ROOT,
+        families=("hi_nerv",),
+    )
+    rows = {row["feature_id"]: row for row in report["feature_rows"]}
+
+    assert report["required_for_long_training_ready"] is False
+    assert "hi_nerv_official_feature_grid_convnext_trilinear_missing" in report[
+        "blockers"
+    ]
+    assert "hi_nerv_prune_quantnoise_torchac_pipeline_missing" in report["blockers"]
+    assert rows["hi_nerv_official_feature_grid_convnext_trilinear"]["status"] == (
+        "missing_or_partial"
+    )
+    assert rows["hi_nerv_official_prune_quantnoise_torchac_pipeline"]["status"] == (
+        "missing_or_partial"
+    )
+
+
 def test_snerv_official_mfu_hfr_and_fc_dim_controls_still_block_long_training() -> None:
     report = build_nerv_source_parity_contract(repo_root=REPO_ROOT, families=("snerv",))
 
