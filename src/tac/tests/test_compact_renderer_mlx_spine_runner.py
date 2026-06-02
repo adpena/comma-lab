@@ -543,6 +543,34 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         )
 
 
+def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> None:
+    hi = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000",
+        hard_byte_ceilings=(178_000,),
+    )
+    sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000",
+        hard_byte_ceilings=(178_000,),
+    )
+
+    assert hi is not None
+    assert hi["candidate_id"] == (
+        "hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000"
+    )
+    assert hi["num_pairs"] == 600
+    assert hi["hard_byte_ceiling"] == 36_000
+    assert hi["decoder_codec"] == "int4_mixed"
+    assert sn is not None
+    assert sn["candidate_id"] == (
+        "snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000"
+    )
+    assert sn["num_pairs"] == 600
+    assert sn["hard_byte_ceiling"] == 36_000
+    assert sn["decoder_payload_codec"] == "int2_symmetric"
+
+
 def test_active_campaign_lock_identity_excludes_output_dir(tmp_path: Path) -> None:
     weight = tmp_path / "weights.npz"
     np.savez_compressed(weight, weight=np.ones((1,), dtype=np.float32))
@@ -721,6 +749,32 @@ def test_active_family_process_detection_ignores_current_process_ancestors(
     )
 
     assert [row["pid"] for row in matches] == [12]
+
+
+def test_active_family_process_detection_ignores_hinerv_pytest_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(runner_mod, "_pid_is_alive", lambda pid: pid == 424242)
+    rows = [
+        {
+            "pid": 424242,
+            "ppid": 1,
+            "elapsed": "01:25",
+            "command": (
+                ".venv/bin/python -m pytest -q "
+                "src/tac/tests/test_hinerv_archive_size_ladder.py "
+                "src/tac/tests/test_compact_renderer_mlx_spine_runner.py"
+            ),
+        },
+    ]
+
+    matches = runner_mod._active_family_campaign_processes(
+        family="hi_nerv",
+        current_pid=1,
+        process_rows=rows,
+    )
+
+    assert matches == []
 
 
 def test_active_campaign_lock_allow_duplicate_skips_family_process_refusal(
