@@ -18,7 +18,7 @@ import json
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 
@@ -125,6 +125,31 @@ def _stats(array: np.ndarray) -> dict[str, Any]:
         "std": std_value,
         "nonfinite_count": int(arr.size - finite.size),
         "nonzero_fraction": float(np.count_nonzero(arr) / max(int(arr.size), 1)),
+    }
+
+
+def _progress_row(
+    *,
+    backend: str,
+    chunk_index: int,
+    chunk_count: int,
+    pair_start: int,
+    pair_end: int,
+    num_pairs: int,
+    started: float,
+) -> dict[str, Any]:
+    return {
+        "schema": "joint_recon_pixel_weight_progress.v1",
+        "surface_generation_backend": backend,
+        "chunk_index": int(chunk_index),
+        "chunk_count": int(chunk_count),
+        "pair_start": int(pair_start),
+        "pair_end": int(pair_end),
+        "num_pairs": int(num_pairs),
+        "pairs_complete": int(pair_end),
+        "elapsed_seconds": float(time.time() - started),
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -293,6 +318,7 @@ def build_joint_p18_p19_recon_pixel_weight(
     *,
     mlx_scorer: Any,
     config: JointReconPixelWeightConfig,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[np.ndarray, dict[str, Any]]:
     """Compute a chunk-reduced joint P18/P19 per-pair/frame weight map.
 
@@ -319,8 +345,10 @@ def build_joint_p18_p19_recon_pixel_weight(
     pose_inverse_variance = [
         float(v) for v in config.pose_inverse_variance[: config.pose_axis_count]
     ]
+    chunk_count = (n + int(config.pair_chunk_size) - 1) // int(config.pair_chunk_size)
+    started = time.time()
 
-    for start in range(0, n, int(config.pair_chunk_size)):
+    for chunk_index, start in enumerate(range(0, n, int(config.pair_chunk_size))):
         end = min(start + int(config.pair_chunk_size), n)
         pairs_np = np.stack([t0[start:end], t1[start:end]], axis=1) * 255.0
         pairs = mx.array(np.ascontiguousarray(pairs_np, dtype=np.float32))
@@ -384,6 +412,18 @@ def build_joint_p18_p19_recon_pixel_weight(
 
         seg[start:end] = seg_saliency
         pose[start:end] = pose_saliency
+        if progress_callback is not None:
+            progress_callback(
+                _progress_row(
+                    backend="mlx_direct_scorer_vjp.v1",
+                    chunk_index=chunk_index,
+                    chunk_count=chunk_count,
+                    pair_start=start,
+                    pair_end=end,
+                    num_pairs=n,
+                    started=started,
+                )
+            )
 
     return _finalize_joint_weight_surface(
         seg=seg,
@@ -406,6 +446,7 @@ def build_joint_p18_p19_recon_pixel_weight_torch(
     torch_segnet: Any,
     config: JointReconPixelWeightConfig,
     device: str = "cpu",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[np.ndarray, dict[str, Any]]:
     """Compute finite P18/P19 saliency with PyTorch autograd.
 
@@ -431,13 +472,15 @@ def build_joint_p18_p19_recon_pixel_weight_torch(
     pose_inverse_variance = [
         float(v) for v in config.pose_inverse_variance[: config.pose_axis_count]
     ]
+    chunk_count = (n + int(config.pair_chunk_size) - 1) // int(config.pair_chunk_size)
+    started = time.time()
     dev = torch.device(device)
     torch_posenet.eval().to(dev)
     torch_segnet.eval().to(dev)
     for parameter in list(torch_posenet.parameters()) + list(torch_segnet.parameters()):
         parameter.requires_grad_(False)
 
-    for start in range(0, n, int(config.pair_chunk_size)):
+    for chunk_index, start in enumerate(range(0, n, int(config.pair_chunk_size))):
         end = min(start + int(config.pair_chunk_size), n)
         pairs_np = np.stack([t0[start:end], t1[start:end]], axis=1) * 255.0
         pairs = torch.as_tensor(
@@ -491,6 +534,18 @@ def build_joint_p18_p19_recon_pixel_weight_torch(
             sanitization.append(pose_sanitized)
             pose_sq += float(inv_var) * np.sum(np.square(g_raw), axis=-1)
         pose[start:end] = np.sqrt(np.maximum(pose_sq, 0.0))
+        if progress_callback is not None:
+            progress_callback(
+                _progress_row(
+                    backend="torch_exact_cpu_scorer_vjp.v1",
+                    chunk_index=chunk_index,
+                    chunk_count=chunk_count,
+                    pair_start=start,
+                    pair_end=end,
+                    num_pairs=n,
+                    started=started,
+                )
+            )
 
     return _finalize_joint_weight_surface(
         seg=seg,
@@ -512,6 +567,7 @@ def build_joint_p18_p19_recon_pixel_weight_from_video(
     config: JointReconPixelWeightConfig,
     scorer_device: str = "cpu",
     scorer_backend: str = "auto",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[np.ndarray, dict[str, Any]]:
     """Decode the real video and build weights with MLX-first fallback."""
 
@@ -544,6 +600,7 @@ def build_joint_p18_p19_recon_pixel_weight_from_video(
             torch_segnet=segnet,
             config=config,
             device=scorer_device,
+            progress_callback=progress_callback,
         )
 
     if backend == "torch":
@@ -559,6 +616,7 @@ def build_joint_p18_p19_recon_pixel_weight_from_video(
             target_rgb_1,
             mlx_scorer=mlx_scorer,
             config=config,
+            progress_callback=progress_callback,
         )
 
     if backend == "mlx":
@@ -620,6 +678,7 @@ def write_joint_p18_p19_recon_pixel_weight_artifact(
     config: JointReconPixelWeightConfig,
     scorer_device: str = "cpu",
     scorer_backend: str = "auto",
+    progress_jsonl_path: str | Path | None = None,
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     """Build and write a queue-consumable joint recon-pixel-weight artifact."""
@@ -628,6 +687,19 @@ def write_joint_p18_p19_recon_pixel_weight_artifact(
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise FileExistsError(f"output_dir is non-empty; pass overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
+    progress_path = (
+        Path(progress_jsonl_path).expanduser().resolve(strict=False)
+        if progress_jsonl_path is not None
+        else out / "joint_p18_p19_recon_pixel_weight_progress.jsonl"
+    )
+    if allow_overwrite and progress_path.is_file():
+        progress_path.unlink()
+    progress_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def emit_progress(row: dict[str, Any]) -> None:
+        with progress_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(row, sort_keys=True) + "\n")
+
     started = time.time()
     weight, metadata = build_joint_p18_p19_recon_pixel_weight_from_video(
         source_video_path=source_video_path,
@@ -635,6 +707,7 @@ def write_joint_p18_p19_recon_pixel_weight_artifact(
         config=config,
         scorer_device=scorer_device,
         scorer_backend=scorer_backend,
+        progress_callback=emit_progress,
     )
     weight_path = out / "joint_p18_p19_recon_pixel_weight.npz"
     np.savez_compressed(weight_path, weight=weight)
@@ -650,6 +723,7 @@ def write_joint_p18_p19_recon_pixel_weight_artifact(
         "upstream_dir": Path(upstream_dir).expanduser().as_posix(),
         "scorer_device": scorer_device,
         "scorer_backend": scorer_backend,
+        "progress_jsonl_path": progress_path.as_posix(),
         "config": asdict(config),
         "elapsed_seconds": time.time() - started,
         "metadata": metadata,

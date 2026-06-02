@@ -140,6 +140,7 @@ def test_torch_joint_recon_pixel_weight_surface_is_finite_and_recommended() -> N
     rng = np.random.default_rng(44)
     target0 = rng.random((2, 8, 8, 3), dtype=np.float32)
     target1 = rng.random((2, 8, 8, 3), dtype=np.float32)
+    progress_rows = []
 
     weight, metadata = build_joint_p18_p19_recon_pixel_weight_torch(
         target0,
@@ -156,6 +157,7 @@ def test_torch_joint_recon_pixel_weight_surface_is_finite_and_recommended() -> N
             normalize="mean",
         ),
         device="cpu",
+        progress_callback=progress_rows.append,
     )
 
     assert weight.shape == (2, 2, 8, 8, 1)
@@ -176,6 +178,11 @@ def test_torch_joint_recon_pixel_weight_surface_is_finite_and_recommended() -> N
     }
     assert metadata["seg_saliency_stats"]["max"] > 0.0
     assert metadata["pose_saliency_stats"]["max"] > 0.0
+    assert [row["pair_end"] for row in progress_rows] == [1, 2]
+    assert progress_rows[-1]["pairs_complete"] == 2
+    assert progress_rows[-1]["surface_generation_backend"] == (
+        "torch_exact_cpu_scorer_vjp.v1"
+    )
 
 
 def test_auto_backend_falls_back_to_torch_with_mlx_failure_metadata(
@@ -283,6 +290,9 @@ def test_write_joint_recon_pixel_weight_artifact_preserves_blockers(
     loaded = json.loads(manifest_path.read_text())
     assert manifest["manifest_path"] == manifest_path.as_posix()
     assert loaded["manifest_path"] == manifest_path.as_posix()
+    assert loaded["progress_jsonl_path"] == (
+        tmp_path / "joint_p18_p19_recon_pixel_weight_progress.jsonl"
+    ).as_posix()
     assert loaded["metadata"]["training_consumption_recommended"] is False
     assert loaded["metadata"]["blockers"] == [
         "nonfinite_gradient_sanitized:pose_axis_0_grad_pairs_0_1"
