@@ -87,6 +87,7 @@ SHARED_SYNERGY_SURFACES = (
     "src/tac/analysis/score_exact_saliency.py",
     "src/tac/analysis/nerv_top_priority_stack_seam.py",
     "src/tac/analysis/nerv_modelsize_budget.py",
+    "src/tac/analysis/nerv_candidate_curriculum.py",
     "tools/run_mlx_scorer_response_cache.py",
     "tools/profile_mlx_scorer_response_cache.py",
 )
@@ -147,7 +148,8 @@ def build_nerv_stack_synergy_audit(
         "next_required_integration": [
             "bind --execute-family hi_nerv modelsize candidate to measured trained archive byte oracle",
             "bind --execute-family snerv modelsize candidate to measured SNAR1 archive byte oracle",
-            "attach curriculum schedule selection to budget candidate and scorer deltas",
+            "write candidate curriculum byte-feedback rows into planner posteriors",
+            "use replay scorer deltas to update candidate curriculum schedules",
             "write every local replay result back into planner posteriors",
         ],
         **FALSE_AUTHORITY,

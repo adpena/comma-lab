@@ -36,6 +36,11 @@ from comma_lab.local_submission_replay import (  # noqa: E402
     run_local_submission_replay,
     stage_local_replay_submission,
 )
+from tac.analysis.nerv_candidate_curriculum import (  # noqa: E402
+    build_hinerv_candidate_curriculum_plan,
+    build_snerv_candidate_curriculum_plan,
+    strip_candidate_curriculum_authority_fields,
+)
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
@@ -1894,12 +1899,25 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             repo_root=root,
         )
     )
+    candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate or None,
+        requested_epochs=int(epochs),
+        num_pairs=int(num_pairs),
+        step_map_coder_mode=str(resolved_step_map_coder_mode),
+        measured_packet_bytes=int(advisory.archive_bytes_total),
+        measured_archive_bytes=(
+            int(row["candidate_archive_bytes"])
+            if row.get("candidate_archive_bytes") is not None
+            else None
+        ),
+    )
 
     blockers = _dedupe(
         [
             "contest_cpu_cuda_exact_eval_not_executed",
             "snerv_mlx_native_train_export_archive_adapter_missing",
             "snerv_longer_staged_score_aware_training_not_executed",
+            *list(candidate_curriculum_plan.get("blockers") or []),
             *local_cpu_replay_blockers,
             *list(post_export_materializer_plan.get("blockers") or []),
             *list(post_export_materializer_execution.get("blockers") or []),
@@ -1934,6 +1952,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     step_map_waterfill_bits_per_coeff
                 ),
                 "launch_decoder_payload_codec": decoder_payload_codec,
+                "candidate_curriculum_plan": candidate_curriculum_plan,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -1955,6 +1974,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 else []
             ),
             "archive_bound_candidate_rows": candidate_rows,
+            "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_carrier_training_plan": planner,
             "score_aware_training": {
                 "schema": "compact_snerv_archive_bound_advisory.v1",
@@ -3376,6 +3396,24 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
     launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
     launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
+    launch_curriculum_plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate or None,
+        requested_epochs=int(epochs),
+        num_pairs=int(num_pairs),
+        segnet_distillation_weight=float(segnet_distillation_weight),
+        pose_distillation_weight=float(pose_distillation_weight),
+        coder_aware_qat=bool(coder_aware_qat),
+        coder_qat_quant_bits=int(coder_qat_quant_bits),
+        recon_pixel_weight_attached=bool(
+            recon_pixel_weight_path is not None or auto_segnet_boundary_recon_weight
+        ),
+    )
+    effective_coder_aware_qat = bool(
+        launch_curriculum_plan["coder_pressure"]["enabled"]
+    )
+    effective_coder_qat_quant_bits = int(
+        launch_curriculum_plan["coder_pressure"]["quant_bits"]
+    )
     try:
         artifact = _run_hi_nerv_mlx_scoreaware_smoke(
             output_dir=out / "hi_nerv_mlx_training",
@@ -3397,8 +3435,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             segnet_hinge_margin=segnet_hinge_margin,
             distillation_device=distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
-            coder_aware_qat=coder_aware_qat,
-            coder_qat_quant_bits=coder_qat_quant_bits,
+            coder_aware_qat=effective_coder_aware_qat,
+            coder_qat_quant_bits=effective_coder_qat_quant_bits,
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
@@ -3411,6 +3449,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
+            candidate_curriculum_plan=launch_curriculum_plan,
         )
     except Exception as exc:
         blocker_report = _base_report(
@@ -3435,6 +3474,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "candidate_curriculum_plan": launch_curriculum_plan,
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -3451,6 +3491,23 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
 
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     archive_path = artifact_dict.get("archive_path")
+    candidate_curriculum_plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate or None,
+        requested_epochs=int(epochs),
+        num_pairs=int(num_pairs),
+        segnet_distillation_weight=float(segnet_distillation_weight),
+        pose_distillation_weight=float(pose_distillation_weight),
+        coder_aware_qat=bool(coder_aware_qat),
+        coder_qat_quant_bits=int(coder_qat_quant_bits),
+        recon_pixel_weight_attached=bool(
+            recon_pixel_weight_path is not None or auto_segnet_boundary_recon_weight
+        ),
+        measured_archive_bytes=(
+            int(artifact_dict["archive_bytes"])
+            if artifact_dict.get("archive_bytes") is not None
+            else None
+        ),
+    )
     training_dir = out / "hi_nerv_mlx_training"
     auto_mlx_prefilter_profile_path = training_dir / "local_mlx_prefilter_profile.json"
     effective_mlx_profile_paths: tuple[str | Path, ...] = tuple(mlx_profile_paths)
@@ -3502,6 +3559,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers: list[Any] = [
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    blockers.extend(candidate_curriculum_plan.get("blockers") or [])
     blockers.extend(local_cpu_replay_blockers)
     pr95_curriculum_enabled = int(epochs) >= 8
     if not pr95_curriculum_enabled:
@@ -3577,6 +3635,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "launch_embed_dim": launch_embed_dim,
                 "launch_decoder_channel": launch_decoder_channel,
                 "launch_decoder_codec": launch_decoder_codec,
+                "candidate_curriculum_plan": candidate_curriculum_plan,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -3585,6 +3644,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "archive_bytes": artifact_dict.get("archive_bytes"),
             "archive_sha256": artifact_dict.get("archive_sha256"),
             "training_artifact": artifact_dict,
+            "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_training": {
                 "schema": "compact_hi_nerv_score_aware_training.v1",
                 "status": "executed_mlx_local_false_authority",
@@ -3600,8 +3660,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
-                    enabled=coder_aware_qat,
-                    quant_bits=coder_qat_quant_bits,
+                    enabled=effective_coder_aware_qat,
+                    quant_bits=effective_coder_qat_quant_bits,
                     quant_residual_weight=coder_qat_quant_residual_weight,
                     magnitude_weight=coder_qat_magnitude_weight,
                     delta_weight=coder_qat_delta_weight,
@@ -4517,6 +4577,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
+    candidate_curriculum_plan: Mapping[str, Any] | None = None,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
         CoderAwareQATConfig,
@@ -4639,6 +4700,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         },
         "score_aware_training": {
             "schema": "compact_hi_nerv_score_aware_training.v1",
+            "candidate_curriculum_plan": strip_candidate_curriculum_authority_fields(
+                candidate_curriculum_plan or {}
+            ),
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
             "segnet_distillation_objective": segnet_distillation_objective,

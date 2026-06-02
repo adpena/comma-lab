@@ -1953,8 +1953,8 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },
-        coder_aware_qat=True,
-        coder_qat_quant_bits=4,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
         coder_qat_quant_residual_weight=0.001,
         coder_qat_magnitude_weight=0.0001,
         coder_qat_delta_weight=0.0002,
@@ -1966,11 +1966,14 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     )
 
     assert captured_train_kwargs["coder_aware_qat"] is True
+    assert captured_train_kwargs["coder_qat_quant_bits"] == 4
+    assert captured_train_kwargs["candidate_curriculum_plan"]["coder_pressure"][
+        "quant_bits"
+    ] == 4
     assert captured_train_kwargs["latent_dim"] == 12
     assert captured_train_kwargs["embed_dim"] == 16
     assert captured_train_kwargs["decoder_channel"] == 6
     assert captured_train_kwargs["decoder_codec"] == "int4_mixed"
-    assert captured_train_kwargs["coder_qat_quant_bits"] == 4
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
     assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
@@ -1990,11 +1993,18 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     selection = out["modelsize_candidate_selection"]
     assert selection["selection_mode"] == "planner_candidate"
     assert selection["candidate"]["candidate_id"] == "hinerv-unit-candidate"
+    assert selection["candidate_curriculum_plan"]["coder_pressure"]["enabled"] is True
+    assert selection["candidate_curriculum_plan"]["coder_pressure"][
+        "quant_bits"
+    ] == 4
     assert selection["launch_latent_dim"] == 12
     assert selection["launch_embed_dim"] == 16
     assert selection["launch_decoder_channel"] == 6
     assert selection["launch_decoder_codec"] == "int4_mixed"
     assert out["score_aware_training"]["decoder_codec"] == "int4_mixed"
+    assert out["candidate_curriculum_plan"]["byte_oracle_logging"][
+        "feedback_ready"
+    ] is True
     assert out["score_aware_training"]["recon_pixel_weight"][
         "source_kind"
     ] == "file"
@@ -2195,6 +2205,9 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert selection["launch_levels"] == 2
     assert selection["launch_bits_per_coeff"] == 1.5
     assert selection["launch_decoder_payload_codec"] == "int2_symmetric"
+    assert selection["candidate_curriculum_plan"]["receiver_grammar_controls"][
+        "step_map_coder_mode"
+    ] == "waterfill"
     assert Path(out["archive_path"]).is_file()
     assert out["archive_bytes"] == Path(out["archive_path"]).stat().st_size
     assert Path(out["receiver_archive_packet_path"]).read_bytes() == packet
@@ -2222,6 +2235,15 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert out["score_aware_training"]["target_bits_per_coeff"] == 1.5
     assert out["score_aware_training"]["step_map_coder_mode"] == "waterfill"
     assert out["score_aware_training"]["decoder_payload_codec"] == "int2_symmetric"
+    assert out["candidate_curriculum_plan"]["byte_oracle_logging"][
+        "feedback_ready"
+    ] is True
+    assert out["candidate_curriculum_plan"]["byte_oracle_logging"][
+        "measured_payload_bytes"
+    ] == len(packet)
+    assert out["candidate_curriculum_plan"]["byte_oracle_logging"][
+        "measured_archive_bytes"
+    ] == Path(out["archive_path"]).stat().st_size
     assert out["score_aware_training"]["beats_frontier_rate"] is True
     assert out["reusable_optimization_followups"][
         "applies_after_byte_closed_export"
