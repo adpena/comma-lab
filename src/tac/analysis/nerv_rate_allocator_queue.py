@@ -82,6 +82,7 @@ def build_nerv_rate_allocator_work_queue(
         for artifact in section_value_artifacts
         if isinstance(artifact, Mapping)
     ]
+    admission_plans.extend(_embedded_byte_price_plans(work_orders))
     admission_rows = _section_admission_queue_rows(admission_plans)
 
     return {
@@ -359,6 +360,11 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             else {}
         )
         command = _snerv_scorer_loop_full600_command(payload)
+        byte_price_plan = (
+            payload.get("byte_price_plan")
+            if isinstance(payload.get("byte_price_plan"), Mapping)
+            else {}
+        )
         return {
             "ingest_kind": "snerv_scorer_loop_qat_full600_followup",
             "planner_action": planner_action,
@@ -386,6 +392,13 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             ),
             "source_best_pair_deltas": _mapping_list(
                 payload.get("best_pair_deltas")
+            ),
+            "source_section_value_rows": _mapping_list(
+                payload.get("section_value_rows")
+            ),
+            "source_byte_price_plan_schema": byte_price_plan.get("schema"),
+            "source_byte_price_decision_rows": _mapping_list(
+                byte_price_plan.get("decision_rows")
             ),
             "source_accepted_improvement": payload.get("accepted_improvement") is True,
             "source_receiver_contract_satisfied": (
@@ -459,6 +472,24 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
         "planner_action": planner_action,
         "runnable_now": False,
     }
+
+
+def _embedded_byte_price_plans(
+    work_orders: Sequence[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    plans: list[Mapping[str, Any]] = []
+    for order in work_orders:
+        payload = (
+            order.get("payload", {})
+            if isinstance(order.get("payload"), Mapping)
+            else {}
+        )
+        plan = payload.get("byte_price_plan")
+        if isinstance(plan, Mapping) and plan.get("schema") == (
+            "compact_nerv_byte_price_controller.v1"
+        ):
+            plans.append(plan)
+    return plans
 
 
 def _precision_modes_from_policy(value: Any) -> list[str]:

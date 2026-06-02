@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from tac.analysis.nerv_rate_allocator_bridge import build_nerv_rate_allocator_bridge
+from tac.analysis.nerv_rate_allocator_queue import build_nerv_rate_allocator_work_queue
 from tac.analysis.snerv_scorer_loop_geometry import (
     BYTE_PRICE,
     SCHEMA,
@@ -90,6 +91,17 @@ def test_snerv_scorer_loop_geometry_units_feed_rate_allocator_bridge(
     assert bridge["rate_allocator_work_orders"][0]["payload"]["byte_price_plan"][
         "schema"
     ] == "compact_nerv_byte_price_controller.v1"
+
+    queue = build_nerv_rate_allocator_work_queue(rate_bridge=bridge)
+    assert queue["section_admission_queue_row_count"] == len(
+        report["reports"][0]["section_value_rows"]
+    )
+    qat_row = queue["queue_rows"][0]
+    assert qat_row["planner_ingest"]["source_section_value_rows"]
+    assert qat_row["planner_ingest"]["source_byte_price_plan_schema"] == (
+        "compact_nerv_byte_price_controller.v1"
+    )
+    assert qat_row["planner_ingest"]["source_byte_price_decision_rows"]
 
 
 def test_snerv_scorer_loop_geometry_cli_writes_json_and_markdown(
