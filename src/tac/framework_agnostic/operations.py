@@ -56,7 +56,6 @@ from tac.framework_agnostic.backend import (
     select_backend,
 )
 
-
 # Canonical PyTorch FP4 codebook (unsigned E2M1) — sister of CLAUDE.md
 # "Quantizr archive contents" verified empirical value
 # ``[0,0.5,1,1.5,2,3,4,6]``. Used for QAT-compatible quantize_fp4 per
@@ -155,7 +154,7 @@ def _quantize_int8_numpy(tensor: Any, *, axis: int) -> tuple[Any, Any]:
     Symmetric int8 (range -127..127 not -128..127 to preserve sign symmetry
     per PR101 medal-class convention).
     """
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
     arr = np.asarray(tensor, dtype=np.float32)
     if axis < 0:
         axis = arr.ndim + axis
@@ -173,7 +172,7 @@ def _quantize_int8_numpy(tensor: Any, *, axis: int) -> tuple[Any, Any]:
 
 
 def _dequantize_int8_numpy(int8_tensor: Any, scale: Any, *, axis: int) -> Any:
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
     int8 = np.asarray(int8_tensor, dtype=np.int8)
     sc = np.asarray(scale, dtype=np.float32)
     if axis < 0:
@@ -185,7 +184,7 @@ def _dequantize_int8_numpy(int8_tensor: Any, scale: Any, *, axis: int) -> Any:
 
 def _quantize_int8_pytorch(tensor: Any, *, axis: int) -> tuple[Any, Any]:
     """PyTorch implementation; numpy-equivalent for byte determinism."""
-    import torch  # noqa: PLC0415
+    import torch
     arr = torch.as_tensor(tensor, dtype=torch.float32)
     if axis < 0:
         axis = arr.dim() + axis
@@ -202,7 +201,7 @@ def _quantize_int8_pytorch(tensor: Any, *, axis: int) -> tuple[Any, Any]:
 
 
 def _dequantize_int8_pytorch(int8_tensor: Any, scale: Any, *, axis: int) -> Any:
-    import torch  # noqa: PLC0415
+    import torch
     int8 = torch.as_tensor(int8_tensor, dtype=torch.int8)
     sc = torch.as_tensor(scale, dtype=torch.float32)
     if axis < 0:
@@ -214,8 +213,8 @@ def _dequantize_int8_pytorch(int8_tensor: Any, scale: Any, *, axis: int) -> Any:
 
 def _quantize_int8_mlx(tensor: Any, *, axis: int) -> tuple[Any, Any]:
     """MLX implementation per CLAUDE.md MLX-FIRST 8th standing directive."""
-    import mlx.core as mx  # noqa: PLC0415
-    import numpy as np  # noqa: PLC0415  # canonical numpy oracle
+    import mlx.core as mx
+    import numpy as np  # canonical numpy oracle
     # MLX may not have the full reduce API; route through numpy oracle for
     # byte determinism and convert back. This is INTENTIONAL — the canonical
     # numpy oracle IS the byte-determinism guarantee per Catalog #146.
@@ -225,8 +224,8 @@ def _quantize_int8_mlx(tensor: Any, *, axis: int) -> tuple[Any, Any]:
 
 
 def _dequantize_int8_mlx(int8_tensor: Any, scale: Any, *, axis: int) -> Any:
-    import mlx.core as mx  # noqa: PLC0415
-    import numpy as np  # noqa: PLC0415
+    import mlx.core as mx
+    import numpy as np
     int8_np = np.asarray(int8_tensor)
     sc_np = np.asarray(scale)
     result = _dequantize_int8_numpy(int8_np, sc_np, axis=axis)
@@ -236,13 +235,13 @@ def _dequantize_int8_mlx(int8_tensor: Any, scale: Any, *, axis: int) -> Any:
 def _quantize_int8_tinygrad(tensor: Any, *, axis: int) -> tuple[Any, Any]:
     """tinygrad implementation — deferred import; OPTIONAL backend."""
     try:
-        from tinygrad import Tensor  # noqa: PLC0415
+        from tinygrad import Tensor
     except ImportError as exc:
         raise BackendUnavailableError(
             "Backend.TINYGRAD requested but tinygrad not installed; "
             "install via `uv pip install tinygrad`"
         ) from exc
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
     arr_np = tensor.numpy() if isinstance(tensor, Tensor) else np.asarray(tensor, dtype=np.float32)
     int8_np, scale_np = _quantize_int8_numpy(arr_np, axis=axis)
     return Tensor(int8_np), Tensor(scale_np)
@@ -250,12 +249,12 @@ def _quantize_int8_tinygrad(tensor: Any, *, axis: int) -> tuple[Any, Any]:
 
 def _dequantize_int8_tinygrad(int8_tensor: Any, scale: Any, *, axis: int) -> Any:
     try:
-        from tinygrad import Tensor  # noqa: PLC0415
+        from tinygrad import Tensor
     except ImportError as exc:
         raise BackendUnavailableError(
             "Backend.TINYGRAD requested but tinygrad not installed"
         ) from exc
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
     int8_np = int8_tensor.numpy() if isinstance(int8_tensor, Tensor) else np.asarray(int8_tensor)
     sc_np = scale.numpy() if isinstance(scale, Tensor) else np.asarray(scale)
     result = _dequantize_int8_numpy(int8_np, sc_np, axis=axis)
@@ -299,7 +298,7 @@ def quantize_fp4_packed_nibbles(
     if len(cb) != 8:
         raise ValueError(f"FP4 codebook must have 8 entries; got {len(cb)}")
     # Route through numpy oracle for byte determinism per Catalog #146.
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
     arr = np.asarray(tensor, dtype=np.float32).flatten()
     abs_max = float(np.max(np.abs(arr))) if arr.size > 0 else 1.0
     if abs_max == 0:
@@ -345,7 +344,7 @@ def brotli_compress(byte_stream: bytes, *, quality: int = 11) -> bytes:
         Compressed bytes.
     """
     try:
-        import brotli  # noqa: PLC0415
+        import brotli
     except ImportError as exc:
         raise BackendUnavailableError(
             "brotli is a hard dependency per CLAUDE.md 'Modal training "

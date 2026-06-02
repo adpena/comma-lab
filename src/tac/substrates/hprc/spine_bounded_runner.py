@@ -1044,15 +1044,16 @@ def _projection_gap_repair_work_order(
         else "queued_for_pact_vq_projection_gap_repair"
     )
     repair_grid = _pact_vq_projection_gap_repair_grid()
-    argv_rows = [
-        _pact_vq_projection_gap_repair_argv(
+    launch_rows = [
+        _pact_vq_projection_gap_repair_launch_row(
             row=row,
-            output_dir=Path(output_dir) / row["run_id"],
+            base_output_dir=Path(output_dir),
             repo_root=repo_root,
             upstream_dir=upstream_dir,
         )
         for row in repair_grid
     ]
+    argv_rows = [row["argv"] for row in launch_rows]
     return {
         "schema": HPRC_SPINE_PROJECTION_GAP_REPAIR_WORK_ORDER_SCHEMA,
         "work_order_id": _projection_gap_work_order_id(
@@ -1074,6 +1075,7 @@ def _projection_gap_repair_work_order(
             "decoder/codebook/latent bytes have nonnegative measured value"
         ),
         "repair_grid": repair_grid,
+        "launch_rows": launch_rows,
         "argv_rows": argv_rows,
         "preferred_output_dir": output_dir,
         "storage_waterfall": list(_SECTION_VALUE_PROFILE_STORAGE_WATERFALL),
@@ -1132,6 +1134,40 @@ def _pact_vq_projection_gap_repair_grid() -> list[dict[str, Any]]:
             "decoder_channel": 48,
         },
     ]
+
+
+def _pact_vq_projection_gap_repair_launch_row(
+    *,
+    row: dict[str, Any],
+    base_output_dir: Path,
+    repo_root: Path,
+    upstream_dir: Path,
+) -> dict[str, Any]:
+    run_root = base_output_dir / str(row["run_id"])
+    runner_output_dir = run_root / "runner_output"
+    launch_metadata_dir = run_root / "launch_metadata"
+    return {
+        "schema": "hprc_projection_gap_repair_launch_row.v1",
+        "run_id": row["run_id"],
+        "runner_output_dir": runner_output_dir.as_posix(),
+        "launch_metadata_dir": launch_metadata_dir.as_posix(),
+        "stdout_log": (launch_metadata_dir / "runner.stdout.log").as_posix(),
+        "stderr_log": (launch_metadata_dir / "runner.stderr.log").as_posix(),
+        "exit_code_path": (launch_metadata_dir / "runner.exit_code").as_posix(),
+        "lifecycle_path": (launch_metadata_dir / "runner.lifecycle").as_posix(),
+        "output_dir_must_be_empty_before_runner_start": True,
+        "metadata_dir_may_exist_before_runner_start": True,
+        "launcher_guard": (
+            "write launch manifests/logs under launch_metadata_dir only; "
+            "the runner owns runner_output_dir and rejects pre-populated output"
+        ),
+        "argv": _pact_vq_projection_gap_repair_argv(
+            row=row,
+            output_dir=runner_output_dir,
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+        ),
+    }
 
 
 def _pact_vq_projection_gap_repair_argv(

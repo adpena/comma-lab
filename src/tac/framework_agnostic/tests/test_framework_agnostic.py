@@ -16,18 +16,20 @@ src/tac/cathedral_consumers/framework_agnostic_lookup_consumer/tests/.
 from __future__ import annotations
 
 import io
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from tac.framework_agnostic import (
+    DEFAULT_ENV_VAR,
+    NPZ_BRIDGE_MANIFEST_SCHEMA,
     Backend,
     BackendUnavailableError,
-    DEFAULT_ENV_VAR,
     FrameworkAgnosticTensor,
     assert_no_framework_mismatch,
     brotli_compress,
+    build_npz_bridge_manifest,
     dequantize_int8_per_channel,
     detect_available_backends,
     detect_available_backends_dict,
@@ -37,6 +39,7 @@ from tac.framework_agnostic import (
     mlx_first_with_numpy_fallback,
     mlx_state_dict_to_npz_bridge,
     npz_to_numpy_primitives,
+    numpy_state_dict_to_npz_bridge,
     pytorch_first_with_numpy_fallback,
     pytorch_state_dict_to_npz_bridge,
     quantize_fp4_packed_nibbles,
@@ -44,9 +47,9 @@ from tac.framework_agnostic import (
     select_backend,
     shape_of,
     tinygrad_state_dict_to_npz_bridge,
+    write_npz_bridge_artifact,
 )
 from tac.framework_agnostic.backend import _AVAILABILITY_CHECK
-
 
 # -----------------------------------------------------------------------------
 # Backend enum + selection (Catalog #205 sister)
@@ -418,6 +421,52 @@ def test_npz_to_numpy_primitives_round_trip():
     assert set(recovered.keys()) == set(sd.keys())
     for k in sd:
         np.testing.assert_array_equal(recovered[k], sd[k])
+
+
+def test_numpy_state_dict_to_npz_bridge_is_sorted_and_manifested(tmp_path):
+    """Canonical NumPy bridge emits stable tensor ordering + hash manifest."""
+    sd = {
+        "z": np.arange(3, dtype=np.float32),
+        "a": np.arange(6, dtype=np.int16).reshape(2, 3),
+    }
+    npz_bytes = numpy_state_dict_to_npz_bridge(sd)
+    recovered = npz_to_numpy_primitives(npz_bytes)
+    assert list(recovered.keys()) == ["a", "z"]
+
+    manifest = build_npz_bridge_manifest(
+        npz_bytes,
+        source_backend="numpy",
+        artifact_path=tmp_path / "state.npz",
+    )
+    assert manifest["schema"] == NPZ_BRIDGE_MANIFEST_SCHEMA
+    assert manifest["tensor_names_sorted"] == ["a", "z"]
+    assert manifest["tensor_count"] == 2
+    assert manifest["all_tensors_finite"] is True
+    assert manifest["consumption_recommended"] is True
+    assert len(manifest["artifact_sha256"]) == 64
+    assert len(manifest["per_tensor"]["a"]["sha256"]) == 64
+    assert manifest["score_claim"] is False
+
+
+def test_write_npz_bridge_artifact_round_trips_and_refuses_nonfinite(tmp_path):
+    """Artifact writer preserves exact bytes and blocks bad training state."""
+    sd = {"w": np.ones((2, 2), dtype=np.float32)}
+    npz_path = tmp_path / "state.npz"
+    manifest = write_npz_bridge_artifact(
+        sd,
+        npz_path,
+        source_backend="mlx",
+        bridge_kind="unit_test_bridge",
+    )
+    assert npz_path.is_file()
+    assert Path(manifest["manifest_path"]).is_file()
+    recovered = npz_to_numpy_primitives(npz_path.read_bytes())
+    np.testing.assert_array_equal(recovered["w"], sd["w"])
+
+    with pytest.raises(ValueError, match="non-finite"):
+        numpy_state_dict_to_npz_bridge(
+            {"bad": np.asarray([np.nan], dtype=np.float32)}
+        )
 
 
 @pytest.mark.skipif(

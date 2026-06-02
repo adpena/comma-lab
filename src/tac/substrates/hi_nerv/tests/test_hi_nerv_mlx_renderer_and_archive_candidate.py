@@ -196,6 +196,12 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         / "hprc_representation_spine_hi_nerv_manifest.json"
     )
     package_path = tmp_path / "hi_nerv_export" / "archive_bound_candidate_adapter_package.json"
+    npz_path = tmp_path / "hi_nerv_export" / "hi_nerv_mlx_exported_state.npz"
+    npz_manifest_path = (
+        tmp_path
+        / "hi_nerv_export"
+        / "hi_nerv_mlx_exported_state_npz_manifest.json"
+    )
     proof_path = (
         tmp_path
         / "hi_nerv_export"
@@ -204,17 +210,31 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     )
     assert manifest_path.is_file()
     assert package_path.is_file()
+    assert npz_path.is_file()
+    assert npz_manifest_path.is_file()
     assert proof_path.is_file()
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     package = json.loads(package_path.read_text(encoding="utf-8"))
+    npz_manifest = json.loads(npz_manifest_path.read_text(encoding="utf-8"))
     assert manifest["family"] == "hi_nerv"
     assert proof["runtime_consumption_proof_ready"] is True
     assert proof["receiver_output_kind"] == "file"
     assert proof["receiver_output_retained"] is False
     assert package["receiver_proof"]["receiver_contract_satisfied"] is True
+    assert npz_manifest["schema"] == "framework_agnostic_npz_bridge_manifest.v1"
+    assert npz_manifest["consumption_recommended"] is True
+    assert npz_manifest["artifact_sha256"]
+    spine_extra = manifest["manifest"]["representation_spine"]["manifest_extra"]
+    assert spine_extra["state_npz_bridge"]["artifact_sha256"] == (
+        npz_manifest["artifact_sha256"]
+    )
     row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    runtime_manifest = row["runtime_adapter_manifest"]
+    assert runtime_manifest["state_npz_bridge_manifest"]["artifact_sha256"] == (
+        npz_manifest["artifact_sha256"]
+    )
     portability = row["runtime_adapter_manifest"][
         "mlx_numpy_portability_contract"
     ]
@@ -222,6 +242,10 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         "numpy_export_bridge_ready_receiver_not_numpy"
     )
     assert portability["numpy_array_export"] is True
+    assert portability["canonical_npz_bridge_used"] is True
     assert portability["pure_numpy_inflate"] is False
     assert "torch" in portability["non_numpy_receiver_dependencies"]
     assert "inflate_runtime_not_pure_numpy" in portability["portability_blockers"]
+    assert "canonical_npz_bridge_not_used_or_not_applicable" not in portability[
+        "portability_blockers"
+    ]

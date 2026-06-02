@@ -41,7 +41,6 @@ from tac.framework_agnostic.backend import (
     select_backend,
 )
 
-
 F = TypeVar("F", bound=Callable[..., Any])
 
 

@@ -29,8 +29,10 @@ Cross-references:
 """
 from __future__ import annotations
 
+import hashlib
 import io
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 from tac.framework_agnostic.backend import (
@@ -38,6 +40,8 @@ from tac.framework_agnostic.backend import (
     Backend,
     BackendUnavailableError,
 )
+
+NPZ_BRIDGE_MANIFEST_SCHEMA = "framework_agnostic_npz_bridge_manifest.v1"
 
 
 def assert_no_framework_mismatch(tensor: Any, expected_backend: Backend) -> None:
@@ -91,6 +95,154 @@ def _detect_tensor_backend(tensor: Any) -> Backend | None:
 # -----------------------------------------------------------------------------
 
 
+def _as_canonical_numpy_state_dict(
+    state_dict: Mapping[str, Any],
+    *,
+    require_finite: bool = True,
+) -> dict[str, Any]:
+    """Return a sorted, numeric, C-contiguous NumPy state dict."""
+
+    import numpy as np
+
+    if not state_dict:
+        raise ValueError("state_dict must not be empty")
+    out: dict[str, Any] = {}
+    for raw_name in sorted(state_dict.keys(), key=str):
+        name = str(raw_name)
+        if not name:
+            raise ValueError("state_dict contains an empty tensor name")
+        arr = np.asarray(state_dict[raw_name])
+        if arr.dtype == object:
+            raise TypeError(f"{name}: object dtype is not portable")
+        if not np.issubdtype(arr.dtype, np.number):
+            raise TypeError(f"{name}: non-numeric dtype {arr.dtype} is not portable")
+        arr = np.ascontiguousarray(arr)
+        if require_finite and not bool(np.isfinite(arr).all()):
+            raise ValueError(f"{name}: non-finite values are not portable")
+        out[name] = arr
+    return out
+
+
+def numpy_state_dict_to_npz_bridge(
+    numpy_state_dict: Mapping[str, Any],
+    *,
+    require_finite: bool = True,
+) -> bytes:
+    """Canonical NumPy state_dict → compressed NPZ bridge.
+
+    This is the backend-neutral middle of the MLX/PyTorch/tinygrad export
+    contract. Inputs are sorted by tensor name, validated as numeric and
+    C-contiguous, then serialized through NumPy's compressed NPZ container.
+    """
+
+    import numpy as np
+
+    numpy_dict = _as_canonical_numpy_state_dict(
+        numpy_state_dict,
+        require_finite=require_finite,
+    )
+    buf = io.BytesIO()
+    np.savez_compressed(buf, **numpy_dict)
+    return buf.getvalue()
+
+
+def build_npz_bridge_manifest(
+    npz_bytes: bytes,
+    *,
+    source_backend: str,
+    bridge_kind: str = "state_dict_to_npz",
+    artifact_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Build a manifest for a canonical NPZ bridge artifact."""
+
+    import numpy as np
+
+    arrays = npz_to_numpy_primitives(npz_bytes)
+    per_tensor: dict[str, dict[str, Any]] = {}
+    total_uncompressed_bytes = 0
+    finite = True
+    for name in sorted(arrays):
+        arr = np.ascontiguousarray(arrays[name])
+        arr_finite = (
+            bool(np.isfinite(arr).all())
+            if np.issubdtype(arr.dtype, np.number)
+            else False
+        )
+        finite = finite and arr_finite
+        nbytes = int(arr.nbytes)
+        total_uncompressed_bytes += nbytes
+        per_tensor[name] = {
+            "shape": [int(v) for v in arr.shape],
+            "dtype": str(arr.dtype),
+            "nbytes": nbytes,
+            "sha256": hashlib.sha256(arr.tobytes()).hexdigest(),
+            "finite": arr_finite,
+        }
+    blockers: list[str] = []
+    if not finite:
+        blockers.append("nonfinite_tensor_values")
+    return {
+        "schema": NPZ_BRIDGE_MANIFEST_SCHEMA,
+        "bridge_kind": str(bridge_kind),
+        "source_backend": str(source_backend),
+        "artifact_path": (
+            Path(artifact_path).as_posix() if artifact_path is not None else None
+        ),
+        "artifact_bytes": len(npz_bytes),
+        "artifact_sha256": hashlib.sha256(npz_bytes).hexdigest(),
+        "tensor_count": len(arrays),
+        "tensor_names_sorted": sorted(arrays),
+        "total_uncompressed_tensor_bytes": int(total_uncompressed_bytes),
+        "all_tensors_finite": bool(finite),
+        "per_tensor": per_tensor,
+        "consumption_recommended": not blockers,
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+    }
+
+
+def write_npz_bridge_artifact(
+    state_dict: Mapping[str, Any],
+    npz_path: str | Path,
+    *,
+    source_backend: str,
+    bridge_kind: str = "state_dict_to_npz",
+    manifest_path: str | Path | None = None,
+    require_finite: bool = True,
+) -> dict[str, Any]:
+    """Write a canonical NPZ bridge artifact and adjacent manifest."""
+
+    import json
+
+    npz_out = Path(npz_path)
+    npz_out.parent.mkdir(parents=True, exist_ok=True)
+    npz_bytes = numpy_state_dict_to_npz_bridge(
+        state_dict,
+        require_finite=require_finite,
+    )
+    npz_out.write_bytes(npz_bytes)
+    manifest = build_npz_bridge_manifest(
+        npz_bytes,
+        source_backend=source_backend,
+        bridge_kind=bridge_kind,
+        artifact_path=npz_out,
+    )
+    manifest_out = (
+        Path(manifest_path)
+        if manifest_path is not None
+        else npz_out.with_suffix(npz_out.suffix + ".manifest.json")
+    )
+    manifest["manifest_path"] = manifest_out.as_posix()
+    manifest_out.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
 def mlx_state_dict_to_npz_bridge(mlx_state_dict: Mapping[str, Any]) -> bytes:
     """Canonical MLX state_dict → npz bridge per 8th standing directive.
 
@@ -115,12 +267,11 @@ def mlx_state_dict_to_npz_bridge(mlx_state_dict: Mapping[str, Any]) -> bytes:
             "mlx_state_dict_to_npz_bridge requires MLX installed; "
             "install via `uv pip install mlx` (Darwin ARM64 only)"
         )
-    import numpy as np
     # Convert every MLX array to numpy via np.asarray (MLX supports __array__).
+    import numpy as np
+
     numpy_dict = {k: np.asarray(v) for k, v in mlx_state_dict.items()}
-    buf = io.BytesIO()
-    np.savez_compressed(buf, **numpy_dict)
-    return buf.getvalue()
+    return numpy_state_dict_to_npz_bridge(numpy_dict)
 
 
 def pytorch_state_dict_to_npz_bridge(pytorch_state_dict: Mapping[str, Any]) -> bytes:
@@ -153,9 +304,7 @@ def pytorch_state_dict_to_npz_bridge(pytorch_state_dict: Mapping[str, Any]) -> b
             numpy_dict[k] = v.detach().cpu().numpy()
         else:
             numpy_dict[k] = np.asarray(v)
-    buf = io.BytesIO()
-    np.savez_compressed(buf, **numpy_dict)
-    return buf.getvalue()
+    return numpy_state_dict_to_npz_bridge(numpy_dict)
 
 
 def tinygrad_state_dict_to_npz_bridge(tinygrad_state_dict: Mapping[str, Any]) -> bytes:
@@ -186,9 +335,7 @@ def tinygrad_state_dict_to_npz_bridge(tinygrad_state_dict: Mapping[str, Any]) ->
             numpy_dict[k] = v.numpy()
         else:
             numpy_dict[k] = np.asarray(v)
-    buf = io.BytesIO()
-    np.savez_compressed(buf, **numpy_dict)
-    return buf.getvalue()
+    return numpy_state_dict_to_npz_bridge(numpy_dict)
 
 
 def npz_to_numpy_primitives(npz_bytes: bytes) -> dict[str, Any]:
@@ -330,11 +477,15 @@ def convert_mlx_state_dict_to_pytorch_oihw(
 
 
 __all__ = [
+    "NPZ_BRIDGE_MANIFEST_SCHEMA",
     "assert_no_framework_mismatch",
+    "build_npz_bridge_manifest",
     "convert_mlx_state_dict_to_pytorch_oihw",
     "detect_available_backends_dict",
     "mlx_state_dict_to_npz_bridge",
     "npz_to_numpy_primitives",
+    "numpy_state_dict_to_npz_bridge",
     "pytorch_state_dict_to_npz_bridge",
     "tinygrad_state_dict_to_npz_bridge",
+    "write_npz_bridge_artifact",
 ]

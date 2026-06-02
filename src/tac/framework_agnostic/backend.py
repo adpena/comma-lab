@@ -116,7 +116,7 @@ def _find_spec_safe(name: str) -> bool:
     importlib) for find_spec to be available.
     """
     try:
-        import importlib.util  # noqa: PLC0415  # deferred-import contract
+        import importlib.util  # deferred-import contract
         spec = importlib.util.find_spec(name)
         return spec is not None
     except (ImportError, AttributeError, ValueError):
@@ -199,7 +199,7 @@ def _platform_priority_order() -> tuple[Backend, ...]:
         # installed AND torch.cuda.is_available(), prefer PYTORCH path.
         if _is_pytorch_available():
             try:
-                import torch  # noqa: PLC0415  # deferred per Catalog #205
+                import torch  # deferred per Catalog #205
                 if torch.cuda.is_available():
                     return _AUTO_PRIORITY_LINUX_CUDA
             except (ImportError, RuntimeError):
@@ -299,9 +299,9 @@ def _install_hint(backend: Backend) -> str:
 
 
 __all__ = [
+    "DEFAULT_ENV_VAR",
     "Backend",
     "BackendUnavailableError",
-    "DEFAULT_ENV_VAR",
     "detect_available_backends",
     "select_backend",
 ]

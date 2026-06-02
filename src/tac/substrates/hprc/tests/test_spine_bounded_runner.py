@@ -721,6 +721,18 @@ def test_pact_vq_core_negative_sections_open_projection_gap_repair(
     assert order["negative_structural_sections"] == ["codebooks_q", "decoder_qw"]
     assert order["evidence_profile_paths"] == [profile_path.as_posix()]
     assert len(order["repair_grid"]) == 3
+    assert len(order["launch_rows"]) == 3
+    first_launch = order["launch_rows"][0]
+    assert first_launch["run_id"] == "capacity_l8_e16_k32_ch32"
+    assert first_launch["runner_output_dir"].endswith(
+        "/capacity_l8_e16_k32_ch32/runner_output"
+    )
+    assert first_launch["launch_metadata_dir"].endswith(
+        "/capacity_l8_e16_k32_ch32/launch_metadata"
+    )
+    assert first_launch["runner_output_dir"] in first_launch["argv"]
+    assert first_launch["runner_output_dir"] not in first_launch["launch_metadata_dir"]
+    assert first_launch["output_dir_must_be_empty_before_runner_start"] is True
     assert all("--execute-family" in argv for argv in order["argv_rows"])
     assert any("pact_nerv_vq" in argv for argv in order["argv_rows"])
     assert "archive_projection_gap_requires_training_or_export_repair" in plan[
