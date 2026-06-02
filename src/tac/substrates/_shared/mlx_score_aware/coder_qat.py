@@ -208,3 +208,70 @@ def build_decoder_coder_qat_terms(
         else zero,
         "coder_qat_delta": mx.mean(mx.stack(delta_terms)) if delta_terms else zero,
     }
+
+
+def build_decoder_c1a_entropy_term(
+    model: Any,
+    cfg: CoderAwareQATConfig,
+    *,
+    sigma: float,
+    sample_size: int = 2000,
+) -> Any:
+    """Build the PR95 C1a soft-categorical entropy term for decoder weights.
+
+    This mirrors PR95's ``cat_entropy_v2`` shape: selected decoder tensors are
+    normalized to the symmetric INT grid, softly assigned to integer bins with
+    Gaussian bandwidth ``sigma``, and charged by size-weighted categorical
+    entropy. The max-abs scale is gradient-blocked, as in fake-quant QAT; the
+    entropy itself remains differentiable with respect to decoder weights.
+    """
+
+    import math
+
+    import numpy as np
+
+    mx = require_mlx_for_harness()
+    c = cfg.validated()
+    if not c.enabled:
+        return mx.array(0.0, dtype=mx.float32)
+    if float(sigma) <= 0.0:
+        raise MlxScoreAwareHarnessError("C1a entropy sigma must be positive")
+    if int(sample_size) <= 0:
+        raise MlxScoreAwareHarnessError("C1a entropy sample_size must be positive")
+
+    arrays = _selected_arrays(model, c)
+    levels = max(1, (1 << (int(c.quant_bits) - 1)) - 1)
+    bins = mx.arange(-levels, levels + 1, dtype=mx.float32)
+    total_numel = 0
+    weighted_entropy = mx.array(0.0, dtype=mx.float32)
+    log2 = math.log(2.0)
+
+    for _name, arr in arrays:
+        values = arr.astype(mx.float32)
+        numel = int(np.prod(tuple(int(v) for v in values.shape)))
+        if numel <= 0:
+            continue
+        scale = mx.stop_gradient(mx.max(mx.abs(values)) / float(levels) + float(c.eps))
+        normalized = mx.reshape(values / scale, (-1,))
+        if int(normalized.shape[0]) > int(sample_size):
+            sample_idx = np.linspace(
+                0,
+                int(normalized.shape[0]) - 1,
+                int(sample_size),
+                dtype=np.int32,
+            )
+            normalized = normalized[mx.array(sample_idx)]
+        diff = (mx.expand_dims(normalized, 1) - mx.expand_dims(bins, 0)) / float(sigma)
+        soft_assign = mx.exp(-0.5 * (diff**2))
+        soft_assign = soft_assign / (
+            mx.sum(soft_assign, axis=1, keepdims=True) + float(c.eps)
+        )
+        bin_prob = mx.mean(soft_assign, axis=0)
+        bin_prob = bin_prob / (mx.sum(bin_prob) + float(c.eps))
+        entropy = -mx.sum(bin_prob * (mx.log(bin_prob + float(c.eps)) / log2))
+        weighted_entropy = weighted_entropy + float(numel) * entropy
+        total_numel += numel
+
+    if total_numel <= 0:
+        return mx.array(0.0, dtype=mx.float32)
+    return weighted_entropy / float(total_numel)

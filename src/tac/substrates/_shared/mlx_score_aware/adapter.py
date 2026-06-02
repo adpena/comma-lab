@@ -729,12 +729,10 @@ class MlxScoreAwareAdapter:
                 preserved in the API for harness backward-compat per Catalog
                 #341 canonical-routing-markers + the canonical
                 ``SubstrateLongTrainingAdapter`` Protocol contract.
-            loss_weights: passed through to ``score_aware_loss``; the stage's
-                ``cat_sigma`` + ``cat_lambda`` are auxiliary canonical
-                hyperparameters not consumed by the current
-                ``score_aware_loss`` surface (they bind to a sister
-                C1a-aware loss path that lands in a follow-on sister wave
-                per the optimizer research memo § "Phase 2-N").
+            loss_weights: passed through to ``score_aware_loss``. For stages
+                whose canonical PR95 verdict has ``cat_lambda > 0``, the loss
+                also adds the real C1a-style soft categorical entropy term over
+                decoder weights using that stage's ``cat_sigma``.
         """
         mx = self._mx
         mlx_nn = self._mlx_nn
@@ -775,6 +773,18 @@ class MlxScoreAwareAdapter:
             total, _parts = score_aware_loss(
                 self.bundle, batch, loss_weights=loss_weights
             )
+            if float(stage_verdict.cat_lambda) > 0.0:
+                from tac.substrates._shared.mlx_score_aware.coder_qat import (
+                    CoderAwareQATConfig,
+                    build_decoder_c1a_entropy_term,
+                )
+
+                c1a_entropy = build_decoder_c1a_entropy_term(
+                    model,
+                    CoderAwareQATConfig(enabled=True, quant_bits=8),
+                    sigma=float(stage_verdict.cat_sigma),
+                )
+                total = total + float(stage_verdict.cat_lambda) * c1a_entropy
             return total
 
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
@@ -796,6 +806,23 @@ class MlxScoreAwareAdapter:
             batch
         )
         post_update_metrics.update(self._score_aware_loss_part_metrics(batch))
+        if float(stage_verdict.cat_lambda) > 0.0:
+            from tac.substrates._shared.mlx_score_aware.coder_qat import (
+                CoderAwareQATConfig,
+                build_decoder_c1a_entropy_term,
+            )
+
+            c1a_metric = build_decoder_c1a_entropy_term(
+                self.model,
+                CoderAwareQATConfig(enabled=True, quant_bits=8),
+                sigma=float(stage_verdict.cat_sigma),
+            )
+            mx.eval(c1a_metric)
+            c1a_value = float(c1a_metric.item())
+            post_update_metrics["loss_part_pr95_c1a_entropy"] = c1a_value
+            post_update_metrics["loss_part_weighted_pr95_c1a_entropy"] = (
+                float(stage_verdict.cat_lambda) * c1a_value
+            )
 
         mx.eval(self.model.parameters(), loss_value, *post_update_eval_targets)
         return {

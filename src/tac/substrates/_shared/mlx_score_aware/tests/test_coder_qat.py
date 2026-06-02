@@ -7,6 +7,7 @@ import pytest
 
 from tac.substrates._shared.mlx_score_aware.coder_qat import (
     CoderAwareQATConfig,
+    build_decoder_c1a_entropy_term,
     build_decoder_coder_qat_terms,
     coder_qat_loss_weights,
     coder_qat_metadata,
@@ -91,6 +92,45 @@ def test_qat_selection_excludes_latents_from_decoder_pressure() -> None:
     assert float(terms_a["coder_qat_magnitude"].item()) == pytest.approx(
         float(terms_b["coder_qat_magnitude"].item())
     )
+
+
+@mlx_only
+def test_c1a_entropy_is_finite_and_positive_for_decoder_weights() -> None:
+    import mlx.core as mx
+
+    cfg = CoderAwareQATConfig(enabled=True, quant_bits=4)
+    model = _TinyParamTree([-1.0, -0.2, 0.0, 0.35, 0.9])
+
+    entropy = build_decoder_c1a_entropy_term(model, cfg, sigma=1.0)
+    mx.eval(entropy)
+
+    assert float(entropy.item()) > 0.0
+
+
+@mlx_only
+def test_c1a_entropy_selection_excludes_latents_from_decoder_pressure() -> None:
+    import mlx.core as mx
+
+    cfg = CoderAwareQATConfig(enabled=True, quant_bits=4)
+    baseline = _TinyParamTree([0.0, 0.5, 1.0], latent_values=[0.25, 0.5])
+    changed_latents = _TinyParamTree([0.0, 0.5, 1.0], latent_values=[8.0, -9.0])
+
+    entropy_a = build_decoder_c1a_entropy_term(baseline, cfg, sigma=0.75)
+    entropy_b = build_decoder_c1a_entropy_term(changed_latents, cfg, sigma=0.75)
+    mx.eval(entropy_a, entropy_b)
+
+    assert float(entropy_a.item()) == pytest.approx(float(entropy_b.item()))
+
+
+@mlx_only
+def test_c1a_entropy_fails_closed_on_invalid_controls() -> None:
+    cfg = CoderAwareQATConfig(enabled=True, quant_bits=4)
+    model = _TinyParamTree([0.0, 0.5, 1.0])
+
+    with pytest.raises(MlxScoreAwareHarnessError, match="sigma"):
+        build_decoder_c1a_entropy_term(model, cfg, sigma=0.0)
+    with pytest.raises(MlxScoreAwareHarnessError, match="sample_size"):
+        build_decoder_c1a_entropy_term(model, cfg, sigma=1.0, sample_size=0)
 
 
 def test_qat_config_fails_closed_on_invalid_values() -> None:
