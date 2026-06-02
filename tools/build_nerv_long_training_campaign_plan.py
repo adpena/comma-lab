@@ -26,7 +26,14 @@ from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
     build_nerv_long_training_campaign_plan,
     render_nerv_long_training_campaign_plan_markdown,
 )
-from tac.repo_io import write_json_artifact, write_text_artifact  # noqa: E402
+from tac.repo_io import (  # noqa: E402
+    ArtifactWriteError,
+    json_text,
+    sha256_bytes,
+    sha256_file,
+    write_json_artifact,
+    write_text_artifact,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -65,10 +72,31 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--decoder-weight-waterfill-source",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Direct nerv_decoder_weight_waterfill.v1 JSON or "
+            "hinerv_archive_ladder_waterfill.v1 bundle. Nested archive-ladder "
+            "plans are materialized as deterministic sidecar JSON files next "
+            "to --output-json before queue rows attach them."
+        ),
+    )
+    parser.add_argument(
         "--output-root",
         default="/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
     )
     parser.add_argument("--max-candidates-per-family", type=int, default=3)
+    parser.add_argument(
+        "--snerv-bounded-proof-only",
+        action="store_true",
+        help=(
+            "Keep SNeRV rows in the historical bounded proof mode. By default "
+            "SNeRV is admitted as a real long-training campaign row."
+        ),
+    )
+    parser.add_argument("--snerv-bounded-proof-epochs", type=int, default=3)
     args = parser.parse_args(argv)
 
     report = build_nerv_long_training_campaign_plan(
@@ -84,6 +112,15 @@ def main(argv: list[str] | None = None) -> int:
         candidate_feedback_sources=tuple(
             _load_feedback_sources(args.candidate_feedback_source)
         ),
+        decoder_weight_waterfill_sources=tuple(
+            _load_decoder_weight_waterfill_sources(
+                args.decoder_weight_waterfill_source,
+                sidecar_root=args.output_json.parent
+                / "decoder_weight_waterfill_sidecars",
+            )
+        ),
+        snerv_bounded_proof_only=bool(args.snerv_bounded_proof_only),
+        snerv_bounded_proof_epochs=int(args.snerv_bounded_proof_epochs),
     )
     write_json_artifact(
         args.output_json,
@@ -114,6 +151,9 @@ def main(argv: list[str] | None = None) -> int:
                     "launchable_local_row_count"
                 ],
                 "blocked_row_count": report["blocked_row_count"],
+                "decoder_weight_waterfill_attached_row_count": report[
+                    "decoder_weight_waterfill_attached_row_count"
+                ],
                 "score_claim": report["score_claim"],
                 "ready_for_exact_eval_dispatch": report[
                     "ready_for_exact_eval_dispatch"
@@ -167,6 +207,111 @@ def _feedback_payload_with_path(payload: dict, path: Path) -> dict:
     out = dict(payload)
     out.setdefault("_candidate_feedback_source_path", path.as_posix())
     return out
+
+
+def _load_decoder_weight_waterfill_sources(
+    paths: list[Path],
+    *,
+    sidecar_root: Path,
+) -> list[dict]:
+    out: list[dict] = []
+    for path in paths:
+        payload = _load(path)
+        schema = payload.get("schema")
+        if schema == "nerv_decoder_weight_waterfill.v1":
+            out.append(_waterfill_payload_with_path(payload, plan_path=path, source_path=path))
+            continue
+        if schema == "hinerv_archive_ladder_waterfill.v1":
+            out.extend(_materialize_archive_ladder_waterfill_sidecars(payload, path, sidecar_root))
+            continue
+        raise TypeError(f"{path}: unsupported decoder waterfill source schema {schema!r}")
+    return out
+
+
+def _materialize_archive_ladder_waterfill_sidecars(
+    payload: dict,
+    source_path: Path,
+    sidecar_root: Path,
+) -> list[dict]:
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise TypeError(f"{source_path}: archive-ladder waterfill rows must be a list")
+    out: list[dict] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        plan = row.get("waterfill_plan")
+        if not isinstance(plan, dict):
+            continue
+        if plan.get("schema") != "nerv_decoder_weight_waterfill.v1":
+            raise TypeError(
+                f"{source_path}: row {index} has unsupported nested waterfill schema "
+                f"{plan.get('schema')!r}"
+            )
+        candidate_key = str(
+            row.get("row_id")
+            or plan.get("candidate_id")
+            or f"waterfill_row_{index:04d}"
+        )
+        sidecar = (
+            sidecar_root
+            / f"{_safe_token(source_path.stem)}__{_safe_token(candidate_key)}"
+            ".decoder_weight_waterfill.json"
+        )
+        _write_json_sidecar_if_identical_or_missing(sidecar, plan)
+        out.append(
+            _waterfill_payload_with_path(
+                plan,
+                plan_path=sidecar,
+                source_path=source_path,
+                extra={
+                    "_modelsize_row_id": candidate_key,
+                    "_archive_ladder_row_index": index,
+                    "_archive_ladder_source_schema": payload.get("schema"),
+                },
+            )
+        )
+    return out
+
+
+def _waterfill_payload_with_path(
+    payload: dict,
+    *,
+    plan_path: Path,
+    source_path: Path,
+    extra: dict | None = None,
+) -> dict:
+    resolved_plan = plan_path.expanduser().resolve(strict=False)
+    resolved_source = source_path.expanduser().resolve(strict=False)
+    out = dict(payload)
+    out.setdefault("_decoder_weight_waterfill_plan_path", resolved_plan.as_posix())
+    out.setdefault("_decoder_weight_waterfill_source_path", resolved_source.as_posix())
+    if resolved_plan.is_file():
+        out.setdefault("_decoder_weight_waterfill_plan_sha256", sha256_file(resolved_plan))
+    if extra:
+        out.update(extra)
+    return out
+
+
+def _write_json_sidecar_if_identical_or_missing(path: Path, payload: dict) -> None:
+    text = json_text(payload)
+    expected_sha = sha256_bytes(text.encode("utf-8"))
+    if path.exists():
+        actual_sha = sha256_file(path)
+        if actual_sha != expected_sha:
+            raise ArtifactWriteError(
+                f"{path}: refusing to overwrite non-identical decoder waterfill sidecar "
+                f"expected={expected_sha} actual={actual_sha}"
+            )
+        return
+    write_json_artifact(path, payload)
+
+
+def _safe_token(value: str) -> str:
+    text = str(value).strip().lower()
+    chars = [ch if ch.isalnum() else "_" for ch in text]
+    token = "_".join("".join(chars).split("_"))
+    return token[:160] or "waterfill"
 
 
 if __name__ == "__main__":  # pragma: no cover

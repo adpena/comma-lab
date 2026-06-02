@@ -27,6 +27,9 @@ from tac.analysis.nerv_candidate_feedback import (
 from tac.analysis.nerv_candidate_feedback import (
     build_nerv_candidate_feedback_row,
 )
+from tac.analysis.nerv_decoder_weight_waterfill import (
+    NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
+)
 from tac.analysis.nerv_modelsize_budget import (
     decoder_codec_nominal_bits,
     snerv_decoder_codec_nominal_bits,
@@ -71,6 +74,9 @@ def build_nerv_long_training_campaign_plan(
     max_candidates_per_family: int = 3,
     joint_recon_weight_manifest_paths: Sequence[str | Path] = (),
     candidate_feedback_sources: Sequence[Mapping[str, Any]] = (),
+    decoder_weight_waterfill_sources: Sequence[Mapping[str, Any]] = (),
+    snerv_bounded_proof_only: bool = False,
+    snerv_bounded_proof_epochs: int = 3,
 ) -> dict[str, Any]:
     """Build the shared HiNeRV/SNeRV long-training campaign matrix."""
 
@@ -95,6 +101,9 @@ def build_nerv_long_training_campaign_plan(
         joint_recon_weight_manifest_paths
     )
     candidate_feedback_index = _candidate_feedback_index(candidate_feedback_sources)
+    decoder_weight_waterfill_index = _decoder_weight_waterfill_index(
+        decoder_weight_waterfill_sources
+    )
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -119,6 +128,7 @@ def build_nerv_long_training_campaign_plan(
                     output_root=Path(output_root),
                     joint_recon_weight_artifacts=joint_recon_weight_artifacts,
                     candidate_feedback_index=candidate_feedback_index,
+                    decoder_weight_waterfill_index=decoder_weight_waterfill_index,
                 )
             )
     for candidate in snerv_candidates:
@@ -128,6 +138,8 @@ def build_nerv_long_training_campaign_plan(
                 epochs=int(epochs),
                 output_root=Path(output_root),
                 candidate_feedback_index=candidate_feedback_index,
+                bounded_proof_only=bool(snerv_bounded_proof_only),
+                bounded_proof_epochs=int(snerv_bounded_proof_epochs),
             )
         )
 
@@ -158,8 +170,15 @@ def build_nerv_long_training_campaign_plan(
         "joint_recon_weight_artifacts": list(joint_recon_weight_artifacts.values()),
         "joint_recon_weight_artifact_count": len(joint_recon_weight_artifacts),
         "candidate_feedback_source_count": len(candidate_feedback_sources),
+        "snerv_bounded_proof_only": bool(snerv_bounded_proof_only),
+        "snerv_bounded_proof_epochs": int(snerv_bounded_proof_epochs),
         "candidate_feedback_row_count": sum(
             len(rows_for_key) for rows_for_key in candidate_feedback_index.values()
+        ),
+        "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
+        "decoder_weight_waterfill_row_count": sum(
+            len(rows_for_key)
+            for rows_for_key in decoder_weight_waterfill_index.values()
         ),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
@@ -172,6 +191,12 @@ def build_nerv_long_training_campaign_plan(
         ),
         "blocked_row_count": sum(1 for row in rows if row["blockers"]),
         "family_counts": _family_counts(rows),
+        "decoder_weight_waterfill_attached_row_count": sum(
+            1
+            for row in rows
+            if isinstance(row.get("decoder_weight_waterfill_plan"), Mapping)
+            and row["decoder_weight_waterfill_plan"].get("attached") is True
+        ),
         "promotion_policy": {
             "schema": "nerv_long_training_campaign_promotion_policy.v1",
             "mlx_role": "fast acquisition and prefilter only",
@@ -247,6 +272,9 @@ def _hinerv_campaign_row(
     candidate_feedback_index: (
         Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
     ) = None,
+    decoder_weight_waterfill_index: (
+        Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
+    ) = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
@@ -258,6 +286,11 @@ def _hinerv_campaign_row(
         candidate=candidate,
         family="hi_nerv",
         index=candidate_feedback_index,
+    )
+    decoder_weight_waterfill = _decoder_weight_waterfill_for(
+        candidate=candidate,
+        family="hi_nerv",
+        index=decoder_weight_waterfill_index,
     )
     launch_feedback_adjustment = _hinerv_feedback_launch_adjustment(
         feedback=feedback,
@@ -338,11 +371,23 @@ def _hinerv_campaign_row(
         )
     else:
         command.append("--auto-joint-recon-pixel-weight")
+    if decoder_weight_waterfill:
+        command.extend(
+            [
+                "--decoder-weight-waterfill-plan-json",
+                str(decoder_weight_waterfill["path"]),
+            ]
+        )
     blockers = [
         (
             ""
             if joint_recon_weight
             else "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
+        ),
+        (
+            ""
+            if decoder_weight_waterfill
+            else "hinerv_decoder_weight_waterfill_plan_missing"
         ),
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
@@ -371,6 +416,19 @@ def _hinerv_campaign_row(
             "optimizer_kind": str(optimizer_kind),
             "quant_bits": int(quant_bits),
             "joint_recon_pixel_weight_artifact": joint_recon_weight or None,
+            "decoder_weight_waterfill_plan": (
+                _decoder_weight_waterfill_row_metadata(decoder_weight_waterfill)
+                if decoder_weight_waterfill
+                else {
+                    "schema": (
+                        "nerv_long_training_decoder_weight_waterfill_"
+                        "attachment.v1"
+                    ),
+                    "attached": False,
+                    "reason": "no_matching_decoder_weight_waterfill_plan",
+                    **FALSE_AUTHORITY,
+                }
+            ),
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
             "output_dir_basename": output_dir_basename,
@@ -391,6 +449,8 @@ def _snerv_campaign_row(
     candidate_feedback_index: (
         Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
     ) = None,
+    bounded_proof_only: bool = False,
+    bounded_proof_epochs: int = 3,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
     feedback = _candidate_feedback_for(
@@ -398,7 +458,11 @@ def _snerv_campaign_row(
         family="snerv",
         index=candidate_feedback_index,
     )
-    execution_epochs = min(int(epochs), 3)
+    execution_epochs = (
+        min(int(epochs), max(1, int(bounded_proof_epochs)))
+        if bounded_proof_only
+        else int(epochs)
+    )
     quant_bits = min(
         8,
         snerv_decoder_codec_nominal_bits(str(candidate.get("decoder_payload_codec"))),
@@ -409,6 +473,7 @@ def _snerv_campaign_row(
         num_pairs=int(candidate.get("num_pairs") or 600),
         step_map_coder_mode="waterfill",
         native_mlx_train_export_attached=True,
+        native_mlx_long_training_bound=not bool(bounded_proof_only),
         native_mlx_receiver_proof_passed=bool(
             feedback.get("native_mlx_receiver_proof_passed")
         ),
@@ -471,7 +536,11 @@ def _snerv_campaign_row(
     ]
     blockers = _dedupe(
         [
-            "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
+            (
+                "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+                if bounded_proof_only
+                else ""
+            ),
             "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
             "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes"
             if candidate.get("nominal_under_ceiling") is not True
@@ -487,14 +556,21 @@ def _snerv_campaign_row(
         curriculum_plan=curriculum,
         command_argv=command,
         local_mlx_launch_command_ready=True,
-        implementation_status="bounded_native_export_scorer_loop_stage_ready",
+        implementation_status=(
+            "bounded_native_export_scorer_loop_stage_ready"
+            if bounded_proof_only
+            else "native_rate_aware_long_training_queue_ready"
+        ),
         blockers=blockers,
         extra={
             "optimizer_kind": None,
             "quant_bits": int(quant_bits),
             "planned_long_training_epochs": int(epochs),
             "execution_epochs": int(execution_epochs),
-            "current_command_is_bounded_proof_not_long_training": True,
+            "current_command_is_bounded_proof_not_long_training": bool(
+                bounded_proof_only
+            ),
+            "snerv_bounded_proof_epochs": int(bounded_proof_epochs),
             "candidate_feedback": feedback or None,
         },
     )
@@ -630,25 +706,27 @@ def _experiment_for_row(
             ]
         )
     elif str(family) == "snerv":
-        postconditions.extend(
-            [
-                {
-                    "type": "json_equals",
-                    "path": output_json,
-                    "key": "execute_family",
-                    "equals": "snerv",
-                },
+        postconditions.append(
+            {
+                "type": "json_equals",
+                "path": output_json,
+                "key": "execute_family",
+                "equals": "snerv",
+            }
+        )
+        bounded_blocker = (
+            "snerv_scoreaware_long_training_not_bound_"
+            "bounded_native_export_stage_only"
+        )
+        if bounded_blocker in blockers:
+            postconditions.append(
                 {
                     "type": "json_array_contains",
                     "path": output_json,
                     "key": "blockers",
-                    "contains": (
-                        "snerv_scoreaware_long_training_not_bound_"
-                        "bounded_native_export_stage_only"
-                    ),
-                },
-            ]
-        )
+                    "contains": bounded_blocker,
+                }
+            )
     return {
         "id": _safe_path_token(row_id),
         "family": str(family),
@@ -917,6 +995,121 @@ def _candidate_feedback_for(
         return {}
     rows = list((index or {}).get((_family_key(family), candidate_id)) or [])
     return dict(rows[0]) if rows else {}
+
+
+def _decoder_weight_waterfill_index(
+    sources: Sequence[Mapping[str, Any]],
+) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    index: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for source in sources:
+        row = _normalize_decoder_weight_waterfill_source(source)
+        family = _family_key(str(row.get("family") or ""))
+        if not family:
+            continue
+        for candidate_key in _candidate_index_keys(row):
+            index.setdefault((family, candidate_key), []).append(row)
+    return {
+        key: sorted(
+            rows,
+            key=lambda row: (
+                int(row.get("full_video_coverage") is True),
+                int(row.get("receiver_proof_ready") is True),
+                int(row.get("group_count") or 0),
+            ),
+            reverse=True,
+        )
+        for key, rows in index.items()
+    }
+
+
+def _normalize_decoder_weight_waterfill_source(
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    if source.get("schema") != NERV_DECODER_WEIGHT_WATERFILL_SCHEMA:
+        raise NervLongTrainingCampaignPlanError(
+            "decoder_weight_waterfill_sources must have schema "
+            f"{NERV_DECODER_WEIGHT_WATERFILL_SCHEMA}; got {source.get('schema')!r}"
+        )
+    path = (
+        source.get("_decoder_weight_waterfill_plan_path")
+        or source.get("decoder_weight_waterfill_plan_path")
+        or source.get("path")
+    )
+    if not path:
+        raise NervLongTrainingCampaignPlanError(
+            "decoder_weight_waterfill_source missing "
+            "_decoder_weight_waterfill_plan_path"
+        )
+    rows = source.get("rows")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)) or not rows:
+        raise NervLongTrainingCampaignPlanError(
+            "decoder_weight_waterfill_source must contain non-empty rows"
+        )
+    out = dict(source)
+    out["path"] = str(path)
+    out["family"] = _family_key(str(source.get("family") or "hi_nerv"))
+    out["group_count"] = int(source.get("group_count") or len(rows))
+    out["full_video_coverage"] = bool(source.get("full_video_coverage"))
+    out["receiver_proof_ready"] = str(
+        source.get("receiver_proof_status") or ""
+    ).lower() in {
+        "runtime_consumption_proof_ready",
+        "receiver_proof_valid",
+        "runtime_consumption_proof_passed",
+        "satisfied",
+        "valid",
+        "passed",
+    }
+    return out
+
+
+def _candidate_index_keys(row: Mapping[str, Any]) -> tuple[str, ...]:
+    raw_values = [
+        row.get("candidate_id"),
+        row.get("_candidate_id"),
+        row.get("_candidate_key"),
+        row.get("_modelsize_row_id"),
+    ]
+    keys: list[str] = []
+    for raw in raw_values:
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        keys.append(text)
+        if ":" in text:
+            keys.append(text.rsplit(":", 1)[-1])
+    return tuple(_dedupe(keys))
+
+
+def _decoder_weight_waterfill_for(
+    *,
+    candidate: Mapping[str, Any],
+    family: str,
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+) -> dict[str, Any]:
+    candidate_id = str(candidate.get("candidate_id") or "").strip()
+    if not candidate_id:
+        return {}
+    rows = list((index or {}).get((_family_key(family), candidate_id)) or [])
+    return dict(rows[0]) if rows else {}
+
+
+def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": "nerv_long_training_decoder_weight_waterfill_attachment.v1",
+        "attached": True,
+        "path": str(row.get("path")),
+        "sha256": row.get("_decoder_weight_waterfill_plan_sha256"),
+        "source_path": row.get("_decoder_weight_waterfill_source_path"),
+        "family": row.get("family"),
+        "candidate_id": row.get("candidate_id"),
+        "candidate_keys": list(_candidate_index_keys(row)),
+        "group_count": int(row.get("group_count") or 0),
+        "full_video_coverage": bool(row.get("full_video_coverage")),
+        "receiver_proof_ready": bool(row.get("receiver_proof_ready")),
+        "blockers": list(row.get("blockers") or []),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _hinerv_feedback_launch_adjustment(

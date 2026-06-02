@@ -305,6 +305,7 @@ def build_snerv_candidate_curriculum_plan(
     full_video_local_prefilter_attached: bool = False,
     local_cpu_replay_gate_attached: bool = False,
     native_mlx_train_export_attached: bool = False,
+    native_mlx_long_training_bound: bool = False,
     native_mlx_receiver_proof_passed: bool = False,
     native_mlx_full600_campaign_ready: bool = False,
     native_mlx_scorer_loop_qat_attached: bool = False,
@@ -395,9 +396,10 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
     if not effective_scorer_loop_attached:
         blockers.append("snerv_scorer_loop_qat_not_attached")
-    blockers.append(
-        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
-    )
+    if not native_mlx_long_training_bound:
+        blockers.append(
+            "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+        )
     if not native_mlx_full600_campaign_ready:
         blockers.append("snerv_mlx_native_full600_campaign_not_ready")
     if (
@@ -472,6 +474,7 @@ def build_snerv_candidate_curriculum_plan(
                 native_contract.get("full600_campaign_ready")
             ),
             "native_mlx_train_export_attached": bool(native_mlx_train_export_attached),
+            "native_mlx_long_training_bound": bool(native_mlx_long_training_bound),
             "native_mlx_receiver_proof_passed": bool(
                 native_mlx_receiver_proof_passed
             ),

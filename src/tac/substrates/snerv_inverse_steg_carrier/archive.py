@@ -797,10 +797,17 @@ def decode_decoder_payload(payload: bytes) -> HfGenerationDecoder:
     if _sha256(raw) != str(header["raw_sha256"]):
         raise SnervArchiveError("decoder payload raw sha256 mismatch")
     values = np.frombuffer(raw, dtype="<f4").astype(np.float64)
+    model_size = _model_size_from_decoder_header(header)
+    values = _strip_legacy_decoder_output_affine_tail(
+        header=header,
+        values=values,
+        levels=levels,
+        model_size=model_size,
+    )
     return _decoder_from_flat_values(
         levels=levels,
         values=values,
-        model_size=_model_size_from_decoder_header(header),
+        model_size=model_size,
     )
 
 
@@ -1028,6 +1035,39 @@ def _decoder_from_flat_values(
         levels=levels,
         model_size=model_size,
     )
+
+
+def _strip_legacy_decoder_output_affine_tail(
+    *,
+    header: dict[str, Any],
+    values: np.ndarray,
+    levels: int,
+    model_size: SnervModelSizeConfig,
+) -> np.ndarray:
+    """Trim legacy v1 decoder affine scalars from raw kernel payloads.
+
+    Some older SNAR1 packets encoded kernel weights followed by receiver-visible
+    output-affine scalars while declaring those scalars in ``output_affine``.
+    The kernel decoder must not treat the affine tail as extra HF weights.
+    """
+
+    expected = int(levels) * len(DECODER_SUBBANDS) * int(model_size.feature_count)
+    if int(values.size) == expected:
+        return values
+    output_affine = header.get("output_affine")
+    if isinstance(output_affine, dict):
+        affine_count = _legacy_output_affine_value_count(output_affine)
+        if affine_count > 0 and int(values.size) == expected + affine_count:
+            return values[:expected]
+    return values
+
+
+def _legacy_output_affine_value_count(output_affine: dict[str, Any]) -> int:
+    count = int(output_affine.get("count", 0))
+    mode = str(output_affine.get("mode", "")).strip().lower()
+    if mode == "scalar" and {"scale", "bias"}.issubset(output_affine):
+        return 2 * max(count, 1)
+    return count
 
 
 def _decoder_kernel_shape_header(model_size: SnervModelSizeConfig) -> list[int]:

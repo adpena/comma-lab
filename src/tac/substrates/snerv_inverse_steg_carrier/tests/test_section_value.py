@@ -3,11 +3,18 @@
 
 from __future__ import annotations
 
+import hashlib
+import lzma
+
 import numpy as np
 import pytest
 
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    DECODER_PAYLOAD_V1_SCHEMA,
+    DECODER_SUBBANDS,
+    SNERV_DECODER_MAGIC,
+    _pack_subpacket,
     decode_snerv_archive_frames,
     encode_decoder_payload,
     encode_lf_metadata_payload,
@@ -47,6 +54,59 @@ def _packet() -> bytes:
         ),
         decoder_payload=encode_decoder_payload(decoder),
         step_map_packet=encode_step_maps(step_maps, bins=8).packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+            "carrier_hw": [6, 6],
+            "orig_hw": [6, 6],
+            "lf_plane_count": 6,
+            "levels": 1,
+            "wavelet": "haar",
+        },
+    )
+    return archive.packet
+
+
+def _packet_with_legacy_decoder_output_affine_tail() -> bytes:
+    raw_values = np.arange(29, dtype="<f4")
+    raw = raw_values.tobytes()
+    compressed = lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
+    decoder = HfGenerationDecoder.zeros(levels=1)
+    decoder_payload = _pack_subpacket(
+        SNERV_DECODER_MAGIC,
+        {
+            "schema": DECODER_PAYLOAD_V1_SCHEMA,
+            "levels": 1,
+            "subbands": list(DECODER_SUBBANDS),
+            "kernel_shape": [3, 3],
+            "feature_count": 9,
+            "model_size_config": decoder.model_size.as_jsonable(),
+            "dtype": "float32_le",
+            "raw_sha256": hashlib.sha256(raw).hexdigest(),
+            "raw_bytes": len(raw),
+            "compressed_bytes": len(compressed),
+            "output_affine": {
+                "mode": "scalar",
+                "count": 1,
+                "scale": float(raw_values[-2]),
+                "bias": float(raw_values[-1]),
+                "dtype": "float32_le",
+            },
+        },
+        compressed,
+    )
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0] * 6),
+        lf_payload=encode_lf_quant_payload(
+            [np.zeros((3, 3), dtype=np.int64) for _ in range(6)],
+            codec="portfolio_auto",
+        ),
+        decoder_payload=decoder_payload,
+        step_map_packet=encode_step_maps(
+            [np.ones((3, 3), dtype=np.float32) for _ in range(6)],
+            bins=8,
+        ).packet,
         metadata={
             "n_pairs": 1,
             "frames_per_pair": 2,
@@ -102,3 +162,15 @@ def test_snerv_section_value_neutralizes_step_maps_and_rejects_required_lf() -> 
 
     with pytest.raises(SnervSectionValueError, match="not neutralizable"):
         neutralize_snerv_section(packet, "lf_payload")
+
+
+def test_snerv_section_value_decodes_legacy_decoder_output_affine_tail() -> None:
+    packet = _packet_with_legacy_decoder_output_affine_tail()
+
+    decoded = unpack_snerv_archive(packet).decode_decoder()
+    assert decoded.levels == 1
+    assert decoded.kernels[0]["LH"].shape == (3, 3)
+
+    step = neutralize_snerv_section(packet, "step_map_packet")
+    assert step["receiver_decode_status"] == "receiver_decode_succeeded"
+    assert decode_snerv_archive_frames(step["packet"]).shape == (1, 2, 3, 6, 6)
