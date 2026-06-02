@@ -49,6 +49,9 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
 
 SCHEMA = "snerv_scorer_loop_decoder_qat_smoke.v1"
 AXIS_TAG = "[macOS-CPU advisory]"
+SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF = (
+    "snerv_scorer_loop_decoder_qat_packs_receiver_archive_and_prices_total_bytes"
+)
 
 
 class SnervScorerLoopDecoderQatError(ValueError):
@@ -578,6 +581,21 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         ),
         wall_seconds=float(time.perf_counter() - t0),
     )
+
+
+def run_snerv_scorer_loop_decoder_qat(
+    **kwargs: Any,
+) -> SnervScorerLoopDecoderQatSmokeResult:
+    """Run the receiver-priced local SNeRV decoder/QAT loop.
+
+    This is the first-class entrypoint consumed by source-parity and operator
+    flows. It deliberately delegates to the bounded scorer-loop implementation
+    above, preserving its false-authority contract: candidates are measured from
+    receiver-replayed SNAR1 bytes and byte-priced in-loop, but they are not
+    promotion, rank, or exact-eval authority.
+    """
+
+    return run_snerv_scorer_loop_decoder_qat_smoke(**kwargs)
 
 
 def quantize_decoder_for_qat(
@@ -1272,6 +1290,7 @@ def _sha256(blob: bytes) -> str:
 __all__ = [
     "AXIS_TAG",
     "SCHEMA",
+    "SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF",
     "QuantizedDecoderStats",
     "SnervDecoderEval",
     "SnervPairDelta",
@@ -1282,5 +1301,6 @@ __all__ = [
     "decoder_search_direction_labels",
     "decoder_trial_passes_pose_guard",
     "quantize_decoder_for_qat",
+    "run_snerv_scorer_loop_decoder_qat",
     "run_snerv_scorer_loop_decoder_qat_smoke",
 ]

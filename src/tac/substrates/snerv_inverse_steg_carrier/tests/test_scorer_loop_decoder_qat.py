@@ -5,18 +5,25 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+import torch
 
+from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
+    CONTEST_BYTE_PRICE,
+    SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF,
     QuantizedDecoderStats,
     SnervDecoderEval,
     SnervPairEval,
     SnervScorerLoopDecoderQatError,
+    _evaluate_decoder,
     _nes_pair_robust_objective,
+    _PreparedState,
     decoder_eval_pair_deltas,
     decoder_search_direction_labels,
     decoder_trial_passes_pose_guard,
     quantize_decoder_for_qat,
+    run_snerv_scorer_loop_decoder_qat,
 )
 
 
@@ -33,6 +40,72 @@ def test_quantize_decoder_for_qat_changes_off_grid_weights_and_preserves_shape()
     assert stats.max_abs_error > 0.0
     assert quantized.kernels[0]["LH"].shape == (3, 3)
     assert not np.array_equal(quantized.kernels[0]["LH"], decoder.kernels[0]["LH"])
+
+
+def test_first_class_qat_runner_preserves_false_authority_wrapper(monkeypatch) -> None:
+    calls = {}
+
+    def fake_smoke(**kwargs):
+        calls.update(kwargs)
+        return "sentinel_result"
+
+    monkeypatch.setattr(
+        "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat."
+        "run_snerv_scorer_loop_decoder_qat_smoke",
+        fake_smoke,
+    )
+
+    result = run_snerv_scorer_loop_decoder_qat(n_pairs=2, wavelet="haar")
+
+    assert result == "sentinel_result"
+    assert calls == {"n_pairs": 2, "wavelet": "haar"}
+
+
+def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
+    monkeypatch,
+) -> None:
+    from tac.substrates.snerv_inverse_steg_carrier import scorer_loop_decoder_qat
+
+    assert SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF
+
+    monkeypatch.setattr(
+        scorer_loop_decoder_qat,
+        "measure_pair_d_seg_d_pose",
+        lambda *_args, **_kwargs: (0.125, 0.09),
+    )
+    step_maps = tuple(np.ones((2, 2), dtype=np.float32) for _ in range(6))
+    step_packet = encode_step_maps(list(step_maps), bins=4).packet
+    prepared = _PreparedState(
+        pairs=torch.zeros((1, 2, 3, 4, 4), dtype=torch.float32),
+        codes=(),
+        lf_quant_planes=tuple(np.zeros((2, 2), dtype=np.int64) for _ in range(6)),
+        lf_zero_points=tuple(0.0 for _ in range(6)),
+        step_maps=step_maps,
+        step_map_packet=step_packet,
+        baseline_decoder=_decoder(),
+        levels=1,
+        wavelet="haar",
+        orig_hw=(4, 4),
+    )
+
+    row = _evaluate_decoder(
+        _decoder(),
+        prepared=prepared,
+        posenet=object(),
+        segnet=object(),
+        qat_bits=8,
+        label="receiver_priced_eval",
+        iteration=1,
+        accepted=False,
+        byte_pressure_multiplier=3.0,
+    )
+
+    assert row.receiver_archive_replay_verified is True
+    assert row.rate_term == pytest.approx(CONTEST_BYTE_PRICE * row.archive_bytes)
+    assert row.score_linf == pytest.approx(12.5 + np.sqrt(0.9) + row.rate_term)
+    assert row.rate_aware_objective_linf == pytest.approx(
+        row.score_linf + 2.0 * row.rate_term
+    )
 
 
 def test_decoder_trial_pose_guard_refuses_score_gain_with_pose_damage() -> None:
