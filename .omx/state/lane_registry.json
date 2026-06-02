@@ -66461,6 +66461,47 @@
         }
       },
       "notes": "2026-06-02 Codex: first capacity_l8_e16_k32_ch32 PACT/VQ projection-gap repair produced receiver-proven 31,728B archive sha 084b44613e6ce711b938109168e0236408db3af513077ee62314206c6126d954; run report /Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/run_20260602T0148Z/compact_renderer_mlx_spine_runner_report.json. False-authority remains: full-video MLX replay/section pricing and exact CPU/CUDA gate missing."
+    },
+    {
+      "id": "snerv_decoder_mode_assignment_probe_20260602",
+      "name": "SNeRV Decoder Mode Assignment Probe",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/snerv_decoder_mode_assignment_probe.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/snerv_decoder_mode_assignment_probe_1pair_20260602T0315Z.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_snerv_decoder_mode_assignment_probe_20260602T0315Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "2026-06-02 Codex: receiver-decoded mixed decoder mode assignment probe landed; 1-pair advisory artifact selected explicit fp16,int4,int4 over magnitude heuristic (score_linf 2.98245 vs 3.61635) but remains false-authority and blocked on full-600 receiver proof plus paired contest CPU/CUDA."
     }
   ],
   "level_rules": {
@@ -66470,5 +66511,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-02T01:46:19Z"
+  "updated_at": "2026-06-02T03:16:17Z"
 }
