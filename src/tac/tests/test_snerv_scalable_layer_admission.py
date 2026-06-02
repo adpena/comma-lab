@@ -19,6 +19,12 @@ from tac.analysis.snerv_scalable_layer_admission import (
     write_snerv_scalable_layer_admission_report,
 )
 from tac.analysis.snerv_step_map_coder import encode_step_maps
+from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
+    CUT,
+    DEMOTE,
+    NERV_BYTE_PRICE_CONTROLLER_SCHEMA,
+    PROTECT,
+)
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_decoder_payload,
     encode_lf_metadata_payload,
@@ -56,6 +62,12 @@ def test_scalable_layer_admission_prices_real_snar_sections_without_overclaim(
     assert rows[STEP_LAYER_ID]["admission_decision"] == (
         "needs_scorer_section_value_profile"
     )
+    assert len(report["section_value_rows"]) == 2
+    assert report["byte_price_plan"]["schema"] == NERV_BYTE_PRICE_CONTROLLER_SCHEMA
+    assert report["byte_price_plan"]["input_row_count"] == 2
+    for decision in report["byte_price_plan"]["decision_rows"]:
+        assert decision["decision"] == DEMOTE
+        assert "delta_nonrate_score_missing" in decision["blockers"]
     assert "snerv_scalable_layer_section_value_profile_missing" in report["blockers"]
 
 
@@ -88,6 +100,22 @@ def test_scalable_layer_admission_uses_scorer_deltas_for_optional_layers(
         "cut_or_receiver_generate_layer_candidate"
     )
     assert rows[STEP_LAYER_ID]["net_score_saved_if_removed"] > 0.0
+    section_rows = {row["section_id"]: row for row in report["section_value_rows"]}
+    assert section_rows[HF_LAYER_ID]["byte_delta"] == -rows[HF_LAYER_ID]["layer_bytes"]
+    assert section_rows[STEP_LAYER_ID]["byte_delta"] == -rows[STEP_LAYER_ID]["layer_bytes"]
+    assert section_rows[HF_LAYER_ID]["delta_nonrate_score"] == rows[HF_LAYER_ID][
+        "measured_nonrate_score_increase_if_removed"
+    ]
+    assert "snerv_scalable_layer_cut_receiver_variant_not_materialized" in (
+        section_rows[HF_LAYER_ID]["blockers"]
+    )
+    decisions = {
+        row["section_id"]: row for row in report["byte_price_plan"]["decision_rows"]
+    }
+    assert decisions[HF_LAYER_ID]["economic_decision"] == PROTECT
+    assert decisions[STEP_LAYER_ID]["economic_decision"] == CUT
+    assert decisions[HF_LAYER_ID]["decision"] == DEMOTE
+    assert decisions[STEP_LAYER_ID]["decision"] == DEMOTE
     assert report["section_value_profile_attached"] is True
     assert report["deserves_separate_scalable_layer_lane"] is True
     assert report["verdict"] == (

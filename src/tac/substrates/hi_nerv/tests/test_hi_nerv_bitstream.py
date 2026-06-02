@@ -15,6 +15,7 @@ from tac.substrates.hi_nerv.bitstream import (
     HiNervBitstreamError,
     apply_decoder_pruning,
     apply_decoder_quant_noise,
+    apply_decoder_waterfill_actions,
     measure_hi_nerv_decoder_bitstream_roundtrip,
     prepare_hi_nerv_decoder_bitstream_state,
     select_hi_nerv_bitstream_codec_by_scorer_waterfill,
@@ -104,6 +105,54 @@ def test_hi_nerv_bitstream_roundtrip_measures_codec_portfolio() -> None:
         assert row["shape_preserved"] is True
         assert row["roundtrip_error"]["missing"] == []
         assert row["roundtrip_error"]["unexpected"] == []
+
+
+def test_hi_nerv_decoder_waterfill_actions_mutate_real_tensors() -> None:
+    base = _state()
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {
+                "group_name": "stem.weight",
+                "selected_bits": 0,
+                "selected_action": "zero_rle",
+            },
+            {
+                "group_name": "block.weight",
+                "selected_bits": 4,
+                "selected_action": "int4",
+            },
+            {
+                "group_name": "norm.weight",
+                "selected_bits": 32,
+                "selected_action": "fp32_protect",
+            },
+        ],
+        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+    }
+
+    changed, report = apply_decoder_waterfill_actions(
+        base,
+        decoder_weight_waterfill_plan=plan,
+    )
+
+    assert report["method"] == "decoder_weight_waterfill_selected_actions"
+    assert report["plan_attached"] is True
+    assert report["applied_row_count"] == 3
+    assert report["changed_tensor_count"] == 2
+    assert report["score_claim"] is False
+    assert "contest_cpu_cuda_exact_eval_not_executed" in report["blockers"]
+    assert torch.count_nonzero(changed["stem.weight"]).item() == 0
+    assert not torch.equal(changed["block.weight"], base["block.weight"])
+    assert torch.equal(changed["norm.weight"], base["norm.weight"])
+    assert torch.equal(base["stem.weight"], _state()["stem.weight"])
+    by_name = {row["group_name"]: row for row in report["applied_rows"]}
+    assert by_name["stem.weight"]["sha256_before"] != by_name["stem.weight"][
+        "sha256_after"
+    ]
+    assert by_name["norm.weight"]["changed"] is False
 
 
 def test_hi_nerv_bitstream_waterfill_selector_admits_only_positive_value_per_byte() -> None:

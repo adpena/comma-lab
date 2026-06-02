@@ -11,7 +11,7 @@ shared archive-bound receiver proof/package.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -162,6 +162,7 @@ def pack_archive_from_exported_state_dict(
     quant_noise_bits: int | None = None,
     quant_noise_scale: float = 0.0,
     quant_noise_seed: int = 0,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
     return_bitstream_report: bool = False,
 ) -> bytes | tuple[bytes, dict[str, Any]]:
     """Pack PyTorch-layout exported MLX tensors into HIV1 ``0.bin`` bytes."""
@@ -202,6 +203,7 @@ def pack_archive_from_exported_state_dict(
         quant_noise_bits=quant_noise_bits,
         quant_noise_scale=quant_noise_scale,
         quant_noise_seed=quant_noise_seed,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
     )
 
     blob = pack_archive(
@@ -234,6 +236,7 @@ def export_hi_nerv_mlx_archive(
     quant_noise_bits: int | None = None,
     quant_noise_scale: float = 0.0,
     quant_noise_seed: int = 0,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
 ) -> tuple[Path, str, int]:
     """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``."""
 
@@ -263,6 +266,7 @@ def export_hi_nerv_mlx_archive(
         quant_noise_bits=quant_noise_bits,
         quant_noise_scale=quant_noise_scale,
         quant_noise_seed=quant_noise_seed,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
         return_bitstream_report=True,
     )
     bin_path = out_dir / "0.bin"
@@ -363,6 +367,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     quant_noise_bits: int | None = None,
     quant_noise_scale: float = 0.0,
     quant_noise_seed: int = 0,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Export HiNeRV MLX bytes and emit the shared candidate package."""
 
@@ -377,6 +382,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         quant_noise_bits=quant_noise_bits,
         quant_noise_scale=quant_noise_scale,
         quant_noise_seed=quant_noise_seed,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
     )
     root = (
         Path(repo_root)

@@ -2711,6 +2711,28 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     captured_train_kwargs: dict[str, object] = {}
     weight_path = tmp_path / "joint_p18_p19_weight.npy"
     np.save(weight_path, np.ones((384, 512), dtype=np.float32))
+    waterfill_plan_path = tmp_path / "hinerv_decoder_waterfill.json"
+    waterfill_plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "hinerv-unit-candidate",
+        "group_count": 1,
+        "rows": [
+            {
+                "group_name": "head_rgb_1.bias",
+                "selected_bits": 0,
+                "selected_action": "zero_rle",
+            }
+        ],
+        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    waterfill_plan_path.write_text(
+        json.dumps(waterfill_plan, sort_keys=True),
+        encoding="utf-8",
+    )
 
     def fake_train(**kwargs):
         captured_train_kwargs.update(kwargs)
@@ -2801,6 +2823,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         coder_qat_quant_residual_weight=0.001,
         coder_qat_magnitude_weight=0.0001,
         coder_qat_delta_weight=0.0002,
+        decoder_weight_waterfill_plan_json=waterfill_plan_path,
         recon_pixel_weight_path=weight_path,
         auto_segnet_boundary_recon_weight=False,
         recon_pixel_weight_tau=0.5,
@@ -2820,6 +2843,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
     assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
+    assert captured_train_kwargs["decoder_weight_waterfill_plan"] == waterfill_plan
     assert captured_train_kwargs["recon_pixel_weight_path"] == weight_path
     assert captured_train_kwargs["auto_segnet_boundary_recon_weight"] is False
     assert captured_train_kwargs["recon_pixel_weight_tau"] == 0.5
@@ -2845,6 +2869,13 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     assert selection["launch_decoder_channel"] == 6
     assert selection["launch_decoder_codec"] == "int4_mixed"
     assert out["score_aware_training"]["decoder_codec"] == "int4_mixed"
+    waterfill = out["score_aware_training"]["decoder_weight_waterfill_plan"]
+    assert waterfill["attached"] is True
+    assert waterfill["path"] == waterfill_plan_path.as_posix()
+    assert waterfill["sha256"] == runner_mod._sha256_file(waterfill_plan_path)
+    assert waterfill["source_schema"] == "nerv_decoder_weight_waterfill.v1"
+    assert waterfill["row_count"] == 1
+    assert waterfill["score_claim"] is False
     feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
     assert feedback["candidate_num_pairs"] == 600
     assert feedback["measured_num_pairs"] == 2

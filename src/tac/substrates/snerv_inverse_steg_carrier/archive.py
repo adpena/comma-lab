@@ -43,6 +43,13 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
 from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
     SNERV_LF_PAYLOAD_INTN_CODEC_PROOF as _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF,
 )
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+    SnervLfPayloadCodecError,
+    decode_lf_quant_payload_v2,
+    encode_lf_quant_payload_v2,
+    inspect_lf_quant_payload_v2,
+    is_lf_quant_payload_v2,
+)
 
 SNERV_ARCHIVE_SCHEMA = "snerv_inverse_steg_archive.v1"
 SNERV_ARCHIVE_MAGIC = b"SNAR1"
@@ -433,6 +440,10 @@ def encode_lf_quant_payload(
             _encode_lf_quant_payload_spatial_delta_leb128_lzma(arrays),
         )
         return min(candidates, key=len)
+    try:
+        return encode_lf_quant_payload_v2(arrays, mode=normalized)
+    except SnervLfPayloadCodecError as exc:
+        raise SnervArchiveError(str(exc)) from exc
     raise SnervArchiveError(f"unsupported LF quant payload codec: {codec!r}")
 
 
@@ -471,6 +482,11 @@ def _encode_lf_quant_payload_spatial_delta_leb128_lzma(
 def decode_lf_quant_payload(payload: bytes) -> list[np.ndarray]:
     """Decode LF quantized coefficient planes from receiver payload bytes."""
 
+    if is_lf_quant_payload_v2(payload):
+        try:
+            return decode_lf_quant_payload_v2(payload)
+        except SnervLfPayloadCodecError as exc:
+            raise SnervArchiveError(str(exc)) from exc
     header, compressed = _unpack_lf_quant_subpacket(payload)
     schema = str(header.get("schema"))
     codec = str(header.get("codec", LF_QUANT_CODEC_INT64_LZMA))
@@ -506,6 +522,14 @@ def decode_lf_quant_payload(payload: bytes) -> list[np.ndarray]:
 def inspect_lf_quant_payload_header(payload: bytes) -> dict[str, Any]:
     """Return validated LF payload header metadata without decoding planes."""
 
+    if is_lf_quant_payload_v2(payload):
+        try:
+            report = inspect_lf_quant_payload_v2(payload).as_jsonable()
+        except SnervLfPayloadCodecError as exc:
+            raise SnervArchiveError(str(exc)) from exc
+        report["payload_bytes"] = int(report.get("payload_bytes") or 0)
+        report["section_bytes"] = len(payload)
+        return report
     header, body = _unpack_lf_quant_subpacket(payload)
     out = dict(header)
     out["payload_bytes"] = len(body)

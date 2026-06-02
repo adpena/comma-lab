@@ -20,6 +20,9 @@ from tac.analysis.snerv_binary_profile import (
     DEFAULT_FRONTIER_BYTES,
     build_snerv_binary_profile,
 )
+from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
+    build_nerv_byte_price_plan,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
 SCHEMA = "snerv_scalable_layer_admission.v1"
@@ -88,6 +91,25 @@ def build_snerv_scalable_layer_admission_report(
         ),
         _header_row(profile=profile, deltas=deltas),
     ]
+    section_value_rows = _section_value_rows_from_layers(
+        layer_rows,
+        profile=profile,
+        full_video_coverage=bool(full_video_coverage),
+    )
+    byte_price_plan = build_nerv_byte_price_plan(
+        {
+            "schema": SCHEMA,
+            "family": "snerv",
+            "candidate_id": profile.get("snar1_packet_sha256"),
+            "axis_tag": AXIS_TAG,
+            "section_value_rows": section_value_rows,
+            "blockers": [
+                "snerv_scalable_layer_byte_price_plan_false_authority",
+                "paired_contest_cpu_cuda_auth_eval_missing",
+            ],
+            **FALSE_AUTHORITY,
+        }
+    )
     optional_rows = [row for row in layer_rows if row["optional_layer"]]
     evidence_attached = all(
         row["measured_nonrate_score_increase_if_removed"] is not None
@@ -144,6 +166,8 @@ def build_snerv_scalable_layer_admission_report(
         "full_video_coverage": bool(full_video_coverage),
         "section_value_profile_attached": bool(evidence_attached),
         "layer_rows": layer_rows,
+        "section_value_rows": section_value_rows,
+        "byte_price_plan": byte_price_plan,
         "admitted_optional_layer_count": len(admitted_optional),
         "cut_or_generate_optional_layer_count": len(cut_optional),
         "deserves_separate_scalable_layer_lane": separate_lane,
@@ -287,6 +311,56 @@ def _header_row(
         "blockers": [],
         **FALSE_AUTHORITY,
     }
+
+
+def _section_value_rows_from_layers(
+    layer_rows: list[Mapping[str, Any]],
+    *,
+    profile: Mapping[str, Any],
+    full_video_coverage: bool,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    packet_sha = str(profile.get("snar1_packet_sha256") or "")
+    archive_sha = str(profile.get("input_sha256") or packet_sha)
+    for row in layer_rows:
+        if not bool(row.get("optional_layer")):
+            continue
+        layer_id = str(row.get("layer_id") or "snerv_layer")
+        layer_bytes = int(row.get("layer_bytes") or 0)
+        measured = row.get("measured_nonrate_score_increase_if_removed")
+        blockers = [
+            *[str(blocker) for blocker in row.get("blockers") or ()],
+            "snerv_scalable_layer_cut_receiver_variant_not_materialized",
+            "snerv_scalable_layer_exact_axis_replay_missing",
+        ]
+        if not full_video_coverage:
+            blockers.append("snerv_scalable_layer_full_video_coverage_missing")
+        out.append(
+            {
+                "row_id": f"snerv_scalable_layer_remove_{layer_id}",
+                "section_id": layer_id,
+                "family": "snerv",
+                "scope": "snerv_scalable_layer_existing_section_removal",
+                "row_kind": "existing_section_cut",
+                "layer_role": row.get("layer_role"),
+                "sections": list(row.get("sections") or []),
+                "baseline_packet_sha256": packet_sha,
+                "archive_sha256": archive_sha,
+                "section_bytes": layer_bytes,
+                "bytes_removed": layer_bytes,
+                "byte_delta": -layer_bytes,
+                "delta_nonrate_score": measured,
+                "measured_nonrate_score_increase_if_removed": measured,
+                "axis_tag": AXIS_TAG,
+                "receiver_proof_status": (
+                    "baseline_receiver_packet_profiled_variant_cut_missing"
+                ),
+                "full_video_coverage": bool(full_video_coverage),
+                "blockers": _ordered_unique(blockers),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return out
 
 
 def _normalize_layer_nonrate_deltas(values: Mapping[str, Any]) -> dict[str, float]:

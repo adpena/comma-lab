@@ -12,6 +12,7 @@ waterfill, and coder-QAT choices, but it is not scorer or promotion authority.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -72,6 +73,7 @@ def prepare_hi_nerv_decoder_bitstream_state(
     quant_noise_bits: int | None = None,
     quant_noise_scale: float = 0.0,
     quant_noise_seed: int = 0,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
 ) -> HinervBitstreamPreparation:
     """Apply real receiver-visible rate preparation to decoder weights.
 
@@ -92,18 +94,23 @@ def prepare_hi_nerv_decoder_bitstream_state(
         noise_scale=quant_noise_scale,
         seed=quant_noise_seed,
     )
+    waterfilled, waterfill_report = apply_decoder_waterfill_actions(
+        prepared,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+    )
     report = {
         "schema": HI_NERV_BITSTREAM_PREPARATION_SCHEMA,
         "proof": HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF,
         "pruning": pruning_report,
         "quant_noise": quant_noise_report,
+        "decoder_weight_waterfill": waterfill_report,
         "input_tensor_count": len(base),
-        "output_tensor_count": len(prepared),
-        "shape_preserved": _state_shapes(base) == _state_shapes(prepared),
-        "zero_fraction_after_preparation": _zero_fraction(prepared),
+        "output_tensor_count": len(waterfilled),
+        "shape_preserved": _state_shapes(base) == _state_shapes(waterfilled),
+        "zero_fraction_after_preparation": _zero_fraction(waterfilled),
         **FALSE_AUTHORITY,
     }
-    return HinervBitstreamPreparation(state_dict=prepared, report=report)
+    return HinervBitstreamPreparation(state_dict=waterfilled, report=report)
 
 
 def apply_decoder_pruning(
@@ -225,6 +232,92 @@ def apply_decoder_quant_noise(
         "max_abs_delta": max_delta,
         "preserves_existing_zero_symbols": True,
         "shape_preserved": _state_shapes(decoder_state_dict) == _state_shapes(out),
+    }
+
+
+def apply_decoder_waterfill_actions(
+    decoder_state_dict: Mapping[str, torch.Tensor],
+    *,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, torch.Tensor], dict[str, Any]]:
+    """Apply selected waterfill actions to real decoder tensors.
+
+    This is export-side adaptive quantization/ablation.  It consumes the shared
+    ``nerv_decoder_weight_waterfill.v1`` rows and mutates only named decoder
+    tensors that exist in the exported state.  The transform is intentionally
+    false-authority, but not advisory-only: returned tensors are the tensors the
+    archive packer serializes.
+    """
+
+    state = _clone_state(decoder_state_dict)
+    if decoder_weight_waterfill_plan is None:
+        return state, {
+            "method": "disabled",
+            "plan_attached": False,
+            "applied_row_count": 0,
+            "changed_tensor_count": 0,
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }
+    if decoder_weight_waterfill_plan.get("schema") != "nerv_decoder_weight_waterfill.v1":
+        raise HiNervBitstreamError(
+            "decoder_weight_waterfill_plan schema must be "
+            "'nerv_decoder_weight_waterfill.v1'"
+        )
+    rows = decoder_weight_waterfill_plan.get("rows")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+        raise HiNervBitstreamError("decoder_weight_waterfill_plan rows must be a list")
+
+    applied_rows: list[dict[str, Any]] = []
+    blockers: list[str] = [
+        *[str(blocker) for blocker in decoder_weight_waterfill_plan.get("blockers") or ()],
+    ]
+    changed = 0
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        name = str(row.get("group_name") or row.get("section_id") or "")
+        if not name:
+            blockers.append("decoder_weight_waterfill_row_missing_group_name")
+            continue
+        if name not in state:
+            blockers.append(f"decoder_weight_waterfill_group_missing:{name}")
+            continue
+        bits = _waterfill_selected_bits(row)
+        before = state[name]
+        before_sha = _tensor_sha256(before)
+        after = _apply_waterfill_bits(before, bits=bits)
+        after_sha = _tensor_sha256(after)
+        state[name] = after
+        changed += int(before_sha != after_sha)
+        applied_rows.append(
+            {
+                "group_name": name,
+                "selected_bits": bits,
+                "selected_action": row.get("selected_action"),
+                "shape": [int(v) for v in after.shape],
+                "dtype_before": str(before.dtype),
+                "dtype_after": str(after.dtype),
+                "sha256_before": before_sha,
+                "sha256_after": after_sha,
+                "changed": before_sha != after_sha,
+                "row_blockers": [str(blocker) for blocker in row.get("blockers") or ()],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return state, {
+        "method": "decoder_weight_waterfill_selected_actions",
+        "plan_attached": True,
+        "plan_schema": decoder_weight_waterfill_plan.get("schema"),
+        "family": decoder_weight_waterfill_plan.get("family"),
+        "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+        "input_group_count": len(rows),
+        "applied_row_count": len(applied_rows),
+        "changed_tensor_count": int(changed),
+        "shape_preserved": _state_shapes(decoder_state_dict) == _state_shapes(state),
+        "applied_rows": applied_rows,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
     }
 
 
@@ -541,6 +634,68 @@ def _float_value(value: Any, default: float) -> float:
         return float(default)
 
 
+def _ordered_unique(values: Iterable[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        item = str(value)
+        if item and item not in seen:
+            out.append(item)
+            seen.add(item)
+    return out
+
+
+def _waterfill_selected_bits(row: Mapping[str, Any]) -> int:
+    try:
+        bits = int(row["selected_bits"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HiNervBitstreamError(
+            "decoder waterfill row missing integer selected_bits"
+        ) from exc
+    if bits not in {0, 2, 4, 8, 16, 32}:
+        raise HiNervBitstreamError(
+            "decoder waterfill selected_bits must be one of 0, 2, 4, 8, 16, 32"
+        )
+    return bits
+
+
+def _apply_waterfill_bits(tensor: torch.Tensor, *, bits: int) -> torch.Tensor:
+    if not torch.is_floating_point(tensor):
+        return tensor.detach().clone()
+    if bits == 32:
+        return tensor.detach().clone()
+    if bits == 16:
+        return tensor.detach().to(dtype=torch.float16).to(dtype=tensor.dtype)
+    if bits == 0:
+        return torch.zeros_like(tensor)
+    return _symmetric_quant_dequant_tensor(tensor, bits=bits)
+
+
+def _symmetric_quant_dequant_tensor(tensor: torch.Tensor, *, bits: int) -> torch.Tensor:
+    if bits not in {2, 4, 8}:
+        raise HiNervBitstreamError("symmetric quant/dequant bits must be 2, 4, or 8")
+    arr = tensor.detach().to("cpu", dtype=torch.float32)
+    if arr.numel() == 0:
+        return tensor.detach().clone()
+    abs_max = float(torch.max(torch.abs(arr)).item())
+    if abs_max <= 0.0:
+        return torch.zeros_like(tensor)
+    qmax = (1 << (bits - 1)) - 1
+    scale = abs_max / float(qmax)
+    quant = torch.clamp(torch.round(arr / scale), -qmax, qmax)
+    dequant = (quant * scale).to(dtype=tensor.dtype)
+    return dequant.to(device=tensor.device)
+
+
+def _tensor_sha256(tensor: torch.Tensor) -> str:
+    arr = tensor.detach().to("cpu").contiguous().numpy()
+    h = hashlib.sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(np.asarray(arr.shape, dtype="<i8").tobytes())
+    h.update(arr.tobytes(order="C"))
+    return h.hexdigest()
+
+
 def _clone_state(state: Mapping[str, torch.Tensor]) -> dict[str, torch.Tensor]:
     return {
         str(name): tensor.detach().clone()
@@ -628,6 +783,7 @@ __all__ = [
     "HinervBitstreamPreparation",
     "apply_decoder_pruning",
     "apply_decoder_quant_noise",
+    "apply_decoder_waterfill_actions",
     "measure_hi_nerv_decoder_bitstream_roundtrip",
     "prepare_hi_nerv_decoder_bitstream_state",
     "select_hi_nerv_bitstream_codec_by_scorer_waterfill",

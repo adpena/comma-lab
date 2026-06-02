@@ -272,6 +272,34 @@ def test_mlx_decoder_fake_quant_forward_changes_surface_without_mutating_export(
 
 
 @skip_no_mlx
+def test_mlx_decoder_fake_quant_can_target_named_receiver_tensors() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    model = HinervSubstrateMLX(_smoke_cfg())
+    pair_indices = mx.array([0, 1, 2], dtype=mx.int32)
+    baseline = model(pair_indices)
+    mx.eval(baseline)
+    exported_before = model.export_state_dict()
+
+    model.configure_decoder_fake_quant_forward(
+        enabled=True,
+        quant_bits=32,
+        per_tensor_bits={"head_rgb_1.weight": 0},
+    )
+    targeted = model(pair_indices)
+    mx.eval(targeted)
+    exported_after = model.export_state_dict()
+
+    assert float(mx.max(mx.abs(targeted[:, 0] - baseline[:, 0]))) < 1.0e-6
+    assert float(mx.max(mx.abs(targeted[:, 1] - baseline[:, 1]))) > 1.0e-7
+    for name, before in exported_before.items():
+        np.testing.assert_array_equal(before, exported_after[name])
+
+
+@skip_no_mlx
 def test_mlx_decoder_fake_quant_rejects_invalid_quant_bits() -> None:
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
 
@@ -377,6 +405,44 @@ def test_archive_candidate_int8_decoder_packet_roundtrip() -> None:
     )
     assert arc.meta["_decoder_state_codec"]["codec"] == "int8_mixed"
     assert "latents_coarse" not in arc.decoder_state_dict
+
+
+def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> None:
+    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    exportable = _exportable_torch_model()
+    blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exportable.export_state_dict(),
+        cfg=exportable.cfg,
+        decoder_codec="fp16_enveloped",
+        decoder_weight_waterfill_plan={
+            "schema": "nerv_decoder_weight_waterfill.v1",
+            "family": "hi_nerv",
+            "candidate_id": "unit",
+            "rows": [
+                {
+                    "group_name": "head_rgb_1.weight",
+                    "selected_bits": 0,
+                    "selected_action": "zero_rle",
+                }
+            ],
+            "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+        },
+    )
+    arc = parse_archive(blob)
+
+    assert torch.count_nonzero(arc.decoder_state_dict["head_rgb_1.weight"]).item() == 0
+    waterfill = arc.meta["_hi_nerv_bitstream_preparation"][
+        "decoder_weight_waterfill"
+    ]
+    assert waterfill["plan_attached"] is True
+    assert waterfill["changed_tensor_count"] == 1
+    assert waterfill["applied_rows"][0]["group_name"] == "head_rgb_1.weight"
+    assert waterfill["applied_rows"][0]["changed"] is True
+    assert waterfill["score_claim"] is False
 
 
 def test_archive_candidate_rejects_incomplete_exported_decoder_state() -> None:

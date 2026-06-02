@@ -22,6 +22,7 @@ local PyTorch HiNeRV grammar so archive/export/runtime contracts remain ours.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -118,23 +119,86 @@ def _fake_quant_symmetric_ste(values: Any, *, bits: int) -> Any:
     return values + mx.stop_gradient(dequant - values)  # type: ignore[union-attr]
 
 
-def _linear_with_params(layer: Any, x: Any, *, fake_quant_bits: int | None) -> Any:
+def _apply_fake_quant_bits(values: Any, *, bits: int | None) -> Any:
+    _require_mlx()
+    if bits is None or int(bits) >= 32:
+        return values
+    if int(bits) == 0:
+        return values + mx.stop_gradient(mx.zeros_like(values) - values)  # type: ignore[union-attr]
+    return _fake_quant_symmetric_ste(values, bits=int(bits))
+
+
+def _resolve_fake_quant_bits(
+    *,
+    name: str | None,
+    fake_quant_bits: int | None,
+    fake_quant_bits_by_name: Mapping[str, int] | None,
+) -> int | None:
+    if name and fake_quant_bits_by_name and name in fake_quant_bits_by_name:
+        bits = int(fake_quant_bits_by_name[name])
+        return None if bits >= 32 else bits
+    return fake_quant_bits
+
+
+def _linear_with_params(
+    layer: Any,
+    x: Any,
+    *,
+    fake_quant_bits: int | None,
+    fake_quant_bits_by_name: Mapping[str, int] | None = None,
+    weight_name: str | None = None,
+    bias_name: str | None = None,
+) -> Any:
     _require_mlx()
     weight = layer.weight
     bias = layer.bias
-    if fake_quant_bits is not None:
-        weight = _fake_quant_symmetric_ste(weight, bits=int(fake_quant_bits))
-        bias = _fake_quant_symmetric_ste(bias, bits=int(fake_quant_bits))
+    weight = _apply_fake_quant_bits(
+        weight,
+        bits=_resolve_fake_quant_bits(
+            name=weight_name,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+        ),
+    )
+    bias = _apply_fake_quant_bits(
+        bias,
+        bits=_resolve_fake_quant_bits(
+            name=bias_name,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+        ),
+    )
     return x @ mx.transpose(weight) + bias  # type: ignore[union-attr]
 
 
-def _conv2d_with_params(layer: Any, x: Any, *, fake_quant_bits: int | None) -> Any:
+def _conv2d_with_params(
+    layer: Any,
+    x: Any,
+    *,
+    fake_quant_bits: int | None,
+    fake_quant_bits_by_name: Mapping[str, int] | None = None,
+    weight_name: str | None = None,
+    bias_name: str | None = None,
+) -> Any:
     _require_mlx()
     weight = layer.weight
     bias = layer.bias
-    if fake_quant_bits is not None:
-        weight = _fake_quant_symmetric_ste(weight, bits=int(fake_quant_bits))
-        bias = _fake_quant_symmetric_ste(bias, bits=int(fake_quant_bits))
+    weight = _apply_fake_quant_bits(
+        weight,
+        bits=_resolve_fake_quant_bits(
+            name=weight_name,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+        ),
+    )
+    bias = _apply_fake_quant_bits(
+        bias,
+        bits=_resolve_fake_quant_bits(
+            name=bias_name,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+        ),
+    )
     padding = getattr(layer, "padding", 0)
     stride = getattr(layer, "stride", 1)
     dilation = getattr(layer, "dilation", 1)
@@ -147,6 +211,39 @@ def _conv2d_with_params(layer: Any, x: Any, *, fake_quant_bits: int | None) -> A
         dilation=dilation,
         groups=groups,
     ) + bias  # type: ignore[union-attr]
+
+
+def _layer_norm_with_params(
+    layer: Any,
+    x: Any,
+    *,
+    fake_quant_bits: int | None,
+    fake_quant_bits_by_name: Mapping[str, int] | None = None,
+    weight_name: str | None = None,
+    bias_name: str | None = None,
+) -> Any:
+    _require_mlx()
+    weight = _apply_fake_quant_bits(
+        layer.weight,
+        bits=_resolve_fake_quant_bits(
+            name=weight_name,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+        ),
+    )
+    bias = _apply_fake_quant_bits(
+        layer.bias,
+        bits=_resolve_fake_quant_bits(
+            name=bias_name,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+        ),
+    )
+    eps = float(getattr(layer, "eps", 1.0e-5))
+    mean = mx.mean(x, axis=-1, keepdims=True)  # type: ignore[union-attr]
+    centered = x - mean
+    var = mx.mean(centered * centered, axis=-1, keepdims=True)  # type: ignore[union-attr]
+    return centered * mx.rsqrt(var + eps) * weight + bias  # type: ignore[union-attr]
 
 
 def trilinear_upsample_mlx(
@@ -235,24 +332,36 @@ class HierarchicalFeatureGridMLX(nn.Module if nn is not None else object):  # ty
         *,
         spatial_shape: tuple[int, int],
         fake_quant_bits: int | None = None,
+        fake_quant_bits_by_name: Mapping[str, int] | None = None,
+        name_prefix: str = "feature_grids",
     ) -> Any:
         h, w = int(spatial_shape[0]), int(spatial_shape[1])
         sampled = [
             trilinear_upsample_mlx(
-                grid,
+                _apply_fake_quant_bits(
+                    grid,
+                    bits=_resolve_fake_quant_bits(
+                        name=f"{name_prefix}.grids.{level}",
+                        fake_quant_bits=fake_quant_bits,
+                        fake_quant_bits_by_name=fake_quant_bits_by_name,
+                    ),
+                ),
                 pair_indices,
                 num_pairs=self.num_pairs,
                 target_h=h,
                 target_w=w,
                 local_scale=self.local_scale,
             )
-            for grid in self.grids
+            for level, grid in enumerate(self.grids)
         ]
         enc = mx.concatenate(sampled, axis=-1)  # type: ignore[union-attr]
         return _conv2d_with_params(
             self.proj,
             enc,
             fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+            weight_name=f"{name_prefix}.proj.weight",
+            bias_name=f"{name_prefix}.proj.bias",
         )
 
 
@@ -289,17 +398,57 @@ class ConvNeXtBlockMLX(nn.Module if nn is not None else object):  # type: ignore
         self.gamma = mx.full((channels, 1, 1), 1.0e-3)  # type: ignore[union-attr]
         self.act: Any = nn.GELU()  # type: ignore[union-attr]
 
-    def __call__(self, x: Any, *, fake_quant_bits: int | None = None) -> Any:
+    def __call__(
+        self,
+        x: Any,
+        *,
+        fake_quant_bits: int | None = None,
+        fake_quant_bits_by_name: Mapping[str, int] | None = None,
+        name_prefix: str = "convnext_blocks",
+    ) -> Any:
         residual = x
-        y = _conv2d_with_params(self.dwconv, x, fake_quant_bits=fake_quant_bits)
-        y = self.norm(y)
-        y = self.act(
-            _conv2d_with_params(self.pwconv1, y, fake_quant_bits=fake_quant_bits)
+        y = _conv2d_with_params(
+            self.dwconv,
+            x,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+            weight_name=f"{name_prefix}.dwconv.weight",
+            bias_name=f"{name_prefix}.dwconv.bias",
         )
-        y = _conv2d_with_params(self.pwconv2, y, fake_quant_bits=fake_quant_bits)
-        gamma = self.gamma
-        if fake_quant_bits is not None:
-            gamma = _fake_quant_symmetric_ste(gamma, bits=int(fake_quant_bits))
+        y = _layer_norm_with_params(
+            self.norm,
+            y,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+            weight_name=f"{name_prefix}.norm.weight",
+            bias_name=f"{name_prefix}.norm.bias",
+        )
+        y = self.act(
+            _conv2d_with_params(
+                self.pwconv1,
+                y,
+                fake_quant_bits=fake_quant_bits,
+                fake_quant_bits_by_name=fake_quant_bits_by_name,
+                weight_name=f"{name_prefix}.pwconv1.weight",
+                bias_name=f"{name_prefix}.pwconv1.bias",
+            )
+        )
+        y = _conv2d_with_params(
+            self.pwconv2,
+            y,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+            weight_name=f"{name_prefix}.pwconv2.weight",
+            bias_name=f"{name_prefix}.pwconv2.bias",
+        )
+        gamma = _apply_fake_quant_bits(
+            self.gamma,
+            bits=_resolve_fake_quant_bits(
+                name=f"{name_prefix}.gamma",
+                fake_quant_bits=fake_quant_bits,
+                fake_quant_bits_by_name=fake_quant_bits_by_name,
+            ),
+        )
         gamma_nhwc = mx.transpose(gamma, (1, 2, 0)).reshape((1, 1, 1, self.channels))  # type: ignore[union-attr]
         return residual + gamma_nhwc * y
 
@@ -320,8 +469,22 @@ class _UpBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc
             padding=1,
         )
 
-    def __call__(self, x: Any, *, fake_quant_bits: int | None = None) -> Any:
-        conv = _conv2d_with_params(self.conv, x, fake_quant_bits=fake_quant_bits)
+    def __call__(
+        self,
+        x: Any,
+        *,
+        fake_quant_bits: int | None = None,
+        fake_quant_bits_by_name: Mapping[str, int] | None = None,
+        name_prefix: str = "blocks",
+    ) -> Any:
+        conv = _conv2d_with_params(
+            self.conv,
+            x,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+            weight_name=f"{name_prefix}.conv.weight",
+            bias_name=f"{name_prefix}.conv.bias",
+        )
         return _pixel_shuffle_2x_nhwc(mx.sin(self.w * conv))  # type: ignore[union-attr]
 
 
@@ -341,9 +504,18 @@ class _LatentInjectorMLX(nn.Module if nn is not None else object):  # type: igno
         spatial_shape: tuple[int, int],
         *,
         fake_quant_bits: int | None = None,
+        fake_quant_bits_by_name: Mapping[str, int] | None = None,
+        name_prefix: str = "latent_injector.proj",
     ) -> Any:
         h, w = int(spatial_shape[0]), int(spatial_shape[1])
-        v = _linear_with_params(self.proj, latent, fake_quant_bits=fake_quant_bits)
+        v = _linear_with_params(
+            self.proj,
+            latent,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+            weight_name=f"{name_prefix}.weight",
+            bias_name=f"{name_prefix}.bias",
+        )
         v = mx.reshape(v, (-1, 1, 1, self.channels))  # type: ignore[union-attr]
         return mx.broadcast_to(v, (int(v.shape[0]), h, w, self.channels))  # type: ignore[union-attr]
 
@@ -435,14 +607,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             in_channels=final_ch, out_channels=3, kernel_size=3, padding=1
         )
         self.decoder_fake_quant_forward_enabled = False
-        self.decoder_fake_quant_bits = 8
+        self.decoder_fake_quant_bits: int | None = 8
+        self.decoder_fake_quant_bits_by_name: dict[str, int] = {}
         self._siren_init()
 
     def configure_decoder_fake_quant_forward(
         self,
         *,
         enabled: bool,
-        quant_bits: int = 8,
+        quant_bits: int | None = 8,
+        per_tensor_bits: Mapping[str, int] | None = None,
     ) -> None:
         """Enable decoder-weight fake-quant forward QAT for training.
 
@@ -450,18 +624,34 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         real packet bytes independently.
         """
 
-        bits = int(quant_bits)
-        if bits < 1 or bits > 16:
+        bits = None if quant_bits is None else int(quant_bits)
+        if bits is not None and (bits < 1 or bits > 16):
             raise ValueError(f"quant_bits must be in [1, 16]; got {quant_bits}")
+        normalized: dict[str, int] = {}
+        for name, value in dict(per_tensor_bits or {}).items():
+            tensor_bits = int(value)
+            if tensor_bits not in {0, 2, 4, 8, 16, 32}:
+                raise ValueError(
+                    "per_tensor_bits values must be one of "
+                    f"[0, 2, 4, 8, 16, 32]; got {value!r} for {name!r}"
+                )
+            normalized[str(name)] = tensor_bits
         self.decoder_fake_quant_forward_enabled = bool(enabled)
         self.decoder_fake_quant_bits = bits
+        self.decoder_fake_quant_bits_by_name = normalized
 
     def _fake_quant_bits(self) -> int | None:
         return (
             int(self.decoder_fake_quant_bits)
             if bool(self.decoder_fake_quant_forward_enabled)
+            and self.decoder_fake_quant_bits is not None
             else None
         )
+
+    def _fake_quant_bits_by_name(self) -> dict[str, int]:
+        if not bool(self.decoder_fake_quant_forward_enabled):
+            return {}
+        return dict(self.decoder_fake_quant_bits_by_name)
 
     def _siren_init(self) -> None:
         w = float(self.cfg.sin_frequency)
@@ -516,10 +706,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         z_f = mx.take(self.latents_fine, pair_indices, axis=0)  # type: ignore[union-attr]
 
         fake_quant_bits = self._fake_quant_bits()
+        fake_quant_bits_by_name = self._fake_quant_bits_by_name()
         h = _linear_with_params(
             self.latent_embed,
             z_c,
             fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+            weight_name="latent_embed.weight",
+            bias_name="latent_embed.bias",
         )
         h = mx.reshape(  # type: ignore[union-attr]
             h,
@@ -532,26 +726,42 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         )
         h = mx.transpose(h, (0, 2, 3, 1))  # type: ignore[union-attr]
         for i, block in enumerate(self.blocks):
-            h = block(h, fake_quant_bits=fake_quant_bits)
+            h = block(
+                h,
+                fake_quant_bits=fake_quant_bits,
+                fake_quant_bits_by_name=fake_quant_bits_by_name,
+                name_prefix=f"blocks.{i}",
+            )
             if bool(self.cfg.use_hierarchical_feature_grid):
                 h = h + self.feature_grids[i](
                     pair_indices,
                     spatial_shape=(int(h.shape[1]), int(h.shape[2])),
                     fake_quant_bits=fake_quant_bits,
+                    fake_quant_bits_by_name=fake_quant_bits_by_name,
+                    name_prefix=f"feature_grids.{i}",
                 )
             if bool(self.cfg.use_convnext_blocks):
-                h = self.convnext_blocks[i](h, fake_quant_bits=fake_quant_bits)
+                h = self.convnext_blocks[i](
+                    h,
+                    fake_quant_bits=fake_quant_bits,
+                    fake_quant_bits_by_name=fake_quant_bits_by_name,
+                    name_prefix=f"convnext_blocks.{i}",
+                )
             if i == int(self.cfg.mid_injection_block_index):
                 h = h + self.mid_injector(
                     z_m,
                     (int(h.shape[1]), int(h.shape[2])),
                     fake_quant_bits=fake_quant_bits,
+                    fake_quant_bits_by_name=fake_quant_bits_by_name,
+                    name_prefix="mid_injector.proj",
                 )
             if i == int(self.cfg.fine_injection_block_index):
                 h = h + self.fine_injector(
                     z_f,
                     (int(h.shape[1]), int(h.shape[2])),
                     fake_quant_bits=fake_quant_bits,
+                    fake_quant_bits_by_name=fake_quant_bits_by_name,
+                    name_prefix="fine_injector.proj",
                 )
 
         h = _bilinear_resize_nhwc(
@@ -564,6 +774,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 self.head_rgb_0,
                 h,
                 fake_quant_bits=fake_quant_bits,
+                fake_quant_bits_by_name=fake_quant_bits_by_name,
+                weight_name="head_rgb_0.weight",
+                bias_name="head_rgb_0.bias",
             )
         ) * 255.0  # type: ignore[union-attr]
         rgb_1 = mx.sigmoid(
@@ -571,6 +784,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 self.head_rgb_1,
                 h,
                 fake_quant_bits=fake_quant_bits,
+                fake_quant_bits_by_name=fake_quant_bits_by_name,
+                weight_name="head_rgb_1.weight",
+                bias_name="head_rgb_1.bias",
             )
         ) * 255.0  # type: ignore[union-attr]
         pair_nhwc = mx.stack([rgb_0, rgb_1], axis=1)  # type: ignore[union-attr]

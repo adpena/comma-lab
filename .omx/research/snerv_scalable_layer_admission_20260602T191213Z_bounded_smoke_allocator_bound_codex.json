@@ -1,0 +1,426 @@
+{
+  "admitted_optional_layer_count": 0,
+  "axis_tag": "[planning/control:false-authority]",
+  "blockers": [
+    "snerv_scalable_layer_admission_false_authority_no_score_claim",
+    "snerv_scalable_layer_full_video_coverage_missing",
+    "snerv_scalable_layer_section_value_profile_missing",
+    "paired_contest_cpu_cuda_auth_eval_missing"
+  ],
+  "byte_price_plan": {
+    "admitted_section_ids": [],
+    "baseline_id": null,
+    "blockers": [
+      "snerv_scalable_layer_byte_price_plan_false_authority",
+      "paired_contest_cpu_cuda_auth_eval_missing",
+      "scalable_layer_section_value_profile_missing",
+      "snerv_scalable_layer_cut_receiver_variant_not_materialized",
+      "snerv_scalable_layer_exact_axis_replay_missing",
+      "snerv_scalable_layer_full_video_coverage_missing",
+      "advisory_or_proxy_axis_not_promotion_authority",
+      "receiver_proof_not_satisfied",
+      "full_video_coverage_missing",
+      "delta_nonrate_score_missing"
+    ],
+    "candidate_id": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+    "contest_byte_price": {
+      "available": true,
+      "blockers": [],
+      "original_video_bytes": 37545489,
+      "score_per_byte": 6.658589531221714e-07,
+      "source": "tac.substrates._shared.mlx_score_aware.modelsize_budget_plan.CONTEST_BYTE_PRICE_SCORE"
+    },
+    "cut_section_ids": [],
+    "decision_counts": {
+      "admit": 0,
+      "cut": 0,
+      "demote": 2,
+      "protect": 0,
+      "retrain": 0
+    },
+    "decision_rows": [
+      {
+        "archive_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+        "axis_labels": [
+          "[planning/control:false-authority]"
+        ],
+        "blockers": [
+          "snerv_scalable_layer_byte_price_plan_false_authority",
+          "paired_contest_cpu_cuda_auth_eval_missing",
+          "scalable_layer_section_value_profile_missing",
+          "snerv_scalable_layer_cut_receiver_variant_not_materialized",
+          "snerv_scalable_layer_exact_axis_replay_missing",
+          "snerv_scalable_layer_full_video_coverage_missing",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "receiver_proof_not_satisfied",
+          "full_video_coverage_missing",
+          "delta_nonrate_score_missing"
+        ],
+        "byte_delta": -939,
+        "candidate_id": "snerv_scalable_layer_remove_snerv_enhancement_hf_decoder_layer",
+        "decision": "demote",
+        "delta_nonrate_score": null,
+        "delta_rate_score": -0.0006252415569817189,
+        "delta_total_score": null,
+        "dispatch_attempted": false,
+        "economic_decision": "demote",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "baseline_receiver_packet_profiled_variant_cut_missing",
+        "row_id": "snerv_scalable_layer_remove_snerv_enhancement_hf_decoder_layer",
+        "row_kind": "existing_section_cut",
+        "scope": "snerv_scalable_layer_existing_section_removal",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 939,
+        "section_id": "snerv_enhancement_hf_decoder_layer",
+        "source": {
+          "archive_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+          "axis_tag": "[planning/control:false-authority]",
+          "baseline_packet_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+          "blockers": [
+            "scalable_layer_section_value_profile_missing",
+            "snerv_scalable_layer_cut_receiver_variant_not_materialized",
+            "snerv_scalable_layer_exact_axis_replay_missing",
+            "snerv_scalable_layer_full_video_coverage_missing"
+          ],
+          "byte_delta": -939,
+          "bytes_removed": 939,
+          "delta_nonrate_score": null,
+          "dispatch_attempted": false,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "layer_role": "enhancement_layer_hf_restoration",
+          "measured_nonrate_score_increase_if_removed": null,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "baseline_receiver_packet_profiled_variant_cut_missing",
+          "row_id": "snerv_scalable_layer_remove_snerv_enhancement_hf_decoder_layer",
+          "row_kind": "existing_section_cut",
+          "scope": "snerv_scalable_layer_existing_section_removal",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_bytes": 939,
+          "section_id": "snerv_enhancement_hf_decoder_layer",
+          "sections": [
+            "decoder_payload"
+          ]
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+        "axis_labels": [
+          "[planning/control:false-authority]"
+        ],
+        "blockers": [
+          "snerv_scalable_layer_byte_price_plan_false_authority",
+          "paired_contest_cpu_cuda_auth_eval_missing",
+          "scalable_layer_section_value_profile_missing",
+          "snerv_scalable_layer_cut_receiver_variant_not_materialized",
+          "snerv_scalable_layer_exact_axis_replay_missing",
+          "snerv_scalable_layer_full_video_coverage_missing",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "receiver_proof_not_satisfied",
+          "full_video_coverage_missing",
+          "delta_nonrate_score_missing"
+        ],
+        "byte_delta": -951,
+        "candidate_id": "snerv_scalable_layer_remove_snerv_enhancement_linf_step_map_layer",
+        "decision": "demote",
+        "delta_nonrate_score": null,
+        "delta_rate_score": -0.000633231864419185,
+        "delta_total_score": null,
+        "dispatch_attempted": false,
+        "economic_decision": "demote",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "baseline_receiver_packet_profiled_variant_cut_missing",
+        "row_id": "snerv_scalable_layer_remove_snerv_enhancement_linf_step_map_layer",
+        "row_kind": "existing_section_cut",
+        "scope": "snerv_scalable_layer_existing_section_removal",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 951,
+        "section_id": "snerv_enhancement_linf_step_map_layer",
+        "source": {
+          "archive_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+          "axis_tag": "[planning/control:false-authority]",
+          "baseline_packet_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+          "blockers": [
+            "scalable_layer_section_value_profile_missing",
+            "snerv_scalable_layer_cut_receiver_variant_not_materialized",
+            "snerv_scalable_layer_exact_axis_replay_missing",
+            "snerv_scalable_layer_full_video_coverage_missing"
+          ],
+          "byte_delta": -951,
+          "bytes_removed": 951,
+          "delta_nonrate_score": null,
+          "dispatch_attempted": false,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "layer_role": "enhancement_layer_linf_step_map",
+          "measured_nonrate_score_increase_if_removed": null,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "baseline_receiver_packet_profiled_variant_cut_missing",
+          "row_id": "snerv_scalable_layer_remove_snerv_enhancement_linf_step_map_layer",
+          "row_kind": "existing_section_cut",
+          "scope": "snerv_scalable_layer_existing_section_removal",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_bytes": 951,
+          "section_id": "snerv_enhancement_linf_step_map_layer",
+          "sections": [
+            "step_map_packet"
+          ]
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      }
+    ],
+    "demoted_section_ids": [
+      "snerv_enhancement_hf_decoder_layer",
+      "snerv_enhancement_linf_step_map_layer"
+    ],
+    "dispatch_attempted": false,
+    "full_video_coverage": false,
+    "gpu_launched": false,
+    "input_row_count": 2,
+    "promotable": false,
+    "promotion_eligible": false,
+    "protected_section_ids": [],
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "retrain_section_ids": [],
+    "schema": "compact_nerv_byte_price_controller.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selection_rule": "delta_total_score = delta_nonrate_score + delta_rate_score; existing sections are cut only when their removal lowers total score; new residual/sidecar bytes are admitted only when delta_total_score < 0",
+    "source_schema": "snerv_scalable_layer_admission.v1"
+  },
+  "charged_archive_bytes": 10441,
+  "created_utc": "2026-06-02T19:12:22.614169+00:00",
+  "cut_or_generate_optional_layer_count": 0,
+  "deserves_separate_scalable_layer_lane": false,
+  "dispatch_attempted": false,
+  "family": "snerv",
+  "frontier_bytes": 178493,
+  "full_video_coverage": false,
+  "gpu_launched": false,
+  "input_kind": "raw_snar1_packet",
+  "input_path": "/Volumes/VertigoDataTier/pact/nerv_local_smokes/snerv_bounded_smoke_20260602T183755Z/snerv_mlx_native_export/native_train_export/snerv_mlx_native_packet.snar",
+  "layer_rows": [
+    {
+      "admission_decision": "base_layer_required_price_for_training_budget",
+      "blockers": [],
+      "byte_price_score": 0.004895395023354204,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "layer_bytes": 7352,
+      "layer_id": "snerv_base_lf_layer",
+      "layer_role": "base_layer_required_for_receiver_decode",
+      "measured_nonrate_score_increase_if_removed": null,
+      "net_score_saved_if_removed": null,
+      "optional_layer": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sections": [
+        "metadata_payload",
+        "lf_payload"
+      ]
+    },
+    {
+      "admission_decision": "needs_scorer_section_value_profile",
+      "blockers": [
+        "scalable_layer_section_value_profile_missing"
+      ],
+      "byte_price_score": 0.0006252415569817189,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "layer_bytes": 939,
+      "layer_id": "snerv_enhancement_hf_decoder_layer",
+      "layer_role": "enhancement_layer_hf_restoration",
+      "measured_nonrate_score_increase_if_removed": null,
+      "net_score_saved_if_removed": null,
+      "optional_layer": true,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sections": [
+        "decoder_payload"
+      ]
+    },
+    {
+      "admission_decision": "needs_scorer_section_value_profile",
+      "blockers": [
+        "scalable_layer_section_value_profile_missing"
+      ],
+      "byte_price_score": 0.000633231864419185,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "layer_bytes": 951,
+      "layer_id": "snerv_enhancement_linf_step_map_layer",
+      "layer_role": "enhancement_layer_linf_step_map",
+      "measured_nonrate_score_increase_if_removed": null,
+      "net_score_saved_if_removed": null,
+      "optional_layer": true,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sections": [
+        "step_map_packet"
+      ]
+    },
+    {
+      "admission_decision": "minimize_header_but_not_scalable_content_layer",
+      "blockers": [],
+      "byte_price_score": 0.0007983648847934835,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "layer_bytes": 1199,
+      "layer_id": "snerv_packet_header_overhead",
+      "layer_role": "mandatory_packet_overhead",
+      "measured_nonrate_score_increase_if_removed": null,
+      "net_score_saved_if_removed": null,
+      "optional_layer": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sections": []
+    }
+  ],
+  "next_actions": [
+    "run_full600_section_value_profile_for_hf_decoder_and_step_map_layers",
+    "keep_scalable_layer_as_snerv_bitstream_policy_not_separate_lane",
+    "price_layer_bytes_inside_scorer_aware_training_export_loop"
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof": "snerv_scalable_layer_sections_priced_against_contest_byte_waterline",
+  "rank_or_kill_eligible": false,
+  "rate_score_per_byte": 6.658589531221714e-07,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_scalable_layer_admission.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "section_value_profile_attached": false,
+  "section_value_rows": [
+    {
+      "archive_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+      "axis_tag": "[planning/control:false-authority]",
+      "baseline_packet_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+      "blockers": [
+        "scalable_layer_section_value_profile_missing",
+        "snerv_scalable_layer_cut_receiver_variant_not_materialized",
+        "snerv_scalable_layer_exact_axis_replay_missing",
+        "snerv_scalable_layer_full_video_coverage_missing"
+      ],
+      "byte_delta": -939,
+      "bytes_removed": 939,
+      "delta_nonrate_score": null,
+      "dispatch_attempted": false,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "layer_role": "enhancement_layer_hf_restoration",
+      "measured_nonrate_score_increase_if_removed": null,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "baseline_receiver_packet_profiled_variant_cut_missing",
+      "row_id": "snerv_scalable_layer_remove_snerv_enhancement_hf_decoder_layer",
+      "row_kind": "existing_section_cut",
+      "scope": "snerv_scalable_layer_existing_section_removal",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_bytes": 939,
+      "section_id": "snerv_enhancement_hf_decoder_layer",
+      "sections": [
+        "decoder_payload"
+      ]
+    },
+    {
+      "archive_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+      "axis_tag": "[planning/control:false-authority]",
+      "baseline_packet_sha256": "cfaa37ce969e74f107e8a39abca550cc3b1ce90f4d9590b7c53f58d992403610",
+      "blockers": [
+        "scalable_layer_section_value_profile_missing",
+        "snerv_scalable_layer_cut_receiver_variant_not_materialized",
+        "snerv_scalable_layer_exact_axis_replay_missing",
+        "snerv_scalable_layer_full_video_coverage_missing"
+      ],
+      "byte_delta": -951,
+      "bytes_removed": 951,
+      "delta_nonrate_score": null,
+      "dispatch_attempted": false,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "layer_role": "enhancement_layer_linf_step_map",
+      "measured_nonrate_score_increase_if_removed": null,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "baseline_receiver_packet_profiled_variant_cut_missing",
+      "row_id": "snerv_scalable_layer_remove_snerv_enhancement_linf_step_map_layer",
+      "row_kind": "existing_section_cut",
+      "scope": "snerv_scalable_layer_existing_section_removal",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_bytes": 951,
+      "section_id": "snerv_enhancement_linf_step_map_layer",
+      "sections": [
+        "step_map_packet"
+      ]
+    }
+  ],
+  "snar1_packet_bytes": 10441,
+  "source_alignment": {
+    "contest_adaptation": "layer admission is scorer-only and byte-priced; human quality is not an authority",
+    "current_snerv_mapping": {
+      "snerv_base_lf_layer": [
+        "metadata_payload",
+        "lf_payload"
+      ],
+      "snerv_enhancement_hf_decoder_layer": [
+        "decoder_payload"
+      ],
+      "snerv_enhancement_linf_step_map_layer": [
+        "step_map_packet"
+      ]
+    },
+    "scalable_layer_paper": "base/enhancement layer truncation"
+  },
+  "verdict": "KEEP_AS_SNERV_BITSTREAM_POLICY__SECTION_VALUE_EVIDENCE_MISSING"
+}

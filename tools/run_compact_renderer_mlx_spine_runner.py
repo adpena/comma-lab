@@ -4160,6 +4160,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     coder_qat_quant_residual_weight: float = 1.0e-4,
     coder_qat_magnitude_weight: float = 0.0,
     coder_qat_delta_weight: float = 0.0,
+    decoder_weight_waterfill_plan_json: str | Path | None = None,
     recon_pixel_weight_path: str | Path | None = None,
     auto_joint_recon_pixel_weight: bool = False,
     auto_segnet_boundary_recon_weight: bool = False,
@@ -4192,6 +4193,44 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             f"output dir is non-empty; pass --overwrite: {out}"
         )
     out.mkdir(parents=True, exist_ok=True)
+    decoder_weight_waterfill_plan: dict[str, Any] | None = None
+    decoder_weight_waterfill_plan_metadata: dict[str, Any] = {
+        "schema": "compact_hi_nerv_decoder_weight_waterfill_plan_attachment.v1",
+        "attached": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if decoder_weight_waterfill_plan_json is not None:
+        plan_path = Path(decoder_weight_waterfill_plan_json).expanduser()
+        if not plan_path.is_absolute():
+            plan_path = root / plan_path
+        plan_path = plan_path.resolve(strict=False)
+        if not plan_path.is_file():
+            raise CompactRendererMlxSpineRunnerError(
+                f"decoder waterfill plan does not exist: {plan_path}"
+            )
+        decoder_weight_waterfill_plan = _load_json(plan_path)
+        if decoder_weight_waterfill_plan.get("schema") != (
+            "nerv_decoder_weight_waterfill.v1"
+        ):
+            raise CompactRendererMlxSpineRunnerError(
+                "decoder waterfill plan schema must be "
+                "nerv_decoder_weight_waterfill.v1"
+            )
+        decoder_weight_waterfill_plan_metadata.update(
+            {
+                "attached": True,
+                "path": plan_path.as_posix(),
+                "sha256": _sha256_file(plan_path),
+                "source_schema": decoder_weight_waterfill_plan.get("schema"),
+                "family": decoder_weight_waterfill_plan.get("family"),
+                "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+                "group_count": decoder_weight_waterfill_plan.get("group_count"),
+                "row_count": len(decoder_weight_waterfill_plan.get("rows") or []),
+                "blockers": list(decoder_weight_waterfill_plan.get("blockers") or []),
+            }
+        )
     modelsize_budget_rows, modelsize_budget_sources = (
         _load_compact_modelsize_budget_rows(
             (*modelsize_budget_json_paths, *receiver_closed_ladder_json_paths),
@@ -4409,6 +4448,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
             recon_pixel_weight_path=effective_recon_pixel_weight_path,
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
             recon_pixel_weight_auto_discovery=recon_pixel_weight_auto_discovery,
             auto_segnet_boundary_recon_weight=auto_segnet_boundary_recon_weight,
             recon_pixel_weight_tau=recon_pixel_weight_tau,
@@ -4688,6 +4728,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     magnitude_weight=coder_qat_magnitude_weight,
                     delta_weight=coder_qat_delta_weight,
                 ),
+                "decoder_weight_waterfill_plan": decoder_weight_waterfill_plan_metadata,
                 "eval_roundtrip_ste": _eval_roundtrip_ste_report_metadata(
                     artifact_dict
                 ),
@@ -5154,6 +5195,44 @@ def _coder_qat_report_metadata(
         "delta_weight": float(delta_weight),
         "authority": "false_macos_mlx_research_signal",
     }
+
+
+def _decoder_weight_waterfill_fake_quant_bits_by_name(
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+) -> dict[str, int]:
+    """Extract train-time per-tensor fake-quant bits from a waterfill plan."""
+
+    if decoder_weight_waterfill_plan is None:
+        return {}
+    if decoder_weight_waterfill_plan.get("schema") != "nerv_decoder_weight_waterfill.v1":
+        raise CompactRendererMlxSpineRunnerError(
+            "decoder_weight_waterfill_plan must have schema "
+            "nerv_decoder_weight_waterfill.v1"
+        )
+    bits_by_name: dict[str, int] = {}
+    for idx, row in enumerate(decoder_weight_waterfill_plan.get("rows") or []):
+        if not isinstance(row, Mapping):
+            raise CompactRendererMlxSpineRunnerError(
+                f"decoder_weight_waterfill_plan row {idx} is not a mapping"
+            )
+        group_name = row.get("group_name")
+        if not isinstance(group_name, str) or not group_name:
+            raise CompactRendererMlxSpineRunnerError(
+                f"decoder_weight_waterfill_plan row {idx} missing group_name"
+            )
+        try:
+            selected_bits = int(row["selected_bits"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise CompactRendererMlxSpineRunnerError(
+                f"decoder_weight_waterfill_plan row {idx} missing selected_bits"
+            ) from exc
+        if selected_bits not in {0, 2, 4, 8, 16, 32}:
+            raise CompactRendererMlxSpineRunnerError(
+                "decoder_weight_waterfill_plan selected_bits must be one of "
+                f"[0, 2, 4, 8, 16, 32]; got {selected_bits} for {group_name}"
+            )
+        bits_by_name[group_name] = selected_bits
+    return bits_by_name
 
 
 def _hi_nerv_eval_roundtrip_ste_metadata() -> dict[str, Any]:
@@ -6122,6 +6201,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     coder_qat_magnitude_weight: float,
     coder_qat_delta_weight: float,
     recon_pixel_weight_path: str | Path | None,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
     recon_pixel_weight_auto_discovery: Mapping[str, Any] | None,
     auto_segnet_boundary_recon_weight: bool,
     recon_pixel_weight_tau: float,
@@ -6219,9 +6299,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         magnitude_weight=float(coder_qat_magnitude_weight),
         delta_weight=float(coder_qat_delta_weight),
     ).validated()
+    decoder_waterfill_fake_quant_bits_by_name = (
+        _decoder_weight_waterfill_fake_quant_bits_by_name(decoder_weight_waterfill_plan)
+    )
     model.configure_decoder_fake_quant_forward(
-        enabled=bool(coder_qat_cfg.enabled),
-        quant_bits=int(coder_qat_cfg.quant_bits),
+        enabled=bool(coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name),
+        quant_bits=int(coder_qat_cfg.quant_bits) if bool(coder_qat_cfg.enabled) else None,
+        per_tensor_bits=decoder_waterfill_fake_quant_bits_by_name,
     )
     pose_instability_monitor = _PoseInstabilityEpochMonitor()
 
@@ -6241,6 +6325,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "hi_nerv",
             ],
             decoder_codec=str(decoder_codec),
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
         )
 
     artifact_metadata = {
@@ -6280,8 +6365,23 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_fake_quant_forward": {
                 "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
-                "enabled": bool(coder_qat_cfg.enabled),
+                "enabled": bool(
+                    coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name
+                ),
+                "global_fake_quant_enabled": bool(coder_qat_cfg.enabled),
                 "quant_bits": int(coder_qat_cfg.quant_bits),
+                "global_quant_bits": (
+                    int(coder_qat_cfg.quant_bits) if bool(coder_qat_cfg.enabled) else None
+                ),
+                "per_tensor_waterfill_enabled": bool(
+                    decoder_waterfill_fake_quant_bits_by_name
+                ),
+                "per_tensor_waterfill_group_count": len(
+                    decoder_waterfill_fake_quant_bits_by_name
+                ),
+                "per_tensor_waterfill_bits_by_name": dict(
+                    sorted(decoder_waterfill_fake_quant_bits_by_name.items())
+                ),
                 "quantizer_geometry": (
                     "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
                     "per_tensor_fp16_scale_for_biases"
@@ -7722,6 +7822,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--coder-qat-magnitude-weight", default=0.0, type=float)
     parser.add_argument("--coder-qat-delta-weight", default=0.0, type=float)
     parser.add_argument(
+        "--decoder-weight-waterfill-plan-json",
+        type=Path,
+        help=(
+            "HiNeRV only: attach a nerv_decoder_weight_waterfill.v1 artifact "
+            "and apply its selected 0/2/4/8/16/32 actions to real decoder "
+            "tensors before archive packing. False-authority until replay."
+        ),
+    )
+    parser.add_argument(
         "--snerv-spectra-preserving-adapter",
         action="store_true",
         help=(
@@ -8242,6 +8351,9 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
+            decoder_weight_waterfill_plan_json=(
+                args.decoder_weight_waterfill_plan_json
+            ),
             recon_pixel_weight_path=args.recon_pixel_weight_path,
             auto_joint_recon_pixel_weight=args.auto_joint_recon_pixel_weight,
             auto_segnet_boundary_recon_weight=(
