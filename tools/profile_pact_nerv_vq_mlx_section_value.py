@@ -41,6 +41,7 @@ from tools.profile_pact_nerv_selector_v3_mlx_section_value import (  # noqa: E40
     _materialize_caches,
     _read_archive_member,
     _resolve,
+    _resolve_reference_cache_dir,
     _run_mlx_responses,
     _sha256_file,
 )
@@ -100,6 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         else _resolve(args.video_names_file, base=repo_root)
     )
     reference_cache_dir = _resolve(args.reference_cache_dir, base=repo_root)
+    resolved_reference_cache_dir = _resolve_reference_cache_dir(reference_cache_dir)
     projection_manifest = (
         None
         if args.projection_manifest is None
@@ -141,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=output_dir,
         repo_root=repo_root,
         upstream_dir=upstream_dir,
-        reference_cache_dir=reference_cache_dir,
+        reference_cache_dir=resolved_reference_cache_dir,
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
         scorer_batch_pairs=int(args.scorer_batch_pairs),
@@ -164,6 +166,7 @@ def main(argv: list[str] | None = None) -> int:
         archive=archive,
         projection_manifest=projection_manifest,
         reference_cache_dir=reference_cache_dir,
+        resolved_reference_cache_dir=resolved_reference_cache_dir,
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
         scorer_batch_pairs=int(args.scorer_batch_pairs),

@@ -6,6 +6,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import pytest
 import torch
 
 REPO = Path(__file__).resolve().parents[2]
@@ -13,6 +14,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 import tools.materialize_pact_nerv_vq_section_cut_candidate as cut_tool  # noqa: E402
+import tools.profile_pact_nerv_selector_v3_mlx_section_value as shared_profiler  # noqa: E402
 import tools.profile_pact_nerv_vq_mlx_section_value as profiler  # noqa: E402
 from tac.archive_byte_profile import contest_rate_term  # noqa: E402
 from tac.auth_eval_schema import contest_formula_score  # noqa: E402
@@ -30,6 +32,87 @@ from tac.substrates.pact_nerv_vq.architecture import (  # noqa: E402
     PactNervVqSubstrate,
 )
 from tac.substrates.pact_nerv_vq.archive import pack_archive, parse_archive  # noqa: E402
+
+
+def test_reference_cache_resolver_accepts_direct_and_profile_root(
+    tmp_path: Path,
+) -> None:
+    direct = tmp_path / "direct_reference_cache"
+    direct.mkdir()
+    (direct / "manifest.json").write_text('{"schema":"cache_manifest.v1"}\n')
+
+    profile_root = tmp_path / "profile_cache_root"
+    (profile_root / "baseline").mkdir(parents=True)
+    (profile_root / "baseline" / "manifest.json").write_text(
+        '{"schema":"cache_manifest.v1"}\n',
+        encoding="utf-8",
+    )
+
+    assert profiler._resolve_reference_cache_dir(direct) == direct
+    assert profiler._resolve_reference_cache_dir(profile_root) == (
+        profile_root / "baseline"
+    )
+    with pytest.raises(FileNotFoundError):
+        profiler._resolve_reference_cache_dir(tmp_path / "missing_reference_cache")
+
+
+def test_materialize_caches_reuses_archive_matched_existing_cache_report(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    output_dir = tmp_path / "profile"
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive-bytes")
+    variant = shared_profiler.VariantSpec(
+        variant_id="baseline",
+        neutralized_section=None,
+        archive_zip_path=archive,
+        submission_dir=tmp_path / "submission",
+        bin_path=tmp_path / "0.bin",
+        archive_bytes=archive.stat().st_size,
+        archive_sha256=shared_profiler._sha256_file(archive),
+        bin_sha256="unused-bin-sha",
+        variant_dir=tmp_path / "variant",
+    )
+    cache_dir = output_dir / "mlx_caches" / "baseline"
+    cache_dir.mkdir(parents=True)
+    manifest = cache_dir / "manifest.json"
+    manifest.write_text('{"schema":"mlx_cache_manifest.v1"}\n', encoding="utf-8")
+    report = output_dir / "mlx_cache_reports" / "baseline.json"
+    report.parent.mkdir(parents=True)
+    report.write_text(
+        json.dumps(
+            {
+                "archive": {
+                    "bytes": variant.archive_bytes,
+                    "sha256": variant.archive_sha256,
+                },
+                "cache_manifest": manifest.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fail_run(*_args, **_kwargs):
+        raise AssertionError("cache materializer should not rerun")
+
+    monkeypatch.setattr(shared_profiler.subprocess, "run", fail_run)
+
+    rows = shared_profiler._materialize_caches(
+        variants=[variant],
+        output_dir=output_dir,
+        repo_root=REPO,
+        upstream_dir=tmp_path / "upstream",
+        video_names_file=None,
+        max_pairs=600,
+        inflate_timeout=1800,
+        allow_large_tensor_cache=True,
+    )
+
+    row = rows["baseline"]
+    assert row["reused_existing_cache_report"] is True
+    assert row["argv"] == []
+    assert row["reuse_integrity"]["archive_sha256"] == variant.archive_sha256
 
 
 def test_materialize_variants_builds_parseable_pvq_neutralizations(
@@ -77,6 +160,12 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     upstream_dir.mkdir()
     video_names_file = tmp_path / "video_names.txt"
     video_names_file.write_text("0.raw\n", encoding="utf-8")
+    reference_cache_root = tmp_path / "reference_cache_root"
+    (reference_cache_root / "baseline").mkdir(parents=True)
+    (reference_cache_root / "baseline" / "manifest.json").write_text(
+        '{"schema":"cache_manifest.v1"}\n',
+        encoding="utf-8",
+    )
 
     def fake_materialize_caches(**kwargs):
         assert Path(kwargs["upstream_dir"]) == upstream_dir
@@ -99,6 +188,7 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
 
     def fake_mlx_responses(**kwargs):
         output_dir = Path(kwargs["output_dir"])
+        assert Path(kwargs["reference_cache_dir"]) == reference_cache_root / "baseline"
         assert kwargs["response_family_prefix"] == "pact_nerv_vq_section_value"
         rows = {}
         for index, variant in enumerate(kwargs["variants"]):
@@ -143,6 +233,8 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
             upstream_dir.as_posix(),
             "--video-names-file",
             video_names_file.as_posix(),
+            "--reference-cache-dir",
+            reference_cache_root.as_posix(),
             "--sections",
             "decoder_qw",
             "codebooks_q",
@@ -166,6 +258,10 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     assert profile["family"] == "pact_nerv_vq"
     assert profile["upstream_dir"] == upstream_dir.as_posix()
     assert profile["video_names_file"] == video_names_file.as_posix()
+    assert profile["reference_cache_dir"] == reference_cache_root.as_posix()
+    assert profile["resolved_reference_cache_dir"] == (
+        reference_cache_root / "baseline"
+    ).as_posix()
     assert "pvq_section_layout" in profile
     assert profile["projection_gap_analysis"]["schema"] == (
         "hprc_archive_projection_gap_analysis.v1"
