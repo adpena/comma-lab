@@ -1,0 +1,1892 @@
+{
+  "authority": "false_authority_lf_payload_codec_rate_only",
+  "axis_tag": "[planning/control]",
+  "baseline_mode": "int64_lzma",
+  "baseline_payload_bytes": 666556,
+  "blockers": [
+    "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+    "contest_cpu_cuda_exact_eval_not_executed"
+  ],
+  "byte_price_plan": {
+    "admitted_section_ids": [],
+    "baseline_id": null,
+    "blockers": [
+      "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+      "contest_cpu_cuda_exact_eval_not_executed",
+      "snerv_lf_payload_codec_row_has_no_scorer_replay",
+      "snerv_lf_payload_codec_row_not_exact_eval_authority",
+      "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+      "advisory_or_proxy_axis_not_promotion_authority",
+      "missing_archive_sha256",
+      "full_video_coverage_missing",
+      "snerv_lf_payload_codec_mode_failed",
+      "receiver_proof_not_satisfied",
+      "section_byte_delta_missing",
+      "delta_nonrate_score_missing"
+    ],
+    "candidate_id": null,
+    "contest_byte_price": {
+      "available": true,
+      "blockers": [],
+      "original_video_bytes": 37545489,
+      "score_per_byte": 6.658589531221714e-07,
+      "source": "tac.substrates._shared.mlx_score_aware.modelsize_budget_plan.CONTEST_BYTE_PRICE_SCORE"
+    },
+    "cut_section_ids": [],
+    "decision_counts": {
+      "admit": 0,
+      "cut": 0,
+      "demote": 10,
+      "protect": 0,
+      "retrain": 0
+    },
+    "decision_rows": [
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "full_video_coverage_missing"
+        ],
+        "byte_delta": 0,
+        "candidate_id": "snerv_lf_payload_codec_int64_lzma",
+        "decision": "demote",
+        "delta_nonrate_score": 0.0,
+        "delta_rate_score": 0.0,
+        "delta_total_score": 0.0,
+        "dispatch_attempted": false,
+        "economic_decision": "protect",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "receiver_proof_valid",
+        "row_id": "snerv_lf_payload_codec_int64_lzma",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 666556,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": 0,
+          "candidate_mode": "int64_lzma",
+          "delta_nonrate_score": 0.0,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": true,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 666556,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "receiver_proof_valid",
+          "row_id": "snerv_lf_payload_codec_int64_lzma",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "full_video_coverage_missing"
+        ],
+        "byte_delta": 120564,
+        "candidate_id": "snerv_lf_payload_codec_portfolio_auto",
+        "decision": "demote",
+        "delta_nonrate_score": 0.0,
+        "delta_rate_score": 0.08027861882422148,
+        "delta_total_score": 0.08027861882422148,
+        "dispatch_attempted": false,
+        "economic_decision": "protect",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "receiver_proof_valid",
+        "row_id": "snerv_lf_payload_codec_portfolio_auto",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 787120,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": 120564,
+          "candidate_mode": "portfolio_auto",
+          "delta_nonrate_score": 0.0,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": true,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 787120,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "receiver_proof_valid",
+          "row_id": "snerv_lf_payload_codec_portfolio_auto",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "full_video_coverage_missing"
+        ],
+        "byte_delta": 121082,
+        "candidate_id": "snerv_lf_payload_codec_int8_escape",
+        "decision": "demote",
+        "delta_nonrate_score": 0.0,
+        "delta_rate_score": 0.08062353376193876,
+        "delta_total_score": 0.08062353376193876,
+        "dispatch_attempted": false,
+        "economic_decision": "protect",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "receiver_proof_valid",
+        "row_id": "snerv_lf_payload_codec_int8_escape",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 787638,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": 121082,
+          "candidate_mode": "int8_escape",
+          "delta_nonrate_score": 0.0,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": true,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 787638,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "receiver_proof_valid",
+          "row_id": "snerv_lf_payload_codec_int8_escape",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "full_video_coverage_missing"
+        ],
+        "byte_delta": 136828,
+        "candidate_id": "snerv_lf_payload_codec_int4_escape",
+        "decision": "demote",
+        "delta_nonrate_score": 0.0,
+        "delta_rate_score": 0.09110814883780047,
+        "delta_total_score": 0.09110814883780047,
+        "dispatch_attempted": false,
+        "economic_decision": "protect",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "receiver_proof_valid",
+        "row_id": "snerv_lf_payload_codec_int4_escape",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 803384,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": 136828,
+          "candidate_mode": "int4_escape",
+          "delta_nonrate_score": 0.0,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": true,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 803384,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "receiver_proof_valid",
+          "row_id": "snerv_lf_payload_codec_int4_escape",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "full_video_coverage_missing"
+        ],
+        "byte_delta": 139861,
+        "candidate_id": "snerv_lf_payload_codec_int2_escape",
+        "decision": "demote",
+        "delta_nonrate_score": 0.0,
+        "delta_rate_score": 0.09312769904262001,
+        "delta_total_score": 0.09312769904262001,
+        "dispatch_attempted": false,
+        "economic_decision": "protect",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "receiver_proof_valid",
+        "row_id": "snerv_lf_payload_codec_int2_escape",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 806417,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": 139861,
+          "candidate_mode": "int2_escape",
+          "delta_nonrate_score": 0.0,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": true,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 806417,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "receiver_proof_valid",
+          "row_id": "snerv_lf_payload_codec_int2_escape",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "full_video_coverage_missing"
+        ],
+        "byte_delta": 164345,
+        "candidate_id": "snerv_lf_payload_codec_zero_run",
+        "decision": "demote",
+        "delta_nonrate_score": 0.0,
+        "delta_rate_score": 0.10943058965086326,
+        "delta_total_score": 0.10943058965086326,
+        "dispatch_attempted": false,
+        "economic_decision": "protect",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "receiver_proof_valid",
+        "row_id": "snerv_lf_payload_codec_zero_run",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 830901,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": 164345,
+          "candidate_mode": "zero_run",
+          "delta_nonrate_score": 0.0,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": true,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 830901,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "receiver_proof_valid",
+          "row_id": "snerv_lf_payload_codec_zero_run",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "full_video_coverage_missing"
+        ],
+        "byte_delta": 171978,
+        "candidate_id": "snerv_lf_payload_codec_delta_varint",
+        "decision": "demote",
+        "delta_nonrate_score": 0.0,
+        "delta_rate_score": 0.1145130910400448,
+        "delta_total_score": 0.1145130910400448,
+        "dispatch_attempted": false,
+        "economic_decision": "protect",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "receiver_proof_valid",
+        "row_id": "snerv_lf_payload_codec_delta_varint",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": 838534,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": 171978,
+          "candidate_mode": "delta_varint",
+          "delta_nonrate_score": 0.0,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": true,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 838534,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "receiver_proof_valid",
+          "row_id": "snerv_lf_payload_codec_delta_varint",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_mode_failed",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "receiver_proof_not_satisfied",
+          "full_video_coverage_missing",
+          "section_byte_delta_missing",
+          "delta_nonrate_score_missing"
+        ],
+        "byte_delta": null,
+        "candidate_id": "snerv_lf_payload_codec_int2",
+        "decision": "demote",
+        "delta_nonrate_score": null,
+        "delta_rate_score": null,
+        "delta_total_score": null,
+        "dispatch_attempted": false,
+        "economic_decision": "demote",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "missing",
+        "row_id": "snerv_lf_payload_codec_int2",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": null,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_mode_failed",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": null,
+          "candidate_mode": "int2",
+          "delta_nonrate_score": null,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": false,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "missing",
+          "row_id": "snerv_lf_payload_codec_int2",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_mode_failed",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "receiver_proof_not_satisfied",
+          "full_video_coverage_missing",
+          "section_byte_delta_missing",
+          "delta_nonrate_score_missing"
+        ],
+        "byte_delta": null,
+        "candidate_id": "snerv_lf_payload_codec_int4",
+        "decision": "demote",
+        "delta_nonrate_score": null,
+        "delta_rate_score": null,
+        "delta_total_score": null,
+        "dispatch_attempted": false,
+        "economic_decision": "demote",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "missing",
+        "row_id": "snerv_lf_payload_codec_int4",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": null,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_mode_failed",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": null,
+          "candidate_mode": "int4",
+          "delta_nonrate_score": null,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": false,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "missing",
+          "row_id": "snerv_lf_payload_codec_int4",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      },
+      {
+        "archive_sha256": null,
+        "axis_labels": [
+          "[planning/control]"
+        ],
+        "blockers": [
+          "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "snerv_lf_payload_codec_row_has_no_scorer_replay",
+          "snerv_lf_payload_codec_row_not_exact_eval_authority",
+          "snerv_lf_payload_codec_mode_failed",
+          "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay",
+          "advisory_or_proxy_axis_not_promotion_authority",
+          "missing_archive_sha256",
+          "receiver_proof_not_satisfied",
+          "full_video_coverage_missing",
+          "section_byte_delta_missing",
+          "delta_nonrate_score_missing"
+        ],
+        "byte_delta": null,
+        "candidate_id": "snerv_lf_payload_codec_int8",
+        "decision": "demote",
+        "delta_nonrate_score": null,
+        "delta_rate_score": null,
+        "delta_total_score": null,
+        "dispatch_attempted": false,
+        "economic_decision": "demote",
+        "family": "snerv",
+        "full_video_coverage": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_status": "missing",
+        "row_id": "snerv_lf_payload_codec_int8",
+        "row_kind": "existing_section_cut",
+        "scope": "lf_payload_codec_replacement",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "section_bytes": null,
+        "section_id": "snerv_lf_payload",
+        "source": {
+          "axis_tag": "[planning/control]",
+          "baseline_mode": "int64_lzma",
+          "baseline_payload_bytes": 666556,
+          "blockers": [
+            "snerv_lf_payload_codec_row_has_no_scorer_replay",
+            "snerv_lf_payload_codec_row_not_exact_eval_authority",
+            "snerv_lf_payload_codec_mode_failed",
+            "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+          ],
+          "byte_delta": null,
+          "candidate_mode": "int8",
+          "delta_nonrate_score": null,
+          "dispatch_attempted": false,
+          "exact_lossless_lf_packet_codec": false,
+          "family": "snerv",
+          "full_video_coverage": false,
+          "gpu_launched": false,
+          "payload_bytes": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_proof_status": "missing",
+          "row_id": "snerv_lf_payload_codec_int8",
+          "row_kind": "existing_section_cut",
+          "scope": "lf_payload_codec_replacement",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "section_id": "snerv_lf_payload"
+        },
+        "strict_residual_admission_rule": "new residual/sidecar bytes admitted only when delta_total_score < 0 and no fail-closed blockers are present"
+      }
+    ],
+    "demoted_section_ids": [
+      "snerv_lf_payload",
+      "snerv_lf_payload",
+      "snerv_lf_payload",
+      "snerv_lf_payload",
+      "snerv_lf_payload",
+      "snerv_lf_payload",
+      "snerv_lf_payload",
+      "snerv_lf_payload",
+      "snerv_lf_payload",
+      "snerv_lf_payload"
+    ],
+    "dispatch_attempted": false,
+    "full_video_coverage": false,
+    "gpu_launched": false,
+    "input_row_count": 10,
+    "promotable": false,
+    "promotion_eligible": false,
+    "protected_section_ids": [],
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "retrain_section_ids": [],
+    "schema": "compact_nerv_byte_price_controller.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selection_rule": "delta_total_score = delta_nonrate_score + delta_rate_score; existing sections are cut only when their removal lowers total score; new residual/sidecar bytes are admitted only when delta_total_score < 0",
+    "source_schema": "snerv_lf_payload_codec_sweep.v1"
+  },
+  "codec_proof": "snerv_lf_quant_payload.v2_receiver_visible_exact_intn_codec",
+  "dispatch_attempted": false,
+  "failed_modes": [
+    {
+      "error": "signed_int2_bitpack requires values in [-2, 1]",
+      "mode": "int2"
+    },
+    {
+      "error": "signed_int4_bitpack requires values in [-8, 7]",
+      "mode": "int4"
+    },
+    {
+      "error": "signed_int8_bitpack requires values in [-128, 127]",
+      "mode": "int8"
+    }
+  ],
+  "family": "snerv",
+  "gpu_launched": false,
+  "marginal_rate_savings": [
+    {
+      "bytes_saved_vs_raw_i64": 11667524,
+      "mode": "int64_lzma",
+      "payload_bytes": 666556,
+      "score_saved_vs_raw_i64": 7.76892531616781
+    },
+    {
+      "bytes_saved_vs_raw_i64": 11546960,
+      "mode": "portfolio_auto",
+      "payload_bytes": 787120,
+      "score_saved_vs_raw_i64": 7.6886466973435885
+    },
+    {
+      "bytes_saved_vs_raw_i64": 11546442,
+      "mode": "int8_escape",
+      "payload_bytes": 787638,
+      "score_saved_vs_raw_i64": 7.688301782405871
+    },
+    {
+      "bytes_saved_vs_raw_i64": 11530696,
+      "mode": "int4_escape",
+      "payload_bytes": 803384,
+      "score_saved_vs_raw_i64": 7.6778171673300095
+    },
+    {
+      "bytes_saved_vs_raw_i64": 11527663,
+      "mode": "int2_escape",
+      "payload_bytes": 806417,
+      "score_saved_vs_raw_i64": 7.675797617125189
+    },
+    {
+      "bytes_saved_vs_raw_i64": 11503179,
+      "mode": "zero_run",
+      "payload_bytes": 830901,
+      "score_saved_vs_raw_i64": 7.659494726516947
+    },
+    {
+      "bytes_saved_vs_raw_i64": 11495546,
+      "mode": "delta_varint",
+      "payload_bytes": 838534,
+      "score_saved_vs_raw_i64": 7.654412225127765
+    }
+  ],
+  "objective_authority": {
+    "allowed_selection_terms": [
+      "SegNet_last_frame_distortion",
+      "PoseNet_pair_distortion",
+      "archive_zip_bytes_rate_term"
+    ],
+    "forbidden_selection_terms": [
+      "human_visual_fidelity",
+      "PSNR",
+      "SSIM",
+      "LPIPS",
+      "perceptual_quality_unless_proven_scorer_causal"
+    ],
+    "objective": "contest_auth_eval_scorer_only",
+    "rule": "human visual fidelity is not an authority surface; optimize only the contest auth eval scorer and byte price"
+  },
+  "plane_count": 96,
+  "plane_shapes": [
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ],
+    [
+      110,
+      146
+    ]
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_i64_bytes": 12334080,
+  "ready_for_exact_eval_dispatch": false,
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T131612Z.json",
+  "rows": [
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority"
+      ],
+      "bytes_saved_vs_raw_i64": 11667524,
+      "dispatch_attempted": false,
+      "error": null,
+      "gpu_launched": false,
+      "mode": "int64_lzma",
+      "mode_histogram": {},
+      "packet_schema": "snerv_lf_quant_payload.v1",
+      "payload_bytes": 666556,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 7.76892531616781,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {}
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority"
+      ],
+      "bytes_saved_vs_raw_i64": 11546960,
+      "dispatch_attempted": false,
+      "error": null,
+      "gpu_launched": false,
+      "mode": "portfolio_auto",
+      "mode_histogram": {
+        "signed_int2_escape_varint": 5,
+        "signed_int4_escape_varint": 10,
+        "signed_int8_escape_varint": 81
+      },
+      "packet_schema": "snerv_lf_quant_payload.v2",
+      "payload_bytes": 787120,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 7.6886466973435885,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {
+        "brotli": 33,
+        "lzma": 63
+      }
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority"
+      ],
+      "bytes_saved_vs_raw_i64": 11546442,
+      "dispatch_attempted": false,
+      "error": null,
+      "gpu_launched": false,
+      "mode": "int8_escape",
+      "mode_histogram": {
+        "signed_int8_escape_varint": 96
+      },
+      "packet_schema": "snerv_lf_quant_payload.v2",
+      "payload_bytes": 787638,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 7.688301782405871,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {
+        "brotli": 33,
+        "lzma": 63
+      }
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority"
+      ],
+      "bytes_saved_vs_raw_i64": 11530696,
+      "dispatch_attempted": false,
+      "error": null,
+      "gpu_launched": false,
+      "mode": "int4_escape",
+      "mode_histogram": {
+        "signed_int4_escape_varint": 96
+      },
+      "packet_schema": "snerv_lf_quant_payload.v2",
+      "payload_bytes": 803384,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 7.6778171673300095,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {
+        "brotli": 96
+      }
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority"
+      ],
+      "bytes_saved_vs_raw_i64": 11527663,
+      "dispatch_attempted": false,
+      "error": null,
+      "gpu_launched": false,
+      "mode": "int2_escape",
+      "mode_histogram": {
+        "signed_int2_escape_varint": 96
+      },
+      "packet_schema": "snerv_lf_quant_payload.v2",
+      "payload_bytes": 806417,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 7.675797617125189,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {
+        "brotli": 95,
+        "lzma": 1
+      }
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority"
+      ],
+      "bytes_saved_vs_raw_i64": 11503179,
+      "dispatch_attempted": false,
+      "error": null,
+      "gpu_launched": false,
+      "mode": "zero_run",
+      "mode_histogram": {
+        "zero_run_varint": 96
+      },
+      "packet_schema": "snerv_lf_quant_payload.v2",
+      "payload_bytes": 830901,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 7.659494726516947,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {
+        "brotli": 25,
+        "lzma": 71
+      }
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority"
+      ],
+      "bytes_saved_vs_raw_i64": 11495546,
+      "dispatch_attempted": false,
+      "error": null,
+      "gpu_launched": false,
+      "mode": "delta_varint",
+      "mode_histogram": {
+        "zigzag_delta_varint": 96
+      },
+      "packet_schema": "snerv_lf_quant_payload.v2",
+      "payload_bytes": 838534,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 7.654412225127765,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {
+        "brotli": 76,
+        "lzma": 20
+      }
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_mode_failed"
+      ],
+      "bytes_saved_vs_raw_i64": 0,
+      "dispatch_attempted": false,
+      "error": "signed_int2_bitpack requires values in [-2, 1]",
+      "gpu_launched": false,
+      "mode": "int2",
+      "mode_histogram": {},
+      "packet_schema": "snerv_lf_quant_payload.v1",
+      "payload_bytes": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 0.0,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {}
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_mode_failed"
+      ],
+      "bytes_saved_vs_raw_i64": 0,
+      "dispatch_attempted": false,
+      "error": "signed_int4_bitpack requires values in [-8, 7]",
+      "gpu_launched": false,
+      "mode": "int4",
+      "mode_histogram": {},
+      "packet_schema": "snerv_lf_quant_payload.v1",
+      "payload_bytes": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 0.0,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {}
+    },
+    {
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_mode_failed"
+      ],
+      "bytes_saved_vs_raw_i64": 0,
+      "dispatch_attempted": false,
+      "error": "signed_int8_bitpack requires values in [-128, 127]",
+      "gpu_launched": false,
+      "mode": "int8",
+      "mode_histogram": {},
+      "packet_schema": "snerv_lf_quant_payload.v1",
+      "payload_bytes": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_score_saved_vs_raw_i64": 0.0,
+      "raw_i64_bytes": 12334080,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "wrapper_histogram": {}
+    }
+  ],
+  "schema": "snerv_lf_payload_codec_sweep.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "section_value_rows": [
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": 0,
+      "candidate_mode": "int64_lzma",
+      "delta_nonrate_score": 0.0,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": true,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 666556,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "receiver_proof_valid",
+      "row_id": "snerv_lf_payload_codec_int64_lzma",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": 120564,
+      "candidate_mode": "portfolio_auto",
+      "delta_nonrate_score": 0.0,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": true,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 787120,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "receiver_proof_valid",
+      "row_id": "snerv_lf_payload_codec_portfolio_auto",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": 121082,
+      "candidate_mode": "int8_escape",
+      "delta_nonrate_score": 0.0,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": true,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 787638,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "receiver_proof_valid",
+      "row_id": "snerv_lf_payload_codec_int8_escape",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": 136828,
+      "candidate_mode": "int4_escape",
+      "delta_nonrate_score": 0.0,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": true,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 803384,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "receiver_proof_valid",
+      "row_id": "snerv_lf_payload_codec_int4_escape",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": 139861,
+      "candidate_mode": "int2_escape",
+      "delta_nonrate_score": 0.0,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": true,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 806417,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "receiver_proof_valid",
+      "row_id": "snerv_lf_payload_codec_int2_escape",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": 164345,
+      "candidate_mode": "zero_run",
+      "delta_nonrate_score": 0.0,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": true,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 830901,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "receiver_proof_valid",
+      "row_id": "snerv_lf_payload_codec_zero_run",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": 171978,
+      "candidate_mode": "delta_varint",
+      "delta_nonrate_score": 0.0,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": true,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 838534,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "receiver_proof_valid",
+      "row_id": "snerv_lf_payload_codec_delta_varint",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_mode_failed",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": null,
+      "candidate_mode": "int2",
+      "delta_nonrate_score": null,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": false,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "missing",
+      "row_id": "snerv_lf_payload_codec_int2",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_mode_failed",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": null,
+      "candidate_mode": "int4",
+      "delta_nonrate_score": null,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": false,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "missing",
+      "row_id": "snerv_lf_payload_codec_int4",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    },
+    {
+      "axis_tag": "[planning/control]",
+      "baseline_mode": "int64_lzma",
+      "baseline_payload_bytes": 666556,
+      "blockers": [
+        "snerv_lf_payload_codec_row_has_no_scorer_replay",
+        "snerv_lf_payload_codec_row_not_exact_eval_authority",
+        "snerv_lf_payload_codec_mode_failed",
+        "snerv_lf_payload_codec_has_packet_exactness_only_no_full_archive_replay"
+      ],
+      "byte_delta": null,
+      "candidate_mode": "int8",
+      "delta_nonrate_score": null,
+      "dispatch_attempted": false,
+      "exact_lossless_lf_packet_codec": false,
+      "family": "snerv",
+      "full_video_coverage": false,
+      "gpu_launched": false,
+      "payload_bytes": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_status": "missing",
+      "row_id": "snerv_lf_payload_codec_int8",
+      "row_kind": "existing_section_cut",
+      "scope": "lf_payload_codec_replacement",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_id": "snerv_lf_payload"
+    }
+  ],
+  "selected_rate_only_row": {
+    "blockers": [
+      "snerv_lf_payload_codec_row_has_no_scorer_replay",
+      "snerv_lf_payload_codec_row_not_exact_eval_authority"
+    ],
+    "bytes_saved_vs_raw_i64": 11667524,
+    "dispatch_attempted": false,
+    "error": null,
+    "gpu_launched": false,
+    "mode": "int64_lzma",
+    "mode_histogram": {},
+    "packet_schema": "snerv_lf_quant_payload.v1",
+    "payload_bytes": 666556,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_score_saved_vs_raw_i64": 7.76892531616781,
+    "raw_i64_bytes": 12334080,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "score_claim_valid": false,
+    "wrapper_histogram": {}
+  },
+  "source": {
+    "bytes": 738516,
+    "kind": "snar1_packet",
+    "metadata": {
+      "carrier_hw": [
+        874,
+        1164
+      ],
+      "channels": 3,
+      "decoder_payload_codec": "float32_lzma",
+      "decoder_payload_mixed_modes": null,
+      "frames_per_pair": 2,
+      "hf_decoder_fit_mode": "least_squares",
+      "hf_decoder_saliency_component": "combined",
+      "hf_decoder_saliency_gain": 1.0,
+      "levels": 3,
+      "lf_coeff_count_total": 1541760,
+      "lf_plane_count": 96,
+      "lf_scale_mode": "implicit_per_element_steps_scale_1",
+      "lf_zero_dtype": "float32_le",
+      "n_pairs": 16,
+      "step_map_adaptive_bin_choices": [
+        16,
+        4
+      ],
+      "step_map_coder_bins": 128,
+      "step_map_coder_mode": "adaptive",
+      "step_map_constant_importance_quantile": null,
+      "step_map_packet_schema": "snerv_step_map_coder.adaptive.v1",
+      "step_map_waterfill_bits_per_coeff": 4.0,
+      "wavelet": "db2"
+    },
+    "packet_sha256": "375c8a36e51cc20ea636c1fd69860b2145843171743d9f1911fd2dd3c5205154",
+    "path": "/Volumes/VertigoDataTier/pact/snerv_lf_codec_16pair_20260602T130014Z/snerv_inverse_steg_advisory_16pair_20260602T130014Z.snar",
+    "sha256": "375c8a36e51cc20ea636c1fd69860b2145843171743d9f1911fd2dd3c5205154"
+  }
+}

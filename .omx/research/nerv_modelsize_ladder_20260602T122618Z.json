@@ -1,0 +1,1372 @@
+{
+  "authority": "false_authority_modelsize_ladder_no_score_claim",
+  "blockers": [
+    "hi_nerv_measured_nonrate_modelsize_ladder_missing",
+    "hi_nerv_byte_closed_modelsize_ladder_missing",
+    "snerv_measured_nonrate_modelsize_ladder_missing",
+    "snerv_byte_closed_modelsize_ladder_missing",
+    "modelsize_ladder_false_authority_no_nonrate_score",
+    "archive_zip_runtime_overhead_not_in_payload_projection"
+  ],
+  "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+  "dispatch_attempted": false,
+  "family_rows": [
+    {
+      "blockers": [
+        "hi_nerv_measured_nonrate_modelsize_ladder_missing",
+        "hi_nerv_byte_closed_modelsize_ladder_missing"
+      ],
+      "dispatch_attempted": false,
+      "family": "hi_nerv",
+      "gpu_launched": false,
+      "ladder_kind": "local_config_family_parameter_ladder",
+      "ladder_rows": [
+        {
+          "blockers": [
+            "hi_nerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "hi_nerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_channels": [
+              24,
+              20,
+              16,
+              12,
+              10,
+              8,
+              6
+            ],
+            "embed_dim": 32,
+            "latent_dim_coarse": 8,
+            "latent_dim_fine": 12,
+            "latent_dim_mid": 10,
+            "num_pairs": 600,
+            "num_upsample_blocks": 7,
+            "output_height": 384,
+            "output_width": 512
+          },
+          "family": "hi_nerv",
+          "main_control": "modelsize_scale=0.5",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 189528,
+              "rate_score_at_contest_price": 0.1261989156673389,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "latent_embed": 6912,
+                "latent_injectors": 612,
+                "latents": 36000,
+                "rgb_heads": 660,
+                "upsample_blocks": 145344
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 379056,
+              "rate_score_at_contest_price": 0.2523978313346778,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "latent_embed": 13824,
+                "latent_injectors": 1224,
+                "latents": 72000,
+                "rgb_heads": 1320,
+                "upsample_blocks": 290688
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 26658,
+              "rate_score_at_contest_price": 0.017750467972330847,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 972,
+                "latent_injectors": 87,
+                "latents": 5064,
+                "rgb_heads": 95,
+                "upsample_blocks": 20440
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 50348,
+              "rate_score_at_contest_price": 0.033524666571795085,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 1836,
+                "latent_injectors": 163,
+                "latents": 9564,
+                "rgb_heads": 177,
+                "upsample_blocks": 38608
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 97730,
+              "rate_score_at_contest_price": 0.06507439548862981,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 3564,
+                "latent_injectors": 316,
+                "latents": 18564,
+                "rgb_heads": 342,
+                "upsample_blocks": 74944
+              }
+            }
+          },
+          "row_id": "hi_nerv_local_tiny",
+          "section_param_counts": {
+            "latent_embed": 3456,
+            "latent_injectors": 306,
+            "latents": 18000,
+            "rgb_heads": 330,
+            "upsample_blocks": 72672
+          },
+          "total_parameter_count": 94764
+        },
+        {
+          "blockers": [
+            "hi_nerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "hi_nerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_channels": [
+              36,
+              30,
+              24,
+              18,
+              15,
+              12,
+              9
+            ],
+            "embed_dim": 48,
+            "latent_dim_coarse": 12,
+            "latent_dim_fine": 18,
+            "latent_dim_mid": 15,
+            "num_pairs": 600,
+            "num_upsample_blocks": 7,
+            "output_height": 384,
+            "output_width": 512
+          },
+          "family": "hi_nerv",
+          "main_control": "modelsize_scale=0.75",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 397746,
+              "rate_score_at_contest_price": 0.2648427351685312,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "latent_embed": 14976,
+                "latent_injectors": 1338,
+                "latents": 54000,
+                "rgb_heads": 984,
+                "upsample_blocks": 326448
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 795492,
+              "rate_score_at_contest_price": 0.5296854703370624,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "latent_embed": 29952,
+                "latent_injectors": 2676,
+                "latents": 108000,
+                "rgb_heads": 1968,
+                "upsample_blocks": 652896
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 55937,
+              "rate_score_at_contest_price": 0.037246152260794904,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 2106,
+                "latent_injectors": 190,
+                "latents": 7594,
+                "rgb_heads": 139,
+                "upsample_blocks": 45908
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 105655,
+              "rate_score_at_contest_price": 0.07035132769212302,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 3978,
+                "latent_injectors": 357,
+                "latents": 14344,
+                "rgb_heads": 262,
+                "upsample_blocks": 86714
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 205091,
+              "rate_score_at_contest_price": 0.13656167855477924,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 7722,
+                "latent_injectors": 691,
+                "latents": 27844,
+                "rgb_heads": 508,
+                "upsample_blocks": 168326
+              }
+            }
+          },
+          "row_id": "hi_nerv_local_small",
+          "section_param_counts": {
+            "latent_embed": 7488,
+            "latent_injectors": 669,
+            "latents": 27000,
+            "rgb_heads": 492,
+            "upsample_blocks": 163224
+          },
+          "total_parameter_count": 198873
+        },
+        {
+          "blockers": [
+            "hi_nerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "hi_nerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_channels": [
+              48,
+              40,
+              32,
+              24,
+              20,
+              16,
+              12
+            ],
+            "embed_dim": 64,
+            "latent_dim_coarse": 16,
+            "latent_dim_fine": 24,
+            "latent_dim_mid": 20,
+            "num_pairs": 600,
+            "num_upsample_blocks": 7,
+            "output_height": 384,
+            "output_width": 512
+          },
+          "family": "hi_nerv",
+          "main_control": "modelsize_scale=1",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 681604,
+              "rate_score_at_contest_price": 0.4538521258838845,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "latent_embed": 26112,
+                "latent_injectors": 2344,
+                "latents": 72000,
+                "rgb_heads": 1308,
+                "upsample_blocks": 579840
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 1363208,
+              "rate_score_at_contest_price": 0.907704251767769,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "latent_embed": 52224,
+                "latent_injectors": 4688,
+                "latents": 144000,
+                "rgb_heads": 2616,
+                "upsample_blocks": 1159680
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 95855,
+              "rate_score_at_contest_price": 0.06382590995152573,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 3672,
+                "latent_injectors": 331,
+                "latents": 10126,
+                "rgb_heads": 186,
+                "upsample_blocks": 81540
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 181055,
+              "rate_score_at_contest_price": 0.12055709275753475,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 6936,
+                "latent_injectors": 624,
+                "latents": 19126,
+                "rgb_heads": 349,
+                "upsample_blocks": 154020
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 351456,
+              "rate_score_at_contest_price": 0.23402012422850588,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 13464,
+                "latent_injectors": 1210,
+                "latents": 37126,
+                "rgb_heads": 676,
+                "upsample_blocks": 298980
+              }
+            }
+          },
+          "row_id": "hi_nerv_local_base",
+          "section_param_counts": {
+            "latent_embed": 13056,
+            "latent_injectors": 1172,
+            "latents": 36000,
+            "rgb_heads": 654,
+            "upsample_blocks": 289920
+          },
+          "total_parameter_count": 340802
+        },
+        {
+          "blockers": [
+            "hi_nerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "hi_nerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_channels": [
+              72,
+              60,
+              48,
+              36,
+              30,
+              24,
+              18
+            ],
+            "embed_dim": 96,
+            "latent_dim_coarse": 24,
+            "latent_dim_fine": 36,
+            "latent_dim_mid": 30,
+            "num_pairs": 600,
+            "num_upsample_blocks": 7,
+            "output_height": 384,
+            "output_width": 512
+          },
+          "family": "hi_nerv",
+          "main_control": "modelsize_scale=1.5",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 1476240,
+              "rate_score_at_contest_price": 0.9829676209570744,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "latent_embed": 57600,
+                "latent_injectors": 5196,
+                "latents": 108000,
+                "rgb_heads": 1956,
+                "upsample_blocks": 1303488
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 2952480,
+              "rate_score_at_contest_price": 1.9659352419141487,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "latent_embed": 115200,
+                "latent_injectors": 10392,
+                "latents": 216000,
+                "rgb_heads": 3912,
+                "upsample_blocks": 2606976
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 207601,
+              "rate_score_at_contest_price": 0.1382329845271159,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 8100,
+                "latent_injectors": 732,
+                "latents": 15188,
+                "rgb_heads": 277,
+                "upsample_blocks": 183304
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 392130,
+              "rate_score_at_contest_price": 0.2611032712877971,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 15300,
+                "latent_injectors": 1381,
+                "latents": 28688,
+                "rgb_heads": 521,
+                "upsample_blocks": 346240
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 761190,
+              "rate_score_at_contest_price": 0.5068451765270656,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "latent_embed": 29700,
+                "latent_injectors": 2680,
+                "latents": 55688,
+                "rgb_heads": 1010,
+                "upsample_blocks": 672112
+              }
+            }
+          },
+          "row_id": "hi_nerv_local_wide",
+          "section_param_counts": {
+            "latent_embed": 28800,
+            "latent_injectors": 2598,
+            "latents": 54000,
+            "rgb_heads": 978,
+            "upsample_blocks": 651744
+          },
+          "total_parameter_count": 738120
+        }
+      ],
+      "marginal_gates": [
+        {
+          "bytes_added": 107361,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 97730,
+          "from_row_id": "hi_nerv_local_tiny",
+          "quant_mode": "int8",
+          "required_nonrate_score_improvement": 0.07148728306614945,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 205091,
+          "to_row_id": "hi_nerv_local_small"
+        },
+        {
+          "bytes_added": 146365,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 205091,
+          "from_row_id": "hi_nerv_local_small",
+          "quant_mode": "int8",
+          "required_nonrate_score_improvement": 0.09745844567372662,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 351456,
+          "to_row_id": "hi_nerv_local_base"
+        },
+        {
+          "bytes_added": 409734,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 351456,
+          "from_row_id": "hi_nerv_local_base",
+          "quant_mode": "int8",
+          "required_nonrate_score_improvement": 0.2728250522985598,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 761190,
+          "to_row_id": "hi_nerv_local_wide"
+        },
+        {
+          "bytes_added": 55307,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 50348,
+          "from_row_id": "hi_nerv_local_tiny",
+          "quant_mode": "int4",
+          "required_nonrate_score_improvement": 0.03682666112032793,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 105655,
+          "to_row_id": "hi_nerv_local_small"
+        },
+        {
+          "bytes_added": 75400,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 105655,
+          "from_row_id": "hi_nerv_local_small",
+          "quant_mode": "int4",
+          "required_nonrate_score_improvement": 0.050205765065411724,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 181055,
+          "to_row_id": "hi_nerv_local_base"
+        },
+        {
+          "bytes_added": 211075,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 181055,
+          "from_row_id": "hi_nerv_local_base",
+          "quant_mode": "int4",
+          "required_nonrate_score_improvement": 0.14054617853026233,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 392130,
+          "to_row_id": "hi_nerv_local_wide"
+        },
+        {
+          "bytes_added": 29279,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 26658,
+          "from_row_id": "hi_nerv_local_tiny",
+          "quant_mode": "int2",
+          "required_nonrate_score_improvement": 0.019495684288464057,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 55937,
+          "to_row_id": "hi_nerv_local_small"
+        },
+        {
+          "bytes_added": 39918,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 55937,
+          "from_row_id": "hi_nerv_local_small",
+          "quant_mode": "int2",
+          "required_nonrate_score_improvement": 0.026579757690730836,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 95855,
+          "to_row_id": "hi_nerv_local_base"
+        },
+        {
+          "bytes_added": 111746,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 95855,
+          "from_row_id": "hi_nerv_local_base",
+          "quant_mode": "int2",
+          "required_nonrate_score_improvement": 0.07440707457559016,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 207601,
+          "to_row_id": "hi_nerv_local_wide"
+        }
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_actions": [
+        "train_each_surviving_hi_nerv_size_with_same_score_aware_schedule",
+        "replace_payload_projection_with_byte_closed_archive_section_measurement",
+        "feed_measured_nonrate_score_rows_into_modelsize_budget_plan"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_fidelity_note": "local configs expose a priced model-size ladder; official HiNeRV S/M/L and bitstream-q parity remain separate blockers"
+    },
+    {
+      "blockers": [
+        "snerv_measured_nonrate_modelsize_ladder_missing",
+        "snerv_byte_closed_modelsize_ladder_missing"
+      ],
+      "dispatch_attempted": false,
+      "family": "snerv",
+      "gpu_launched": false,
+      "ladder_kind": "lf_depth_quant_and_shared_decoder_payload_ladder",
+      "ladder_rows": [
+        {
+          "blockers": [
+            "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "snerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_quant_bits": 4,
+            "levels": 4,
+            "lf_quant_bits": 2,
+            "n_pairs": 600,
+            "scorer_input_hw": [
+              384,
+              512
+            ]
+          },
+          "family": "snerv",
+          "lf_shape": [
+            24,
+            32
+          ],
+          "main_control": "levels=4, lf_bits=2, decoder_bits=4",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "configured": {
+              "decoder_quant_bits": 4,
+              "lf_quant_bits": 2,
+              "payload_bytes": 792174,
+              "rate_score_at_contest_price": 0.527476150330603,
+              "section_bytes": {
+                "hf_decoder_parameters": 174,
+                "lf_coefficients": 777600,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 5544648,
+              "rate_score_at_contest_price": 3.6919535127109415,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 648,
+                "lf_coefficients": 5529600,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 11089296,
+              "rate_score_at_contest_price": 7.383907025421883,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 1296,
+                "lf_coefficients": 11059200,
+                "metadata_scalars": 28800
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 779719,
+              "rate_score_at_contest_price": 0.5191828770694663,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 93,
+                "lf_coefficients": 777600,
+                "metadata_scalars": 2026
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 1472800,
+              "rate_score_at_contest_price": 0.980677066158334,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 174,
+                "lf_coefficients": 1468800,
+                "metadata_scalars": 3826
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 2858962,
+              "rate_score_at_contest_price": 1.9036654443360694,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 336,
+                "lf_coefficients": 2851200,
+                "metadata_scalars": 7426
+              }
+            }
+          },
+          "row_id": "snerv_l4_lf2_decoder_int4",
+          "section_scalar_counts": {
+            "hf_decoder_parameters": 324,
+            "lf_coefficients": 2764800,
+            "metadata_scalars": 7200
+          }
+        },
+        {
+          "blockers": [
+            "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "snerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_quant_bits": 4,
+            "levels": 3,
+            "lf_quant_bits": 2,
+            "n_pairs": 600,
+            "scorer_input_hw": [
+              384,
+              512
+            ]
+          },
+          "family": "snerv",
+          "lf_shape": [
+            48,
+            64
+          ],
+          "main_control": "levels=3, lf_bits=2, decoder_bits=4",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "configured": {
+              "decoder_quant_bits": 4,
+              "lf_quant_bits": 2,
+              "payload_bytes": 3124930,
+              "rate_score_at_contest_price": 2.080762618380067,
+              "section_bytes": {
+                "hf_decoder_parameters": 130,
+                "lf_coefficients": 3110400,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 22133286,
+              "rate_score_at_contest_price": 14.737646645113612,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 486,
+                "lf_coefficients": 22118400,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 44266572,
+              "rate_score_at_contest_price": 29.475293290227224,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 972,
+                "lf_coefficients": 44236800,
+                "metadata_scalars": 28800
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 3112495,
+              "rate_score_at_contest_price": 2.072482662297993,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 69,
+                "lf_coefficients": 3110400,
+                "metadata_scalars": 2026
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 5879156,
+              "rate_score_at_contest_price": 3.9146886594019326,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 130,
+                "lf_coefficients": 5875200,
+                "metadata_scalars": 3826
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 11412477,
+              "rate_score_at_contest_price": 7.59909998775086,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 251,
+                "lf_coefficients": 11404800,
+                "metadata_scalars": 7426
+              }
+            }
+          },
+          "row_id": "snerv_l3_lf2_decoder_int4",
+          "section_scalar_counts": {
+            "hf_decoder_parameters": 243,
+            "lf_coefficients": 11059200,
+            "metadata_scalars": 7200
+          }
+        },
+        {
+          "blockers": [
+            "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "snerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_quant_bits": 4,
+            "levels": 3,
+            "lf_quant_bits": 4,
+            "n_pairs": 600,
+            "scorer_input_hw": [
+              384,
+              512
+            ]
+          },
+          "family": "snerv",
+          "lf_shape": [
+            48,
+            64
+          ],
+          "main_control": "levels=3, lf_bits=4, decoder_bits=4",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "configured": {
+              "decoder_quant_bits": 4,
+              "lf_quant_bits": 4,
+              "payload_bytes": 5889730,
+              "rate_score_at_contest_price": 3.9217294519722463,
+              "section_bytes": {
+                "hf_decoder_parameters": 130,
+                "lf_coefficients": 5875200,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 22133286,
+              "rate_score_at_contest_price": 14.737646645113612,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 486,
+                "lf_coefficients": 22118400,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 44266572,
+              "rate_score_at_contest_price": 29.475293290227224,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 972,
+                "lf_coefficients": 44236800,
+                "metadata_scalars": 28800
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 3112495,
+              "rate_score_at_contest_price": 2.072482662297993,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 69,
+                "lf_coefficients": 3110400,
+                "metadata_scalars": 2026
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 5879156,
+              "rate_score_at_contest_price": 3.9146886594019326,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 130,
+                "lf_coefficients": 5875200,
+                "metadata_scalars": 3826
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 11412477,
+              "rate_score_at_contest_price": 7.59909998775086,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 251,
+                "lf_coefficients": 11404800,
+                "metadata_scalars": 7426
+              }
+            }
+          },
+          "row_id": "snerv_l3_lf4_decoder_int4",
+          "section_scalar_counts": {
+            "hf_decoder_parameters": 243,
+            "lf_coefficients": 11059200,
+            "metadata_scalars": 7200
+          }
+        },
+        {
+          "blockers": [
+            "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "snerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_quant_bits": 4,
+            "levels": 2,
+            "lf_quant_bits": 4,
+            "n_pairs": 600,
+            "scorer_input_hw": [
+              384,
+              512
+            ]
+          },
+          "family": "snerv",
+          "lf_shape": [
+            96,
+            128
+          ],
+          "main_control": "levels=2, lf_bits=4, decoder_bits=4",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "configured": {
+              "decoder_quant_bits": 4,
+              "lf_quant_bits": 4,
+              "payload_bytes": 23515287,
+              "rate_score_at_contest_price": 15.657864384187407,
+              "section_bytes": {
+                "hf_decoder_parameters": 87,
+                "lf_coefficients": 23500800,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 88488324,
+              "rate_score_at_contest_price": 58.920742782175516,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 324,
+                "lf_coefficients": 88473600,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 176976648,
+              "rate_score_at_contest_price": 117.84148556435103,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 648,
+                "lf_coefficients": 176947200,
+                "metadata_scalars": 28800
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 12443673,
+              "rate_score_at_contest_price": 8.28573107677463,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 47,
+                "lf_coefficients": 12441600,
+                "metadata_scalars": 2026
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 23504713,
+              "rate_score_at_contest_price": 15.650823591617092,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 87,
+                "lf_coefficients": 23500800,
+                "metadata_scalars": 3826
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 45626794,
+              "rate_score_at_contest_price": 30.38100928716097,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 168,
+                "lf_coefficients": 45619200,
+                "metadata_scalars": 7426
+              }
+            }
+          },
+          "row_id": "snerv_l2_lf4_decoder_int4",
+          "section_scalar_counts": {
+            "hf_decoder_parameters": 162,
+            "lf_coefficients": 44236800,
+            "metadata_scalars": 7200
+          }
+        },
+        {
+          "blockers": [
+            "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "snerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_quant_bits": 8,
+            "levels": 2,
+            "lf_quant_bits": 8,
+            "n_pairs": 600,
+            "scorer_input_hw": [
+              384,
+              512
+            ]
+          },
+          "family": "snerv",
+          "lf_shape": [
+            96,
+            128
+          ],
+          "main_control": "levels=2, lf_bits=8, decoder_bits=8",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "configured": {
+              "decoder_quant_bits": 8,
+              "lf_quant_bits": 8,
+              "payload_bytes": 45633768,
+              "rate_score_at_contest_price": 30.385652987500045,
+              "section_bytes": {
+                "hf_decoder_parameters": 168,
+                "lf_coefficients": 45619200,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 88488324,
+              "rate_score_at_contest_price": 58.920742782175516,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 324,
+                "lf_coefficients": 88473600,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 176976648,
+              "rate_score_at_contest_price": 117.84148556435103,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 648,
+                "lf_coefficients": 176947200,
+                "metadata_scalars": 28800
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 12443673,
+              "rate_score_at_contest_price": 8.28573107677463,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 47,
+                "lf_coefficients": 12441600,
+                "metadata_scalars": 2026
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 23504713,
+              "rate_score_at_contest_price": 15.650823591617092,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 87,
+                "lf_coefficients": 23500800,
+                "metadata_scalars": 3826
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 45626794,
+              "rate_score_at_contest_price": 30.38100928716097,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 168,
+                "lf_coefficients": 45619200,
+                "metadata_scalars": 7426
+              }
+            }
+          },
+          "row_id": "snerv_l2_lf8_decoder_int8",
+          "section_scalar_counts": {
+            "hf_decoder_parameters": 162,
+            "lf_coefficients": 44236800,
+            "metadata_scalars": 7200
+          }
+        },
+        {
+          "blockers": [
+            "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+            "snerv_payload_estimate_not_archive_zip_measurement"
+          ],
+          "config": {
+            "decoder_quant_bits": 8,
+            "levels": 1,
+            "lf_quant_bits": 8,
+            "n_pairs": 600,
+            "scorer_input_hw": [
+              384,
+              512
+            ]
+          },
+          "family": "snerv",
+          "lf_shape": [
+            192,
+            256
+          ],
+          "main_control": "levels=1, lf_bits=8, decoder_bits=8",
+          "nonrate_score_required": true,
+          "quantized_payload_estimates": {
+            "configured": {
+              "decoder_quant_bits": 8,
+              "lf_quant_bits": 8,
+              "payload_bytes": 182491285,
+              "rate_score_at_contest_price": 121.51345598401981,
+              "section_bytes": {
+                "hf_decoder_parameters": 85,
+                "lf_coefficients": 182476800,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp16": {
+              "bits_per_scalar": 16,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 353908962,
+              "rate_score_at_contest_price": 235.65345093787434,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 162,
+                "lf_coefficients": 353894400,
+                "metadata_scalars": 14400
+              }
+            },
+            "fp32": {
+              "bits_per_scalar": 32,
+              "group_size": null,
+              "grouped_scale_overhead": false,
+              "payload_bytes": 707817924,
+              "rate_score_at_contest_price": 471.3069018757487,
+              "scale_bytes_per_group": 0,
+              "section_bytes": {
+                "hf_decoder_parameters": 324,
+                "lf_coefficients": 707788800,
+                "metadata_scalars": 28800
+              }
+            },
+            "int2": {
+              "bits_per_scalar": 2,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 49768451,
+              "rate_score_at_contest_price": 33.138768681372085,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 25,
+                "lf_coefficients": 49766400,
+                "metadata_scalars": 2026
+              }
+            },
+            "int4": {
+              "bits_per_scalar": 4,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 94007071,
+              "rate_score_at_contest_price": 62.59544988214164,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 45,
+                "lf_coefficients": 94003200,
+                "metadata_scalars": 3826
+              }
+            },
+            "int8": {
+              "bits_per_scalar": 8,
+              "group_size": 64,
+              "grouped_scale_overhead": true,
+              "payload_bytes": 182484311,
+              "rate_score_at_contest_price": 121.50881228368074,
+              "scale_bytes_per_group": 2,
+              "section_bytes": {
+                "hf_decoder_parameters": 85,
+                "lf_coefficients": 182476800,
+                "metadata_scalars": 7426
+              }
+            }
+          },
+          "row_id": "snerv_l1_lf8_decoder_int8",
+          "section_scalar_counts": {
+            "hf_decoder_parameters": 81,
+            "lf_coefficients": 176947200,
+            "metadata_scalars": 7200
+          }
+        }
+      ],
+      "marginal_gates": [
+        {
+          "bytes_added": 2332756,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 792174,
+          "from_row_id": "snerv_l4_lf2_decoder_int4",
+          "quant_mode": "configured",
+          "required_nonrate_score_improvement": 1.553286468049464,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 3124930,
+          "to_row_id": "snerv_l3_lf2_decoder_int4"
+        },
+        {
+          "bytes_added": 2764800,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 3124930,
+          "from_row_id": "snerv_l3_lf2_decoder_int4",
+          "quant_mode": "configured",
+          "required_nonrate_score_improvement": 1.8409668335921794,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 5889730,
+          "to_row_id": "snerv_l3_lf4_decoder_int4"
+        },
+        {
+          "bytes_added": 17625557,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 5889730,
+          "from_row_id": "snerv_l3_lf4_decoder_int4",
+          "quant_mode": "configured",
+          "required_nonrate_score_improvement": 11.73613493221516,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 23515287,
+          "to_row_id": "snerv_l2_lf4_decoder_int4"
+        },
+        {
+          "bytes_added": 22118481,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 23515287,
+          "from_row_id": "snerv_l2_lf4_decoder_int4",
+          "quant_mode": "configured",
+          "required_nonrate_score_improvement": 14.72778860331264,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 45633768,
+          "to_row_id": "snerv_l2_lf8_decoder_int8"
+        },
+        {
+          "bytes_added": 136857517,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 45633768,
+          "from_row_id": "snerv_l2_lf8_decoder_int8",
+          "quant_mode": "configured",
+          "required_nonrate_score_improvement": 91.12780299651978,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 182491285,
+          "to_row_id": "snerv_l1_lf8_decoder_int8"
+        },
+        {
+          "bytes_added": 4406356,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 1472800,
+          "from_row_id": "snerv_l4_lf2_decoder_int4",
+          "quant_mode": "int4",
+          "required_nonrate_score_improvement": 2.9340115932435986,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 5879156,
+          "to_row_id": "snerv_l3_lf2_decoder_int4"
+        },
+        {
+          "bytes_added": 17625557,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 5879156,
+          "from_row_id": "snerv_l3_lf4_decoder_int4",
+          "quant_mode": "int4",
+          "required_nonrate_score_improvement": 11.73613493221516,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 23504713,
+          "to_row_id": "snerv_l2_lf4_decoder_int4"
+        },
+        {
+          "bytes_added": 70502358,
+          "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+          "from_payload_bytes": 23504713,
+          "from_row_id": "snerv_l2_lf8_decoder_int8",
+          "quant_mode": "int4",
+          "required_nonrate_score_improvement": 46.944626290524546,
+          "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+          "to_payload_bytes": 94007071,
+          "to_row_id": "snerv_l1_lf8_decoder_int8"
+        }
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_actions": [
+        "attach_full_video_advisory_nonrate_score_to_each_snerv_ladder_row",
+        "replace_payload_projection_with_receiver_closed_archive_bytes",
+        "push_wavelet_group_saliency_into_lf_depth_and_quant_selection"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_fidelity_note": "local inverse-steg SNeRV estimates LF/depth payloads; official DWT/MFU/HFR/SNeRV-T parity remains a separate blocker"
+    }
+  ],
+  "focus_families": [
+    "hi_nerv",
+    "snerv"
+  ],
+  "frames": 1200,
+  "gpu_launched": false,
+  "num_pairs": 600,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/nerv_modelsize_ladder_20260602T122618Z.json",
+  "schema": "nerv_modelsize_ladder.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "scorer_input_hw": [
+    384,
+    512
+  ],
+  "section_payload_rule": "payload byte estimates exclude ZIP/runtime overhead and require receiver-closed archive measurement before promotion"
+}

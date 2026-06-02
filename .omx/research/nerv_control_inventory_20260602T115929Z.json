@@ -1,0 +1,737 @@
+{
+  "authority": "false_authority_control_inventory_no_score_claim",
+  "binding_gap_rows": [
+    {
+      "applies_to": "hi_nerv",
+      "blocks_score_lowering": true,
+      "control_id": "hi_nerv_hierarchical_capacity",
+      "gap_id": "measured_hi_nerv_modelsize_budget_ladder",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "hi_nerv",
+      "blocks_score_lowering": true,
+      "control_id": "hi_nerv_hierarchical_capacity",
+      "gap_id": "decoder_weight_saliency_into_trainer",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "hi_nerv",
+      "blocks_score_lowering": true,
+      "control_id": "hi_nerv_hierarchical_capacity",
+      "gap_id": "cache_quality_gate_required_before_profile_or_spend",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "hi_nerv",
+      "blocks_score_lowering": true,
+      "control_id": "hi_nerv_bitstream_quantization",
+      "gap_id": "hi_nerv_decoder_codec_sweep_full600_replay",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "hi_nerv",
+      "blocks_score_lowering": true,
+      "control_id": "hi_nerv_sr_resolution_axis",
+      "gap_id": "trained_scorer_preserving_sr_receiver_for_hi_nerv",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "sr_nerv_lowres_receiver_axis",
+      "gap_id": "receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "hi_nerv",
+      "blocks_score_lowering": true,
+      "control_id": "hi_nerv_inverse_steg_decoder_weight_fit",
+      "gap_id": "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_frequency_split",
+      "gap_id": "mlx_native_snerv_train_export",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_frequency_split",
+      "gap_id": "receiver_closed_learned_hfr",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_lf_modelsize_and_stepmap",
+      "gap_id": "snerv_measured_modelsize_ladder",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_lf_modelsize_and_stepmap",
+      "gap_id": "learned_lf_generator_byte_collapse",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_pose_guarded_hf_restoration",
+      "gap_id": "snerv_scorer_loop_decoder_qat_full_video",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "hnerv_modelsize_control",
+      "gap_id": "feed_pr95_hnerv_measured_ladder_into_all_carrier_plans",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "rnerv_config_optimizer",
+      "gap_id": "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "ffnerv_flow_temporal_redundancy",
+      "gap_id": "byte_priced_flow_or_pose_support_tokens_for_hi_nerv_snerv",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "nervplusplus_decoder_efficiency_blocks",
+      "gap_id": "rate_priced_nervplusplus_block_ablation_for_hi_nerv_snerv",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "inverse_steganalysis_saliency_stack",
+      "gap_id": "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "master_gradient_xray_stack",
+      "gap_id": "nerv_control_inventory_consumer_for_master_gradient_rows",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "bitmask_and_zero_packing",
+      "gap_id": "hi_nerv_snerv_grouped_intN_zero_run_packet_layout",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    }
+  ],
+  "control_rows": [
+    {
+      "allocator_binding": "modelsize_budget_plan + decoder-weight saliency/waterfilling",
+      "applies_to": "hi_nerv",
+      "archive_runtime_binding": "export_hi_nerv_mlx_archive + decoder_codec",
+      "binding_status": "partially_wired_needs_measured_ladder",
+      "control_id": "hi_nerv_hierarchical_capacity",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "latent_dim_coarse/mid/fine, embed_dim, decoder_channels, injection blocks",
+      "missing_bindings": [
+        "measured_hi_nerv_modelsize_budget_ladder",
+        "decoder_weight_saliency_into_trainer",
+        "cache_quality_gate_required_before_profile_or_spend"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "score-aware MLX full_main + cache quality gate + scorer prefilter",
+      "upstream_control": "HiNeRV-S/M/L config capacity; hierarchical positional encodings"
+    },
+    {
+      "allocator_binding": "contest byte price from modelsize_budget_plan",
+      "applies_to": "hi_nerv",
+      "archive_runtime_binding": "compact decoder codec sweep",
+      "binding_status": "partially_wired_needs_hi_nerv_codec_sweep_replay",
+      "control_id": "hi_nerv_bitstream_quantization",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "decoder_codec int8/int4/int2 plus coder_aware_qat quant bits",
+      "missing_bindings": [
+        "hi_nerv_decoder_codec_sweep_full600_replay"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "MLX replay and section value profile",
+      "upstream_control": "HiNeRV --bitstream-q evaluates compressed bitstreams"
+    },
+    {
+      "allocator_binding": "resolution dead-zone before per-pixel saliency spend",
+      "applies_to": "hi_nerv",
+      "archive_runtime_binding": "do not store high-frequency output detail unless scorer-visible",
+      "binding_status": "design_knob_needs_trained_sr_receiver",
+      "control_id": "hi_nerv_sr_resolution_axis",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "output_height/output_width currently 384x512 scorer size; SR mirror exists",
+      "missing_bindings": [
+        "trained_scorer_preserving_sr_receiver_for_hi_nerv"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "sr_nerv_resolution_axis_mirror + MLX scorer cache quality",
+      "upstream_control": "SR-NeRV principle: encode low internal resolution and super-resolve"
+    },
+    {
+      "allocator_binding": "resolution-axis dead-zone before atom-level waterfilling",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "receiver-generated SR, not stored high-frequency payload",
+      "binding_status": "design_knob_needs_receiver_closed_training",
+      "control_id": "sr_nerv_lowres_receiver_axis",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "sr_nerv_resolution_axis_mirror and scorer cache quality gate",
+      "missing_bindings": [
+        "receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "contest scorer downsample mirror; reject SR detail that scorer cannot see",
+      "upstream_control": "SR-NeRV uses low-detail INR reconstruction plus SR to improve embedding efficiency"
+    },
+    {
+      "allocator_binding": "decoder weights, not post-hoc latents, when latent JVP is near zero",
+      "applies_to": "hi_nerv",
+      "archive_runtime_binding": "QAT/coder-aware regularized trained decoder bytes",
+      "binding_status": "not_wired_into_real_trainer",
+      "control_id": "hi_nerv_inverse_steg_decoder_weight_fit",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "hinerv_latent_linf_allocation, score_exact_saliency, carrier_training_plan",
+      "missing_bindings": [
+        "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "P18 SegNet last-frame saliency + P19 PoseNet Fisher",
+      "upstream_control": "HNeRV content amortizes into decoder weights"
+    },
+    {
+      "allocator_binding": "G3 adjoint pushes pixel saliency into wavelet/LF/HF domains",
+      "applies_to": "snerv",
+      "archive_runtime_binding": "SNAR packet + compact LF residual grammar",
+      "binding_status": "partially_wired_cpu_advisory_mlx_missing",
+      "control_id": "snerv_frequency_split",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "snerv_step_map_coder, SNeRV packet/runtime proofs, LF/HF advisories",
+      "missing_bindings": [
+        "mlx_native_snerv_train_export",
+        "receiver_closed_learned_hfr"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "score_exact_saliency + hprc_saliency_rd_allocation",
+      "upstream_control": "SNeRV DWT LF/HF split, HFR, MFU, temporal TUB"
+    },
+    {
+      "allocator_binding": "modelsize_budget_plan + waterfilling over LF/HF atoms",
+      "applies_to": "snerv",
+      "archive_runtime_binding": "deterministic receiver-side LF generator or symbolic residual grammar",
+      "binding_status": "needs_representation_change",
+      "control_id": "snerv_lf_modelsize_and_stepmap",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "step-map waterfill, LF predictor profiles, decoder mode probes",
+      "missing_bindings": [
+        "snerv_measured_modelsize_ladder",
+        "learned_lf_generator_byte_collapse"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "cache quality gate + full-video scorer replay",
+      "upstream_control": "SNeRV controls enc_strds/dec_strds, fc_dim, num_blocks, emb_size"
+    },
+    {
+      "allocator_binding": "frame_0 pose-only vs frame_1 seg+pose asymmetry",
+      "applies_to": "snerv",
+      "archive_runtime_binding": "HF restoration should be receiver-generated, not stored as floats",
+      "binding_status": "advisory_only_needs_scorer_loop_training",
+      "control_id": "snerv_pose_guarded_hf_restoration",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "snerv_pose_guarded_decoder_gate, score-weighted decoder fit smokes",
+      "missing_bindings": [
+        "snerv_scorer_loop_decoder_qat_full_video"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "PoseNet Fisher over both frames and SegNet last-frame only",
+      "upstream_control": "SNeRV HFR restores high-frequency detail from compact LF features"
+    },
+    {
+      "allocator_binding": "fixed contest byte price; spend size only if marginal distortion drops enough",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "PR95-style byte-closed archive/runtime",
+      "binding_status": "control_baseline_available",
+      "control_id": "hnerv_modelsize_control",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "PR95 HNeRV MLX + modelsize_budget_plan",
+      "missing_bindings": [
+        "feed_pr95_hnerv_measured_ladder_into_all_carrier_plans"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "PR95 control replay + MLX/PyTorch render parity",
+      "upstream_control": "HNeRV/NeRV use architecture size, pruning, quant_bit, model parameter bpp"
+    },
+    {
+      "allocator_binding": "acquisition rule over modelsize, codec, SR, saliency controls",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "only promote receiver-closed archive/runtime rows",
+      "binding_status": "planner_missing",
+      "control_id": "rnerv_config_optimizer",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "runner family configs, bounded runner, implementation readiness",
+      "missing_bindings": [
+        "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "timing smoke + cache gate + scorer replay gates",
+      "upstream_control": "RNeRV-style per-video configuration search"
+    },
+    {
+      "allocator_binding": "only spend flow/support tokens when byte-priced score drop pays",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "flow/support must be receiver-generated, tiny-tokenized, or entropy-coded",
+      "binding_status": "not_wired_into_compact_carrier_training",
+      "control_id": "ffnerv_flow_temporal_redundancy",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "pose/flow side-channel probes, RAFT/ego-motion priors, scorer-visible motion groups",
+      "missing_bindings": [
+        "byte_priced_flow_or_pose_support_tokens_for_hi_nerv_snerv"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "PoseNet pair sensitivity plus SegNet last-frame sensitivity",
+      "upstream_control": "FFNeRV injects flow information and compact convolutions for temporal redundancy"
+    },
+    {
+      "allocator_binding": "architecture changes must beat byte price after quantization and pruning",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "decoder block bytes must pass intN/coder-aware archive section proof",
+      "binding_status": "architecture_candidate_needs_rate_priced_ladder",
+      "control_id": "nervplusplus_decoder_efficiency_blocks",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "decoder architecture candidates for HiNeRV/SNeRV MLX trainers",
+      "missing_bindings": [
+        "rate_priced_nervplusplus_block_ablation_for_hi_nerv_snerv"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "cache gate plus modelsize_budget_plan before full-video training",
+      "upstream_control": "NeRV++ improves decoder capacity with separable residual blocks and skip layers"
+    },
+    {
+      "allocator_binding": "waterfill sparse atoms, zero dead zones, protect scorer-visible coefficients",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "int8/fp16 only for protected atoms; int4/int2/zero/RLE elsewhere",
+      "binding_status": "available_needs_carrier_domain_binding",
+      "control_id": "inverse_steganalysis_saliency_stack",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "score_exact_saliency, inverse_steganalysis_linf_vs_l2_gate, joint_p18_p19_waterfill, segnet_boundary_marginals",
+      "missing_bindings": [
+        "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "SegNet boundary/logit margin + PoseNet Fisher + exact byte price",
+      "upstream_control": "detector-aware allocation rather than perceptual allocation"
+    },
+    {
+      "allocator_binding": "rank controls by measured marginal score response",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "operator plans must include grammar-aware packet proof",
+      "binding_status": "available_needs_nerv_control_consumer",
+      "control_id": "master_gradient_xray_stack",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "master_gradient, xray tools, Venn composition, sensitivity maps",
+      "missing_bindings": [
+        "nerv_control_inventory_consumer_for_master_gradient_rows"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "component deltas and CPU/CUDA drift by pair/frame/byte group",
+      "upstream_control": "none; repo-native diagnostic score-response tensor"
+    },
+    {
+      "allocator_binding": "protect high-value atoms; RLE/zero low-value atoms",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "compact decoder codec sweep + arithmetic/range/ANS candidates",
+      "binding_status": "available_needs_family_specific_packet_layout",
+      "control_id": "bitmask_and_zero_packing",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "bitmask, packed-zero, intN codec sweeps, section value profiling",
+      "missing_bindings": [
+        "hi_nerv_snerv_grouped_intN_zero_run_packet_layout"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "section neutralization replay and cache quality gates",
+      "upstream_control": "standard entropy coding and sparse neural compression practice"
+    }
+  ],
+  "dispatch_attempted": false,
+  "focus_families": [
+    "hi_nerv",
+    "snerv"
+  ],
+  "gpu_launched": false,
+  "local_binding_surfaces": {
+    "nerv_carriers": [
+      "tools/run_compact_renderer_mlx_spine_runner.py",
+      "src/tac/substrates/hi_nerv",
+      "src/tac/analysis/snerv_step_map_coder.py",
+      "src/tac/analysis/sr_nerv_resolution_axis_mirror.py",
+      "src/tac/local_acceleration/pr95_hnerv_mlx.py"
+    ],
+    "newly_required_gates": [
+      "src/tac/analysis/mlx_cache_quality_gate.py",
+      "src/tac/substrates/_shared/mlx_score_aware/modelsize_budget_plan.py"
+    ],
+    "scorer_and_saliency": [
+      "src/tac/analysis/score_exact_saliency.py",
+      "src/tac/analysis/hprc_saliency_rd_allocation.py",
+      "src/tac/analysis/segnet_boundary_marginals.py",
+      "src/tac/optimization/joint_p18_p19_waterfill.py",
+      "src/tac/analysis/inverse_steganalysis_linf_vs_l2_gate.py"
+    ],
+    "xray_and_master_gradient": [
+      "src/tac/master_gradient.py",
+      "src/tac/master_gradient_consumers.py",
+      "src/tac/master_gradient_mlx_pipeline.py",
+      "tools/build_pair_frame_scorer_geometry_lattice.py",
+      "tools/cpu_cuda_xray_loader_drift.py"
+    ]
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_constraint": {
+    "constraint_id": "fixed_contest_byte_price",
+    "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "implication": "large NeRV-family capacity is admissible only when measured non-rate improvement per added archive byte exceeds the fixed contest byte price",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "required_large_model_escape_hatches": [
+      "quantization_aware_training",
+      "coder_aware_regularization",
+      "weight_or_wavelet_group_ablation",
+      "waterfilled_int8_int4_int2_zero_allocation",
+      "packed_zero_run_or_entropy_coded_packet_layout",
+      "receiver_generated_low_resolution_or_symbolic_components"
+    ],
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_work_orders": [
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "hi_nerv",
+        "blocks_score_lowering": true,
+        "control_id": "hi_nerv_hierarchical_capacity",
+        "gap_id": "cache_quality_gate_required_before_profile_or_spend",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "cache_quality_gate_required_before_profile_or_spend"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "hi_nerv",
+        "blocks_score_lowering": true,
+        "control_id": "hi_nerv_hierarchical_capacity",
+        "gap_id": "measured_hi_nerv_modelsize_budget_ladder",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "measured_hi_nerv_modelsize_budget_ladder"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "hi_nerv",
+        "blocks_score_lowering": true,
+        "control_id": "hi_nerv_inverse_steg_decoder_weight_fit",
+        "gap_id": "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "snerv",
+        "blocks_score_lowering": true,
+        "control_id": "snerv_frequency_split",
+        "gap_id": "mlx_native_snerv_train_export",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "mlx_native_snerv_train_export"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "snerv",
+        "blocks_score_lowering": true,
+        "control_id": "snerv_lf_modelsize_and_stepmap",
+        "gap_id": "snerv_measured_modelsize_ladder",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "snerv_measured_modelsize_ladder"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "cross_stack",
+        "blocks_score_lowering": true,
+        "control_id": "inverse_steganalysis_saliency_stack",
+        "gap_id": "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "cross_stack",
+        "blocks_score_lowering": true,
+        "control_id": "rnerv_config_optimizer",
+        "gap_id": "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls"
+    }
+  ],
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/nerv_control_inventory_20260602T115929Z.json",
+  "schema": "nerv_control_inventory.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "status_counts": {
+    "advisory_only_needs_scorer_loop_training": 1,
+    "architecture_candidate_needs_rate_priced_ladder": 1,
+    "available_needs_carrier_domain_binding": 1,
+    "available_needs_family_specific_packet_layout": 1,
+    "available_needs_nerv_control_consumer": 1,
+    "control_baseline_available": 1,
+    "design_knob_needs_receiver_closed_training": 1,
+    "design_knob_needs_trained_sr_receiver": 1,
+    "needs_representation_change": 1,
+    "not_wired_into_compact_carrier_training": 1,
+    "not_wired_into_real_trainer": 1,
+    "partially_wired_cpu_advisory_mlx_missing": 1,
+    "partially_wired_needs_hi_nerv_codec_sweep_replay": 1,
+    "partially_wired_needs_measured_ladder": 1,
+    "planner_missing": 1
+  },
+  "upstream_sources_checked": [
+    {
+      "control_signal": "architecture size, pruning, quantization, model bpp",
+      "id": "hnerv_official",
+      "url": "https://github.com/haochen-rye/HNeRV"
+    },
+    {
+      "control_signal": "HiNeRV S/M/L configs, patch size, bitstream-q",
+      "id": "hinerv_official",
+      "url": "https://github.com/hmkx/HiNeRV"
+    },
+    {
+      "control_signal": "hierarchical encodings plus pruning and quantization pipeline",
+      "id": "hinerv_paper",
+      "url": "https://arxiv.org/abs/2306.09818"
+    },
+    {
+      "control_signal": "DWT LF/HF, enc/dec strides, fc_dim, emb_size, temporal extension",
+      "id": "snerv_official",
+      "url": "https://github.com/qwertja/SNeRV"
+    },
+    {
+      "control_signal": "spectral split, HFR/MFU/TUB controls",
+      "id": "snerv_paper",
+      "url": "https://arxiv.org/abs/2501.01681"
+    },
+    {
+      "control_signal": "low-detail INR representation plus super-resolution",
+      "id": "sr_nerv_paper",
+      "url": "https://arxiv.org/abs/2505.00046"
+    },
+    {
+      "control_signal": "shallow residual/inter-frame VQ codebook controls",
+      "id": "vq_nerv_paper",
+      "url": "https://arxiv.org/abs/2403.12401"
+    },
+    {
+      "control_signal": "flow-guided temporal redundancy and compact convolutional architecture",
+      "id": "ffnerv_paper",
+      "url": "https://arxiv.org/abs/2212.12294"
+    },
+    {
+      "control_signal": "separable residual decoder blocks and skip-layer capacity",
+      "id": "nervplusplus_paper",
+      "url": "https://arxiv.org/abs/2402.18305"
+    }
+  ]
+}

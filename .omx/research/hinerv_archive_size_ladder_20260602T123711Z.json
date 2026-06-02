@@ -1,0 +1,293 @@
+{
+  "archive_rows": [
+    {
+      "archive_bytes": 135056,
+      "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_tiny/archive.zip",
+      "archive_rate_score_at_contest_price": 0.08992824677286798,
+      "archive_sha256": "696d95950801f45aab7798b2f3f5411b56db38ad77f4a418b74e484ccbeaeedf",
+      "blockers": [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "receiver_proof_not_executed_for_archive_size_ladder"
+      ],
+      "config": {
+        "decoder_channels": [
+          24,
+          20,
+          16,
+          12,
+          10,
+          8,
+          6
+        ],
+        "embed_dim": 32,
+        "latent_dim_coarse": 8,
+        "latent_dim_fine": 12,
+        "latent_dim_mid": 10,
+        "num_pairs": 600,
+        "num_upsample_blocks": 7,
+        "output_height": 384,
+        "output_width": 512
+      },
+      "decoder_codec": "int8_mixed",
+      "dispatch_attempted": false,
+      "family": "hi_nerv",
+      "gpu_launched": false,
+      "modelsize_scale": 0.5,
+      "num_parameters": 94764,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_executed": false,
+      "receiver_proof_path": null,
+      "required_allocator_bindings": [
+        "adaptive_quantization_by_decoder_weight_group",
+        "ablate_or_zero_groups_with_nonpositive_measured_value",
+        "waterfill_group_bits_against_fixed_contest_byte_price",
+        "inverse_steg_saliency_decoder_weight_binding",
+        "packed_zero_and_entropy_coded_low_value_groups"
+      ],
+      "row_id": "hi_nerv_local_tiny",
+      "runtime_consumption_proof_ready": null,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_tiny/hprc_representation_spine_hi_nerv_manifest.json",
+      "state_npz_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_tiny/hi_nerv_mlx_exported_state_npz_manifest.json",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_tiny/submission"
+    },
+    {
+      "archive_bytes": 247785,
+      "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_small/archive.zip",
+      "archive_rate_score_at_contest_price": 0.16498986069937724,
+      "archive_sha256": "4e6c282be9990211bd477dd19d14e41b4aee39ea0956f3906967bd6799ed144b",
+      "blockers": [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "receiver_proof_not_executed_for_archive_size_ladder"
+      ],
+      "config": {
+        "decoder_channels": [
+          36,
+          30,
+          24,
+          18,
+          15,
+          12,
+          9
+        ],
+        "embed_dim": 48,
+        "latent_dim_coarse": 12,
+        "latent_dim_fine": 18,
+        "latent_dim_mid": 15,
+        "num_pairs": 600,
+        "num_upsample_blocks": 7,
+        "output_height": 384,
+        "output_width": 512
+      },
+      "decoder_codec": "int8_mixed",
+      "dispatch_attempted": false,
+      "family": "hi_nerv",
+      "gpu_launched": false,
+      "modelsize_scale": 0.75,
+      "num_parameters": 198873,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_executed": false,
+      "receiver_proof_path": null,
+      "required_allocator_bindings": [
+        "adaptive_quantization_by_decoder_weight_group",
+        "ablate_or_zero_groups_with_nonpositive_measured_value",
+        "waterfill_group_bits_against_fixed_contest_byte_price",
+        "inverse_steg_saliency_decoder_weight_binding",
+        "packed_zero_and_entropy_coded_low_value_groups"
+      ],
+      "row_id": "hi_nerv_local_small",
+      "runtime_consumption_proof_ready": null,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_small/hprc_representation_spine_hi_nerv_manifest.json",
+      "state_npz_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_small/hi_nerv_mlx_exported_state_npz_manifest.json",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_small/submission"
+    },
+    {
+      "archive_bytes": 397988,
+      "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_base/archive.zip",
+      "archive_rate_score_at_contest_price": 0.26500387303518674,
+      "archive_sha256": "cc6d00df7385b300b70a305d2fd43e340c586d5944716cd21aa9f91bdcd1a352",
+      "blockers": [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "receiver_proof_not_executed_for_archive_size_ladder"
+      ],
+      "config": {
+        "decoder_channels": [
+          48,
+          40,
+          32,
+          24,
+          20,
+          16,
+          12
+        ],
+        "embed_dim": 64,
+        "latent_dim_coarse": 16,
+        "latent_dim_fine": 24,
+        "latent_dim_mid": 20,
+        "num_pairs": 600,
+        "num_upsample_blocks": 7,
+        "output_height": 384,
+        "output_width": 512
+      },
+      "decoder_codec": "int8_mixed",
+      "dispatch_attempted": false,
+      "family": "hi_nerv",
+      "gpu_launched": false,
+      "modelsize_scale": 1.0,
+      "num_parameters": 340802,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_executed": false,
+      "receiver_proof_path": null,
+      "required_allocator_bindings": [
+        "adaptive_quantization_by_decoder_weight_group",
+        "ablate_or_zero_groups_with_nonpositive_measured_value",
+        "waterfill_group_bits_against_fixed_contest_byte_price",
+        "inverse_steg_saliency_decoder_weight_binding",
+        "packed_zero_and_entropy_coded_low_value_groups"
+      ],
+      "row_id": "hi_nerv_local_base",
+      "runtime_consumption_proof_ready": null,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_base/hprc_representation_spine_hi_nerv_manifest.json",
+      "state_npz_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_base/hi_nerv_mlx_exported_state_npz_manifest.json",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_base/submission"
+    },
+    {
+      "archive_bytes": 812302,
+      "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_wide/archive.zip",
+      "archive_rate_score_at_contest_price": 0.540878559339046,
+      "archive_sha256": "88e4113daa357ba899da9a4e890b2ee96fe59492b6755fd7c98cf91a65732cc2",
+      "blockers": [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "receiver_proof_not_executed_for_archive_size_ladder"
+      ],
+      "config": {
+        "decoder_channels": [
+          72,
+          60,
+          48,
+          36,
+          30,
+          24,
+          18
+        ],
+        "embed_dim": 96,
+        "latent_dim_coarse": 24,
+        "latent_dim_fine": 36,
+        "latent_dim_mid": 30,
+        "num_pairs": 600,
+        "num_upsample_blocks": 7,
+        "output_height": 384,
+        "output_width": 512
+      },
+      "decoder_codec": "int8_mixed",
+      "dispatch_attempted": false,
+      "family": "hi_nerv",
+      "gpu_launched": false,
+      "modelsize_scale": 1.5,
+      "num_parameters": 738120,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_executed": false,
+      "receiver_proof_path": null,
+      "required_allocator_bindings": [
+        "adaptive_quantization_by_decoder_weight_group",
+        "ablate_or_zero_groups_with_nonpositive_measured_value",
+        "waterfill_group_bits_against_fixed_contest_byte_price",
+        "inverse_steg_saliency_decoder_weight_binding",
+        "packed_zero_and_entropy_coded_low_value_groups"
+      ],
+      "row_id": "hi_nerv_local_wide",
+      "runtime_consumption_proof_ready": null,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_wide/hprc_representation_spine_hi_nerv_manifest.json",
+      "state_npz_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_wide/hi_nerv_mlx_exported_state_npz_manifest.json",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z/hi_nerv_local_wide/submission"
+    }
+  ],
+  "authority": "false_authority_archive_size_ladder_no_score_claim",
+  "blockers": [
+    "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "receiver_proof_not_executed_for_archive_size_ladder"
+  ],
+  "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+  "decoder_codec": "int8_mixed",
+  "dispatch_attempted": false,
+  "emit_receiver_proof": false,
+  "family": "hi_nerv",
+  "gpu_launched": false,
+  "marginal_archive_gates": [
+    {
+      "bytes_added": 112729,
+      "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+      "from_archive_bytes": 135056,
+      "from_row_id": "hi_nerv_local_tiny",
+      "required_nonrate_score_improvement": 0.07506161392650926,
+      "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+      "to_archive_bytes": 247785,
+      "to_row_id": "hi_nerv_local_small"
+    },
+    {
+      "bytes_added": 150203,
+      "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+      "from_archive_bytes": 247785,
+      "from_row_id": "hi_nerv_local_small",
+      "required_nonrate_score_improvement": 0.1000140123358095,
+      "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+      "to_archive_bytes": 397988,
+      "to_row_id": "hi_nerv_local_base"
+    },
+    {
+      "bytes_added": 414314,
+      "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+      "from_archive_bytes": 397988,
+      "from_row_id": "hi_nerv_local_base",
+      "required_nonrate_score_improvement": 0.2758746863038593,
+      "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+      "to_archive_bytes": 812302,
+      "to_row_id": "hi_nerv_local_wide"
+    }
+  ],
+  "missing_requested_row_ids": [],
+  "num_pairs": 600,
+  "output_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260602T123711Z",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "repo_root": "/Users/adpena/Projects/pact",
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_20260602T123711Z.json",
+  "required_allocator_bindings": [
+    "adaptive_quantization_by_decoder_weight_group",
+    "ablate_or_zero_groups_with_nonpositive_measured_value",
+    "waterfill_group_bits_against_fixed_contest_byte_price",
+    "inverse_steg_saliency_decoder_weight_binding",
+    "packed_zero_and_entropy_coded_low_value_groups"
+  ],
+  "row_count": 4,
+  "schema": "hinerv_archive_size_ladder.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selection_rule": "measured archive bytes are only admissible after adaptive quantization, ablation, waterfilling, inverse-steg saliency, packed-zero, and entropy coding bind per decoder/latent group"
+}

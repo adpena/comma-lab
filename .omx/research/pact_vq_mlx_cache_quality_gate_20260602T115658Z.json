@@ -1,0 +1,98 @@
+{
+  "blockers": [
+    "mlx_cache_quality_gate_is_false_authority"
+  ],
+  "candidate_cache_dir": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/baseline",
+  "candidate_cache_nondegenerate": true,
+  "dispatch_attempted": false,
+  "distance_to_reference": {
+    "posenet_yuv6_pair_mae": 16.317649841308594,
+    "posenet_yuv6_pair_rmse": 22.816593170166016,
+    "segnet_last_rgb_mae": 22.36121368408203,
+    "segnet_last_rgb_rmse": 27.502792358398438
+  },
+  "fit_gate_passed": true,
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_actions": [
+    "local_cache_quality_gate_passed_still_false_authority",
+    "continue_with_full_video_distortion_and_receiver_proof_gates"
+  ],
+  "reference_cache_dir": "/Users/adpena/Projects/pact/experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/pact_vq_mlx_cache_quality_gate_20260602T115658Z.json",
+  "sample_pairs": 16,
+  "schema": "mlx_cache_quality_gate.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "stats": {
+    "candidate_posenet_yuv6_pair": {
+      "dtype": "float32",
+      "dynamic_range": 128.28211069107056,
+      "max": 135.07611083984375,
+      "mean": 68.70075225830078,
+      "min": 6.794000148773193,
+      "name": "candidate_posenet_yuv6_pair",
+      "shape": [
+        16,
+        12,
+        192,
+        256
+      ],
+      "std": 44.89167022705078
+    },
+    "candidate_segnet_last_rgb": {
+      "dtype": "float32",
+      "dynamic_range": 111.4609375,
+      "max": 116.4609375,
+      "mean": 38.089500427246094,
+      "min": 5.0,
+      "name": "candidate_segnet_last_rgb",
+      "shape": [
+        16,
+        3,
+        384,
+        512
+      ],
+      "std": 14.274662971496582
+    },
+    "reference_posenet_yuv6_pair": {
+      "dtype": "float32",
+      "dynamic_range": 255.0,
+      "max": 255.0,
+      "mean": 59.99654006958008,
+      "min": 0.0,
+      "name": "reference_posenet_yuv6_pair",
+      "shape": [
+        16,
+        12,
+        192,
+        256
+      ],
+      "std": 51.543941497802734
+    },
+    "reference_segnet_last_rgb": {
+      "dtype": "float32",
+      "dynamic_range": 255.0,
+      "max": 255.0,
+      "mean": 25.356361389160156,
+      "min": 0.0,
+      "name": "reference_segnet_last_rgb",
+      "shape": [
+        16,
+        3,
+        384,
+        512
+      ],
+      "std": 19.93938636779785
+    }
+  },
+  "thresholds": {
+    "max_segnet_mae_vs_reference_for_fit_gate": 64.0,
+    "min_segnet_dynamic_range": 16.0,
+    "min_segnet_std": 1.0
+  },
+  "verdict": "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+}

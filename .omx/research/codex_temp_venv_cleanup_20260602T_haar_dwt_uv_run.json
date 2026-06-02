@@ -1,0 +1,12 @@
+{
+  "bytes_total": 554530165,
+  "created_utc": "2026-06-02T13:40:05Z",
+  "false_authority": true,
+  "file_count": 18862,
+  "path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main",
+  "reason": "uv run --no-project pytest/numpy/PyWavelets verification created a rebuildable local test venv",
+  "rebuild_command": "uv run --no-project --with pytest --with numpy --with PyWavelets -- python -m pytest src/tac/substrates/snerv_inverse_steg_carrier/tests/test_dwt_adjoint.py -q",
+  "safe_to_delete": true,
+  "schema": "codex_rebuildable_temp_venv_cleanup.v1",
+  "sha256": "a152602a5dc496d10988cbb02bd1292a416d596b78fb427c15f18a1c82ac26b8"
+}
