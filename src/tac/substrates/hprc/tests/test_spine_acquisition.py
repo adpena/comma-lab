@@ -150,6 +150,36 @@ def test_acquisition_knows_compact_nerv_vq_stack_roles(tmp_path: Path) -> None:
     )
 
 
+def test_acquisition_exposes_declared_capacity_control_surface(tmp_path: Path) -> None:
+    pvq = _projection(
+        tmp_path / "pvq_capacity",
+        family=HprcRepresentationFamily.PACT_NERV_VQ,
+        decoder=b"d" * 20,
+        codebooks=b"c" * 12,
+        selectors=b"s" * 8,
+        manifest_extra={
+            "num_pairs": 600,
+            "latent_dim": 16,
+            "embed_dim": 32,
+            "codebook_size": 64,
+            "decoder_channel": 48,
+        },
+    )
+
+    report = build_spine_acquisition_report(
+        projection_manifest_paths=[pvq],
+        hard_byte_ceilings=[10_000],
+    )
+
+    surface = report["rows"][0]["capacity_control_surface"]
+    assert surface["schema"] == "hprc_capacity_control_surface.v1"
+    assert surface["status"] == "declared_capacity_knobs_ready_for_hard_ceiling_sweep"
+    assert surface["declared_capacity_knobs"]["latent_dim"] == 16
+    assert surface["declared_capacity_knobs"]["codebook_size"] == 64
+    assert surface["section_byte_controls"]["decoder_qw"]["bytes"] == 20
+    assert surface["hard_byte_ceiling_sweep_required"] is True
+
+
 def _projection(
     out: Path,
     *,

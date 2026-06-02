@@ -16,6 +16,10 @@ from tac.analysis.compact_vq_pivot_audit import (
 from tac.archive_byte_profile import contest_rate_term
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
+from tac.substrates.hprc.implementation_readiness import (
+    build_implementation_readiness,
+    implementation_readiness_blockers,
+)
 from tac.substrates.hprc.mlx_prefilter_coverage import (
     HPRC_MLX_COMPONENT_PROFILE_SCHEMA,
     mlx_profile_full_video_scope,
@@ -136,6 +140,14 @@ def build_spine_bounded_runner_plan(
     exact_index = _index_exact_reports(exact_reports)
     hprc_queue_followup_index = _index_hprc_queue_followups(hprc_queue_followups)
     compact_vq_pivot_index = _index_compact_vq_pivot_audits(compact_vq_pivot_audits)
+    implementation_readiness_rows = [
+        _implementation_readiness_for_acquisition_row(row)
+        for row in _rows(acquisition_report, "rows")
+    ]
+    implementation_readiness_index = {
+        str(row.get("projection_manifest_path") or ""): row
+        for row in implementation_readiness_rows
+    }
     compact_base_rows = [
         _compact_base_sweep_row(
             acquisition_row=row,
@@ -144,6 +156,9 @@ def build_spine_bounded_runner_plan(
             exact_index=exact_index,
             hprc_queue_followup_index=hprc_queue_followup_index,
             compact_vq_pivot_index=compact_vq_pivot_index,
+            implementation_readiness=implementation_readiness_index.get(
+                str(row.get("projection_manifest_path") or "")
+            ),
         )
         for row in _rows(acquisition_report, "rows")
         for ceiling_result in _rows(row, "ceiling_results")
@@ -194,6 +209,7 @@ def build_spine_bounded_runner_plan(
         mlx_profiles=mlx_profiles,
         projection_gap_repair_work_orders=projection_gap_repair_work_orders,
         compact_carrier_pivot_work_orders=compact_carrier_pivot_work_orders,
+        implementation_readiness_rows=implementation_readiness_rows,
     )
     return {
         "schema": HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA,
@@ -218,6 +234,7 @@ def build_spine_bounded_runner_plan(
         "compact_vq_pivot_signal_rows": _compact_vq_pivot_signal_rows(
             compact_vq_pivot_audits
         ),
+        "implementation_readiness_rows": implementation_readiness_rows,
         "compact_base_sweep_rows": compact_base_rows,
         "section_value_rows": section_value_rows,
         "section_value_profile_work_orders": section_value_profile_work_orders,
@@ -259,6 +276,11 @@ def build_spine_bounded_runner_plan(
                 "or missing RT/VQ residual-token structure are demoted before "
                 "additional replay/training spend"
             ),
+            "implementation_readiness_rule": (
+                "smoke, mock, proxy-only, synthetic, scaffold, stubbed, partial "
+                "coverage, or archive-custody-missing rows are routed to repair "
+                "or materialization work before budget spend"
+            ),
             "stop_conditions": [
                 "better_receiver_proven_archive_bound_candidate",
                 "precise_exact_axis_blocker",
@@ -298,6 +320,7 @@ def _compact_base_sweep_row(
     exact_index: dict[str, dict[str, Any]],
     hprc_queue_followup_index: dict[str, dict[str, Any]],
     compact_vq_pivot_index: dict[str, dict[str, Any]],
+    implementation_readiness: dict[str, Any] | None,
 ) -> dict[str, Any]:
     family = str(acquisition_row.get("family") or "unknown")
     ceiling = int(ceiling_result.get("ceiling_bytes") or 0)
@@ -330,6 +353,16 @@ def _compact_base_sweep_row(
         compact_vq_pivot_index=compact_vq_pivot_index,
     )
     compact_vq_pivot_blockers = _compact_vq_pivot_demoting_blockers(compact_vq_pivot)
+    implementation_blockers = (
+        implementation_readiness_blockers(implementation_readiness)
+        if isinstance(implementation_readiness, dict)
+        else ["implementation_readiness_not_built"]
+    )
+    implementation_action_blockers = [
+        blocker
+        for blocker in implementation_blockers
+        if blocker != "declared_pair_coverage_below_full_video"
+    ]
     if not coverage_valid:
         action = "train_or_scale_to_full_coverage_emit_spine_then_receiver_proof"
         route_status = "blocked_until_full_video_coverage"
@@ -352,6 +385,9 @@ def _compact_base_sweep_row(
             "pivot_to_pr95_hinerv_snerv_or_rebuild_vq_as_residual_token_bolton"
         )
         route_status = "demoted_by_compact_vq_pivot_audit"
+    if implementation_action_blockers:
+        action = "repair_or_materialize_real_full_coverage_archive_before_budget_spend"
+        route_status = "blocked_by_implementation_readiness"
     return {
         "schema": HPRC_SPINE_COMPACT_BASE_SWEEP_ROW_SCHEMA,
         "runner_row_id": f"{family}:{ceiling}",
@@ -359,6 +395,7 @@ def _compact_base_sweep_row(
         "projection_manifest_path": acquisition_row.get("projection_manifest_path"),
         "effective_archive_bytes": acquisition_row.get("effective_archive_bytes"),
         "effective_rate_term": acquisition_row.get("effective_rate_term"),
+        "capacity_control_surface": acquisition_row.get("capacity_control_surface"),
         "ceiling_bytes": ceiling,
         "fits_ceiling": fits_ceiling,
         "excess_bytes": ceiling_result.get("excess_bytes"),
@@ -381,8 +418,13 @@ def _compact_base_sweep_row(
         "hprc_queue_followup_summary": _hprc_queue_followup_summary(hprc_followup),
         "compact_vq_pivot_audit_observed": compact_vq_pivot is not None,
         "compact_vq_pivot_summary": _compact_vq_pivot_summary(compact_vq_pivot),
+        "implementation_readiness_observed": implementation_readiness is not None,
+        "implementation_readiness": implementation_readiness,
         "requires_architecture_redesign_before_replay": bool(
             hprc_followup_blockers or compact_vq_pivot_blockers
+        ),
+        "requires_implementation_repair_before_budget_spend": bool(
+            implementation_action_blockers
         ),
         "blockers": _dedupe(
             [
@@ -390,6 +432,7 @@ def _compact_base_sweep_row(
                 *([] if fits_ceiling else ["candidate_exceeds_hard_byte_ceiling"]),
                 *hprc_followup_blockers,
                 *compact_vq_pivot_blockers,
+                *implementation_blockers,
                 *(
                     []
                     if receiver_proof_passed
@@ -1436,9 +1479,40 @@ def _shell_quote_arg(value: Any) -> str:
 
 def _demoted_route_statuses() -> set[str]:
     return {
+        "blocked_by_implementation_readiness",
         "demoted_by_hprc_queue_followup",
         "demoted_by_compact_vq_pivot_audit",
     }
+
+
+def _implementation_readiness_for_acquisition_row(
+    acquisition_row: dict[str, Any],
+) -> dict[str, Any]:
+    return build_implementation_readiness(
+        {
+            "schema": "hprc_spine_acquisition_row_readiness_input.v1",
+            "family": acquisition_row.get("family"),
+            "projection_manifest_path": acquisition_row.get("projection_manifest_path"),
+            "coverage": acquisition_row.get("coverage"),
+            "source_archive": acquisition_row.get("source_archive"),
+            "representation_source_payload_kind": acquisition_row.get(
+                "representation_source_payload_kind"
+            ),
+            "representation_side_channel_kind": acquisition_row.get(
+                "representation_side_channel_kind"
+            ),
+            "representation_payload_magic": acquisition_row.get(
+                "representation_payload_magic"
+            ),
+            "representation_emitter": acquisition_row.get("representation_emitter"),
+            "stack_role": acquisition_row.get("stack_role"),
+            "recommended_next_action": acquisition_row.get("recommended_next_action"),
+            "blockers": acquisition_row.get("blockers", []),
+        },
+        source_path=acquisition_row.get("projection_manifest_path"),
+        require_full_video_coverage=True,
+        require_archive_custody=True,
+    )
 
 
 def _choose_runner_rows(*, compact_base_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -2418,6 +2492,7 @@ def _plan_blockers(
     mlx_profiles: list[dict[str, Any]],
     projection_gap_repair_work_orders: list[dict[str, Any]],
     compact_carrier_pivot_work_orders: list[dict[str, Any]],
+    implementation_readiness_rows: list[dict[str, Any]],
 ) -> list[str]:
     blockers = ["contest_cpu_cuda_exact_eval_not_executed"]
     if not mlx_profiles:
@@ -2455,6 +2530,11 @@ def _plan_blockers(
         blockers.append("archive_projection_gap_requires_training_or_export_repair")
     if compact_carrier_pivot_work_orders:
         blockers.append("compact_carrier_pivot_work_order_opened")
+    if any(
+        _implementation_action_blockers(row)
+        for row in implementation_readiness_rows
+    ):
+        blockers.append("implementation_readiness_blocked_fake_or_incomplete_candidate")
     return _dedupe(blockers)
 
 
@@ -2464,6 +2544,14 @@ def _load_profile(path: str | Path, *, root: Path) -> dict[str, Any]:
     if payload.get("schema") != HPRC_MLX_COMPONENT_PROFILE_SCHEMA:
         raise ValueError(f"MLX profile has unexpected schema: {resolved}")
     return {"path": resolved.as_posix(), "sha256": _sha256_file(resolved), "payload": payload}
+
+
+def _implementation_action_blockers(readiness: dict[str, Any]) -> list[str]:
+    return [
+        blocker
+        for blocker in implementation_readiness_blockers(readiness)
+        if blocker != "declared_pair_coverage_below_full_video"
+    ]
 
 
 def _section_evidence_has_full_video_scope(row: dict[str, Any]) -> bool:

@@ -212,6 +212,12 @@ def _projection_row(
         "hprc_projection_bytes": hprc_bytes,
         "source_archive": source,
         "coverage": coverage,
+        "capacity_control_surface": _capacity_control_surface(
+            family=family,
+            manifest_extra=manifest_extra,
+            section_rows=section_rows,
+            effective_archive_bytes=effective_bytes,
+        ),
         "ceiling_results": [
             _ceiling_result(effective_bytes=effective_bytes, ceiling=ceiling)
             for ceiling in ceilings
@@ -248,6 +254,73 @@ def _section_row(raw: dict[str, Any]) -> dict[str, Any]:
         "sha256": raw.get("sha256"),
         "rate_cost": contest_rate_term(byte_count),
         "requires_value_measurement": True,
+    }
+
+
+def _capacity_control_surface(
+    *,
+    family: str,
+    manifest_extra: dict[str, Any],
+    section_rows: list[dict[str, Any]],
+    effective_archive_bytes: int,
+) -> dict[str, Any]:
+    """Expose archive-rate controls for learned receiver capacity sweeps."""
+
+    knob_keys = (
+        "modelsize",
+        "model_size",
+        "latent_dim",
+        "latent_dim_coarse",
+        "latent_dim_mid",
+        "latent_dim_fine",
+        "embed_dim",
+        "codebook_size",
+        "decoder_channel",
+        "decoder_channels",
+        "num_layers",
+        "depth",
+        "width",
+    )
+    declared_knobs = {
+        key: manifest_extra[key]
+        for key in knob_keys
+        if key in manifest_extra
+    }
+    section_byte_controls = {
+        row["name"]: {
+            "bytes": row["bytes"],
+            "rate_cost": row["rate_cost"],
+            "role": row["role"],
+        }
+        for row in section_rows
+        if row["name"] in {"decoder_qw", "latents_rc", "codebooks_q", "selectors_rc"}
+    }
+    if declared_knobs:
+        status = "declared_capacity_knobs_ready_for_hard_ceiling_sweep"
+        next_action = "sweep_declared_capacity_knobs_under_hard_byte_ceilings"
+    elif section_byte_controls:
+        status = "archive_section_byte_controls_only_modelsize_knob_not_declared"
+        next_action = (
+            "recover_or_add_modelsize_capacity_knob_before_family_level_verdict"
+        )
+    else:
+        status = "capacity_control_surface_missing"
+        next_action = "add_archive_charged_capacity_controls_before_budget_spend"
+    return {
+        "schema": "hprc_capacity_control_surface.v1",
+        "family": family,
+        "effective_archive_bytes": int(effective_archive_bytes),
+        "declared_capacity_knobs": declared_knobs,
+        "declared_capacity_knob_count": len(declared_knobs),
+        "section_byte_controls": section_byte_controls,
+        "section_byte_control_count": len(section_byte_controls),
+        "hard_byte_ceiling_sweep_required": True,
+        "rate_variable": "archive.zip bytes under contest score term 25*bytes/N",
+        "status": status,
+        "next_action": next_action,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 

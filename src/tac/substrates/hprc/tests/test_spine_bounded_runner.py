@@ -11,6 +11,9 @@ from tac.analysis.compact_vq_pivot_audit import (
 )
 from tac.archive_byte_profile import contest_rate_term
 from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
+from tac.substrates.hprc.implementation_readiness import (
+    build_implementation_readiness,
+)
 from tac.substrates.hprc.representation_spine import (
     HprcRepresentationFamily,
     build_representation_spine_packet,
@@ -60,6 +63,9 @@ def test_spine_bounded_runner_forces_receiver_proof_and_coverage(tmp_path: Path)
     )
     assert rows["rnerv:178000"]["requires_receiver_proof"] is True
     assert rows["rnerv:178000"]["requires_full_video_mlx_replay"] is True
+    assert rows["rnerv:178000"]["capacity_control_surface"]["schema"] == (
+        "hprc_capacity_control_surface.v1"
+    )
     assert rows["pact_nerv_vq:178000"]["action"] == (
         "train_or_scale_to_full_coverage_emit_spine_then_receiver_proof"
     )
@@ -1055,6 +1061,64 @@ def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:
     assert payload["compact_base_sweep_rows"][0]["requires_receiver_proof"] is True
 
 
+def test_implementation_readiness_blocks_mock_smoke_proxy_rows() -> None:
+    readiness = build_implementation_readiness(
+        {
+            "schema": "compact_carrier_candidate.v1",
+            "smoke": True,
+            "allow_mock_scorer_teacher": True,
+            "score_path": "proxy-only archive_bytes_proxy",
+            "coverage": {"declared_pairs": 32},
+            "source_archive": {},
+        },
+        require_full_video_coverage=True,
+        require_archive_custody=True,
+    )
+
+    assert readiness["ready_for_budget_routing"] is False
+    assert "smoke_blocks_runner_budget" in readiness["blockers"]
+    assert "allow_mock_scorer_teacher_blocks_runner_budget" in readiness["blockers"]
+    assert "proxy_only_blocks_runner_budget" in readiness["blockers"]
+    assert "archive_zip_path_missing_for_budget_routing" in readiness["blockers"]
+    assert "declared_pair_coverage_below_full_video" in readiness["blockers"]
+
+
+def test_spine_bounded_runner_refuses_stubbed_candidate_before_budget(
+    tmp_path: Path,
+) -> None:
+    manifest = _projection(
+        tmp_path / "rnerv_stub",
+        family=HprcRepresentationFamily.RNERV,
+        decoder=b"d" * 20,
+        latents=b"l" * 8,
+        manifest_extra={
+            "num_pairs": 600,
+            "emitted_by": "stubbed carrier adapter",
+        },
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+    )
+
+    row = plan["compact_base_sweep_rows"][0]
+    assert row["route_status"] == "blocked_by_implementation_readiness"
+    assert row["requires_implementation_repair_before_budget_spend"] is True
+    assert "stubbed_blocks_runner_budget" in row["blockers"]
+    assert plan["selected_runner_rows"] == []
+    assert (
+        "implementation_readiness_blocked_fake_or_incomplete_candidate"
+        in plan["blockers"]
+    )
+
+
 def _projection(
     out: Path,
     *,
@@ -1067,6 +1131,12 @@ def _projection(
     source: dict[str, object] | None = None,
     manifest_extra: dict[str, object] | None = None,
 ) -> Path:
+    default_source: dict[str, object] = {
+        "kind": "unit_test_archive",
+        "archive_zip_path": (out / "archive.zip").as_posix(),
+        "archive_zip_sha256": "e" * 64,
+        "archive_zip_bytes": 1234,
+    }
     spine = build_representation_spine_packet(
         family=family,
         decoder_blob=decoder,
@@ -1074,7 +1144,7 @@ def _projection(
         codebooks_blob=codebooks,
         selectors_blob=selectors,
         residual_blob=residual,
-        source=source,
+        source=default_source if source is None else source,
         manifest_extra=manifest_extra,
     )
     written = write_representation_spine_projection(output_dir=out, spine=spine)
