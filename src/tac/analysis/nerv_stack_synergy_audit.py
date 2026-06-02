@@ -25,6 +25,10 @@ from tac.analysis.nerv_modelsize_budget import (
     build_snerv_modelsize_budget_report,
     official_nerv_oss_flag_audit,
 )
+from tac.analysis.pr95_stack_binding_requirements import (
+    build_pr95_stack_binding_evidence,
+    build_pr95_stack_binding_requirements,
+)
 
 SCHEMA = "nerv_stack_synergy_audit.v1"
 FALSE_AUTHORITY = {
@@ -177,6 +181,10 @@ def _hi_nerv_stack_audit(
         num_pairs=num_pairs,
         per_ceiling_limit=6,
     )
+    pr95_binding = build_pr95_stack_binding_requirements(
+        family="hi_nerv",
+        evidence=build_pr95_stack_binding_evidence(),
+    )
     blockers = [
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle",
         "hinerv_local_architecture_not_source_faithful_upstream_hinerv_feature_grid",
@@ -185,6 +193,7 @@ def _hi_nerv_stack_audit(
         "hinerv_receiver_load_strict_false_schema_drift_risk",
         "hinerv_legacy_trainer_rate_proxy_not_codec_matched",
         "hinerv_exact_cpu_cuda_eval_missing_for_current_candidates",
+        *pr95_binding["blockers"],
     ]
     if markers:
         blockers.append("hinerv_partial_or_stub_markers_present")
@@ -212,6 +221,7 @@ def _hi_nerv_stack_audit(
         "related_memos": memos,
         "partial_markers": markers,
         "modelsize_budget": budget,
+        "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "byte ceiling selects capacity candidate before launch",
             "PR95-faithful staged curriculum is required for non-smoke runs",
@@ -269,6 +279,10 @@ def _snerv_stack_audit(
         num_pairs=num_pairs,
         per_ceiling_limit=6,
     )
+    pr95_binding = build_pr95_stack_binding_requirements(
+        family="snerv",
+        evidence=build_pr95_stack_binding_evidence(),
+    )
     blockers = [
         "snerv_mlx_native_train_export_adapter_missing",
         "snerv_execute_family_uses_cpu_advisory_not_mlx_native_training",
@@ -278,6 +292,7 @@ def _snerv_stack_audit(
         "snerv_gate_defaults_are_not_frontier_provenance_driven",
         "snerv_work_orders_are_textual_not_queue_actuated",
         "snerv_exact_cpu_cuda_eval_missing_for_current_candidates",
+        *pr95_binding["blockers"],
     ]
     if markers:
         blockers.append("snerv_partial_or_stub_markers_present")
@@ -304,6 +319,7 @@ def _snerv_stack_audit(
         "related_memos": memos,
         "partial_markers": markers,
         "modelsize_budget": budget,
+        "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "LF level and precision select rate before advisory launch",
             "HF decoder QAT must be trained under PoseNet hard guard",

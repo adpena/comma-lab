@@ -26,6 +26,14 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     assert set(stacks) == {"hi_nerv", "snerv"}
     assert stacks["hi_nerv"]["modelsize_budget"]["schema"] == "nerv_modelsize_budget.v1"
     assert stacks["snerv"]["modelsize_budget"]["schema"] == "snerv_modelsize_budget.v1"
+    assert stacks["hi_nerv"]["pr95_stack_binding"]["schema"] == (
+        "pr95_stack_binding_requirements.v1"
+    )
+    assert stacks["snerv"]["pr95_stack_binding"]["schema"] == (
+        "pr95_stack_binding_requirements.v1"
+    )
+    assert stacks["hi_nerv"]["pr95_stack_binding"]["complete"] is False
+    assert stacks["snerv"]["pr95_stack_binding"]["complete"] is False
     assert stacks["hi_nerv"]["local_status"] == (
         "mlx_train_export_adapter_present_but_not_full_upstream_control_surface"
     )
@@ -47,6 +55,8 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle"
         in stacks["hi_nerv"]["blockers"]
     )
+    assert "hi_nerv_real_posenet_teacher_missing" in stacks["hi_nerv"]["blockers"]
+    assert "snerv_pr95_staged_curriculum_missing" in stacks["snerv"]["blockers"]
     assert (
         "hinerv_execute_family_does_not_yet_consume_modelsize_candidate_id"
         not in stacks["hi_nerv"]["blockers"]

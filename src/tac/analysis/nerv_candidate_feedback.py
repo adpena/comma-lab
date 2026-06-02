@@ -47,6 +47,11 @@ def build_nerv_candidate_feedback_row(
         or {}
     )
     byte_feedback = dict(curriculum.get("byte_oracle_logging") or {})
+    pr95_binding = dict(
+        curriculum.get("pr95_stack_binding")
+        or selection.get("pr95_stack_binding")
+        or {}
+    )
     candidate = selection.get("candidate")
     candidate_row = dict(candidate) if isinstance(candidate, Mapping) else {}
     source_path = (
@@ -99,6 +104,11 @@ def build_nerv_candidate_feedback_row(
             "lf_payload_bytes_per_coeff"
         ),
         "snerv_binary_profile_blockers": list(snerv_profile.get("blockers") or []),
+        "pr95_stack_binding_schema": pr95_binding.get("schema"),
+        "pr95_stack_binding_satisfied_count": pr95_binding.get("satisfied_count"),
+        "pr95_stack_binding_missing_count": pr95_binding.get("missing_count"),
+        "pr95_stack_binding_complete": pr95_binding.get("complete"),
+        "pr95_stack_binding_blockers": list(pr95_binding.get("blockers") or []),
         "receiver_proof_report_paths": list(
             runner_report.get("receiver_proof_report_paths") or []
         ),

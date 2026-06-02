@@ -24,6 +24,16 @@ def _runner_report(tmp_path: Path) -> dict[str, object]:
             "candidate": {
                 "candidate_id": "hinerv_np600_ld12_ed24_dc32_int4",
             },
+            "pr95_stack_binding": {
+                "schema": "pr95_stack_binding_requirements.v1",
+                "satisfied_count": 5,
+                "missing_count": 12,
+                "complete": False,
+                "blockers": [
+                    "hi_nerv_real_posenet_teacher_missing",
+                    "hi_nerv_archive_in_loop_byte_oracle_missing",
+                ],
+            },
         },
         "candidate_curriculum_plan": {
             "candidate_id": "hinerv_np600_ld12_ed24_dc32_int4",
@@ -90,6 +100,16 @@ def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
     assert row["snerv_binary_profile_lf_payload_fraction_of_packet"] == 0.9965
     assert row["snerv_binary_profile_blockers"] == [
         "snerv_lf_payload_dominates_packet"
+    ]
+    assert row["pr95_stack_binding_schema"] == (
+        "pr95_stack_binding_requirements.v1"
+    )
+    assert row["pr95_stack_binding_satisfied_count"] == 5
+    assert row["pr95_stack_binding_missing_count"] == 12
+    assert row["pr95_stack_binding_complete"] is False
+    assert row["pr95_stack_binding_blockers"] == [
+        "hi_nerv_real_posenet_teacher_missing",
+        "hi_nerv_archive_in_loop_byte_oracle_missing",
     ]
     assert row["source_report_sha256"] is not None
     assert row["blockers"] == ["partial_pair_byte_feedback_only"]

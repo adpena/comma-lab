@@ -14,6 +14,10 @@ from collections.abc import Mapping
 from typing import Any
 
 from tac.analysis.nerv_modelsize_budget import RATE_SCORE_PER_BYTE
+from tac.analysis.pr95_stack_binding_requirements import (
+    build_pr95_stack_binding_evidence,
+    build_pr95_stack_binding_requirements,
+)
 from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
     CANONICAL_PR95_TOTAL_EPOCHS,
 )
@@ -190,6 +194,21 @@ def build_hinerv_candidate_curriculum_plan(
         blockers.append("partial_pair_byte_feedback_only")
     elif candidate_selected and not byte_feedback["feedback_ready"]:
         blockers.append("hinerv_trained_archive_byte_oracle_feedback_missing")
+    pr95_binding = build_pr95_stack_binding_requirements(
+        family="hi_nerv",
+        evidence=build_pr95_stack_binding_evidence(
+            modelsize_archive_budget=candidate_selected,
+            pr95_staged_curriculum=epochs >= 8,
+            real_segnet_teacher=_num(segnet_distillation_weight) > 0.0,
+            real_posenet_teacher=_num(pose_distillation_weight) > 0.0,
+            qat_forward=effective_qat,
+            coder_aware_regularizer=bool(coder_aware_qat),
+            muon_adamw_partition=epochs >= 8,
+            archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
+            byte_closed_archive_export=measured_archive_bytes is not None,
+        ),
+    )
+    blockers.extend(pr95_binding["blockers"])
     return {
         "schema": SCHEMA,
         "family": "hi_nerv",
@@ -221,6 +240,7 @@ def build_hinerv_candidate_curriculum_plan(
             ),
         },
         "byte_oracle_logging": byte_feedback,
+        "pr95_stack_binding": pr95_binding,
         "launch_mutations": launch_mutations,
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
@@ -280,6 +300,15 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("partial_pair_byte_feedback_only")
     elif candidate_selected and not byte_feedback["feedback_ready"]:
         blockers.append("snerv_snar1_byte_feedback_missing")
+    pr95_binding = build_pr95_stack_binding_requirements(
+        family="snerv",
+        evidence=build_pr95_stack_binding_evidence(
+            modelsize_archive_budget=candidate_selected,
+            archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
+            byte_closed_archive_export=measured_archive_bytes is not None,
+        ),
+    )
+    blockers.extend(pr95_binding["blockers"])
     return {
         "schema": SCHEMA,
         "family": "snerv",
@@ -301,6 +330,7 @@ def build_snerv_candidate_curriculum_plan(
             "next_required_adapter": "snerv_mlx_native_train_export_archive",
         },
         "byte_oracle_logging": byte_feedback,
+        "pr95_stack_binding": pr95_binding,
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
