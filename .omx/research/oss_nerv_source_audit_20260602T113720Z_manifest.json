@@ -1,0 +1,51 @@
+{
+  "audit_root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z",
+  "cleanup_policy": "SSD forensic source snapshots are rebuildable from repo_url+head_sha+clone_command; keep while parity audit is active, safe to reclone if removed after this manifest is preserved.",
+  "generated_utc": "2026-06-02T11:43:59.794114+00:00",
+  "production_hardened_claim": false,
+  "promotion_eligible": false,
+  "purpose": "source-faithfulness gate input for SNeRV/HiNeRV/PR95 HNeRV; not production truth and not score authority",
+  "repos": [
+    {
+      "audit_root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV",
+      "clone_command": "git clone --depth 1 https://github.com/qwertja/SNeRV.git /Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV",
+      "file_count_excluding_git": 18,
+      "head_sha": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+      "rebuildable_from_remote_head": true,
+      "repo_name": "SNeRV",
+      "repo_url": "https://github.com/qwertja/SNeRV.git",
+      "stack_id": "snerv",
+      "storage_tier": "/Volumes/VertigoDataTier/pact",
+      "tree_bytes_excluding_git": 198927,
+      "tree_sha256_excluding_git": "980029b5857e522439ca56d9587155fbfa1ebb193e4420e35882eedebedaeb06"
+    },
+    {
+      "audit_root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV",
+      "clone_command": "git clone --depth 1 https://github.com/hmkx/HiNeRV.git /Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV",
+      "file_count_excluding_git": 57,
+      "head_sha": "fdb92ec22492246f800621dfd454f6a5c62ab75b",
+      "rebuildable_from_remote_head": true,
+      "repo_name": "HiNeRV",
+      "repo_url": "https://github.com/hmkx/HiNeRV.git",
+      "stack_id": "hinerv",
+      "storage_tier": "/Volumes/VertigoDataTier/pact",
+      "tree_bytes_excluding_git": 197068,
+      "tree_sha256_excluding_git": "2a5cdb98bf161ca8f2fd30d9ef79f9776593d9abace66e9a19079e49cf538fc5"
+    },
+    {
+      "audit_root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HNeRV",
+      "clone_command": "git clone --depth 1 https://github.com/haochen-rye/HNeRV.git /Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HNeRV",
+      "file_count_excluding_git": 143,
+      "head_sha": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+      "rebuildable_from_remote_head": true,
+      "repo_name": "HNeRV",
+      "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+      "stack_id": "hnerv_pr95_control",
+      "storage_tier": "/Volumes/VertigoDataTier/pact",
+      "tree_bytes_excluding_git": 276108718,
+      "tree_sha256_excluding_git": "4b70f5cb59dc12a368c39a0310e74725ed4ed41f00b8531334ad256be74251e3"
+    }
+  ],
+  "schema": "oss_nerv_source_audit_manifest.v1",
+  "score_claim": false
+}

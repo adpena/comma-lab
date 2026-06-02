@@ -29,6 +29,8 @@ FALSE_AUTHORITY = {
     "frontier_score_claim": False,
     "rank_or_kill_eligible": False,
     "promotion_eligible": False,
+    "production_hardened_claim": False,
+    "source_faithful_stack_claim": False,
     "ready_for_exact_eval_dispatch": False,
     "exact_or_full_video_launched": False,
 }
@@ -82,6 +84,124 @@ EXACT_OR_FULL_VIDEO_TOKENS = (
 )
 REMOTE_EVAL_PLATFORMS = ("lightning", "modal", "vast", "vastai", "azure", "aws", "gcp")
 
+OFFICIAL_OSS_SOURCES: dict[str, dict[str, Any]] = {
+    "snerv": {
+        "repo_url": "https://github.com/qwertja/SNeRV.git",
+        "paper": "SNeRV: Spectra-preserving Neural Representation for Video",
+        "paper_url": "https://arxiv.org/abs/2501.01681",
+        "required_files": [
+            "train_snerv.py",
+            "train_snerv_t.py",
+            "model/snerv.py",
+            "model/snerv_t.py",
+            "model/layers.py",
+        ],
+        "required_features": [
+            "official_encoder_decoder_stride_stack",
+            "haar_dwt_idwt_low_high_frequency_reconstruction",
+            "multi_resolution_fusion_blocks",
+            "high_frequency_restoration_heads",
+            "temporal_extension_snerv_t_or_documented_no_go",
+            "modelsize_or_fc_dim_budget_binding",
+            "quant_model_and_embedding_payload_accounting",
+        ],
+    },
+    "hinerv": {
+        "repo_url": "https://github.com/hmkx/HiNeRV.git",
+        "paper": (
+            "HiNeRV: Video Compression with Hierarchical Encoding-based "
+            "Neural Representation"
+        ),
+        "paper_url": "https://arxiv.org/abs/2306.09818",
+        "required_files": [
+            "hinerv_main.py",
+            "hinerv_compress.py",
+            "models/hinerv.py",
+            "models/encoding.py",
+            "models/patch_utils.py",
+            "compression/quant_utils.py",
+            "compression/prune_utils.py",
+            "compression/codec_utils.py",
+        ],
+        "required_features": [
+            "hierarchical_feature_grid_encoding",
+            "patch_mode_and_frame_mode_equivalence",
+            "3d_trilinear_or_nearest_hierarchical_upsampling",
+            "official_config_family_size_sweeps",
+            "pruning_parametrization",
+            "quant_noise_and_quant_ste_training_controls",
+            "torchac_or_equivalent_integer_bitstream_codec",
+        ],
+    },
+    "hnerv_pr95_control": {
+        "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+        "paper": "HNeRV: A Hybrid Neural Representation for Videos",
+        "paper_url": "https://arxiv.org/abs/2304.02633",
+        "required_files": [
+            "train_nerv_all.py",
+            "model_all.py",
+            "hnerv_utils.py",
+            "efficient_nvloader.py",
+        ],
+        "required_features": [
+            "modelsize_flag_controls_decoder_and_embedding_budget",
+            "ks_reduce_lower_width_parameter_balance",
+            "convnext_encoder_pshuffel_decoder_path",
+            "quant_model_bit_and_quant_embed_bit_export",
+            "source_runtime_replay_for_pr95_control",
+        ],
+    },
+}
+
+LOCAL_SOURCE_FAITHFULNESS_AUDIT: dict[str, dict[str, Any]] = {
+    "snerv": {
+        "status": "simplified_contest_adapter_not_source_faithful",
+        "local_surfaces": [
+            "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+            "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+            "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
+        ],
+        "implemented_features": [
+            "haar_like_multilevel_dwt_idwt",
+            "lf_storage_with_generated_hf_detail",
+            "linear_3x3_hf_predictor",
+            "local_scorer_loop_decoder_qat_smoke",
+            "receiver_archive_proof_surface",
+        ],
+        "missing_source_features": [
+            "official_SNeRV_encoder_decoder_stride_stack",
+            "official_MFU_multi_resolution_fusion_blocks",
+            "official_HFR_high_frequency_restoration_heads",
+            "official_SNeRV_T_temporal_neighbor_path",
+            "official_modelsize_fc_dim_parameter_budget_solver",
+            "official_quantized_checkpoint_payload_replay",
+        ],
+    },
+    "hinerv": {
+        "status": "l0_sketch_not_source_faithful",
+        "local_surfaces": [
+            "src/tac/substrates/hi_nerv/architecture.py",
+            "src/tac/substrates/hi_nerv/archive.py",
+            "src/tac/substrates/hi_nerv/score_aware_loss.py",
+            "tools/run_compact_renderer_mlx_spine_runner.py",
+        ],
+        "implemented_features": [
+            "three_scale_latent_pyramid_sketch",
+            "local_archive_and_receiver_smoke",
+            "score_aware_loss_bridge",
+            "mlx_prefilter_path",
+        ],
+        "missing_source_features": [
+            "official_hierarchical_feature_grid_encoding",
+            "official_patch_mode_frame_mode_equivalence",
+            "official_fast_3d_hierarchical_upsampling",
+            "official_config_family_size_sweep_parity",
+            "official_prune_quant_noise_quant_ste_compression_stack",
+            "official_bitstream_compress_decompress_roundtrip",
+        ],
+    },
+}
+
 
 class NervTopPriorityStackSeamError(ValueError):
     """Raised when the orchestration contract inputs are malformed."""
@@ -94,6 +214,7 @@ def build_nerv_top_priority_stack_seam(
     pr95_intake_root: str | Path | None = None,
     active_claims_path: str | Path | None = None,
     pr95_pr_metadata: Mapping[str, Any] | None = None,
+    oss_source_metadata: Mapping[str, Mapping[str, Any]] | None = None,
     generated_utc: str | None = None,
     lane_id: str = DEFAULT_LANE_ID,
 ) -> dict[str, Any]:
@@ -115,12 +236,14 @@ def build_nerv_top_priority_stack_seam(
         pr95_intake_root=pr95_intake_root,
         pr95_pr_metadata=pr95_pr_metadata,
     )
+    source_faithfulness = build_source_faithfulness_matrix(oss_source_metadata)
     dispatch_blockers = discover_dispatch_blockers(
         active_claims_path,
         now_utc=generated,
     )
     blockers = _unique(
         list(baseline["blockers"])
+        + list(source_faithfulness["blockers"])
         + dispatch_blockers
         + [
             "full_600_byte_closed_receiver_proof_missing_for_snerv_and_hinerv",
@@ -136,7 +259,7 @@ def build_nerv_top_priority_stack_seam(
         "lane_id": lane_id,
         "axis_tag": AXIS_TAG,
         "go_no_go_verdict": (
-            "GO_LOCAL_STACK_OPTIMIZATION__NO_GO_EXACT_PROMOTION_OR_SCORE_CLAIM"
+            "GO_LOCAL_STACK_OPTIMIZATION__NO_GO_PRODUCTION_HARDENED_OR_EXACT_CLAIM"
         ),
         "baseline_to_beat": "pr95_hnerv_muon",
         "top_priority_carriers": list(TOP_PRIORITY_CARRIERS),
@@ -148,7 +271,12 @@ def build_nerv_top_priority_stack_seam(
             "enhancers_are_not_standalone_carrier_stacks": True,
             "compare_under_same_archive_runtime_eval_axis": True,
             "do_not_launch_new_full_video_or_exact_while_dispatch_blockers_active": True,
+            "no_fake_implementations_allowed": True,
+            "paper_and_oss_parity_required_before_production_claim": True,
+            "bad_current_scores_are_config_or_wiring_bug_signals_until_parity": True,
         },
+        "source_faithfulness": source_faithfulness,
+        "modelsize_archive_budget_policy": _modelsize_archive_budget_policy(),
         "full_stack_priority": _full_stack_priority(),
         "baseline": baseline,
         "carrier_stacks": [_snerv_stack(), _hinerv_stack()],
@@ -167,6 +295,9 @@ def build_nerv_top_priority_stack_seam(
             "dispatch_exact_or_full_video_while_pr101_cpu_pending",
             "rerun_closed_form_snerv_scalar_hf_sweeps_as_promotion_evidence",
             "treat_sr_nerv_zero_parameter_interpolation_as_promotable",
+            "call_simplified_snerv_adapter_source_faithful",
+            "call_l0_hinerv_sketch_source_faithful",
+            "retire_snerv_or_hinerv_from_current_bad_advisory_scores",
         ],
         "blockers": blockers,
         "operator_truth": {
@@ -179,6 +310,195 @@ def build_nerv_top_priority_stack_seam(
             ),
         },
         **FALSE_AUTHORITY,
+    }
+
+
+def build_source_faithfulness_matrix(
+    oss_source_metadata: Mapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Return the paper/OSS parity gate for production-hardened NeRV claims.
+
+    Bad advisory scores from a sketch are bug/config/wiring signals, not method
+    negatives. This matrix makes that operational: a stack remains local-only
+    until official source features, contest adaptations, receiver bytes, and
+    same-axis control replay are all present.
+    """
+
+    metadata = {
+        str(key): dict(value)
+        for key, value in (oss_source_metadata or {}).items()
+    }
+    source_rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for stack_id in ("snerv", "hinerv", "hnerv_pr95_control"):
+        official = OFFICIAL_OSS_SOURCES[stack_id]
+        source_meta = dict(metadata.get(stack_id, {}))
+        source_rows.append(
+            {
+                "stack_id": stack_id,
+                "role": (
+                    "baseline_control"
+                    if stack_id == "hnerv_pr95_control"
+                    else "top_priority_carrier"
+                ),
+                "official": official,
+                "observed_source": {
+                    "repo_url": source_meta.get("repo_url", official["repo_url"]),
+                    "head_sha": source_meta.get("head_sha"),
+                    "audit_root": source_meta.get("audit_root"),
+                    "source_snapshot_claim": bool(source_meta.get("head_sha")),
+                },
+                "parity_status": (
+                    "oss_snapshot_observed_not_yet_contest_parity_proven"
+                    if source_meta.get("head_sha")
+                    else "oss_snapshot_missing"
+                ),
+                "production_authority": False,
+                "blockers": [
+                    f"{stack_id}_contest_config_parity_missing",
+                    f"{stack_id}_architecture_symbol_parity_missing",
+                    f"{stack_id}_tiny_forward_parity_missing",
+                    f"{stack_id}_contest_receiver_byte_grammar_missing",
+                    f"{stack_id}_same_axis_pr95_control_missing",
+                ],
+            }
+        )
+        if not source_meta.get("head_sha"):
+            blockers.append(f"{stack_id}_official_oss_snapshot_missing")
+    for stack_id, audit in LOCAL_SOURCE_FAITHFULNESS_AUDIT.items():
+        blockers.append(f"{stack_id}_{audit['status']}")
+
+    return {
+        "schema": "nerv_source_faithfulness_matrix.v1",
+        "verdict": (
+            "NO_GO_PRODUCTION_HARDENED_CLAIM_UNTIL_PAPER_OSS_PARITY_AND_"
+            "CONTEST_RECEIVER_PROOFS_PASS"
+        ),
+        "policy": {
+            "no_fake_implementations_allowed": True,
+            "minimal_or_sketch_adapters_are_local_only": True,
+            "bad_scores_from_non_source_faithful_stacks_are_bug_signals": True,
+            "production_hardened_requires_official_feature_parity": True,
+            "journal_grade_requires_source_snapshot_and_replayable_commands": True,
+        },
+        "official_sources": source_rows,
+        "local_implementation_audit": [
+            {
+                "stack_id": stack_id,
+                **audit,
+                "method_verdict_authority": False,
+                "production_authority": False,
+            }
+            for stack_id, audit in LOCAL_SOURCE_FAITHFULNESS_AUDIT.items()
+        ],
+        "required_gates": [
+            {
+                "gate": "official_oss_snapshot_custody",
+                "required": True,
+                "evidence": "repo_url, head_sha, audit_root, required file manifest",
+            },
+            {
+                "gate": "paper_feature_parity",
+                "required": True,
+                "evidence": "architecture symbol map from official feature to local module",
+            },
+            {
+                "gate": "official_config_parity_smoke",
+                "required": True,
+                "evidence": "tiny deterministic official config and local adapted config",
+            },
+            {
+                "gate": "contest_adaptation_binding",
+                "required": True,
+                "evidence": "1164x874 output, scorer downsample path, 600-pair filelist",
+            },
+            {
+                "gate": "byte_closed_receiver_grammar",
+                "required": True,
+                "evidence": "archive bytes, member hashes, receiver-only inflate proof",
+            },
+            {
+                "gate": "same_axis_pr95_control",
+                "required": True,
+                "evidence": "PR95 source runtime replay on matching CPU/CUDA axis",
+            },
+        ],
+        "blockers": _unique(blockers),
+        "production_hardened_claim": False,
+        "source_faithful_stack_claim": False,
+    }
+
+
+def _modelsize_archive_budget_policy() -> dict[str, Any]:
+    """Describe the archive-size inversion required before production claims."""
+
+    return {
+        "schema": "nerv_modelsize_archive_budget_policy.v1",
+        "verdict": "NO_GO_FULL_LEVERAGE_UNTIL_MODEL_SIZE_TO_ARCHIVE_BYTES_CURVE_EXISTS",
+        "why_it_matters": (
+            "Official HNeRV/SNeRV expose a parameter-budget knob that can be "
+            "inverted into an archive-byte budget once quantization, entropy "
+            "coding, and metadata overhead are measured. Current local stacks "
+            "have width/latent knobs, but not the official modelsize-to-bytes "
+            "solver or a measured score/byte Pareto curve."
+        ),
+        "official_controls_to_bind": [
+            "--modelsize",
+            "--ks",
+            "--reduce",
+            "--lower_width",
+            "--enc_dim",
+            "--fc_hw",
+            "--enc_strds",
+            "--dec_strds",
+            "--quant_model_bit",
+            "--quant_embed_bit",
+            "--quant_axis",
+            "HiNeRV config family xs/s/m/l/xl/xxl",
+            "HiNeRV prune-ratio/prune-weight",
+            "HiNeRV quant-level/quant-noise/quant-ste",
+        ],
+        "contest_inversion_target": {
+            "objective": (
+                "choose architecture widths, embedding dimensions, quant bits, "
+                "and entropy grammar to minimize SegNet/PoseNet distortion plus "
+                "25*archive_bytes/raw_bytes under explicit byte caps"
+            ),
+            "byte_caps_to_sweep": [36_000, 72_000, 120_000, 150_000, 178_417],
+            "control_baseline_bytes": 178_417,
+            "rate_formula": "contest_rate_term = 25 * archive_zip_bytes / raw_video_bytes",
+            "requires_measured_curve": True,
+        },
+        "required_measurements": [
+            "official_config_tiny_forward_parity",
+            "params_split_encoder_decoder_embedding",
+            "quantized_tensor_payload_bytes",
+            "entropy_coded_payload_bytes",
+            "metadata_and_receiver_runtime_bytes",
+            "brotli_or_zip_member_bytes",
+            "receiver_inflate_parity",
+            "macos_or_mlx_prefilter_component_deltas",
+            "same_axis_pr95_control_replay_before_beat_claim",
+        ],
+        "current_gap": {
+            "hi_nerv": (
+                "local compact runner exposes latent_dim/embed_dim/"
+                "decoder_channel, but not the official modelsize solver over "
+                "ks/reduce/lower_width/enc_dim/strides/quant bits"
+            ),
+            "snerv": (
+                "local adapter exposes LF levels, target bits, and decoder "
+                "payload modes, but not official SNeRV modelsize/fc_dim/"
+                "MFU/HFR/SNeRV_T budget binding"
+            ),
+        },
+        "production_blockers": [
+            "nerv_modelsize_to_archive_bytes_curve_missing",
+            "official_modelsize_flag_not_bound_to_contest_byte_caps",
+            "quant_bits_not_jointly_optimized_with_score_sensitivity",
+            "modelsize_sweep_not_replayed_through_receiver_archive_bytes",
+        ],
+        "production_hardened_claim": False,
     }
 
 
@@ -804,6 +1124,7 @@ __all__ = [
     "TOP_PRIORITY_CARRIERS",
     "NervTopPriorityStackSeamError",
     "build_nerv_top_priority_stack_seam",
+    "build_source_faithfulness_matrix",
     "discover_dispatch_blockers",
     "discover_pr95_baseline",
 ]
