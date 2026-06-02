@@ -1,0 +1,97 @@
+{
+  "schema": "nerv_blocker_sweep.v1",
+  "created_utc": "2026-06-02T20:41:03Z",
+  "axis_tag": "[planning/control]",
+  "source_plan_paths": [
+    ".omx/research/nerv_long_training_campaign_plan_20260602T203909Z_gpu_telemetry_timeout_codex.json",
+    ".omx/research/nerv_long_training_campaign_plan_20260602T203000Z_snerv_hinerv_lr_recovery_unique_queue_codex.json",
+    ".omx/research/nerv_long_training_campaign_plan_20260602T202713Z_planner_row_custody_codex.json"
+  ],
+  "execution_observation_paths": [
+    ".omx/research/nerv_hinerv_planner_row_lr2p7e5_long_worker_result_20260602T2035Z.json",
+    ".omx/research/nerv_long_training_campaign_observation_20260602T2035Z_lr2p7e5_external_sigterm_no_artifact_codex.json",
+    ".omx/research/nerv_long_training_campaign_cpu_teacher_hotspot_blocker_20260602T2033Z_codex.json"
+  ],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "families": {
+    "hi_nerv": {
+      "method_blocker_count": 10,
+      "execution_blocker_count": 1,
+      "all_blockers_burned_down": false,
+      "method_blockers": [
+        "hi_nerv_archive_in_loop_byte_oracle_missing",
+        "hi_nerv_byte_closed_archive_export_missing",
+        "hi_nerv_full_video_local_prefilter_missing",
+        "hi_nerv_local_cpu_replay_gate_missing",
+        "hi_nerv_receiver_proof_missing",
+        "hinerv_decoder_weight_waterfill_plan_missing",
+        "hinerv_trained_archive_byte_oracle_feedback_missing",
+        "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
+        "requires_local_cpu_replay_win_before_exact_cpu_auth",
+        "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
+      ],
+      "execution_blockers": [
+        "lr2p7e5_planner_row_long_worker_returncode_143_sigterm_before_runner_report"
+      ],
+      "burned_down_this_pass": [
+        "planner_rows_emit_gpu_distillation_device",
+        "planner_rows_emit_gpu_mlx_prefilter_scorer_device",
+        "admitted_local_mlx_rows_have_explicit_43200s_timeout",
+        "compact_family_startup_marker_writes_pre_training_custody",
+        "score_aware_harness_forwards_telemetry_flush_interval",
+        "long_training_canonical_flushes_epoch_telemetry_on_configured_cadence"
+      ],
+      "next_attack_order": [
+        "relaunch_first_hi_nerv_planner_row_from_203909_queue_and_verify_startup_marker",
+        "attach_candidate_scoped_decoder_weight_waterfill_plan",
+        "produce_full_video_mlx_prefilter_report",
+        "export_byte_closed_receiver_proven_archive",
+        "run_local_cpu_replay_then_exact_cpu_cuda_only_after_same_axis_win"
+      ]
+    },
+    "snerv": {
+      "method_blocker_count": 20,
+      "execution_blocker_count": 0,
+      "all_blockers_burned_down": false,
+      "method_blockers": [
+        "snerv_archive_in_loop_byte_oracle_missing",
+        "snerv_byte_closed_archive_export_missing",
+        "snerv_differentiable_pose_preprocess_missing",
+        "snerv_ema_archive_selection_missing",
+        "snerv_eval_roundtrip_ste_missing",
+        "snerv_full_video_local_prefilter_missing",
+        "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
+        "snerv_local_cpu_replay_gate_missing",
+        "snerv_mlx_native_adapter_surfaces_present_but_unproven",
+        "snerv_mlx_native_full600_campaign_not_ready",
+        "snerv_mlx_native_receiver_proof_missing_or_failed",
+        "snerv_muon_adamw_partition_missing",
+        "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+        "snerv_native_scorer_loop_best_packet_not_materialized",
+        "snerv_pr95_staged_curriculum_missing",
+        "snerv_receiver_proof_missing",
+        "snerv_scorer_loop_qat_no_accepted_improvement",
+        "snerv_scorer_loop_qat_pose_guard_not_ready",
+        "snerv_scorer_loop_qat_receiver_contract_failed",
+        "snerv_snar1_byte_feedback_missing"
+      ],
+      "execution_blockers": [],
+      "burned_down_this_pass": [
+        "planner_rows_emit_gpu_distillation_device",
+        "admitted_local_mlx_rows_have_explicit_43200s_timeout",
+        "compact_family_startup_marker_writes_pre_training_custody"
+      ],
+      "next_attack_order": [
+        "materialize_native_scorer_loop_best_packet_as_receiver_closed_snar1",
+        "attach_snar1_byte_feedback_and_section_value_profile",
+        "bind_pr95_staged_curriculum_eval_roundtrip_ste_ema_muon_partition_to_native_mlx_adapter",
+        "rerun_full600_mlx_prefilter",
+        "export_byte_closed_receiver_proven_archive"
+      ]
+    }
+  },
+  "verdict": "not_all_blockers_burned_down",
+  "notes": "False-authority blocker sweep only. No local MLX, CPU, CUDA, rank, promotion, or exact score claim is made."
+}

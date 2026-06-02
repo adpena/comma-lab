@@ -637,6 +637,39 @@ def test_run_mlx_score_aware_full_main_end_to_end(tmp_path: Path) -> None:
 
 
 @mlx_only
+def test_run_mlx_score_aware_full_main_forwards_telemetry_flush_interval(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.training.long_training_canonical as canonical
+
+    captured = {}
+
+    def _capture_run_long_training(adapter, config, *, on_epoch_end=None):
+        captured["adapter"] = adapter
+        captured["config"] = config
+        captured["on_epoch_end"] = on_epoch_end
+        return config
+
+    monkeypatch.setattr(canonical, "run_long_training", _capture_run_long_training)
+    bundle = _tiny_dreamer_bundle(num_pairs=4, distill=0.0)
+
+    result = run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="dreamer_v3_rssm",
+        lane_id=_LANE,
+        output_dir=tmp_path / "run",
+        epochs=3,
+        batch_pair_indices_per_step=2,
+        telemetry_flush_interval_epochs=1,
+        notes="telemetry flush pass-through unit test",
+    )
+
+    assert result is captured["config"]
+    assert captured["config"].telemetry_flush_interval_epochs == 1
+
+
+@mlx_only
 def test_run_verifies_inflate_portability_fails_closed(tmp_path: Path) -> None:
     from tac.substrates._shared.mlx_score_aware import MlxScoreAwareHarnessError
 

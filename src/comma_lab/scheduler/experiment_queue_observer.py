@@ -6,6 +6,7 @@ import os
 import sqlite3
 import subprocess
 import time
+from collections import deque
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -54,6 +55,36 @@ OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
 PR95_MLX_LONG_TRAINING_PLAN_SCHEMA = "pr95_mlx_long_training_plan.v1"
 HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA = "hinton_mlx_long_training_smoke_verdict.v1"
+JSONL_PROGRESS_LAST_ROW_KEYS = (
+    "schema",
+    "schema_version",
+    "epoch",
+    "stage_name",
+    "loss",
+    "learning_rate",
+    "captured_at_utc",
+    "generated_utc",
+    "run_id",
+    "scorer_device",
+    "scorer_batch_pairs",
+    "chunk_index",
+    "chunk_count",
+    "pair_start",
+    "pair_stop",
+    "pair_count",
+    "cumulative_pair_count",
+    "required_pairs",
+    "elapsed_seconds",
+    "cumulative_pairs_per_second",
+    "cumulative_avg_posenet_dist",
+    "cumulative_avg_segnet_dist",
+    "cumulative_canonical_score",
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "promotable",
+    "ready_for_exact_eval_dispatch",
+)
 REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS = (
     "score_claim",
     "promotion_eligible",
@@ -116,6 +147,57 @@ def _json_load_lenient(path: Path) -> Mapping[str, Any] | None:
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         return None
     return payload if isinstance(payload, Mapping) else None
+
+
+def _jsonl_artifact_summary(path: Path, *, max_tail_rows: int = 3) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "schema": "experiment_queue_jsonl_artifact_summary.v1",
+        "line_count": 0,
+        "tail_row_count": 0,
+        "valid_json_tail": False,
+    }
+    if not path.is_file():
+        out["blockers"] = ["jsonl_artifact_file_missing"]
+        return out
+    tail: deque[str] = deque(maxlen=max(1, int(max_tail_rows)))
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                out["line_count"] = int(out["line_count"]) + 1
+                tail.append(line)
+    except (OSError, UnicodeDecodeError) as exc:
+        out["blockers"] = [f"jsonl_artifact_read_failed:{type(exc).__name__}"]
+        return out
+    out["tail_row_count"] = len(tail)
+    parsed_tail: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for raw_line in tail:
+        try:
+            payload = json.loads(raw_line)
+        except json.JSONDecodeError as exc:
+            blockers.append(f"jsonl_artifact_tail_decode_failed:{exc.lineno}:{exc.colno}")
+            continue
+        if not isinstance(payload, Mapping):
+            blockers.append("jsonl_artifact_tail_row_not_object")
+            continue
+        selected = {
+            key: payload[key]
+            for key in JSONL_PROGRESS_LAST_ROW_KEYS
+            if key in payload
+        }
+        parsed_tail.append(selected)
+    out["valid_json_tail"] = bool(parsed_tail) and not blockers
+    if parsed_tail:
+        out["last_row"] = parsed_tail[-1]
+        schema = parsed_tail[-1].get("schema") or parsed_tail[-1].get("schema_version")
+        if schema:
+            out["last_row_schema"] = schema
+    if blockers:
+        out["blockers"] = blockers
+    return out
 
 
 def _sha256_file(path: Path) -> str:
@@ -935,6 +1017,14 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
             time.gmtime(stat.st_mtime),
         )
         payload = _json_load_lenient(path) if path.suffix == ".json" else None
+        if path.suffix == ".jsonl":
+            record["jsonl_summary"] = _jsonl_artifact_summary(path)
+            summary = record["jsonl_summary"]
+            if isinstance(summary, Mapping):
+                if summary.get("last_row_schema"):
+                    record["jsonl_last_row_schema"] = summary["last_row_schema"]
+                if summary.get("line_count") is not None:
+                    record["jsonl_line_count"] = summary["line_count"]
         if payload is not None:
             record["json_schema"] = payload.get("schema") or payload.get("schema_version")
             for key in (
@@ -1563,6 +1653,27 @@ def _artifact_paths_from_telemetry(
     return paths
 
 
+def _telemetry_artifacts(
+    step: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    existing_paths: Sequence[Any],
+) -> list[dict[str, Any]]:
+    existing = {str(path) for path in existing_paths if str(path)}
+    artifacts: list[dict[str, Any]] = []
+    for rel_path in _artifact_paths_from_telemetry(step, repo_root=repo_root):
+        if rel_path in existing:
+            continue
+        path = Path(rel_path)
+        if not path.is_absolute():
+            path = repo_root / path
+        record = _path_artifact_record(path, repo_root=repo_root)
+        record["telemetry_only"] = True
+        artifacts.append(record)
+        existing.add(rel_path)
+    return artifacts
+
+
 def _queue_state_watermark(
     conn: sqlite3.Connection,
     *,
@@ -1885,13 +1996,29 @@ def _step_observation(
             step_definition,
             repo_root=repo_root,
         )
-        _extend_unique(
-            observation["expected_artifact_paths"],
-            [artifact.get("path") for artifact in observation["expected_artifacts"] if isinstance(artifact, Mapping)],
+        postcondition_artifact_paths = [
+            artifact.get("path")
+            for artifact in observation["expected_artifacts"]
+            if isinstance(artifact, Mapping)
+        ]
+        telemetry_artifact_paths = _artifact_paths_from_telemetry(
+            step_definition,
+            repo_root=repo_root,
         )
         _extend_unique(
             observation["expected_artifact_paths"],
-            _artifact_paths_from_telemetry(step_definition, repo_root=repo_root),
+            postcondition_artifact_paths,
+        )
+        _extend_unique(
+            observation["expected_artifact_paths"],
+            telemetry_artifact_paths,
+        )
+        observation["expected_artifacts"].extend(
+            _telemetry_artifacts(
+                step_definition,
+                repo_root=repo_root,
+                existing_paths=postcondition_artifact_paths,
+            )
         )
     metadata = experiment_metadata if isinstance(experiment_metadata, Mapping) else {}
     for key in (

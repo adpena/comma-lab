@@ -18,6 +18,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.nerv_long_training_campaign_admission import (  # noqa: E402
+    DEFAULT_LOCAL_MLX_LONG_TRAINING_TIMEOUT_SECONDS,
     DEFAULT_QUEUE_ID,
     DEFAULT_STORAGE_EXPECTED_BYTES_PER_ROW,
     build_nerv_long_training_campaign_execution_admission,
@@ -56,6 +57,16 @@ def _build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_STORAGE_EXPECTED_BYTES_PER_ROW,
     )
     parser.add_argument("--storage-reserve-free-gb", type=float, default=40.0)
+    parser.add_argument(
+        "--local-mlx-timeout-seconds",
+        type=int,
+        default=DEFAULT_LOCAL_MLX_LONG_TRAINING_TIMEOUT_SECONDS,
+        help=(
+            "explicit timeout for admitted local_mlx long-training rows; "
+            "default is 12h so full HiNeRV/SNeRV rows are not killed by "
+            "short generic queue defaults"
+        ),
+    )
     parser.add_argument("--allowed-output-root", action="append", default=[])
     parser.add_argument("--expected-output-json-sha256")
     parser.add_argument("--expected-output-md-sha256")
@@ -84,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         selected_experiment_ids=tuple(args.selected_experiment_id),
         storage_expected_bytes_per_row=args.storage_expected_bytes_per_row,
         storage_reserve_free_gb=args.storage_reserve_free_gb,
+        local_mlx_timeout_seconds=args.local_mlx_timeout_seconds,
         allowed_output_roots=allowed_output_roots,
     )
     output_json = args.output_json or _default_output_json()

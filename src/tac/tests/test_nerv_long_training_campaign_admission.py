@@ -9,6 +9,7 @@ from pathlib import Path
 from comma_lab.scheduler.experiment_queue import normalize_queue_definition
 from tac.analysis.nerv_long_training_campaign_admission import (
     ADMISSION_SCHEMA,
+    DEFAULT_LOCAL_MLX_LONG_TRAINING_TIMEOUT_SECONDS,
     build_nerv_long_training_campaign_execution_admission,
 )
 from tac.analysis.nerv_long_training_campaign_plan import (
@@ -57,6 +58,24 @@ def test_nerv_long_training_campaign_admission_builds_storage_gated_queue(
         "nerv_campaign_storage_preflight.proactive_cleanup"
     ]
     assert selected["steps"][0]["resources"]["kind"] == "local_mlx"
+    assert selected["steps"][0]["timeout_seconds"] == (
+        DEFAULT_LOCAL_MLX_LONG_TRAINING_TIMEOUT_SECONDS
+    )
+    command = selected["steps"][0]["command"]
+    output_dir = Path(command[command.index("--output-dir") + 1])
+    artifact_paths = set(selected["steps"][0]["telemetry"]["artifact_paths"])
+    assert (
+        output_dir / "compact_renderer_mlx_spine_runner_report.json"
+    ).as_posix() in artifact_paths
+    assert (
+        output_dir / "compact_renderer_mlx_spine_runner_startup.json"
+    ).as_posix() in artifact_paths
+    assert (
+        output_dir / "hi_nerv_mlx_training" / "telemetry.jsonl"
+    ).as_posix() in artifact_paths
+    assert (
+        output_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl"
+    ).as_posix() in artifact_paths
     assert selected["metadata"]["human_visual_fidelity_relevance"] == (
         "irrelevant_unless_scorer_causal"
     )
@@ -194,6 +213,8 @@ def test_nerv_long_training_campaign_admission_cli_writes_artifacts(
             "1024",
             "--storage-reserve-free-gb",
             "0",
+            "--local-mlx-timeout-seconds",
+            "777",
             "--allowed-output-root",
             str(tmp_path / "ssd"),
         ],
@@ -214,6 +235,8 @@ def test_nerv_long_training_campaign_admission_cli_writes_artifacts(
     )
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
     assert queue["schema"] == "experiment_queue.v1"
+    selected = queue["experiments"][1]
+    assert selected["steps"][0]["timeout_seconds"] == 777
 
 
 def _campaign_plan(output_root: Path) -> dict:

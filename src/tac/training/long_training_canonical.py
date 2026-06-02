@@ -516,6 +516,10 @@ class LongTrainingConfig:
             "Forbidden /tmp paths" non-negotiable.
         telemetry_path: optional canonical telemetry JSONL path for
             per-epoch metrics flush; default = ``output_dir/telemetry.jsonl``.
+        telemetry_flush_interval_epochs: flush JSONL rows every N epochs.
+            Default preserves the canonical historical cadence; long expensive
+            carrier rows should set this to 1 so progress is queryable while
+            the run is alive.
         checkpoint_dir: optional canonical checkpoint dir; default =
             ``output_dir/checkpoints/``.
         device: target device identifier (``"cuda"`` / ``"cpu"`` / ``"mlx"``);
@@ -549,6 +553,7 @@ class LongTrainingConfig:
     seed: int = 0
     output_dir: Path = field(default_factory=lambda: Path("experiments/results/long_training_canonical_default"))
     telemetry_path: Path | None = None
+    telemetry_flush_interval_epochs: int = DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS
     checkpoint_dir: Path | None = None
     device: str = "mlx"
     resume_from_checkpoint: Path | None = None
@@ -641,6 +646,14 @@ class LongTrainingConfig:
             if not isinstance(self.telemetry_path, Path):
                 raise TypeError(f"telemetry_path must be Path; got {type(self.telemetry_path).__name__}")
             _refuse_tmp_path(self.telemetry_path, "telemetry_path")
+        if (
+            not isinstance(self.telemetry_flush_interval_epochs, int)
+            or self.telemetry_flush_interval_epochs <= 0
+        ):
+            raise ValueError(
+                "telemetry_flush_interval_epochs must be positive int; got "
+                f"{self.telemetry_flush_interval_epochs!r}"
+            )
         if self.checkpoint_dir is not None:
             if not isinstance(self.checkpoint_dir, Path):
                 raise TypeError(f"checkpoint_dir must be Path; got {type(self.checkpoint_dir).__name__}")
@@ -705,6 +718,9 @@ class LongTrainingConfig:
             "seed": int(self.seed),
             "output_dir": str(self.output_dir),
             "telemetry_path": str(self.resolved_telemetry_path()),
+            "telemetry_flush_interval_epochs": int(
+                self.telemetry_flush_interval_epochs
+            ),
             "checkpoint_dir": str(self.resolved_checkpoint_dir()),
             "device": self.device,
             "resume_from_checkpoint": (
@@ -2318,7 +2334,7 @@ def run_long_training(
     config.output_dir.mkdir(parents=True, exist_ok=True)
     telemetry_sink = TelemetrySink(
         telemetry_path=config.resolved_telemetry_path(),
-        flush_interval_epochs=DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS,
+        flush_interval_epochs=config.telemetry_flush_interval_epochs,
     )
     checkpoint_writer = CheckpointWriter(
         checkpoint_dir=config.resolved_checkpoint_dir(),

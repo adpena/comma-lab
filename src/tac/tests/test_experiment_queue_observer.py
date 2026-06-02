@@ -184,6 +184,88 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     assert "healthy" in markdown
 
 
+def test_observer_summarizes_jsonl_telemetry_artifacts(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.json"
+    artifact.write_text(json.dumps({"schema": "artifact.v1"}), encoding="utf-8")
+    progress = tmp_path / "progress.jsonl"
+    progress.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "schema": "compact_carrier_progress.v1",
+                        "epoch": 0,
+                        "loss": 1.0,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                    }
+                ),
+                json.dumps(
+                    {
+                        "schema": "compact_carrier_progress.v1",
+                        "epoch": 1,
+                        "loss": 0.75,
+                        "scorer_device": "gpu",
+                        "scorer_batch_pairs": 8,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["telemetry"] = {
+        "artifact_paths": [progress.as_posix()],
+        "include_postcondition_paths": True,
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-23T00:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"log_path": str(tmp_path / "missing.log")}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+    running = observation["running_steps"][0]
+    progress_rel = progress.relative_to(tmp_path).as_posix()
+    telemetry = next(
+        item
+        for item in running["expected_artifacts"]
+        if item.get("path") == progress_rel
+    )
+
+    assert telemetry["telemetry_only"] is True
+    assert telemetry["jsonl_line_count"] == 2
+    assert telemetry["jsonl_last_row_schema"] == "compact_carrier_progress.v1"
+    assert telemetry["jsonl_summary"]["last_row"] == {
+        "schema": "compact_carrier_progress.v1",
+        "epoch": 1,
+        "loss": 0.75,
+        "scorer_device": "gpu",
+        "scorer_batch_pairs": 8,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def test_observer_surfaces_frozen_definition_status(tmp_path: Path) -> None:
     artifact = tmp_path / "artifact.json"
     queue = _queue(artifact)

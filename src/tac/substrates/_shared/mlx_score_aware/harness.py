@@ -54,6 +54,7 @@ def run_mlx_score_aware_full_main(
     seed: int = 0,
     ema_decay: float | None = None,
     checkpoint_interval_epochs: int = 10,
+    telemetry_flush_interval_epochs: int | None = None,
     early_stopping_patience: int | None = None,
     curriculum_stages: Any | None = None,
     inflate_py_path: Any | None = None,
@@ -99,6 +100,9 @@ def run_mlx_score_aware_full_main(
         epochs: total epoch budget.
         batch_pair_indices_per_step: training batch size.
         learning_rate / seed / checkpoint_interval_epochs: training hparams.
+        telemetry_flush_interval_epochs: optional per-run override for canonical
+            telemetry JSONL flush cadence. Use 1 for long carrier campaigns so
+            epoch rows are durable while the process is still running.
         ema_decay: optional EMA decay override (default = canonical 0.997).
         early_stopping_patience: optional override (default = epochs + 1, i.e.
             disabled; MLX-local runs are cheap so we run the full budget).
@@ -148,6 +152,7 @@ def run_mlx_score_aware_full_main(
 
     from tac.training.long_training_canonical import (
         CANONICAL_EMA_DECAY,
+        DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS,
         CurriculumStage,
         LongTrainingConfig,
         run_long_training,
@@ -203,6 +208,11 @@ def run_mlx_score_aware_full_main(
         curriculum_stages=curriculum_stages,
         ema_decay=CANONICAL_EMA_DECAY if ema_decay is None else float(ema_decay),
         checkpoint_interval_epochs=checkpoint_interval_epochs,
+        telemetry_flush_interval_epochs=(
+            telemetry_flush_interval_epochs
+            if telemetry_flush_interval_epochs is not None
+            else DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS
+        ),
         early_stopping_patience=(
             epochs + 1
             if early_stopping_patience is None

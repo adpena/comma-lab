@@ -1,0 +1,17 @@
+{
+  "blocker_class": "cpu_teacher_hotspot_before_first_artifact",
+  "candidate_id": "hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000",
+  "created_utc": "2026-06-02T20:33:29.056803+00:00",
+  "evidence": {
+    "log_path": "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_planner_row_lr2p7e5_long_20260602T2035Z/nerv_hinerv_planner_row_custody_first_row_20260602T202713Z.v1/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw/run_mlx_first_campaign_row/20260602T203128Z_f67e9df7f15afd29.log",
+    "output_dir": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw_feedback_pose_instability_lr2.7e-05_lower_learning_rate_from_pose_instability_teleme_preserve_pose_instability_guard_f",
+    "sample_summary": "python child was RUNNING at ~252% CPU, ~20.7GB physical footprint, stack dominated by torch/libtorch_cpu conv2d/NNPACK convolution; stdout/stderr log remained 0 bytes and output dir 0B before stop"
+  },
+  "family": "hi_nerv",
+  "planner_row_id": "hi_nerv::hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000::adamw",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_fix": "planner long-campaign rows must request accelerator scorer/pre-filter surfaces when supported and runner must emit startup telemetry before heavy teacher cache/scorer work",
+  "schema": "nerv_long_training_campaign_blocker.v1",
+  "score_claim": false
+}

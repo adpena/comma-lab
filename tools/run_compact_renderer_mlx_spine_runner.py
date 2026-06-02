@@ -3432,6 +3432,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=max(1, int(epochs)),
+        telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=False,
         notes=(
             "Compact PR95/HNeRV MLX spine runner seeded from the public PR95 "
@@ -6593,6 +6594,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=max(1, int(epochs)),
+        telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
         ema_archive_selection_enabled=True,
@@ -6889,6 +6891,7 @@ def _run_pact_nerv_vq_mlx_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=max(1, int(epochs)),
+        telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
         grad_clip_max_norm=1.0,
@@ -7163,6 +7166,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=max(1, int(epochs)),
+        telemetry_flush_interval_epochs=1,
         notes=(
             "Compact renderer MLX spine runner PACT-NeRV-SELECTOR-V4 smoke "
             "using real contest video targets, selector-v4 PSV4 archive export, "
@@ -7544,6 +7548,55 @@ def _write_planner_row_launch_refusal(
     path = output_dir / "compact_renderer_mlx_spine_runner_report.json"
     _write_json(path, report)
     return {**report, "report_path": path.as_posix()}
+
+
+def _write_compact_family_startup_marker(
+    *,
+    output_dir: Path,
+    args: argparse.Namespace,
+    source_video_path: Path,
+    hard_byte_ceilings: tuple[int, ...],
+    modelsize_candidate: Mapping[str, Any] | None,
+) -> Path | None:
+    """Write launch custody before heavy scorer/teacher/training work starts."""
+
+    family = str(getattr(args, "execute_family", "") or "").strip()
+    if family not in PLANNER_ROW_REQUIRED_FAMILIES:
+        return None
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema": "compact_carrier_startup_marker.v1",
+        "created_utc": datetime.now(UTC).isoformat(),
+        "pid": os.getpid(),
+        "execute_family": family,
+        "planner_row_id": str(getattr(args, "planner_row_id", "") or "").strip()
+        or None,
+        "modelsize_candidate_id": str(
+            getattr(args, "modelsize_candidate_id", "") or ""
+        ).strip()
+        or None,
+        "modelsize_candidate": _jsonable_lock_value(dict(modelsize_candidate or {})),
+        "output_dir": output_dir.as_posix(),
+        "source_video_path": source_video_path.as_posix(),
+        "hard_byte_ceilings": list(hard_byte_ceilings),
+        "distillation_device": str(getattr(args, "distillation_device", "") or ""),
+        "mlx_prefilter_scorer_device": str(
+            getattr(args, "mlx_prefilter_scorer_device", "") or ""
+        ),
+        "mlx_prefilter_scorer_batch_pairs": int(
+            getattr(args, "mlx_prefilter_scorer_batch_pairs", 1) or 1
+        ),
+        "mlx_prefilter_progress_every": int(
+            getattr(args, "mlx_prefilter_progress_every", 50) or 50
+        ),
+        "command_args": _jsonable_lock_value(vars(args)),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    path = output_dir / "compact_renderer_mlx_spine_runner_startup.json"
+    _write_json(path, payload)
+    return path
 
 
 def _write_active_family_process_refusal(
@@ -8280,6 +8333,13 @@ def main(argv: list[str] | None = None) -> int:
         args=args,
         source_video_path=source_video_path,
         hard_byte_ceilings=ceilings,
+    )
+    _write_compact_family_startup_marker(
+        output_dir=Path(output_dir).expanduser().resolve(strict=False),
+        args=args,
+        source_video_path=source_video_path,
+        hard_byte_ceilings=ceilings,
+        modelsize_candidate=modelsize_candidate,
     )
     if args.execute_pr95_mlx_smoke:
         report = execute_pr95_mlx_smoke_and_adapt(

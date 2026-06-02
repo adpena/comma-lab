@@ -43,6 +43,28 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert {row["optimizer_kind"] for row in hi_rows} == {"lion", "adafactor"}
     assert all("--optimizer-kind" in row["command_argv"] for row in hi_rows)
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][
+            row["command_argv"].index("--distillation-device") + 1
+        ]
+        == "gpu"
+        for row in hi_rows
+    )
+    assert all(
+        row["command_argv"][
+            row["command_argv"].index("--mlx-prefilter-scorer-device") + 1
+        ]
+        == "gpu"
+        for row in hi_rows
+    )
+    assert all(
+        row["command_argv"][
+            row["command_argv"].index("--mlx-prefilter-scorer-batch-pairs") + 1
+        ]
+        == "8"
+        for row in hi_rows
+    )
+    assert all("--mlx-prefilter-progress-every" in row["command_argv"] for row in hi_rows)
     assert all(row["local_mlx_launch_command_ready"] is True for row in hi_rows)
     assert all(row["local_mlx_executable"] is True for row in hi_rows)
     assert all("--auto-joint-recon-pixel-weight" in row["command_argv"] for row in hi_rows)
@@ -117,6 +139,9 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["execution_epochs"] == 29_650
     assert snerv_row["current_command_is_bounded_proof_not_long_training"] is False
     assert "--snerv-scorer-loop-qat" in snerv_row["command_argv"]
+    assert snerv_row["command_argv"][
+        snerv_row["command_argv"].index("--distillation-device") + 1
+    ] == "gpu"
     assert "--planner-row-id" in snerv_row["command_argv"]
     assert (
         snerv_row["command_argv"][

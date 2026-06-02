@@ -26,6 +26,7 @@ import pytest
 from tac.training.long_training_canonical import (
     CANONICAL_EMA_DECAY,
     CANONICAL_NON_PROMOTABLE_MARKERS,
+    DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS,
     EMA_ACCUMULATION_MODES,
     PR95_8STAGE_CURRICULUM_DEFAULT,
     TRAINING_ARTIFACT_SCHEMA_VERSION,
@@ -257,6 +258,24 @@ def test_long_training_config_happy_path(tmp_path: Path) -> None:
     d = config.as_dict()
     assert d["curriculum_hash"] == config.curriculum_hash()
     assert d["ema_accumulation"] == "naive"
+    assert d["telemetry_flush_interval_epochs"] == DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS
+
+
+def test_long_training_config_rejects_invalid_telemetry_flush_interval(
+    tmp_path: Path,
+) -> None:
+    for bad_interval in [0, -1, 1.5, "1"]:
+        with pytest.raises(ValueError, match="telemetry_flush_interval_epochs"):
+            LongTrainingConfig(
+                substrate_id="x",
+                lane_id="lane_x_20260526",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_x_20260526_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
+                epochs=10,
+                curriculum_stages=(
+                    CurriculumStage(name="s", start_epoch=0, end_epoch=10),
+                ),
+                output_dir=tmp_path,
+                telemetry_flush_interval_epochs=bad_interval,  # type: ignore[arg-type]
+            )
 
 
 def test_long_training_config_rejects_lane_id_without_prefix(tmp_path: Path) -> None:
@@ -367,6 +386,39 @@ def test_long_training_config_curriculum_hash_is_stable(tmp_path: Path) -> None:
         output_dir=tmp_path,
     )
     assert c1.curriculum_hash() != c3.curriculum_hash()
+
+
+def test_run_long_training_flushes_epoch_telemetry_on_configured_cadence(
+    tmp_path: Path,
+) -> None:
+    adapter = _MockSubstrateAdapter()
+    config = LongTrainingConfig(
+        substrate_id="test_substrate",
+        lane_id="lane_test_substrate_20260526",
+        epochs=3,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(name="single", start_epoch=0, end_epoch=3),
+        ),
+        checkpoint_interval_epochs=10,
+        early_stopping_patience=30,
+        output_dir=tmp_path / "long_training_canonical_test",
+        telemetry_path=tmp_path / "telemetry" / "live.jsonl",
+        checkpoint_dir=tmp_path / "checkpoints",
+        telemetry_flush_interval_epochs=1,
+    )
+    observed_line_counts: list[int] = []
+
+    def _assert_flushed(metrics: PerEpochMetrics) -> None:
+        assert config.resolved_telemetry_path().exists()
+        lines = config.resolved_telemetry_path().read_text().splitlines()
+        observed_line_counts.append(len(lines))
+        assert len(lines) >= metrics.epoch + 1
+
+    artifact = run_long_training(adapter, config, on_epoch_end=_assert_flushed)
+
+    assert artifact.config_snapshot["telemetry_flush_interval_epochs"] == 1
+    assert observed_line_counts == [1, 2, 3]
 
 
 # ---------------------------------------------------------------------------

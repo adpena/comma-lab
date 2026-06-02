@@ -1,0 +1,156 @@
+{
+  "artifact_catalog_metadata": {
+    "artifact_paths": [
+      ".omx/research/nerv_long_training_campaign_admission_storage_plan_20260602T203940Z.json",
+      ".omx/research/nerv_long_training_campaign_admission_proactive_cleanup_20260602T203940Z.json",
+      ".omx/research/nerv_long_training_campaign_admission_proactive_cleanup_20260602T203940Z.json.journal.jsonl"
+    ],
+    "cleanup_plan_path": ".omx/research/nerv_long_training_campaign_admission_proactive_cleanup_20260602T203940Z.json",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "journal_path": ".omx/research/nerv_long_training_campaign_admission_proactive_cleanup_20260602T203940Z.json.journal.jsonl",
+    "lifecycle_kind": "HISTORICAL_PROVENANCE",
+    "policy_id": "operator_storage_waterfall.v1",
+    "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_plan_path": ".omx/research/nerv_long_training_campaign_admission_storage_plan_20260602T203940Z.json",
+    "tracked_local_boundary": {
+      ".omx/research/nerv_long_training_campaign_admission_proactive_cleanup_20260602T203940Z.json": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      },
+      ".omx/research/nerv_long_training_campaign_admission_proactive_cleanup_20260602T203940Z.json.journal.jsonl": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      },
+      ".omx/research/nerv_long_training_campaign_admission_storage_plan_20260602T203940Z.json": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      }
+    }
+  },
+  "blockers": [],
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "expected_workload_root": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "20260602T204002Z",
+  "gpu_launched": false,
+  "min_free_bytes": 0,
+  "operator_storage_policy": {
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact/cold_store",
+      "/Volumes/APDataStore/pact/cold_store"
+    ],
+    "cold_store_subdir": "cold_store",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "explicit_cold_store_override": false,
+    "explicit_storage_tier_override": true,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_disk_enabled": false,
+    "local_disk_enabled_by_default": false,
+    "local_disk_requires_explicit_opt_in": true,
+    "policy_id": "operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_tier_cli_specs": [
+      "vertigo=/Volumes/VertigoDataTier/pact",
+      "apdatastore=/Volumes/APDataStore/pact"
+    ],
+    "work_tier_order": [
+      {
+        "allow_local_disk": false,
+        "name": "vertigo",
+        "priority": 0,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "source": "explicit_override"
+      },
+      {
+        "allow_local_disk": false,
+        "name": "apdatastore",
+        "priority": 1,
+        "root": "/Volumes/APDataStore/pact",
+        "source": "explicit_override"
+      }
+    ]
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requested_bytes": 8589934592,
+  "schema": "comma_lab.experiment_storage_tier_plan.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_root": "/Volumes/VertigoDataTier/pact",
+  "selected_tier": "vertigo",
+  "selected_workload_root": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
+  "selected_workload_root_matches_expected": true,
+  "storage_required": true,
+  "tiers": [
+    {
+      "allow_local_disk": false,
+      "blockers": [],
+      "eligible": true,
+      "exists": true,
+      "free_bytes": 1267724615680,
+      "name": "vertigo",
+      "parent_exists": true,
+      "priority": 0,
+      "requested_bytes": 8589934592,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Volumes/VertigoDataTier/pact",
+      "total_bytes": 2000189177856,
+      "usable_bytes": 1224774942720,
+      "workload_root": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
+      "workload_root_exists": true,
+      "writable": true
+    },
+    {
+      "allow_local_disk": false,
+      "blockers": [],
+      "eligible": true,
+      "exists": true,
+      "free_bytes": 1489924784128,
+      "name": "apdatastore",
+      "parent_exists": true,
+      "priority": 1,
+      "requested_bytes": 8589934592,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Volumes/APDataStore/pact",
+      "total_bytes": 2000333438976,
+      "usable_bytes": 1446975111168,
+      "workload_root": "/Volumes/APDataStore/pact/nerv_long_training_campaigns",
+      "workload_root_exists": true,
+      "writable": true
+    }
+  ],
+  "workload_subdir": "nerv_long_training_campaigns"
+}

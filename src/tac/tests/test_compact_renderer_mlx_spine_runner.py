@@ -245,6 +245,41 @@ def test_planner_row_launch_gate_allows_planner_or_explicit_manual() -> None:
     ) == []
 
 
+def test_compact_family_startup_marker_records_mlx_custody(
+    tmp_path: Path,
+) -> None:
+    args = SimpleNamespace(
+        execute_family="hi_nerv",
+        planner_row_id="hi_nerv::candidate::adamw",
+        modelsize_candidate_id="candidate",
+        distillation_device="gpu",
+        mlx_prefilter_scorer_device="gpu",
+        mlx_prefilter_scorer_batch_pairs=8,
+        mlx_prefilter_progress_every=10,
+        output_dir=tmp_path,
+    )
+
+    path = runner_mod._write_compact_family_startup_marker(
+        output_dir=tmp_path,
+        args=args,
+        source_video_path=Path("/Volumes/VertigoDataTier/pact/source/0.mkv"),
+        hard_byte_ceilings=(178_000, 216_000),
+        modelsize_candidate={"candidate_id": "candidate", "num_pairs": 600},
+    )
+    assert path is not None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert payload["schema"] == "compact_carrier_startup_marker.v1"
+    assert payload["execute_family"] == "hi_nerv"
+    assert payload["planner_row_id"] == "hi_nerv::candidate::adamw"
+    assert payload["distillation_device"] == "gpu"
+    assert payload["mlx_prefilter_scorer_device"] == "gpu"
+    assert payload["mlx_prefilter_scorer_batch_pairs"] == 8
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
     tmp_path: Path,
 ) -> None:

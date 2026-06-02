@@ -35,6 +35,7 @@ ADMISSION_SCHEMA = "nerv_long_training_campaign_execution_admission.v1"
 ADMITTED_EXPERIMENT_SCHEMA = "nerv_long_training_campaign_admitted_experiment.v1"
 DEFAULT_QUEUE_ID = "nerv_manifest_pinned_long_training_local_mlx_admission.v1"
 DEFAULT_STORAGE_EXPECTED_BYTES_PER_ROW = 8 * 1024**3
+DEFAULT_LOCAL_MLX_LONG_TRAINING_TIMEOUT_SECONDS = 12 * 60 * 60
 DEFAULT_ALLOWED_OUTPUT_ROOTS = (
     "/Volumes/VertigoDataTier/pact",
     "/Volumes/APDataStore/pact",
@@ -71,6 +72,7 @@ def build_nerv_long_training_campaign_execution_admission(
     selected_experiment_ids: Sequence[str] = (),
     storage_expected_bytes_per_row: int = DEFAULT_STORAGE_EXPECTED_BYTES_PER_ROW,
     storage_reserve_free_gb: float = 40.0,
+    local_mlx_timeout_seconds: int = DEFAULT_LOCAL_MLX_LONG_TRAINING_TIMEOUT_SECONDS,
     allowed_output_roots: Sequence[str | Path] = DEFAULT_ALLOWED_OUTPUT_ROOTS,
     now_utc: str | None = None,
 ) -> dict[str, Any]:
@@ -97,6 +99,10 @@ def build_nerv_long_training_campaign_execution_admission(
     ):
         raise NervLongTrainingCampaignAdmissionError(
             "storage_expected_bytes_per_row must be non-negative"
+        )
+    if isinstance(local_mlx_timeout_seconds, bool) or int(local_mlx_timeout_seconds) <= 0:
+        raise NervLongTrainingCampaignAdmissionError(
+            "local_mlx_timeout_seconds must be positive"
         )
 
     generated_at = now_utc or _utc_now()
@@ -154,6 +160,7 @@ def build_nerv_long_training_campaign_execution_admission(
             output_parent=output_parent,
             storage_expected_bytes=storage_expected_bytes,
             storage_reserve_free_gb=storage_reserve_free_gb,
+            local_mlx_timeout_seconds=int(local_mlx_timeout_seconds),
             source_verdict=consumer_verdict,
             claim_row=claim_row or {},
         )
@@ -183,6 +190,7 @@ def build_nerv_long_training_campaign_execution_admission(
         "storage_expected_bytes_per_row": int(storage_expected_bytes_per_row),
         "storage_expected_bytes": storage_expected_bytes,
         "storage_reserve_free_gb": float(storage_reserve_free_gb),
+        "local_mlx_timeout_seconds": int(local_mlx_timeout_seconds),
         "output_parent": None if output_parent is None else output_parent.as_posix(),
         "allowed_output_roots": [root.as_posix() for root in allowed_roots],
         "experiment_queue": queue,
@@ -254,6 +262,7 @@ def _execution_queue(
     output_parent: Path,
     storage_expected_bytes: int,
     storage_reserve_free_gb: float,
+    local_mlx_timeout_seconds: int,
     source_verdict: Mapping[str, Any],
     claim_row: Mapping[str, str],
 ) -> dict[str, Any]:
@@ -278,6 +287,7 @@ def _execution_queue(
             row,
             lane_id=lane_id,
             requires="nerv_campaign_storage_preflight.proactive_cleanup",
+            local_mlx_timeout_seconds=int(local_mlx_timeout_seconds),
         )
         for row in rows
     )
@@ -315,9 +325,14 @@ def _admitted_experiment(
     *,
     lane_id: str,
     requires: str,
+    local_mlx_timeout_seconds: int,
 ) -> dict[str, Any]:
     command = [str(item) for item in _list(row.get("command"))]
     report_path = _output_report_path(command)
+    artifact_paths = _observable_artifact_paths(
+        command,
+        family=str(row.get("family") or "unknown"),
+    )
     postconditions = [dict(item) for item in _mapping_list(row.get("postconditions"))]
     if not postconditions and report_path:
         postconditions = [
@@ -353,8 +368,9 @@ def _admitted_experiment(
                 },
                 "postconditions": postconditions,
                 "on_postcondition_failure": "failed",
+                "timeout_seconds": int(local_mlx_timeout_seconds),
                 "telemetry": {
-                    "artifact_paths": [report_path] if report_path else [],
+                    "artifact_paths": artifact_paths,
                     "include_postcondition_paths": True,
                 },
                 "score_claim": False,
@@ -485,11 +501,47 @@ def _output_report_path(command: Sequence[str]) -> str:
     return (out_dir / "compact_renderer_mlx_spine_runner_report.json").as_posix()
 
 
+def _observable_artifact_paths(command: Sequence[str], *, family: str) -> list[str]:
+    out_dir = _output_dir(command)
+    if out_dir is None:
+        return []
+    paths = [
+        out_dir / "compact_renderer_mlx_spine_runner_report.json",
+    ]
+    if family in {"hi_nerv", "snerv"}:
+        paths.append(out_dir / "compact_renderer_mlx_spine_runner_startup.json")
+    if family == "hi_nerv":
+        paths.extend(
+            [
+                out_dir / "hi_nerv_mlx_training" / "telemetry.jsonl",
+                out_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
+            ]
+        )
+    elif family == "snerv":
+        paths.extend(
+            [
+                out_dir / "snerv_mlx_training" / "telemetry.jsonl",
+                out_dir / "snerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
+            ]
+        )
+    out: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        text = path.as_posix()
+        if text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
+
+
 def _existing_output_artifact_paths(output_dir: Path) -> list[Path]:
     candidates = (
         output_dir / "compact_renderer_mlx_spine_runner_report.json",
+        output_dir / "compact_renderer_mlx_spine_runner_startup.json",
         output_dir / "hi_nerv_mlx_training" / "telemetry.jsonl",
+        output_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
         output_dir / "snerv_mlx_training" / "telemetry.jsonl",
+        output_dir / "snerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
         output_dir / "nerv_candidate_byte_feedback_row.json",
         output_dir / "nerv_candidate_byte_feedback.jsonl",
     )
@@ -576,6 +628,7 @@ __all__ = [
     "ADMISSION_SCHEMA",
     "CONSUMER_RESULT_SCHEMA",
     "DEFAULT_ALLOWED_OUTPUT_ROOTS",
+    "DEFAULT_LOCAL_MLX_LONG_TRAINING_TIMEOUT_SECONDS",
     "DEFAULT_QUEUE_ID",
     "DEFAULT_STORAGE_EXPECTED_BYTES_PER_ROW",
     "NervLongTrainingCampaignAdmissionError",
