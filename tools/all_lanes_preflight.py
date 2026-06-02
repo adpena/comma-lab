@@ -101,6 +101,10 @@ Currently runs:
   Gate #34: tools/audit_archive_bound_candidate_contracts.py
            (archive-like MLX/materializer/public-frontier artifacts cannot carry
             invalid or stale shared runtime-bridge contracts)
+  Gate #35: NeRV top-priority stack production-hardening surfaces
+           (SNeRV/HiNeRV modelsize curve, control inventory, implementation
+            sweep, master-consumer bridge, and rate/allocator bridge all
+            remain fail-closed and Cathedral/final-rate visible)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -223,6 +227,12 @@ CANONICAL_TASK_STATUS_AUDIT = TOOLS / "check_canonical_task_status_no_dangling_t
 TAC_TERMINOLOGY_AUDIT = TOOLS / "check_tac_terminology.py"
 PUBLIC_SUBMISSION_PR_AUDIT = TOOLS / "audit_public_submission_pr.py"
 ARCHIVE_BOUND_CONTRACT_AUDIT = TOOLS / "audit_archive_bound_candidate_contracts.py"
+NERV_MODEL_SIZE_CURVE = TOOLS / "build_nerv_modelsize_archive_curve.py"
+NERV_CONTROL_INVENTORY = TOOLS / "build_nerv_control_inventory.py"
+NERV_IMPLEMENTATION_DESIGN_SWEEP = TOOLS / "build_nerv_implementation_design_sweep.py"
+NERV_TOP_PRIORITY_SEAM = TOOLS / "build_nerv_top_priority_stack_seam.py"
+NERV_MASTER_CONSUMER_BRIDGE = TOOLS / "build_nerv_master_consumer_bridge.py"
+NERV_RATE_ALLOCATOR_BRIDGE = TOOLS / "build_nerv_rate_allocator_bridge.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -1626,6 +1636,251 @@ def _run_operator_briefing_dispatch_gate() -> tuple[bool, str]:
         "active rows require dispatch_routing.active=true and "
         "ready_for_operator_dispatch=true)",
     )
+
+
+_NERV_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "frontier_score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "production_hardened_claim",
+    "source_faithful_stack_claim",
+    "ready_for_exact_eval_dispatch",
+    "exact_or_full_video_launched",
+    "promotable",
+)
+
+
+def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
+    """Ensure SNeRV/HiNeRV priority surfaces stay sourceful and no-authority."""
+
+    with tempfile.TemporaryDirectory(prefix="pact_nerv_preflight_") as temp_dir:
+        temp = Path(temp_dir)
+        curve = temp / "curve.json"
+        inventory = temp / "inventory.json"
+        sweep = temp / "sweep.json"
+        seam = temp / "seam.json"
+        bridge = temp / "bridge.json"
+        rate_bridge = temp / "rate_bridge.json"
+        oss_root = (
+            Path("/Volumes/VertigoDataTier/pact/experiments/results")
+            / "oss_nerv_source_audit_20260602T113720Z"
+        )
+        commands = [
+            [sys.executable, str(NERV_MODEL_SIZE_CURVE), "--out", str(curve)],
+            [
+                sys.executable,
+                str(NERV_CONTROL_INVENTORY),
+                "--repo-root",
+                str(REPO),
+                "--output-json",
+                str(inventory),
+            ],
+            [
+                sys.executable,
+                str(NERV_IMPLEMENTATION_DESIGN_SWEEP),
+                "--repo-root",
+                str(REPO),
+                "--out",
+                str(sweep),
+            ],
+            [
+                sys.executable,
+                str(NERV_TOP_PRIORITY_SEAM),
+                "--repo-root",
+                str(REPO),
+                "--out",
+                str(seam),
+            ],
+            [
+                sys.executable,
+                str(NERV_MASTER_CONSUMER_BRIDGE),
+                "--seam",
+                str(seam),
+                "--control-inventory",
+                str(inventory),
+                "--implementation-sweep",
+                str(sweep),
+                "--modelsize-curve",
+                str(curve),
+                "--out",
+                str(bridge),
+            ],
+            [
+                sys.executable,
+                str(NERV_RATE_ALLOCATOR_BRIDGE),
+                "--master-bridge",
+                str(bridge),
+                "--out",
+                str(rate_bridge),
+            ],
+        ]
+        if oss_root.is_dir():
+            commands[2][4:4] = ["--oss-audit-root", str(oss_root)]
+            commands[3][4:4] = ["--oss-audit-root", str(oss_root)]
+
+        output_parts: list[str] = []
+        for command in commands:
+            proc = _run_subprocess(command, capture_output=True, text=True)
+            output_parts.append(proc.stdout + proc.stderr)
+            if proc.returncode != 0:
+                return (
+                    False,
+                    "NeRV preflight builder failed:\n"
+                    + "\n".join(part for part in output_parts if part.strip()),
+                )
+
+        payloads = {
+            "modelsize_curve": _load_nerv_preflight_json(curve),
+            "control_inventory": _load_nerv_preflight_json(inventory),
+            "implementation_sweep": _load_nerv_preflight_json(sweep),
+            "top_priority_seam": _load_nerv_preflight_json(seam),
+            "master_consumer_bridge": _load_nerv_preflight_json(bridge),
+            "rate_allocator_bridge": _load_nerv_preflight_json(rate_bridge),
+        }
+        expected_schemas = {
+            "modelsize_curve": "nerv_modelsize_archive_curve.v1",
+            "control_inventory": "nerv_control_inventory.v1",
+            "implementation_sweep": "nerv_implementation_design_sweep.v1",
+            "top_priority_seam": "nerv_top_priority_stack_seam.v1",
+            "master_consumer_bridge": "nerv_master_consumer_bridge.v1",
+            "rate_allocator_bridge": "nerv_rate_allocator_bridge.v1",
+        }
+        failures: list[str] = []
+        for name, expected_schema in expected_schemas.items():
+            payload = payloads[name]
+            if payload.get("schema") != expected_schema:
+                failures.append(
+                    f"{name}:schema:{payload.get('schema')!r}!={expected_schema!r}"
+                )
+            _append_nerv_authority_failures(failures, name, payload)
+
+        bridge_payload = payloads["master_consumer_bridge"]
+        normalized = bridge_payload.get("normalized_candidate")
+        if not isinstance(normalized, dict):
+            failures.append("master_consumer_bridge:normalized_candidate_missing")
+        else:
+            _append_nerv_authority_failures(
+                failures,
+                "master_consumer_bridge.normalized_candidate",
+                normalized,
+            )
+        units = bridge_payload.get("master_consumer_units")
+        if not isinstance(units, list) or not units:
+            failures.append("master_consumer_bridge:units_missing")
+            units = []
+        for index, unit in enumerate(units):
+            if not isinstance(unit, dict):
+                failures.append(f"master_consumer_bridge:unit_{index}:not_object")
+                continue
+            _append_nerv_authority_failures(
+                failures,
+                f"master_consumer_bridge.unit_{index}",
+                unit,
+            )
+        routes = bridge_payload.get("master_consumer_routes")
+        if not isinstance(routes, list) or not routes:
+            failures.append("master_consumer_bridge:routes_missing")
+        memo_count = bridge_payload.get("related_omx_design_memo_ref_count")
+        if not isinstance(memo_count, int) or memo_count <= 0:
+            failures.append("master_consumer_bridge:omx_memo_refs_missing")
+
+        rate_payload = payloads["rate_allocator_bridge"]
+        work_orders = rate_payload.get("rate_allocator_work_orders")
+        if not isinstance(work_orders, list) or not work_orders:
+            failures.append("rate_allocator_bridge:work_orders_missing")
+            work_orders = []
+        for index, order in enumerate(work_orders):
+            if not isinstance(order, dict):
+                failures.append(f"rate_allocator_bridge:work_order_{index}:not_object")
+                continue
+            _append_nerv_authority_failures(
+                failures,
+                f"rate_allocator_bridge.work_order_{index}",
+                order,
+            )
+        precision_modes = {
+            str(row.get("mode"))
+            for row in rate_payload.get("receiver_precision_mode_policy", [])
+            if isinstance(row, dict)
+        }
+        required_modes = {
+            "fp16_protected",
+            "int8_protected",
+            "int4",
+            "int2",
+            "zero",
+            "rle_only",
+        }
+        missing_modes = sorted(required_modes - precision_modes)
+        if missing_modes:
+            failures.append(
+                "rate_allocator_bridge:precision_modes_missing:"
+                + ",".join(missing_modes)
+            )
+
+        from tac.cathedral.consumer_contract import validate_consumer_module
+        from tac.cathedral_consumers import nerv_top_priority_stack_consumer
+
+        registration = validate_consumer_module(nerv_top_priority_stack_consumer)
+        if not registration.contract_compliant:
+            failures.extend(
+                f"cathedral_consumer_contract:{err}"
+                for err in registration.validation_errors
+            )
+        consumer_result = nerv_top_priority_stack_consumer.consume_candidate(
+            bridge_payload
+        )
+        if not isinstance(consumer_result, dict):
+            failures.append("cathedral_consumer:result_not_object")
+        else:
+            _append_nerv_authority_failures(
+                failures,
+                "cathedral_consumer_result",
+                consumer_result,
+            )
+            if consumer_result.get("predicted_delta_adjustment") != 0.0:
+                failures.append("cathedral_consumer_result:predicted_delta_nonzero")
+
+        if failures:
+            return (
+                False,
+                "NeRV top-priority preflight failed:\n  "
+                + "\n  ".join(failures)
+                + "\n"
+                + "\n".join(part for part in output_parts if part.strip()),
+            )
+
+        seam_payload = payloads["top_priority_seam"]
+        sweep_payload = payloads["implementation_sweep"]
+        return (
+            True,
+            "NeRV top-priority preflight: PASS "
+            f"(bridge_units={len(units)} routes={len(routes or [])} "
+            f"rate_work_orders={len(work_orders)} "
+            f"memo_refs={memo_count} blockers={len(bridge_payload.get('blockers') or [])} "
+            f"blocked_dispatch={seam_payload.get('blocked_dispatch')} "
+            f"stack_rows={len(sweep_payload.get('stack_sweeps') or [])}; "
+            "all authority flags remain false)",
+        )
+
+
+def _load_nerv_preflight_json(path: Path) -> dict[str, object]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise TypeError(f"{path}: expected JSON object")
+    return payload
+
+
+def _append_nerv_authority_failures(
+    failures: list[str],
+    label: str,
+    payload: dict[str, object],
+) -> None:
+    for field in _NERV_FALSE_AUTHORITY_FIELDS:
+        if field in payload and payload[field] is not False:
+            failures.append(f"{label}:{field}_not_false")
 
 
 def _run_hidden_gems_gate() -> tuple[bool, str]:
@@ -3802,6 +4057,12 @@ def main(argv: list[str] | None = None) -> int:
         CANONICAL_TASK_STATUS_AUDIT,
         TAC_TERMINOLOGY_AUDIT,
         ARCHIVE_BOUND_CONTRACT_AUDIT,
+        NERV_MODEL_SIZE_CURVE,
+        NERV_CONTROL_INVENTORY,
+        NERV_IMPLEMENTATION_DESIGN_SWEEP,
+        NERV_TOP_PRIORITY_SEAM,
+        NERV_MASTER_CONSUMER_BRIDGE,
+        NERV_RATE_ALLOCATOR_BRIDGE,
         *[lane["tool"] for lane in lanes],
     ]:
         if not tool.is_file():
@@ -4131,6 +4392,14 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "  ✓ Gate #34: archive-bound shared contract hygiene — PASSED",
             "  ✗ Gate #34: archive-bound shared contract hygiene — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            35,
+            "NeRV top-priority stack production-hardening surfaces",
+            _run_nerv_top_priority_stack_gate,
+            "  ✓ Gate #35: NeRV top-priority stack production-hardening surfaces — PASSED",
+            "  ✗ Gate #35: NeRV top-priority stack production-hardening surfaces — FAILED",
         ),
     ]
     lane_steps = [
