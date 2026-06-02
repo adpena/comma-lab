@@ -9,6 +9,7 @@ from tac.analysis.nerv_control_inventory import (
     build_nerv_control_inventory,
     render_nerv_control_inventory_markdown,
 )
+from tools import build_nerv_control_inventory as inventory_tool
 from tools.build_nerv_control_inventory import main as inventory_tool_main
 
 REPO = Path(__file__).resolve().parents[3]
@@ -238,6 +239,23 @@ def test_nerv_control_inventory_accepts_hinerv_archive_ladder_waterfill_report()
                     "group_count": 2,
                     "total_selected_byte_delta": -16,
                 },
+                "archive_ladder_replay_command_axis_tag": (
+                    "[planning/control:false-authority]"
+                ),
+                "archive_ladder_replay_command_argv": [
+                    ".venv/bin/python",
+                    "tools/build_hinerv_archive_size_ladder.py",
+                    "--row-id",
+                    "hi_nerv_local_tiny",
+                ],
+                "archive_ladder_replay_command_hint": (
+                    ".venv/bin/python tools/build_hinerv_archive_size_ladder.py "
+                    "--row-id hi_nerv_local_tiny"
+                ),
+                "archive_ladder_replay_output_dir": (
+                    "/Volumes/VertigoDataTier/pact/"
+                    "hinerv_archive_ladder_waterfill_replay/hi_nerv_local_tiny"
+                ),
                 "blockers": ["decoder_weight_saliency_missing_for_some_groups"],
             }
         ],
@@ -258,6 +276,19 @@ def test_nerv_control_inventory_accepts_hinerv_archive_ladder_waterfill_report()
     assert measured["score_claim"] is False
     assert measured["row_count"] == 1
     assert measured["section_value_row_count"] == 1
+    row = measured["waterfill_rows"][0]
+    assert row["archive_ladder_replay_command_axis_tag"] == (
+        "[planning/control:false-authority]"
+    )
+    assert row["archive_ladder_replay_command_argv"] == [
+        ".venv/bin/python",
+        "tools/build_hinerv_archive_size_ladder.py",
+        "--row-id",
+        "hi_nerv_local_tiny",
+    ]
+    assert row["archive_ladder_replay_output_dir"].endswith(
+        "/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_tiny"
+    )
     assert measured["waterfill_rows"][0]["waterfill_summary"]["group_count"] == 2
 
 
@@ -485,6 +516,72 @@ def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
     assert rc == 0
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["decoder_weight_waterfill_reports"]["hi_nerv"]["row_count"] == 1
+    assert payload["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_auto_discovers_latest_waterfill_report(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    research = tmp_path / "research"
+    research.mkdir()
+    output_json = tmp_path / "inventory.json"
+    (research / "hinerv_archive_ladder_waterfill_0001.json").write_text(
+        json.dumps({"schema": "wrong"}),
+        encoding="utf-8",
+    )
+    latest = research / "hinerv_archive_ladder_waterfill_9999.json"
+    latest.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_ladder_waterfill.v1",
+                "report_path": ".omx/research/hinerv_archive_ladder_waterfill_9999.json",
+                "row_count": 1,
+                "full_video_coverage": True,
+                "rows": [
+                    {
+                        "row_id": "hi_nerv_auto",
+                        "archive_bytes": 321,
+                        "archive_sha256": "a" * 64,
+                        "state_npz_artifact_sha256": "b" * 64,
+                        "waterfill_summary": {"group_count": 5},
+                        "blockers": [
+                            "decoder_weight_saliency_missing_for_some_groups"
+                        ],
+                    }
+                ],
+                "section_value_rows": [{"row_id": "r0"}],
+                "byte_price_plan": {
+                    "schema": "compact_nerv_byte_price_controller.v1"
+                },
+                "blockers": [
+                    "decoder_weight_saliency_replay_required_for_authority"
+                ],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(inventory_tool, "RESEARCH_DIR", research)
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "hi_nerv",
+            "--repo-root",
+            str(REPO),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    measured = payload["decoder_weight_waterfill_reports"]["hi_nerv"]
+    assert measured["row_count"] == 1
+    assert measured["waterfill_rows"][0]["row_id"] == "hi_nerv_auto"
+    assert measured["waterfill_rows"][0]["waterfill_summary"]["group_count"] == 5
     assert payload["score_claim"] is False
 
 
