@@ -747,6 +747,76 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.post_export_materializer_max_experiments == 1
 
 
+def test_main_from_snerv_advisory_forwards_cleanup_scratch_flag(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    report_path = tmp_path / "snerv_advisory.json"
+    report_path.write_text(json.dumps({"schema": "unit.snerv"}), encoding="utf-8")
+    source_video = tmp_path / "0.mkv"
+    source_video.write_bytes(b"video")
+    calls: list[dict[str, object]] = []
+
+    def fake_adapt_snerv_advisory_report_to_spine(**kwargs):
+        calls.append(dict(kwargs))
+        out = Path(kwargs["output_dir"])
+        runner_report = out / "compact_renderer_mlx_spine_runner_report.json"
+        runner_report.parent.mkdir(parents=True, exist_ok=True)
+        runner_report.write_text("{}", encoding="utf-8")
+        return {
+            "mode": "adapted_snerv_advisory_report_to_spine",
+            "report_path": runner_report.as_posix(),
+            "blockers": ["unit_not_exact_ready"],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(runner_mod, "_acquire_active_campaign_lock", lambda **_: None)
+    monkeypatch.setattr(
+        runner_mod,
+        "adapt_snerv_advisory_report_to_spine",
+        fake_adapt_snerv_advisory_report_to_spine,
+    )
+
+    base_argv = [
+        "--from-snerv-advisory-report",
+        report_path.as_posix(),
+        "--source-video-path",
+        source_video.as_posix(),
+        "--upstream-dir",
+        (tmp_path / "upstream").as_posix(),
+        "--repo-root",
+        tmp_path.as_posix(),
+    ]
+
+    assert (
+        runner_mod.main(
+            [
+                *base_argv,
+                "--output-dir",
+                (tmp_path / "default_cleanup").as_posix(),
+            ]
+        )
+        == 0
+    )
+    assert calls[-1]["cleanup_failed_local_replay_scratch"] is True
+    assert json.loads(capsys.readouterr().out)["ready_for_exact_eval_dispatch"] is False
+
+    assert (
+        runner_mod.main(
+            [
+                *base_argv,
+                "--output-dir",
+                (tmp_path / "retain_cleanup").as_posix(),
+                "--retain-failed-local-replay-scratch",
+            ]
+        )
+        == 0
+    )
+    assert calls[-1]["cleanup_failed_local_replay_scratch"] is False
+
+
 def test_post_export_materializer_executor_runs_output_scoped_queue(
     tmp_path: Path,
 ) -> None:
@@ -2113,6 +2183,81 @@ def test_adapt_snerv_advisory_report_uses_package_dir_archive_fallback(
     assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out[
         "blockers"
     ]
+
+
+def test_adapt_snerv_advisory_report_accepts_archive_package_manifest(
+    tmp_path: Path,
+) -> None:
+    package_dir = tmp_path / "snerv_package"
+    submission = package_dir / "submission"
+    submission.mkdir(parents=True)
+    (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    (submission / "inflate.py").write_text("print('inflate')\n", encoding="utf-8")
+    archive = _write_synthetic_pr95_archive(package_dir / "archive.zip", pairs=600)
+    archive_sha = runner_mod._sha256_file(archive)
+    archive_bytes = archive.stat().st_size
+    proof_path = package_dir / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+    proof_path.parent.mkdir()
+    proof_payload = {
+        "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+        "proof_path": proof_path.as_posix(),
+        "runtime_consumption_proof_passed": True,
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    proof_path.write_text(json.dumps(proof_payload), encoding="utf-8")
+    package_manifest = package_dir / "archive_bound_candidate_adapter_package.json"
+    package_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_inverse_steg_archive_bound_candidate_package.v1",
+                "archive_bound_candidate_adapter_package": {
+                    "candidate_rows": [
+                        {
+                            "candidate_archive_path": archive.as_posix(),
+                            "candidate_archive_sha256": archive_sha,
+                            "candidate_archive_bytes": archive_bytes,
+                            "runtime_adapter_manifest": {"n_pairs": 600},
+                            "blockers": [
+                                "paired_contest_cpu_cuda_auth_eval_missing"
+                            ],
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    ]
+                },
+                "receiver_proof": proof_payload,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    out = runner_mod.adapt_snerv_advisory_report_to_spine(
+        snerv_advisory_report_path=package_manifest,
+        output_dir=tmp_path / "adapted",
+        hard_byte_ceilings=(178_000,),
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["source_snerv_advisory_report_sha256"] == runner_mod._sha256_file(
+        package_manifest
+    )
+    assert out["runtime_package_dir"].endswith("/snerv_package")
+    assert out["archive_sha256"] == archive_sha
+    assert out["receiver_proof_report_paths"] == [proof_path.as_posix()]
+    assert "snerv_packet_not_full_600_pairs" not in out["blockers"]
+    assert "paired_contest_cpu_cuda_auth_eval_missing" in out["blockers"]
+    assert out["post_export_materializer_plan"]["archive_record"][
+        "source_runtime_dir"
+    ].endswith("/snerv_package/submission")
 
 
 def test_pr95_stage8_execute_parser_exposes_source_lane_controls() -> None:
