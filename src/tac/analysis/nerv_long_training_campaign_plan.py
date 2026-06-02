@@ -30,6 +30,7 @@ from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
 SCHEMA = "nerv_long_training_campaign_plan.v1"
 ROW_SCHEMA = "nerv_long_training_campaign_row.v1"
+EXPERIMENT_QUEUE_SCHEMA = "experiment_queue.v1"
 DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
@@ -117,6 +118,7 @@ def build_nerv_long_training_campaign_plan(
             str(row.get("row_id") or ""),
         ),
     )
+    experiment_queue = _experiment_queue(rows)
     return {
         "schema": SCHEMA,
         "baseline_to_beat": "pr95_public_control_arm_plus_frontier_exact_axes",
@@ -134,6 +136,10 @@ def build_nerv_long_training_campaign_plan(
         "output_root": Path(output_root).as_posix(),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
+        "experiment_queue": experiment_queue,
+        "experiment_queue_schema": EXPERIMENT_QUEUE_SCHEMA,
+        "experiment_queue_id": experiment_queue["queue_id"],
+        "experiment_queue_experiment_count": len(experiment_queue["experiments"]),
         "launchable_local_row_count": sum(
             1 for row in rows if row["local_mlx_launch_command_ready"]
         ),
@@ -408,11 +414,141 @@ def _row(
         "local_mlx_launch_command_ready": bool(local_mlx_launch_command_ready),
         "implementation_status": str(implementation_status),
         "command_argv": list(command_argv),
+        "experiment_queue_entry": _experiment_for_row(
+            row_id=row_id,
+            family=family,
+            priority=priority,
+            command_argv=command_argv,
+            local_mlx_launch_command_ready=local_mlx_launch_command_ready,
+            blockers=blockers,
+        ),
         "curriculum_plan": dict(curriculum_plan),
         "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
         **dict(extra),
         **FALSE_AUTHORITY,
     }
+
+
+def _experiment_queue(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    return {
+        "schema": EXPERIMENT_QUEUE_SCHEMA,
+        "queue_id": "nerv_long_training_campaign_queue.v1",
+        "owner": "nerv_long_training_campaign_plan",
+        "description": (
+            "Queue-owned MLX-first HiNeRV/SNeRV long-training campaign. "
+            "Rows are false-authority until receiver proof, local CPU replay, "
+            "and exact CPU/CUDA gates pass."
+        ),
+        "experiments": [
+            dict(row["experiment_queue_entry"])
+            for row in rows
+            if isinstance(row.get("experiment_queue_entry"), Mapping)
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _experiment_for_row(
+    *,
+    row_id: str,
+    family: str,
+    priority: int,
+    command_argv: Sequence[str],
+    local_mlx_launch_command_ready: bool,
+    blockers: Sequence[str],
+) -> dict[str, Any]:
+    output_json = _row_output_report_path(command_argv)
+    postconditions = [
+        {
+            "type": "json_equals",
+            "path": output_json,
+            "key": "schema",
+            "equals": "compact_renderer_mlx_spine_runner.v1",
+        },
+        {
+            "type": "json_equals",
+            "path": output_json,
+            "key": "score_claim",
+            "equals": False,
+        },
+        {
+            "type": "json_equals",
+            "path": output_json,
+            "key": "ready_for_exact_eval_dispatch",
+            "equals": False,
+        },
+    ]
+    if str(family) == "hi_nerv":
+        postconditions.extend(
+            [
+                {
+                    "type": "json_equals",
+                    "path": output_json,
+                    "key": "execute_family",
+                    "equals": "hi_nerv",
+                },
+                {
+                    "type": "json_equals",
+                    "path": output_json,
+                    "key": "training_executed",
+                    "equals": True,
+                },
+            ]
+        )
+    elif str(family) == "snerv":
+        postconditions.extend(
+            [
+                {
+                    "type": "json_equals",
+                    "path": output_json,
+                    "key": "execute_family",
+                    "equals": "snerv",
+                },
+                {
+                    "type": "json_path_contains",
+                    "path": output_json,
+                    "key": "blockers",
+                    "contains": "snerv_score_aware_curriculum_not_native_mlx_yet",
+                },
+            ]
+        )
+    return {
+        "id": _safe_path_token(row_id),
+        "family": str(family),
+        "priority": int(priority),
+        "status": (
+            "ready"
+            if bool(local_mlx_launch_command_ready)
+            else "blocked_dependency"
+        ),
+        "blocked": not bool(local_mlx_launch_command_ready),
+        "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
+        "steps": [
+            {
+                "id": "run_mlx_first_campaign_row",
+                "command": list(command_argv),
+                "postconditions": postconditions,
+                "on_postcondition_failure": "failed",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _row_output_report_path(command_argv: Sequence[str]) -> str:
+    argv = [str(value) for value in command_argv]
+    try:
+        out_dir = argv[argv.index("--output-dir") + 1]
+    except (ValueError, IndexError):
+        out_dir = DEFAULT_OUTPUT_ROOT
+    return (Path(out_dir) / "compact_renderer_mlx_spine_runner_report.json").as_posix()
 
 
 def _require_schema(payload: Mapping[str, Any], schema: str, name: str) -> None:

@@ -302,6 +302,10 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert campaign_plan["family_counts"]["hi_nerv"] > 0
     assert campaign_plan["family_counts"]["snerv"] > 0
     assert campaign_plan["launchable_local_row_count"] > 0
+    assert campaign_plan["experiment_queue"]["schema"] == "experiment_queue.v1"
+    assert campaign_plan["experiment_queue_experiment_count"] == campaign_plan[
+        "campaign_row_count"
+    ]
     assert {
         row["family"]
         for row in campaign_plan["campaign_rows"]

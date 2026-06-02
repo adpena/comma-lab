@@ -30,6 +30,8 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["campaign_row_count"] == 3
+    assert report["experiment_queue"]["schema"] == "experiment_queue.v1"
+    assert report["experiment_queue_experiment_count"] == 3
     assert report["launchable_local_row_count"] == 2
     assert report["family_counts"] == {"hi_nerv": 2, "snerv": 1}
 
@@ -38,13 +40,35 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all("--optimizer-kind" in row["command_argv"] for row in hi_rows)
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
     assert all(row["local_mlx_launch_command_ready"] is True for row in hi_rows)
+    assert all(
+        row["experiment_queue_entry"]["status"] == "ready" for row in hi_rows
+    )
+    hi_step = hi_rows[0]["experiment_queue_entry"]["steps"][0]
+    assert hi_step["command"] == hi_rows[0]["command_argv"]
+    assert {
+        (condition["key"], condition.get("equals"))
+        for condition in hi_step["postconditions"]
+        if condition["type"] == "json_equals"
+    } >= {
+        ("schema", "compact_renderer_mlx_spine_runner.v1"),
+        ("execute_family", "hi_nerv"),
+        ("training_executed", True),
+        ("score_claim", False),
+        ("ready_for_exact_eval_dispatch", False),
+    }
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["experiment_queue_entry"]["status"] == "blocked_dependency"
+    assert snerv_row["experiment_queue_entry"]["blocked"] is True
     assert "snerv_shared_mlx_scoreaware_long_training_harness_not_bound" in snerv_row[
         "blockers"
     ]
     assert "--snerv-scorer-loop-qat" in snerv_row["command_argv"]
+    snerv_step = snerv_row["experiment_queue_entry"]["steps"][0]
+    assert {
+        condition["type"] for condition in snerv_step["postconditions"]
+    } >= {"json_equals", "json_path_contains"}
 
     markdown = render_nerv_long_training_campaign_plan_markdown(report)
     assert "NeRV Long-Training Campaign Plan" in markdown
@@ -88,6 +112,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert rc == 0
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["campaign_row_count"] == 2
+    assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert out_md.read_text(encoding="utf-8").startswith(
         "# NeRV Long-Training Campaign Plan"
     )
