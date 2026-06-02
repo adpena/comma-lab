@@ -892,6 +892,11 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
         candidate_id="snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000",
         hard_byte_ceilings=(178_000,),
     )
+    sn_rich = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_int2_symmetric_ceil36000",
+        hard_byte_ceilings=(178_000,),
+    )
 
     assert hi is not None
     assert hi["candidate_id"] == (
@@ -904,9 +909,17 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert sn["candidate_id"] == (
         "snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000"
     )
+    assert sn["legacy_candidate_id"] is True
     assert sn["num_pairs"] == 600
     assert sn["hard_byte_ceiling"] == 36_000
     assert sn["decoder_payload_codec"] == "int2_symmetric"
+    assert sn_rich is not None
+    assert sn_rich["candidate_id"] == (
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_int2_symmetric_ceil36000"
+    )
+    assert sn_rich["wavelet"] == "haar"
+    assert sn_rich["fc_dim"] == 11
+    assert sn_rich["emb_size"] == 2
 
 
 def test_pose_instability_epoch_monitor_requires_sustained_bad_pose() -> None:

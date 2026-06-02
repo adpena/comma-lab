@@ -1908,6 +1908,14 @@ _HINERV_MODEL_SIZE_ID_RE = re.compile(
     r"(?P<decoder_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
 )
 _SNERV_MODEL_SIZE_ID_RE = re.compile(
+    r"^snerv_np(?P<num_pairs>\d+)_(?P<wavelet>[A-Za-z0-9]+)_"
+    r"lv(?P<levels>\d+)_"
+    r"lfb(?P<bits_per_coeff>\d+(?:p\d+)?)_"
+    r"stepb(?P<step_map_bits_per_coeff>\d+(?:p\d+)?)_"
+    r"fc(?P<fc_dim>\d+)e(?P<emb_size>\d+)_"
+    r"(?P<decoder_payload_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
+)
+_SNERV_LEGACY_MODEL_SIZE_ID_RE = re.compile(
     r"^snerv_np(?P<num_pairs>\d+)_lv(?P<levels>\d+)_"
     r"lfb(?P<bits_per_coeff>\d+(?:p\d+)?)_"
     r"stepb(?P<step_map_bits_per_coeff>\d+(?:p\d+)?)_"
@@ -1949,18 +1957,40 @@ def _modelsize_candidate_from_self_describing_id(
         ).as_dict()
     elif family == "snerv":
         match = _SNERV_MODEL_SIZE_ID_RE.match(token)
-        if match is None:
+        legacy_match = _SNERV_LEGACY_MODEL_SIZE_ID_RE.match(token)
+        if match is None and legacy_match is None:
+            return None
+        matched = match or legacy_match
+        if matched is None:  # pragma: no cover - defensive for type checkers
             return None
         row = analyze_snerv_modelsize_candidate(
-            hard_byte_ceiling=int(match.group("hard_byte_ceiling")),
-            num_pairs=int(match.group("num_pairs")),
-            levels=int(match.group("levels")),
-            bits_per_coeff=_float_token(match.group("bits_per_coeff")),
-            step_map_bits_per_coeff=_float_token(
-                match.group("step_map_bits_per_coeff")
+            hard_byte_ceiling=int(matched.group("hard_byte_ceiling")),
+            num_pairs=int(matched.group("num_pairs")),
+            wavelet=(
+                matched.group("wavelet")
+                if "wavelet" in matched.groupdict()
+                else "db2"
             ),
-            decoder_payload_codec=match.group("decoder_payload_codec"),
+            levels=int(matched.group("levels")),
+            bits_per_coeff=_float_token(matched.group("bits_per_coeff")),
+            step_map_bits_per_coeff=_float_token(
+                matched.group("step_map_bits_per_coeff")
+            ),
+            decoder_payload_codec=matched.group("decoder_payload_codec"),
+            fc_dim=(
+                int(matched.group("fc_dim"))
+                if "fc_dim" in matched.groupdict()
+                else 9
+            ),
+            emb_size=(
+                int(matched.group("emb_size"))
+                if "emb_size" in matched.groupdict()
+                else 0
+            ),
         ).as_dict()
+        if legacy_match is not None:
+            row["candidate_id"] = token
+            row["legacy_candidate_id"] = True
     else:
         return None
     if row["candidate_id"] != token:
