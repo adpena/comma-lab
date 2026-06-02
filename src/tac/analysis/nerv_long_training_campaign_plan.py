@@ -50,6 +50,7 @@ DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaign
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
 DEFAULT_LEARNING_RATE = 1.0e-3
+HINERV_POSE_INSTABILITY_LOW_LR_FLOOR = 3.0e-5
 DEFAULT_OPTIMIZER_KINDS = (
     "adamw",
     "lion",
@@ -1132,7 +1133,7 @@ def _hinerv_feedback_launch_adjustment(
     observed = _float_or_none(feedback.get("observed_learning_rate"))
     recommended = _float_or_none(feedback.get("recommended_learning_rate"))
     pose_instability = bool(feedback.get("pose_instability_detected"))
-    lr_floor = 3.0e-5
+    lr_floor = HINERV_POSE_INSTABILITY_LOW_LR_FLOOR
     repeated_low_lr_instability = bool(
         pose_instability and observed is not None and observed <= lr_floor
     )
