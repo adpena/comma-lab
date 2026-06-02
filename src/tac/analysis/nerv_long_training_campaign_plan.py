@@ -398,6 +398,10 @@ def _hinerv_campaign_row(
         and not launch_feedback_adjustment.get("applied")
     ):
         blockers.append("hinerv_pose_instability_feedback_unapplied")
+    if launch_feedback_adjustment.get("repeated_low_lr_pose_instability") is True:
+        blockers.append(
+            "hinerv_repeated_low_lr_pose_instability_requires_pose_protected_pathway"
+        )
     if candidate.get("nominal_under_ceiling") is not True:
         blockers.append("hinerv_candidate_nominal_over_byte_ceiling")
     blockers = _dedupe(blockers)
@@ -1128,8 +1132,13 @@ def _hinerv_feedback_launch_adjustment(
     observed = _float_or_none(feedback.get("observed_learning_rate"))
     recommended = _float_or_none(feedback.get("recommended_learning_rate"))
     pose_instability = bool(feedback.get("pose_instability_detected"))
+    lr_floor = 3.0e-5
+    repeated_low_lr_instability = bool(
+        pose_instability and observed is not None and observed <= lr_floor
+    )
     applied = bool(
         pose_instability
+        and not repeated_low_lr_instability
         and recommended is not None
         and recommended > 0.0
         and recommended < float(learning_rate)
@@ -1141,15 +1150,21 @@ def _hinerv_feedback_launch_adjustment(
             "pose_instability_recommended_lower_learning_rate"
             if applied
             else (
-                "pose_instability_feedback_without_lower_lr"
-                if pose_instability
-                else "feedback_does_not_request_launch_adjustment"
+                "repeated_pose_instability_at_low_lr_requires_pose_protected_pathway"
+                if repeated_low_lr_instability
+                else (
+                    "pose_instability_feedback_without_lower_lr"
+                    if pose_instability
+                    else "feedback_does_not_request_launch_adjustment"
+                )
             )
         ),
         "source_feedback_kind": feedback.get("feedback_kind"),
         "source_feedback_scope": feedback.get("feedback_scope"),
         "pose_instability_detected": pose_instability,
         "observed_learning_rate": observed,
+        "low_learning_rate_floor": lr_floor,
+        "repeated_low_lr_pose_instability": repeated_low_lr_instability,
         "requested_learning_rate": float(learning_rate),
         "recommended_learning_rate": recommended,
         "learning_rate": float(recommended if applied else learning_rate),

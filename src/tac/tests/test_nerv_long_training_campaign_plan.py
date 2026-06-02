@@ -350,6 +350,98 @@ def test_long_training_campaign_plan_applies_hinerv_pose_instability_feedback(
     assert hi["score_claim"] is False
 
 
+def test_long_training_campaign_plan_applies_hinerv_lr9e5_recovery_feedback(
+) -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=9.0e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "pose_instability_detected": True,
+                "observed_learning_rate": 9.0e-5,
+                "recommended_learning_rate": 2.7e-5,
+                "recommended_launch_mutations": [
+                    "lower_learning_rate_from_pose_instability_telemetry"
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["applied"] is True
+    assert adjustment["repeated_low_lr_pose_instability"] is False
+    assert adjustment["learning_rate"] == 2.7e-5
+    assert "hinerv_pose_instability_feedback_unapplied" not in hi["blockers"]
+    assert hi["command_argv"][hi["command_argv"].index("--learning-rate") + 1] == (
+        "2.7e-05"
+    )
+
+
+def test_long_training_campaign_plan_blocks_repeated_low_lr_pose_instability(
+) -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "pose_instability_detected": True,
+                "observed_learning_rate": 2.7e-5,
+                "recommended_learning_rate": 8.1e-6,
+                "recommended_launch_mutations": [
+                    "lower_learning_rate_from_pose_instability_telemetry"
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["applied"] is False
+    assert adjustment["repeated_low_lr_pose_instability"] is True
+    assert adjustment["learning_rate"] == 2.7e-5
+    assert adjustment["reason"] == (
+        "repeated_pose_instability_at_low_lr_requires_pose_protected_pathway"
+    )
+    assert "hinerv_pose_instability_feedback_unapplied" in hi["blockers"]
+    assert (
+        "hinerv_repeated_low_lr_pose_instability_requires_pose_protected_pathway"
+        in hi["blockers"]
+    )
+    assert "--learning-rate" in hi["command_argv"]
+    assert hi["command_argv"][hi["command_argv"].index("--learning-rate") + 1] == (
+        "2.7e-05"
+    )
+
+
 def test_long_training_campaign_plan_consumes_partial_snerv_runner_feedback() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
