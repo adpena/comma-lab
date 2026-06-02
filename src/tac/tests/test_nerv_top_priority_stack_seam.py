@@ -37,7 +37,8 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
             "url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
             "title": "hnerv_muon submission (0.20)",
             "state": "MERGED",
-            "headRefOid": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
+            "headRefOid": _git_head(upstream),
+            "headRefName": "hnerv_muon",
         },
         oss_source_metadata={
             "snerv": {
@@ -231,6 +232,46 @@ def test_nongit_upstream_blocks_baseline_authority(tmp_path: Path) -> None:
     assert payload["ready_for_exact_eval_dispatch"] is False
 
 
+def test_pr95_metadata_absence_or_head_mismatch_blocks_baseline_authority(
+    tmp_path: Path,
+) -> None:
+    repo = _repo(tmp_path)
+    upstream = _upstream(tmp_path)
+    intake = _pr95_intake(tmp_path)
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    claims.write_text("", encoding="utf-8")
+
+    missing = build_nerv_top_priority_stack_seam(
+        repo_root=repo,
+        upstream_repo_dir=upstream,
+        pr95_intake_root=intake,
+        active_claims_path=claims,
+        generated_utc="2026-06-02T03:40:00+00:00",
+    )
+    assert "pr95_pr_metadata_missing" in missing["baseline"]["blockers"]
+    assert "pr95_pr_head_sha_missing" in missing["baseline"]["blockers"]
+    assert "pr95_pr_head_ref_missing" in missing["baseline"]["blockers"]
+
+    mismatched = build_nerv_top_priority_stack_seam(
+        repo_root=repo,
+        upstream_repo_dir=upstream,
+        pr95_intake_root=intake,
+        active_claims_path=claims,
+        pr95_pr_metadata={
+            "url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+            "title": "hnerv_muon submission (0.20)",
+            "state": "MERGED",
+            "headRefOid": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
+            "headRefName": "hnerv_muon",
+        },
+        generated_utc="2026-06-02T03:40:00+00:00",
+    )
+    assert "upstream_repo_head_sha_mismatch_pr95_metadata" in mismatched[
+        "baseline"
+    ]["blockers"]
+    assert "upstream_repo_head_sha_mismatch_pr95_metadata" in mismatched["blockers"]
+
+
 def test_dispatch_blocker_parser_finds_named_and_generic_claims(tmp_path: Path) -> None:
     claims = tmp_path / "claims.md"
     claims.write_text(
@@ -315,6 +356,16 @@ def _upstream(tmp_path: Path) -> Path:
         capture_output=True,
     )
     return upstream
+
+
+def _git_head(path: Path) -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
 
 
 def _pr95_intake(tmp_path: Path) -> Path:

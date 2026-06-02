@@ -296,6 +296,25 @@ def test_parse_rejects_mismatched_advisory_S_no_fake():
         )
 
 
+def test_parse_rejects_bytes_only_rows_without_distortion_axes():
+    with pytest.raises(CarrierFitConsumerError, match="missing required d_seg"):
+        parse_carrier_fit_rows([{"carrier_id": "c", "modelsize_bytes": 1000}])
+
+
+def test_consume_candidate_rejects_bytes_only_rows_without_frontier_payload():
+    out = consume_candidate(
+        {
+            "carrier_fit_rows": [{"carrier_id": "c", "modelsize_bytes": 1000}],
+            "baseline_archive_bytes": 178493,
+            "baseline_S": 0.192,
+        }
+    )
+    assert out["predicted_delta_adjustment"] == 0.0
+    assert out["promotable"] is False
+    assert "input rejected" in out["rationale"]
+    assert "pareto_carrier_fit_frontier" not in out
+
+
 def test_parse_accepts_consistent_advisory_S():
     consistent = contest_formula_score(
         seg_dist=0.0015, pose_dist=3e-5, archive_bytes=160000

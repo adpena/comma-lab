@@ -233,6 +233,7 @@ NERV_IMPLEMENTATION_DESIGN_SWEEP = TOOLS / "build_nerv_implementation_design_swe
 NERV_TOP_PRIORITY_SEAM = TOOLS / "build_nerv_top_priority_stack_seam.py"
 NERV_MASTER_CONSUMER_BRIDGE = TOOLS / "build_nerv_master_consumer_bridge.py"
 NERV_RATE_ALLOCATOR_BRIDGE = TOOLS / "build_nerv_rate_allocator_bridge.py"
+NERV_RATE_ALLOCATOR_QUEUE = TOOLS / "build_nerv_rate_allocator_queue.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -1648,6 +1649,9 @@ _NERV_FALSE_AUTHORITY_FIELDS = (
     "source_faithful_stack_claim",
     "ready_for_exact_eval_dispatch",
     "exact_or_full_video_launched",
+    "exact_or_full_video_cuda_allowed",
+    "full_video_eval_allowed",
+    "dispatch_allowed",
     "promotable",
 )
 
@@ -1663,6 +1667,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
         seam = temp / "seam.json"
         bridge = temp / "bridge.json"
         rate_bridge = temp / "rate_bridge.json"
+        rate_queue = temp / "rate_queue.json"
         oss_root = (
             Path("/Volumes/VertigoDataTier/pact/experiments/results")
             / "oss_nerv_source_audit_20260602T113720Z"
@@ -1715,6 +1720,14 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
                 "--out",
                 str(rate_bridge),
             ],
+            [
+                sys.executable,
+                str(NERV_RATE_ALLOCATOR_QUEUE),
+                "--rate-bridge",
+                str(rate_bridge),
+                "--out",
+                str(rate_queue),
+            ],
         ]
         if oss_root.is_dir():
             commands[2][4:4] = ["--oss-audit-root", str(oss_root)]
@@ -1738,6 +1751,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             "top_priority_seam": _load_nerv_preflight_json(seam),
             "master_consumer_bridge": _load_nerv_preflight_json(bridge),
             "rate_allocator_bridge": _load_nerv_preflight_json(rate_bridge),
+            "rate_allocator_queue": _load_nerv_preflight_json(rate_queue),
         }
         expected_schemas = {
             "modelsize_curve": "nerv_modelsize_archive_curve.v1",
@@ -1746,6 +1760,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             "top_priority_seam": "nerv_top_priority_stack_seam.v1",
             "master_consumer_bridge": "nerv_master_consumer_bridge.v1",
             "rate_allocator_bridge": "nerv_rate_allocator_bridge.v1",
+            "rate_allocator_queue": "nerv_rate_allocator_work_queue.v1",
         }
         failures: list[str] = []
         for name, expected_schema in expected_schemas.items():
@@ -1820,6 +1835,52 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
                 + ",".join(missing_modes)
             )
 
+        queue_payload = payloads["rate_allocator_queue"]
+        queue_rows = queue_payload.get("queue_rows")
+        if not isinstance(queue_rows, list) or not queue_rows:
+            failures.append("rate_allocator_queue:rows_missing")
+            queue_rows = []
+        if queue_payload.get("queue_kind") != "planner_queue_not_experiment_queue":
+            failures.append("rate_allocator_queue:queue_kind_not_planner_queue")
+        activation_policy = queue_payload.get("activation_policy")
+        if not isinstance(activation_policy, dict):
+            failures.append("rate_allocator_queue:activation_policy_missing")
+        else:
+            if activation_policy.get("planner_rows_are_executable_experiments") is not False:
+                failures.append(
+                    "rate_allocator_queue:planner_rows_are_executable_experiments_not_false"
+                )
+            if activation_policy.get("exact_or_full_video_cuda_allowed") is not False:
+                failures.append(
+                    "rate_allocator_queue:activation_exact_or_full_video_cuda_allowed_not_false"
+                )
+        if queue_payload.get("queue_row_count") != len(queue_rows):
+            failures.append("rate_allocator_queue:queue_row_count_mismatch")
+        for index, row in enumerate(queue_rows):
+            if not isinstance(row, dict):
+                failures.append(f"rate_allocator_queue:row_{index}:not_object")
+                continue
+            _append_nerv_authority_failures(
+                failures,
+                f"rate_allocator_queue.row_{index}",
+                row,
+            )
+            if row.get("planner_ingest", {}).get("runnable_now") is not False:
+                failures.append(
+                    f"rate_allocator_queue.row_{index}:planner_ingest_runnable_now_not_false"
+                )
+        queue_precision_modes = set(
+            queue_payload.get("precision_mode_index", {}).keys()
+            if isinstance(queue_payload.get("precision_mode_index"), dict)
+            else []
+        )
+        missing_queue_modes = sorted(required_modes - queue_precision_modes)
+        if missing_queue_modes:
+            failures.append(
+                "rate_allocator_queue:precision_modes_missing:"
+                + ",".join(missing_queue_modes)
+            )
+
         from tac.cathedral.consumer_contract import validate_consumer_module
         from tac.cathedral_consumers import nerv_top_priority_stack_consumer
 
@@ -1859,6 +1920,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             "NeRV top-priority preflight: PASS "
             f"(bridge_units={len(units)} routes={len(routes or [])} "
             f"rate_work_orders={len(work_orders)} "
+            f"queue_rows={len(queue_rows)} "
             f"memo_refs={memo_count} blockers={len(bridge_payload.get('blockers') or [])} "
             f"blocked_dispatch={seam_payload.get('blocked_dispatch')} "
             f"stack_rows={len(sweep_payload.get('stack_sweeps') or [])}; "

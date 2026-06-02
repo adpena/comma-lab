@@ -521,6 +521,8 @@ def discover_pr95_baseline(
             blockers.append("upstream_repo_git_head_missing")
         if not upstream_git.get("remote_origin"):
             blockers.append("upstream_repo_git_remote_origin_missing")
+        elif not _remote_origin_matches_pr95(upstream_git.get("remote_origin")):
+            blockers.append("upstream_repo_git_remote_origin_not_pr95_source")
 
     intake = _path_record(pr95_intake_root)
     archive = None
@@ -552,6 +554,32 @@ def discover_pr95_baseline(
     if not upstream["present"]:
         blockers.append("upstream_repo_dir_missing")
 
+    metadata_url = metadata.get("url")
+    metadata_state = metadata.get("state")
+    metadata_head_sha = metadata.get("headRefOid")
+    metadata_head_ref = metadata.get("headRefName")
+    if not metadata:
+        blockers.append("pr95_pr_metadata_missing")
+    if not metadata_url:
+        blockers.append("pr95_pr_url_missing")
+    elif str(metadata_url) != PR95_PR_URL:
+        blockers.append("pr95_pr_url_mismatch")
+    if not metadata_state:
+        blockers.append("pr95_pr_state_missing")
+    elif str(metadata_state).upper() != "MERGED":
+        blockers.append(f"pr95_pr_state_not_merged:{_blocker_slug(metadata_state)}")
+    if not metadata_head_sha:
+        blockers.append("pr95_pr_head_sha_missing")
+    if not metadata_head_ref:
+        blockers.append("pr95_pr_head_ref_missing")
+    if (
+        upstream["present"]
+        and metadata_head_sha
+        and upstream.get("git", {}).get("head")
+        and str(upstream["git"]["head"]) != str(metadata_head_sha)
+    ):
+        blockers.append("upstream_repo_head_sha_mismatch_pr95_metadata")
+
     proof_tool = repo_root / "tools" / "prove_pr95_public_archive_runtime_consumption.py"
     if not proof_tool.is_file():
         blockers.append("pr95_runtime_consumption_proof_tool_missing")
@@ -559,11 +587,11 @@ def discover_pr95_baseline(
     return {
         "schema": "pr95_hnerv_baseline_control_pointer.v1",
         "source_pr": PR95_PR_NUMBER,
-        "source_url": metadata.get("url", PR95_PR_URL),
+        "source_url": metadata_url or PR95_PR_URL,
         "title": metadata.get("title", "hnerv_muon submission (0.20)"),
-        "state": metadata.get("state"),
-        "head_sha": metadata.get("headRefOid"),
-        "head_ref": metadata.get("headRefName"),
+        "state": metadata_state,
+        "head_sha": metadata_head_sha,
+        "head_ref": metadata_head_ref,
         "submission": PR95_SUBMISSION,
         "role": "baseline_control_to_beat",
         "upstream_repo_dir": upstream,
@@ -966,6 +994,11 @@ def _git_info(path: Path) -> dict[str, Any]:
         "branch": _git_output(path, "branch", "--show-current"),
         "remote_origin": _git_output(path, "remote", "get-url", "origin"),
     }
+
+
+def _remote_origin_matches_pr95(remote_origin: object) -> bool:
+    text = str(remote_origin or "").strip().lower()
+    return "commaai/comma_video_compression_challenge" in text
 
 
 def _git_output(path: Path, *args: str) -> str | None:
