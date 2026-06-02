@@ -31,6 +31,7 @@ from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 SCHEMA = "nerv_long_training_campaign_plan.v1"
 ROW_SCHEMA = "nerv_long_training_campaign_row.v1"
 EXPERIMENT_QUEUE_SCHEMA = "experiment_queue.v1"
+SCORE_LOWERING_GATE_SCHEMA = "nerv_long_training_score_lowering_gate.v1"
 DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
@@ -278,19 +279,8 @@ def _hinerv_campaign_row(
     ]
     if candidate.get("nominal_under_ceiling") is not True:
         blockers.append("hinerv_candidate_nominal_over_byte_ceiling")
-    blockers = [
-        blocker
-        for blocker in _dedupe(blockers)
-        if blocker
-        not in {
-            "hinerv_trained_archive_byte_oracle_feedback_missing",
-            "hi_nerv_archive_in_loop_byte_oracle_missing",
-            "hi_nerv_byte_closed_archive_export_missing",
-            "hi_nerv_receiver_proof_missing",
-            "hi_nerv_full_video_local_prefilter_missing",
-            "hi_nerv_local_cpu_replay_gate_missing",
-        }
-    ]
+    blockers = _dedupe(blockers)
+    prelaunch_gate = dict(curriculum.get("long_campaign_prelaunch_gate") or {})
     return _row(
         row_id=row_id,
         family="hi_nerv",
@@ -298,7 +288,7 @@ def _hinerv_campaign_row(
         candidate=candidate,
         curriculum_plan=curriculum,
         command_argv=command,
-        local_mlx_launch_command_ready=True,
+        local_mlx_launch_command_ready=bool(prelaunch_gate.get("launch_allowed")),
         implementation_status="shared_mlx_scoreaware_runner_launchable",
         blockers=blockers,
         extra={
@@ -400,6 +390,12 @@ def _row(
     blockers: Sequence[str],
     extra: Mapping[str, Any],
 ) -> dict[str, Any]:
+    score_gate = _score_lowering_gate(
+        family=family,
+        local_mlx_launch_command_ready=local_mlx_launch_command_ready,
+        curriculum_plan=curriculum_plan,
+        blockers=blockers,
+    )
     return {
         "schema": ROW_SCHEMA,
         "row_id": row_id,
@@ -421,8 +417,14 @@ def _row(
             command_argv=command_argv,
             local_mlx_launch_command_ready=local_mlx_launch_command_ready,
             blockers=blockers,
+            score_lowering_gate=score_gate,
         ),
         "curriculum_plan": dict(curriculum_plan),
+        "score_lowering_gate": score_gate,
+        "local_mlx_executable": bool(score_gate["local_mlx_executable"]),
+        "cpu_replay_ready": bool(score_gate["cpu_replay_ready"]),
+        "exact_gate_ready": bool(score_gate["exact_gate_ready"]),
+        "promotion_blockers": list(score_gate["promotion_blockers"]),
         "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
         **dict(extra),
         **FALSE_AUTHORITY,
@@ -458,6 +460,7 @@ def _experiment_for_row(
     command_argv: Sequence[str],
     local_mlx_launch_command_ready: bool,
     blockers: Sequence[str],
+    score_lowering_gate: Mapping[str, Any],
 ) -> dict[str, Any]:
     output_json = _row_output_report_path(command_argv)
     postconditions = [
@@ -477,6 +480,12 @@ def _experiment_for_row(
             "type": "json_equals",
             "path": output_json,
             "key": "ready_for_exact_eval_dispatch",
+            "equals": False,
+        },
+        {
+            "type": "json_equals",
+            "path": output_json,
+            "key": "promotion_eligible",
             "equals": False,
         },
     ]
@@ -525,6 +534,9 @@ def _experiment_for_row(
         ),
         "blocked": not bool(local_mlx_launch_command_ready),
         "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
+        "score_lowering_gate": dict(score_lowering_gate),
+        "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
+        "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
         "steps": [
             {
                 "id": "run_mlx_first_campaign_row",
@@ -549,6 +561,87 @@ def _row_output_report_path(command_argv: Sequence[str]) -> str:
     except (ValueError, IndexError):
         out_dir = DEFAULT_OUTPUT_ROOT
     return (Path(out_dir) / "compact_renderer_mlx_spine_runner_report.json").as_posix()
+
+
+def _score_lowering_gate(
+    *,
+    family: str,
+    local_mlx_launch_command_ready: bool,
+    curriculum_plan: Mapping[str, Any],
+    blockers: Sequence[str],
+) -> dict[str, Any]:
+    """Separate launchability from score/promotion authority for campaign rows."""
+
+    binding = (
+        curriculum_plan.get("pr95_stack_binding")
+        if isinstance(curriculum_plan.get("pr95_stack_binding"), Mapping)
+        else {}
+    )
+    gate = (
+        curriculum_plan.get("long_campaign_prelaunch_gate")
+        if isinstance(curriculum_plan.get("long_campaign_prelaunch_gate"), Mapping)
+        else {}
+    )
+    missing_rows = [
+        dict(row)
+        for row in binding.get("rows", [])
+        if isinstance(row, Mapping) and row.get("satisfied") is not True
+    ]
+    missing_requirement_ids = [
+        str(row.get("requirement_id"))
+        for row in missing_rows
+        if row.get("requirement_id")
+    ]
+    post_run_requirements = [
+        str(item) for item in gate.get("post_run_requirements_excluded", []) if item
+    ]
+    post_run_missing = [
+        requirement
+        for requirement in missing_requirement_ids
+        if requirement in post_run_requirements
+    ]
+    promotion_blockers = _dedupe(
+        [
+            *(str(blocker) for blocker in blockers if blocker),
+            *(
+                f"{family}_{requirement}_missing"
+                for requirement in post_run_missing
+            ),
+        ]
+    )
+    prelaunch_blockers = [
+        str(blocker) for blocker in gate.get("blockers", []) if blocker
+    ]
+    cpu_replay_ready = (
+        bool(local_mlx_launch_command_ready)
+        and "receiver_proof" not in post_run_missing
+        and "full_video_local_prefilter" not in post_run_missing
+        and "local_cpu_replay_gate" not in post_run_missing
+        and not prelaunch_blockers
+    )
+    exact_gate_ready = (
+        cpu_replay_ready
+        and "exact_auth_gate_plan" not in post_run_missing
+        and not promotion_blockers
+    )
+    return {
+        "schema": SCORE_LOWERING_GATE_SCHEMA,
+        "family": str(family),
+        "local_mlx_executable": bool(local_mlx_launch_command_ready),
+        "prelaunch_allowed": bool(gate.get("launch_allowed")),
+        "prelaunch_blockers": _dedupe(prelaunch_blockers),
+        "post_run_requirements": post_run_requirements,
+        "missing_requirement_ids": _dedupe(missing_requirement_ids),
+        "post_run_missing_requirement_ids": _dedupe(post_run_missing),
+        "receiver_proof_required": "receiver_proof" in post_run_missing,
+        "full_video_prefilter_required": "full_video_local_prefilter" in post_run_missing,
+        "local_cpu_replay_required": "local_cpu_replay_gate" in post_run_missing,
+        "exact_auth_gate_required": "exact_auth_gate_plan" in post_run_missing,
+        "cpu_replay_ready": bool(cpu_replay_ready),
+        "exact_gate_ready": bool(exact_gate_ready),
+        "promotion_blockers": promotion_blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _require_schema(payload: Mapping[str, Any], schema: str, name: str) -> None:
@@ -632,6 +725,7 @@ def _float_token(value: float) -> str:
 __all__ = [
     "DEFAULT_OPTIMIZER_KINDS",
     "SCHEMA",
+    "SCORE_LOWERING_GATE_SCHEMA",
     "NervLongTrainingCampaignPlanError",
     "build_nerv_long_training_campaign_plan",
     "render_nerv_long_training_campaign_plan_markdown",
