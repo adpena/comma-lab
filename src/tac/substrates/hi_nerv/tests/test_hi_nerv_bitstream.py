@@ -130,7 +130,7 @@ def test_hi_nerv_decoder_waterfill_actions_mutate_real_tensors() -> None:
                 "selected_action": "fp32_protect",
             },
         ],
-        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+        "blockers": [],
     }
 
     changed, report = apply_decoder_waterfill_actions(
@@ -141,9 +141,9 @@ def test_hi_nerv_decoder_waterfill_actions_mutate_real_tensors() -> None:
     assert report["method"] == "decoder_weight_waterfill_selected_actions"
     assert report["plan_attached"] is True
     assert report["applied_row_count"] == 3
+    assert report["blocked_row_count"] == 0
     assert report["changed_tensor_count"] == 2
     assert report["score_claim"] is False
-    assert "contest_cpu_cuda_exact_eval_not_executed" in report["blockers"]
     assert torch.count_nonzero(changed["stem.weight"]).item() == 0
     assert not torch.equal(changed["block.weight"], base["block.weight"])
     assert torch.equal(changed["norm.weight"], base["norm.weight"])
@@ -153,6 +153,81 @@ def test_hi_nerv_decoder_waterfill_actions_mutate_real_tensors() -> None:
         "sha256_after"
     ]
     assert by_name["norm.weight"]["changed"] is False
+
+
+def test_hi_nerv_decoder_waterfill_refuses_blocked_plan() -> None:
+    base = _state()
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {
+                "group_name": "stem.weight",
+                "selected_bits": 0,
+                "selected_action": "zero_rle",
+            },
+            {
+                "group_name": "block.weight",
+                "selected_bits": 4,
+                "selected_action": "int4",
+                "blockers": ["score_loss_proxy_outside_allocator_linearization_basin"],
+            },
+        ],
+        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+    }
+
+    changed, report = apply_decoder_waterfill_actions(
+        base,
+        decoder_weight_waterfill_plan=plan,
+    )
+
+    assert report["method"] == "decoder_weight_waterfill_blocked"
+    assert report["applied_row_count"] == 0
+    assert report["blocked_row_count"] == 2
+    assert report["changed_tensor_count"] == 0
+    assert "contest_cpu_cuda_exact_eval_not_executed" in report["blockers"]
+    assert torch.equal(changed["stem.weight"], base["stem.weight"])
+    assert torch.equal(changed["block.weight"], base["block.weight"])
+
+
+def test_hi_nerv_decoder_waterfill_skips_blocked_rows() -> None:
+    base = _state()
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {
+                "group_name": "stem.weight",
+                "selected_bits": 0,
+                "selected_action": "zero_rle",
+            },
+            {
+                "group_name": "block.weight",
+                "selected_bits": 4,
+                "selected_action": "int4",
+                "blockers": ["score_loss_proxy_outside_allocator_linearization_basin"],
+            },
+        ],
+        "blockers": [],
+    }
+
+    changed, report = apply_decoder_waterfill_actions(
+        base,
+        decoder_weight_waterfill_plan=plan,
+    )
+
+    assert report["method"] == "decoder_weight_waterfill_selected_actions"
+    assert report["applied_row_count"] == 1
+    assert report["blocked_row_count"] == 1
+    assert report["changed_tensor_count"] == 1
+    assert torch.count_nonzero(changed["stem.weight"]).item() == 0
+    assert torch.equal(changed["block.weight"], base["block.weight"])
+    assert (
+        "score_loss_proxy_outside_allocator_linearization_basin"
+        in report["blockers"]
+    )
 
 
 def test_hi_nerv_bitstream_waterfill_selector_admits_only_positive_value_per_byte() -> None:

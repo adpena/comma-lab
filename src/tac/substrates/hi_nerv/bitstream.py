@@ -272,13 +272,55 @@ def apply_decoder_waterfill_actions(
     blockers: list[str] = [
         *[str(blocker) for blocker in decoder_weight_waterfill_plan.get("blockers") or ()],
     ]
+    if blockers:
+        return state, {
+            "method": "decoder_weight_waterfill_blocked",
+            "plan_attached": True,
+            "plan_schema": decoder_weight_waterfill_plan.get("schema"),
+            "family": decoder_weight_waterfill_plan.get("family"),
+            "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+            "input_group_count": len(rows),
+            "applied_row_count": 0,
+            "blocked_row_count": len(rows),
+            "changed_tensor_count": 0,
+            "shape_preserved": _state_shapes(decoder_state_dict) == _state_shapes(state),
+            "applied_rows": [],
+            "skipped_rows": [
+                {
+                    "group_name": str(
+                        row.get("group_name") or row.get("section_id") or ""
+                    )
+                    if isinstance(row, Mapping)
+                    else "",
+                    "reason": "decoder_weight_waterfill_plan_has_blockers",
+                    "plan_blockers": blockers,
+                    **FALSE_AUTHORITY,
+                }
+                for row in rows
+            ],
+            "blockers": _ordered_unique(blockers),
+            **FALSE_AUTHORITY,
+        }
     changed = 0
+    skipped_rows: list[dict[str, Any]] = []
     for row in rows:
         if not isinstance(row, Mapping):
             continue
+        row_blockers = [str(blocker) for blocker in row.get("blockers") or ()]
         name = str(row.get("group_name") or row.get("section_id") or "")
         if not name:
             blockers.append("decoder_weight_waterfill_row_missing_group_name")
+            continue
+        if row_blockers:
+            blockers.extend(row_blockers)
+            skipped_rows.append(
+                {
+                    "group_name": name,
+                    "reason": "decoder_weight_waterfill_row_has_blockers",
+                    "row_blockers": row_blockers,
+                    **FALSE_AUTHORITY,
+                }
+            )
             continue
         if name not in state:
             blockers.append(f"decoder_weight_waterfill_group_missing:{name}")
@@ -314,8 +356,10 @@ def apply_decoder_waterfill_actions(
         "input_group_count": len(rows),
         "applied_row_count": len(applied_rows),
         "changed_tensor_count": int(changed),
+        "blocked_row_count": len(skipped_rows),
         "shape_preserved": _state_shapes(decoder_state_dict) == _state_shapes(state),
         "applied_rows": applied_rows,
+        "skipped_rows": skipped_rows,
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
     }

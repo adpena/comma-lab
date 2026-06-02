@@ -1249,6 +1249,9 @@ def _normalize_hinerv_training_telemetry_feedback(
         "feedback_kind": "training_telemetry",
         "feedback_scope": "full600_training_telemetry",
         "feedback_ready": False,
+        "launch_control_feedback_ready": bool(
+            candidate_id and last_epoch > 0 and (pose_recovered or seg_still_binding)
+        ),
         "family": "hi_nerv",
         "candidate_id": candidate_id,
         "candidate_num_pairs": 600,
@@ -1683,6 +1686,23 @@ def _hinerv_feedback_launch_adjustment(
             "segnet_distillation_weight": 1.0,
             **FALSE_AUTHORITY,
         }
+    launch_control_ready = _feedback_launch_control_ready(feedback)
+    if not launch_control_ready:
+        return {
+            "schema": "hinerv_feedback_launch_adjustment.v1",
+            "applied": False,
+            "reason": "feedback_not_launch_control_ready",
+            "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
+            "source_feedback_kind": feedback.get("feedback_kind"),
+            "source_feedback_scope": feedback.get("feedback_scope"),
+            "feedback_ready": feedback.get("feedback_ready"),
+            "launch_control_feedback_ready": feedback.get(
+                "launch_control_feedback_ready"
+            ),
+            "learning_rate": float(learning_rate),
+            "segnet_distillation_weight": 1.0,
+            **FALSE_AUTHORITY,
+        }
     observed = _float_or_none(feedback.get("observed_learning_rate"))
     recommended = _float_or_none(feedback.get("recommended_learning_rate"))
     pose_instability = bool(feedback.get("pose_instability_detected"))
@@ -1764,6 +1784,8 @@ def _hinerv_feedback_launch_adjustment(
         ),
         "source_feedback_kind": feedback.get("feedback_kind"),
         "source_feedback_scope": feedback.get("feedback_scope"),
+        "feedback_ready": feedback.get("feedback_ready"),
+        "launch_control_feedback_ready": launch_control_ready,
         "pose_instability_detected": pose_instability,
         "seg_stagnation_detected": seg_stagnation,
         "observed_learning_rate": observed,
@@ -1789,6 +1811,32 @@ def _hinerv_feedback_launch_adjustment(
         "launch_mutations": launch_mutations,
         **FALSE_AUTHORITY,
     }
+
+
+def _feedback_launch_control_ready(feedback: Mapping[str, Any]) -> bool:
+    if feedback.get("launch_control_feedback_ready") is True:
+        return True
+    if str(feedback.get("feedback_kind") or "") == "training_telemetry" and str(
+        feedback.get("feedback_scope") or ""
+    ) == "full600_training_telemetry":
+        recommended_lr = _float_or_none(feedback.get("recommended_learning_rate"))
+        recommended_seg_weight = _float_or_none(
+            feedback.get("recommended_segnet_distillation_weight")
+        )
+        pose_ready = (
+            feedback.get("pose_instability_detected") is True
+            and recommended_lr is not None
+            and recommended_lr > 0.0
+        )
+        seg_ready = (
+            feedback.get("seg_stagnation_detected") is True
+            and recommended_seg_weight is not None
+            and recommended_seg_weight > 1.0
+        )
+        return bool(pose_ready or seg_ready)
+    if feedback.get("feedback_ready") is False:
+        return False
+    return bool(feedback)
 
 
 def _hinerv_source_faithfulness_controls(
