@@ -139,6 +139,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     search_mode: str
     perturb_scale: float
     pose_slack: float
+    seg_slack: float
     pair_guard_min_score_improved_fraction: float
     pair_guard_max_pose_worsened_fraction: float
     baseline: SnervDecoderEval
@@ -212,6 +213,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     search_mode: str = "random_signed",
     perturb_scale: float = 0.02,
     pose_slack: float = 0.0,
+    seg_slack: float = 0.0,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
     seed: int = 1337,
@@ -226,7 +228,10 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     smooth random affine subspace directions. ``nes_pair_robust`` evaluates
     symmetric probes, estimates a pair-robust objective gradient, and tests one
     synthesized update. A candidate is accepted only if it improves advisory
-    score and keeps both PoseNet and SegNet within the hard continuation guard.
+    score, keeps PoseNet within the hard continuation guard, and keeps SegNet
+    inside the explicitly configured slack. The default SegNet slack is zero,
+    preserving strict no-worse behavior unless a smoke opts into score-primary
+    pose-hard exploration.
     """
 
     if n_pairs < 1:
@@ -237,6 +242,8 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         raise SnervScorerLoopDecoderQatError("perturb_scale must be >= 0")
     if pose_slack < 0:
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
+    if seg_slack < 0:
+        raise SnervScorerLoopDecoderQatError("seg_slack must be >= 0")
     if search_mode not in {
         "random_signed",
         "top_weight_coordinate",
@@ -325,6 +332,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 plus_row,
                 best_eval,
                 pose_slack=pose_slack,
+                seg_slack=seg_slack,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -336,6 +344,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 minus_row,
                 best_eval,
                 pose_slack=pose_slack,
+                seg_slack=seg_slack,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -357,6 +366,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                                         row,
                                         best_eval,
                                         pose_slack=pose_slack,
+                                        seg_slack=seg_slack,
                                         pair_guard_min_score_improved_fraction=(
                                             pair_guard_min_score_improved_fraction
                                         ),
@@ -387,6 +397,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 row,
                 best_eval,
                 pose_slack=pose_slack,
+                seg_slack=seg_slack,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -406,6 +417,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                         row,
                         best_eval,
                         pose_slack=pose_slack,
+                        seg_slack=seg_slack,
                         pair_guard_min_score_improved_fraction=(
                             pair_guard_min_score_improved_fraction
                         ),
@@ -436,6 +448,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     row,
                     best_eval,
                     pose_slack=pose_slack,
+                    seg_slack=seg_slack,
                     pair_guard_min_score_improved_fraction=(
                         pair_guard_min_score_improved_fraction
                     ),
@@ -455,6 +468,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                             row,
                             best_eval,
                             pose_slack=pose_slack,
+                            seg_slack=seg_slack,
                             pair_guard_min_score_improved_fraction=(
                                 pair_guard_min_score_improved_fraction
                             ),
@@ -491,6 +505,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         search_mode=search_mode,
         perturb_scale=float(perturb_scale),
         pose_slack=float(pose_slack),
+        seg_slack=float(seg_slack),
         pair_guard_min_score_improved_fraction=float(
             pair_guard_min_score_improved_fraction
         ),
@@ -575,6 +590,7 @@ def decoder_trial_passes_pose_guard(
     current_best: SnervDecoderEval,
     *,
     pose_slack: float = 0.0,
+    seg_slack: float = 0.0,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
 ) -> bool:
@@ -582,6 +598,8 @@ def decoder_trial_passes_pose_guard(
 
     if pose_slack < 0:
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
+    if seg_slack < 0:
+        raise SnervScorerLoopDecoderQatError("seg_slack must be >= 0")
     pair_guard_blockers = _pair_guard_blockers(
         candidate,
         current_best,
@@ -592,7 +610,7 @@ def decoder_trial_passes_pose_guard(
     return bool(
         candidate.receiver_archive_replay_verified
         and candidate.d_pose_linf <= current_best.d_pose_linf + float(pose_slack)
-        and candidate.d_seg_linf < current_best.d_seg_linf
+        and candidate.d_seg_linf <= current_best.d_seg_linf + float(seg_slack)
         and candidate.score_linf < current_best.score_linf
         and not pair_guard_blockers
     )
@@ -651,6 +669,7 @@ def _trial_blockers(
     current_best: SnervDecoderEval,
     *,
     pose_slack: float,
+    seg_slack: float,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
 ) -> tuple[str, ...]:
@@ -659,7 +678,7 @@ def _trial_blockers(
         blockers.append("receiver_archive_replay_failed")
     if candidate.d_pose_linf > current_best.d_pose_linf + float(pose_slack):
         blockers.append("pose_guard_failed")
-    if candidate.d_seg_linf >= current_best.d_seg_linf:
+    if candidate.d_seg_linf > current_best.d_seg_linf + float(seg_slack):
         blockers.append("seg_gate_failed")
     if candidate.score_linf >= current_best.score_linf:
         blockers.append("score_gate_failed")
@@ -718,6 +737,7 @@ def _nes_pair_robust_objective(
     current_best: SnervDecoderEval,
     *,
     pose_slack: float,
+    seg_slack: float,
     pair_guard_min_score_improved_fraction: float,
     pair_guard_max_pose_worsened_fraction: float,
 ) -> float:
@@ -741,7 +761,7 @@ def _nes_pair_robust_objective(
     )
     penalty += 1.0e6 * max(
         0.0,
-        float(candidate.d_seg_linf) - float(current_best.d_seg_linf),
+        float(candidate.d_seg_linf) - float(current_best.d_seg_linf) - float(seg_slack),
     )
 
     try:

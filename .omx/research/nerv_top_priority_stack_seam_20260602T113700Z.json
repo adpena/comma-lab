@@ -257,7 +257,7 @@
       "hinerv"
     ]
   },
-  "generated_utc": "2026-06-02T11:17:49.671692+00:00",
+  "generated_utc": "2026-06-02T11:25:58.469882+00:00",
   "go_no_go_verdict": "GO_LOCAL_STACK_OPTIMIZATION__NO_GO_EXACT_PROMOTION_OR_SCORE_CLAIM",
   "lane_id": "lane_nerv_top_priority_stack_seam_20260602",
   "next_local_actions": [
@@ -272,7 +272,7 @@
       "allowed_now": true,
       "authority_after_pass": "local triage only",
       "axis": "[macOS-CPU advisory]",
-      "command": ".venv/bin/python tools/run_snerv_scorer_loop_decoder_qat_smoke.py --n-pairs 4 --pair-stride 8 --pose-hard-guard --out .omx/research/snerv_scorer_loop_decoder_qat_next_<UTC>.json",
+      "command": ".venv/bin/python tools/run_snerv_scorer_loop_decoder_qat_smoke.py --n-pairs 4 --levels 3 --target-bits-per-coeff 2.0 --pair-stride 8 --search-mode nes_pair_robust --max-trials 2 --pose-slack 0.0 --seg-slack 0.00005 --pair-guard-min-score-improved-fraction 0.75 --pair-guard-max-pose-worsened-fraction 0.0 --out .omx/research/snerv_scorer_loop_decoder_qat_next_<UTC>.json",
       "id": "snerv_pair_robust_decoder_qat_continuation"
     },
     {
