@@ -1,0 +1,68 @@
+{
+  "frontier_score_claim": false,
+  "included_statuses": [
+    "running"
+  ],
+  "promotion_eligible": false,
+  "queue_id": "nerv_long_training_campaign_nerv_long_training_campaign_plan_20260602t231600z_hinerv_segw4_snerv_controls_codex.v1",
+  "queue_path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_queue_20260602T231600Z_hinerv_segw4_snerv_controls_codex.json",
+  "queue_sha256": "d27b629527c72de3e67ce8071be0350ba3c5ed2ac122a710fedfad17406b612b",
+  "queue_summary_schema": "experiment_queue_summary.v1",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "refreshed_row_count": 0,
+  "rows": [],
+  "schema": "nerv_queue_training_feedback_refresh.v1",
+  "score_claim": false,
+  "skipped": [
+    {
+      "experiment_id": "hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_adamw",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "hi_nerv_hinerv_np600_ld28_ed32_dc32_hfg_cnx_int2_mixed_ceil216000_adamw",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "hi_nerv_hinerv_np600_ld4_ed16_dc8_hfg_cnx_int2_mixed_ceil36000_adamw",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "hi_nerv_hinerv_np600_ld4_ed24_dc8_hfg_cnx_int2_mixed_ceil36000_adamw",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "hi_nerv_hinerv_np600_ld8_ed32_dc32_hfg_cnx_int4_mixed_ceil216000_adamw",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "snerv_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_int2_symmetric_ceil178000_native_rate_aware_training",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "snerv_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_int8_symmetric_ceil216000_native_rate_aware_training",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "snerv_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_mixed_magnitude_symmetric_ceil178000_native_rate_aware_training",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "snerv_snerv_np600_haar_lv5_lfb1p5_stepb1_fc9e0_int8_symmetric_ceil285000_native_rate_aware_training",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "snerv_snerv_np600_haar_lv5_lfb2_stepb1_fc9e0_int8_symmetric_ceil285000_native_rate_aware_training",
+      "reason": "not_nerv_training_family"
+    },
+    {
+      "experiment_id": "snerv_snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc9e0_int8_symmetric_ceil285000_native_rate_aware_training",
+      "reason": "not_nerv_training_family"
+    }
+  ],
+  "skipped_count": 12
+}
