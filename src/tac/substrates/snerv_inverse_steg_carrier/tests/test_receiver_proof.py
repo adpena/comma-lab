@@ -55,6 +55,8 @@ def test_receiver_proof_cli_writes_hash_matched_packet(tmp_path: Path) -> None:
             "4",
             "--levels",
             "2",
+            "--wavelet",
+            "haar",
             "--out",
             str(report_path),
             "--packet-out",
@@ -69,6 +71,7 @@ def test_receiver_proof_cli_writes_hash_matched_packet(tmp_path: Path) -> None:
     assert payload["packet_artifact_sha256"] == payload["archive_packet_sha256"]
     assert payload["packet_artifact_matches_proof"] is True
     assert payload["receiver_contract_satisfied"] is True
+    assert payload["wavelet"] == "haar"
 
 
 def test_receiver_proof_module_imports_no_torch_or_scorer() -> None:

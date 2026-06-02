@@ -77,6 +77,7 @@ def build_snerv_receiver_archive_proof(
     *,
     bins: int = 4,
     levels: int = 2,
+    wavelet: str = "db2",
     hw: tuple[int, int] = (32, 48),
     seed: int = 7,
     full_frame_packet: bool = False,
@@ -105,7 +106,7 @@ def build_snerv_receiver_archive_proof(
     else:
         frames_tensor = None
         frames = _deterministic_frames(hw=hw, seed=seed)
-    pyrs = [encode_frame_lf(frame, levels=levels) for frame in frames]
+    pyrs = [encode_frame_lf(frame, levels=levels, wavelet=wavelet) for frame in frames]
     decoder = fit_hf_decoder_least_squares(pyrs, levels=levels)
     step_maps = [
         _deterministic_step_map(pyr.lf.shape, phase=float(idx) * 0.17)

@@ -32,6 +32,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bins", type=int, default=4)
     parser.add_argument("--levels", type=int, default=2)
+    parser.add_argument(
+        "--wavelet",
+        default="db2",
+        help=(
+            "Wavelet for the proof packet. Use 'haar' to exercise the "
+            "NumPy-only receiver DWT path."
+        ),
+    )
     parser.add_argument("--height", type=int, default=32)
     parser.add_argument("--width", type=int, default=48)
     parser.add_argument("--seed", type=int, default=7)
@@ -66,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     proof, archive = build_snerv_receiver_archive_proof(
         bins=args.bins,
         levels=args.levels,
+        wavelet=args.wavelet,
         hw=(args.height, args.width),
         seed=args.seed,
         full_frame_packet=full_frame_packet,

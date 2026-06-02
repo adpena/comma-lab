@@ -99,10 +99,10 @@ def export_snerv_archive_bound_candidate_package(
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
 
-    extra_blockers = [
-        "paired_contest_cpu_cuda_auth_eval_missing",
-        "pywavelets_runtime_dependency_not_contest_proven",
-    ]
+    receiver_dwt_dependency = _receiver_dwt_dependency_mode(decoded.metadata)
+    extra_blockers = ["paired_contest_cpu_cuda_auth_eval_missing"]
+    if receiver_dwt_dependency != "numpy_haar_no_pywavelets":
+        extra_blockers.append("pywavelets_runtime_dependency_not_contest_proven")
     if int(decoded.metadata.get("n_pairs", 0)) != 600:
         extra_blockers.insert(0, "snerv_packet_not_full_600_pairs")
 
@@ -135,6 +135,7 @@ def export_snerv_archive_bound_candidate_package(
             "channels": int(decoded.metadata.get("channels", 3)),
             "camera_hw": list(CAMERA_HW),
             "numpy_receiver_raw_writer": True,
+            "receiver_dwt_dependency": receiver_dwt_dependency,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -164,6 +165,13 @@ def expected_receiver_output_bytes_from_metadata(metadata: dict[str, Any]) -> in
     if channels != 3:
         raise SnervArchiveError(f"contest inflate expects channels=3, got {channels}")
     return int(n_pairs) * frames_per_pair * channels * int(CAMERA_HW[0]) * int(CAMERA_HW[1])
+
+
+def _receiver_dwt_dependency_mode(metadata: dict[str, Any]) -> str:
+    wavelet = str(metadata.get("wavelet", "")).strip().lower()
+    if wavelet in {"haar", "db1"}:
+        return "numpy_haar_no_pywavelets"
+    return "pywavelets_required_for_non_haar"
 
 
 __all__ = [

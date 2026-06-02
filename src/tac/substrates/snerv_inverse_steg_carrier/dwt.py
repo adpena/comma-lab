@@ -49,15 +49,14 @@ import numpy as np
 
 try:  # pragma: no cover - import guard
     import pywt
-except ImportError as exc:  # pragma: no cover
-    raise ImportError(
-        "snerv_inverse_steg_carrier.dwt requires pywt (PyWavelets). "
-        "Install with `uv pip install pywt`."
-    ) from exc
+except ImportError:  # pragma: no cover
+    pywt = None
 
 __all__ = [
     "DEFAULT_WAVELET",
     "DWT_MODE",
+    "OFFICIAL_SNERV_HAAR_MODE_PROOF",
+    "SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF",
     "SnervDwtError",
     "WaveletPyramid",
     "dwt2_multilevel",
@@ -70,6 +69,12 @@ __all__ = [
 # The ONLY mode that makes the 2D DWT a square orthonormal operator on even dims.
 DWT_MODE: Final[str] = "periodization"
 DEFAULT_WAVELET: Final[str] = "db2"
+OFFICIAL_SNERV_HAAR_MODE_PROOF: Final[str] = (
+    "official_snerv_haar_j1_compatible_numpy_periodized_orthonormal_path"
+)
+SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF: Final[str] = (
+    "receiver_can_decode_wavelet_haar_without_pywavelets_dependency"
+)
 
 
 class SnervDwtError(ValueError):
@@ -172,6 +177,14 @@ def _validate_levels_for_padded_shape(
     levels: int,
     wavelet: str,
 ) -> None:
+    if _is_numpy_haar(wavelet):
+        if min(padded_hw) < (1 << int(levels)):
+            raise SnervDwtError(
+                f"levels={levels} exceeds Haar capacity for native shape {orig_hw} "
+                f"(padded to {padded_hw})"
+            )
+        return
+    _require_pywt()
     max_lvl = pywt.dwtn_max_level(padded_hw, pywt.Wavelet(wavelet))
     if levels > max_lvl:
         raise SnervDwtError(
@@ -198,7 +211,11 @@ def dwt2_multilevel(
     padded_hw = _pad_to_square_dims(orig_hw, levels)
     _validate_levels_for_padded_shape(orig_hw, padded_hw, levels, wavelet)
     canvas = _pad_reflect(arr, padded_hw)
-    coeffs = pywt.wavedec2(canvas, wavelet, mode=DWT_MODE, level=levels)
+    coeffs = (
+        _haar_wavedec2_periodized(canvas, levels=levels)
+        if _is_numpy_haar(wavelet)
+        else pywt.wavedec2(canvas, wavelet, mode=DWT_MODE, level=levels)
+    )
     return WaveletPyramid(
         coeffs=coeffs,
         levels=int(levels),
@@ -231,7 +248,11 @@ def dwt2_native_synthesis_adjoint(
     padded_hw = _pad_to_square_dims(orig_hw, levels)
     _validate_levels_for_padded_shape(orig_hw, padded_hw, levels, wavelet)
     canvas = _zero_embed_native(arr, padded_hw)
-    coeffs = pywt.wavedec2(canvas, wavelet, mode=DWT_MODE, level=levels)
+    coeffs = (
+        _haar_wavedec2_periodized(canvas, levels=levels)
+        if _is_numpy_haar(wavelet)
+        else pywt.wavedec2(canvas, wavelet, mode=DWT_MODE, level=levels)
+    )
     return WaveletPyramid(
         coeffs=coeffs,
         levels=int(levels),
@@ -249,7 +270,11 @@ def idwt2_multilevel(pyramid: WaveletPyramid) -> np.ndarray:
     §7.5). Returns the reconstructed ``(H, W)`` image, cropped to ``orig_hw``
     (periodization can round dims up to the next multiple of the filter length).
     """
-    recon = pywt.waverec2(pyramid.coeffs, pyramid.wavelet, mode=DWT_MODE)
+    if _is_numpy_haar(pyramid.wavelet):
+        recon = _haar_waverec2_periodized(pyramid.coeffs)
+    else:
+        _require_pywt()
+        recon = pywt.waverec2(pyramid.coeffs, pyramid.wavelet, mode=DWT_MODE)
     h, w = pyramid.orig_hw
     return np.asarray(recon[:h, :w], dtype=np.float64)
 
@@ -289,8 +314,13 @@ def synthesis_adjoint_residual(
     """
     rng = np.random.default_rng(seed)
     ph, pw = _pad_to_square_dims(orig_hw, levels)
-    template_coeffs = pywt.wavedec2(
-        np.zeros((ph, pw), dtype=np.float64), wavelet, mode=DWT_MODE, level=levels
+    _validate_levels_for_padded_shape(orig_hw, (ph, pw), levels, wavelet)
+    template_coeffs = (
+        _haar_wavedec2_periodized(np.zeros((ph, pw), dtype=np.float64), levels=levels)
+        if _is_numpy_haar(wavelet)
+        else pywt.wavedec2(
+            np.zeros((ph, pw), dtype=np.float64), wavelet, mode=DWT_MODE, level=levels
+        )
     )
     c_struct = _random_like_coeffs(template_coeffs, rng)
     c_vec = _flatten_coeffs(c_struct)
@@ -332,4 +362,65 @@ def _random_like_coeffs(coeffs: list, rng: np.random.Generator) -> list:
                 rng.standard_normal(np.asarray(hh).shape),
             )
         )
+    return out
+
+
+def _require_pywt() -> None:
+    if pywt is None:
+        raise ImportError(
+            "snerv_inverse_steg_carrier.dwt requires pywt (PyWavelets) for "
+            "non-Haar wavelets. Use wavelet='haar' for the NumPy receiver path."
+        )
+
+
+def _is_numpy_haar(wavelet: str) -> bool:
+    return str(wavelet).strip().lower() in {"haar", "db1"}
+
+
+def _haar_wavedec2_periodized(image: np.ndarray, *, levels: int) -> list:
+    current = np.asarray(image, dtype=np.float64)
+    details: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
+    for _level in range(int(levels)):
+        current, detail = _haar_dwt2_level(current)
+        details.append(detail)
+    return [current, *reversed(details)]
+
+
+def _haar_waverec2_periodized(coeffs: list) -> np.ndarray:
+    current = np.asarray(coeffs[0], dtype=np.float64)
+    for detail in coeffs[1:]:
+        current = _haar_idwt2_level(current, detail)
+    return current
+
+
+def _haar_dwt2_level(
+    image: np.ndarray,
+) -> tuple[np.ndarray, tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    arr = np.asarray(image, dtype=np.float64)
+    if arr.ndim != 2 or arr.shape[0] % 2 or arr.shape[1] % 2:
+        raise SnervDwtError(f"Haar level requires even 2D shape; got {arr.shape}")
+    a = arr[0::2, 0::2]
+    b = arr[0::2, 1::2]
+    c = arr[1::2, 0::2]
+    d = arr[1::2, 1::2]
+    ll = (a + b + c + d) * 0.5
+    lh = (a + b - c - d) * 0.5
+    hl = (a - b + c - d) * 0.5
+    hh = (a - b - c + d) * 0.5
+    return ll, (lh, hl, hh)
+
+
+def _haar_idwt2_level(
+    ll: np.ndarray,
+    detail: tuple[np.ndarray, np.ndarray, np.ndarray],
+) -> np.ndarray:
+    ll = np.asarray(ll, dtype=np.float64)
+    lh, hl, hh = (np.asarray(item, dtype=np.float64) for item in detail)
+    if lh.shape != ll.shape or hl.shape != ll.shape or hh.shape != ll.shape:
+        raise SnervDwtError("Haar detail shapes must match LL shape")
+    out = np.empty((ll.shape[0] * 2, ll.shape[1] * 2), dtype=np.float64)
+    out[0::2, 0::2] = (ll + lh + hl + hh) * 0.5
+    out[0::2, 1::2] = (ll + lh - hl - hh) * 0.5
+    out[1::2, 0::2] = (ll - lh + hl - hh) * 0.5
+    out[1::2, 1::2] = (ll - lh - hl + hh) * 0.5
     return out

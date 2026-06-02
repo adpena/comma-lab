@@ -61,9 +61,36 @@ def test_snerv_archive_bound_package_runs_receiver_proof(tmp_path: Path) -> None
         "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
         "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
         "src/tac/substrates/snerv_inverse_steg_carrier/dwt.py",
+        "src/tac/substrates/snerv_inverse_steg_carrier/lf_payload_codec.py",
         "src/tac/substrates/_shared/int_stream_codec.py",
         "src/tac/analysis/snerv_step_map_coder.py",
     }.issubset(names)
+
+
+def test_haar_package_uses_numpy_receiver_dwt_without_pywavelets_blocker(
+    tmp_path: Path,
+) -> None:
+    _proof, archive = build_snerv_receiver_archive_proof(
+        bins=4,
+        levels=1,
+        wavelet="haar",
+        hw=(16, 24),
+        full_frame_packet=True,
+    )
+
+    package = export_snerv_archive_bound_candidate_package(
+        packet=archive.packet,
+        output_dir=tmp_path,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=120,
+    )
+    row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    manifest = row["runtime_adapter_manifest"]
+
+    assert package["receiver_proof"]["runtime_consumption_proof_passed"] is True
+    assert manifest["receiver_dwt_dependency"] == "numpy_haar_no_pywavelets"
+    assert "pywavelets_runtime_dependency_not_contest_proven" not in row["blockers"]
+    assert "paired_contest_cpu_cuda_auth_eval_missing" in row["blockers"]
 
 
 def test_expected_receiver_output_bytes_requires_contest_grouping() -> None:

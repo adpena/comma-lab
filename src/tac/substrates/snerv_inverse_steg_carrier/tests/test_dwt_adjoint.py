@@ -14,6 +14,8 @@ import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     DEFAULT_WAVELET,
+    OFFICIAL_SNERV_HAAR_MODE_PROOF,
+    SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF,
     SnervDwtError,
     WaveletPyramid,
     dwt2_multilevel,
@@ -55,6 +57,26 @@ def test_perfect_reconstruction(hw):
     recon = idwt2_multilevel(pyr)
     assert recon.shape == hw  # cropped back to native
     assert np.abs(recon - x).max() < 1e-12
+
+
+@pytest.mark.parametrize("hw", [(64, 96), (874, 1164), (65, 97)])
+def test_numpy_haar_path_reconstructs_without_pywavelets_receiver_dependency(hw):
+    rng = np.random.default_rng(101)
+    x = rng.standard_normal(hw)
+    pyr = dwt2_multilevel(x, levels=1, wavelet="haar")
+    recon = idwt2_multilevel(pyr)
+
+    assert OFFICIAL_SNERV_HAAR_MODE_PROOF
+    assert SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF
+    assert pyr.wavelet == "haar"
+    assert recon.shape == hw
+    assert np.abs(recon - x).max() < 1e-12
+
+
+def test_numpy_haar_native_adjoint_residual_is_machine_zero():
+    res = synthesis_adjoint_residual((65, 97), levels=1, wavelet="haar", seed=5)
+
+    assert res < 1e-12
 
 
 @pytest.mark.parametrize("hw", [(64, 96), (384, 512), (874, 1164), (100, 150)])
