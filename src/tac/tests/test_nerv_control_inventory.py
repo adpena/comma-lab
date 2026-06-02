@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tac.analysis.nerv_control_inventory import (
     NERV_CONTROL_INVENTORY_SCHEMA,
     build_nerv_control_inventory,
@@ -636,8 +638,73 @@ def test_nerv_control_inventory_accepts_snerv_scorer_loop_qat_report() -> None:
     assert measured["n_pairs"] == 1
     assert measured["accepted_improvement"] is False
     assert measured["result_sha256"] == "a" * 64
+    assert measured["history_count"] == 1
+    assert measured["score_delta_linf"] == 0.0
+    assert measured["candidate_count"] == 0
     markdown = render_nerv_control_inventory_markdown(report)
     assert "## SNeRV Scorer-Loop QAT" in markdown
+
+
+def test_nerv_control_inventory_preserves_snerv_scorer_loop_qat_history() -> None:
+    one_pair = {
+        "schema": "snerv_scorer_loop_qat_local_trainer.v1",
+        "axis_tag": "[macOS-CPU advisory]",
+        "research_json_path": ".omx/research/snerv_qat_1pair.json",
+        "result_sha256": "a" * 64,
+        "n_pairs": 1,
+        "levels": 1,
+        "wavelet": "haar",
+        "qat_bits": 8,
+        "search_mode": "random_signed",
+        "scorer_loop_evaluations": 3,
+        "baseline_score_linf": 0.9,
+        "best_score_linf": 0.9,
+        "accepted_improvement": False,
+        "receiver_contract_satisfied": True,
+        "blockers": ["local_smoke_only_not_full_600_pairs"],
+    }
+    two_pair = {
+        **one_pair,
+        "research_json_path": ".omx/research/snerv_qat_2pair.json",
+        "result_sha256": "b" * 64,
+        "n_pairs": 2,
+        "scorer_loop_evaluations": 17,
+        "baseline_score_linf": 1.44,
+        "best_score_linf": 1.40,
+        "accepted_improvement": True,
+        "result": {
+            "evaluations": [
+                {"accepted": True},
+                {"accepted": False},
+                {"accepted": False},
+            ],
+            "best_pair_deltas": [
+                {
+                    "pair_index": 0,
+                    "score_linf_without_rate_delta": -0.02,
+                    "d_seg_linf_delta": -0.001,
+                    "d_pose_linf_delta": -0.0001,
+                }
+            ],
+        },
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("snerv",),
+        snerv_scorer_loop_qat_reports=(one_pair, two_pair),
+    )
+
+    measured = report["snerv_scorer_loop_qat_reports"]["snerv"]
+    assert measured["selection_policy"] == "largest_pair_count_then_accepted_then_evaluations"
+    assert measured["history_count"] == 2
+    assert measured["n_pairs"] == 2
+    assert measured["accepted_improvement"] is True
+    assert measured["score_delta_linf"] == pytest.approx(-0.04)
+    assert measured["candidate_count"] == 3
+    assert measured["accepted_candidate_count"] == 1
+    assert measured["rejected_candidate_count"] == 2
+    assert measured["best_pair_deltas"][0]["score_linf_without_rate_delta"] == -0.02
+    assert [row["n_pairs"] for row in measured["history_rows"]] == [1, 2]
 
 
 def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
@@ -1098,6 +1165,7 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_scorer_loop_qat_report(
     tmp_path: Path,
 ) -> None:
     qat_path = tmp_path / "snerv_qat.json"
+    qat_path_2 = tmp_path / "snerv_qat_2pair.json"
     output_json = tmp_path / "inventory.json"
     qat_path.write_text(
         json.dumps(
@@ -1123,6 +1191,30 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_scorer_loop_qat_report(
         ),
         encoding="utf-8",
     )
+    qat_path_2.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_scorer_loop_qat_local_trainer.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "research_json_path": ".omx/research/snerv_qat_2pair_fake.json",
+                "result_sha256": "b" * 64,
+                "n_pairs": 2,
+                "levels": 1,
+                "wavelet": "haar",
+                "qat_bits": 8,
+                "search_mode": "random_signed",
+                "scorer_loop_evaluations": 17,
+                "baseline_score_linf": 1.44,
+                "best_score_linf": 1.40,
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "blockers": ["local_smoke_only_not_full_600_pairs"],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
 
     rc = inventory_tool_main(
         [
@@ -1132,6 +1224,8 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_scorer_loop_qat_report(
             str(REPO),
             "--snerv-scorer-loop-qat-json",
             str(qat_path),
+            "--snerv-scorer-loop-qat-json",
+            str(qat_path_2),
             "--output-json",
             str(output_json),
         ]
@@ -1140,6 +1234,8 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_scorer_loop_qat_report(
     assert rc == 0
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     measured = payload["snerv_scorer_loop_qat_reports"]["snerv"]
-    assert measured["n_pairs"] == 1
-    assert measured["result_sha256"] == "a" * 64
+    assert measured["history_count"] == 2
+    assert measured["n_pairs"] == 2
+    assert measured["result_sha256"] == "b" * 64
+    assert measured["score_delta_linf"] == pytest.approx(-0.04)
     assert measured["score_claim"] is False

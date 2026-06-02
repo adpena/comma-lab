@@ -40,6 +40,7 @@ def build_nerv_control_inventory(
     snerv_waterfill_mode_assignment_report: Mapping[str, Any] | None = None,
     snerv_decoder_mode_probe_report: Mapping[str, Any] | None = None,
     snerv_scorer_loop_qat_report: Mapping[str, Any] | None = None,
+    snerv_scorer_loop_qat_reports: Iterable[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return a machine-readable map of NeRV controls and required bindings."""
 
@@ -108,6 +109,7 @@ def build_nerv_control_inventory(
         ),
         "snerv_scorer_loop_qat_reports": _snerv_scorer_loop_qat_reports(
             snerv_scorer_loop_qat_report=snerv_scorer_loop_qat_report,
+            snerv_scorer_loop_qat_reports=snerv_scorer_loop_qat_reports,
             focus_families=focus,
         ),
         "control_rows": controls,
@@ -244,7 +246,9 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
             lines.append(
                 f"- `{family}`: `{scorer_row.get('status')}` "
                 f"({scorer_row.get('n_pairs', 0)} pairs, "
-                f"accepted={scorer_row.get('accepted_improvement')})"
+                f"accepted={scorer_row.get('accepted_improvement')}, "
+                f"history={scorer_row.get('history_count', 0)}, "
+                f"delta={scorer_row.get('score_delta_linf')})"
             )
     policy = report.get("source_review_policy")
     if isinstance(policy, Mapping):
@@ -698,17 +702,48 @@ def _decoder_mode_probe_reports(
 def _snerv_scorer_loop_qat_reports(
     *,
     snerv_scorer_loop_qat_report: Mapping[str, Any] | None,
+    snerv_scorer_loop_qat_reports: Iterable[Mapping[str, Any]] | None,
     focus_families: Iterable[str],
 ) -> dict[str, Any]:
     focus = {str(family) for family in focus_families}
     rows: dict[str, Any] = {}
-    if snerv_scorer_loop_qat_report is not None and (
-        not focus or "snerv" in focus
-    ):
-        report = snerv_scorer_loop_qat_report
+    reports = _scorer_loop_report_history(
+        snerv_scorer_loop_qat_report=snerv_scorer_loop_qat_report,
+        snerv_scorer_loop_qat_reports=snerv_scorer_loop_qat_reports,
+    )
+    if reports and (not focus or "snerv" in focus):
+        selected_report = max(
+            reports,
+            key=lambda report: (
+                _int_or_zero(report.get("n_pairs")),
+                bool(report.get("accepted_improvement")),
+                _int_or_zero(report.get("scorer_loop_evaluations")),
+                -_float_or_inf(report.get("best_score_linf")),
+            ),
+        )
+        report = selected_report
+        baseline_score = _float_or_none(report.get("baseline_score_linf"))
+        best_score = _float_or_none(report.get("best_score_linf"))
+        score_delta = (
+            best_score - baseline_score
+            if baseline_score is not None and best_score is not None
+            else None
+        )
+        score_delta_fraction = (
+            score_delta / baseline_score
+            if score_delta is not None and baseline_score not in (None, 0.0)
+            else None
+        )
+        candidate_counts = _scorer_loop_candidate_counts(report)
         rows["snerv"] = {
             "schema": report.get("schema"),
             "status": "snerv_scorer_loop_qat_report_available_false_authority",
+            "selection_policy": "largest_pair_count_then_accepted_then_evaluations",
+            "history_count": len(reports),
+            "history_rows": [
+                _snerv_scorer_loop_history_row(history_report)
+                for history_report in reports
+            ],
             "axis_tag": report.get("axis_tag"),
             "report_path": report.get("report_path")
             or report.get("research_json_path")
@@ -727,6 +762,12 @@ def _snerv_scorer_loop_qat_reports(
             "best_archive_bytes": report.get("best_archive_bytes"),
             "baseline_score_linf": report.get("baseline_score_linf"),
             "best_score_linf": report.get("best_score_linf"),
+            "score_delta_linf": score_delta,
+            "score_delta_fraction": score_delta_fraction,
+            "candidate_count": candidate_counts["candidate_count"],
+            "accepted_candidate_count": candidate_counts["accepted_candidate_count"],
+            "rejected_candidate_count": candidate_counts["rejected_candidate_count"],
+            "best_pair_deltas": _best_pair_deltas(report),
             "accepted_improvement": bool(report.get("accepted_improvement")),
             "ready_for_pose_guard_gate": bool(
                 report.get("ready_for_pose_guard_gate")
@@ -738,6 +779,117 @@ def _snerv_scorer_loop_qat_reports(
             **FALSE_AUTHORITY,
         }
     return rows
+
+
+def _scorer_loop_report_history(
+    *,
+    snerv_scorer_loop_qat_report: Mapping[str, Any] | None,
+    snerv_scorer_loop_qat_reports: Iterable[Mapping[str, Any]] | None,
+) -> list[Mapping[str, Any]]:
+    reports: list[Mapping[str, Any]] = []
+    if snerv_scorer_loop_qat_report is not None:
+        reports.append(snerv_scorer_loop_qat_report)
+    if snerv_scorer_loop_qat_reports is not None:
+        reports.extend(
+            report
+            for report in snerv_scorer_loop_qat_reports
+            if isinstance(report, Mapping)
+        )
+    deduped: dict[str, Mapping[str, Any]] = {}
+    for index, report in enumerate(reports):
+        key = str(
+            report.get("result_sha256")
+            or report.get("research_json_path")
+            or report.get("result_path")
+            or index
+        )
+        deduped[key] = report
+    return list(deduped.values())
+
+
+def _snerv_scorer_loop_history_row(report: Mapping[str, Any]) -> dict[str, Any]:
+    baseline_score = _float_or_none(report.get("baseline_score_linf"))
+    best_score = _float_or_none(report.get("best_score_linf"))
+    score_delta = (
+        best_score - baseline_score
+        if baseline_score is not None and best_score is not None
+        else None
+    )
+    candidate_counts = _scorer_loop_candidate_counts(report)
+    return {
+        "report_path": report.get("report_path")
+        or report.get("research_json_path")
+        or report.get("result_path"),
+        "result_sha256": report.get("result_sha256"),
+        "axis_tag": report.get("axis_tag"),
+        "n_pairs": report.get("n_pairs"),
+        "scorer_loop_evaluations": report.get("scorer_loop_evaluations"),
+        "baseline_score_linf": report.get("baseline_score_linf"),
+        "best_score_linf": report.get("best_score_linf"),
+        "score_delta_linf": score_delta,
+        "accepted_improvement": bool(report.get("accepted_improvement")),
+        "receiver_contract_satisfied": bool(
+            report.get("receiver_contract_satisfied")
+        ),
+        **candidate_counts,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _scorer_loop_candidate_counts(report: Mapping[str, Any]) -> dict[str, int]:
+    result = report.get("result")
+    evaluations = []
+    if isinstance(result, Mapping):
+        evaluations = [
+            row
+            for row in result.get("evaluations", ())
+            if isinstance(row, Mapping)
+        ]
+    accepted = sum(1 for row in evaluations if row.get("accepted") is True)
+    return {
+        "candidate_count": len(evaluations),
+        "accepted_candidate_count": accepted,
+        "rejected_candidate_count": len(evaluations) - accepted,
+    }
+
+
+def _best_pair_deltas(report: Mapping[str, Any]) -> list[dict[str, Any]]:
+    result = report.get("result")
+    if not isinstance(result, Mapping):
+        return []
+    return [
+        {
+            "pair_index": row.get("pair_index"),
+            "score_linf_without_rate_delta": row.get(
+                "score_linf_without_rate_delta"
+            ),
+            "d_seg_linf_delta": row.get("d_seg_linf_delta"),
+            "d_pose_linf_delta": row.get("d_pose_linf_delta"),
+        }
+        for row in result.get("best_pair_deltas", ())
+        if isinstance(row, Mapping)
+    ]
+
+
+def _int_or_zero(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _float_or_inf(value: Any) -> float:
+    parsed = _float_or_none(value)
+    if parsed is None:
+        return float("inf")
+    return parsed
 
 
 def _control_rows() -> list[dict[str, Any]]:

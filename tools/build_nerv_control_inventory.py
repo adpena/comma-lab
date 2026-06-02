@@ -108,6 +108,7 @@ def main(argv: list[str] | None = None) -> int:
         "--snerv-scorer-loop-qat-json",
         default=None,
         type=Path,
+        action="append",
         help="Optional false-authority SNeRV scorer-loop QAT local trainer JSON.",
     )
     args = parser.parse_args(argv)
@@ -153,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
         pattern="snerv_decoder_mode_assignment_probe*.json",
         schema="snerv_decoder_mode_assignment_probe.v1",
     )
-    snerv_scorer_loop_qat_report = _load_optional_report(
+    snerv_scorer_loop_qat_reports = _load_optional_reports(
         args.snerv_scorer_loop_qat_json,
         pattern="snerv_scorer_loop_qat_local_trainer*.json",
         schema="snerv_scorer_loop_qat_local_trainer.v1",
@@ -179,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
             snerv_waterfill_mode_assignment_report
         ),
         snerv_decoder_mode_probe_report=snerv_decoder_mode_probe_report,
-        snerv_scorer_loop_qat_report=snerv_scorer_loop_qat_report,
+        snerv_scorer_loop_qat_reports=snerv_scorer_loop_qat_reports,
     )
     output = Path(args.output_json).expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -212,6 +213,23 @@ def _load_optional_report(
             payload.setdefault("source_artifact_path", candidate.as_posix())
             return payload
     return None
+
+
+def _load_optional_reports(
+    paths: list[Path] | None,
+    *,
+    pattern: str,
+    schema: str,
+) -> list[dict[str, Any]]:
+    if paths:
+        return [_load_json(path) for path in paths]
+    reports: list[dict[str, Any]] = []
+    for candidate in sorted(RESEARCH_DIR.glob(pattern), reverse=True):
+        payload = _load_json(candidate)
+        if payload.get("schema") == schema:
+            payload.setdefault("source_artifact_path", candidate.as_posix())
+            reports.append(payload)
+    return reports
 
 
 def _load_json(path: Path) -> dict[str, Any]:

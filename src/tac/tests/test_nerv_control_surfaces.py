@@ -311,6 +311,11 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     qat_order = orders["scale_snerv_scorer_loop_qat_to_full600"]
     assert qat_order["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
     assert qat_order["payload"]["n_pairs"] == 1
+    assert qat_order["payload"]["history_count"] == 1
+    assert qat_order["payload"]["score_delta_linf"] == -0.01
+    assert qat_order["payload"]["candidate_count"] == 3
+    assert qat_order["payload"]["accepted_candidate_count"] == 1
+    assert qat_order["payload"]["best_pair_deltas"][0]["pair_index"] == 0
     assert qat_order["payload"]["receiver_contract_satisfied"] is True
     assert "snerv_scorer_loop_qat_full600_missing" in qat_order["blockers"]
     for order in orders.values():
@@ -487,6 +492,11 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         qat_row["planner_ingest"]["local_full600_continuation_runnable_now"]
         is True
     )
+    assert qat_row["planner_ingest"]["source_history_count"] == 1
+    assert qat_row["planner_ingest"]["source_score_delta_linf"] == -0.01
+    assert qat_row["planner_ingest"]["source_candidate_count"] == 3
+    assert qat_row["planner_ingest"]["source_accepted_candidate_count"] == 1
+    assert qat_row["planner_ingest"]["source_best_pair_deltas"][0]["pair_index"] == 0
     qat_command = qat_row["planner_ingest"][
         "local_full600_continuation_command_argv"
     ]
@@ -861,10 +871,25 @@ def _synthetic_rate_bridge() -> dict:
                 "qat_bits": 8,
                 "search_mode": "random_signed",
                 "scorer_loop_evaluations": 1,
+                "history_count": 1,
+                "selection_policy": "largest_pair_count_then_accepted_then_evaluations",
                 "baseline_archive_bytes": 929_937,
                 "best_archive_bytes": 929_937,
                 "baseline_score_linf": 0.8545,
-                "best_score_linf": 0.8545,
+                "best_score_linf": 0.8445,
+                "score_delta_linf": -0.01,
+                "score_delta_fraction": -0.011703920421299,
+                "candidate_count": 3,
+                "accepted_candidate_count": 1,
+                "rejected_candidate_count": 2,
+                "best_pair_deltas": [
+                    {
+                        "pair_index": 0,
+                        "score_linf_without_rate_delta": -0.02,
+                        "d_seg_linf_delta": -0.001,
+                        "d_pose_linf_delta": -0.0001,
+                    }
+                ],
                 "accepted_improvement": False,
                 "ready_for_pose_guard_gate": False,
                 "receiver_contract_satisfied": True,

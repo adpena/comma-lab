@@ -373,6 +373,20 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "source_scorer_loop_evaluations": payload.get(
                 "scorer_loop_evaluations"
             ),
+            "source_history_count": payload.get("history_count"),
+            "source_selection_policy": payload.get("selection_policy"),
+            "source_score_delta_linf": payload.get("score_delta_linf"),
+            "source_score_delta_fraction": payload.get("score_delta_fraction"),
+            "source_candidate_count": payload.get("candidate_count"),
+            "source_accepted_candidate_count": payload.get(
+                "accepted_candidate_count"
+            ),
+            "source_rejected_candidate_count": payload.get(
+                "rejected_candidate_count"
+            ),
+            "source_best_pair_deltas": _mapping_list(
+                payload.get("best_pair_deltas")
+            ),
             "source_accepted_improvement": payload.get("accepted_improvement") is True,
             "source_receiver_contract_satisfied": (
                 payload.get("receiver_contract_satisfied") is True

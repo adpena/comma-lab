@@ -671,12 +671,26 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                         "scorer_loop_evaluations": unit.get(
                             "scorer_loop_evaluations"
                         ),
+                        "history_count": unit.get("history_count"),
+                        "selection_policy": unit.get("selection_policy"),
                         "baseline_archive_bytes": unit.get(
                             "baseline_archive_bytes"
                         ),
                         "best_archive_bytes": unit.get("best_archive_bytes"),
                         "baseline_score_linf": unit.get("baseline_score_linf"),
                         "best_score_linf": unit.get("best_score_linf"),
+                        "score_delta_linf": unit.get("score_delta_linf"),
+                        "score_delta_fraction": unit.get("score_delta_fraction"),
+                        "candidate_count": unit.get("candidate_count"),
+                        "accepted_candidate_count": unit.get(
+                            "accepted_candidate_count"
+                        ),
+                        "rejected_candidate_count": unit.get(
+                            "rejected_candidate_count"
+                        ),
+                        "best_pair_deltas": _mapping_list(
+                            unit.get("best_pair_deltas")
+                        ),
                         "accepted_improvement": unit.get("accepted_improvement"),
                         "ready_for_pose_guard_gate": unit.get(
                             "ready_for_pose_guard_gate"

@@ -572,10 +572,18 @@ def _control_inventory_evidence_units(
                 "qat_bits": report.get("qat_bits"),
                 "search_mode": report.get("search_mode"),
                 "scorer_loop_evaluations": report.get("scorer_loop_evaluations"),
+                "history_count": report.get("history_count"),
+                "selection_policy": report.get("selection_policy"),
                 "baseline_archive_bytes": report.get("baseline_archive_bytes"),
                 "best_archive_bytes": report.get("best_archive_bytes"),
                 "baseline_score_linf": report.get("baseline_score_linf"),
                 "best_score_linf": report.get("best_score_linf"),
+                "score_delta_linf": report.get("score_delta_linf"),
+                "score_delta_fraction": report.get("score_delta_fraction"),
+                "candidate_count": report.get("candidate_count"),
+                "accepted_candidate_count": report.get("accepted_candidate_count"),
+                "rejected_candidate_count": report.get("rejected_candidate_count"),
+                "best_pair_deltas": _mapping_list(report.get("best_pair_deltas")),
                 "accepted_improvement": bool(report.get("accepted_improvement")),
                 "ready_for_pose_guard_gate": bool(
                     report.get("ready_for_pose_guard_gate")
