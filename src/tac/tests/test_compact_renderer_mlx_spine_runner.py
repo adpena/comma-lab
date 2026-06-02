@@ -907,6 +907,16 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert out["local_cpu_replay_summary"]["score_claim"] is False
     assert out["local_cpu_replay_summary_paths"]
     assert Path(out["local_cpu_replay_summary_paths"][0]).is_file()
+    post_export = out["post_export_materializer_plan"]
+    assert post_export["schema"] == "compact_carrier_post_export_materializer_plan.v1"
+    assert post_export["compiled"] is True
+    assert post_export["queue_launch_executed"] is False
+    assert post_export["experiment_count"] > 0
+    assert Path(post_export["experiment_queue_path"]).is_file()
+    queue = json.loads(Path(post_export["experiment_queue_path"]).read_text())
+    assert queue["schema"] == "experiment_queue.v1"
+    assert post_export["score_claim"] is False
+    assert post_export["ready_for_exact_eval_dispatch"] is False
     assert "local_cpu_replay_not_executed" not in out["blockers"]
     assert "local_cpu_replay_not_run_partial_pair_coverage" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
@@ -1417,7 +1427,8 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
         package_dir = Path(kwargs["output_dir"])
         package_dir.mkdir(parents=True, exist_ok=True)
         archive = package_dir / "archive.zip"
-        archive.write_bytes(b"snerv-archive")
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", b"snerv-archive")
         submission = package_dir / "submission"
         submission.mkdir()
         (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
@@ -1507,6 +1518,15 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert "final_rate_attack_and_repair_materializers" in out[
         "reusable_optimization_followups"
     ]["required_hooks"]
+    post_export = out["post_export_materializer_plan"]
+    assert post_export["schema"] == "compact_carrier_post_export_materializer_plan.v1"
+    assert post_export["compiled"] is True
+    assert post_export["queue_launch_executed"] is False
+    assert post_export["experiment_count"] > 0
+    assert Path(post_export["experiment_queue_path"]).is_file()
+    assert out["reusable_optimization_followups"][
+        "post_export_experiment_queue_path"
+    ] == post_export["experiment_queue_path"]
     assert "snerv_mlx_native_train_export_archive_adapter_missing" in out[
         "blockers"
     ]

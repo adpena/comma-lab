@@ -473,6 +473,152 @@ def _run_compact_local_cpu_replay_gate(
     return summary_dict, [summary_path], _dedupe(blockers)
 
 
+def _compact_queue_id_token(value: str, *, fallback: str = "carrier") -> str:
+    token = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value)
+    return token.strip("._-") or fallback
+
+
+def _compile_carrier_post_export_materializer_plan(
+    *,
+    output_dir: str | Path,
+    archive_path: str | Path | None,
+    archive_sha256: Any = None,
+    archive_bytes: Any = None,
+    family: str,
+    repo_root: str | Path = REPO_ROOT,
+    local_cpu_concurrency: int = 2,
+) -> dict[str, Any]:
+    """Compile reusable final-rate materializer queues for a carrier archive.
+
+    The result is a deterministic handoff only: it writes bootstrap, context,
+    backlog, work-queue, and experiment-queue JSON, but never executes the
+    queue and never grants local score authority.
+    """
+
+    from comma_lab.scheduler.frontier_rate_attack_bootstrap import (
+        DEFAULT_EXECUTABLE_TARGET_KINDS,
+        FrontierRateAttackBootstrapError,
+        archive_record,
+        build_frontier_rate_attack_payloads,
+    )
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    result_root = out / "carrier_post_export_materializers"
+    plan_path = result_root / "post_export_materializer_plan.json"
+    family_token = _compact_queue_id_token(str(family), fallback="carrier")
+    blockers: list[str] = []
+    archive_bytes_int: int | None = None
+    if archive_bytes is not None:
+        try:
+            archive_bytes_int = int(archive_bytes)
+        except (TypeError, ValueError):
+            blockers.append("carrier_post_export_archive_bytes_invalid")
+    base_result: dict[str, Any] = {
+        "schema": "compact_carrier_post_export_materializer_plan.v1",
+        "family": str(family),
+        "compiled": False,
+        "archive_path": str(archive_path) if archive_path is not None else None,
+        "archive_sha256": str(archive_sha256) if archive_sha256 else None,
+        "archive_bytes": archive_bytes_int,
+        "materializer_results_root": result_root.as_posix(),
+        "plan_path": plan_path.as_posix(),
+        "queue_launch_executed": False,
+        "allowed_use": "compile_only_post_export_local_materializer_queue",
+        **FALSE_AUTHORITY,
+    }
+    if blockers:
+        result = {
+            **base_result,
+            "blockers": _dedupe(blockers),
+        }
+        _write_json(plan_path, result)
+        return result
+    if archive_path is None:
+        result = {
+            **base_result,
+            "blockers": ["carrier_post_export_archive_missing"],
+        }
+        _write_json(plan_path, result)
+        return result
+
+    try:
+        archive = _resolve(archive_path, base=root)
+        expected_sha = str(archive_sha256) if archive_sha256 else None
+        record = archive_record(
+            label=f"{family_token}_post_export",
+            archive_path=archive,
+            repo_root=root,
+            source_kind="compact_carrier_byte_closed_export",
+            expected_sha256=expected_sha,
+            expected_bytes=archive_bytes_int,
+        )
+        queue_id = (
+            f"carrier_post_export_{family_token}_{str(record['sha256'])[:12]}"
+        )
+        output_root = result_root / queue_id
+        bootstrap_path = output_root / "frontier_rate_attack_bootstrap.json"
+        target_coverage_path = output_root / "target_coverage.json"
+        contexts_path = output_root / "materializer_contexts.json"
+        backlog_path = output_root / "materializer_backlog.json"
+        work_queue_path = output_root / "materializer_work_queue.json"
+        experiment_queue_path = output_root / "experiment_queue.json"
+        payloads = build_frontier_rate_attack_payloads(
+            repo_root=root,
+            queue_id=queue_id,
+            archive_records=[record],
+            results_root=result_root,
+            target_kinds=DEFAULT_EXECUTABLE_TARGET_KINDS,
+            include_optional_target_blockers=True,
+            local_cpu_concurrency=int(local_cpu_concurrency),
+            lane_id=f"compact_carrier_post_export:{family_token}",
+            source_work_queue_path=work_queue_path,
+            include_exact_readiness_followup=True,
+            exact_readiness_followup_require_ready=False,
+        )
+        _write_json(bootstrap_path, payloads["bootstrap"])
+        _write_json(target_coverage_path, payloads["target_coverage"])
+        _write_json(contexts_path, payloads["contexts"])
+        _write_json(backlog_path, payloads["backlog"])
+        _write_json(work_queue_path, payloads["work_queue"])
+        _write_json(experiment_queue_path, payloads["queue"])
+        result = {
+            **base_result,
+            "compiled": True,
+            "archive_record": record,
+            "queue_id": queue_id,
+            "queue_output_dir": output_root.as_posix(),
+            "bootstrap_path": bootstrap_path.as_posix(),
+            "target_coverage_path": target_coverage_path.as_posix(),
+            "materializer_contexts_path": contexts_path.as_posix(),
+            "materializer_backlog_path": backlog_path.as_posix(),
+            "materializer_work_queue_path": work_queue_path.as_posix(),
+            "experiment_queue_path": experiment_queue_path.as_posix(),
+            "executable_target_count": payloads["bootstrap"].get(
+                "executable_target_count"
+            ),
+            "experiment_count": payloads["bootstrap"].get("experiment_count"),
+            "step_count": payloads["bootstrap"].get("step_count"),
+            "target_coverage": payloads["target_coverage"],
+            "blockers": [],
+        }
+    except (
+        FrontierRateAttackBootstrapError,
+        OSError,
+        ValueError,
+        zipfile.BadZipFile,
+    ) as exc:
+        result = {
+            **base_result,
+            "compiled": False,
+            "blockers": _dedupe(
+                [f"carrier_post_export_materializer_plan_failed:{exc}"]
+            ),
+        }
+    _write_json(plan_path, result)
+    return result
+
+
 def _scorer_coupled_rd_metadata() -> dict[str, Any]:
     """Return durable scorer-domain facts for advisory compact-run metadata."""
 
@@ -1178,6 +1324,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
             repo_root=root,
         )
+    post_export_materializer_plan = _compile_carrier_post_export_materializer_plan(
+        output_dir=out,
+        archive_path=archive_path,
+        archive_sha256=row.get("candidate_archive_sha256"),
+        archive_bytes=row.get("candidate_archive_bytes"),
+        family="snerv",
+        repo_root=root,
+    )
 
     blockers = _dedupe(
         [
@@ -1185,6 +1339,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "snerv_mlx_native_train_export_archive_adapter_missing",
             "snerv_longer_staged_score_aware_training_not_executed",
             *local_cpu_replay_blockers,
+            *list(post_export_materializer_plan.get("blockers") or []),
             *list(row.get("blockers") or []),
             *list(mlx_prefilter_coverage.get("blockers") or []),
         ]
@@ -1254,8 +1409,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "stages for all byte-closed carriers, not as private SNeRV "
                     "or HiNeRV one-offs"
                 ),
+                "post_export_materializer_plan_path": (
+                    post_export_materializer_plan.get("plan_path")
+                ),
+                "post_export_experiment_queue_path": (
+                    post_export_materializer_plan.get("experiment_queue_path")
+                ),
                 "authority": "planner_hook_false_authority_until_executed",
             },
+            "post_export_materializer_plan": post_export_materializer_plan,
             "local_cpu_replay_summary_paths": [
                 path.as_posix() for path in local_cpu_replay_paths
             ],
@@ -2476,6 +2638,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         blockers.append("hi_nerv_spine_projection_manifest_missing")
     if not archive_path:
         blockers.append("hi_nerv_archive_export_missing")
+    post_export_materializer_plan = _compile_carrier_post_export_materializer_plan(
+        output_dir=out,
+        archive_path=archive_path,
+        archive_sha256=artifact_dict.get("archive_sha256"),
+        archive_bytes=artifact_dict.get("archive_bytes"),
+        family="hi_nerv",
+        repo_root=root,
+    )
+    blockers.extend(post_export_materializer_plan.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -2541,6 +2712,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 path.as_posix() for path in local_cpu_replay_paths
             ],
             "local_cpu_replay_summary": local_cpu_replay_summary,
+            "post_export_materializer_plan": post_export_materializer_plan,
             "local_cpu_replay_gate": {
                 "schema": "compact_runner_local_cpu_replay_gate.v1",
                 "requested": run_local_cpu_replay,

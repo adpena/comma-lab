@@ -62,6 +62,7 @@ from .byte_shaving_materializer_registry import (
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
+    Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND,
     registry_manifest,
 )
 from .experiment_queue import ExperimentQueueError, normalize_queue_definition
@@ -108,6 +109,12 @@ FRONTIER_RATE_ATTACK_DEFERRED_TARGET_RATIONALES = {
         "candidate-template, and inflate-parity context; they are queued through "
         "the inverse-steganalysis acquisition chain rather than the archive-only "
         "final-rate bootstrap."
+    ),
+    Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND: (
+        "Z8 detail-coefficient entropy-delta candidates require the Z8-HPC1 "
+        "runtime payload bridge, per-subband entropy curves, and generated "
+        "receiver proof context; they are queued through the Z8 entropy-delta "
+        "campaign rather than the generic archive-only final-rate bootstrap."
     ),
 }
 _AXIS_POINTER_KEYS = {
@@ -1244,6 +1251,11 @@ def _target_coverage_report(
     )
     deferred_rows: list[dict[str, Any]] = []
     unclassified: list[str] = []
+    deferred_destinations = {
+        DQS1_PAIRSET_TARGET_KIND: "dqs1_local_first_feedback_cycle",
+        INVERSE_SCORER_CELL_TARGET_KIND: "inverse_steganalysis_acquisition_chain",
+        Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND: "z8_entropy_delta_campaign",
+    }
     for target_kind in registry_candidates:
         if target_kind in supported:
             continue
@@ -1255,10 +1267,9 @@ def _target_coverage_report(
             {
                 "target_kind": target_kind,
                 "rationale": rationale,
-                "deferred_to": (
-                    "dqs1_local_first_feedback_cycle"
-                    if target_kind == DQS1_PAIRSET_TARGET_KIND
-                    else "inverse_steganalysis_acquisition_chain"
+                "deferred_to": deferred_destinations.get(
+                    target_kind,
+                    "specialized_materializer_campaign",
                 ),
             }
         )

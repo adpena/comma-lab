@@ -31,6 +31,7 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
+    Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND,
 )
 from comma_lab.scheduler.frontier_final_rate_attack_autoloop import (
     POST_FEEDBACK_CHILD_QUEUE_ACTIVATION_PLAN_SCHEMA,
@@ -82,6 +83,12 @@ def _write_archive(path: Path, *, member_name: str = "renderer.bin") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr(member_name, b"frontier-bytes")
+    return path
+
+
+def _write_target_video(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"declared-contest-target-video")
     return path
 
 
@@ -330,6 +337,10 @@ def test_frontier_bootstrap_target_coverage_accounts_for_registry_executables(
     assert INVERSE_SCORER_CELL_TARGET_KIND in deferred
     assert deferred[INVERSE_SCORER_CELL_TARGET_KIND]["deferred_to"] == (
         "inverse_steganalysis_acquisition_chain"
+    )
+    assert Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND in deferred
+    assert deferred[Z8_HPC1_DETAIL_ENTROPY_DELTA_TARGET_KIND]["deferred_to"] == (
+        "z8_entropy_delta_campaign"
     )
     _assert_false_authority(coverage)
 
@@ -778,6 +789,7 @@ def test_frontier_bootstrap_refuses_exact_followup_without_work_queue_custody(
 
 def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
     archive_path = _write_archive(tmp_path / "archive.zip")
+    target_video = _write_target_video(tmp_path / "target" / "0.mkv")
     output_dir = tmp_path / "out"
     result = subprocess.run(
         [
@@ -794,6 +806,8 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
             "frontier_final_rate_attack_unit",
             "--target-kind",
             PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            "--target-video",
+            str(target_video),
             "--no-optional-target-blockers",
             "--include-exact-readiness-followup",
         ],
@@ -861,6 +875,7 @@ def test_frontier_bootstrap_cli_defaults_to_end_to_end_rate_attack_queue(
     tmp_path: Path,
 ) -> None:
     archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
+    target_video = _write_target_video(tmp_path / "target" / "0.mkv")
     output_dir = tmp_path / "out"
     result = subprocess.run(
         [
@@ -879,6 +894,8 @@ def test_frontier_bootstrap_cli_defaults_to_end_to_end_rate_attack_queue(
             PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             "--member-name",
             "payload.bin",
+            "--target-video",
+            str(target_video),
             "--no-optional-target-blockers",
         ],
         cwd=REPO_ROOT,
@@ -2056,6 +2073,7 @@ def test_frontier_bootstrap_cli_derives_merge_contract_for_receiver_targets(
     tmp_path: Path,
 ) -> None:
     archive_path = _write_robust_like_archive(tmp_path / "archive.zip")
+    target_video = _write_target_video(tmp_path / "target" / "0.mkv")
     output_dir = tmp_path / "out"
     result = subprocess.run(
         [
@@ -2074,6 +2092,8 @@ def test_frontier_bootstrap_cli_derives_merge_contract_for_receiver_targets(
             PACKET_MEMBER_MERGE_TARGET_KIND,
             "--target-kind",
             RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            "--target-video",
+            str(target_video),
             "--no-optional-target-blockers",
         ],
         cwd=REPO_ROOT,
