@@ -40,6 +40,9 @@ from tac.analysis.nerv_modelsize_ladder import (
     hi_nerv_modelsize_config_rows,
 )
 from tac.repo_io import write_json
+from tac.substrates._shared.mlx_score_aware.adapter import (
+    SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
+)
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     FALSE_AUTHORITY,
 )
@@ -401,7 +404,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--grad-clip-max-norm", type=float, default=None)
     parser.add_argument("--warmup-epochs", type=int, default=0)
     parser.add_argument("--weight-decay", type=float, default=None)
-    parser.add_argument("--optimizer-kind", choices=("adamw", "rmsprop"), default="adamw")
+    parser.add_argument(
+        "--optimizer-kind",
+        choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
+        default="adamw",
+    )
     parser.add_argument("--cosine-decay", action="store_true")
     parser.add_argument("--cosine-decay-total-epochs", type=int, default=None)
     parser.add_argument("--cosine-decay-min-lr-ratio", type=float, default=1.0e-2)

@@ -176,9 +176,20 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "hi_nerv_official_symbol_parity_map_missing",
         "hi_nerv_full600_receiver_proven_candidate_missing",
         "hi_nerv_missing_measured_config_family_ladder",
-        "hi_nerv_missing_integer_bitstream_q_roundtrip",
         "hi_nerv_full_video_decoder_weight_saliency_replay_missing",
     }.issubset(set(stack_rows["hi_nerv"]["blocking_gaps"]))
+    assert "hi_nerv_missing_integer_bitstream_q_roundtrip" not in stack_rows[
+        "hi_nerv"
+    ]["blocking_gaps"]
+    hinerv_features = {
+        row["feature_id"]: row for row in stack_rows["hi_nerv"]["official_feature_rows"]
+    }
+    assert hinerv_features["official_pruning_quant_noise_quant_ste_stack"][
+        "local_binding_status"
+    ] == "implemented_or_receiver_proven"
+    assert hinerv_features["official_torchac_or_equivalent_integer_bitstream_codec"][
+        "local_binding_status"
+    ] == "implemented_or_receiver_proven"
     snerv_blocking_gaps = set(stack_rows["snerv"]["blocking_gaps"])
     assert {
         "snerv_official_symbol_parity_map_missing",

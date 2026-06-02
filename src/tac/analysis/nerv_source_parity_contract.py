@@ -253,18 +253,33 @@ def _source_features() -> tuple[SourceFeature, ...]:
         ),
         SourceFeature(
             family="hi_nerv",
-            feature_id="hi_nerv_official_prune_quantnoise_torchac_pipeline",
+            feature_id="hi_nerv_prune_quantnoise_receiver_bitstream_pipeline",
             official_source_id="hi_nerv_official_repo",
             implementation_target=(
-                "official pruning, QuantNoise/QAT, and arithmetic bitstream "
-                "pipeline are receiver-visible instead of generic packet bytes"
+                "pruning, QuantNoise/QAT preparation, and decoder bitstream "
+                "roundtrip are receiver-visible instead of prose-only"
             ),
-            required_source_markers=(
-                "QuantNoise",
-                "torchac",
-                "pruning_ratio",
+            required_symbols=(
+                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF", "behavior-backed proof constant"),
+                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "apply_decoder_pruning", "global magnitude pruning"),
+                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "apply_decoder_quant_noise", "deterministic QuantNoise"),
+                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "measure_hi_nerv_decoder_bitstream_roundtrip", "receiver codec measurement"),
+                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "select_hi_nerv_bitstream_codec_by_scorer_waterfill", "score-priced codec waterfill selector"),
+                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.archive", "repack_archive_decoder_codec", "latent-preserving decoder codec repack"),
             ),
-            blocker_if_missing="hi_nerv_prune_quantnoise_torchac_pipeline_missing",
+            blocker_if_missing="hi_nerv_prune_quantnoise_receiver_bitstream_pipeline_missing",
+        ),
+        SourceFeature(
+            family="hi_nerv",
+            feature_id="hi_nerv_official_torchac_entropy_coder_parity",
+            official_source_id="hi_nerv_official_repo",
+            implementation_target=(
+                "exact official torchac arithmetic entropy coder is vendored or "
+                "explicitly superseded by measured same-axis receiver codec evidence"
+            ),
+            required_source_markers=("torchac",),
+            blocker_if_missing="hi_nerv_official_torchac_entropy_coder_missing",
+            required_for_long_training=False,
         ),
         SourceFeature(
             family="hi_nerv",

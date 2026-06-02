@@ -81,6 +81,7 @@ def build_nerv_master_consumer_bridge(
     control_inventory: Mapping[str, Any],
     implementation_sweep: Mapping[str, Any],
     modelsize_curve: Mapping[str, Any] | None = None,
+    snerv_scorer_loop_geometry: Mapping[str, Any] | None = None,
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
     """Build one normalized no-authority packet for master consumers."""
@@ -102,6 +103,12 @@ def build_nerv_master_consumer_bridge(
             "nerv_modelsize_archive_curve.v1",
             "modelsize_curve",
         )
+    if snerv_scorer_loop_geometry is not None:
+        _require_mapping_schema(
+            snerv_scorer_loop_geometry,
+            "snerv_scorer_loop_geometry.v1",
+            "snerv_scorer_loop_geometry",
+        )
 
     generated = generated_utc or datetime.now(UTC).isoformat()
     blockers = _unique(
@@ -119,6 +126,8 @@ def build_nerv_master_consumer_bridge(
     units.extend(_memo_ref_units(implementation_sweep))
     if modelsize_curve is not None:
         units.extend(_modelsize_units(modelsize_curve))
+    if snerv_scorer_loop_geometry is not None:
+        units.extend(_snerv_scorer_loop_geometry_units(snerv_scorer_loop_geometry))
     memo_refs = _mapping_list(implementation_sweep.get("related_omx_design_memo_refs"))
 
     return {
@@ -141,6 +150,14 @@ def build_nerv_master_consumer_bridge(
                 "present": False,
                 "schema": None,
                 "blocker": "modelsize_archive_curve_payload_missing",
+            },
+            _surface_ref("snerv_scorer_loop_geometry", snerv_scorer_loop_geometry)
+            if snerv_scorer_loop_geometry is not None
+            else {
+                "surface_id": "snerv_scorer_loop_geometry",
+                "present": False,
+                "schema": None,
+                "blocker": "snerv_scorer_loop_geometry_payload_missing",
             },
         ],
         "master_consumer_routes": list(MASTER_CONSUMER_ROUTES),
@@ -217,6 +234,68 @@ def _control_inventory_units(control_inventory: Mapping[str, Any]) -> list[dict[
         + _binding_surface_units(control_inventory)
         + _control_inventory_evidence_units(control_inventory)
     )
+
+
+def _snerv_scorer_loop_geometry_units(report: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Expose geometry allocator units through the master-consumer packet."""
+
+    report_blockers = _string_list(report.get("blockers"))
+    units: list[dict[str, Any]] = []
+    for index, unit in enumerate(_mapping_list(report.get("allocator_units"))):
+        unit_id = str(unit.get("unit_id") or f"snerv_scorer_loop_geometry_{index:04d}")
+        blockers = _unique(report_blockers + _string_list(unit.get("blockers")))
+        units.append(
+            {
+                **dict(unit),
+                "unit_id": unit_id,
+                "unit_type": str(
+                    unit.get("unit_type") or "snerv_scorer_loop_qat_result"
+                ),
+                "family": str(unit.get("family") or "snerv"),
+                "geometry_report_schema": report.get("schema"),
+                "geometry_report_label": report.get("label"),
+                "geometry_best_descent_score_delta_linf": report.get(
+                    "best_descent_score_delta_linf"
+                ),
+                "geometry_lowest_local_score_linf": report.get(
+                    "lowest_local_score_linf"
+                ),
+                "target_consumers": [
+                    "final_rate_attack",
+                    "bit_allocator",
+                    "probe_disambiguator",
+                    "cathedral_autopilot",
+                    "continual_learning_posterior",
+                ],
+                "planner_action": "scale_snerv_geometry_run_to_full600_receiver_proof",
+                "blockers": blockers,
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
+    if units:
+        return units
+    return [
+        {
+            "unit_id": "snerv_scorer_loop_geometry_missing_allocator_units",
+            "unit_type": "snerv_scorer_loop_geometry_gap",
+            "family": "snerv",
+            "target_consumers": [
+                "final_rate_attack",
+                "bit_allocator",
+                "cathedral_autopilot",
+            ],
+            "planner_action": "regenerate_snerv_scorer_loop_geometry_allocator_units",
+            "blockers": _unique(
+                [
+                    *report_blockers,
+                    "snerv_scorer_loop_geometry_allocator_units_missing",
+                ]
+            ),
+            "predicted_delta_adjustment": 0.0,
+            **FALSE_AUTHORITY,
+        }
+    ]
 
 
 def _control_row_units(control_inventory: Mapping[str, Any]) -> list[dict[str, Any]]:

@@ -90,6 +90,22 @@ class HinervArchive:
     schema_version: int
 
 
+@dataclass(frozen=True)
+class HinervArchiveSections:
+    """Raw HIV1 sections used for decoder-codec-only repacks."""
+
+    decoder_blob: bytes
+    latents_coarse_blob: bytes
+    latents_mid_blob: bytes
+    latents_fine_blob: bytes
+    meta: dict[str, object]
+    schema_version: int
+    latent_dim_coarse: int
+    latent_dim_mid: int
+    latent_dim_fine: int
+    num_pairs: int
+
+
 def _serialize_state_dict(
     sd: dict[str, torch.Tensor],
     *,
@@ -204,6 +220,113 @@ def pack_archive(
         len(meta_bytes),
     )
     return header + decoder_blob + bytes_c + bytes_m + bytes_f + meta_bytes
+
+
+def split_archive_sections(blob: bytes) -> HinervArchiveSections:
+    """Return raw HIV1 sections without dequantizing latent payloads."""
+
+    if len(blob) < HIV1_HEADER_SIZE:
+        raise ValueError(
+            f"archive too short ({len(blob)} bytes; need >= {HIV1_HEADER_SIZE})"
+        )
+    (
+        magic,
+        version,
+        dim_c,
+        dim_m,
+        dim_f,
+        num_pairs,
+        decoder_len,
+        lat_c_len,
+        lat_m_len,
+        lat_f_len,
+        meta_len,
+    ) = struct.unpack(HIV1_HEADER_FMT, blob[:HIV1_HEADER_SIZE])
+    if magic != HIV1_MAGIC:
+        raise ValueError(f"bad magic: {magic!r} (expected {HIV1_MAGIC!r})")
+    if version != HIV1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {version}")
+    for name, given, expected in (
+        ("lat_c_len", lat_c_len, num_pairs * dim_c * 2),
+        ("lat_m_len", lat_m_len, num_pairs * dim_m * 2),
+        ("lat_f_len", lat_f_len, num_pairs * dim_f * 2),
+    ):
+        if given != expected:
+            raise ValueError(
+                f"{name} {given} != num_pairs*latent_dim*2 = {expected}"
+            )
+
+    end_header = HIV1_HEADER_SIZE
+    end_decoder = end_header + decoder_len
+    end_lat_c = end_decoder + lat_c_len
+    end_lat_m = end_lat_c + lat_m_len
+    end_lat_f = end_lat_m + lat_f_len
+    end_meta = end_lat_f + meta_len
+    if end_meta != len(blob):
+        raise ValueError(
+            f"archive size {len(blob)} != expected {end_meta} from header"
+        )
+    return HinervArchiveSections(
+        decoder_blob=blob[end_header:end_decoder],
+        latents_coarse_blob=blob[end_decoder:end_lat_c],
+        latents_mid_blob=blob[end_lat_c:end_lat_m],
+        latents_fine_blob=blob[end_lat_m:end_lat_f],
+        meta=json.loads(blob[end_lat_f:end_meta].decode("utf-8")),
+        schema_version=int(version),
+        latent_dim_coarse=int(dim_c),
+        latent_dim_mid=int(dim_m),
+        latent_dim_fine=int(dim_f),
+        num_pairs=int(num_pairs),
+    )
+
+
+def repack_archive_decoder_codec(
+    blob: bytes,
+    *,
+    decoder_codec: str,
+    decoder_state_dict: dict[str, torch.Tensor] | None = None,
+    extra_meta: dict[str, object] | None = None,
+) -> bytes:
+    """Rebuild HIV1 bytes with a different decoder codec.
+
+    Latent int16 blobs are copied byte-for-byte so codec sweeps isolate the
+    decoder-state bitstream instead of silently requantizing per-pair latents.
+    """
+
+    sections = split_archive_sections(blob)
+    state = (
+        decoder_state_dict
+        if decoder_state_dict is not None
+        else _deserialize_state_dict(sections.decoder_blob)
+    )
+    decoder_blob = _serialize_state_dict(state, codec=decoder_codec)
+    meta = dict(sections.meta)
+    meta["_decoder_state_codec"] = decoder_state_codec_stats(decoder_blob).as_dict()
+    if extra_meta:
+        meta.update(extra_meta)
+    meta_bytes = json.dumps(meta, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    header = struct.pack(
+        HIV1_HEADER_FMT,
+        HIV1_MAGIC,
+        sections.schema_version,
+        sections.latent_dim_coarse,
+        sections.latent_dim_mid,
+        sections.latent_dim_fine,
+        sections.num_pairs,
+        len(decoder_blob),
+        len(sections.latents_coarse_blob),
+        len(sections.latents_mid_blob),
+        len(sections.latents_fine_blob),
+        len(meta_bytes),
+    )
+    return (
+        header
+        + decoder_blob
+        + sections.latents_coarse_blob
+        + sections.latents_mid_blob
+        + sections.latents_fine_blob
+        + meta_bytes
+    )
 
 
 def parse_archive(blob: bytes) -> HinervArchive:

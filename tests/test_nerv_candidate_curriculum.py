@@ -160,3 +160,43 @@ def test_snerv_prelaunch_stays_blocked_until_native_mlx_training_exists() -> Non
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
     assert _requirement(plan, "real_segnet_teacher")["satisfied"] is False
     assert _requirement(plan, "real_posenet_teacher")["satisfied"] is False
+
+
+def test_snerv_prelaunch_consumes_native_scorer_loop_but_keeps_materialization_blocker() -> None:
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate={
+            "candidate_id": "snerv_full600_ceil180k",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 180_000,
+            "nominal_total_payload_bytes": 160_000,
+            "levels": 3,
+            "bits_per_coeff": 2.5,
+            "step_map_bits_per_coeff": 4.0,
+            "decoder_payload_codec": "snar1",
+        },
+        requested_epochs=8,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=160_000,
+        measured_archive_bytes=161_000,
+        native_mlx_train_export_attached=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_full600_campaign_ready=True,
+        native_mlx_scorer_loop_qat_attached=True,
+        native_mlx_scorer_loop_qat_receiver_contract_satisfied=True,
+        native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=True,
+        native_mlx_scorer_loop_qat_accepted_improvement=True,
+        native_mlx_scorer_loop_qat_best_materialized=False,
+    )
+
+    training_plan = plan["training_plan"]
+    assert training_plan["scorer_loop_qat_attached"] is True
+    assert training_plan["standalone_scorer_loop_qat_attached"] is False
+    assert training_plan["native_mlx_scorer_loop_qat_attached"] is True
+    assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
+    assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
+        "blockers"
+    ]
+    assert plan["score_claim"] is False

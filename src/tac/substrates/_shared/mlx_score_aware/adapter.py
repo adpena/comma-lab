@@ -37,6 +37,13 @@ from tac.substrates._shared.mlx_score_aware.loss import (
 if TYPE_CHECKING:
     from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
 
+SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS: tuple[str, ...] = (
+    "adamw",
+    "rmsprop",
+    "lion",
+    "adafactor",
+)
+
 
 class MlxScoreAwareAdapter:
     """Generic Style-B MLX adapter satisfying ``SubstrateLongTrainingAdapter``.
@@ -117,11 +124,14 @@ class MlxScoreAwareAdapter:
             weight_decay: Wave N+11 stabilizer. AdamW weight_decay override
                 (None preserves AdamW default 0.01; canonical Wave N+11 =
                 1e-4 per Loshchilov+Hutter 2019).
-            optimizer_kind: Wave N+11 stabilizer. One of {"adamw", "rmsprop"}.
-                Default "adamw" preserves legacy. "rmsprop" routes through
+            optimizer_kind: Wave N+11 stabilizer. One of
+                ``SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS``. Default
+                "adamw" preserves legacy. "rmsprop" routes through
                 ``mlx.optimizers.RMSprop`` per Mamba-2 RMSprop empirical
-                stability finding (Tieleman+Hinton 2012; smaller momentum
-                helps Mamba SSD recurrence).
+                stability finding. "lion" and "adafactor" are native MLX
+                primitives exposed for long score-aware HiNeRV/SNeRV sweeps;
+                Adafactor is pinned to explicit-LR mode so stage curricula
+                remain the authority.
             cosine_decay_enabled: Wave N+11 stabilizer. When True AND
                 warmup_epochs > 0 AND cosine_decay_total_epochs is set,
                 composes the canonical warmup + cosine-decay schedule via
@@ -160,9 +170,10 @@ class MlxScoreAwareAdapter:
             raise ValueError(
                 f"warmup_steps_per_epoch must be > 0; got {warmup_steps_per_epoch}"
             )
-        if str(optimizer_kind).lower() not in {"adamw", "rmsprop"}:
+        if str(optimizer_kind).lower() not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
             raise ValueError(
-                f"optimizer_kind must be 'adamw' or 'rmsprop'; got {optimizer_kind!r}"
+                "optimizer_kind must be one of "
+                f"{SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS}; got {optimizer_kind!r}"
             )
         if cosine_decay_enabled:
             if int(warmup_epochs) <= 0:
@@ -597,6 +608,12 @@ class MlxScoreAwareAdapter:
           RMSprop does not accept weight_decay; a future canonical add lands
           weight-decay-via-AdamW-style decoupling per Loshchilov+Hutter 2019
           §4 if Mamba-2 empirically benefits from it).
+        - ``"lion"``: ``mlx.optimizers.Lion(learning_rate=sched)`` with
+          optional explicit weight decay. Native MLX primitive, lower optimizer
+          state than Adam-class methods.
+        - ``"adafactor"``: ``mlx.optimizers.Adafactor(learning_rate=sched,
+          relative_step=False, scale_parameter=False)`` so the caller's
+          stage/curriculum LR remains the sole scheduler authority.
         """
         mlx_optim = self._mlx_optim
         warmup_epochs = self._wave_n11_warmup_epochs
@@ -626,6 +643,22 @@ class MlxScoreAwareAdapter:
 
         if self._wave_n11_optimizer_kind == "rmsprop":
             return mlx_optim.RMSprop(learning_rate=lr_sched)
+        if self._wave_n11_optimizer_kind == "lion":
+            if self._wave_n11_weight_decay is None:
+                return mlx_optim.Lion(learning_rate=lr_sched)
+            return mlx_optim.Lion(
+                learning_rate=lr_sched,
+                weight_decay=self._wave_n11_weight_decay,
+            )
+        if self._wave_n11_optimizer_kind == "adafactor":
+            adafactor_kwargs = {
+                "learning_rate": lr_sched,
+                "relative_step": False,
+                "scale_parameter": False,
+            }
+            if self._wave_n11_weight_decay is not None:
+                adafactor_kwargs["weight_decay"] = self._wave_n11_weight_decay
+            return mlx_optim.Adafactor(**adafactor_kwargs)
 
         # adamw default + weight_decay override
         if self._wave_n11_weight_decay is None:

@@ -130,6 +130,8 @@ STACK_REQUIREMENTS: dict[str, dict[str, Any]] = {
         "local_surfaces": [
             "src/tac/substrates/hi_nerv/architecture.py",
             "src/tac/substrates/hi_nerv/archive.py",
+            "src/tac/substrates/hi_nerv/bitstream.py",
+            "src/tac/substrates/_shared/compact_decoder_codec_sweep.py",
             "src/tac/substrates/hi_nerv/score_aware_loss.py",
             "src/tac/analysis/nerv_modelsize_archive_curve.py",
             "src/tac/substrates/_shared/mlx_score_aware_full_main.py",
@@ -139,7 +141,13 @@ STACK_REQUIREMENTS: dict[str, dict[str, Any]] = {
         "local_feature_tokens": {
             "l0_sketch_gate": ["sketch", "l0", "not_source_faithful"],
             "score_aware_teacher": ["SegNet", "PoseNet", "score"],
-            "coder_qat": ["quant", "noise", "coder"],
+            "coder_qat": [
+                "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+                "apply_decoder_pruning",
+                "apply_decoder_quant_noise",
+                "measure_hi_nerv_decoder_bitstream_roundtrip",
+                "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
+            ],
             "dense_vjp_allocator_inputs": ["master_gradient", "VJP", "linf"],
             "receiver_archive": ["archive", "receiver", "bytes"],
         },

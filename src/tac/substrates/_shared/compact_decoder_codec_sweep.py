@@ -26,6 +26,13 @@ from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
 )
+from tac.substrates.hi_nerv.archive import HIV1_MAGIC
+from tac.substrates.hi_nerv.archive import (
+    parse_archive as parse_hi_nerv_archive,
+)
+from tac.substrates.hi_nerv.archive import (
+    repack_archive_decoder_codec as repack_hi_nerv_archive_decoder_codec,
+)
 from tac.substrates.pact_nerv_selector_v4.archive import (
     PSV4_MAGIC,
 )
@@ -85,7 +92,8 @@ def sweep_compact_decoder_codecs(
             a compact ``0.bin`` payload.
         output_dir: durable SSD/local artifact root for variant archives.
         decoder_codecs: candidate decoder-state codecs to materialize.
-        family: ``auto`` / ``pact_nerv_vq`` / ``pact_nerv_selector_v4``.
+        family: ``auto`` / ``pact_nerv_vq`` / ``pact_nerv_selector_v4`` /
+            ``hi_nerv``.
         repo_root: repository root used for runtime vendoring and relative
             proof paths.
         run_receiver_proof: when true, run each generated ``inflate.sh`` and
@@ -451,6 +459,18 @@ def _repack_bin(
             int(parsed.latents.shape[0]),
             _decoder_codec_meta(reparsed.meta),
         )
+    if family == "hi_nerv":
+        parsed = parse_hi_nerv_archive(source_bin)
+        bin_bytes = repack_hi_nerv_archive_decoder_codec(
+            source_bin,
+            decoder_codec=decoder_codec,
+        )
+        reparsed = parse_hi_nerv_archive(bin_bytes)
+        return (
+            bin_bytes,
+            int(parsed.latents_coarse.shape[0]),
+            _decoder_codec_meta(reparsed.meta),
+        )
     raise CompactDecoderCodecSweepError(f"unsupported family: {family!r}")
 
 
@@ -461,7 +481,7 @@ def _decoder_codec_meta(meta: dict[str, Any]) -> dict[str, Any]:
 
 def _resolve_family(source_bin: bytes, *, family: str) -> str:
     normalized = str(family).strip().lower()
-    if normalized not in {"auto", "pact_nerv_vq", "pact_nerv_selector_v4"}:
+    if normalized not in {"auto", "pact_nerv_vq", "pact_nerv_selector_v4", "hi_nerv"}:
         raise CompactDecoderCodecSweepError(f"unsupported family: {family!r}")
     if normalized != "auto":
         return normalized
@@ -470,6 +490,8 @@ def _resolve_family(source_bin: bytes, *, family: str) -> str:
         return "pact_nerv_vq"
     if magic == PSV4_MAGIC:
         return "pact_nerv_selector_v4"
+    if magic == HIV1_MAGIC:
+        return "hi_nerv"
     raise CompactDecoderCodecSweepError(f"cannot auto-detect family from magic {magic!r}")
 
 
@@ -500,7 +522,7 @@ def _codec_dir_name(codec: str) -> str:
 
 
 def _substrate_pkg_name(family: str) -> str:
-    if family in {"pact_nerv_vq", "pact_nerv_selector_v4"}:
+    if family in {"pact_nerv_vq", "pact_nerv_selector_v4", "hi_nerv"}:
         return family
     raise CompactDecoderCodecSweepError(f"unsupported family: {family!r}")
 

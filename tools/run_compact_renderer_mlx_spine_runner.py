@@ -118,6 +118,8 @@ DEFAULT_PR95_RECEIVER_RUNTIME_DIR = (
 )
 DEFAULT_UPSTREAM_DIR = Path(os.environ.get("TAC_UPSTREAM_DIR", REPO_ROOT / "upstream"))
 CANONICAL_UPSTREAM_FALLBACK_DIR = Path.home() / "Projects" / "pact" / "upstream"
+HI_NERV_MODELSIZE_DEFAULT_SEGNET_DISTILLATION_WEIGHT = 1.0
+HI_NERV_MODELSIZE_DEFAULT_POSE_DISTILLATION_WEIGHT = 1.0
 DEFAULT_SOURCE_VIDEO_PATH = Path("upstream/videos/0.mkv")
 TARGET_FAMILIES = (
     "pr95_hnerv",
@@ -1986,6 +1988,12 @@ def _run_snerv_native_mlx_export_attachment(
     allow_overwrite: bool,
     retain_receiver_output: bool,
     receiver_proof_timeout_seconds: int,
+    run_scorer_loop_qat: bool,
+    scorer_loop_qat_max_trials: int,
+    scorer_loop_qat_search_mode: str,
+    scorer_loop_qat_qat_bits: int,
+    scorer_loop_qat_component_guard_mode: str,
+    scorer_loop_qat_device: str,
 ) -> dict[str, Any]:
     """Run the native MLX SNeRV train/export/archive bridge.
 
@@ -2027,6 +2035,14 @@ def _run_snerv_native_mlx_export_attachment(
             run_archive_export=True,
             retain_receiver_output=bool(retain_receiver_output),
             receiver_proof_timeout_seconds=int(receiver_proof_timeout_seconds),
+            run_scorer_loop_qat=bool(run_scorer_loop_qat),
+            scorer_loop_qat_max_trials=int(scorer_loop_qat_max_trials),
+            scorer_loop_qat_search_mode=str(scorer_loop_qat_search_mode),
+            scorer_loop_qat_qat_bits=int(scorer_loop_qat_qat_bits),
+            scorer_loop_qat_component_guard_mode=str(
+                scorer_loop_qat_component_guard_mode
+            ),
+            scorer_loop_qat_device=str(scorer_loop_qat_device),
             allow_overwrite=bool(allow_overwrite),
         )
         blockers = list(artifact.get("blockers") or [])
@@ -2034,6 +2050,7 @@ def _run_snerv_native_mlx_export_attachment(
             blockers.append("snerv_mlx_native_export_partial_pair_coverage")
         if artifact.get("receiver_proof_passed") is not True:
             blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
+        native_scorer_loop = dict(artifact.get("scorer_loop_qat") or {})
         payload = {
             "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
             "executed": True,
@@ -2052,6 +2069,19 @@ def _run_snerv_native_mlx_export_attachment(
             "receiver_proof_passed": bool(artifact.get("receiver_proof_passed")),
             "receiver_contract_satisfied": bool(
                 artifact.get("receiver_contract_satisfied")
+            ),
+            "scorer_loop_qat_attached": bool(native_scorer_loop.get("executed")),
+            "scorer_loop_qat_receiver_contract_satisfied": bool(
+                native_scorer_loop.get("receiver_contract_satisfied")
+            ),
+            "scorer_loop_qat_ready_for_pose_guard_gate": bool(
+                native_scorer_loop.get("ready_for_pose_guard_gate")
+            ),
+            "scorer_loop_qat_accepted_improvement": bool(
+                native_scorer_loop.get("accepted_improvement")
+            ),
+            "scorer_loop_qat_best_materialized": bool(
+                native_scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
             ),
             "native_mlx_train_export_attached": True,
             "native_mlx_full600_campaign_ready": int(num_pairs) >= CONTEST_PAIR_COUNT,
@@ -2102,6 +2132,67 @@ def _pr95_long_campaign_prelaunch_blockers(
             *list(gate.get("blockers") or []),
         ]
     )
+
+
+def _bind_hi_nerv_modelsize_launch_pressure(
+    *,
+    modelsize_candidate: Mapping[str, Any] | None,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    allow_unscored_research_smoke: bool,
+) -> dict[str, Any]:
+    """Return effective scorer weights for a modelsize-conditioned launch."""
+
+    candidate_selected = bool(modelsize_candidate)
+    effective_seg = float(segnet_distillation_weight)
+    effective_pose = float(pose_distillation_weight)
+    mutations: list[dict[str, Any]] = []
+    if candidate_selected and not bool(allow_unscored_research_smoke):
+        if effective_seg == 0.0:
+            effective_seg = HI_NERV_MODELSIZE_DEFAULT_SEGNET_DISTILLATION_WEIGHT
+            mutations.append(
+                {
+                    "field": "segnet_distillation_weight",
+                    "before": float(segnet_distillation_weight),
+                    "after": effective_seg,
+                    "reason": (
+                        "modelsize-conditioned HiNeRV campaigns require a real "
+                        "SegNet teacher; zero remains available only for "
+                        "explicit unscored research smokes"
+                    ),
+                }
+            )
+        if effective_pose == 0.0:
+            effective_pose = HI_NERV_MODELSIZE_DEFAULT_POSE_DISTILLATION_WEIGHT
+            mutations.append(
+                {
+                    "field": "pose_distillation_weight",
+                    "before": float(pose_distillation_weight),
+                    "after": effective_pose,
+                    "reason": (
+                        "modelsize-conditioned HiNeRV campaigns require a real "
+                        "PoseNet teacher; SegNet-only pressure is not a "
+                        "frontier-targeting contest objective"
+                    ),
+                }
+            )
+    source = "caller_supplied"
+    if mutations:
+        source = "modelsize_candidate_minimum_joint_scorer_pressure"
+    elif candidate_selected and not bool(allow_unscored_research_smoke):
+        source = "caller_supplied_modelsize_frontier_pressure"
+    return {
+        "schema": "compact_hi_nerv_modelsize_launch_pressure.v1",
+        "candidate_conditioned": candidate_selected,
+        "allow_unscored_research_smoke": bool(allow_unscored_research_smoke),
+        "segnet_distillation_weight": effective_seg,
+        "pose_distillation_weight": effective_pose,
+        "source": source,
+        "mutations": mutations,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def execute_snerv_inverse_steg_advisory_and_adapt(
@@ -2412,6 +2503,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         receiver_proof_timeout_seconds=int(
             snerv_native_mlx_receiver_proof_timeout_seconds
         ),
+        run_scorer_loop_qat=bool(run_scorer_loop_qat),
+        scorer_loop_qat_max_trials=int(snerv_scorer_loop_max_trials),
+        scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
+        scorer_loop_qat_qat_bits=int(snerv_scorer_loop_qat_bits),
+        scorer_loop_qat_component_guard_mode=(
+            "score_primary"
+        ),
+        scorer_loop_qat_device=str(distillation_device),
     )
     snerv_mlx_native_export_verified = bool(
         snerv_mlx_native_export.get("executed")
@@ -2448,6 +2547,23 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         native_mlx_receiver_proof_passed=snerv_mlx_native_export_verified,
         native_mlx_full600_campaign_ready=bool(
             snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")
+        ),
+        native_mlx_scorer_loop_qat_attached=bool(
+            snerv_mlx_native_export.get("scorer_loop_qat_attached")
+        ),
+        native_mlx_scorer_loop_qat_receiver_contract_satisfied=bool(
+            snerv_mlx_native_export.get(
+                "scorer_loop_qat_receiver_contract_satisfied"
+            )
+        ),
+        native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=bool(
+            snerv_mlx_native_export.get("scorer_loop_qat_ready_for_pose_guard_gate")
+        ),
+        native_mlx_scorer_loop_qat_accepted_improvement=bool(
+            snerv_mlx_native_export.get("scorer_loop_qat_accepted_improvement")
+        ),
+        native_mlx_scorer_loop_qat_best_materialized=bool(
+            snerv_mlx_native_export.get("scorer_loop_qat_best_materialized")
         ),
     )
 
@@ -4007,9 +4123,22 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
-    config_gate = _validate_hi_nerv_frontier_training_config(
+    candidate = dict(modelsize_candidate or {})
+    launch_pressure_binding = _bind_hi_nerv_modelsize_launch_pressure(
+        modelsize_candidate=candidate or None,
         segnet_distillation_weight=segnet_distillation_weight,
         pose_distillation_weight=pose_distillation_weight,
+        allow_unscored_research_smoke=allow_unscored_research_smoke,
+    )
+    effective_segnet_distillation_weight = float(
+        launch_pressure_binding["segnet_distillation_weight"]
+    )
+    effective_pose_distillation_weight = float(
+        launch_pressure_binding["pose_distillation_weight"]
+    )
+    config_gate = _validate_hi_nerv_frontier_training_config(
+        segnet_distillation_weight=effective_segnet_distillation_weight,
+        pose_distillation_weight=effective_pose_distillation_weight,
         allow_segnet_only_research=allow_segnet_only_research,
         allow_unscored_research_smoke=allow_unscored_research_smoke,
         score_aware_training_plan=score_aware_training_plan,
@@ -4033,6 +4162,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "unscored research smoke"
                 ),
                 "score_aware_training_config_gate": config_gate,
+                "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
@@ -4055,7 +4185,6 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         path = out / "compact_renderer_mlx_spine_runner_report.json"
         _write_json(path, refusal)
         return {**refusal, "report_path": path.as_posix()}
-    candidate = dict(modelsize_candidate or {})
     launch_latent_dim = int(candidate.get("latent_dim", latent_dim))
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
     launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
@@ -4088,8 +4217,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         candidate=candidate or None,
         requested_epochs=int(epochs),
         num_pairs=int(num_pairs),
-        segnet_distillation_weight=float(segnet_distillation_weight),
-        pose_distillation_weight=float(pose_distillation_weight),
+        segnet_distillation_weight=effective_segnet_distillation_weight,
+        pose_distillation_weight=effective_pose_distillation_weight,
         coder_aware_qat=bool(coder_aware_qat),
         coder_qat_quant_bits=int(coder_qat_quant_bits),
         recon_pixel_weight_attached=bool(
@@ -4146,6 +4275,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 },
                 "candidate_curriculum_plan": launch_curriculum_plan,
                 "score_aware_training_config_gate": config_gate,
+                "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": prelaunch_blockers,
@@ -4171,8 +4301,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             decoder_channel=launch_decoder_channel,
             decoder_codec=launch_decoder_codec,
             ema_decay=ema_decay,
-            segnet_distillation_weight=segnet_distillation_weight,
-            pose_distillation_weight=pose_distillation_weight,
+            segnet_distillation_weight=effective_segnet_distillation_weight,
+            pose_distillation_weight=effective_pose_distillation_weight,
             segnet_distillation_objective=segnet_distillation_objective,
             distillation_temperature=distillation_temperature,
             segnet_tau_boundary=segnet_tau_boundary,
@@ -4229,6 +4359,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     scorer_upstream
                 ),
                 "score_aware_training_config_gate": config_gate,
+                "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": ["hi_nerv_mlx_scoreaware_or_export_failed"],
@@ -4297,8 +4428,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         candidate=candidate or None,
         requested_epochs=int(epochs),
         num_pairs=int(num_pairs),
-        segnet_distillation_weight=float(segnet_distillation_weight),
-        pose_distillation_weight=float(pose_distillation_weight),
+        segnet_distillation_weight=effective_segnet_distillation_weight,
+        pose_distillation_weight=effective_pose_distillation_weight,
         coder_aware_qat=bool(coder_aware_qat),
         coder_qat_quant_bits=int(coder_qat_quant_bits),
         recon_pixel_weight_attached=bool(
@@ -4330,7 +4461,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     pr95_curriculum_enabled = int(epochs) >= 8
     if not pr95_curriculum_enabled:
         blockers.append("hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs")
-    if segnet_distillation_weight <= 0.0 or pose_distillation_weight <= 0.0:
+    if (
+        effective_segnet_distillation_weight <= 0.0
+        or effective_pose_distillation_weight <= 0.0
+    ):
         blockers.append("hi_nerv_real_segnet_posenet_teachers_not_both_attached")
     blockers.extend(mlx_prefilter_coverage.get("blockers") or [])
     if projection_paths:
@@ -4418,13 +4552,23 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "training_artifact": artifact_dict,
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_training_config_gate": config_gate,
+            "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
             "score_aware_carrier_training_plan": score_aware_training_plan,
             "modelsize_budget_evidence": modelsize_budget_evidence,
             "score_aware_training": {
                 "schema": "compact_hi_nerv_score_aware_training.v1",
                 "status": "executed_mlx_local_false_authority",
-                "segnet_distillation_weight": float(segnet_distillation_weight),
-                "pose_distillation_weight": float(pose_distillation_weight),
+                "requested_segnet_distillation_weight": float(
+                    segnet_distillation_weight
+                ),
+                "requested_pose_distillation_weight": float(
+                    pose_distillation_weight
+                ),
+                "segnet_distillation_weight": (
+                    effective_segnet_distillation_weight
+                ),
+                "pose_distillation_weight": effective_pose_distillation_weight,
+                "modelsize_launch_pressure": launch_pressure_binding,
                 "segnet_distillation_objective": segnet_distillation_objective,
                 "distillation_temperature": float(distillation_temperature),
                 "segnet_tau_boundary": float(segnet_tau_boundary),

@@ -631,9 +631,13 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
             )
             continue
         if unit_type == "snerv_scorer_loop_qat_result":
+            source_unit_id = str(unit.get("unit_id") or "")
+            run_token = _safe_work_order_token(source_unit_id or unit.get("report_path"))
             orders.append(
                 _work_order(
-                    work_order_id=f"scale_{family}_scorer_loop_qat_to_full600",
+                    work_order_id=(
+                        f"scale_{family}_{run_token}_scorer_loop_qat_to_full600"
+                    ),
                     work_order_type="snerv_scorer_loop_qat_full600_followup",
                     target_consumers=[
                         "final_rate_attack",
@@ -644,7 +648,7 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                     planner_action=(
                         "scale_snerv_scorer_loop_qat_to_full600_receiver_proof"
                     ),
-                    source_unit_id=str(unit.get("unit_id") or ""),
+                    source_unit_id=source_unit_id,
                     priority=8,
                     receiver_precision_modes=[
                         "fp16_protected",
@@ -841,6 +845,13 @@ def _nested_candidate_id(master_bridge: Mapping[str, Any]) -> str | None:
         value = candidate.get("candidate_id")
         return str(value) if value else None
     return None
+
+
+def _safe_work_order_token(value: Any) -> str:
+    text = str(value or "").strip()
+    token = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in text)
+    token = "_".join(part for part in token.split("_") if part)
+    return token[:160] or "unknown_run"
 
 
 def _dedupe_work_orders(orders: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:

@@ -213,6 +213,92 @@ def test_master_consumer_bridge_and_cathedral_consumer_are_no_authority() -> Non
     assert registration.contract_compliant, registration.validation_errors
 
 
+def test_master_bridge_consumes_snerv_geometry_units_without_collapsing_runs() -> None:
+    seam = {
+        "schema": "nerv_top_priority_stack_seam.v1",
+        "top_priority_carriers": ["snerv", "hi_nerv"],
+        "baseline_to_beat": "pr95_hnerv_muon",
+        "blockers": [],
+    }
+    control_inventory = {
+        "schema": "nerv_control_inventory.v1",
+        "control_rows": [],
+        "binding_gap_rows": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    implementation_sweep = {
+        "schema": "nerv_implementation_design_sweep.v1",
+        "stack_sweeps": [],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    geometry = {
+        "schema": "snerv_scorer_loop_geometry.v1",
+        "label": "two_run_geometry",
+        "best_descent_score_delta_linf": -0.02,
+        "lowest_local_score_linf": 0.8,
+        "blockers": ["full600_receiver_proof_required"],
+        "allocator_units": [
+            {
+                "unit_type": "snerv_scorer_loop_qat_result",
+                "family": "snerv",
+                "unit_id": "snerv_scorer_loop_qat:one_pair",
+                "report_path": "one.json",
+                "n_pairs": 1,
+                "score_delta_linf": -0.02,
+                "receiver_contract_satisfied": True,
+            },
+            {
+                "unit_type": "snerv_scorer_loop_qat_result",
+                "family": "snerv",
+                "unit_id": "snerv_scorer_loop_qat:four_pair",
+                "report_path": "four.json",
+                "n_pairs": 4,
+                "score_delta_linf": -0.01,
+                "receiver_contract_satisfied": True,
+            },
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    bridge = build_nerv_master_consumer_bridge(
+        seam=seam,
+        control_inventory=control_inventory,
+        implementation_sweep=implementation_sweep,
+        snerv_scorer_loop_geometry=geometry,
+    )
+    units = [
+        unit
+        for unit in bridge["master_consumer_units"]
+        if unit["unit_type"] == "snerv_scorer_loop_qat_result"
+    ]
+    assert len(units) == 2
+    assert all(unit["geometry_report_label"] == "two_run_geometry" for unit in units)
+
+    rate_bridge = build_nerv_rate_allocator_bridge(master_bridge=bridge)
+    orders = [
+        row
+        for row in rate_bridge["rate_allocator_work_orders"]
+        if row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    ]
+    assert len(orders) == 2
+    assert {
+        order["source_unit_id"] for order in orders
+    } == {
+        "snerv_scorer_loop_qat:one_pair",
+        "snerv_scorer_loop_qat:four_pair",
+    }
+    assert {
+        order["payload"]["n_pairs"] for order in orders
+    } == {1, 4}
+
+
 def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     rate_bridge = _synthetic_rate_bridge()
 
@@ -244,7 +330,10 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     assert "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill" in orders
     assert "compile_snerv_snerv_local_tiny_decoder_modes_to_receiver" in orders
     assert "replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust" in orders
-    assert "scale_snerv_scorer_loop_qat_to_full600" in orders
+    assert any(
+        row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+        for row in orders.values()
+    )
     zero_order = orders["route_bitmask_and_zero_packing_to_rate_allocator"]
     assert {"zero", "rle_only", "int2", "int4"} <= set(
         zero_order["receiver_precision_modes"]
@@ -308,7 +397,11 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
         probe_order["payload"]["receiver_archive_packet_is_contest_archive_zip"]
         is False
     )
-    qat_order = orders["scale_snerv_scorer_loop_qat_to_full600"]
+    qat_order = next(
+        row
+        for row in orders.values()
+        if row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    )
     assert qat_order["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
     assert qat_order["payload"]["n_pairs"] == 1
     assert qat_order["payload"]["history_count"] == 1
@@ -479,7 +572,11 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         drift_row["planner_ingest"]["local_backend_output_is_promotion_authority"]
         is False
     )
-    qat_row = rows["scale_snerv_scorer_loop_qat_to_full600"]
+    qat_row = next(
+        row
+        for row in rows.values()
+        if row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    )
     assert (
         qat_row["planner_ingest"]["ingest_kind"]
         == "snerv_scorer_loop_qat_full600_followup"
@@ -983,7 +1080,11 @@ def _write_local_sources(repo_root: Path) -> None:
             repo_root / rel,
             (
                 "sketch l0 not_source_faithful SegNet PoseNet score quant "
-                "noise coder master_gradient VJP linf archive receiver bytes"
+                "noise coder master_gradient VJP linf archive receiver bytes "
+                "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF "
+                "apply_decoder_pruning apply_decoder_quant_noise "
+                "measure_hi_nerv_decoder_bitstream_roundtrip "
+                "select_hi_nerv_bitstream_codec_by_scorer_waterfill"
             ),
         )
 

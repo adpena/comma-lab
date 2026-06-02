@@ -53,27 +53,51 @@ from .architecture import (
 )
 from .archive import (
     HinervArchive,
+    HinervArchiveSections,
     pack_archive,
     parse_archive,
+    repack_archive_decoder_codec,
+    split_archive_sections,
 )
 from .archive_candidate import (
     export_hi_nerv_mlx_archive,
     export_hi_nerv_mlx_archive_bound_candidate_package,
     pack_archive_from_exported_state_dict,
 )
+from .bitstream import (
+    HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE,
+    HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA,
+    HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF,
+    apply_decoder_pruning,
+    apply_decoder_quant_noise,
+    measure_hi_nerv_decoder_bitstream_roundtrip,
+    prepare_hi_nerv_decoder_bitstream_state,
+    select_hi_nerv_bitstream_codec_by_scorer_waterfill,
+)
 from .score_aware_loss import HinervScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
+    "HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE",
+    "HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA",
+    "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
     "HinervArchive",
+    "HinervArchiveSections",
     "HinervConfig",
     "HinervScoreAwareLoss",
     "HinervSubstrate",
     "ScoreAwareLossWeights",
+    "apply_decoder_pruning",
+    "apply_decoder_quant_noise",
     "expected_decoder_state_shapes",
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
+    "measure_hi_nerv_decoder_bitstream_roundtrip",
     "pack_archive",
     "pack_archive_from_exported_state_dict",
     "parse_archive",
+    "prepare_hi_nerv_decoder_bitstream_state",
+    "repack_archive_decoder_codec",
+    "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
+    "split_archive_sections",
     "validate_decoder_state_dict",
 ]

@@ -104,8 +104,103 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert report["archive_path"] is None
     assert report["receiver_proof_passed"] is False
     assert "snerv_mlx_score_aware_long_training_not_executed" in report["blockers"]
+    assert "snerv_real_segnet_posenet_teacher_loop_not_attached" in report["blockers"]
+    assert report["scorer_loop_qat"]["requested"] is False
     frames = decode_snerv_archive_frames(packet_path.read_bytes())
     assert frames.shape == (1, 2, 3, 16, 16)
+
+
+def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    class FakeQatResult:
+        def as_jsonable(self) -> dict:
+            return {
+                "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "n_pairs": 1,
+                "scorer_loop_evaluations": 2,
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "baseline": {
+                    "archive_bytes": 111,
+                    "archive_sha256": "1" * 64,
+                    "score_linf": 3.0,
+                },
+                "best": {
+                    "archive_bytes": 109,
+                    "archive_sha256": "2" * 64,
+                    "score_linf": 2.5,
+                },
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+    captured: dict[str, object] = {}
+
+    def fake_run_qat(**kwargs):
+        captured.update(kwargs)
+        return FakeQatResult()
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(qat_mod, "run_snerv_scorer_loop_decoder_qat_smoke", fake_run_qat)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path,
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 5,
+            "snerv_mfu_scales": (1, 2),
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        run_scorer_loop_qat=True,
+        scorer_loop_qat_max_trials=1,
+        scorer_loop_qat_search_mode="top_weight_coordinate",
+        scorer_loop_qat_qat_bits=4,
+    )
+
+    assert captured["n_pairs"] == 1
+    assert captured["max_trials"] == 1
+    assert captured["qat_bits"] == 4
+    assert captured["snerv_fc_dim"] == 5
+    assert captured["snerv_mfu_scales"] == (1, 2)
+    scorer_loop = report["scorer_loop_qat"]
+    assert scorer_loop["requested"] is True
+    assert scorer_loop["executed"] is True
+    assert scorer_loop["receiver_contract_satisfied"] is True
+    assert scorer_loop["accepted_improvement"] is True
+    assert scorer_loop["best_archive_sha256"] == "2" * 64
+    assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report[
+        "blockers"
+    ]
+    assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" in report[
+        "blockers"
+    ]
+    assert "snerv_scorer_loop_qat_not_full_video" in report["blockers"]
+    assert report["score_claim"] is False
 
 
 def test_prefilter_profile_is_false_authority_until_component_scores_exist(

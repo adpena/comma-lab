@@ -129,7 +129,7 @@ def test_adapter_rejects_invalid_optimizer_kind(minimal_bundle, adapter_kwargs):
     """Unknown optimizer_kind is rejected."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
-    with pytest.raises(ValueError, match="optimizer_kind must be 'adamw' or 'rmsprop'"):
+    with pytest.raises(ValueError, match="optimizer_kind must be one of"):
         MlxScoreAwareAdapter(
             minimal_bundle, optimizer_kind="sgd", **adapter_kwargs
         )
@@ -211,6 +211,46 @@ def test_build_optimizer_rmsprop_kind_returns_rmsprop(
     )
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
     assert isinstance(opt, mlx_optim.RMSprop)
+
+
+def test_build_optimizer_lion_kind_returns_native_lion(
+    minimal_bundle, adapter_kwargs
+):
+    """optimizer_kind='lion' routes through native mlx.optimizers.Lion."""
+    import mlx.optimizers as mlx_optim
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        optimizer_kind="lion",
+        weight_decay=1.0e-4,
+        **adapter_kwargs,
+    )
+    opt = a._build_wave_n11_optimizer(learning_rate=1e-4)
+    assert isinstance(opt, mlx_optim.Lion)
+    assert opt.weight_decay == pytest.approx(1.0e-4)
+
+
+def test_build_optimizer_adafactor_honors_explicit_curriculum_lr(
+    minimal_bundle, adapter_kwargs
+):
+    """Adafactor is pinned out of hidden relative-step scheduling."""
+    import mlx.optimizers as mlx_optim
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        optimizer_kind="adafactor",
+        weight_decay=1.0e-5,
+        **adapter_kwargs,
+    )
+    opt = a._build_wave_n11_optimizer(learning_rate=3.0e-4)
+    assert isinstance(opt, mlx_optim.Adafactor)
+    assert opt.relative_step is False
+    assert opt.scale_parameter is False
+    assert opt.weight_decay == pytest.approx(1.0e-5)
 
 
 def test_build_optimizer_warmup_only_uses_linear_schedule(

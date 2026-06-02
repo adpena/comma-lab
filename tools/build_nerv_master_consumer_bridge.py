@@ -34,6 +34,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--control-inventory", type=Path, required=True)
     parser.add_argument("--implementation-sweep", type=Path, required=True)
     parser.add_argument("--modelsize-curve", type=Path)
+    parser.add_argument("--snerv-scorer-loop-geometry", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument(
         "--allow-overwrite",
@@ -59,6 +60,11 @@ def main(argv: list[str] | None = None) -> int:
         control_inventory=_load(args.control_inventory),
         implementation_sweep=_load(args.implementation_sweep),
         modelsize_curve=_load(args.modelsize_curve) if args.modelsize_curve else None,
+        snerv_scorer_loop_geometry=(
+            _load(args.snerv_scorer_loop_geometry)
+            if args.snerv_scorer_loop_geometry
+            else None
+        ),
     )
     out_path = args.out or _default_out()
     if not out_path.is_absolute():

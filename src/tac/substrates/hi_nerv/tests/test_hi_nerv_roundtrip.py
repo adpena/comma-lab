@@ -24,6 +24,12 @@ from tac.substrates.hi_nerv.archive import (
     HIV1_SCHEMA_VERSION,
     pack_archive,
     parse_archive,
+    repack_archive_decoder_codec,
+    split_archive_sections,
+)
+from tac.substrates.hi_nerv.bitstream import (
+    measure_hi_nerv_decoder_bitstream_roundtrip,
+    prepare_hi_nerv_decoder_bitstream_state,
 )
 from tac.substrates.hi_nerv.inflate import build_model_from_archive
 
@@ -297,6 +303,66 @@ def test_byte_mutation_changes_inflate_output_no_op_proof():
     assert not torch.allclose(arc_a.latents_fine[0, 0], arc_b.latents_fine[0, 0], atol=1e-6)
     # Coarse + mid latents are unchanged
     assert torch.allclose(arc_a.latents_coarse, arc_b.latents_coarse, atol=1e-6)
+
+
+def test_decoder_bitstream_preparation_and_repack_are_receiver_visible():
+    cfg = _smoke_cfg()
+    torch.manual_seed(7)
+    model = HinervSubstrate(cfg).eval()
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v.clone()
+        for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+
+    prepared = prepare_hi_nerv_decoder_bitstream_state(
+        decoder_sd,
+        pruning_ratio=0.25,
+        quant_noise_bits=4,
+        quant_noise_scale=0.1,
+        quant_noise_seed=123,
+    )
+
+    assert prepared.report["shape_preserved"] is True
+    assert prepared.report["pruning"]["actual_new_zero_values"] > 0
+    assert prepared.report["quant_noise"]["changed_tensor_count"] > 0
+    assert any(
+        not torch.equal(prepared.state_dict[name], decoder_sd[name])
+        for name in decoder_sd
+    )
+
+    blob = pack_archive(
+        prepared.state_dict,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        _smoke_meta(cfg),
+        decoder_codec="int8_mixed",
+    )
+    original_sections = split_archive_sections(blob)
+    repacked = repack_archive_decoder_codec(blob, decoder_codec="int4_mixed")
+    repacked_sections = split_archive_sections(repacked)
+
+    assert repacked != blob
+    assert repacked_sections.latents_coarse_blob == original_sections.latents_coarse_blob
+    assert repacked_sections.latents_mid_blob == original_sections.latents_mid_blob
+    assert repacked_sections.latents_fine_blob == original_sections.latents_fine_blob
+    assert repacked_sections.meta["_decoder_state_codec"]["codec"] == "int4_mixed"
+    assert parse_archive(repacked).latents_fine.shape == sd["latents_fine"].shape
+
+    roundtrip = measure_hi_nerv_decoder_bitstream_roundtrip(
+        decoder_sd,
+        decoder_codecs=("int8_mixed", "int4_mixed"),
+        pruning_ratio=0.10,
+        quant_noise_bits=4,
+        quant_noise_scale=0.05,
+        quant_noise_seed=321,
+    )
+    assert roundtrip["score_claim"] is False
+    assert len(roundtrip["rows"]) == 2
+    assert roundtrip["best_row"]["shape_preserved"] is True
+    assert roundtrip["best_row"]["roundtrip_error"]["missing"] == []
 
 
 def test_forward_pass_produces_unit_interval_rgb():

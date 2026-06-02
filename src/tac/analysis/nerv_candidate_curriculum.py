@@ -304,6 +304,11 @@ def build_snerv_candidate_curriculum_plan(
     native_mlx_train_export_attached: bool = False,
     native_mlx_receiver_proof_passed: bool = False,
     native_mlx_full600_campaign_ready: bool = False,
+    native_mlx_scorer_loop_qat_attached: bool = False,
+    native_mlx_scorer_loop_qat_receiver_contract_satisfied: bool = False,
+    native_mlx_scorer_loop_qat_ready_for_pose_guard_gate: bool = False,
+    native_mlx_scorer_loop_qat_accepted_improvement: bool = False,
+    native_mlx_scorer_loop_qat_best_materialized: bool = False,
 ) -> dict[str, Any]:
     """Bind a SNeRV receiver-grammar candidate to byte feedback and blockers."""
 
@@ -311,6 +316,38 @@ def build_snerv_candidate_curriculum_plan(
     native_contract = build_snerv_mlx_native_adapter_contract()
     native_export_verified = bool(
         native_mlx_train_export_attached and native_mlx_receiver_proof_passed
+    )
+    standalone_scorer_loop_attached = bool(scorer_loop_qat_attached)
+    native_scorer_loop_attached = bool(native_mlx_scorer_loop_qat_attached)
+    effective_scorer_loop_attached = bool(
+        standalone_scorer_loop_attached or native_scorer_loop_attached
+    )
+    effective_scorer_loop_receiver_contract = bool(
+        (
+            standalone_scorer_loop_attached
+            and scorer_loop_qat_receiver_contract_satisfied
+        )
+        or (
+            native_scorer_loop_attached
+            and native_mlx_scorer_loop_qat_receiver_contract_satisfied
+        )
+    )
+    effective_scorer_loop_pose_guard = bool(
+        (
+            standalone_scorer_loop_attached
+            and scorer_loop_qat_ready_for_pose_guard_gate
+        )
+        or (
+            native_scorer_loop_attached
+            and native_mlx_scorer_loop_qat_ready_for_pose_guard_gate
+        )
+    )
+    effective_scorer_loop_accepted = bool(
+        (standalone_scorer_loop_attached and scorer_loop_qat_accepted_improvement)
+        or (
+            native_scorer_loop_attached
+            and native_mlx_scorer_loop_qat_accepted_improvement
+        )
     )
     candidate_selected = bool(candidate_row)
     full_video = int(num_pairs) >= 600
@@ -350,11 +387,16 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("snerv_mlx_native_adapter_surfaces_present_but_unproven")
     if native_mlx_train_export_attached and not native_mlx_receiver_proof_passed:
         blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
-    if not scorer_loop_qat_attached:
+    if not effective_scorer_loop_attached:
         blockers.append("snerv_scorer_loop_qat_not_attached")
     blockers.append("snerv_score_aware_curriculum_not_native_mlx_yet")
     if not native_mlx_full600_campaign_ready:
         blockers.append("snerv_mlx_native_full600_campaign_not_ready")
+    if (
+        native_scorer_loop_attached
+        and not native_mlx_scorer_loop_qat_best_materialized
+    ):
+        blockers.append("snerv_native_scorer_loop_best_packet_not_materialized")
     if not candidate_selected:
         blockers.append("snerv_modelsize_candidate_not_selected_manual_probe")
     if not full_video:
@@ -369,21 +411,21 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("partial_pair_byte_feedback_only")
     elif candidate_selected and not byte_feedback["feedback_ready"]:
         blockers.append("snerv_snar1_byte_feedback_missing")
-    if scorer_loop_qat_attached:
-        if not scorer_loop_qat_receiver_contract_satisfied:
+    if effective_scorer_loop_attached:
+        if not effective_scorer_loop_receiver_contract:
             blockers.append("snerv_scorer_loop_qat_receiver_contract_failed")
-        if not scorer_loop_qat_ready_for_pose_guard_gate:
+        if not effective_scorer_loop_pose_guard:
             blockers.append("snerv_scorer_loop_qat_pose_guard_not_ready")
-        if not scorer_loop_qat_accepted_improvement:
+        if not effective_scorer_loop_accepted:
             blockers.append("snerv_scorer_loop_qat_no_accepted_improvement")
     pr95_binding = build_pr95_stack_binding_requirements(
         family="snerv",
         evidence=build_pr95_stack_binding_evidence(
             modelsize_archive_budget=candidate_selected,
-            real_segnet_teacher=bool(scorer_loop_qat_attached),
-            real_posenet_teacher=bool(scorer_loop_qat_attached),
-            qat_forward=bool(scorer_loop_qat_attached),
-            coder_aware_regularizer=bool(scorer_loop_qat_attached),
+            real_segnet_teacher=effective_scorer_loop_attached,
+            real_posenet_teacher=effective_scorer_loop_attached,
+            qat_forward=effective_scorer_loop_attached,
+            coder_aware_regularizer=effective_scorer_loop_attached,
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
             receiver_proof=bool(receiver_proof_attached),
@@ -429,15 +471,29 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_export_full600_campaign_ready": bool(
                 native_mlx_full600_campaign_ready
             ),
-            "scorer_loop_qat_attached": bool(scorer_loop_qat_attached),
+            "scorer_loop_qat_attached": effective_scorer_loop_attached,
+            "standalone_scorer_loop_qat_attached": standalone_scorer_loop_attached,
             "scorer_loop_qat_receiver_contract_satisfied": bool(
-                scorer_loop_qat_receiver_contract_satisfied
+                effective_scorer_loop_receiver_contract
             ),
             "scorer_loop_qat_ready_for_pose_guard_gate": bool(
-                scorer_loop_qat_ready_for_pose_guard_gate
+                effective_scorer_loop_pose_guard
             ),
             "scorer_loop_qat_accepted_improvement": bool(
-                scorer_loop_qat_accepted_improvement
+                effective_scorer_loop_accepted
+            ),
+            "native_mlx_scorer_loop_qat_attached": native_scorer_loop_attached,
+            "native_mlx_scorer_loop_qat_receiver_contract_satisfied": bool(
+                native_mlx_scorer_loop_qat_receiver_contract_satisfied
+            ),
+            "native_mlx_scorer_loop_qat_ready_for_pose_guard_gate": bool(
+                native_mlx_scorer_loop_qat_ready_for_pose_guard_gate
+            ),
+            "native_mlx_scorer_loop_qat_accepted_improvement": bool(
+                native_mlx_scorer_loop_qat_accepted_improvement
+            ),
+            "native_mlx_scorer_loop_qat_best_materialized": bool(
+                native_mlx_scorer_loop_qat_best_materialized
             ),
             "receiver_proof_attached": bool(receiver_proof_attached),
             "full_video_local_prefilter_attached": bool(

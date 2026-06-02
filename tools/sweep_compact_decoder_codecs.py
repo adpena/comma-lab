@@ -28,7 +28,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument(
         "--family",
-        choices=("auto", "pact_nerv_vq", "pact_nerv_selector_v4"),
+        choices=("auto", "pact_nerv_vq", "pact_nerv_selector_v4", "hi_nerv"),
         default="auto",
     )
     parser.add_argument(

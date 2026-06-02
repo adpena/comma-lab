@@ -2752,6 +2752,96 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     }
 
 
+def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_auto_score_pressure",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        modelsize_candidate={
+            "schema": "hinerv_modelsize_candidate.v1",
+            "family": "hi_nerv",
+            "candidate_id": "hinerv-auto-score-pressure",
+            "latent_dim": 12,
+            "embed_dim": 16,
+            "decoder_channel": 6,
+            "decoder_codec": "int4_mixed",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 160_000,
+            "nominal_under_ceiling": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["segnet_distillation_weight"] == 1.0
+    assert captured_train_kwargs["pose_distillation_weight"] == 1.0
+    assert captured_train_kwargs["coder_aware_qat"] is True
+    assert captured_train_kwargs["coder_qat_quant_bits"] == 4
+    plan = captured_train_kwargs["candidate_curriculum_plan"]
+    assert "hinerv_candidate_curriculum_requires_real_segnet_teacher" not in plan[
+        "blockers"
+    ]
+    assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in plan[
+        "blockers"
+    ]
+    binding = out["hi_nerv_modelsize_launch_pressure"]
+    assert binding["source"] == "modelsize_candidate_minimum_joint_scorer_pressure"
+    assert {row["field"] for row in binding["mutations"]} == {
+        "segnet_distillation_weight",
+        "pose_distillation_weight",
+    }
+    assert out["score_aware_training"]["requested_segnet_distillation_weight"] == 0.0
+    assert out["score_aware_training"]["requested_pose_distillation_weight"] == 0.0
+    assert out["score_aware_training"]["segnet_distillation_weight"] == 1.0
+    assert out["score_aware_training"]["pose_distillation_weight"] == 1.0
+    assert out["score_aware_training_config_gate"]["frontier_targeting"] is True
+    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out[
+        "blockers"
+    ]
+    assert "hinerv_candidate_curriculum_requires_real_segnet_teacher" not in out[
+        "blockers"
+    ]
+    assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in out[
+        "blockers"
+    ]
+
+
 @pytest.mark.skipif(
     not _MLX_AVAILABLE or not _AV_AVAILABLE,
     reason="MLX and PyAV runtime video decode are required for HiNeRV adapter smoke",
@@ -3186,6 +3276,13 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
+            "scorer_loop_qat": {
+                "executed": bool(kwargs.get("run_scorer_loop_qat")),
+                "receiver_contract_satisfied": bool(kwargs.get("run_scorer_loop_qat")),
+                "ready_for_pose_guard_gate": bool(kwargs.get("run_scorer_loop_qat")),
+                "accepted_improvement": bool(kwargs.get("run_scorer_loop_qat")),
+                "emitted_packet_uses_scorer_loop_best_decoder": False,
+            },
             "num_pairs": int(kwargs["num_pairs"]),
             "blockers": [
                 "snerv_mlx_score_aware_long_training_not_executed",
@@ -3198,9 +3295,36 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         report.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
         return payload
 
+    class FakeQatResult:
+        def as_jsonable(self) -> dict[str, object]:
+            return {
+                "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "n_pairs": 2,
+                "scorer_loop_evaluations": 1,
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "baseline": {
+                    "archive_bytes": len(packet),
+                    "archive_sha256": "3" * 64,
+                    "score_linf": 12.0,
+                },
+                "best": {
+                    "archive_bytes": len(packet) - 1,
+                    "archive_sha256": "4" * 64,
+                    "score_linf": 11.0,
+                },
+                "blockers": ["local_smoke_only_not_full_600_pairs"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
     import tac.substrates.snerv_inverse_steg_carrier.advisory as advisory_mod
     import tac.substrates.snerv_inverse_steg_carrier.archive_candidate as package_mod
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as native_mod
+    import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
 
     monkeypatch.setattr(advisory_mod, "run_snerv_advisory", fake_run_snerv_advisory)
     monkeypatch.setattr(
@@ -3212,6 +3336,11 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         native_mod,
         "train_export_snerv_mlx_native",
         fake_train_export_snerv_mlx_native,
+    )
+    monkeypatch.setattr(
+        qat_mod,
+        "run_snerv_scorer_loop_decoder_qat_smoke",
+        lambda **_kwargs: FakeQatResult(),
     )
 
     out = execute_snerv_inverse_steg_advisory_and_adapt(
@@ -3233,21 +3362,42 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "nominal_under_ceiling": True,
         },
         run_native_mlx_export=True,
+        run_scorer_loop_qat=True,
+        snerv_scorer_loop_max_trials=1,
+        snerv_scorer_loop_search_mode="top_weight_coordinate",
+        snerv_scorer_loop_qat_bits=4,
         repo_root=REPO_ROOT,
     )
 
     assert native_calls
     assert native_calls[0]["num_pairs"] == 2
+    assert native_calls[0]["run_scorer_loop_qat"] is True
+    assert native_calls[0]["scorer_loop_qat_max_trials"] == 1
+    assert native_calls[0]["scorer_loop_qat_search_mode"] == "top_weight_coordinate"
+    assert native_calls[0]["scorer_loop_qat_qat_bits"] == 4
     native = out["snerv_mlx_native_export"]
     assert native["executed"] is True
     assert native["receiver_proof_passed"] is True
     assert native["receiver_contract_satisfied"] is True
+    assert native["scorer_loop_qat_attached"] is True
+    assert native["scorer_loop_qat_receiver_contract_satisfied"] is True
+    assert native["scorer_loop_qat_ready_for_pose_guard_gate"] is True
+    assert native["scorer_loop_qat_accepted_improvement"] is True
+    assert native["scorer_loop_qat_best_materialized"] is False
     assert Path(native["artifact_report_path"]).is_file()
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
     assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is True
     plan = out["candidate_curriculum_plan"]
     assert plan["training_plan"]["native_mlx_train_export_attached"] is True
     assert plan["training_plan"]["native_mlx_receiver_proof_passed"] is True
+    assert plan["training_plan"]["native_mlx_scorer_loop_qat_attached"] is True
+    assert plan["training_plan"]["scorer_loop_qat_attached"] is True
+    assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
+    assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
+        "blockers"
+    ]
     assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" not in plan[
         "blockers"
     ]

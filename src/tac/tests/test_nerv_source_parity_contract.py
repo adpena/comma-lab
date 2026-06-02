@@ -32,24 +32,48 @@ def test_hinerv_generic_resize_path_is_no_longer_a_source_parity_blocker() -> No
     assert "hi_nerv_generic_resolution_path_missing" not in report["blockers"]
 
 
-def test_hinerv_grid_convnext_is_bound_but_bitstream_pipeline_still_blocks() -> None:
+def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> None:
     report = build_nerv_source_parity_contract(
         repo_root=REPO_ROOT,
         families=("hi_nerv",),
     )
     rows = {row["feature_id"]: row for row in report["feature_rows"]}
 
-    assert report["required_for_long_training_ready"] is False
+    assert report["required_for_long_training_ready"] is True
     assert "hi_nerv_official_feature_grid_convnext_trilinear_missing" not in report[
         "blockers"
     ]
-    assert "hi_nerv_prune_quantnoise_torchac_pipeline_missing" in report["blockers"]
+    assert "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline_missing" not in report[
+        "blockers"
+    ]
+    assert "hi_nerv_official_torchac_entropy_coder_missing" not in report["blockers"]
     assert rows["hi_nerv_official_feature_grid_convnext_trilinear"]["status"] == (
         "implemented_or_bound"
     )
-    assert rows["hi_nerv_official_prune_quantnoise_torchac_pipeline"]["status"] == (
-        "missing_or_partial"
+    assert rows["hi_nerv_prune_quantnoise_receiver_bitstream_pipeline"]["status"] == (
+        "implemented_or_bound"
     )
+    assert rows["hi_nerv_official_torchac_entropy_coder_parity"]["status"] == (
+        "implemented_or_bound"
+    )
+    assert rows["hi_nerv_official_torchac_entropy_coder_parity"][
+        "required_for_long_training"
+    ] is False
+    present_symbols = {
+        symbol["symbol"]
+        for symbol in rows["hi_nerv_prune_quantnoise_receiver_bitstream_pipeline"][
+            "symbol_rows"
+        ]
+        if symbol["status"] == "present"
+    }
+    assert {
+        "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+        "apply_decoder_pruning",
+        "apply_decoder_quant_noise",
+        "measure_hi_nerv_decoder_bitstream_roundtrip",
+        "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
+        "repack_archive_decoder_codec",
+    }.issubset(present_symbols)
 
 
 def test_snerv_spectra_preserving_adapter_is_local_not_official_parity() -> None:

@@ -36,6 +36,9 @@ from tac.substrates._shared.pact_nerv_full_main import (
 )
 from tac.substrates.hi_nerv.architecture import validate_decoder_state_dict
 from tac.substrates.hi_nerv.archive import pack_archive
+from tac.substrates.hi_nerv.bitstream import (
+    prepare_hi_nerv_decoder_bitstream_state,
+)
 from tac.substrates.hprc.representation_spine import (
     build_hi_nerv_spine_from_archive_payload,
     write_representation_spine_projection,
@@ -155,7 +158,12 @@ def pack_archive_from_exported_state_dict(
     exported_state_dict: dict[str, np.ndarray],
     cfg: HinervConfig,
     decoder_codec: str = "int8_mixed",
-) -> bytes:
+    pruning_ratio: float = 0.0,
+    quant_noise_bits: int | None = None,
+    quant_noise_scale: float = 0.0,
+    quant_noise_seed: int = 0,
+    return_bitstream_report: bool = False,
+) -> bytes | tuple[bytes, dict[str, Any]]:
     """Pack PyTorch-layout exported MLX tensors into HIV1 ``0.bin`` bytes."""
 
     latents_coarse = _require_exported_tensor(exported_state_dict, "latents_coarse")
@@ -188,15 +196,28 @@ def pack_archive_from_exported_state_dict(
         cfg,
         context="hi_nerv_exported_decoder_state",
     )
-
-    return pack_archive(
+    prepared = prepare_hi_nerv_decoder_bitstream_state(
         decoder_state,
+        pruning_ratio=pruning_ratio,
+        quant_noise_bits=quant_noise_bits,
+        quant_noise_scale=quant_noise_scale,
+        quant_noise_seed=quant_noise_seed,
+    )
+
+    blob = pack_archive(
+        prepared.state_dict,
         latents_coarse,
         latents_mid,
         latents_fine,
-        hi_nerv_meta_from_config(cfg),
+        {
+            **hi_nerv_meta_from_config(cfg),
+            "_hi_nerv_bitstream_preparation": prepared.report,
+        },
         decoder_codec=decoder_codec,
     )
+    if return_bitstream_report:
+        return blob, prepared.report
+    return blob
 
 
 def export_hi_nerv_mlx_archive(
@@ -209,6 +230,10 @@ def export_hi_nerv_mlx_archive(
     mlx_triage_argv: Sequence[str] | None = None,
     decoder_codec: str = "int8_mixed",
     source_backend: str = "mlx",
+    pruning_ratio: float = 0.0,
+    quant_noise_bits: int | None = None,
+    quant_noise_scale: float = 0.0,
+    quant_noise_seed: int = 0,
 ) -> tuple[Path, str, int]:
     """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``."""
 
@@ -230,10 +255,15 @@ def export_hi_nerv_mlx_archive(
             source_backend=source_backend,
         )
     )
-    bin_bytes = pack_archive_from_exported_state_dict(
+    bin_bytes, bitstream_report = pack_archive_from_exported_state_dict(
         exported_state_dict=exported_state_dict,
         cfg=cfg,
         decoder_codec=decoder_codec,
+        pruning_ratio=pruning_ratio,
+        quant_noise_bits=quant_noise_bits,
+        quant_noise_scale=quant_noise_scale,
+        quant_noise_seed=quant_noise_seed,
+        return_bitstream_report=True,
     )
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
@@ -268,6 +298,7 @@ def export_hi_nerv_mlx_archive(
                 "emitted_by": "export_hi_nerv_mlx_archive",
                 "archive_bytes_are_authority_for_rate": True,
                 "decoder_codec": decoder_codec,
+                "hi_nerv_bitstream_preparation": bitstream_report,
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge": {
                     "artifact_path": npz_bridge_manifest["artifact_path"],
@@ -303,6 +334,7 @@ def export_hi_nerv_mlx_archive(
                 "schema": "hi_nerv_mlx_runtime_adapter_manifest.v1",
                 "latent_pyramid": ["coarse", "mid", "fine"],
                 "decoder_codec": decoder_codec,
+                "hi_nerv_bitstream_preparation": bitstream_report,
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge_manifest": npz_bridge_manifest,
                 "mlx_numpy_portability_contract": (
@@ -327,6 +359,10 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     mlx_triage_argv: Sequence[str] | None = None,
     decoder_codec: str = "int8_mixed",
     source_backend: str = "mlx",
+    pruning_ratio: float = 0.0,
+    quant_noise_bits: int | None = None,
+    quant_noise_scale: float = 0.0,
+    quant_noise_seed: int = 0,
 ) -> dict[str, Any]:
     """Export HiNeRV MLX bytes and emit the shared candidate package."""
 
@@ -337,6 +373,10 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         emit_archive_bound_candidate_package=False,
         decoder_codec=decoder_codec,
         source_backend=source_backend,
+        pruning_ratio=pruning_ratio,
+        quant_noise_bits=quant_noise_bits,
+        quant_noise_scale=quant_noise_scale,
+        quant_noise_seed=quant_noise_seed,
     )
     root = (
         Path(repo_root)

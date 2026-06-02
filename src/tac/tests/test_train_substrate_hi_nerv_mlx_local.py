@@ -196,11 +196,12 @@ def test_hinerv_mlx_trainer_parser_requires_mode() -> None:
 
 
 def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
-    args = _build_parser().parse_args(
-        ["--full", "--optimizer-kind", "rmsprop"]
-    )
+    for optimizer_kind in ("rmsprop", "lion", "adafactor"):
+        args = _build_parser().parse_args(
+            ["--full", "--optimizer-kind", optimizer_kind]
+        )
+        assert args.optimizer_kind == optimizer_kind
 
-    assert args.optimizer_kind == "rmsprop"
     with pytest.raises(SystemExit):
         _build_parser().parse_args(["--full", "--optimizer-kind", "muon"])
 

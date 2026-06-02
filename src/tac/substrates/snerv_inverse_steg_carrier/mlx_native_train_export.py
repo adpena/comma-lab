@@ -95,6 +95,7 @@ class SnervMlxNativeArtifact:
     model_size: dict[str, Any]
     bridge_drift: dict[str, Any]
     scorer_custody: dict[str, Any]
+    scorer_loop_qat: dict[str, Any]
     storage_preflight: dict[str, Any]
     archive_package: dict[str, Any] | None
     archive_path: str | None
@@ -128,6 +129,12 @@ def train_export_snerv_mlx_native(
     run_archive_export: bool = True,
     retain_receiver_output: bool = False,
     receiver_proof_timeout_seconds: int = 1800,
+    run_scorer_loop_qat: bool = False,
+    scorer_loop_qat_max_trials: int = 0,
+    scorer_loop_qat_search_mode: str = "random_signed",
+    scorer_loop_qat_qat_bits: int = 8,
+    scorer_loop_qat_component_guard_mode: str = "score_primary",
+    scorer_loop_qat_device: str = "cpu",
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     """Hydrate real targets on MLX, export a NumPy-portable SNAR1 archive.
@@ -222,14 +229,31 @@ def train_export_snerv_mlx_native(
         n_pairs=int(num_pairs),
         packet_bytes=int(archive.total_bytes),
     )
+    scorer_loop_qat = _run_scorer_loop_qat_attachment(
+        requested=bool(run_scorer_loop_qat),
+        output_dir=out / "snerv_scorer_loop_qat",
+        num_pairs=int(num_pairs),
+        source_video_path=source_video_path,
+        scorer_upstream_dir=scorer_upstream_dir,
+        levels=levels,
+        wavelet=wavelet,
+        target_bits_per_coeff=target_bits_per_coeff,
+        model_size=model_size,
+        max_trials=int(scorer_loop_qat_max_trials),
+        search_mode=str(scorer_loop_qat_search_mode),
+        qat_bits=int(scorer_loop_qat_qat_bits),
+        component_guard_mode=str(scorer_loop_qat_component_guard_mode),
+        device=str(scorer_loop_qat_device),
+        allow_overwrite=allow_overwrite,
+    )
     package: dict[str, Any] | None = None
     blockers = [
         "snerv_mlx_score_aware_long_training_not_executed",
-        "snerv_real_segnet_posenet_teacher_loop_not_attached",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
     if scorer_custody.get("contract_valid") is not True:
         blockers.append("snerv_mlx_native_scorer_custody_contract_invalid")
+    blockers.extend(_scorer_loop_qat_blockers(scorer_loop_qat, num_pairs=int(num_pairs)))
     if run_archive_export:
         if storage_preflight["preflight_passed"] is not True:
             blockers.append("snerv_mlx_native_receiver_proof_storage_preflight_failed")
@@ -261,6 +285,7 @@ def train_export_snerv_mlx_native(
         model_size=model_size.as_jsonable(),
         bridge_drift=bridge,
         scorer_custody=scorer_custody,
+        scorer_loop_qat=scorer_loop_qat,
         storage_preflight=storage_preflight,
         archive_package=package,
         archive_path=(
@@ -389,6 +414,155 @@ def write_snerv_mlx_receiver_proof(
     )
     proof["snerv_mlx_native_storage_preflight"] = storage
     return proof
+
+
+def _run_scorer_loop_qat_attachment(
+    *,
+    requested: bool,
+    output_dir: str | Path,
+    num_pairs: int,
+    source_video_path: str | Path,
+    scorer_upstream_dir: str | Path,
+    levels: int,
+    wavelet: str,
+    target_bits_per_coeff: float,
+    model_size: SnervModelSizeConfig,
+    max_trials: int,
+    search_mode: str,
+    qat_bits: int,
+    component_guard_mode: str,
+    device: str,
+    allow_overwrite: bool,
+) -> dict[str, Any]:
+    """Attach real SegNet/PoseNet scorer-loop evidence to a native export."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    report_path = out / "snerv_scorer_loop_qat_attachment.json"
+    if report_path.exists() and not allow_overwrite:
+        raise SnervMlxNativeExportError(
+            f"refusing to overwrite existing scorer-loop artifact: {report_path}"
+        )
+    if not requested:
+        payload = {
+            "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
+            "requested": False,
+            "executed": False,
+            "receiver_contract_satisfied": False,
+            "accepted_improvement": False,
+            "full_video_coverage": False,
+            "emitted_packet_uses_scorer_loop_best_decoder": False,
+            "blockers": ["snerv_scorer_loop_qat_not_requested"],
+            **FALSE_AUTHORITY,
+        }
+        write_json(report_path, payload)
+        return {**payload, "report_path": report_path.as_posix()}
+
+    try:
+        from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
+            run_snerv_scorer_loop_decoder_qat_smoke,
+        )
+
+        result = run_snerv_scorer_loop_decoder_qat_smoke(
+            n_pairs=int(num_pairs),
+            levels=int(levels),
+            wavelet=str(wavelet),
+            target_bits_per_coeff=float(target_bits_per_coeff),
+            upstream_dir=str(scorer_upstream_dir),
+            video_path=str(source_video_path),
+            device=str(device),
+            snerv_model_size_adapter=model_size.adapter,
+            snerv_fc_dim=int(model_size.fc_dim),
+            snerv_emb_size=int(model_size.emb_size),
+            snerv_patch_radius=int(model_size.patch_radius),
+            snerv_mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
+            snerv_hfr_gain=float(model_size.hfr_gain),
+            snerv_temporal_context=int(model_size.temporal_context),
+            qat_bits=int(qat_bits),
+            max_trials=int(max_trials),
+            search_mode=str(search_mode),
+            component_guard_mode=str(component_guard_mode),
+        )
+        result_payload = result.as_jsonable()
+        blockers = [
+            str(blocker) for blocker in result_payload.get("blockers") or [] if blocker
+        ]
+        if bool(result_payload.get("receiver_contract_satisfied")):
+            blockers.append(
+                "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
+            )
+        payload = {
+            "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
+            "requested": True,
+            "executed": True,
+            "source_schema": result_payload.get("schema"),
+            "axis_tag": result_payload.get("axis_tag"),
+            "num_pairs": int(result_payload.get("n_pairs") or num_pairs),
+            "full_video_coverage": int(result_payload.get("n_pairs") or 0) == 600,
+            "scorer_loop_evaluations": int(
+                result_payload.get("scorer_loop_evaluations") or 0
+            ),
+            "baseline_archive_bytes": _nested(result_payload, "baseline", "archive_bytes"),
+            "best_archive_bytes": _nested(result_payload, "best", "archive_bytes"),
+            "baseline_archive_sha256": _nested(
+                result_payload, "baseline", "archive_sha256"
+            ),
+            "best_archive_sha256": _nested(result_payload, "best", "archive_sha256"),
+            "baseline_score_linf": _nested(result_payload, "baseline", "score_linf"),
+            "best_score_linf": _nested(result_payload, "best", "score_linf"),
+            "accepted_improvement": bool(result_payload.get("accepted_improvement")),
+            "receiver_contract_satisfied": bool(
+                result_payload.get("receiver_contract_satisfied")
+            ),
+            "ready_for_pose_guard_gate": bool(
+                result_payload.get("ready_for_pose_guard_gate")
+            ),
+            "emitted_packet_uses_scorer_loop_best_decoder": False,
+            "result": result_payload,
+            "blockers": _ordered_unique(blockers),
+            **FALSE_AUTHORITY,
+        }
+    except Exception as exc:
+        payload = {
+            "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
+            "requested": True,
+            "executed": False,
+            "failure": repr(exc),
+            "receiver_contract_satisfied": False,
+            "accepted_improvement": False,
+            "full_video_coverage": False,
+            "emitted_packet_uses_scorer_loop_best_decoder": False,
+            "blockers": ["snerv_scorer_loop_qat_attachment_failed"],
+            **FALSE_AUTHORITY,
+        }
+    write_json(report_path, payload)
+    return {**payload, "report_path": report_path.as_posix()}
+
+
+def _scorer_loop_qat_blockers(
+    scorer_loop_qat: Mapping[str, Any],
+    *,
+    num_pairs: int,
+) -> list[str]:
+    blockers = [
+        str(blocker)
+        for blocker in scorer_loop_qat.get("blockers") or []
+        if str(blocker)
+    ]
+    if scorer_loop_qat.get("executed") is not True:
+        blockers.append("snerv_real_segnet_posenet_teacher_loop_not_attached")
+        return _ordered_unique(blockers)
+    if scorer_loop_qat.get("receiver_contract_satisfied") is not True:
+        blockers.append("snerv_real_segnet_posenet_teacher_loop_receiver_unproven")
+    if scorer_loop_qat.get("accepted_improvement") is not True:
+        blockers.append("snerv_scorer_loop_qat_no_accepted_improvement")
+    if int(num_pairs) != 600 or scorer_loop_qat.get("full_video_coverage") is not True:
+        blockers.append("snerv_scorer_loop_qat_not_full_video")
+    if scorer_loop_qat.get("emitted_packet_uses_scorer_loop_best_decoder") is not True:
+        blockers.append(
+            "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
+        )
+    return _ordered_unique(blockers)
 
 
 def write_snerv_mlx_prefilter_profile(
@@ -658,6 +832,19 @@ def _artifact_mapping(value: Any) -> dict[str, Any]:
     if hasattr(value, "__dict__"):
         return dict(vars(value))
     return {}
+
+
+def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _ordered_unique(values: Sequence[str]) -> list[str]:
+    return [str(value) for value in dict.fromkeys(str(v) for v in values if str(v))]
 
 
 def _repo_root(repo_root: str | Path | None) -> Path:

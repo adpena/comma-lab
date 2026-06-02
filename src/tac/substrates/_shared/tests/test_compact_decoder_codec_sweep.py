@@ -13,6 +13,14 @@ from tac.substrates._shared.compact_decoder_codec_sweep import (
     adjudicate_compact_decoder_codec_sweep_with_replay,
     sweep_compact_decoder_codecs,
 )
+from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
+from tac.substrates.hi_nerv.archive import (
+    pack_archive as pack_hi_nerv_archive,
+)
+from tac.substrates.hi_nerv.archive import (
+    parse_archive as parse_hi_nerv_archive,
+)
+from tac.substrates.hi_nerv.archive import split_archive_sections
 from tac.substrates.pact_nerv_selector_v4.archive import (
     pack_archive as pack_selector_v4_archive,
 )
@@ -111,6 +119,84 @@ def test_sweep_selector_archive_materializes_codec_variants_fail_closed(
         assert "receiver_proof_not_run" in row["blockers"]
         assert Path(row["archive_path"]).is_file()
         parse_selector_v4_archive(Path(row["bin_path"]).read_bytes())
+
+
+def test_sweep_hi_nerv_archive_materializes_codec_variants_and_preserves_latents(
+    tmp_path: Path,
+) -> None:
+    torch.manual_seed(3)
+    cfg = HinervConfig(
+        latent_dim_coarse=4,
+        latent_dim_mid=5,
+        latent_dim_fine=6,
+        embed_dim=12,
+        initial_grid_h=2,
+        initial_grid_w=3,
+        decoder_channels=(10, 8),
+        num_upsample_blocks=2,
+        mid_injection_block_index=0,
+        fine_injection_block_index=1,
+        num_pairs=3,
+        output_height=8,
+        output_width=12,
+    )
+    model = HinervSubstrate(cfg)
+    sd = model.state_dict()
+    decoder = {
+        k: v.clone()
+        for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    source_bin = pack_hi_nerv_archive(
+        decoder,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        {
+            "embed_dim": cfg.embed_dim,
+            "initial_grid_h": cfg.initial_grid_h,
+            "initial_grid_w": cfg.initial_grid_w,
+            "decoder_channels": list(cfg.decoder_channels),
+            "sin_frequency": cfg.sin_frequency,
+            "num_upsample_blocks": cfg.num_upsample_blocks,
+            "mid_injection_block_index": cfg.mid_injection_block_index,
+            "fine_injection_block_index": cfg.fine_injection_block_index,
+            "output_height": cfg.output_height,
+            "output_width": cfg.output_width,
+            "use_hierarchical_feature_grid": cfg.use_hierarchical_feature_grid,
+            "use_convnext_blocks": cfg.use_convnext_blocks,
+            "local_grid_levels": cfg.local_grid_levels,
+            "local_grid_channels": cfg.local_grid_channels,
+            "convnext_mlp_ratio": cfg.convnext_mlp_ratio,
+            "convnext_kernel_size": cfg.convnext_kernel_size,
+        },
+        decoder_codec="int8_mixed",
+    )
+    source_sections = split_archive_sections(source_bin)
+    source = _source_zip(tmp_path / "source_hi_nerv.zip", source_bin)
+
+    report = sweep_compact_decoder_codecs(
+        source_archive_zip=source,
+        output_dir=tmp_path / "sweep_hi_nerv",
+        decoder_codecs=("int8_mixed", "int4_mixed"),
+        repo_root=Path.cwd(),
+        run_receiver_proof=False,
+    )
+
+    assert report["family"] == "hi_nerv"
+    assert len(report["variant_rows"]) == 2
+    for row in report["variant_rows"]:
+        assert row["promotion_eligible"] is False
+        assert row["charged_bits_changed"] is True
+        assert "receiver_proof_not_run" in row["blockers"]
+        parsed = parse_hi_nerv_archive(Path(row["bin_path"]).read_bytes())
+        sections = split_archive_sections(Path(row["bin_path"]).read_bytes())
+        assert sections.latents_coarse_blob == source_sections.latents_coarse_blob
+        assert sections.latents_mid_blob == source_sections.latents_mid_blob
+        assert sections.latents_fine_blob == source_sections.latents_fine_blob
+        assert parsed.meta["_decoder_state_codec"]["codec"] == row["parsed_decoder_codec"][
+            "codec"
+        ]
 
 
 def test_replay_adjudication_preserves_pact_vq_rate_primitive(

@@ -1254,7 +1254,6 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
                 "intrinsic_gaps": [
                     "hi_nerv_official_symbol_parity_map_missing",
                     "hi_nerv_tiny_forward_parity_against_oss_missing",
-                    "hi_nerv_bitstream_q_receiver_roundtrip_missing",
                 ],
                 "next_action": (
                     "build official-symbol parity map and tiny forward parity "
@@ -1291,8 +1290,14 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
                     "tools/build_nerv_decoder_weight_waterfill_plan.py",
                     "src/tac/substrates/hi_nerv/archive.py",
                     "src/tac/substrates/hi_nerv/archive_candidate.py",
+                    "src/tac/substrates/hi_nerv/bitstream.py",
+                    "src/tac/substrates/_shared/compact_decoder_codec_sweep.py",
                 ],
-                "marker_files": ["src/tac/substrates/hi_nerv/archive.py"],
+                "marker_files": [
+                    "src/tac/substrates/hi_nerv/archive.py",
+                    "src/tac/substrates/hi_nerv/bitstream.py",
+                    "src/tac/substrates/_shared/compact_decoder_codec_sweep.py",
+                ],
                 "reference": "HNeRV modelsize and HiNeRV pruning/quantization codec pipeline",
                 "intrinsic_gaps": [
                     "hi_nerv_measured_modelsize_budget_ladder_missing",
@@ -1414,12 +1419,24 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
             (
                 "official_pruning_quant_noise_quant_ste_stack",
                 "missing_prune_quant_noise_qste_bitstream_roundtrip",
-                (),
+                (
+                    "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+                    "apply_decoder_pruning",
+                    "apply_decoder_quant_noise",
+                    "measure_hi_nerv_decoder_bitstream_roundtrip",
+                    "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
+                ),
             ),
             (
                 "official_torchac_or_equivalent_integer_bitstream_codec",
                 "missing_integer_bitstream_q_roundtrip",
-                (),
+                (
+                    "repack_archive_decoder_codec",
+                    "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
+                    "serialize_decoder_state_dict",
+                    "int4_mixed",
+                    "int2_mixed",
+                ),
             ),
         ]
     elif family == "snerv":
