@@ -18,6 +18,7 @@ from tac.substrates.hprc.representation_spine import (
 )
 from tac.substrates.hprc.spine_acquisition import build_spine_acquisition_report
 from tac.substrates.hprc.spine_bounded_runner import (
+    HPRC_SPINE_COMPACT_CARRIER_PIVOT_WORK_ORDER_SCHEMA,
     HPRC_SPINE_PROJECTION_GAP_REPAIR_WORK_ORDER_SCHEMA,
     HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA,
     HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA,
@@ -863,10 +864,95 @@ def test_compact_vq_pivot_audit_demotes_pact_vq_runner_rows(
     )
     assert "compact_vq_pivot_audit_demoted_family" in plan["blockers"]
     assert all(row["family"] != "pact_nerv_vq" for row in plan["selected_runner_rows"])
+    pivot_orders = plan["compact_carrier_pivot_work_orders"]
+    assert len(pivot_orders) == 1
+    pivot_order = pivot_orders[0]
+    assert pivot_order["schema"] == HPRC_SPINE_COMPACT_CARRIER_PIVOT_WORK_ORDER_SCHEMA
+    assert pivot_order["status"] == "queued_for_compact_carrier_pivot_execution"
+    assert pivot_order["demoted_family"] == "pact_nerv_vq"
+    assert pivot_order["best_full_video_mlx_score"] == 90.0
+    assert pivot_order["pivot_families"] == ["pr95_hnerv", "hi_nerv", "snerv"]
+    assert "pivot_launch_rows_not_executed" in pivot_order["blockers"]
+    launch = {row["family"]: row for row in pivot_order["launch_rows"]}
+    assert launch["pr95_hnerv"]["run_id"] == (
+        "pr95_hnerv_stage8_faithful_scoreaware_600pair"
+    )
+    assert "--execute-family" in launch["pr95_hnerv"]["argv"]
+    assert "pr95_hnerv" in launch["pr95_hnerv"]["argv"]
+    assert "--run-receiver-proof" in launch["pr95_hnerv"]["argv"]
+    assert "--coder-aware-qat" in launch["hi_nerv"]["argv"]
+    assert "--run-local-cpu-replay" in launch["snerv"]["argv"]
+    assert all("--overwrite" not in row["argv"] for row in pivot_order["launch_rows"])
     assert any(
         hook["status"] == "demote_from_upstream_eval_and_rt_vq_mismatch"
         for hook in plan["posterior_update_hooks"]
     )
+
+
+def test_all_demoted_compact_vq_rows_are_not_selected_without_pivot(
+    tmp_path: Path,
+) -> None:
+    pact_archive = tmp_path / "pact_vq_archive.zip"
+    pact_archive.write_bytes(b"pact-vq")
+    pact_manifest = _projection(
+        tmp_path / "pact_vq",
+        family=HprcRepresentationFamily.PACT_NERV_VQ,
+        decoder=b"d" * 20,
+        codebooks=b"c" * 12,
+        selectors=b"s" * 4,
+        source={
+            "archive_zip_path": pact_archive.as_posix(),
+            "archive_zip_sha256": "f" * 64,
+            "archive_zip_bytes": pact_archive.stat().st_size,
+        },
+        manifest_extra={
+            "num_pairs": 600,
+            "source_payload_kind": "pact_nerv_vq_pvq",
+        },
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[pact_manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    audit_path = tmp_path / "compact_vq_pivot.json"
+    audit_path.write_text(
+        json.dumps(
+            {
+                "schema": "compact_vq_pivot_audit.v1",
+                "family": "pact_nerv_vq",
+                "verdict": COMPACT_VQ_MISMATCH_STATUS,
+                "spend_recommendation": "pivot",
+                "profile_signal": {
+                    "best_full_video_mlx_score": 90.0,
+                    "local_replay_threshold_passed": False,
+                },
+                "implementation_contract": {
+                    "per_pair_single_vector_vq_present": True,
+                    "residual_tokenization_present": False,
+                    "shallow_interframe_feature_path_present": False,
+                    "codebook_utilization_repair_present": False,
+                },
+                "blockers": ["compact_vq_is_per_pair_latent_not_residual_tokenization"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        compact_vq_pivot_audit_paths=[audit_path],
+    )
+
+    assert plan["selected_runner_rows"] == []
+    assert len(plan["compact_carrier_pivot_work_orders"]) == 1
+    assert "compact_carrier_pivot_work_order_opened" in plan["blockers"]
 
 
 def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:

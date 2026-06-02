@@ -39,6 +39,9 @@ HPRC_SPINE_PROJECTION_GAP_REPAIR_WORK_ORDER_SCHEMA = (
 HPRC_SPINE_COMPACT_DECODER_CODEC_SWEEP_WORK_ORDER_SCHEMA = (
     "hprc_spine_compact_decoder_codec_sweep_work_order.v1"
 )
+HPRC_SPINE_COMPACT_CARRIER_PIVOT_WORK_ORDER_SCHEMA = (
+    "hprc_spine_compact_carrier_pivot_work_order.v1"
+)
 _PROJECTION_GAP_STRUCTURAL_SECTIONS = frozenset(
     ("decoder_qw", "codebooks_q", "latents_rc")
 )
@@ -175,11 +178,17 @@ def build_spine_bounded_runner_plan(
     ]
     residual_candidate_rows = _residual_candidate_value_rows(mlx_profiles)
     runner_rows = _choose_runner_rows(compact_base_rows=compact_base_rows)
+    compact_carrier_pivot_work_orders = _compact_carrier_pivot_work_orders(
+        compact_vq_pivot_audits=compact_vq_pivot_audits,
+        repo_root=root,
+        upstream_dir=upstream_root,
+    )
     blockers = _plan_blockers(
         compact_base_rows=compact_base_rows,
         section_value_rows=section_value_rows,
         mlx_profiles=mlx_profiles,
         projection_gap_repair_work_orders=projection_gap_repair_work_orders,
+        compact_carrier_pivot_work_orders=compact_carrier_pivot_work_orders,
     )
     return {
         "schema": HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA,
@@ -209,6 +218,7 @@ def build_spine_bounded_runner_plan(
         "section_value_profile_work_orders": section_value_profile_work_orders,
         "section_cut_materializer_work_orders": section_cut_materializer_work_orders,
         "projection_gap_repair_work_orders": projection_gap_repair_work_orders,
+        "compact_carrier_pivot_work_orders": compact_carrier_pivot_work_orders,
         "residual_token_admission_rows": [*residual_rows, *residual_candidate_rows],
         "selected_runner_rows": runner_rows,
         "runner_policy": {
@@ -1382,17 +1392,22 @@ def _shell_quote_arg(value: Any) -> str:
     return "'" + text.replace("'", "'\"'\"'") + "'"
 
 
+def _demoted_route_statuses() -> set[str]:
+    return {
+        "demoted_by_hprc_queue_followup",
+        "demoted_by_compact_vq_pivot_audit",
+    }
+
+
 def _choose_runner_rows(*, compact_base_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     non_demoted_rows = [
         row
         for row in compact_base_rows
-        if row.get("route_status")
-        not in {
-            "demoted_by_hprc_queue_followup",
-            "demoted_by_compact_vq_pivot_audit",
-        }
+        if row.get("route_status") not in _demoted_route_statuses()
     ]
-    candidate_rows = non_demoted_rows or compact_base_rows
+    if compact_base_rows and not non_demoted_rows:
+        return []
+    candidate_rows = non_demoted_rows
     readyish = [
         row
         for row in candidate_rows
@@ -1416,6 +1431,286 @@ def _choose_runner_rows(*, compact_base_rows: list[dict[str, Any]]) -> list[dict
         ),
     )
     return blocked[:3]
+
+
+def _compact_carrier_pivot_work_orders(
+    *,
+    compact_vq_pivot_audits: list[dict[str, Any]],
+    repo_root: Path,
+    upstream_dir: Path,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in compact_vq_pivot_audits:
+        payload = item["payload"]
+        if payload.get("verdict") != COMPACT_VQ_MISMATCH_STATUS:
+            continue
+        rows.append(
+            _compact_carrier_pivot_work_order(
+                audit=item,
+                repo_root=repo_root,
+                upstream_dir=upstream_dir,
+            )
+        )
+    rows.sort(key=lambda row: (str(row.get("work_order_id") or ""), row["status"]))
+    return rows
+
+
+def _compact_carrier_pivot_work_order(
+    *,
+    audit: dict[str, Any],
+    repo_root: Path,
+    upstream_dir: Path,
+) -> dict[str, Any]:
+    payload = audit["payload"]
+    signal = (
+        payload.get("profile_signal")
+        if isinstance(payload.get("profile_signal"), dict)
+        else {}
+    )
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "audit_sha256": audit["sha256"],
+                "family": payload.get("family"),
+                "verdict": payload.get("verdict"),
+                "best_full_video_mlx_score": signal.get("best_full_video_mlx_score"),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()[:16]
+    root = (
+        Path(_SECTION_VALUE_PROFILE_STORAGE_WATERFALL[0])
+        / "compact_carrier_pivots"
+        / f"compact_vq_pivot_{fingerprint}"
+    )
+    launch_rows = [
+        _compact_carrier_pivot_launch_row(
+            family="pr95_hnerv",
+            run_id="pr95_hnerv_stage8_faithful_scoreaware_600pair",
+            output_dir=root / "pr95_hnerv_stage8_faithful_scoreaware_600pair",
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+            argv=_compact_pivot_pr95_argv(
+                output_dir=root / "pr95_hnerv_stage8_faithful_scoreaware_600pair",
+                repo_root=repo_root,
+                upstream_dir=upstream_dir,
+            ),
+        ),
+        _compact_carrier_pivot_launch_row(
+            family="hi_nerv",
+            run_id="hi_nerv_scoreaware_qat_600pair",
+            output_dir=root / "hi_nerv_scoreaware_qat_600pair",
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+            argv=_compact_pivot_hi_nerv_argv(
+                output_dir=root / "hi_nerv_scoreaware_qat_600pair",
+                repo_root=repo_root,
+                upstream_dir=upstream_dir,
+            ),
+        ),
+        _compact_carrier_pivot_launch_row(
+            family="snerv",
+            run_id="snerv_lf_hf_receiver_proven_advisory_600pair",
+            output_dir=root / "snerv_lf_hf_receiver_proven_advisory_600pair",
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+            argv=_compact_pivot_snerv_argv(
+                output_dir=root / "snerv_lf_hf_receiver_proven_advisory_600pair",
+                repo_root=repo_root,
+                upstream_dir=upstream_dir,
+            ),
+        ),
+    ]
+    return {
+        "schema": HPRC_SPINE_COMPACT_CARRIER_PIVOT_WORK_ORDER_SCHEMA,
+        "work_order_id": f"compact_carrier_pivot:{fingerprint}",
+        "status": "queued_for_compact_carrier_pivot_execution",
+        "trigger_audit_path": audit["path"],
+        "trigger_audit_sha256": audit["sha256"],
+        "demoted_family": payload.get("family"),
+        "demotion_verdict": payload.get("verdict"),
+        "best_full_video_mlx_score": signal.get("best_full_video_mlx_score"),
+        "pivot_families": [row["family"] for row in launch_rows],
+        "launch_rows": launch_rows,
+        "selection_rule": (
+            "current per-pair-latent VQ is demoted; run PR95/HiNeRV/SNeRV "
+            "carrier rows before spending more budget on VQ unless VQ is "
+            "rebuilt as RT/VQ residual-token bolt-on"
+        ),
+        "success_gate": (
+            "byte-closed archive plus receiver proof plus full-video MLX replay; "
+            "exact CPU/CUDA dispatch remains blocked until local evidence can "
+            "plausibly approach frontier"
+        ),
+        "blockers": [
+            "compact_vq_primary_carrier_demoted_before_more_spend",
+            "pivot_launch_rows_not_executed",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _compact_carrier_pivot_launch_row(
+    *,
+    family: str,
+    run_id: str,
+    output_dir: Path,
+    repo_root: Path,
+    upstream_dir: Path,
+    argv: list[str],
+) -> dict[str, Any]:
+    metadata_dir = output_dir / "launch_metadata"
+    return {
+        "schema": "compact_carrier_pivot_launch_row.v1",
+        "family": family,
+        "run_id": run_id,
+        "runner_output_dir": output_dir.as_posix(),
+        "launch_metadata_dir": metadata_dir.as_posix(),
+        "stdout_log": (metadata_dir / "runner.stdout.log").as_posix(),
+        "stderr_log": (metadata_dir / "runner.stderr.log").as_posix(),
+        "exit_code_path": (metadata_dir / "runner.exit_code").as_posix(),
+        "repo_root": repo_root.as_posix(),
+        "upstream_dir": upstream_dir.as_posix(),
+        "output_dir_must_be_empty_before_runner_start": True,
+        "metadata_dir_may_exist_before_runner_start": True,
+        "argv": argv,
+        "shell_command": " ".join(_shell_quote_arg(arg) for arg in argv),
+        "blockers": [
+            "runner_not_executed",
+            "full_video_mlx_scorer_replay_not_attached",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _compact_pivot_common_argv(
+    *,
+    family: str,
+    output_dir: Path,
+    repo_root: Path,
+    upstream_dir: Path,
+) -> list[str]:
+    return [
+        ".venv/bin/python",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        "--execute-family",
+        family,
+        "--output-dir",
+        output_dir.as_posix(),
+        "--repo-root",
+        repo_root.as_posix(),
+        "--upstream-dir",
+        upstream_dir.as_posix(),
+        "--num-pairs",
+        str(CONTEST_PAIR_COUNT),
+        "--hard-byte-ceiling",
+        "178000",
+        "--hard-byte-ceiling",
+        "216000",
+        "--hard-byte-ceiling",
+        "285000",
+    ]
+
+
+def _compact_pivot_pr95_argv(
+    *,
+    output_dir: Path,
+    repo_root: Path,
+    upstream_dir: Path,
+) -> list[str]:
+    return [
+        *_compact_pivot_common_argv(
+            family="pr95_hnerv",
+            output_dir=output_dir,
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+        ),
+        "--epochs",
+        "64",
+        "--batch-pairs",
+        "1",
+        "--learning-rate",
+        "0.0005",
+        "--compact-ema-decay",
+        "0.997",
+        "--segnet-distillation-weight",
+        "0.05",
+        "--pose-distillation-weight",
+        "0.0005",
+        "--segnet-distillation-objective",
+        "boundary_argmax_hinge",
+        "--segnet-hinge-margin",
+        "1.0",
+        "--run-receiver-proof",
+        "--run-post-export-materializers",
+        "--post-export-materializer-max-steps",
+        "1",
+    ]
+
+
+def _compact_pivot_hi_nerv_argv(
+    *,
+    output_dir: Path,
+    repo_root: Path,
+    upstream_dir: Path,
+) -> list[str]:
+    return [
+        *_compact_pivot_common_argv(
+            family="hi_nerv",
+            output_dir=output_dir,
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+        ),
+        "--epochs",
+        "512",
+        "--batch-pairs",
+        "1",
+        "--learning-rate",
+        "0.001",
+        "--compact-latent-dim",
+        "16",
+        "--compact-embed-dim",
+        "32",
+        "--compact-decoder-channel",
+        "48",
+        "--compact-decoder-codec",
+        "int4_scale_bundled",
+        "--compact-ema-decay",
+        "0.997",
+        "--segnet-distillation-weight",
+        "0.05",
+        "--pose-distillation-weight",
+        "0.0005",
+        "--segnet-distillation-objective",
+        "boundary_argmax_hinge",
+        "--segnet-hinge-margin",
+        "1.0",
+        "--coder-aware-qat",
+        "--coder-qat-quant-bits",
+        "4",
+    ]
+
+
+def _compact_pivot_snerv_argv(
+    *,
+    output_dir: Path,
+    repo_root: Path,
+    upstream_dir: Path,
+) -> list[str]:
+    return [
+        *_compact_pivot_common_argv(
+            family="snerv",
+            output_dir=output_dir,
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+        ),
+        "--epochs",
+        "256",
+        "--run-local-cpu-replay",
+    ]
 
 
 def _index_section_evidence(
@@ -2080,6 +2375,7 @@ def _plan_blockers(
     section_value_rows: list[dict[str, Any]],
     mlx_profiles: list[dict[str, Any]],
     projection_gap_repair_work_orders: list[dict[str, Any]],
+    compact_carrier_pivot_work_orders: list[dict[str, Any]],
 ) -> list[str]:
     blockers = ["contest_cpu_cuda_exact_eval_not_executed"]
     if not mlx_profiles:
@@ -2115,6 +2411,8 @@ def _plan_blockers(
         blockers.append("compact_vq_pivot_audit_demoted_family")
     if projection_gap_repair_work_orders:
         blockers.append("archive_projection_gap_requires_training_or_export_repair")
+    if compact_carrier_pivot_work_orders:
+        blockers.append("compact_carrier_pivot_work_order_opened")
     return _dedupe(blockers)
 
 
