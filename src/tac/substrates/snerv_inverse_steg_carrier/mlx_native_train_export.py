@@ -536,10 +536,31 @@ def _run_scorer_loop_qat_attachment(
         best_packet = getattr(result, "best_packet", b"")
         if best_packet:
             best_packet = bytes(best_packet)
+        best_packet_path = out / "best_packet.snar"
+        best_packet_materialized = False
+        best_packet_path_str: str | None = None
+        best_packet_path_sha256: str | None = None
+        if best_packet:
+            write_bytes_artifact(
+                best_packet_path,
+                best_packet,
+                allow_overwrite=allow_overwrite,
+                expected_existing_sha256=(
+                    sha256_file(best_packet_path)
+                    if allow_overwrite and best_packet_path.is_file()
+                    else None
+                ),
+            )
+            best_packet_materialized = True
+            best_packet_path_str = best_packet_path.as_posix()
+            best_packet_path_sha256 = sha256_file(best_packet_path)
         blockers = [
             str(blocker) for blocker in result_payload.get("blockers") or [] if blocker
         ]
-        if bool(result_payload.get("receiver_contract_satisfied")):
+        if bool(result_payload.get("receiver_contract_satisfied")) and not (
+            best_packet_materialized
+            and best_packet_path_sha256 == result_payload.get("best_packet_sha256")
+        ):
             blockers.append(
                 "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
             )
@@ -564,6 +585,9 @@ def _run_scorer_loop_qat_attachment(
             "best_score_linf": _nested(result_payload, "best", "score_linf"),
             "best_packet_bytes": int(result_payload.get("best_packet_bytes") or 0),
             "best_packet_sha256": result_payload.get("best_packet_sha256"),
+            "best_packet_path": best_packet_path_str,
+            "best_packet_path_sha256": best_packet_path_sha256,
+            "best_packet_materialized": best_packet_materialized,
             "decoder_payload_codec": str(
                 result_payload.get("decoder_payload_codec") or decoder_payload_codec
             ),
@@ -579,7 +603,9 @@ def _run_scorer_loop_qat_attachment(
             "blockers": _ordered_unique(blockers),
             **FALSE_AUTHORITY,
         }
-        if best_packet:
+        if best_packet_materialized and best_packet_path_sha256 == result_payload.get(
+            "best_packet_sha256"
+        ):
             payload["_best_packet_bytes"] = best_packet
     except Exception as exc:
         payload = {

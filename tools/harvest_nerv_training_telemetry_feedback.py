@@ -93,6 +93,9 @@ def _summary(result: dict[str, Any]) -> dict[str, Any]:
         "seg_stagnation_relative_improvement": row.get(
             "seg_stagnation_relative_improvement"
         ),
+        "observed_segnet_distillation_weight": row.get(
+            "observed_segnet_distillation_weight"
+        ),
         "recommended_segnet_distillation_weight": row.get(
             "recommended_segnet_distillation_weight"
         ),

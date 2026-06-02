@@ -251,6 +251,9 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["accepted_improvement"] is True
     assert scorer_loop["best_archive_sha256"] == best_packet_sha256
     assert scorer_loop["best_packet_sha256"] == best_packet_sha256
+    assert scorer_loop["best_packet_materialized"] is True
+    assert scorer_loop["best_packet_path_sha256"] == best_packet_sha256
+    assert Path(scorer_loop["best_packet_path"]).read_bytes() == best_packet
     assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is True
     assert scorer_loop["emitted_packet_sha256"] == best_packet_sha256
     assert report["packet_source"] == "scorer_loop_qat_best_receiver_packet"

@@ -302,6 +302,7 @@ def build_snerv_mlx_native_file_backed_evidence(
         ),
         "scorer_loop_qat_best_materialized": bool(
             scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
+            or scorer_loop.get("best_packet_materialized")
             or art.get("scorer_loop_qat_best_materialized")
         ),
         "blockers": list(dict.fromkeys(blockers)),

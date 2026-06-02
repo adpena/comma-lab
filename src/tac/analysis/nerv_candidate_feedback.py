@@ -56,6 +56,7 @@ _SEG_STAGNATION_MIN_EPOCHS = 128
 _SEG_STAGNATION_WINDOW_EPOCHS = 64
 _SEG_STAGNATION_MIN_RELATIVE_IMPROVEMENT = 0.05
 _SEG_STAGNATION_WEIGHT_MULTIPLIER = 2.0
+_SEG_STAGNATION_MAX_DISTILLATION_WEIGHT = 8.0
 
 
 def _mapping_or_empty(value: Any) -> dict[str, Any]:
@@ -206,6 +207,7 @@ def build_nerv_candidate_feedback_row(
             else snerv_native_scorer_loop.get(
                 "emitted_packet_uses_scorer_loop_best_decoder"
             )
+            or snerv_native_scorer_loop.get("best_packet_materialized")
         ),
         "snerv_binary_profile_path": snerv_profile.get("profile_path"),
         "snerv_binary_profile_written": bool(snerv_profile.get("profile_written")),
@@ -398,6 +400,9 @@ def build_nerv_training_telemetry_feedback_row(
         ),
         "seg_stagnation_last_window_median": health.get(
             "seg_stagnation_last_window_median"
+        ),
+        "observed_segnet_distillation_weight": health.get(
+            "observed_segnet_distillation_weight"
         ),
         "recommended_segnet_distillation_weight": health.get(
             "recommended_segnet_distillation_weight"
@@ -701,6 +706,7 @@ def _summarize_training_telemetry_health(
     pose_losses: list[float] = []
     pose_axes: list[float] = []
     seg_axes: list[float] = []
+    segnet_distillation_weights: list[float] = []
     learning_rates: list[float] = []
     bad_epochs: list[int] = []
     window_size = max(1, int(instability_window_epochs))
@@ -741,6 +747,9 @@ def _summarize_training_telemetry_health(
             pose_axes.append(pose_axis)
         if seg_axis is not None:
             seg_axes.append(seg_axis)
+        seg_weight = _effective_distillation_weight(loss_components)
+        if seg_weight is not None:
+            segnet_distillation_weights.append(seg_weight)
         bad = bool(
             (pose_loss is not None and pose_loss >= pose_loss_instability_threshold)
             or (pose_axis is not None and pose_axis >= pose_axis_instability_threshold)
@@ -809,8 +818,13 @@ def _summarize_training_telemetry_health(
         and seg_relative_improvement is not None
         and seg_relative_improvement < _SEG_STAGNATION_MIN_RELATIVE_IMPROVEMENT
     )
+    observed_seg_weight = _median(
+        segnet_distillation_weights[-_SEG_STAGNATION_WINDOW_EPOCHS:]
+    )
     recommended_seg_weight = (
-        _SEG_STAGNATION_WEIGHT_MULTIPLIER if seg_stagnation else None
+        recommend_segnet_distillation_weight_for_stagnation(observed_seg_weight)
+        if seg_stagnation
+        else None
     )
     if seg_stagnation:
         mutations.extend(
@@ -857,6 +871,7 @@ def _summarize_training_telemetry_health(
         "seg_stagnation_last_window_median": seg_last_window_median,
         "seg_stagnation_relative_improvement": seg_relative_improvement,
         "seg_stagnation_detected": seg_stagnation,
+        "observed_segnet_distillation_weight": observed_seg_weight,
         "recommended_learning_rate": recommended_lr,
         "recommended_learning_rate_multiplier": (
             float(learning_rate_multiplier) if instability else None
@@ -946,6 +961,31 @@ def _float_or_none(value: Any) -> float | None:
     return number if math.isfinite(number) else None
 
 
+def _effective_distillation_weight(loss_components: Any) -> float | None:
+    if not isinstance(loss_components, Mapping):
+        return None
+    unweighted = _float_or_none(loss_components.get("loss_part_distill"))
+    weighted = _float_or_none(loss_components.get("loss_part_weighted_distill"))
+    if unweighted is None or weighted is None or unweighted <= 1.0e-12:
+        return None
+    return weighted / unweighted
+
+
+def recommend_segnet_distillation_weight_for_stagnation(
+    observed_weight: float | None,
+) -> float:
+    """Return the next bounded SegNet pressure for a stagnant HiNeRV run."""
+
+    observed = _float_or_none(observed_weight)
+    if observed is None or observed <= 0.0:
+        return float(_SEG_STAGNATION_WEIGHT_MULTIPLIER)
+    next_weight = max(
+        float(_SEG_STAGNATION_WEIGHT_MULTIPLIER),
+        observed * float(_SEG_STAGNATION_WEIGHT_MULTIPLIER),
+    )
+    return min(next_weight, float(_SEG_STAGNATION_MAX_DISTILLATION_WEIGHT))
+
+
 def _median(values: Sequence[float]) -> float | None:
     if not values:
         return None
@@ -983,6 +1023,7 @@ __all__ = [
     "TELEMETRY_FEEDBACK_SCHEMA",
     "build_nerv_candidate_feedback_row",
     "build_nerv_training_telemetry_feedback_row",
+    "recommend_segnet_distillation_weight_for_stagnation",
     "refresh_nerv_candidate_feedback_report",
     "write_nerv_candidate_feedback_files",
     "write_nerv_training_telemetry_feedback_files",

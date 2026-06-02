@@ -1,0 +1,260 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 1,
+  "idle_cycles": 0,
+  "max_experiments": null,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "nerv_hinerv_snerv_official_controls_feedback_20260602T225900Z.v1.hinerv_official_step1",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_mlx": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "skip_count": 0,
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-06-02T22:48:22Z",
+  "started_experiment_ids": [
+    "hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw"
+  ],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_nerv_hinerv_snerv_official_controls_feedback_20260602T225900Z.v1.hinerv_official_step1.sqlite",
+  "step_results": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--extra",
+        "dev",
+        "--extra",
+        "runtime",
+        "--extra",
+        "mlx",
+        "python",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        "--execute-family",
+        "hi_nerv",
+        "--planner-row-id",
+        "hi_nerv::hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000::adamw",
+        "--num-pairs",
+        "600",
+        "--epochs",
+        "29650",
+        "--batch-pairs",
+        "8",
+        "--learning-rate",
+        "2.7e-05",
+        "--distillation-device",
+        "gpu",
+        "--modelsize-candidate-id",
+        "hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000",
+        "--segnet-distillation-weight",
+        "2",
+        "--pose-distillation-weight",
+        "1.0",
+        "--coder-aware-qat",
+        "--coder-qat-quant-bits",
+        "4",
+        "--optimizer-kind",
+        "adamw",
+        "--mlx-prefilter-scorer-device",
+        "gpu",
+        "--mlx-prefilter-scorer-batch-pairs",
+        "8",
+        "--mlx-prefilter-progress-every",
+        "10",
+        "--telemetry-flush-interval-epochs",
+        "1",
+        "--run-post-export-materializers",
+        "--output-dir",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard",
+        "--auto-joint-recon-pixel-weight"
+      ],
+      "elapsed_seconds": 900.5323515420314,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [
+        {
+          "equals": "compact_renderer_mlx_spine_runner.v1",
+          "key": "schema",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json",
+          "type": "json_equals"
+        },
+        {
+          "equals": false,
+          "key": "score_claim",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json",
+          "type": "json_equals"
+        },
+        {
+          "equals": false,
+          "key": "ready_for_exact_eval_dispatch",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json",
+          "type": "json_equals"
+        },
+        {
+          "equals": false,
+          "key": "promotion_eligible",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json",
+          "type": "json_equals"
+        },
+        {
+          "equals": "hi_nerv",
+          "key": "execute_family",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json",
+          "type": "json_equals"
+        },
+        {
+          "equals": true,
+          "key": "training_executed",
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json",
+          "type": "json_equals"
+        }
+      ],
+      "log_path": "/Volumes/VertigoDataTier/pact/queue_logs/hinerv_official_controls_29650ep_detached_20260602T225900Z/nerv_hinerv_snerv_official_controls_feedback_20260602T225900Z.v1.hinerv_official_step1/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw/run_mlx_first_campaign_row/20260602T224822Z_bb135c6d05c9b7b3.log",
+      "pid": 93780,
+      "postcondition_errors": [
+        {
+          "condition": "{\"equals\":\"compact_renderer_mlx_spine_runner.v1\",\"key\":\"schema\",\"path\":\"/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json\",\"type\":\"json_equals\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json'"
+        },
+        {
+          "condition": "{\"equals\":false,\"key\":\"score_claim\",\"path\":\"/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json\",\"type\":\"json_equals\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json'"
+        },
+        {
+          "condition": "{\"equals\":false,\"key\":\"ready_for_exact_eval_dispatch\",\"path\":\"/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json\",\"type\":\"json_equals\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json'"
+        },
+        {
+          "condition": "{\"equals\":false,\"key\":\"promotion_eligible\",\"path\":\"/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json\",\"type\":\"json_equals\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json'"
+        },
+        {
+          "condition": "{\"equals\":\"hi_nerv\",\"key\":\"execute_family\",\"path\":\"/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json\",\"type\":\"json_equals\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json'"
+        },
+        {
+          "condition": "{\"equals\":true,\"key\":\"training_executed\",\"path\":\"/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json\",\"type\":\"json_equals\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json'"
+        }
+      ],
+      "ready_step": {
+        "command": [
+          "uv",
+          "run",
+          "--extra",
+          "dev",
+          "--extra",
+          "runtime",
+          "--extra",
+          "mlx",
+          "python",
+          "tools/run_compact_renderer_mlx_spine_runner.py",
+          "--execute-family",
+          "hi_nerv",
+          "--planner-row-id",
+          "hi_nerv::hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000::adamw",
+          "--num-pairs",
+          "600",
+          "--epochs",
+          "29650",
+          "--batch-pairs",
+          "8",
+          "--learning-rate",
+          "2.7e-05",
+          "--distillation-device",
+          "gpu",
+          "--modelsize-candidate-id",
+          "hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000",
+          "--segnet-distillation-weight",
+          "2",
+          "--pose-distillation-weight",
+          "1.0",
+          "--coder-aware-qat",
+          "--coder-qat-quant-bits",
+          "4",
+          "--optimizer-kind",
+          "adamw",
+          "--mlx-prefilter-scorer-device",
+          "gpu",
+          "--mlx-prefilter-scorer-batch-pairs",
+          "8",
+          "--mlx-prefilter-progress-every",
+          "10",
+          "--telemetry-flush-interval-epochs",
+          "1",
+          "--run-post-export-materializers",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard",
+          "--auto-joint-recon-pixel-weight"
+        ],
+        "experiment_id": "hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw",
+        "priority": 10,
+        "queue_id": "nerv_hinerv_snerv_official_controls_feedback_20260602T225900Z.v1.hinerv_official_step1",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "bf6de45e23bf28b75c5549521a19646e73319ff663ae0250ad91ce0b76a972b1",
+          "definition_hash": "94daa3e2d43b85b88eabf4e63f1cfab41a9e1b478146fdf2d0069f0e5f306f86",
+          "postcondition_hash": "593815f79c4a9d09f2864367660d2eca7a0b0b5b7f0d17350181e4a6e4df6b6f"
+        },
+        "step_id": "run_mlx_first_campaign_row"
+      },
+      "resource_kind": "local_mlx",
+      "returncode": 143,
+      "skip_reason": null,
+      "skipped": false,
+      "succeeded": false,
+      "telemetry": {
+        "artifact_record_count": 4,
+        "artifact_records": [
+          {
+            "bytes": 12944,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-06-02T22:48:27Z",
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_startup.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 947317,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-06-02T23:03:19Z",
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/hi_nerv_mlx_training/telemetry.jsonl",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "exists": false,
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "exists": false,
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T225900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_continue_official_controls_long_run_preserve_pose_guard/compact_renderer_mlx_spine_runner_report.json",
+            "source": "step.command.inferred_compact_renderer_output_artifacts"
+          }
+        ],
+        "log_bytes": 0,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "bb135c6d05c9b7b3"
+    }
+  ],
+  "steps_started": 1,
+  "stop_reason": "stop_requested",
+  "stop_signals": [
+    "SIGINT",
+    "SIGTERM"
+  ],
+  "success_count": 0
+}

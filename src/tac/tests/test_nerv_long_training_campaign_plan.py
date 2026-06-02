@@ -173,6 +173,34 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["source_bound_capacity_controls"]["fc_dim"] == 11
     assert snerv_row["source_bound_capacity_controls"]["emb_size"] == 2
     assert not snerv_row["source_bound_capacity_control_blockers"]
+    assert "--snerv-model-size-adapter" in snerv_row["command_argv"]
+    assert (
+        snerv_row["command_argv"][
+            snerv_row["command_argv"].index("--snerv-model-size-adapter") + 1
+        ]
+        == "snerv_fc_dim_emb_size_adapter_v1"
+    )
+    assert "--snerv-fc-dim" in snerv_row["command_argv"]
+    assert (
+        snerv_row["command_argv"][
+            snerv_row["command_argv"].index("--snerv-fc-dim") + 1
+        ]
+        == "11"
+    )
+    assert "--snerv-emb-size" in snerv_row["command_argv"]
+    assert (
+        snerv_row["command_argv"][
+            snerv_row["command_argv"].index("--snerv-emb-size") + 1
+        ]
+        == "2"
+    )
+    assert "--snerv-patch-radius" in snerv_row["command_argv"]
+    assert (
+        snerv_row["command_argv"][
+            snerv_row["command_argv"].index("--snerv-patch-radius") + 1
+        ]
+        == "1"
+    )
     assert "--snerv-mfu-scales" in snerv_row["command_argv"]
     assert (
         snerv_row["command_argv"][
@@ -184,6 +212,13 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert (
         snerv_row["command_argv"][
             snerv_row["command_argv"].index("--snerv-hfr-gain") + 1
+        ]
+        == "0"
+    )
+    assert "--snerv-temporal-context" in snerv_row["command_argv"]
+    assert (
+        snerv_row["command_argv"][
+            snerv_row["command_argv"].index("--snerv-temporal-context") + 1
         ]
         == "0"
     )
@@ -1035,6 +1070,7 @@ def test_long_training_campaign_plan_consumes_hinerv_foreground_feedback_schema(
                 "first_seg_axis": 6.36,
                 "last_seg_axis": 6.21,
                 "learning_rate": 2.7e-5,
+                "observed_segnet_distillation_weight": 2.0,
                 "pose_recovered_from_initial_spike": True,
                 "segnet_still_binding": True,
                 "score_claim": False,
@@ -1052,10 +1088,11 @@ def test_long_training_campaign_plan_consumes_hinerv_foreground_feedback_schema(
     )
     assert feedback["feedback_match_scope"] == "family_training_telemetry"
     assert feedback["segnet_still_binding"] is True
-    assert feedback["recommended_segnet_distillation_weight"] == 2.0
+    assert feedback["observed_segnet_distillation_weight"] == 2.0
+    assert feedback["recommended_segnet_distillation_weight"] == 4.0
     assert hi["command_argv"][
         hi["command_argv"].index("--segnet-distillation-weight") + 1
-    ] == "2"
+    ] == "4"
     assert hi["feedback_launch_adjustment"]["segnet_weight_applied"] is True
     assert hi["score_claim"] is False
 

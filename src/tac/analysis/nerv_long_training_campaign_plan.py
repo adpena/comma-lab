@@ -26,6 +26,7 @@ from tac.analysis.nerv_candidate_feedback import (
 )
 from tac.analysis.nerv_candidate_feedback import (
     build_nerv_candidate_feedback_row,
+    recommend_segnet_distillation_weight_for_stagnation,
 )
 from tac.analysis.nerv_decoder_weight_waterfill import (
     NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
@@ -605,10 +606,20 @@ def _snerv_campaign_row(
         "--snerv-scorer-loop-search-mode",
         "learned_random_subspace",
         "--snerv-spectra-preserving-adapter",
+        "--snerv-model-size-adapter",
+        str(candidate.get("snerv_model_size_adapter") or ""),
+        "--snerv-fc-dim",
+        str(int(candidate.get("fc_dim") or 0)),
+        "--snerv-emb-size",
+        str(int(candidate.get("emb_size") or 0)),
+        "--snerv-patch-radius",
+        str(int(candidate.get("patch_radius") or 0)),
         "--snerv-mfu-scales",
         _int_csv(candidate.get("mfu_scales") or (1, 2, 4)),
         "--snerv-hfr-gain",
         _float_token(float(candidate.get("hfr_gain") or 0.0)),
+        "--snerv-temporal-context",
+        str(int(candidate.get("temporal_context") or 0)),
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
@@ -1207,6 +1218,16 @@ def _normalize_hinerv_training_telemetry_feedback(
     last_epoch = int(source.get("last_epoch") or 0)
     seg_still_binding = bool(source.get("segnet_still_binding") is True)
     pose_recovered = bool(source.get("pose_recovered_from_initial_spike") is True)
+    observed_seg_weight = _float_or_none(
+        source.get("observed_segnet_distillation_weight")
+    )
+    recommended_seg_weight = _float_or_none(
+        source.get("recommended_segnet_distillation_weight")
+    )
+    if seg_still_binding and recommended_seg_weight is None:
+        recommended_seg_weight = recommend_segnet_distillation_weight_for_stagnation(
+            observed_seg_weight
+        )
     recommended_mutations = list(source.get("recommended_next_mutations") or [])
     if seg_still_binding and (
         "increase_segnet_distillation_weight_from_stagnation_telemetry"
@@ -1233,7 +1254,8 @@ def _normalize_hinerv_training_telemetry_feedback(
         "pose_recovered_from_initial_spike": pose_recovered,
         "seg_stagnation_detected": seg_still_binding,
         "segnet_still_binding": seg_still_binding,
-        "recommended_segnet_distillation_weight": 2.0 if seg_still_binding else None,
+        "observed_segnet_distillation_weight": observed_seg_weight,
+        "recommended_segnet_distillation_weight": recommended_seg_weight,
         "recommended_segnet_distillation_weight_multiplier": (
             2.0 if seg_still_binding else None
         ),
@@ -1248,6 +1270,7 @@ def _normalize_hinerv_training_telemetry_feedback(
             "last_seg_axis": source.get("last_seg_axis"),
             "last_recon_aux": source.get("last_recon_aux"),
             "last_loss": source.get("last_loss"),
+            "observed_segnet_distillation_weight": observed_seg_weight,
             "pose_recovered_from_initial_spike": pose_recovered,
             "segnet_still_binding": seg_still_binding,
         },

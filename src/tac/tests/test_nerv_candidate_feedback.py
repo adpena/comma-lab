@@ -335,7 +335,11 @@ def test_training_telemetry_feedback_detects_segnet_stagnation(
         {
             "epoch": epoch,
             "learning_rate": 2.7e-5,
-            "loss_components": {"loss_part_pose_distill": 1.0},
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 6.3,
+                "loss_part_weighted_distill": 12.6,
+            },
             "per_axis_decomposition": {
                 "pose": 2.0,
                 "seg": 6.3 - min(epoch, 127) * 0.0005,
@@ -357,7 +361,8 @@ def test_training_telemetry_feedback_detects_segnet_stagnation(
 
     assert row["pose_instability_detected"] is False
     assert row["seg_stagnation_detected"] is True
-    assert row["recommended_segnet_distillation_weight"] == 2.0
+    assert row["observed_segnet_distillation_weight"] == 2.0
+    assert row["recommended_segnet_distillation_weight"] == 4.0
     assert row["seg_stagnation_relative_improvement"] < 0.05
     assert "increase_segnet_distillation_weight_from_stagnation_telemetry" in row[
         "recommended_launch_mutations"
