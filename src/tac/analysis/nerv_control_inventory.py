@@ -255,11 +255,15 @@ def _control_rows() -> list[dict[str, Any]]:
             upstream="HiNeRV-S/M/L config capacity; hierarchical positional encodings",
             local="latent_dim_coarse/mid/fine, embed_dim, decoder_channels, injection blocks",
             scorer="score-aware MLX full_main + cache quality gate + scorer prefilter",
-            allocator="modelsize_budget_plan + decoder-weight saliency/waterfilling",
+            allocator=(
+                "modelsize_budget_plan + nerv_decoder_weight_waterfill over "
+                "measured decoder saliency"
+            ),
             archive="export_hi_nerv_mlx_archive + decoder_codec",
             status="partially_wired_needs_measured_ladder",
             missing=[
                 "measured_hi_nerv_modelsize_budget_ladder",
+                "decoder_weight_waterfill_plan_for_hi_nerv_archive_rows",
                 "decoder_weight_saliency_into_trainer",
                 "cache_quality_gate_required_before_profile_or_spend",
             ],
@@ -303,10 +307,16 @@ def _control_rows() -> list[dict[str, Any]]:
             upstream="HNeRV content amortizes into decoder weights",
             local="hinerv_latent_linf_allocation, score_exact_saliency, carrier_training_plan",
             scorer="P18 SegNet last-frame saliency + P19 PoseNet Fisher",
-            allocator="decoder weights, not post-hoc latents, when latent JVP is near zero",
+            allocator=(
+                "nerv_decoder_weight_waterfill protects weights unless measured "
+                "full-video saliency prices a cut"
+            ),
             archive="QAT/coder-aware regularized trained decoder bytes",
             status="not_wired_into_real_trainer",
-            missing=["decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main"],
+            missing=[
+                "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
+                "decoder_weight_waterfill_plan_for_hi_nerv_full_main",
+            ],
         ),
         _row(
             "snerv_frequency_split",
@@ -325,10 +335,17 @@ def _control_rows() -> list[dict[str, Any]]:
             upstream="SNeRV controls enc_strds/dec_strds, fc_dim, num_blocks, emb_size",
             local="step-map waterfill, LF predictor profiles, decoder mode probes",
             scorer="cache quality gate + full-video scorer replay",
-            allocator="modelsize_budget_plan + waterfilling over LF/HF atoms",
+            allocator=(
+                "modelsize_budget_plan + nerv_decoder_weight_waterfill for decoder "
+                "weights + waterfilling over LF/HF atoms"
+            ),
             archive="deterministic receiver-side LF generator or symbolic residual grammar",
             status="needs_representation_change",
-            missing=["snerv_measured_modelsize_ladder", "learned_lf_generator_byte_collapse"],
+            missing=[
+                "snerv_measured_modelsize_ladder",
+                "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
+                "learned_lf_generator_byte_collapse",
+            ],
         ),
         _row(
             "snerv_pose_guarded_hf_restoration",
@@ -616,6 +633,8 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
                 "category": "modelsize_and_codec",
                 "required_files": [
                     "src/tac/substrates/_shared/mlx_score_aware/modelsize_budget_plan.py",
+                    "src/tac/analysis/nerv_decoder_weight_waterfill.py",
+                    "tools/build_nerv_decoder_weight_waterfill_plan.py",
                     "src/tac/substrates/hi_nerv/archive.py",
                     "src/tac/substrates/hi_nerv/archive_candidate.py",
                 ],
@@ -623,11 +642,13 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
                 "reference": "HNeRV modelsize and HiNeRV pruning/quantization codec pipeline",
                 "intrinsic_gaps": [
                     "hi_nerv_measured_modelsize_budget_ladder_missing",
+                    "hi_nerv_decoder_weight_waterfill_plan_missing",
                     "hi_nerv_grouped_intN_zero_run_packet_layout_missing",
                 ],
                 "next_action": (
                     "sweep modelsize/width/latent/codec ladders under hard byte "
-                    "ceilings and select by measured contest byte price"
+                    "ceilings, then build decoder-weight waterfill plans from "
+                    "full-video saliency before selecting by byte price"
                 ),
             },
             common_exact,
@@ -1031,9 +1052,12 @@ def _recommended_work_orders(gaps: list[dict[str, Any]]) -> list[dict[str, Any]]
     priority = [
         "cache_quality_gate_required_before_profile_or_spend",
         "measured_hi_nerv_modelsize_budget_ladder",
+        "decoder_weight_waterfill_plan_for_hi_nerv_archive_rows",
         "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
+        "decoder_weight_waterfill_plan_for_hi_nerv_full_main",
         "mlx_native_snerv_train_export",
         "snerv_measured_modelsize_ladder",
+        "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
         "full_video_section_value_for_vq_codebook_indices",
         "full_video_vjp_bundle_as_budget_spend_prerequisite",
         "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
@@ -1084,6 +1108,8 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "src/tac/substrates/pact_nerv_vq",
             "src/tac/analysis/hnerv_packet_sections.py",
             "src/tac/analysis/scorer_conditional_mdl.py",
+            "src/tac/analysis/nerv_decoder_weight_waterfill.py",
+            "tools/build_nerv_decoder_weight_waterfill_plan.py",
         ],
         "receiver_and_exact_custody": [
             "src/tac/substrates/hprc/archive_candidate.py",

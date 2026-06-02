@@ -49,7 +49,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     gap_ids = {row["gap_id"] for row in report["binding_gap_rows"]}
     assert {
         "measured_hi_nerv_modelsize_budget_ladder",
+        "decoder_weight_waterfill_plan_for_hi_nerv_archive_rows",
         "mlx_native_snerv_train_export",
+        "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
         "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
         "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls",
         "receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv",
@@ -85,6 +87,12 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "tools/profile_pact_nerv_selector_v3_mlx_section_value.py" in surfaces[
         "section_value_and_codebook"
     ]
+    assert "src/tac/analysis/nerv_decoder_weight_waterfill.py" in surfaces[
+        "section_value_and_codebook"
+    ]
+    assert "tools/build_nerv_decoder_weight_waterfill_plan.py" in surfaces[
+        "section_value_and_codebook"
+    ]
     assert "src/tac/submission_packet/paired_auth_eval.py" in surfaces[
         "receiver_and_exact_custody"
     ]
@@ -106,6 +114,7 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "hi_nerv_full600_receiver_proven_candidate_missing",
         "hi_nerv_missing_measured_config_family_ladder",
         "hi_nerv_missing_integer_bitstream_q_roundtrip",
+        "hi_nerv_decoder_weight_waterfill_plan_missing",
     }.issubset(set(stack_rows["hi_nerv"]["blocking_gaps"]))
     assert {
         "snerv_official_symbol_parity_map_missing",
@@ -135,6 +144,8 @@ def test_nerv_control_inventory_can_focus_on_snerv_plus_cross_stack_only() -> No
     assert applies_to <= {"snerv", "cross_stack"}
     assert "snerv" in applies_to
     assert "cross_stack" in applies_to
+    work_order_ids = {row["work_order_id"] for row in report["recommended_next_work_orders"]}
+    assert "decoder_weight_waterfill_plan_for_snerv_receiver_rows" in work_order_ids
     assert report["score_claim"] is False
     assert [row["family"] for row in report["modelsize_ladder"]["family_rows"]] == [
         "snerv"
