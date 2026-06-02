@@ -170,6 +170,7 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
     assert profile == compat
     assert profile["schema"] == "hprc_mlx_component_neutralization_profile.v1"
     assert profile["source_schema"] == "pact_nerv_selector_v4_section_value_profile.v1"
+    assert profile["axis_tag"] == "[macOS-MLX research-signal]"
     assert profile["upstream_dir"] == upstream_dir.as_posix()
     assert profile["video_names_file"] == video_names_file.as_posix()
     assert profile["reference_cache_dir"] == reference_cache_root.as_posix()
@@ -185,6 +186,10 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
     assert admission["schema"] == "compact_nerv_byte_price_controller.v1"
     assert admission["source_schema"] == profile["schema"]
     assert admission["input_row_count"] == 5
+    assert "[macOS-MLX research-signal]" in admission["decision_rows"][0][
+        "axis_labels"
+    ]
+    assert "axis_label_missing" not in admission["decision_rows"][0]["blockers"]
     assert admission["score_claim"] is False
     assert admission["ready_for_exact_eval_dispatch"] is False
     rows = {row["variant_id"]: row for row in profile["section_value_rows"]}
@@ -196,6 +201,7 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
         "residual_absent_no_admission",
     }
     assert rows["neutralize_decoder_qw"]["neutralized_section"] == "decoder_qw"
+    assert rows["neutralize_decoder_qw"]["axis_tag"] == "[macOS-MLX research-signal]"
     assert rows["neutralize_decoder_qw"]["projection_manifest_path"] == (
         projection.as_posix()
     )

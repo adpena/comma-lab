@@ -293,6 +293,7 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     assert profile["schema"] == "hprc_mlx_component_neutralization_profile.v1"
     assert profile["source_schema"] == "pact_nerv_vq_section_value_profile.v1"
     assert profile["family"] == "pact_nerv_vq"
+    assert profile["axis_tag"] == "[macOS-MLX research-signal]"
     assert profile["upstream_dir"] == upstream_dir.as_posix()
     assert profile["video_names_file"] == video_names_file.as_posix()
     assert profile["reference_cache_dir"] == reference_cache_root.as_posix()
@@ -317,6 +318,10 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     assert admission["schema"] == "compact_nerv_byte_price_controller.v1"
     assert admission["source_schema"] == profile["schema"]
     assert admission["input_row_count"] == 5
+    assert "[macOS-MLX research-signal]" in admission["decision_rows"][0][
+        "axis_labels"
+    ]
+    assert "axis_label_missing" not in admission["decision_rows"][0]["blockers"]
     assert admission["score_claim"] is False
     assert admission["ready_for_exact_eval_dispatch"] is False
     rows = {row["variant_id"]: row for row in profile["section_value_rows"]}
@@ -329,6 +334,7 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     }
     assert rows["neutralize_codebooks_q"]["neutralized_section"] == "codebooks_q"
     assert rows["neutralize_codebooks_q"]["family"] == "pact_nerv_vq"
+    assert rows["neutralize_codebooks_q"]["axis_tag"] == "[macOS-MLX research-signal]"
     assert rows["residual_absent_no_admission"]["admission_status"] == (
         "demote_residual_token_variant"
     )

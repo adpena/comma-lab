@@ -42,6 +42,7 @@ from tac.substrates.hprc.spine_bounded_runner import (  # noqa: E402
 COMPACT_RENDERER_MLX_SECTION_VALUE_SOURCE_SCHEMA = (
     "compact_renderer_mlx_baseline_section_value_profile.v1"
 )
+MLX_SECTION_VALUE_AXIS_TAG = "[macOS-MLX research-signal]"
 _SECTION_ATTRIBUTION_BLOCKER = "section_neutralization_or_ablation_replay_missing"
 _METADATA_SECTION_NAMES = frozenset({"rdo_plan", "manifest_json", "receiver_state"})
 
@@ -188,6 +189,7 @@ def build_compact_renderer_mlx_section_value_profile(
             "variant_id": "baseline",
             "neutralized_section": "none",
             "family": family,
+            "axis_tag": MLX_SECTION_VALUE_AXIS_TAG,
             "projection_manifest_path": projection_manifest_path,
             "archive_zip_bytes": archive_bytes,
             "archive_bytes_removed_vs_baseline": 0,
@@ -212,6 +214,7 @@ def build_compact_renderer_mlx_section_value_profile(
         "repo_root": root.as_posix(),
         "tool_argv": list(tool_argv or []),
         "family": family,
+        "axis_tag": MLX_SECTION_VALUE_AXIS_TAG,
         "projection_manifest_path": projection_manifest_path,
         "source_reports": {
             "compact_runner_report": _file_record(runner_path),

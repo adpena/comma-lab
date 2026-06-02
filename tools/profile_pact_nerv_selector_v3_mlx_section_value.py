@@ -60,6 +60,7 @@ DEFAULT_REFERENCE_CACHE = (
 )
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
 DEFAULT_SECTIONS = ("decoder_qw", "latents_rc", "selectors_rc", "residual_rc")
+MLX_SECTION_VALUE_AXIS_TAG = "[macOS-MLX research-signal]"
 
 
 @dataclass(frozen=True)
@@ -596,6 +597,7 @@ def _build_report(
                     "marginal_status": "residual_section_absent_no_token_admitted",
                     "admission_status": "demote_residual_token_variant",
                     "family": "pact_nerv",
+                    "axis_tag": MLX_SECTION_VALUE_AXIS_TAG,
                     "projection_manifest_path": (
                         None if projection_manifest is None else projection_manifest.as_posix()
                     ),
@@ -616,6 +618,7 @@ def _build_report(
             *raw_argv,
         ],
         "family": "pact_nerv",
+        "axis_tag": MLX_SECTION_VALUE_AXIS_TAG,
         "projection_manifest_path": None if projection_manifest is None else projection_manifest.as_posix(),
         "candidate_archive": {
             "path": archive.as_posix(),
@@ -748,6 +751,7 @@ def _section_value_row(
         "variant_id": variant.variant_id,
         "neutralized_section": section,
         "family": "pact_nerv",
+        "axis_tag": MLX_SECTION_VALUE_AXIS_TAG,
         "projection_manifest_path": None if projection_manifest is None else projection_manifest.as_posix(),
         "archive_zip_bytes": int(variant.archive_bytes),
         "archive_bytes_removed_vs_baseline": int(archive_bytes_removed),

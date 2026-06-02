@@ -41,6 +41,7 @@ def test_build_profile_records_baseline_score_and_section_byte_blockers(
     )
 
     assert profile["schema"] == HPRC_MLX_COMPONENT_PROFILE_SCHEMA
+    assert profile["axis_tag"] == "[macOS-MLX research-signal]"
     assert profile["score_claim"] is False
     assert profile["ready_for_exact_eval_dispatch"] is False
     assert profile["candidate_archive"]["bytes"] == archive.stat().st_size
@@ -63,6 +64,7 @@ def test_build_profile_records_baseline_score_and_section_byte_blockers(
             **profile["section_value_rows"][0],
             "variant_id": "baseline",
             "neutralized_section": "none",
+            "axis_tag": "[macOS-MLX research-signal]",
             "archive_zip_bytes": archive.stat().st_size,
             "delta_nonrate_score": 0.0,
         }
@@ -79,6 +81,10 @@ def test_build_profile_records_baseline_score_and_section_byte_blockers(
     assert admission["input_row_count"] == 1
     assert admission["decision_rows"][0]["row_id"] == "baseline"
     assert admission["decision_rows"][0]["decision"] == "demote"
+    assert "[macOS-MLX research-signal]" in admission["decision_rows"][0][
+        "axis_labels"
+    ]
+    assert "axis_label_missing" not in admission["decision_rows"][0]["blockers"]
     assert admission["score_claim"] is False
     assert admission["ready_for_exact_eval_dispatch"] is False
     assert "compact_base_long_training_required_before_family_demote" in profile["blockers"]
