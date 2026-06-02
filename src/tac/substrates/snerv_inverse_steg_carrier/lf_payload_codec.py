@@ -4,7 +4,9 @@
 The legacy SNAR1 LF section stores signed LF coefficient planes as raw int64
 followed by XZ.  This module keeps the signal identical, but gives the receiver
 smaller integer-stream grammars that match what the planes actually need:
-delta-varints, zero-run varints, and exact signed int2/int4/int8 bit-packing.
+delta-varints, zero-run varints, exact signed int2/int4/int8 bit-packing,
+and exact unsigned int2/int4/int8 variants for LF planes shifted nonnegative by
+the SNeRV quantizer.
 """
 
 from __future__ import annotations
@@ -41,11 +43,21 @@ _SUPPORTED_MODES = (
     "raw_i64",
     "zigzag_delta_varint",
     "zero_run_varint",
+    "unsigned_int2_bitpack",
+    "unsigned_int4_bitpack",
+    "unsigned_int8_bitpack",
+    "unsigned_int2_escape_varint",
+    "unsigned_int4_escape_varint",
+    "unsigned_int8_escape_varint",
     "signed_int2_bitpack",
     "signed_int4_bitpack",
     "signed_int8_bitpack",
+    "signed_int2_escape_varint",
+    "signed_int4_escape_varint",
+    "signed_int8_escape_varint",
 )
 _SUPPORTED_WRAPPERS = ("none", "brotli", "lzma")
+_ESCAPE_HEADER = struct.Struct("<I")
 
 
 class SnervLfPayloadCodecError(ValueError):
@@ -303,7 +315,19 @@ def _encode_plane_unwrapped(arr: np.ndarray, *, mode: str) -> bytes:
             out.extend(encode_varint(_zigzag_encode(value) + 1))
             idx += 1
         return bytes(out)
-    bits = _signed_bitpack_bits(mode)
+    if mode.startswith("unsigned_int") and mode.endswith("_escape_varint"):
+        return _encode_unsigned_escape_varint(arr, bits=_unsigned_intn_bits(mode))
+    if mode.startswith("signed_int") and mode.endswith("_escape_varint"):
+        return _encode_signed_escape_varint(arr, bits=_signed_intn_bits(mode))
+    if mode.startswith("unsigned_int"):
+        bits = _unsigned_intn_bits(mode)
+        qmax = (1 << bits) - 1
+        if arr.size and (int(arr.min()) < 0 or int(arr.max()) > qmax):
+            raise SnervLfPayloadCodecError(
+                f"{mode} requires values in [0, {qmax}]"
+            )
+        return pack_fixed_width_uints(arr.astype(np.int64), bits=bits)
+    bits = _signed_intn_bits(mode)
     qmin = -(1 << (bits - 1))
     qmax = (1 << (bits - 1)) - 1
     if arr.size and (int(arr.min()) < qmin or int(arr.max()) > qmax):
@@ -338,10 +362,30 @@ def _decode_plane_unwrapped(blob: bytes, *, mode: str, count: int) -> np.ndarray
                 out.append(_zigzag_decode(token - 1))
         arr = np.asarray(out, dtype=np.int64)
     else:
-        bits = _signed_bitpack_bits(mode)
-        qmin = -(1 << (bits - 1))
-        arr = unpack_fixed_width_uints(blob, bits=bits, count=count).astype(np.int64)
-        arr += qmin
+        if mode.startswith("unsigned_int") and mode.endswith("_escape_varint"):
+            arr = _decode_unsigned_escape_varint(
+                blob,
+                bits=_unsigned_intn_bits(mode),
+                count=count,
+            )
+        elif mode.startswith("signed_int") and mode.endswith("_escape_varint"):
+            arr = _decode_signed_escape_varint(
+                blob,
+                bits=_signed_intn_bits(mode),
+                count=count,
+            )
+        elif mode.startswith("unsigned_int"):
+            bits = _unsigned_intn_bits(mode)
+            arr = unpack_fixed_width_uints(blob, bits=bits, count=count).astype(
+                np.int64
+            )
+        else:
+            bits = _signed_intn_bits(mode)
+            qmin = -(1 << (bits - 1))
+            arr = unpack_fixed_width_uints(blob, bits=bits, count=count).astype(
+                np.int64
+            )
+            arr += qmin
     if int(arr.size) != int(count):
         raise SnervLfPayloadCodecError(
             f"LF v2 decoded count {arr.size} != expected {count}"
@@ -452,14 +496,42 @@ def _normalize_mode(mode: str) -> tuple[str, ...]:
         "raw": "raw_i64",
         "delta_varint": "zigzag_delta_varint",
         "zero_run": "zero_run_varint",
+        "uint2": "unsigned_int2_bitpack",
+        "uint4": "unsigned_int4_bitpack",
+        "uint8": "unsigned_int8_bitpack",
+        "u2": "unsigned_int2_bitpack",
+        "u4": "unsigned_int4_bitpack",
+        "u8": "unsigned_int8_bitpack",
         "int2": "signed_int2_bitpack",
         "int4": "signed_int4_bitpack",
         "int8": "signed_int8_bitpack",
+        "uint2_escape": "unsigned_int2_escape_varint",
+        "uint4_escape": "unsigned_int4_escape_varint",
+        "uint8_escape": "unsigned_int8_escape_varint",
+        "unsigned_int2_escape": "unsigned_int2_escape_varint",
+        "unsigned_int4_escape": "unsigned_int4_escape_varint",
+        "unsigned_int8_escape": "unsigned_int8_escape_varint",
+        "int2_escape": "signed_int2_escape_varint",
+        "int4_escape": "signed_int4_escape_varint",
+        "int8_escape": "signed_int8_escape_varint",
+        "signed_int2_escape": "signed_int2_escape_varint",
+        "signed_int4_escape": "signed_int4_escape_varint",
+        "signed_int8_escape": "signed_int8_escape_varint",
     }
     normalized = aliases.get(normalized, normalized)
     if normalized not in _SUPPORTED_MODES:
         raise SnervLfPayloadCodecError(f"unsupported LF mode: {mode!r}")
     return (normalized,)
+
+
+def _unsigned_intn_bits(mode: str) -> int:
+    if mode.startswith("unsigned_int2_"):
+        return 2
+    if mode.startswith("unsigned_int4_"):
+        return 4
+    if mode.startswith("unsigned_int8_"):
+        return 8
+    raise SnervLfPayloadCodecError(f"not an unsigned intN mode: {mode!r}")
 
 
 def _normalize_wrapper(wrapper: str) -> tuple[str, ...]:
@@ -475,14 +547,130 @@ def _normalize_wrapper(wrapper: str) -> tuple[str, ...]:
     return (normalized,)
 
 
-def _signed_bitpack_bits(mode: str) -> int:
-    if mode == "signed_int2_bitpack":
+def _signed_intn_bits(mode: str) -> int:
+    if mode.startswith("signed_int2_"):
         return 2
-    if mode == "signed_int4_bitpack":
+    if mode.startswith("signed_int4_"):
         return 4
-    if mode == "signed_int8_bitpack":
+    if mode.startswith("signed_int8_"):
         return 8
-    raise SnervLfPayloadCodecError(f"not a signed bitpack mode: {mode!r}")
+    raise SnervLfPayloadCodecError(f"not a signed intN mode: {mode!r}")
+
+
+def _encode_signed_escape_varint(arr: np.ndarray, *, bits: int) -> bytes:
+    qmin = -(1 << (bits - 1))
+    qmax = (1 << (bits - 1)) - 1
+    flat = arr.astype(np.int64, copy=False).reshape(-1)
+    escape_mask = (flat < qmin) | (flat > qmax)
+    escape_count = int(np.count_nonzero(escape_mask))
+    mask_payload = pack_fixed_width_uints(escape_mask.astype(np.uint8), bits=1)
+    low_values = flat[~escape_mask] - qmin
+    low_payload = pack_fixed_width_uints(low_values, bits=bits)
+    escape_payload = bytearray()
+    for value in flat[escape_mask].tolist():
+        escape_payload.extend(encode_varint(_zigzag_encode(int(value))))
+    return (
+        _ESCAPE_HEADER.pack(escape_count)
+        + mask_payload
+        + low_payload
+        + bytes(escape_payload)
+    )
+
+
+def _decode_signed_escape_varint(blob: bytes, *, bits: int, count: int) -> np.ndarray:
+    if len(blob) < _ESCAPE_HEADER.size:
+        raise SnervLfPayloadCodecError("truncated signed escape LF payload")
+    (escape_count,) = _ESCAPE_HEADER.unpack(blob[: _ESCAPE_HEADER.size])
+    if int(escape_count) > int(count):
+        raise SnervLfPayloadCodecError("signed escape count exceeds LF plane count")
+    pos = _ESCAPE_HEADER.size
+    mask_bytes = _packed_width_bytes(count=int(count), bits=1)
+    mask_end = pos + mask_bytes
+    if mask_end > len(blob):
+        raise SnervLfPayloadCodecError("truncated signed escape mask")
+    mask = unpack_fixed_width_uints(blob[pos:mask_end], bits=1, count=count).astype(bool)
+    pos = mask_end
+    if int(np.count_nonzero(mask)) != int(escape_count):
+        raise SnervLfPayloadCodecError("signed escape mask count mismatch")
+    low_count = int(count) - int(escape_count)
+    low_bytes = _packed_width_bytes(count=low_count, bits=bits)
+    low_end = pos + low_bytes
+    if low_end > len(blob):
+        raise SnervLfPayloadCodecError("truncated signed escape low-bit payload")
+    qmin = -(1 << (bits - 1))
+    low = unpack_fixed_width_uints(blob[pos:low_end], bits=bits, count=low_count)
+    low = low.astype(np.int64) + qmin
+    pos = low_end
+    escapes: list[int] = []
+    for _idx in range(int(escape_count)):
+        token, pos = decode_varint(blob, pos)
+        escapes.append(_zigzag_decode(token))
+    if pos != len(blob):
+        raise SnervLfPayloadCodecError("signed escape payload has trailing bytes")
+    out = np.empty(int(count), dtype=np.int64)
+    out[~mask] = low
+    out[mask] = np.asarray(escapes, dtype=np.int64)
+    return out
+
+
+def _encode_unsigned_escape_varint(arr: np.ndarray, *, bits: int) -> bytes:
+    qmax = (1 << bits) - 1
+    flat = arr.astype(np.int64, copy=False).reshape(-1)
+    if flat.size and int(flat.min()) < 0:
+        raise SnervLfPayloadCodecError(
+            f"unsigned_int{bits}_escape_varint requires non-negative values"
+        )
+    escape_mask = flat > qmax
+    escape_count = int(np.count_nonzero(escape_mask))
+    mask_payload = pack_fixed_width_uints(escape_mask.astype(np.uint8), bits=1)
+    low_payload = pack_fixed_width_uints(flat[~escape_mask], bits=bits)
+    escape_payload = bytearray()
+    for value in flat[escape_mask].tolist():
+        escape_payload.extend(encode_varint(int(value)))
+    return (
+        _ESCAPE_HEADER.pack(escape_count)
+        + mask_payload
+        + low_payload
+        + bytes(escape_payload)
+    )
+
+
+def _decode_unsigned_escape_varint(blob: bytes, *, bits: int, count: int) -> np.ndarray:
+    if len(blob) < _ESCAPE_HEADER.size:
+        raise SnervLfPayloadCodecError("truncated unsigned escape LF payload")
+    (escape_count,) = _ESCAPE_HEADER.unpack(blob[: _ESCAPE_HEADER.size])
+    if int(escape_count) > int(count):
+        raise SnervLfPayloadCodecError("unsigned escape count exceeds LF plane count")
+    pos = _ESCAPE_HEADER.size
+    mask_bytes = _packed_width_bytes(count=int(count), bits=1)
+    mask_end = pos + mask_bytes
+    if mask_end > len(blob):
+        raise SnervLfPayloadCodecError("truncated unsigned escape mask")
+    mask = unpack_fixed_width_uints(blob[pos:mask_end], bits=1, count=count).astype(bool)
+    pos = mask_end
+    if int(np.count_nonzero(mask)) != int(escape_count):
+        raise SnervLfPayloadCodecError("unsigned escape mask count mismatch")
+    low_count = int(count) - int(escape_count)
+    low_bytes = _packed_width_bytes(count=low_count, bits=bits)
+    low_end = pos + low_bytes
+    if low_end > len(blob):
+        raise SnervLfPayloadCodecError("truncated unsigned escape low payload")
+    low_values = unpack_fixed_width_uints(blob[pos:low_end], bits=bits, count=low_count)
+    pos = low_end
+    escapes = []
+    for _ in range(int(escape_count)):
+        value, pos = decode_varint(blob, pos)
+        escapes.append(int(value))
+    if pos != len(blob):
+        raise SnervLfPayloadCodecError("trailing bytes in unsigned escape LF payload")
+    out = np.empty(int(count), dtype=np.int64)
+    out[~mask] = low_values
+    out[mask] = np.asarray(escapes, dtype=np.int64)
+    return out
+
+
+def _packed_width_bytes(*, count: int, bits: int) -> int:
+    return (int(count) * int(bits) + 7) // 8
 
 
 def _validate_payload_coverage(

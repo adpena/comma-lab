@@ -53,6 +53,12 @@ def test_lf_payload_v2_zero_heavy_portfolio_beats_raw_i64() -> None:
             "raw_i64",
             "zigzag_delta_varint",
             "zero_run_varint",
+            "unsigned_int2_bitpack",
+            "unsigned_int4_bitpack",
+            "unsigned_int8_bitpack",
+            "unsigned_int2_escape_varint",
+            "unsigned_int4_escape_varint",
+            "unsigned_int8_escape_varint",
             "signed_int2_bitpack",
             "signed_int4_bitpack",
             "signed_int8_bitpack",
@@ -77,6 +83,128 @@ def test_lf_payload_v2_signed_bitpack_exactness_and_range_refusal() -> None:
             mode="int2",
             wrapper="none",
         )
+
+
+def test_lf_payload_v2_unsigned_bitpack_exactness_and_range_refusal() -> None:
+    plane = np.array([[0, 1, 2, 3], [3, 2, 1, 0]], dtype=np.int64)
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        mode="uint2",
+        wrapper="none",
+    )
+
+    np.testing.assert_array_equal(decode_lf_quant_payload_v2(packet)[0], plane)
+    assert report.mode_histogram == {"unsigned_int2_bitpack": 1}
+
+    with pytest.raises(SnervLfPayloadCodecError, match="unsigned_int2_bitpack"):
+        encode_lf_quant_payload_v2_with_report(
+            [np.array([[-1]], dtype=np.int64)],
+            mode="uint2",
+            wrapper="none",
+        )
+    with pytest.raises(SnervLfPayloadCodecError, match="unsigned_int2_bitpack"):
+        encode_lf_quant_payload_v2_with_report(
+            [np.array([[4]], dtype=np.int64)],
+            mode="uint2",
+            wrapper="none",
+        )
+
+
+def test_lf_payload_v2_unsigned_escape_varint_roundtrips_sparse_high_tail() -> None:
+    plane = np.zeros((16, 16), dtype=np.int64)
+    plane[0, 1] = 1
+    plane[2, 3] = 2
+    plane[4, 5] = 3
+    plane[9, 4] = 111
+    plane[15, 0] = 999
+
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        mode="uint2_escape",
+        wrapper="none",
+    )
+    decoded = decode_lf_quant_payload_v2(packet)
+
+    np.testing.assert_array_equal(decoded[0], plane)
+    assert report.mode_histogram == {"unsigned_int2_escape_varint": 1}
+    assert report.packet_bytes < plane.size * np.dtype("<i8").itemsize
+
+    with pytest.raises(SnervLfPayloadCodecError, match="non-negative"):
+        encode_lf_quant_payload_v2_with_report(
+            [np.array([[-1, 0, 1]], dtype=np.int64)],
+            mode="uint2_escape",
+            wrapper="none",
+        )
+
+
+def test_lf_payload_v2_unsigned_escape_beats_signed_escape_for_nonnegative_plane() -> None:
+    plane = (np.arange(32 * 32, dtype=np.int64).reshape(32, 32) % 4).astype(np.int64)
+    plane[9, 4] = 111
+    plane[15, 0] = 999
+
+    unsigned_packet, unsigned_report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        mode="uint2_escape",
+        wrapper="none",
+    )
+    signed_packet, signed_report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        mode="int2_escape",
+        wrapper="none",
+    )
+
+    np.testing.assert_array_equal(decode_lf_quant_payload_v2(unsigned_packet)[0], plane)
+    np.testing.assert_array_equal(decode_lf_quant_payload_v2(signed_packet)[0], plane)
+    assert unsigned_report.packet_bytes < signed_report.packet_bytes
+
+
+def test_lf_payload_v2_portfolio_can_pick_unsigned_escape_for_nonnegative_tail() -> None:
+    plane = (np.arange(32 * 32, dtype=np.int64).reshape(32, 32) % 4).astype(np.int64)
+    plane[4, 6] = 127
+    plane[10, 9] = 255
+
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        wrapper="none",
+    )
+    decoded = decode_lf_quant_payload_v2(packet)
+
+    np.testing.assert_array_equal(decoded[0], plane)
+    assert any(mode.startswith("unsigned_int") for mode in report.mode_histogram)
+
+
+def test_lf_payload_v2_signed_escape_varint_roundtrips_sparse_outliers() -> None:
+    plane = np.zeros((16, 16), dtype=np.int64)
+    plane[0, 0] = -2
+    plane[0, 1] = 1
+    plane[3, 5] = 97
+    plane[9, 4] = -111
+
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        mode="int2_escape",
+        wrapper="none",
+    )
+    decoded = decode_lf_quant_payload_v2(packet)
+
+    np.testing.assert_array_equal(decoded[0], plane)
+    assert report.mode_histogram == {"signed_int2_escape_varint": 1}
+    assert report.packet_bytes < plane.size * np.dtype("<i8").itemsize
+
+
+def test_lf_payload_v2_portfolio_can_pick_escape_mode_for_sparse_tail() -> None:
+    plane = (np.arange(32 * 32, dtype=np.int64).reshape(32, 32) % 4) - 2
+    plane[4, 6] = 127
+    plane[10, 9] = -126
+
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        wrapper="none",
+    )
+    decoded = decode_lf_quant_payload_v2(packet)
+
+    np.testing.assert_array_equal(decoded[0], plane)
+    assert "signed_int2_escape_varint" in report.mode_histogram
 
 
 def test_lf_payload_v2_metadata_is_deterministic_and_inspectable() -> None:
