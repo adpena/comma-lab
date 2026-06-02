@@ -18,6 +18,7 @@ from typing import Any
 
 import numpy as np
 
+from tac.repo_io import sha256_file
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
     ORIGINAL_VIDEO_BYTES,
@@ -191,6 +192,50 @@ def load_state_npz(path: str | Path) -> dict[str, np.ndarray]:
         raise NervDecoderWeightWaterfillError(f"state npz does not exist: {p}")
     with np.load(p, allow_pickle=False) as data:
         return {name: np.asarray(data[name]) for name in data.files}
+
+
+def load_state_npz_from_manifest(path: str | Path) -> dict[str, np.ndarray]:
+    """Load a state NPZ only after verifying its bridge manifest SHA."""
+
+    manifest_path = Path(path).expanduser().resolve(strict=False)
+    if not manifest_path.is_file():
+        raise NervDecoderWeightWaterfillError(
+            f"state npz manifest does not exist: {manifest_path}"
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema") != "framework_agnostic_npz_bridge_manifest.v1":
+        raise NervDecoderWeightWaterfillError(
+            "unsupported state npz manifest schema: "
+            f"{manifest.get('schema')!r}"
+        )
+    if manifest.get("consumption_recommended") is not True:
+        raise NervDecoderWeightWaterfillError(
+            "state npz manifest is not consumption-recommended: "
+            f"{manifest.get('blockers')}"
+        )
+    artifact = manifest.get("artifact_path")
+    if not artifact:
+        raise NervDecoderWeightWaterfillError("state npz manifest missing artifact_path")
+    artifact_path = Path(str(artifact)).expanduser()
+    if not artifact_path.is_absolute():
+        artifact_path = manifest_path.parent / artifact_path
+    artifact_path = artifact_path.resolve(strict=False)
+    expected_sha = str(manifest.get("artifact_sha256") or "")
+    if len(expected_sha) != 64:
+        raise NervDecoderWeightWaterfillError(
+            "state npz manifest missing 64-char artifact_sha256"
+        )
+    if not artifact_path.is_file():
+        raise NervDecoderWeightWaterfillError(
+            f"state npz artifact does not exist: {artifact_path}"
+        )
+    actual_sha = sha256_file(artifact_path)
+    if actual_sha != expected_sha:
+        raise NervDecoderWeightWaterfillError(
+            "state npz artifact sha256 mismatch: "
+            f"expected={expected_sha} actual={actual_sha}"
+        )
+    return load_state_npz(artifact_path)
 
 
 def load_saliency_json(path: str | Path) -> dict[str, float]:
@@ -532,5 +577,6 @@ __all__ = [
     "build_nerv_decoder_weight_waterfill_plan",
     "load_saliency_json",
     "load_state_npz",
+    "load_state_npz_from_manifest",
     "render_nerv_decoder_weight_waterfill_markdown",
 ]

@@ -32,6 +32,7 @@ def build_nerv_control_inventory(
     focus_families: Iterable[str] = ("hi_nerv", "snerv"),
     repo_root: str | Path | None = None,
     hinerv_archive_size_ladder_report: Mapping[str, Any] | None = None,
+    hinerv_archive_ladder_waterfill_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a machine-readable map of NeRV controls and required bindings."""
 
@@ -58,6 +59,12 @@ def build_nerv_control_inventory(
         "modelsize_ladder": build_nerv_modelsize_ladder(focus_families=focus),
         "measured_archive_size_ladders": _measured_archive_size_ladders(
             hinerv_archive_size_ladder_report=hinerv_archive_size_ladder_report,
+            focus_families=focus,
+        ),
+        "decoder_weight_waterfill_reports": _decoder_weight_waterfill_reports(
+            hinerv_archive_ladder_waterfill_report=(
+                hinerv_archive_ladder_waterfill_report
+            ),
             focus_families=focus,
         ),
         "control_rows": controls,
@@ -247,6 +254,43 @@ def _measured_archive_size_ladders(
     return rows
 
 
+def _decoder_weight_waterfill_reports(
+    *,
+    hinerv_archive_ladder_waterfill_report: Mapping[str, Any] | None,
+    focus_families: Iterable[str],
+) -> dict[str, Any]:
+    focus = {str(family) for family in focus_families}
+    rows: dict[str, Any] = {}
+    if hinerv_archive_ladder_waterfill_report is not None and (
+        not focus or "hi_nerv" in focus
+    ):
+        report = hinerv_archive_ladder_waterfill_report
+        rows["hi_nerv"] = {
+            "schema": report.get("schema"),
+            "status": "decoder_weight_waterfill_rows_available_false_authority",
+            "report_path": report.get("report_path"),
+            "row_count": int(report.get("row_count", 0) or 0),
+            "section_value_row_count": len(report.get("section_value_rows") or ()),
+            "full_video_coverage": bool(report.get("full_video_coverage")),
+            "byte_price_plan": report.get("byte_price_plan"),
+            "waterfill_rows": [
+                {
+                    "row_id": row.get("row_id"),
+                    "archive_bytes": row.get("archive_bytes"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "state_npz_artifact_sha256": row.get("state_npz_artifact_sha256"),
+                    "waterfill_summary": row.get("waterfill_summary"),
+                    "blockers": list(row.get("blockers") or ()),
+                }
+                for row in report.get("rows", ())
+                if isinstance(row, Mapping)
+            ],
+            "blockers": list(report.get("blockers") or ()),
+            **FALSE_AUTHORITY,
+        }
+    return rows
+
+
 def _control_rows() -> list[dict[str, Any]]:
     return [
         _row(
@@ -263,7 +307,7 @@ def _control_rows() -> list[dict[str, Any]]:
             status="partially_wired_needs_measured_ladder",
             missing=[
                 "measured_hi_nerv_modelsize_budget_ladder",
-                "decoder_weight_waterfill_plan_for_hi_nerv_archive_rows",
+                "decoder_weight_saliency_replay_for_hi_nerv_archive_rows",
                 "decoder_weight_saliency_into_trainer",
                 "cache_quality_gate_required_before_profile_or_spend",
             ],
@@ -642,7 +686,7 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
                 "reference": "HNeRV modelsize and HiNeRV pruning/quantization codec pipeline",
                 "intrinsic_gaps": [
                     "hi_nerv_measured_modelsize_budget_ladder_missing",
-                    "hi_nerv_decoder_weight_waterfill_plan_missing",
+                    "hi_nerv_decoder_weight_saliency_replay_missing",
                     "hi_nerv_grouped_intN_zero_run_packet_layout_missing",
                 ],
                 "next_action": (
@@ -1052,7 +1096,7 @@ def _recommended_work_orders(gaps: list[dict[str, Any]]) -> list[dict[str, Any]]
     priority = [
         "cache_quality_gate_required_before_profile_or_spend",
         "measured_hi_nerv_modelsize_budget_ladder",
-        "decoder_weight_waterfill_plan_for_hi_nerv_archive_rows",
+        "decoder_weight_saliency_replay_for_hi_nerv_archive_rows",
         "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
         "decoder_weight_waterfill_plan_for_hi_nerv_full_main",
         "mlx_native_snerv_train_export",
@@ -1109,7 +1153,9 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "src/tac/analysis/hnerv_packet_sections.py",
             "src/tac/analysis/scorer_conditional_mdl.py",
             "src/tac/analysis/nerv_decoder_weight_waterfill.py",
+            "src/tac/analysis/hinerv_archive_ladder_waterfill.py",
             "tools/build_nerv_decoder_weight_waterfill_plan.py",
+            "tools/build_hinerv_archive_ladder_waterfill.py",
         ],
         "receiver_and_exact_custody": [
             "src/tac/substrates/hprc/archive_candidate.py",

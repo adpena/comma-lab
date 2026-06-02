@@ -22,10 +22,18 @@ from comma_lab.storage_tiers import (
     plan_experiment_storage,
     require_selected_storage,
 )
+from tac.analysis.nerv_decoder_weight_waterfill import (
+    DEFAULT_ACTION_BITS,
+    NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
+    build_nerv_decoder_weight_waterfill_plan,
+    load_saliency_json,
+    load_state_npz_from_manifest,
+)
 from tac.analysis.nerv_modelsize_ladder import (
     SCORER_ONLY_OBJECTIVE_AUTHORITY,
     hi_nerv_modelsize_config_rows,
 )
+from tac.repo_io import write_json
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
 )
@@ -56,6 +64,9 @@ def build_hinerv_archive_size_ladder(
     allow_local_output_dir: bool = False,
     storage_expected_bytes: int = 512 * 1024 * 1024,
     storage_reserve_free_gb: float = DEFAULT_RESERVE_FREE_GB,
+    emit_decoder_weight_waterfill_plan: bool = False,
+    decoder_weight_saliency_json: str | Path | None = None,
+    decoder_weight_waterfill_action_bits: Sequence[int] = DEFAULT_ACTION_BITS,
 ) -> dict[str, Any]:
     """Export measured archive ZIP rows for the local HiNeRV size ladder."""
 
@@ -70,6 +81,11 @@ def build_hinerv_archive_size_ladder(
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
 
+    decoder_weight_saliency = (
+        None
+        if decoder_weight_saliency_json is None
+        else load_saliency_json(decoder_weight_saliency_json)
+    )
     selected = {str(row_id) for row_id in row_ids} if row_ids is not None else None
     specs = [
         spec
@@ -97,6 +113,28 @@ def build_hinerv_archive_size_ladder(
         )
         proof_path = row_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
         proof = _read_json_if_exists(proof_path)
+        state_npz_manifest_path = row_dir / "hi_nerv_mlx_exported_state_npz_manifest.json"
+        waterfill_path = None
+        waterfill_summary = None
+        if emit_decoder_weight_waterfill_plan:
+            proof_status = (
+                "runtime_consumption_proof_ready"
+                if proof.get("runtime_consumption_proof_ready") is True
+                else "missing"
+            )
+            waterfill_path = row_dir / "decoder_weight_waterfill_plan.json"
+            waterfill = build_nerv_decoder_weight_waterfill_plan(
+                load_state_npz_from_manifest(state_npz_manifest_path),
+                saliency_by_name=decoder_weight_saliency,
+                family="hi_nerv",
+                candidate_id=row_id,
+                action_bits=decoder_weight_waterfill_action_bits,
+                full_video_coverage=False,
+                receiver_proof_status=proof_status,
+                archive_sha256=archive_sha256,
+            )
+            write_json(waterfill_path, waterfill)
+            waterfill_summary = _decoder_weight_waterfill_summary(waterfill)
         row_blockers = [
             "hinerv_archive_size_row_has_no_nonrate_score",
             "contest_cpu_cuda_exact_eval_not_executed",
@@ -122,9 +160,11 @@ def build_hinerv_archive_size_ladder(
                 "spine_manifest_path": _path_if_exists(
                     row_dir / "hprc_representation_spine_hi_nerv_manifest.json"
                 ),
-                "state_npz_manifest_path": _path_if_exists(
-                    row_dir / "hi_nerv_mlx_exported_state_npz_manifest.json"
-                ),
+                "state_npz_manifest_path": _path_if_exists(state_npz_manifest_path),
+                "decoder_weight_waterfill_plan_path": _path_if_exists(waterfill_path)
+                if waterfill_path is not None
+                else None,
+                "decoder_weight_waterfill_summary": waterfill_summary,
                 "submission_dir": _path_if_exists(row_dir / "submission"),
                 "receiver_proof_executed": bool(emit_receiver_proof),
                 "receiver_proof_path": _path_if_exists(proof_path),
@@ -166,6 +206,16 @@ def build_hinerv_archive_size_ladder(
         "num_pairs": int(num_pairs),
         "decoder_codec": str(decoder_codec),
         "emit_receiver_proof": bool(emit_receiver_proof),
+        "emit_decoder_weight_waterfill_plan": bool(emit_decoder_weight_waterfill_plan),
+        "decoder_weight_waterfill_schema": NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
+        "decoder_weight_saliency_json": (
+            None
+            if decoder_weight_saliency_json is None
+            else Path(decoder_weight_saliency_json).expanduser().as_posix()
+        ),
+        "decoder_weight_waterfill_action_bits": [
+            int(value) for value in decoder_weight_waterfill_action_bits
+        ],
         "objective_authority": SCORER_ONLY_OBJECTIVE_AUTHORITY,
         "contest_byte_price_score_per_byte": CONTEST_BYTE_PRICE_SCORE,
         "selection_rule": (
@@ -184,6 +234,22 @@ def build_hinerv_archive_size_ladder(
     }
     report["byte_price_plan"] = build_nerv_byte_price_plan(report)
     return report
+
+
+def _decoder_weight_waterfill_summary(report: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": report.get("schema"),
+        "group_count": report.get("group_count"),
+        "total_selected_byte_delta": report.get("total_selected_byte_delta"),
+        "total_selected_delta_rate_score": report.get(
+            "total_selected_delta_rate_score"
+        ),
+        "total_selected_delta_nonrate_score_proxy": report.get(
+            "total_selected_delta_nonrate_score_proxy"
+        ),
+        "blockers": list(report.get("blockers") or ()),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _resolve_output_dir(

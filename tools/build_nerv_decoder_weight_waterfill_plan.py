@@ -24,6 +24,7 @@ from tac.analysis.nerv_decoder_weight_waterfill import (  # noqa: E402
     build_nerv_decoder_weight_waterfill_plan,
     load_saliency_json,
     load_state_npz,
+    load_state_npz_from_manifest,
     render_nerv_decoder_weight_waterfill_markdown,
 )
 from tac.repo_io import write_json  # noqa: E402
@@ -31,7 +32,9 @@ from tac.repo_io import write_json  # noqa: E402
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--state-npz", required=True, type=Path)
+    state_group = parser.add_mutually_exclusive_group(required=True)
+    state_group.add_argument("--state-npz", type=Path)
+    state_group.add_argument("--state-npz-manifest", type=Path)
     parser.add_argument("--output-json", required=True, type=Path)
     parser.add_argument("--output-md", default=None, type=Path)
     parser.add_argument("--saliency-json", default=None, type=Path)
@@ -46,7 +49,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--zero-run-overhead-bytes", default=2, type=int)
     args = parser.parse_args(argv)
 
-    state = load_state_npz(args.state_npz)
+    state = (
+        load_state_npz(args.state_npz)
+        if args.state_npz is not None
+        else load_state_npz_from_manifest(args.state_npz_manifest)
+    )
     saliency = (
         None if args.saliency_json is None else load_saliency_json(args.saliency_json)
     )

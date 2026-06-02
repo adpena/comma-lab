@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from tac.analysis.nerv_control_inventory import (
@@ -8,6 +9,7 @@ from tac.analysis.nerv_control_inventory import (
     build_nerv_control_inventory,
     render_nerv_control_inventory_markdown,
 )
+from tools.build_nerv_control_inventory import main as inventory_tool_main
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -49,7 +51,7 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     gap_ids = {row["gap_id"] for row in report["binding_gap_rows"]}
     assert {
         "measured_hi_nerv_modelsize_budget_ladder",
-        "decoder_weight_waterfill_plan_for_hi_nerv_archive_rows",
+        "decoder_weight_saliency_replay_for_hi_nerv_archive_rows",
         "mlx_native_snerv_train_export",
         "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
         "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
@@ -90,7 +92,13 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "src/tac/analysis/nerv_decoder_weight_waterfill.py" in surfaces[
         "section_value_and_codebook"
     ]
+    assert "src/tac/analysis/hinerv_archive_ladder_waterfill.py" in surfaces[
+        "section_value_and_codebook"
+    ]
     assert "tools/build_nerv_decoder_weight_waterfill_plan.py" in surfaces[
+        "section_value_and_codebook"
+    ]
+    assert "tools/build_hinerv_archive_ladder_waterfill.py" in surfaces[
         "section_value_and_codebook"
     ]
     assert "src/tac/submission_packet/paired_auth_eval.py" in surfaces[
@@ -114,7 +122,7 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "hi_nerv_full600_receiver_proven_candidate_missing",
         "hi_nerv_missing_measured_config_family_ladder",
         "hi_nerv_missing_integer_bitstream_q_roundtrip",
-        "hi_nerv_decoder_weight_waterfill_plan_missing",
+        "hi_nerv_decoder_weight_saliency_replay_missing",
     }.issubset(set(stack_rows["hi_nerv"]["blocking_gaps"]))
     assert {
         "snerv_official_symbol_parity_map_missing",
@@ -194,3 +202,93 @@ def test_nerv_control_inventory_accepts_measured_hinerv_archive_size_ladder() ->
     assert "inverse_steg_saliency_decoder_weight_binding" in measured[
         "required_allocator_bindings"
     ]
+
+
+def test_nerv_control_inventory_accepts_hinerv_archive_ladder_waterfill_report() -> None:
+    waterfill_report = {
+        "schema": "hinerv_archive_ladder_waterfill.v1",
+        "report_path": ".omx/research/hinerv_archive_ladder_waterfill_fake.json",
+        "row_count": 1,
+        "full_video_coverage": True,
+        "rows": [
+            {
+                "row_id": "hi_nerv_local_tiny",
+                "archive_bytes": 123,
+                "archive_sha256": "a" * 64,
+                "state_npz_artifact_sha256": "b" * 64,
+                "waterfill_summary": {
+                    "group_count": 2,
+                    "total_selected_byte_delta": -16,
+                },
+                "blockers": ["decoder_weight_saliency_missing_for_some_groups"],
+            }
+        ],
+        "section_value_rows": [{"row_id": "r0"}],
+        "byte_price_plan": {"schema": "compact_nerv_byte_price_controller.v1"},
+        "blockers": ["decoder_weight_saliency_replay_required_for_authority"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("hi_nerv",),
+        hinerv_archive_ladder_waterfill_report=waterfill_report,
+    )
+
+    measured = report["decoder_weight_waterfill_reports"]["hi_nerv"]
+    assert measured["schema"] == "hinerv_archive_ladder_waterfill.v1"
+    assert measured["score_claim"] is False
+    assert measured["row_count"] == 1
+    assert measured["section_value_row_count"] == 1
+    assert measured["waterfill_rows"][0]["waterfill_summary"]["group_count"] == 2
+
+
+def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
+    tmp_path: Path,
+) -> None:
+    waterfill_path = tmp_path / "waterfill.json"
+    output_json = tmp_path / "inventory.json"
+    waterfill_path.write_text(
+        """
+        {
+          "schema": "hinerv_archive_ladder_waterfill.v1",
+          "report_path": ".omx/research/hinerv_archive_ladder_waterfill_fake.json",
+          "row_count": 1,
+          "full_video_coverage": true,
+          "rows": [
+            {
+              "row_id": "hi_nerv_local_tiny",
+              "archive_bytes": 123,
+              "archive_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state_npz_artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "waterfill_summary": {"group_count": 2},
+              "blockers": ["decoder_weight_saliency_missing_for_some_groups"]
+            }
+          ],
+          "section_value_rows": [{"row_id": "r0"}],
+          "byte_price_plan": {"schema": "compact_nerv_byte_price_controller.v1"},
+          "blockers": ["decoder_weight_saliency_replay_required_for_authority"],
+          "score_claim": false,
+          "ready_for_exact_eval_dispatch": false
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "hi_nerv",
+            "--repo-root",
+            str(REPO),
+            "--hinerv-archive-ladder-waterfill-json",
+            str(waterfill_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["decoder_weight_waterfill_reports"]["hi_nerv"]["row_count"] == 1
+    assert payload["score_claim"] is False

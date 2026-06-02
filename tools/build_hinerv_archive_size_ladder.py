@@ -39,6 +39,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--decoder-codec", default="int8_mixed")
     parser.add_argument("--emit-receiver-proof", action="store_true")
     parser.add_argument("--retain-receiver-proof-output", action="store_true")
+    parser.add_argument("--emit-decoder-weight-waterfill-plan", action="store_true")
+    parser.add_argument("--decoder-weight-saliency-json", default=None, type=Path)
+    parser.add_argument("--decoder-weight-waterfill-action-bits", default="0,2,4,8,16,32")
     parser.add_argument(
         "--allow-local-output-dir",
         action="store_true",
@@ -72,6 +75,13 @@ def main(argv: list[str] | None = None) -> int:
         allow_local_output_dir=bool(args.allow_local_output_dir),
         storage_expected_bytes=int(args.storage_expected_bytes),
         storage_reserve_free_gb=float(args.storage_reserve_free_gb),
+        emit_decoder_weight_waterfill_plan=bool(
+            args.emit_decoder_weight_waterfill_plan
+        ),
+        decoder_weight_saliency_json=args.decoder_weight_saliency_json,
+        decoder_weight_waterfill_action_bits=_parse_action_bits(
+            args.decoder_weight_waterfill_action_bits
+        ),
     )
     output = args.output_json.expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -98,9 +108,16 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         "archive_bytes": {
             row["row_id"]: row["archive_bytes"] for row in report["archive_rows"]
         },
+        "emit_decoder_weight_waterfill_plan": report[
+            "emit_decoder_weight_waterfill_plan"
+        ],
         "score_claim": report["score_claim"],
         "ready_for_exact_eval_dispatch": report["ready_for_exact_eval_dispatch"],
     }
+
+
+def _parse_action_bits(value: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in str(value).split(",") if part.strip())
 
 
 if __name__ == "__main__":

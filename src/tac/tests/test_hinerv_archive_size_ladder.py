@@ -12,6 +12,9 @@ from tac.analysis.hinerv_archive_size_ladder import (
     hinerv_modelsize_increment_section_value_rows,
     render_hinerv_archive_size_ladder_markdown,
 )
+from tac.analysis.nerv_decoder_weight_waterfill import (
+    NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
+)
 from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
     DEMOTE,
     NERV_BYTE_PRICE_CONTROLLER_SCHEMA,
@@ -39,6 +42,8 @@ def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None
         emit_receiver_proof=False,
         allow_local_output_dir=True,
         storage_reserve_free_gb=0.0,
+        emit_decoder_weight_waterfill_plan=True,
+        decoder_weight_waterfill_action_bits=(0, 2, 32),
     )
 
     assert report["schema"] == HINERV_ARCHIVE_SIZE_LADDER_SCHEMA
@@ -67,6 +72,14 @@ def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None
     assert row["archive_rate_score_at_contest_price"] > 0.0
     assert row["spine_manifest_path"] is not None
     assert row["state_npz_manifest_path"] is not None
+    assert row["decoder_weight_waterfill_plan_path"] is not None
+    assert Path(row["decoder_weight_waterfill_plan_path"]).is_file()
+    assert row["decoder_weight_waterfill_summary"]["schema"] == (
+        NERV_DECODER_WEIGHT_WATERFILL_SCHEMA
+    )
+    assert "decoder_weight_saliency_missing_for_some_groups" in row[
+        "decoder_weight_waterfill_summary"
+    ]["blockers"]
     assert row["receiver_proof_executed"] is False
     assert row["runtime_consumption_proof_ready"] is None
     assert "adaptive_quantization_by_decoder_weight_group" in row[
