@@ -22,6 +22,9 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.repo_io import sha256_file, write_json
 from tac.substrates._shared.inflate_runtime import CAMERA_HW
+from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
+    build_nerv_byte_price_plan,
+)
 from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
@@ -138,6 +141,19 @@ def sweep_compact_decoder_codecs(
             )
         )
     rows_sorted = sorted(rows, key=lambda row: int(row["archive_bytes"]))
+    section_value_rows = _decoder_codec_section_value_rows(
+        rows_sorted,
+        source_archive_bytes=int(source.stat().st_size),
+    )
+    byte_price_plan = build_nerv_byte_price_plan(
+        {
+            "schema": f"{COMPACT_DECODER_CODEC_SWEEP_SCHEMA}.section_value_rows",
+            "candidate_id": f"{resolved_family}_compact_decoder_codec_sweep",
+            "family": resolved_family,
+            "axis_tag": "[planning/control]",
+            "section_value_rows": section_value_rows,
+        }
+    )
     report = {
         "schema": COMPACT_DECODER_CODEC_SWEEP_SCHEMA,
         "source_archive_zip": source.as_posix(),
@@ -148,10 +164,17 @@ def sweep_compact_decoder_codecs(
         "run_receiver_proof": bool(run_receiver_proof),
         "variant_rows": rows_sorted,
         "best_variant": rows_sorted[0] if rows_sorted else None,
+        "section_value_rows": section_value_rows,
+        "byte_price_plan": byte_price_plan,
         "blockers": _dedupe(
-            blocker
-            for row in rows_sorted
-            for blocker in list(row.get("blockers") or [])
+            [
+                *[
+                    blocker
+                    for row in rows_sorted
+                    for blocker in list(row.get("blockers") or [])
+                ],
+                *list(byte_price_plan.get("blockers") or []),
+            ]
         ),
         **FALSE_AUTHORITY,
     }
@@ -417,6 +440,48 @@ def _materialize_variant(
     }
     write_json(output_dir / "compact_decoder_codec_variant.json", row)
     return row
+
+
+def _decoder_codec_section_value_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    source_archive_bytes: int,
+) -> list[dict[str, Any]]:
+    section_rows: list[dict[str, Any]] = []
+    for row in rows:
+        decoder_codec = str(row.get("decoder_codec") or "")
+        byte_delta = int(row.get("archive_bytes") or 0) - int(source_archive_bytes)
+        section_rows.append(
+            {
+                "row_id": f"{row.get('family')}_decoder_codec:{decoder_codec}",
+                "section_id": f"decoder_codec:{decoder_codec}",
+                "row_kind": (
+                    "new_residual_or_sidecar"
+                    if byte_delta > 0
+                    else "existing_section_cut"
+                ),
+                "family": row.get("family"),
+                "scope": "compact_decoder_codec_replacement",
+                "byte_delta": byte_delta,
+                "section_bytes": abs(byte_delta)
+                or int(row.get("archive_bytes") or 0),
+                "delta_nonrate_score": None,
+                "axis_tag": "[planning/control]",
+                "receiver_proof_status": (
+                    "satisfied" if row.get("receiver_proof_passed") is True else "missing"
+                ),
+                "full_video_coverage": int(row.get("num_pairs") or 0) >= 600,
+                "archive_sha256": row.get("archive_sha256"),
+                "source_archive_sha256": row.get("source_archive_sha256"),
+                "source_archive_bytes": int(source_archive_bytes),
+                "candidate_archive_bytes": int(row.get("archive_bytes") or 0),
+                "decoder_codec": decoder_codec,
+                "parsed_decoder_codec": dict(row.get("parsed_decoder_codec") or {}),
+                "blockers": list(row.get("blockers") or []),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return section_rows
 
 
 def _repack_bin(

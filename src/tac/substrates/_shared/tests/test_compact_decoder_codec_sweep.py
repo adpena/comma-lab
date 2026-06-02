@@ -67,6 +67,11 @@ def test_sweep_vq_archive_materializes_codec_variants_fail_closed(tmp_path: Path
     rows = report["variant_rows"]
     assert report["family"] == "pact_nerv_vq"
     assert len(rows) == 3
+    assert len(report["section_value_rows"]) == 3
+    assert report["byte_price_plan"]["schema"] == (
+        "compact_nerv_byte_price_controller.v1"
+    )
+    assert "delta_nonrate_score_missing" in report["byte_price_plan"]["blockers"]
     assert [row["archive_bytes"] for row in rows] == sorted(
         row["archive_bytes"] for row in rows
     )
@@ -113,6 +118,10 @@ def test_sweep_selector_archive_materializes_codec_variants_fail_closed(
     rows = report["variant_rows"]
     assert report["family"] == "pact_nerv_selector_v4"
     assert len(rows) == 2
+    assert report["byte_price_plan"]["input_row_count"] == 2
+    assert report["section_value_rows"][0]["scope"] == (
+        "compact_decoder_codec_replacement"
+    )
     for row in rows:
         assert row["promotion_eligible"] is False
         assert row["charged_bits_changed"] is True
@@ -185,6 +194,10 @@ def test_sweep_hi_nerv_archive_materializes_codec_variants_and_preserves_latents
 
     assert report["family"] == "hi_nerv"
     assert len(report["variant_rows"]) == 2
+    assert report["byte_price_plan"]["candidate_id"] == (
+        "hi_nerv_compact_decoder_codec_sweep"
+    )
+    assert report["byte_price_plan"]["score_claim"] is False
     for row in report["variant_rows"]:
         assert row["promotion_eligible"] is False
         assert row["charged_bits_changed"] is True
