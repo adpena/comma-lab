@@ -44,6 +44,7 @@ def test_packet_builder_emits_receiver_decodable_snar1() -> None:
         levels=1,
         wavelet="haar",
         target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
         decoder_payload_codec="int8_symmetric",
         lf_payload_codec="auto",
     )
@@ -54,6 +55,14 @@ def test_packet_builder_emits_receiver_decodable_snar1() -> None:
     assert decoded.metadata["wavelet"] == "haar"
     assert decoded.metadata["lf_plane_count"] == 12
     assert decoded.metadata["allocation_mode"] == "uniform_mlx_native_closed_form_export"
+    assert decoded.metadata["step_map_packet_schema"] == (
+        "snerv_step_map_coder.adaptive.v1"
+    )
+    assert decoded.metadata["step_map_coder_mode"] == (
+        "waterfill_mlx_native_uniform_importance_bridge"
+    )
+    assert decoded.metadata["step_map_waterfill_bits_per_coeff"] == pytest.approx(0.5)
+    assert decoded.metadata["step_map_coder_groups"]
     assert frames.shape == (2, 2, 3, 16, 16)
     assert np.isfinite(frames).all()
     assert packet.score_claim is False
@@ -83,6 +92,7 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
             "levels": 1,
             "wavelet": "haar",
             "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int8_symmetric",
         },
         scorer_upstream_dir="upstream",
@@ -103,6 +113,12 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     )
     assert report["archive_package"] is None
     assert report["archive_path"] is None
+    assert report["step_map_bits_per_coeff"] == pytest.approx(0.5)
+    assert report["step_map_packet_schema"] == "snerv_step_map_coder.adaptive.v1"
+    assert report["step_map_coder_mode"] == (
+        "waterfill_mlx_native_uniform_importance_bridge"
+    )
+    assert report["step_map_coder_groups"]
     assert report["receiver_proof_passed"] is False
     assert "snerv_mlx_score_aware_long_training_not_executed" in report["blockers"]
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" in report["blockers"]

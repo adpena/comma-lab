@@ -821,6 +821,51 @@ def test_long_training_campaign_plan_applies_hinerv_segnet_stagnation_feedback(
     assert hi["output_dir_reuse_policy"] == "fresh_feedback_mutation_path"
 
 
+def test_long_training_campaign_plan_refuses_not_ready_hinerv_launch_feedback(
+) -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "partial_advisory",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 16,
+                "feedback_scope": "partial_pair_advisory",
+                "scope_matches_candidate": False,
+                "feedback_ready": False,
+                "launch_control_feedback_ready": False,
+                "pose_instability_detected": False,
+                "seg_stagnation_detected": True,
+                "recommended_segnet_distillation_weight": 8.0,
+                "recommended_launch_mutations": [
+                    "increase_segnet_distillation_weight_from_stagnation_telemetry"
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    argv = hi["command_argv"]
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["applied"] is False
+    assert adjustment["reason"] == "feedback_not_launch_control_ready"
+    assert adjustment["feedback_ready"] is False
+    assert adjustment["launch_control_feedback_ready"] is False
+    assert argv[argv.index("--segnet-distillation-weight") + 1] == "1"
+    assert hi["curriculum_plan"]["scorer_pressure"][
+        "segnet_distillation_weight"
+    ] == 1.0
+
+
 def test_long_training_campaign_plan_prefers_newer_running_telemetry_feedback(
 ) -> None:
     report = build_nerv_long_training_campaign_plan(

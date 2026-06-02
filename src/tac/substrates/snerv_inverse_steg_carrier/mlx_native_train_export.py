@@ -23,7 +23,7 @@ from typing import Any
 
 import numpy as np
 
-from tac.analysis.snerv_step_map_coder import encode_step_maps
+from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill
 from tac.contest_eval_contract import build_upstream_eval_contract
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
     run_generated_inflate_receiver_proof,
@@ -90,6 +90,10 @@ class SnervMlxNativeArtifact:
     levels: int
     wavelet: str
     target_bits_per_coeff: float
+    step_map_bits_per_coeff: float
+    step_map_packet_schema: str
+    step_map_coder_mode: str
+    step_map_coder_groups: tuple[dict[str, Any], ...]
     decoder_payload_codec: str
     lf_payload_codec: str
     model_size: dict[str, Any]
@@ -158,6 +162,12 @@ def train_export_snerv_mlx_native(
     levels = int(candidate.get("levels", candidate.get("snerv_levels", 3)))
     wavelet = str(candidate.get("wavelet", "haar"))
     target_bits_per_coeff = float(candidate.get("bits_per_coeff", 2.5))
+    step_map_bits_per_coeff = float(
+        candidate.get(
+            "step_map_bits_per_coeff",
+            candidate.get("snerv_step_map_bits_per_coeff", 4.0),
+        )
+    )
     decoder_payload_codec = str(
         candidate.get("decoder_payload_codec", "mixed_magnitude_symmetric")
     )
@@ -207,6 +217,7 @@ def train_export_snerv_mlx_native(
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
+        step_map_bits_per_coeff=step_map_bits_per_coeff,
         decoder_payload_codec=active_decoder_payload_codec,
         lf_payload_codec=lf_payload_codec,
         model_size=model_size,
@@ -315,6 +326,7 @@ def train_export_snerv_mlx_native(
                 receiver_proof_timeout_seconds=receiver_proof_timeout_seconds,
             )
     receiver_proof = dict(package.get("receiver_proof") or {}) if package else {}
+    selected_archive_metadata = unpack_snerv_archive(selected_packet).metadata
 
     artifact = SnervMlxNativeArtifact(
         schema=SNERV_MLX_NATIVE_TRAIN_EXPORT_SCHEMA,
@@ -326,6 +338,17 @@ def train_export_snerv_mlx_native(
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
+        step_map_bits_per_coeff=step_map_bits_per_coeff,
+        step_map_packet_schema=str(
+            selected_archive_metadata.get("step_map_packet_schema") or ""
+        ),
+        step_map_coder_mode=str(
+            selected_archive_metadata.get("step_map_coder_mode") or ""
+        ),
+        step_map_coder_groups=tuple(
+            dict(group)
+            for group in selected_archive_metadata.get("step_map_coder_groups") or ()
+        ),
         decoder_payload_codec=active_decoder_payload_codec,
         lf_payload_codec=lf_payload_codec,
         model_size=model_size.as_jsonable(),
@@ -716,6 +739,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     wavelet: str,
     target_bits_per_coeff: float,
     decoder_payload_codec: str,
+    step_map_bits_per_coeff: float = 4.0,
     lf_payload_codec: str = "auto",
     model_size: SnervModelSizeConfig | None = None,
     metadata_extra: Mapping[str, Any] | None = None,
@@ -761,7 +785,12 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         lf_zero_points.append(float(zero))
         step_maps.append(step)
 
-    step_packet = encode_step_maps(step_maps, bins=4)
+    step_map_importance = np.ones(len(step_maps), dtype=np.float64)
+    step_packet = encode_step_maps_waterfill(
+        step_maps,
+        map_importance=step_map_importance,
+        target_bits_per_coeff=float(step_map_bits_per_coeff),
+    )
     decoder_payload = encode_decoder_payload(decoder, codec=decoder_payload_codec)
     metadata = {
         "n_pairs": n_pairs,
@@ -777,8 +806,10 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "lf_scale_mode": "implicit_per_element_steps_scale_1",
         "lf_payload_codec": str(lf_payload_codec),
         "step_map_packet_schema": step_packet.schema,
-        "step_map_coder_mode": "uniform_mlx_native_bridge",
-        "step_map_coder_bins": 4,
+        "step_map_coder_mode": "waterfill_mlx_native_uniform_importance_bridge",
+        "step_map_coder_bins": None,
+        "step_map_waterfill_bits_per_coeff": float(step_map_bits_per_coeff),
+        "step_map_coder_groups": [dict(group) for group in step_packet.groups],
         "target_bits_per_coeff": float(target_bits_per_coeff),
         "uniform_quantization_levels": int(n_levels),
         "allocation_mode": "uniform_mlx_native_closed_form_export",

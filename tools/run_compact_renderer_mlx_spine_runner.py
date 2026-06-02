@@ -2603,6 +2603,22 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             ),
         )
     )
+    raw_mfu_scales = candidate.get("mfu_scales", candidate.get("snerv_mfu_scales"))
+    if raw_mfu_scales is None:
+        resolved_snerv_mfu_scales = tuple(int(v) for v in snerv_mfu_scales)
+    elif isinstance(raw_mfu_scales, str):
+        resolved_snerv_mfu_scales = tuple(
+            int(v.strip()) for v in raw_mfu_scales.split(",") if v.strip()
+        )
+    else:
+        resolved_snerv_mfu_scales = tuple(int(v) for v in raw_mfu_scales)
+    if not resolved_snerv_mfu_scales:
+        raise CompactRendererMlxSpineRunnerError(
+            "SNeRV modelsize candidate mfu_scales resolved to an empty tuple"
+        )
+    resolved_snerv_hfr_gain = float(
+        candidate.get("hfr_gain", candidate.get("snerv_hfr_gain", snerv_hfr_gain))
+    )
     candidate_adapter = str(candidate.get("snerv_model_size_adapter") or "")
     explicit_adapter = str(snerv_model_size_adapter_override or "")
     if candidate_adapter:
@@ -2703,8 +2719,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         snerv_fc_dim=snerv_fc_dim,
         snerv_emb_size=snerv_emb_size,
         snerv_patch_radius=snerv_patch_radius,
-        snerv_mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
-        snerv_hfr_gain=float(snerv_hfr_gain),
+        snerv_mfu_scales=resolved_snerv_mfu_scales,
+        snerv_hfr_gain=resolved_snerv_hfr_gain,
         snerv_temporal_context=snerv_temporal_context,
     )
     packet_path = out / "snerv_inverse_steg_advisory.snar"
@@ -2844,8 +2860,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         snerv_fc_dim=snerv_fc_dim,
         snerv_emb_size=snerv_emb_size,
         snerv_patch_radius=snerv_patch_radius,
-        snerv_mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
-        snerv_hfr_gain=float(snerv_hfr_gain),
+        snerv_mfu_scales=resolved_snerv_mfu_scales,
+        snerv_hfr_gain=resolved_snerv_hfr_gain,
         snerv_temporal_context=snerv_temporal_context,
         max_trials=int(snerv_scorer_loop_max_trials),
         search_mode=str(snerv_scorer_loop_search_mode),

@@ -44,6 +44,38 @@ class _TinyParamTree:
         return self._params
 
 
+class _HiNervOfficialParamTree:
+    def __init__(self):
+        import mlx.core as mx
+
+        self._params = {
+            "feature_grids": {
+                "0": {
+                    "grids": {
+                        "0": mx.array([0.0, 0.5, 1.0], dtype=mx.float32)
+                    }
+                }
+            },
+            "convnext_blocks": {
+                "0": {
+                    "dwconv": {
+                        "weight": mx.array([0.0, 0.25, 1.0], dtype=mx.float32)
+                    }
+                }
+            },
+            "mid_injector": {
+                "proj": {"weight": mx.array([0.0, 0.125, 1.0], dtype=mx.float32)}
+            },
+            "fine_injector": {
+                "proj": {"weight": mx.array([0.0, 0.375, 1.0], dtype=mx.float32)}
+            },
+            "latents": mx.array([3.0, -3.0], dtype=mx.float32),
+        }
+
+    def parameters(self):
+        return self._params
+
+
 @mlx_only
 def test_disabled_qat_emits_no_terms_or_weights() -> None:
     cfg = CoderAwareQATConfig(enabled=False)
@@ -135,6 +167,21 @@ def test_c1a_entropy_selection_excludes_latents_from_decoder_pressure() -> None:
 
 
 @mlx_only
+def test_qat_selection_includes_hinerv_official_decoder_controls() -> None:
+    import mlx.core as mx
+
+    cfg = CoderAwareQATConfig(enabled=True, quant_bits=2)
+    model = _HiNervOfficialParamTree()
+
+    terms = build_decoder_coder_qat_terms(model, cfg)
+    entropy = build_decoder_c1a_entropy_term(model, cfg, sigma=0.75)
+    mx.eval(terms["coder_qat_quant_residual"], entropy)
+
+    assert float(terms["coder_qat_quant_residual"].item()) > 0.0
+    assert float(entropy.item()) > 0.0
+
+
+@mlx_only
 def test_c1a_entropy_fails_closed_on_invalid_controls() -> None:
     cfg = CoderAwareQATConfig(enabled=True, quant_bits=4)
     model = _TinyParamTree([0.0, 0.5, 1.0])
@@ -179,6 +226,9 @@ def test_qat_metadata_avoids_duplicate_authority_fields() -> None:
         "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
         "per_tensor_fp16_scale_for_biases"
     )
+    assert "feature_grids" in metadata["include_substrings"]
+    assert "convnext_blocks" in metadata["include_substrings"]
+    assert "injector" in metadata["include_substrings"]
     assert metadata["authority"] == "false_macos_mlx_research_signal"
     assert "score_claim" not in metadata
     assert "promotion_eligible" not in metadata

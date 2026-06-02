@@ -20,6 +20,9 @@ from tac.substrates._shared.mlx_score_aware.device_gate import (
 DEFAULT_DECODER_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "latent_embed",
     "blocks",
+    "feature_grids",
+    "convnext_blocks",
+    "injector",
     "head",
     "decoder",
 )

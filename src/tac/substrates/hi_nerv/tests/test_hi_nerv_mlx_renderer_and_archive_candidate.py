@@ -445,10 +445,53 @@ def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> N
         "decoder_weight_waterfill"
     ]
     assert waterfill["plan_attached"] is True
+    assert waterfill["method"] == "decoder_weight_waterfill_selected_actions"
     assert waterfill["changed_tensor_count"] == 1
     assert waterfill["applied_rows"][0]["group_name"] == "head_rgb_1.weight"
     assert waterfill["applied_rows"][0]["changed"] is True
+    assert "contest_cpu_cuda_exact_eval_not_executed" in waterfill["blockers"]
     assert waterfill["score_claim"] is False
+
+
+def test_archive_candidate_refuses_unsafe_decoder_waterfill_plan() -> None:
+    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    exportable = _exportable_torch_model()
+    blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exportable.export_state_dict(),
+        cfg=exportable.cfg,
+        decoder_codec="fp16_enveloped",
+        decoder_weight_waterfill_plan={
+            "schema": "nerv_decoder_weight_waterfill.v1",
+            "family": "hi_nerv",
+            "candidate_id": "unit",
+            "rows": [
+                {
+                    "group_name": "head_rgb_1.weight",
+                    "selected_bits": 0,
+                    "selected_action": "zero_rle",
+                }
+            ],
+            "blockers": [
+                "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+            ],
+        },
+    )
+    arc = parse_archive(blob)
+
+    assert torch.count_nonzero(arc.decoder_state_dict["head_rgb_1.weight"]).item() > 0
+    waterfill = arc.meta["_hi_nerv_bitstream_preparation"][
+        "decoder_weight_waterfill"
+    ]
+    assert waterfill["method"] == "decoder_weight_waterfill_blocked"
+    assert waterfill["changed_tensor_count"] == 0
+    assert waterfill["applied_rows"] == []
+    assert waterfill["actuation_blockers"] == [
+        "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+    ]
 
 
 def test_archive_candidate_rejects_incomplete_exported_decoder_state() -> None:
@@ -496,6 +539,9 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         / "hi_nerv_export"
         / "hi_nerv_mlx_exported_state_npz_manifest.json"
     )
+    bitstream_report_path = (
+        tmp_path / "hi_nerv_export" / "hi_nerv_bitstream_preparation.json"
+    )
     proof_path = (
         tmp_path
         / "hi_nerv_export"
@@ -506,12 +552,14 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert package_path.is_file()
     assert npz_path.is_file()
     assert npz_manifest_path.is_file()
+    assert bitstream_report_path.is_file()
     assert proof_path.is_file()
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     package = json.loads(package_path.read_text(encoding="utf-8"))
     npz_manifest = json.loads(npz_manifest_path.read_text(encoding="utf-8"))
+    bitstream_report = json.loads(bitstream_report_path.read_text(encoding="utf-8"))
     assert manifest["family"] == "hi_nerv"
     assert proof["runtime_consumption_proof_ready"] is True
     assert proof["receiver_output_kind"] == "file"
@@ -524,10 +572,15 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert spine_extra["state_npz_bridge"]["artifact_sha256"] == (
         npz_manifest["artifact_sha256"]
     )
+    assert spine_extra["hi_nerv_bitstream_preparation"] == bitstream_report
     row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
     runtime_manifest = row["runtime_adapter_manifest"]
     assert runtime_manifest["state_npz_bridge_manifest"]["artifact_sha256"] == (
         npz_manifest["artifact_sha256"]
+    )
+    assert runtime_manifest["hi_nerv_bitstream_preparation"] == bitstream_report
+    assert runtime_manifest["hi_nerv_bitstream_preparation_path"] == (
+        bitstream_report_path.as_posix()
     )
     portability = row["runtime_adapter_manifest"][
         "mlx_numpy_portability_contract"

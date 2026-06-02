@@ -58,6 +58,7 @@ HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND = "hi_nerv_mlx_archive"
 _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
 _STATE_NPZ_NAME = "hi_nerv_mlx_exported_state.npz"
 _STATE_NPZ_MANIFEST_NAME = "hi_nerv_mlx_exported_state_npz_manifest.json"
+_BITSTREAM_PREPARATION_REPORT_NAME = "hi_nerv_bitstream_preparation.json"
 
 
 def hi_nerv_mlx_numpy_portability_contract(
@@ -271,6 +272,11 @@ def export_hi_nerv_mlx_archive(
     )
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
+    bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
+    bitstream_report_path.write_text(
+        json.dumps(bitstream_report, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
 
     submission_dir = out_dir / "submission"
     write_contest_runtime(
@@ -303,6 +309,9 @@ def export_hi_nerv_mlx_archive(
                 "archive_bytes_are_authority_for_rate": True,
                 "decoder_codec": decoder_codec,
                 "hi_nerv_bitstream_preparation": bitstream_report,
+                "hi_nerv_bitstream_preparation_path": (
+                    bitstream_report_path.as_posix()
+                ),
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge": {
                     "artifact_path": npz_bridge_manifest["artifact_path"],
@@ -339,6 +348,9 @@ def export_hi_nerv_mlx_archive(
                 "latent_pyramid": ["coarse", "mid", "fine"],
                 "decoder_codec": decoder_codec,
                 "hi_nerv_bitstream_preparation": bitstream_report,
+                "hi_nerv_bitstream_preparation_path": (
+                    bitstream_report_path.as_posix()
+                ),
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge_manifest": npz_bridge_manifest,
                 "mlx_numpy_portability_contract": (
@@ -397,6 +409,8 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     npz_bridge_manifest = json.loads(
         npz_bridge_manifest_path.read_text(encoding="utf-8")
     )
+    bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
+    bitstream_report = json.loads(bitstream_report_path.read_text(encoding="utf-8"))
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID,
         candidate_family=HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY,
@@ -419,6 +433,8 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
             "schema": "hi_nerv_mlx_runtime_adapter_manifest.v1",
             "latent_pyramid": ["coarse", "mid", "fine"],
             "decoder_codec": decoder_codec,
+            "hi_nerv_bitstream_preparation": bitstream_report,
+            "hi_nerv_bitstream_preparation_path": bitstream_report_path.as_posix(),
             "num_pairs": int(cfg.num_pairs),
             "state_npz_bridge_manifest": npz_bridge_manifest,
             "mlx_numpy_portability_contract": (

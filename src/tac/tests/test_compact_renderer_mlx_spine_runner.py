@@ -3814,6 +3814,8 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             "bits_per_coeff": 1.5,
             "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int2_symmetric",
+            "mfu_scales": (1, 5),
+            "hfr_gain": 0.375,
             "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 150_000,
@@ -3833,6 +3835,8 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert captured_advisory_kwargs["step_map_coder_mode"] == "waterfill"
     assert captured_advisory_kwargs["step_map_waterfill_bits_per_coeff"] == 0.5
     assert captured_advisory_kwargs["decoder_payload_codec"] == "int2_symmetric"
+    assert captured_advisory_kwargs["snerv_mfu_scales"] == (1, 5)
+    assert captured_advisory_kwargs["snerv_hfr_gain"] == 0.375
     selection = out["modelsize_candidate_selection"]
     assert selection["selection_mode"] == "planner_candidate"
     assert selection["candidate"]["candidate_id"] == "snerv-unit-candidate"
