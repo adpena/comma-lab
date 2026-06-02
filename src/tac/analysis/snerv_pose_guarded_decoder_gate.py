@@ -49,6 +49,8 @@ class SnervPoseGuardedRow:
     passes_seg_gate: bool
     passes_score_gate: bool
     passes_rate_gate: bool
+    source_row_accepted: bool | None
+    source_row_blockers: tuple[str, ...]
     accepted_for_local_continuation: bool
     blockers: tuple[str, ...]
     axis_tag: str = AXIS_TAG
@@ -222,6 +224,17 @@ def _evaluate_row(
     passes_seg = d_seg is not None and d_seg <= seg_ceiling and d_seg < baseline_seg
     passes_score = score is not None and score < baseline_score
     passes_rate = archive <= max_bytes
+    source_accepted = row.get("accepted")
+    if not isinstance(source_accepted, bool):
+        source_accepted = None
+    source_artifact = _optional_str(row.get("source_artifact"))
+    honor_source_contract = bool(
+        source_accepted is not None
+        or source_artifact == "snerv_scorer_loop_decoder_qat_smoke"
+    )
+    source_blockers = (
+        _optional_str_tuple(row.get("blockers")) if honor_source_contract else ()
+    )
     blockers = []
     if not replay:
         blockers.append("receiver_archive_replay_missing")
@@ -233,11 +246,22 @@ def _evaluate_row(
         blockers.append("score_gate_failed")
     if not passes_rate:
         blockers.append("rate_gate_failed")
-    accepted = replay and passes_pose and passes_seg and passes_score and passes_rate
+    if honor_source_contract and source_accepted is False:
+        blockers.append("source_scorer_loop_rejected")
+    blockers.extend(f"source:{blocker}" for blocker in source_blockers)
+    accepted = (
+        replay
+        and passes_pose
+        and passes_seg
+        and passes_score
+        and passes_rate
+        and (not honor_source_contract or source_accepted is not False)
+        and not source_blockers
+    )
     return SnervPoseGuardedRow(
         source_index=source_index,
         label=_row_label(row),
-        source_artifact=_optional_str(row.get("source_artifact")),
+        source_artifact=source_artifact,
         hf_decoder_fit_mode=_optional_str(row.get("hf_decoder_fit_mode")),
         hf_decoder_saliency_component=_optional_str(row.get("hf_decoder_saliency_component")),
         hf_decoder_saliency_gain=_optional_float(row.get("hf_decoder_saliency_gain")),
@@ -254,8 +278,10 @@ def _evaluate_row(
         passes_seg_gate=passes_seg,
         passes_score_gate=passes_score,
         passes_rate_gate=passes_rate,
+        source_row_accepted=source_accepted,
+        source_row_blockers=source_blockers,
         accepted_for_local_continuation=accepted,
-        blockers=tuple(blockers),
+        blockers=tuple(dict.fromkeys(blockers)),
     )
 
 
@@ -331,3 +357,13 @@ def _optional_str(value: Any) -> str | None:
     if not isinstance(value, str) or not value:
         return None
     return value
+
+
+def _optional_str_tuple(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    out = []
+    for item in value:
+        if isinstance(item, str) and item:
+            out.append(item)
+    return tuple(out)

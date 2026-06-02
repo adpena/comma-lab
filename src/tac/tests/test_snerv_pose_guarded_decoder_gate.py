@@ -79,6 +79,51 @@ def test_candidate_must_improve_score_and_hold_pose() -> None:
     assert gate["promotion_eligible"] is False
 
 
+def test_scorer_loop_source_rejection_blocks_aggregate_good_row() -> None:
+    payload = {
+        "rows": [
+            _row(
+                label="least_squares_baseline_existing",
+                mode="least_squares",
+                archive=33_754,
+                d_seg=0.022644,
+                d_pose=2.13907,
+                score=6.91189,
+            ),
+            {
+                **_row(
+                    label="aggregate_good_pair_guard_rejected",
+                    mode="scorer_loop_qat",
+                    archive=34_000,
+                    d_seg=0.019,
+                    d_pose=2.10,
+                    score=6.80,
+                ),
+                "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+                "accepted": False,
+                "blockers": ["pair_pose_worsening_fraction_guard_failed"],
+            },
+        ]
+    }
+
+    gate = build_snerv_pose_guarded_decoder_gate([payload]).as_jsonable()
+
+    assert gate["verdict"] == "NO_GO_FOR_PROMOTION_OR_EXACT_EVAL"
+    assert gate["accepted_rows"] == []
+    assert gate["rows"][0]["passes_pose_guard"] is True
+    assert gate["rows"][0]["passes_seg_gate"] is True
+    assert gate["rows"][0]["passes_score_gate"] is True
+    assert gate["rows"][0]["source_row_accepted"] is False
+    assert gate["rows"][0]["source_row_blockers"] == (
+        "pair_pose_worsening_fraction_guard_failed",
+    )
+    assert "source_scorer_loop_rejected" in gate["rows"][0]["blockers"]
+    assert (
+        "source:pair_pose_worsening_fraction_guard_failed"
+        in gate["rows"][0]["blockers"]
+    )
+
+
 def test_missing_baseline_fails_closed() -> None:
     payload = {
         "rows": [
