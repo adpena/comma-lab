@@ -259,6 +259,13 @@ def _hinerv_campaign_row(
         family="hi_nerv",
         index=candidate_feedback_index,
     )
+    launch_feedback_adjustment = _hinerv_feedback_launch_adjustment(
+        feedback=feedback,
+        learning_rate=float(learning_rate),
+    )
+    effective_learning_rate = float(
+        launch_feedback_adjustment.get("learning_rate") or learning_rate
+    )
     curriculum = build_hinerv_candidate_curriculum_plan(
         candidate=candidate,
         requested_epochs=int(epochs),
@@ -302,7 +309,7 @@ def _hinerv_campaign_row(
         "--batch-pairs",
         str(int(batch_pairs)),
         "--learning-rate",
-        _float_token(learning_rate),
+        _float_token(effective_learning_rate),
         "--modelsize-candidate-id",
         candidate_id,
         "--segnet-distillation-weight",
@@ -337,6 +344,11 @@ def _hinerv_campaign_row(
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *list(curriculum.get("blockers") or []),
     ]
+    if (
+        feedback.get("pose_instability_detected") is True
+        and not launch_feedback_adjustment.get("applied")
+    ):
+        blockers.append("hinerv_pose_instability_feedback_unapplied")
     if candidate.get("nominal_under_ceiling") is not True:
         blockers.append("hinerv_candidate_nominal_over_byte_ceiling")
     blockers = _dedupe(blockers)
@@ -355,6 +367,7 @@ def _hinerv_campaign_row(
             "optimizer_kind": str(optimizer_kind),
             "quant_bits": int(quant_bits),
             "joint_recon_pixel_weight_artifact": joint_recon_weight or None,
+            "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
         },
     )
@@ -896,6 +909,54 @@ def _candidate_feedback_for(
     return dict(rows[0]) if rows else {}
 
 
+def _hinerv_feedback_launch_adjustment(
+    *,
+    feedback: Mapping[str, Any],
+    learning_rate: float,
+) -> dict[str, Any]:
+    if not feedback:
+        return {
+            "schema": "hinerv_feedback_launch_adjustment.v1",
+            "applied": False,
+            "reason": "no_candidate_feedback",
+            "learning_rate": float(learning_rate),
+            **FALSE_AUTHORITY,
+        }
+    observed = _float_or_none(feedback.get("observed_learning_rate"))
+    recommended = _float_or_none(feedback.get("recommended_learning_rate"))
+    pose_instability = bool(feedback.get("pose_instability_detected"))
+    applied = bool(
+        pose_instability
+        and recommended is not None
+        and recommended > 0.0
+        and recommended < float(learning_rate)
+    )
+    return {
+        "schema": "hinerv_feedback_launch_adjustment.v1",
+        "applied": applied,
+        "reason": (
+            "pose_instability_recommended_lower_learning_rate"
+            if applied
+            else (
+                "pose_instability_feedback_without_lower_lr"
+                if pose_instability
+                else "feedback_does_not_request_launch_adjustment"
+            )
+        ),
+        "source_feedback_kind": feedback.get("feedback_kind"),
+        "source_feedback_scope": feedback.get("feedback_scope"),
+        "pose_instability_detected": pose_instability,
+        "observed_learning_rate": observed,
+        "requested_learning_rate": float(learning_rate),
+        "recommended_learning_rate": recommended,
+        "learning_rate": float(recommended if applied else learning_rate),
+        "launch_mutations": (
+            list(feedback.get("recommended_launch_mutations") or []) if applied else []
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
 def _feedback_family(row: Mapping[str, Any]) -> str:
     return _family_key(str(row.get("family") or row.get("execute_family") or ""))
 
@@ -1034,6 +1095,16 @@ def _safe_path_token(value: str) -> str:
 
 def _float_token(value: float) -> str:
     return f"{float(value):.12g}"
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    import math
+
+    return number if math.isfinite(number) else None
 
 
 __all__ = [

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -18,6 +18,7 @@ from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
 SCHEMA = "nerv_candidate_feedback_row.v1"
 LEDGER_SCHEMA = "nerv_candidate_byte_feedback_ledger.v1"
 REFRESH_SCHEMA = "nerv_candidate_feedback_refresh.v1"
+TELEMETRY_FEEDBACK_SCHEMA = "nerv_training_telemetry_feedback.v1"
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -39,6 +40,11 @@ _MLX_PREFILTER_MISSING_BLOCKERS = {
 _LOCAL_REPLAY_BLOCKED_BY_MLX_SCORE = (
     "local_cpu_replay_blocked_by_mlx_prefilter_score"
 )
+_POSE_LOSS_INSTABILITY_THRESHOLD = 1_000.0
+_POSE_AXIS_INSTABILITY_THRESHOLD = 1_000.0
+_POSE_INSTABILITY_WINDOW_EPOCHS = 32
+_POSE_INSTABILITY_BAD_FRACTION = 0.5
+_POSE_INSTABILITY_LR_MULTIPLIER = 0.3
 
 
 def _sha256_file(path: Path) -> str | None:
@@ -182,6 +188,123 @@ def build_nerv_candidate_feedback_row(
         ),
         "mlx_prefilter_blockers": list(mlx_prefilter.get("blockers") or []),
         "blockers": list(runner_report.get("blockers") or []),
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_nerv_training_telemetry_feedback_row(
+    *,
+    telemetry_path: str | Path,
+    family: str,
+    candidate_id: str,
+    candidate_num_pairs: int,
+    source_queue_path: str | Path | None = None,
+    stop_reason: str | None = None,
+    pose_loss_instability_threshold: float = _POSE_LOSS_INSTABILITY_THRESHOLD,
+    pose_axis_instability_threshold: float = _POSE_AXIS_INSTABILITY_THRESHOLD,
+    instability_window_epochs: int = _POSE_INSTABILITY_WINDOW_EPOCHS,
+    instability_bad_fraction: float = _POSE_INSTABILITY_BAD_FRACTION,
+    learning_rate_multiplier: float = _POSE_INSTABILITY_LR_MULTIPLIER,
+) -> dict[str, Any]:
+    """Build a false-authority candidate-feedback row from training telemetry."""
+
+    telemetry = Path(telemetry_path).expanduser().resolve(strict=False)
+    if not telemetry.is_file():
+        raise FileNotFoundError(f"telemetry file not found: {telemetry}")
+    source_queue = (
+        Path(source_queue_path).expanduser().resolve(strict=False)
+        if source_queue_path
+        else None
+    )
+    rows = _read_telemetry_rows(telemetry)
+    if not rows:
+        raise ValueError(f"telemetry file has no JSON rows: {telemetry}")
+    health = _summarize_training_telemetry_health(
+        rows,
+        pose_loss_instability_threshold=float(pose_loss_instability_threshold),
+        pose_axis_instability_threshold=float(pose_axis_instability_threshold),
+        instability_window_epochs=int(instability_window_epochs),
+        instability_bad_fraction=float(instability_bad_fraction),
+        learning_rate_multiplier=float(learning_rate_multiplier),
+    )
+    candidate_pairs = int(candidate_num_pairs)
+    measured_pairs = _int_or_none(health.get("num_pairs")) or candidate_pairs
+    blockers: list[str] = [
+        "hinerv_trained_archive_byte_oracle_feedback_missing",
+        "hi_nerv_byte_closed_archive_export_missing",
+        "hi_nerv_receiver_proof_missing",
+        "hi_nerv_full_video_local_prefilter_missing",
+        "hi_nerv_local_cpu_replay_gate_missing",
+    ]
+    if health["pose_instability_detected"]:
+        blockers.append("hi_nerv_pose_instability_telemetry_feedback")
+    return {
+        "schema": SCHEMA,
+        "feedback_kind": "training_telemetry",
+        "telemetry_feedback_schema": TELEMETRY_FEEDBACK_SCHEMA,
+        "created_utc": datetime.now(UTC).isoformat(),
+        "source_report_path": telemetry.as_posix(),
+        "source_report_sha256": _sha256_file(telemetry),
+        "source_queue_path": source_queue.as_posix() if source_queue else None,
+        "source_queue_sha256": _sha256_file(source_queue) if source_queue else None,
+        "mode": "training_telemetry_harvested",
+        "family": _family_key(family),
+        "candidate_id": str(candidate_id),
+        "candidate_conditioned": True,
+        "candidate_num_pairs": candidate_pairs,
+        "measured_num_pairs": measured_pairs,
+        "feedback_scope": "full600_training_telemetry"
+        if measured_pairs >= CONTEST_PAIR_COUNT
+        else "partial_training_telemetry",
+        "scope_matches_candidate": measured_pairs >= candidate_pairs,
+        "feedback_ready": False,
+        "hard_byte_ceiling": None,
+        "nominal_total_payload_bytes": None,
+        "measured_payload_bytes": None,
+        "measured_archive_bytes": None,
+        "measured_minus_nominal_bytes": None,
+        "archive_path": None,
+        "archive_bytes": None,
+        "archive_sha256": None,
+        "training_completed": False,
+        "training_stopped": True,
+        "training_stop_reason": stop_reason
+        or (
+            "pose_instability_telemetry"
+            if health["pose_instability_detected"]
+            else "telemetry_harvest_without_completion_artifact"
+        ),
+        "training_telemetry": health,
+        "pose_instability_detected": bool(health["pose_instability_detected"]),
+        "pose_instability_first_epoch": health.get("pose_instability_first_epoch"),
+        "pose_instability_last_window_bad_fraction": health.get(
+            "pose_instability_last_window_bad_fraction"
+        ),
+        "observed_learning_rate": health.get("observed_learning_rate"),
+        "recommended_learning_rate": health.get("recommended_learning_rate"),
+        "recommended_learning_rate_multiplier": health.get(
+            "recommended_learning_rate_multiplier"
+        ),
+        "recommended_launch_mutations": list(
+            health.get("recommended_launch_mutations") or []
+        ),
+        "receiver_proof_report_paths": [],
+        "local_cpu_replay_summary_present": False,
+        "local_cpu_replay_score_estimate": None,
+        "local_cpu_replay_gate_requested": None,
+        "local_cpu_replay_gate_default_enabled_for_full_coverage": False,
+        "local_cpu_replay_gate_has_full_video_mlx_prefilter": False,
+        "local_cpu_replay_gate_local_replay_mlx_prefilter_passed": False,
+        "local_cpu_replay_gate_coverage_valid_for_replay": False,
+        "local_cpu_replay_gate_executed": False,
+        "mlx_prefilter_profile_count": 0,
+        "mlx_prefilter_has_full_video": False,
+        "mlx_prefilter_local_replay_passed": False,
+        "mlx_prefilter_best_full_video_mlx_score": None,
+        "mlx_prefilter_full_video_profile_paths": [],
+        "mlx_prefilter_local_replay_profile_paths": [],
+        "mlx_prefilter_blockers": ["full_video_mlx_scorer_replay_not_attached"],
+        "blockers": _dedupe_strings(blockers),
         **FALSE_AUTHORITY,
     }
 
@@ -362,6 +485,53 @@ def write_refreshed_nerv_candidate_feedback_files(
     }
 
 
+def write_nerv_training_telemetry_feedback_files(
+    *,
+    telemetry_path: str | Path,
+    output_dir: str | Path,
+    family: str,
+    candidate_id: str,
+    candidate_num_pairs: int,
+    source_queue_path: str | Path | None = None,
+    stop_reason: str | None = None,
+) -> dict[str, Any]:
+    """Write a telemetry feedback row plus append-only ledger."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry_path,
+        family=family,
+        candidate_id=candidate_id,
+        candidate_num_pairs=int(candidate_num_pairs),
+        source_queue_path=source_queue_path,
+        stop_reason=stop_reason,
+    )
+    row_path = out / "nerv_candidate_training_telemetry_feedback_row.json"
+    ledger_path = out / "nerv_candidate_training_telemetry_feedback.jsonl"
+    row_path.write_text(
+        json.dumps(row, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    with ledger_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True) + "\n")
+    manifest = {
+        "schema": TELEMETRY_FEEDBACK_SCHEMA,
+        "row": row,
+        "row_path": row_path.as_posix(),
+        "ledger_path": ledger_path.as_posix(),
+        "append_only": True,
+        **FALSE_AUTHORITY,
+    }
+    manifest_path = out / "nerv_training_telemetry_feedback.json"
+    manifest.update({"manifest_path": manifest_path.as_posix()})
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
 def _infer_mlx_profile_paths(runner_report: Mapping[str, Any]) -> list[str]:
     paths: list[str] = []
     for key in ("mlx_profile_paths", "local_mlx_prefilter_profile_paths"):
@@ -378,6 +548,139 @@ def _infer_mlx_profile_paths(runner_report: Mapping[str, Any]) -> list[str]:
             if isinstance(value, (list, tuple)):
                 paths.extend(str(path) for path in value if path)
     return _dedupe_strings(paths)
+
+
+def _read_telemetry_rows(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(),
+        start=1,
+    ):
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            row = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path}:{line_number}: invalid JSON telemetry row") from exc
+        if isinstance(row, Mapping):
+            rows.append(dict(row))
+    return rows
+
+
+def _summarize_training_telemetry_health(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    pose_loss_instability_threshold: float,
+    pose_axis_instability_threshold: float,
+    instability_window_epochs: int,
+    instability_bad_fraction: float,
+    learning_rate_multiplier: float,
+) -> dict[str, Any]:
+    epochs: list[int] = []
+    pose_losses: list[float] = []
+    pose_axes: list[float] = []
+    seg_axes: list[float] = []
+    learning_rates: list[float] = []
+    bad_epochs: list[int] = []
+    window_size = max(1, int(instability_window_epochs))
+    bad_fraction_threshold = min(max(float(instability_bad_fraction), 0.0), 1.0)
+    first_bad_window_epoch: int | None = None
+    rolling_flags: list[bool] = []
+    for row in rows:
+        epoch = _int_or_none(row.get("epoch"))
+        if epoch is not None:
+            epochs.append(epoch)
+        lr = _float_or_none(row.get("learning_rate"))
+        if lr is not None:
+            learning_rates.append(lr)
+        loss_components = row.get("loss_components")
+        per_axis = row.get("per_axis_decomposition")
+        pose_loss = (
+            _float_or_none(loss_components.get("loss_part_pose_distill"))
+            if isinstance(loss_components, Mapping)
+            else None
+        )
+        pose_axis = (
+            _float_or_none(per_axis.get("pose"))
+            if isinstance(per_axis, Mapping)
+            else None
+        )
+        seg_axis = (
+            _float_or_none(per_axis.get("seg"))
+            if isinstance(per_axis, Mapping)
+            else None
+        )
+        if pose_loss is not None:
+            pose_losses.append(pose_loss)
+        if pose_axis is not None:
+            pose_axes.append(pose_axis)
+        if seg_axis is not None:
+            seg_axes.append(seg_axis)
+        bad = bool(
+            (pose_loss is not None and pose_loss >= pose_loss_instability_threshold)
+            or (pose_axis is not None and pose_axis >= pose_axis_instability_threshold)
+        )
+        rolling_flags.append(bad)
+        if bad and epoch is not None:
+            bad_epochs.append(epoch)
+        window = rolling_flags[-window_size:]
+        if len(window) == window_size and first_bad_window_epoch is None:
+            bad_fraction = sum(1 for flag in window if flag) / float(window_size)
+            if bad_fraction >= bad_fraction_threshold:
+                first_bad_window_epoch = epoch
+    last_window = rolling_flags[-window_size:]
+    last_bad_fraction = (
+        sum(1 for flag in last_window if flag) / float(len(last_window))
+        if last_window
+        else 0.0
+    )
+    observed_lr = learning_rates[-1] if learning_rates else None
+    instability = bool(first_bad_window_epoch is not None)
+    recommended_lr = (
+        max(float(observed_lr) * float(learning_rate_multiplier), 1.0e-6)
+        if instability and observed_lr is not None
+        else None
+    )
+    mutations: list[str] = []
+    if instability:
+        mutations.extend(
+            [
+                "lower_learning_rate_from_pose_instability_telemetry",
+                "preserve_pose_instability_guard_for_relaunch",
+                "treat_previous_hi_nerv_run_as_fit_failure_not_rate_negative",
+            ]
+        )
+    return {
+        "schema": TELEMETRY_FEEDBACK_SCHEMA,
+        "row_count": len(rows),
+        "num_pairs": CONTEST_PAIR_COUNT,
+        "first_epoch": min(epochs) if epochs else None,
+        "last_epoch": max(epochs) if epochs else None,
+        "observed_learning_rate": observed_lr,
+        "pose_loss_instability_threshold": float(pose_loss_instability_threshold),
+        "pose_axis_instability_threshold": float(pose_axis_instability_threshold),
+        "instability_window_epochs": int(window_size),
+        "instability_bad_fraction_threshold": float(bad_fraction_threshold),
+        "pose_bad_epoch_count": len(bad_epochs),
+        "pose_bad_epoch_fraction": (
+            len(bad_epochs) / float(len(rows)) if rows else 0.0
+        ),
+        "pose_instability_detected": instability,
+        "pose_instability_first_epoch": first_bad_window_epoch,
+        "pose_instability_last_window_bad_fraction": last_bad_fraction,
+        "max_pose_distill_loss": max(pose_losses) if pose_losses else None,
+        "max_pose_axis": max(pose_axes) if pose_axes else None,
+        "median_pose_distill_loss": _median(pose_losses),
+        "median_pose_axis": _median(pose_axes),
+        "median_seg_axis": _median(seg_axes),
+        "recommended_learning_rate": recommended_lr,
+        "recommended_learning_rate_multiplier": (
+            float(learning_rate_multiplier) if instability else None
+        ),
+        "recommended_launch_mutations": mutations,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _refresh_nested_pr95_stack_binding_blockers(report: dict[str, Any]) -> list[str]:
@@ -442,12 +745,42 @@ def _int_or_none(value: Any) -> int | None:
         return None
 
 
+def _float_or_none(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    import math
+
+    return number if math.isfinite(number) else None
+
+
+def _median(values: Sequence[float]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(float(value) for value in values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[mid]
+    return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def _family_key(value: str) -> str:
+    text = str(value).strip().lower().replace("-", "_")
+    if text == "hinerv":
+        return "hi_nerv"
+    return text
+
+
 __all__ = [
     "LEDGER_SCHEMA",
     "REFRESH_SCHEMA",
     "SCHEMA",
+    "TELEMETRY_FEEDBACK_SCHEMA",
     "build_nerv_candidate_feedback_row",
+    "build_nerv_training_telemetry_feedback_row",
     "refresh_nerv_candidate_feedback_report",
     "write_nerv_candidate_feedback_files",
+    "write_nerv_training_telemetry_feedback_files",
     "write_refreshed_nerv_candidate_feedback_files",
 ]

@@ -8,8 +8,10 @@ from pathlib import Path
 
 from tac.analysis.nerv_candidate_feedback import (
     build_nerv_candidate_feedback_row,
+    build_nerv_training_telemetry_feedback_row,
     refresh_nerv_candidate_feedback_report,
     write_nerv_candidate_feedback_files,
+    write_nerv_training_telemetry_feedback_files,
     write_refreshed_nerv_candidate_feedback_files,
 )
 
@@ -200,6 +202,94 @@ def test_write_nerv_candidate_feedback_files_writes_json_and_append_ledger(
     assert ledger_rows == [row]
     assert output["score_claim"] is False
     assert output["promotion_eligible"] is False
+
+
+def test_training_telemetry_feedback_detects_pose_instability_and_lr_replan(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    rows = []
+    for epoch in range(40):
+        pose_loss = 100.0 if epoch < 12 else 1_500.0
+        pose_axis = 50.0 if epoch < 12 else 1_250.0
+        rows.append(
+            {
+                "epoch": epoch,
+                "learning_rate": 1.0e-3,
+                "loss_components": {"loss_part_pose_distill": pose_loss},
+                "per_axis_decomposition": {"pose": pose_axis, "seg": 5.0},
+            }
+        )
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hinerv",
+        candidate_id="hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000",
+        candidate_num_pairs=600,
+    )
+
+    assert row["schema"] == "nerv_candidate_feedback_row.v1"
+    assert row["telemetry_feedback_schema"] == "nerv_training_telemetry_feedback.v1"
+    assert row["family"] == "hi_nerv"
+    assert row["feedback_kind"] == "training_telemetry"
+    assert row["measured_num_pairs"] == 600
+    assert row["scope_matches_candidate"] is True
+    assert row["feedback_ready"] is False
+    assert row["pose_instability_detected"] is True
+    assert row["recommended_learning_rate"] == 3.0e-4
+    assert "lower_learning_rate_from_pose_instability_telemetry" in row[
+        "recommended_launch_mutations"
+    ]
+    assert "hi_nerv_pose_instability_telemetry_feedback" in row["blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_write_training_telemetry_feedback_files_writes_manifest_and_ledger(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 1,
+                "learning_rate": 1.0e-3,
+                "loss_components": {"loss_part_pose_distill": 10.0},
+                "per_axis_decomposition": {"pose": 10.0, "seg": 1.0},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    output = write_nerv_training_telemetry_feedback_files(
+        telemetry_path=telemetry,
+        output_dir=tmp_path / "feedback",
+        family="hi_nerv",
+        candidate_id="hinerv_tiny",
+        candidate_num_pairs=600,
+    )
+
+    row_path = Path(output["row_path"])
+    ledger_path = Path(output["ledger_path"])
+    manifest_path = Path(output["manifest_path"])
+    assert row_path.is_file()
+    assert ledger_path.is_file()
+    assert manifest_path.is_file()
+    row = json.loads(row_path.read_text(encoding="utf-8"))
+    ledger_rows = [
+        json.loads(line)
+        for line in ledger_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert output["schema"] == "nerv_training_telemetry_feedback.v1"
+    assert ledger_rows == [row]
+    assert row["pose_instability_detected"] is False
+    assert output["score_claim"] is False
 
 
 def test_refresh_nerv_candidate_feedback_report_repairs_batched_mlx_signal(

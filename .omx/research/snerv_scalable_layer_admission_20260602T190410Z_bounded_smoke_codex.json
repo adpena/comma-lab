@@ -1,0 +1,147 @@
+{
+  "admitted_optional_layer_count": 0,
+  "axis_tag": "[planning/control:false-authority]",
+  "blockers": [
+    "snerv_scalable_layer_admission_false_authority_no_score_claim",
+    "snerv_scalable_layer_full_video_coverage_missing",
+    "snerv_scalable_layer_section_value_profile_missing",
+    "paired_contest_cpu_cuda_auth_eval_missing"
+  ],
+  "charged_archive_bytes": 10441,
+  "created_utc": "2026-06-02T19:04:11.231998+00:00",
+  "cut_or_generate_optional_layer_count": 0,
+  "deserves_separate_scalable_layer_lane": false,
+  "dispatch_attempted": false,
+  "family": "snerv",
+  "frontier_bytes": 178493,
+  "full_video_coverage": false,
+  "gpu_launched": false,
+  "input_kind": "raw_snar1_packet",
+  "input_path": "/Volumes/VertigoDataTier/pact/nerv_local_smokes/snerv_bounded_smoke_20260602T183755Z/snerv_mlx_native_export/native_train_export/snerv_mlx_native_packet.snar",
+  "layer_rows": [
+    {
+      "admission_decision": "base_layer_required_price_for_training_budget",
+      "blockers": [],
+      "byte_price_score": 0.004895395023354204,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "layer_bytes": 7352,
+      "layer_id": "snerv_base_lf_layer",
+      "layer_role": "base_layer_required_for_receiver_decode",
+      "measured_nonrate_score_increase_if_removed": null,
+      "net_score_saved_if_removed": null,
+      "optional_layer": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sections": [
+        "metadata_payload",
+        "lf_payload"
+      ]
+    },
+    {
+      "admission_decision": "needs_scorer_section_value_profile",
+      "blockers": [
+        "scalable_layer_section_value_profile_missing"
+      ],
+      "byte_price_score": 0.0006252415569817189,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "layer_bytes": 939,
+      "layer_id": "snerv_enhancement_hf_decoder_layer",
+      "layer_role": "enhancement_layer_hf_restoration",
+      "measured_nonrate_score_increase_if_removed": null,
+      "net_score_saved_if_removed": null,
+      "optional_layer": true,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sections": [
+        "decoder_payload"
+      ]
+    },
+    {
+      "admission_decision": "needs_scorer_section_value_profile",
+      "blockers": [
+        "scalable_layer_section_value_profile_missing"
+      ],
+      "byte_price_score": 0.000633231864419185,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "layer_bytes": 951,
+      "layer_id": "snerv_enhancement_linf_step_map_layer",
+      "layer_role": "enhancement_layer_linf_step_map",
+      "measured_nonrate_score_increase_if_removed": null,
+      "net_score_saved_if_removed": null,
+      "optional_layer": true,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sections": [
+        "step_map_packet"
+      ]
+    },
+    {
+      "admission_decision": "minimize_header_but_not_scalable_content_layer",
+      "blockers": [],
+      "byte_price_score": 0.0007983648847934835,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "layer_bytes": 1199,
+      "layer_id": "snerv_packet_header_overhead",
+      "layer_role": "mandatory_packet_overhead",
+      "measured_nonrate_score_increase_if_removed": null,
+      "net_score_saved_if_removed": null,
+      "optional_layer": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sections": []
+    }
+  ],
+  "next_actions": [
+    "run_full600_section_value_profile_for_hf_decoder_and_step_map_layers",
+    "keep_scalable_layer_as_snerv_bitstream_policy_not_separate_lane",
+    "price_layer_bytes_inside_scorer_aware_training_export_loop"
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof": "snerv_scalable_layer_sections_priced_against_contest_byte_waterline",
+  "rank_or_kill_eligible": false,
+  "rate_score_per_byte": 6.658589531221714e-07,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_scalable_layer_admission.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "section_value_profile_attached": false,
+  "snar1_packet_bytes": 10441,
+  "source_alignment": {
+    "contest_adaptation": "layer admission is scorer-only and byte-priced; human quality is not an authority",
+    "current_snerv_mapping": {
+      "snerv_base_lf_layer": [
+        "metadata_payload",
+        "lf_payload"
+      ],
+      "snerv_enhancement_hf_decoder_layer": [
+        "decoder_payload"
+      ],
+      "snerv_enhancement_linf_step_map_layer": [
+        "step_map_packet"
+      ]
+    },
+    "scalable_layer_paper": "base/enhancement layer truncation"
+  },
+  "verdict": "KEEP_AS_SNERV_BITSTREAM_POLICY__SECTION_VALUE_EVIDENCE_MISSING"
+}

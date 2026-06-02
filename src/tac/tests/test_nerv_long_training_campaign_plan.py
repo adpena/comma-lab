@@ -226,6 +226,54 @@ def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> No
     )
 
 
+def test_long_training_campaign_plan_applies_hinerv_pose_instability_feedback(
+) -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=1.0e-3,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "pose_instability_detected": True,
+                "observed_learning_rate": 1.0e-3,
+                "recommended_learning_rate": 3.0e-4,
+                "recommended_launch_mutations": [
+                    "lower_learning_rate_from_pose_instability_telemetry"
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    argv = hi["command_argv"]
+    lr = argv[argv.index("--learning-rate") + 1]
+    assert lr == "0.0003"
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["schema"] == "hinerv_feedback_launch_adjustment.v1"
+    assert adjustment["applied"] is True
+    assert adjustment["requested_learning_rate"] == 1.0e-3
+    assert adjustment["learning_rate"] == 3.0e-4
+    assert "lower_learning_rate_from_pose_instability_telemetry" in adjustment[
+        "launch_mutations"
+    ]
+    assert "hinerv_pose_instability_feedback_unapplied" not in hi["blockers"]
+    assert hi["candidate_feedback"]["feedback_kind"] == "training_telemetry"
+    assert hi["score_claim"] is False
+
+
 def test_long_training_campaign_plan_consumes_partial_snerv_runner_feedback() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),

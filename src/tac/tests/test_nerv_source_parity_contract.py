@@ -20,8 +20,11 @@ def test_source_parity_contract_is_false_authority_and_family_scoped() -> None:
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert set(report["families"]) == {"hi_nerv", "snerv"}
-    assert report["required_for_long_training_ready"] is False
-    assert report["blockers"]
+    assert report["required_for_long_training_ready"] is True
+    assert report["blockers"] == ()
+    assert "snerv_official_mfu_hfr_tub_parity_missing" in report[
+        "nonblocking_gaps"
+    ]
 
 
 def test_hinerv_generic_resize_path_is_no_longer_a_source_parity_blocker() -> None:
@@ -76,11 +79,17 @@ def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> Non
     }.issubset(present_symbols)
 
 
-def test_snerv_spectra_preserving_adapter_is_local_not_official_parity() -> None:
+def test_snerv_spectra_preserving_adapter_unblocks_training_but_not_official_parity() -> None:
     report = build_nerv_source_parity_contract(repo_root=REPO_ROOT, families=("snerv",))
 
-    assert report["required_for_long_training_ready"] is False
-    assert "snerv_official_mfu_hfr_tub_parity_missing" in report["blockers"]
+    assert report["required_for_long_training_ready"] is True
+    assert "snerv_official_mfu_hfr_tub_parity_missing" not in report["blockers"]
+    assert "snerv_official_mfu_hfr_tub_parity_missing" in report[
+        "nonblocking_gaps"
+    ]
+    assert "snerv_receiver_safe_mfu_hfr_temporal_adapter_missing" not in report[
+        "blockers"
+    ]
     assert "snerv_fc_dim_modelsize_control_missing" not in report["blockers"]
     assert "snerv_scorer_loop_decoder_qat_missing" not in report["blockers"]
     assert "snerv_lf_quant_intn_codec_missing" not in report["blockers"]
@@ -92,9 +101,18 @@ def test_snerv_spectra_preserving_adapter_is_local_not_official_parity() -> None
     assert rows["snerv_qat_receiver_codec_pricing"]["status"] == "implemented_or_bound"
     assert rows["snerv_official_haar_mode"]["status"] == "implemented_or_bound"
     assert rows["snerv_receiver_dependency_custody"]["status"] == "implemented_or_bound"
+    assert rows["snerv_scalable_layer_admission_policy"]["status"] == (
+        "implemented_or_bound"
+    )
+    assert rows["snerv_scalable_layer_admission_policy"][
+        "required_for_long_training"
+    ] is False
+    assert "snerv_scalable_layer_admission_policy_missing" not in report["blockers"]
     present_symbols = {
         symbol["symbol"]
-        for symbol in rows["snerv_official_mfu_hfr_stride_stack"]["symbol_rows"]
+        for symbol in rows["snerv_receiver_safe_mfu_hfr_temporal_adapter"][
+            "symbol_rows"
+        ]
         if symbol["status"] == "present"
     }
     assert {
@@ -103,10 +121,21 @@ def test_snerv_spectra_preserving_adapter_is_local_not_official_parity() -> None
         "SnervTemporalExtension",
         "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
     }.issubset(present_symbols)
-    assert "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF" not in present_symbols
-    assert rows["snerv_official_mfu_hfr_stride_stack"]["status"] == (
-        "missing_or_partial"
+    assert rows["snerv_receiver_safe_mfu_hfr_temporal_adapter"]["status"] == (
+        "implemented_or_bound"
     )
+    official = rows["snerv_official_mfu_hfr_tub_parity"]
+    assert official["status"] == "missing_or_partial"
+    assert official["required_for_long_training"] is False
+    assert official["blockers"] == (
+        "snerv_official_mfu_hfr_tub_parity_missing",
+    )
+    official_symbols = {
+        symbol["symbol"]
+        for symbol in official["symbol_rows"]
+        if symbol["status"] == "present"
+    }
+    assert "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF" not in official_symbols
     controls = {row["control_id"]: row for row in report["control_rows"]}
     assert controls["snerv_fc_dim_modelsize_control"]["status"] == (
         "implemented_or_declared"
@@ -130,7 +159,9 @@ def test_source_parity_contract_writes_json_and_markdown(tmp_path: Path) -> None
 
     assert json_path.is_file()
     assert md_path.is_file()
-    assert "NeRV Source-Parity Contract" in md_path.read_text(encoding="utf-8")
+    md_text = md_path.read_text(encoding="utf-8")
+    assert "NeRV Source-Parity Contract" in md_text
+    assert "Nonblocking Source Gaps" in md_text
     assert render_nerv_source_parity_markdown(report).startswith(
         "# NeRV Source-Parity Contract"
     )

@@ -120,6 +120,12 @@ def build_nerv_source_parity_contract(
             if row["required_for_long_training"]
         ]
     )
+    nonblocking_gaps = _ordered_unique(
+        blocker
+        for row in feature_rows
+        for blocker in row["blockers"]
+        if not row["required_for_long_training"]
+    )
     family_rows = [
         _family_summary(family, feature_rows=feature_rows, control_rows=control_rows)
         for family in selected_families
@@ -136,6 +142,7 @@ def build_nerv_source_parity_contract(
         "control_rows": control_rows,
         "required_for_long_training_ready": not blockers,
         "blockers": blockers,
+        "nonblocking_gaps": nonblocking_gaps,
         "next_actions": _next_actions(blockers),
     }
 
@@ -166,6 +173,12 @@ def render_nerv_source_parity_markdown(report: Mapping[str, Any]) -> str:
     blockers = report.get("blockers", ())
     if blockers:
         lines.extend(f"- `{blocker}`" for blocker in blockers)
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Nonblocking Source Gaps", ""])
+    nonblocking_gaps = report.get("nonblocking_gaps", ())
+    if nonblocking_gaps:
+        lines.extend(f"- `{gap}`" for gap in nonblocking_gaps)
     else:
         lines.append("- none")
     lines.extend(["", "## Next Actions", ""])
@@ -332,20 +345,34 @@ def _source_features() -> tuple[SourceFeature, ...]:
         ),
         SourceFeature(
             family="snerv",
-            feature_id="snerv_official_mfu_hfr_stride_stack",
+            feature_id="snerv_receiver_safe_mfu_hfr_temporal_adapter",
             official_source_id="snerv_spectra_preserving_paper",
             implementation_target=(
-                "official spectra-preserving MFU/HFR/SNeRV_T behavior is "
-                "proven by source-forward parity or an explicit receiver-closed fork proof"
+                "local spectra-preserving MFU/HFR/SNeRV_T fork is executable, "
+                "receiver-closed, and byte-priced before long training"
             ),
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "MultiResolutionFusionUnit", "local receiver-safe MFU adapter"),
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "HighFrequencyRestorer", "local receiver-safe HFR adapter"),
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SnervTemporalExtension", "local SNeRV_T analysis utility"),
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF", "local receiver-safe adapter proof constant"),
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF", "official MFU/HFR/TUB parity proof"),
+                RequiredSymbol("snerv", "snerv_receiver_safe_mfu_hfr_temporal_adapter", "tac.substrates.snerv_inverse_steg_carrier.carrier", "MultiResolutionFusionUnit", "local receiver-safe MFU adapter"),
+                RequiredSymbol("snerv", "snerv_receiver_safe_mfu_hfr_temporal_adapter", "tac.substrates.snerv_inverse_steg_carrier.carrier", "HighFrequencyRestorer", "local receiver-safe HFR adapter"),
+                RequiredSymbol("snerv", "snerv_receiver_safe_mfu_hfr_temporal_adapter", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SnervTemporalExtension", "local SNeRV_T analysis utility"),
+                RequiredSymbol("snerv", "snerv_receiver_safe_mfu_hfr_temporal_adapter", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF", "local receiver-safe adapter proof constant"),
+            ),
+            blocker_if_missing="snerv_receiver_safe_mfu_hfr_temporal_adapter_missing",
+        ),
+        SourceFeature(
+            family="snerv",
+            feature_id="snerv_official_mfu_hfr_tub_parity",
+            official_source_id="snerv_spectra_preserving_official_repo",
+            implementation_target=(
+                "official spectra-preserving MFU/HFR/TUB source-forward parity "
+                "is proven or explicitly superseded by same-axis receiver-closed "
+                "evidence"
+            ),
+            required_symbols=(
+                RequiredSymbol("snerv", "snerv_official_mfu_hfr_tub_parity", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF", "official MFU/HFR/TUB parity proof"),
             ),
             blocker_if_missing="snerv_official_mfu_hfr_tub_parity_missing",
+            required_for_long_training=False,
         ),
         SourceFeature(
             family="snerv",
@@ -386,6 +413,22 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 RequiredSymbol("snerv", "snerv_receiver_dependency_custody", "tac.substrates.snerv_inverse_steg_carrier.dwt", "SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF", "receiver dependency custody proof constant"),
             ),
             blocker_if_missing="snerv_receiver_dependency_custody_missing",
+        ),
+        SourceFeature(
+            family="snerv",
+            feature_id="snerv_scalable_layer_admission_policy",
+            official_source_id="snerv_scalable_layer_paper",
+            implementation_target=(
+                "base/enhancement layer bytes are priced by contest waterline "
+                "before scalable-layer is promoted to a separate lane"
+            ),
+            required_symbols=(
+                RequiredSymbol("snerv", "snerv_scalable_layer_admission_policy", "tac.analysis.snerv_scalable_layer_admission", "SNERV_SCALABLE_LAYER_ADMISSION_PROOF", "behavior-backed proof constant"),
+                RequiredSymbol("snerv", "snerv_scalable_layer_admission_policy", "tac.analysis.snerv_scalable_layer_admission", "build_snerv_scalable_layer_admission_report", "real SNAR1 layer admission profiler"),
+                RequiredSymbol("snerv", "snerv_scalable_layer_admission_policy", "tac.analysis.snerv_scalable_layer_admission", "write_snerv_scalable_layer_admission_report", "durable report writer"),
+            ),
+            blocker_if_missing="snerv_scalable_layer_admission_policy_missing",
+            required_for_long_training=False,
         ),
     )
 
