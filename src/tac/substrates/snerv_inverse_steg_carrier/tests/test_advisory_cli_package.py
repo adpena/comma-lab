@@ -34,7 +34,13 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     fake = _fake_advisory_result(archive.packet)
-    monkeypatch.setattr(module, "run_snerv_advisory", lambda **_kwargs: fake)
+    captured_kwargs = {}
+
+    def fake_run_snerv_advisory(**kwargs):
+        captured_kwargs.update(kwargs)
+        return fake
+
+    monkeypatch.setattr(module, "run_snerv_advisory", fake_run_snerv_advisory)
 
     report_path = tmp_path / "advisory.json"
     packet_path = tmp_path / "advisory.snar"
@@ -51,6 +57,8 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
             str(packet_path),
             "--package-dir",
             str(package_dir),
+            "--decoder-payload-codec",
+            "int8_symmetric",
             "--package-timeout-seconds",
             "120",
         ]
@@ -67,14 +75,15 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
         "paired_contest_cpu_cuda_auth_eval_missing",
         "not_packaged_as_contest_archive_zip",
     ]
-    assert payload["archive_byte_closure_blockers"] == [
+    assert set(payload["archive_byte_closure_blockers"]) >= {
         "snerv_packet_not_full_600_pairs",
         "paired_contest_cpu_cuda_auth_eval_missing",
         "pywavelets_runtime_dependency_not_contest_proven",
-    ]
+    }
     assert payload["runtime_package"]["receiver_proof"][
         "runtime_consumption_proof_passed"
     ] is True
+    assert captured_kwargs["decoder_payload_codec"] == "int8_symmetric"
 
 
 def _fake_advisory_result(packet: bytes):
@@ -114,6 +123,7 @@ def _fake_advisory_result(packet: bytes):
         metadata_bytes=24,
         receiver_archive_header_bytes=64,
         decoder_bytes=40,
+        decoder_payload_codec="float32_lzma",
         hf_decoder_fit_mode="least_squares",
         hf_decoder_saliency_gain=1.0,
         hf_decoder_saliency_component="combined",

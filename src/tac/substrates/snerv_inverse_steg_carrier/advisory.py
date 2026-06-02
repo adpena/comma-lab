@@ -67,6 +67,7 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     SnervArchivePacket,
+    decode_decoder_payload,
     decode_snerv_archive_frames,
     encode_decoder_payload,
     encode_lf_metadata_payload,
@@ -121,6 +122,7 @@ class SnervAdvisoryResult:
     # rate
     lf_coeff_count_total: int  # stored LF coeffs across all frames+channels
     decoder_bytes: int
+    decoder_payload_codec: str
     hf_decoder_fit_mode: str
     hf_decoder_saliency_gain: float
     hf_decoder_saliency_component: str
@@ -342,6 +344,7 @@ def run_snerv_advisory(
     hf_decoder_fit_mode: str = "least_squares",
     hf_decoder_saliency_gain: float = 1.0,
     hf_decoder_saliency_component: str = "combined",
+    decoder_payload_codec: str = "float32_lzma",
 ) -> SnervAdvisoryResult:
     """Run the complete byte-closed SNeRV advisory on ``n_pairs`` real pairs.
 
@@ -405,6 +408,8 @@ def run_snerv_advisory(
         )
     else:
         raise RuntimeError(f"unknown HF decoder fit mode: {hf_decoder_fit_mode!r}")
+    decoder_bytes = encode_decoder_payload(decoder, codec=decoder_payload_codec)
+    receiver_decoder = decode_decoder_payload(decoder_bytes)
 
     # ---- 2. Oracle: per-pixel saliency on the LAST frame (seg) + both (pose) ----
     # Average the oracle across pairs to get a representative allocation map (the
@@ -489,7 +494,7 @@ def run_snerv_advisory(
                     lf_shape=lf.shape, levels=levels, wavelet=wavelet,
                     orig_hw=(H, W), per_element_steps=l2steps,
                 )
-                recon_l2 = decode_frame(code_l2, decoder)
+                recon_l2 = decode_frame(code_l2, receiver_decoder)
                 recon_pairs_l2[p, fidx, c] = torch.from_numpy(
                     np.clip(recon_l2, 0.0, 255.0)
                 ).to(recon_pairs_l2)
@@ -520,7 +525,7 @@ def run_snerv_advisory(
             orig_hw=(H, W),
             per_element_steps=receiver_steps,
         )
-        recon_linf = decode_frame(code_linf, decoder)
+        recon_linf = decode_frame(code_linf, receiver_decoder)
         recon_pairs_linf[
             record.pair_index,
             record.frame_index,
@@ -529,7 +534,6 @@ def run_snerv_advisory(
 
     # ---- 6. Charge the receiver-visible packet (the rate numerator) ----
     lf_payload = encode_lf_quant_payload(lf_quant_linf)
-    decoder_bytes = encode_decoder_payload(decoder)
     metadata_payload = encode_lf_metadata_payload(
         lf_zero_points=lf_zero_points_linf,
     )
@@ -558,6 +562,7 @@ def run_snerv_advisory(
             "hf_decoder_fit_mode": hf_decoder_fit_mode,
             "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
             "hf_decoder_saliency_component": hf_decoder_saliency_component,
+            "decoder_payload_codec": decoder_payload_codec,
         },
     )
     metadata = len(metadata_payload)
@@ -568,7 +573,7 @@ def run_snerv_advisory(
         lf_quant_planes=lf_quant_linf,
         lf_zero_points=lf_zero_points_linf,
         step_maps=receiver_step_maps,
-        decoder=decoder,
+        decoder=receiver_decoder,
     )
     frame_replay_ok, frame_replay_error, receiver_frames_np = (
         _verify_receiver_archive_full_frame_replay(
@@ -657,6 +662,7 @@ def run_snerv_advisory(
         carrier_hw=(H, W),
         lf_coeff_count_total=lf_count_total,
         decoder_bytes=len(decoder_bytes),
+        decoder_payload_codec=decoder_payload_codec,
         hf_decoder_fit_mode=hf_decoder_fit_mode,
         hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),
         hf_decoder_saliency_component=hf_decoder_saliency_component,

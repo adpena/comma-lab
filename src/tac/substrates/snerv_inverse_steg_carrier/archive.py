@@ -21,6 +21,10 @@ from typing import Any
 import numpy as np
 
 from tac.analysis.snerv_step_map_coder import decode_step_maps
+from tac.substrates._shared.int_stream_codec import (
+    pack_fixed_width_uints,
+    unpack_fixed_width_uints,
+)
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     HfGenerationDecoder,
     SnervFrameCode,
@@ -34,6 +38,14 @@ SNERV_DECODER_MAGIC = b"SNDC1"
 HEADER_LEN_FMT = "<I"
 SECTION_ORDER = ("metadata_payload", "lf_payload", "decoder_payload", "step_map_packet")
 DECODER_SUBBANDS = ("LH", "HL", "HH")
+DECODER_PAYLOAD_V1_SCHEMA = "snerv_decoder_payload.v1"
+DECODER_PAYLOAD_V2_SCHEMA = "snerv_decoder_payload.v2"
+DECODER_PAYLOAD_LEGACY_CODEC = "float32_lzma"
+DECODER_PAYLOAD_QUANTIZED_CODECS = {
+    "int8_symmetric": 8,
+    "int4_symmetric": 4,
+    "int2_symmetric": 2,
+}
 
 
 class SnervArchiveError(ValueError):
@@ -413,30 +425,40 @@ def decode_lf_quant_payload(payload: bytes) -> list[np.ndarray]:
     return out
 
 
-def encode_decoder_payload(decoder: HfGenerationDecoder) -> bytes:
+def encode_decoder_payload(
+    decoder: HfGenerationDecoder,
+    *,
+    codec: str = DECODER_PAYLOAD_LEGACY_CODEC,
+) -> bytes:
     """Encode the shared HF decoder as deterministic scorer-free receiver bytes."""
 
-    levels = int(decoder.levels)
-    arrays = []
-    for lvl in range(levels):
-        level = decoder.kernels.get(lvl)
-        if not isinstance(level, dict):
-            raise SnervArchiveError(f"decoder missing level {lvl}")
-        for subband in DECODER_SUBBANDS:
-            kernel = np.asarray(level.get(subband), dtype="<f4")
-            if kernel.shape != (3, 3):
-                raise SnervArchiveError(
-                    f"decoder kernel {lvl}/{subband} shape {kernel.shape} != (3, 3)"
-                )
-            if not np.all(np.isfinite(kernel)):
-                raise SnervArchiveError(f"decoder kernel {lvl}/{subband} is non-finite")
-            arrays.append(kernel.reshape(-1))
-    raw = np.concatenate(arrays).astype("<f4").tobytes() if arrays else b""
+    levels, values = _decoder_to_flat_values(decoder)
+    raw = values.astype("<f4").tobytes()
     if not raw:
         raise SnervArchiveError("decoder payload must be non-empty")
+    normalized = str(codec).strip().lower()
+    if normalized in {
+        DECODER_PAYLOAD_LEGACY_CODEC,
+        "fp32_lzma",
+        "float32",
+        "legacy",
+    }:
+        return _encode_decoder_payload_v1(levels=levels, raw=raw)
+    if normalized in DECODER_PAYLOAD_QUANTIZED_CODECS:
+        return _encode_decoder_payload_quantized(
+            levels=levels,
+            values=values,
+            bits=DECODER_PAYLOAD_QUANTIZED_CODECS[normalized],
+            codec=normalized,
+            raw_reference=raw,
+        )
+    raise SnervArchiveError(f"unsupported decoder payload codec: {codec!r}")
+
+
+def _encode_decoder_payload_v1(*, levels: int, raw: bytes) -> bytes:
     compressed = lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
     header = {
-        "schema": "snerv_decoder_payload.v1",
+        "schema": DECODER_PAYLOAD_V1_SCHEMA,
         "levels": levels,
         "subbands": list(DECODER_SUBBANDS),
         "kernel_shape": [3, 3],
@@ -448,21 +470,138 @@ def encode_decoder_payload(decoder: HfGenerationDecoder) -> bytes:
     return _pack_subpacket(SNERV_DECODER_MAGIC, header, compressed)
 
 
+def _encode_decoder_payload_quantized(
+    *,
+    levels: int,
+    values: np.ndarray,
+    bits: int,
+    codec: str,
+    raw_reference: bytes,
+) -> bytes:
+    qmax = (1 << (int(bits) - 1)) - 1
+    if qmax < 1:
+        raise SnervArchiveError(f"invalid decoder quantizer bits: {bits}")
+    value_groups = values.reshape(levels * len(DECODER_SUBBANDS), 9)
+    scales = []
+    unsigned_parts = []
+    max_abs_error = 0.0
+    mean_abs_errors = []
+    for group in value_groups:
+        max_abs = float(np.max(np.abs(group))) if group.size else 0.0
+        scale = 1.0 if max_abs == 0.0 else max_abs / float(qmax)
+        q_signed = np.round(group / scale).clip(-qmax, qmax).astype(np.int64)
+        dequant = q_signed.astype(np.float64) * scale
+        err = np.abs(dequant - group)
+        max_abs_error = max(max_abs_error, float(np.max(err)) if err.size else 0.0)
+        mean_abs_errors.append(float(np.mean(err)) if err.size else 0.0)
+        scales.append(scale)
+        unsigned_parts.append((q_signed + qmax).astype(np.int64))
+    q_unsigned = np.concatenate(unsigned_parts) if unsigned_parts else np.zeros(0)
+    packed_q = pack_fixed_width_uints(q_unsigned, bits=bits)
+    scale_payload = np.asarray(scales, dtype="<f2").tobytes()
+    raw_payload = scale_payload + packed_q
+    header = {
+        "schema": DECODER_PAYLOAD_V2_SCHEMA,
+        "levels": levels,
+        "subbands": list(DECODER_SUBBANDS),
+        "kernel_shape": [3, 3],
+        "codec": codec,
+        "bits_per_weight": int(bits),
+        "quantizer": "symmetric_per_kernel_fp16_scale",
+        "q_offset": int(qmax),
+        "scale_dtype": "float16_le",
+        "scale_count": len(scales),
+        "scale_bytes": len(scale_payload),
+        "packed_q_bytes": len(packed_q),
+        "value_count": int(values.size),
+        "raw_reference_sha256": _sha256(raw_reference),
+        "raw_reference_bytes": len(raw_reference),
+        "max_abs_error": max_abs_error,
+        "mean_abs_error": float(np.mean(mean_abs_errors)) if mean_abs_errors else 0.0,
+        "payload_sha256": _sha256(raw_payload),
+        "payload_bytes": len(raw_payload),
+    }
+    return _pack_subpacket(SNERV_DECODER_MAGIC, header, raw_payload)
+
+
 def decode_decoder_payload(payload: bytes) -> HfGenerationDecoder:
     """Decode the shared HF decoder from receiver payload bytes."""
 
     header, compressed = _unpack_subpacket(
         payload,
         magic=SNERV_DECODER_MAGIC,
-        schema="snerv_decoder_payload.v1",
+        schema=(DECODER_PAYLOAD_V1_SCHEMA, DECODER_PAYLOAD_V2_SCHEMA),
     )
     levels = int(header["levels"])
+    if header["schema"] == DECODER_PAYLOAD_V2_SCHEMA:
+        return _decode_decoder_payload_quantized(header, compressed)
     raw = lzma.decompress(compressed)
     if len(raw) != int(header["raw_bytes"]):
         raise SnervArchiveError("decoder payload raw byte count mismatch")
     if _sha256(raw) != str(header["raw_sha256"]):
         raise SnervArchiveError("decoder payload raw sha256 mismatch")
     values = np.frombuffer(raw, dtype="<f4").astype(np.float64)
+    return _decoder_from_flat_values(levels=levels, values=values)
+
+
+def _decode_decoder_payload_quantized(
+    header: dict[str, Any],
+    payload: bytes,
+) -> HfGenerationDecoder:
+    if _sha256(payload) != str(header["payload_sha256"]):
+        raise SnervArchiveError("decoder quantized payload sha256 mismatch")
+    levels = int(header["levels"])
+    bits = int(header["bits_per_weight"])
+    offset = int(header["q_offset"])
+    scale_bytes = int(header["scale_bytes"])
+    scale_count = int(header["scale_count"])
+    value_count = int(header["value_count"])
+    if scale_count != levels * len(DECODER_SUBBANDS):
+        raise SnervArchiveError("decoder quantized scale count mismatch")
+    if scale_bytes != scale_count * np.dtype("<f2").itemsize:
+        raise SnervArchiveError("decoder quantized scale byte count mismatch")
+    if len(payload) < scale_bytes:
+        raise SnervArchiveError("decoder quantized payload too short")
+    scale_payload = payload[:scale_bytes]
+    packed_q = payload[scale_bytes:]
+    if len(packed_q) != int(header["packed_q_bytes"]):
+        raise SnervArchiveError("decoder quantized q byte count mismatch")
+    scales = np.frombuffer(scale_payload, dtype="<f2").astype(np.float64)
+    q_unsigned = unpack_fixed_width_uints(packed_q, bits=bits, count=value_count)
+    q_signed = q_unsigned.astype(np.int64) - offset
+    values = q_signed.astype(np.float64)
+    for idx, scale in enumerate(scales):
+        start = idx * 9
+        stop = start + 9
+        values[start:stop] *= float(scale)
+    return _decoder_from_flat_values(levels=levels, values=values)
+
+
+def _decoder_to_flat_values(decoder: HfGenerationDecoder) -> tuple[int, np.ndarray]:
+    levels = int(decoder.levels)
+    arrays = []
+    for lvl in range(levels):
+        level = decoder.kernels.get(lvl)
+        if not isinstance(level, dict):
+            raise SnervArchiveError(f"decoder missing level {lvl}")
+        for subband in DECODER_SUBBANDS:
+            kernel = np.asarray(level.get(subband), dtype=np.float64)
+            if kernel.shape != (3, 3):
+                raise SnervArchiveError(
+                    f"decoder kernel {lvl}/{subband} shape {kernel.shape} != (3, 3)"
+                )
+            if not np.all(np.isfinite(kernel)):
+                raise SnervArchiveError(f"decoder kernel {lvl}/{subband} is non-finite")
+            arrays.append(kernel.reshape(-1))
+    values = np.concatenate(arrays).astype(np.float64) if arrays else np.zeros(0)
+    return levels, values
+
+
+def _decoder_from_flat_values(
+    *,
+    levels: int,
+    values: np.ndarray,
+) -> HfGenerationDecoder:
     expected = levels * len(DECODER_SUBBANDS) * 9
     if values.size != expected:
         raise SnervArchiveError(
@@ -590,7 +729,7 @@ def _unpack_subpacket(
     packet: bytes,
     *,
     magic: bytes,
-    schema: str,
+    schema: str | tuple[str, ...],
 ) -> tuple[dict[str, Any], bytes]:
     packet = bytes(packet)
     if not packet.startswith(magic):
@@ -607,7 +746,8 @@ def _unpack_subpacket(
     if header_end > len(packet):
         raise SnervArchiveError(f"declared subpacket header exceeds bytes for {schema}")
     header = json.loads(packet[offset:header_end].decode("utf-8"))
-    if header.get("schema") != schema:
+    allowed = (schema,) if isinstance(schema, str) else tuple(schema)
+    if header.get("schema") not in allowed:
         raise SnervArchiveError(f"unsupported subpacket schema: {header.get('schema')!r}")
     return dict(header), packet[header_end:]
 

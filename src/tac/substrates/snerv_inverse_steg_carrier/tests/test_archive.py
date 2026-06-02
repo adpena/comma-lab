@@ -152,6 +152,53 @@ def test_lf_quant_and_decoder_payloads_roundtrip_independently() -> None:
         encode_lf_quant_payload([np.array([1.25], dtype=np.float32)])
 
 
+def test_quantized_decoder_payload_codecs_roundtrip_receiver_values() -> None:
+    decoder = HfGenerationDecoder.zeros(levels=2)
+    for lvl in range(decoder.levels):
+        for idx, subband in enumerate(("LH", "HL", "HH"), start=1):
+            decoder.kernels[lvl][subband] = (
+                np.arange(9, dtype=np.float64).reshape(3, 3) - 4.0
+            ) * (0.0125 * idx * (lvl + 1))
+
+    legacy_payload = encode_decoder_payload(decoder)
+    payload_sizes = {}
+    for codec, tolerance in (
+        ("int8_symmetric", 1.5e-3),
+        ("int4_symmetric", 4.5e-2),
+        ("int2_symmetric", 3.1e-1),
+    ):
+        payload = encode_decoder_payload(decoder, codec=codec)
+        header = _read_subpacket_header(payload)
+        decoded = decode_decoder_payload(payload)
+        payload_sizes[codec] = len(payload)
+
+        assert header["schema"] == "snerv_decoder_payload.v2"
+        assert header["codec"] == codec
+        assert header["bits_per_weight"] in {8, 4, 2}
+        assert header["quantizer"] == "symmetric_per_kernel_fp16_scale"
+        for lvl in range(decoder.levels):
+            for subband in ("LH", "HL", "HH"):
+                np.testing.assert_allclose(
+                    decoded.kernels[lvl][subband],
+                    decoder.kernels[lvl][subband],
+                    atol=tolerance,
+                    rtol=0.0,
+                )
+
+    assert payload_sizes["int2_symmetric"] <= payload_sizes["int4_symmetric"]
+    assert payload_sizes["int4_symmetric"] <= payload_sizes["int8_symmetric"]
+    assert decode_decoder_payload(legacy_payload).levels == decoder.levels
+
+
+def test_quantized_decoder_payload_rejects_corrupt_payload_bytes() -> None:
+    decoder = HfGenerationDecoder.zeros(levels=1)
+    payload = bytearray(encode_decoder_payload(decoder, codec="int4_symmetric"))
+    payload[-1] ^= 0x01
+
+    with pytest.raises(SnervArchiveError, match="sha256 mismatch"):
+        decode_decoder_payload(bytes(payload))
+
+
 def test_archive_decoded_sections_reconstruct_receiver_frame() -> None:
     rng = np.random.default_rng(7)
     yy, xx = np.mgrid[0:32, 0:48].astype(np.float64)
@@ -351,3 +398,14 @@ def _rewrite_header(packet: bytes, mutator) -> bytes:
         + header_bytes
         + packet[header_end:]
     )
+
+
+def _read_subpacket_header(packet: bytes) -> dict[str, object]:
+    offset = 5
+    (header_len,) = struct.unpack(
+        HEADER_LEN_FMT,
+        packet[offset : offset + struct.calcsize(HEADER_LEN_FMT)],
+    )
+    header_start = offset + struct.calcsize(HEADER_LEN_FMT)
+    header_end = header_start + int(header_len)
+    return json.loads(packet[header_start:header_end].decode("utf-8"))

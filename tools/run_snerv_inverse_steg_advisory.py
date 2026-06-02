@@ -101,6 +101,17 @@ def main(argv: list[str] | None = None) -> int:
         default="combined",
         help="Detector component used to weight score_weighted HF decoder fitting.",
     )
+    ap.add_argument(
+        "--decoder-payload-codec",
+        choices=(
+            "float32_lzma",
+            "int8_symmetric",
+            "int4_symmetric",
+            "int2_symmetric",
+        ),
+        default="float32_lzma",
+        help="Receiver-visible HF decoder payload grammar.",
+    )
     ap.add_argument("--out", type=str, default=None)
     ap.add_argument(
         "--packet-out",
@@ -145,6 +156,7 @@ def main(argv: list[str] | None = None) -> int:
         hf_decoder_fit_mode=args.hf_decoder_fit_mode,
         hf_decoder_saliency_gain=args.hf_decoder_saliency_gain,
         hf_decoder_saliency_component=args.hf_decoder_saliency_component,
+        decoder_payload_codec=args.decoder_payload_codec,
     )
     payload = res.as_jsonable()
     out_path = Path(args.out or _default_out())
@@ -204,7 +216,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(
         "  decoder = "
-        f"{res.decoder_bytes} B  fit={res.hf_decoder_fit_mode} "
+        f"{res.decoder_bytes} B  codec={res.decoder_payload_codec} "
+        f"fit={res.hf_decoder_fit_mode} "
         f"gain={res.hf_decoder_saliency_gain:g} "
         f"component={res.hf_decoder_saliency_component}  "
         f"archive_total = {res.archive_bytes_total} B "

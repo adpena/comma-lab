@@ -50,6 +50,7 @@ def write_snerv_contest_runtime(
         runtime_module_files=("inflate.py", "archive.py", "carrier.py", "dwt.py"),
         vendor_extra_tac_subpackages=(
             ("analysis", ("snerv_step_map_coder.py",)),
+            ("substrates._shared", ("int_stream_codec.py",)),
         ),
     )
 
