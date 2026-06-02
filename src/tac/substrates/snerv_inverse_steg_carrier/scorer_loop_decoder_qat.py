@@ -139,6 +139,8 @@ class SnervScorerLoopDecoderQatSmokeResult:
     search_mode: str
     perturb_scale: float
     pose_slack: float
+    pair_guard_min_score_improved_fraction: float
+    pair_guard_max_pose_worsened_fraction: float
     baseline: SnervDecoderEval
     best: SnervDecoderEval
     evaluations: tuple[SnervDecoderEval, ...]
@@ -210,6 +212,8 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     search_mode: str = "random_signed",
     perturb_scale: float = 0.02,
     pose_slack: float = 0.0,
+    pair_guard_min_score_improved_fraction: float = 0.0,
+    pair_guard_max_pose_worsened_fraction: float = 1.0,
     seed: int = 1337,
 ) -> SnervScorerLoopDecoderQatSmokeResult:
     """Run a tiny real-frame scorer-loop decoder/QAT smoke.
@@ -217,9 +221,11 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     The loop is deliberately bounded: it evaluates the least-squares decoder and
     up to ``2 * max_trials`` signed decoder perturbations after fake
     quantization. ``random_signed`` probes global random signs; ``top_weight_
-    coordinate`` probes the largest-magnitude decoder atoms one at a time. A
-    candidate is accepted only if it improves advisory score and keeps both
-    PoseNet and SegNet within the hard continuation guard.
+    coordinate`` probes the largest-magnitude decoder atoms one at a time;
+    ``learned_random_subspace`` runs a non-coordinate scorer-loop hill climb in
+    smooth random affine subspace directions. A candidate is accepted only if it
+    improves advisory score and keeps both PoseNet and SegNet within the hard
+    continuation guard.
     """
 
     if n_pairs < 1:
@@ -230,9 +236,22 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         raise SnervScorerLoopDecoderQatError("perturb_scale must be >= 0")
     if pose_slack < 0:
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
-    if search_mode not in {"random_signed", "top_weight_coordinate"}:
+    if search_mode not in {
+        "random_signed",
+        "top_weight_coordinate",
+        "learned_random_subspace",
+    }:
         raise SnervScorerLoopDecoderQatError(
-            "search_mode must be 'random_signed' or 'top_weight_coordinate'"
+            "search_mode must be 'random_signed', 'top_weight_coordinate', "
+            "or 'learned_random_subspace'"
+        )
+    if not 0.0 <= pair_guard_min_score_improved_fraction <= 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "pair_guard_min_score_improved_fraction must be in [0, 1]"
+        )
+    if not 0.0 <= pair_guard_max_pose_worsened_fraction <= 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "pair_guard_max_pose_worsened_fraction must be in [0, 1]"
         )
 
     t0 = time.perf_counter()
@@ -294,6 +313,12 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 row,
                 best_eval,
                 pose_slack=pose_slack,
+                pair_guard_min_score_improved_fraction=(
+                    pair_guard_min_score_improved_fraction
+                ),
+                pair_guard_max_pose_worsened_fraction=(
+                    pair_guard_max_pose_worsened_fraction
+                ),
             )
             if accepted:
                 row = _replace_eval_acceptance(row, accepted=True, blockers=())
@@ -303,7 +328,17 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 row = _replace_eval_acceptance(
                     row,
                     accepted=False,
-                    blockers=_trial_blockers(row, best_eval, pose_slack=pose_slack),
+                    blockers=_trial_blockers(
+                        row,
+                        best_eval,
+                        pose_slack=pose_slack,
+                        pair_guard_min_score_improved_fraction=(
+                            pair_guard_min_score_improved_fraction
+                        ),
+                        pair_guard_max_pose_worsened_fraction=(
+                            pair_guard_max_pose_worsened_fraction
+                        ),
+                    ),
                 )
             rows.append(row)
 
@@ -333,6 +368,12 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         search_mode=search_mode,
         perturb_scale=float(perturb_scale),
         pose_slack=float(pose_slack),
+        pair_guard_min_score_improved_fraction=float(
+            pair_guard_min_score_improved_fraction
+        ),
+        pair_guard_max_pose_worsened_fraction=float(
+            pair_guard_max_pose_worsened_fraction
+        ),
         baseline=baseline,
         best=best_eval,
         evaluations=tuple(rows),
@@ -411,16 +452,26 @@ def decoder_trial_passes_pose_guard(
     current_best: SnervDecoderEval,
     *,
     pose_slack: float = 0.0,
+    pair_guard_min_score_improved_fraction: float = 0.0,
+    pair_guard_max_pose_worsened_fraction: float = 1.0,
 ) -> bool:
     """Return whether a local decoder trial may replace the current best."""
 
     if pose_slack < 0:
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
+    pair_guard_blockers = _pair_guard_blockers(
+        candidate,
+        current_best,
+        pose_slack=pose_slack,
+        min_score_improved_fraction=pair_guard_min_score_improved_fraction,
+        max_pose_worsened_fraction=pair_guard_max_pose_worsened_fraction,
+    )
     return bool(
         candidate.receiver_archive_replay_verified
         and candidate.d_pose_linf <= current_best.d_pose_linf + float(pose_slack)
         and candidate.d_seg_linf < current_best.d_seg_linf
         and candidate.score_linf < current_best.score_linf
+        and not pair_guard_blockers
     )
 
 
@@ -477,6 +528,8 @@ def _trial_blockers(
     current_best: SnervDecoderEval,
     *,
     pose_slack: float,
+    pair_guard_min_score_improved_fraction: float = 0.0,
+    pair_guard_max_pose_worsened_fraction: float = 1.0,
 ) -> tuple[str, ...]:
     blockers = list(candidate.blockers)
     if not candidate.receiver_archive_replay_verified:
@@ -487,7 +540,54 @@ def _trial_blockers(
         blockers.append("seg_gate_failed")
     if candidate.score_linf >= current_best.score_linf:
         blockers.append("score_gate_failed")
+    blockers.extend(
+        _pair_guard_blockers(
+            candidate,
+            current_best,
+            pose_slack=pose_slack,
+            min_score_improved_fraction=pair_guard_min_score_improved_fraction,
+            max_pose_worsened_fraction=pair_guard_max_pose_worsened_fraction,
+        )
+    )
     return tuple(dict.fromkeys(blockers))
+
+
+def _pair_guard_blockers(
+    candidate: SnervDecoderEval,
+    current_best: SnervDecoderEval,
+    *,
+    pose_slack: float,
+    min_score_improved_fraction: float,
+    max_pose_worsened_fraction: float,
+) -> tuple[str, ...]:
+    if not 0.0 <= min_score_improved_fraction <= 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "pair_guard_min_score_improved_fraction must be in [0, 1]"
+        )
+    if not 0.0 <= max_pose_worsened_fraction <= 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "pair_guard_max_pose_worsened_fraction must be in [0, 1]"
+        )
+    if min_score_improved_fraction <= 0.0 and max_pose_worsened_fraction >= 1.0:
+        return ()
+    deltas = decoder_eval_pair_deltas(current_best, candidate)
+    if not deltas:
+        return ("pair_guard_no_pair_deltas",)
+    n_pairs = float(len(deltas))
+    score_improved_fraction = (
+        sum(1 for row in deltas if row.score_linf_without_rate_delta < 0.0)
+        / n_pairs
+    )
+    pose_worsened_fraction = (
+        sum(1 for row in deltas if row.d_pose_linf_delta > float(pose_slack))
+        / n_pairs
+    )
+    blockers = []
+    if score_improved_fraction < float(min_score_improved_fraction):
+        blockers.append("pair_score_improvement_fraction_guard_failed")
+    if pose_worsened_fraction > float(max_pose_worsened_fraction):
+        blockers.append("pair_pose_worsening_fraction_guard_failed")
+    return tuple(blockers)
 
 
 def _decoder_search_directions(
@@ -508,6 +608,17 @@ def _decoder_search_directions(
             (f"random_{idx}", rng.choice(signs, size=vec.shape))
             for idx in range(1, int(max_trials) + 1)
         )
+    if search_mode == "learned_random_subspace":
+        rows = []
+        for idx in range(1, int(max_trials) + 1):
+            raw = rng.normal(0.0, 1.0, size=vec.shape)
+            mixed = raw + 0.35 * np.roll(raw, 1) - 0.15 * np.roll(raw, 2)
+            direction = np.tanh(mixed)
+            rms = float(np.sqrt(np.mean(direction * direction)))
+            if rms > 0.0:
+                direction = direction / rms
+            rows.append((f"learned_subspace_{idx:03d}", direction))
+        return tuple(rows)
     if search_mode == "top_weight_coordinate":
         order = np.argsort(-np.abs(vec), kind="stable")[: int(max_trials)]
         rows = []
@@ -517,7 +628,8 @@ def _decoder_search_directions(
             rows.append((f"coord_{int(idx):03d}", direction))
         return tuple(rows)
     raise SnervScorerLoopDecoderQatError(
-        "search_mode must be 'random_signed' or 'top_weight_coordinate'"
+        "search_mode must be 'random_signed', 'top_weight_coordinate', "
+        "or 'learned_random_subspace'"
     )
 
 

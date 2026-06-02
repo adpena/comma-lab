@@ -68,6 +68,116 @@ def test_decoder_trial_pose_guard_requires_receiver_replay() -> None:
     assert decoder_trial_passes_pose_guard(candidate, current) is False
 
 
+def test_decoder_trial_pose_guard_can_require_pair_robust_score_improvement() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.4,
+        d_seg=0.02,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.01,
+                d_pose_linf=0.3,
+                score_linf_without_rate=2.0,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.03,
+                d_pose_linf=0.5,
+                score_linf_without_rate=5.0,
+            ),
+        ),
+    )
+    candidate = _eval(
+        label="aggregate_win_pair_cancellation",
+        score=6.9,
+        d_pose=0.39,
+        d_seg=0.019,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.011,
+                d_pose_linf=0.29,
+                score_linf_without_rate=2.1,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.027,
+                d_pose_linf=0.49,
+                score_linf_without_rate=4.5,
+            ),
+        ),
+    )
+
+    assert decoder_trial_passes_pose_guard(candidate, current) is True
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            pair_guard_min_score_improved_fraction=1.0,
+        )
+        is False
+    )
+
+
+def test_decoder_trial_pose_guard_can_limit_pair_pose_worsening() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.4,
+        d_seg=0.02,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.01,
+                d_pose_linf=0.3,
+                score_linf_without_rate=2.0,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.03,
+                d_pose_linf=0.5,
+                score_linf_without_rate=5.0,
+            ),
+        ),
+    )
+    candidate = _eval(
+        label="aggregate_win_pose_cancellation",
+        score=6.9,
+        d_pose=0.39,
+        d_seg=0.019,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.009,
+                d_pose_linf=0.31,
+                score_linf_without_rate=1.9,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.029,
+                d_pose_linf=0.47,
+                score_linf_without_rate=4.8,
+            ),
+        ),
+    )
+
+    assert decoder_trial_passes_pose_guard(candidate, current) is True
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            pair_guard_max_pose_worsened_fraction=0.0,
+        )
+        is False
+    )
+
+
 def test_decoder_eval_json_preserves_pair_local_detector_response() -> None:
     row = _eval(
         label="candidate",
@@ -206,6 +316,21 @@ def test_top_weight_coordinate_direction_labels_are_deterministic() -> None:
     )
 
     assert labels == ("coord_001", "coord_002")
+
+
+def test_learned_random_subspace_direction_labels_are_deterministic() -> None:
+    labels = decoder_search_direction_labels(
+        np.array([0.1, -4.0, 3.0, 0.2]),
+        max_trials=3,
+        search_mode="learned_random_subspace",
+        seed=99,
+    )
+
+    assert labels == (
+        "learned_subspace_001",
+        "learned_subspace_002",
+        "learned_subspace_003",
+    )
 
 
 def test_decoder_search_direction_labels_rejects_unknown_mode() -> None:
