@@ -12,6 +12,7 @@ REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+import tools.materialize_pact_nerv_vq_section_cut_candidate as cut_tool  # noqa: E402
 import tools.profile_pact_nerv_vq_mlx_section_value as profiler  # noqa: E402
 from tac.archive_byte_profile import contest_rate_term  # noqa: E402
 from tac.auth_eval_schema import contest_formula_score  # noqa: E402
@@ -211,6 +212,130 @@ def test_bounded_runner_opens_pvq_full_video_section_value_work_order(
     assert (REPO / "upstream").as_posix() in order["argv"]
     assert "--max-pairs" in order["argv"]
     assert "600" in order["argv"]
+
+
+def test_bounded_runner_opens_pvq_section_cut_materializer(
+    tmp_path: Path,
+) -> None:
+    archive = _archive(tmp_path / "archive.zip", num_pairs=600)
+    projection = _projection(tmp_path, archive)
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[projection],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    profile_path = tmp_path / "profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "source_schema": "pact_nerv_vq_section_value_profile.v1",
+                "family": "pact_nerv_vq",
+                "max_pairs": 600,
+                "projection_manifest_path": projection.as_posix(),
+                "scope_status": {"full_video": "executed", "section": "executed"},
+                "section_value_rows": [
+                    {
+                        "variant_id": "neutralize_decoder_qw",
+                        "family": "pact_nerv_vq",
+                        "neutralized_section": "decoder_qw",
+                        "marginal_status": "cut_candidate_distortion_nonworse",
+                        "archive_bytes_removed_vs_baseline": 128,
+                        "delta_nonrate_score": -0.5,
+                        "delta_rate_score": -0.1,
+                        "delta_total_mlx_score_advisory": -0.6,
+                        "projection_manifest_path": projection.as_posix(),
+                        "ready_for_exact_eval_dispatch": False,
+                        "score_claim": False,
+                    },
+                    {
+                        "variant_id": "neutralize_codebooks_q",
+                        "family": "pact_nerv_vq",
+                        "neutralized_section": "codebooks_q",
+                        "marginal_status": "cut_candidate_distortion_nonworse",
+                        "archive_bytes_removed_vs_baseline": 64,
+                        "delta_nonrate_score": -0.25,
+                        "delta_rate_score": -0.05,
+                        "delta_total_mlx_score_advisory": -0.3,
+                        "projection_manifest_path": projection.as_posix(),
+                        "ready_for_exact_eval_dispatch": False,
+                        "score_claim": False,
+                    },
+                ],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        mlx_profile_paths=[profile_path],
+    )
+
+    work_orders = plan["section_cut_materializer_work_orders"]
+    assert len(work_orders) == 1
+    order = work_orders[0]
+    assert order["status"] == "queued_for_byte_closed_section_cut_materializer"
+    assert order["materializer_tool"] == (
+        "tools/materialize_pact_nerv_vq_section_cut_candidate.py"
+    )
+    assert order["cut_sections"] == ["decoder_qw", "codebooks_q"]
+    assert order["archive_zip_path"] == archive.as_posix()
+    assert order["full_video_profile_path"] == profile_path.as_posix()
+    assert "--run-receiver-proof" in order["argv"]
+    assert order["score_claim"] is False
+
+
+def test_materialize_vq_section_cut_candidate_combines_measured_cuts(
+    tmp_path: Path,
+) -> None:
+    archive = _archive(tmp_path / "archive.zip")
+    profile = tmp_path / "profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "section_value_rows": [],
+                "score_claim": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rc = cut_tool.main(
+        [
+            "--archive",
+            archive.as_posix(),
+            "--profile",
+            profile.as_posix(),
+            "--output-dir",
+            (tmp_path / "cut").as_posix(),
+            "--sections",
+            "decoder_qw",
+            "codebooks_q",
+            "selectors_rc",
+        ]
+    )
+
+    assert rc == 0
+    report = json.loads(
+        (tmp_path / "cut" / "pact_nerv_vq_section_cut_candidate.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["sections_cut"] == ["decoder_qw", "codebooks_q", "selectors_rc"]
+    with zipfile.ZipFile(report["candidate_archive"]["path"]) as zf:
+        arc = parse_archive(zf.read("0.bin"))
+    assert all(float(t.abs().max()) == 0.0 for t in arc.decoder_state_dict.values())
+    assert float(arc.codebook.abs().max()) == 0.0
+    assert int(arc.indices.abs().max()) == 0
 
 
 def _cfg() -> PactNervVqConfig:

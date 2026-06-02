@@ -44,6 +44,10 @@ _SECTION_VALUE_PROFILERS: dict[str, dict[str, Any]] = {
     },
 }
 _SECTION_CUT_MATERIALIZERS: dict[str, dict[str, Any]] = {
+    "pact_nerv_vq_pvq": {
+        "tool": "tools/materialize_pact_nerv_vq_section_cut_candidate.py",
+        "sections": ("decoder_qw", "codebooks_q", "selectors_rc"),
+    },
     "pact_nerv_selector_v4_psv4": {
         "tool": "tools/materialize_pact_nerv_selector_v4_section_cut_candidate.py",
         "sections": ("latents_rc", "selectors_rc"),
