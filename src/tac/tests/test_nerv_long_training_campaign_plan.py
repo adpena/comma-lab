@@ -169,6 +169,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["execution_epochs"] == 29_650
     assert snerv_row["current_command_is_bounded_proof_not_long_training"] is False
     assert "--snerv-scorer-loop-qat" in snerv_row["command_argv"]
+    assert "--snerv-spectra-preserving-adapter" not in snerv_row["command_argv"]
     assert snerv_row["candidate"]["wavelet"] == "haar"
     assert snerv_row["source_bound_capacity_controls"]["fc_dim"] == 11
     assert snerv_row["source_bound_capacity_controls"]["emb_size"] == 2

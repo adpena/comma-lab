@@ -166,6 +166,12 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
         "run-worker --execute --detach --output <worker-result.json> "
         "--detach-launch-output <launch.json> --log-root <ssd-log-root>"
     )
+    assert observation["suggested_commands"]["refresh_nerv_training_feedback"] == (
+        ".venv/bin/python tools/refresh_nerv_queue_training_feedback.py "
+        "--queue <queue-path> --output-dir <feedback-dir> "
+        "--output-json <refresh.json> --output-jsonl <feedback.jsonl> "
+        "--output-md <refresh.md>"
+    )
     assert observation["auto_parallelism"]["local_only"] == {
         "max_parallel": 1,
         "resource_limits": {"local_cpu": 1},

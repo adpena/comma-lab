@@ -42,6 +42,9 @@ from tac.substrates._shared.mlx_score_aware.adapter import (
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+)
 
 SCHEMA = "nerv_long_training_campaign_plan.v1"
 ROW_SCHEMA = "nerv_long_training_campaign_row.v1"
@@ -605,7 +608,6 @@ def _snerv_campaign_row(
         "--snerv-scorer-loop-qat",
         "--snerv-scorer-loop-search-mode",
         "learned_random_subspace",
-        "--snerv-spectra-preserving-adapter",
         "--snerv-model-size-adapter",
         str(candidate.get("snerv_model_size_adapter") or ""),
         "--snerv-fc-dim",
@@ -623,6 +625,11 @@ def _snerv_campaign_row(
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
+    if str(candidate.get("snerv_model_size_adapter") or "") == (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    ):
+        insert_at = command.index("--snerv-model-size-adapter")
+        command.insert(insert_at, "--snerv-spectra-preserving-adapter")
     rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(
         candidate
     )

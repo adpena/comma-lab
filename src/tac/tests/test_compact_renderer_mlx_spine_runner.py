@@ -4485,6 +4485,43 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     ]
 
 
+def test_snerv_runner_refuses_conflicting_candidate_adapter_flag(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="modelsize candidate adapter conflicts",
+    ):
+        execute_snerv_inverse_steg_advisory_and_adapt(
+            output_dir=tmp_path / "snerv_conflict",
+            num_pairs=2,
+            epochs=3,
+            source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+            modelsize_candidate={
+                "schema": "snerv_modelsize_candidate.v1",
+                "family": "snerv",
+                "candidate_id": "snerv-conflict",
+                "wavelet": "haar",
+                "levels": 2,
+                "bits_per_coeff": 1.5,
+                "step_map_bits_per_coeff": 0.5,
+                "decoder_payload_codec": "int2_symmetric",
+                "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+                "fc_dim": 11,
+                "emb_size": 2,
+                "num_pairs": 600,
+                "hard_byte_ceiling": 178_000,
+                "nominal_total_payload_bytes": 150_000,
+                "nominal_under_ceiling": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            snerv_spectra_preserving_adapter=True,
+            repo_root=REPO_ROOT,
+        )
+
+
 def test_snerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
     tmp_path: Path,
     monkeypatch,

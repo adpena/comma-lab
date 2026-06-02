@@ -2603,17 +2603,34 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             ),
         )
     )
-    snerv_model_size_adapter = str(
-        candidate.get(
-            "snerv_model_size_adapter",
-            snerv_model_size_adapter_override
+    candidate_adapter = str(candidate.get("snerv_model_size_adapter") or "")
+    explicit_adapter = str(snerv_model_size_adapter_override or "")
+    if candidate_adapter:
+        if (
+            snerv_spectra_preserving_adapter
+            and candidate_adapter != SNERV_SPECTRA_PRESERVING_ADAPTER
+        ):
+            raise CompactRendererMlxSpineRunnerError(
+                "SNeRV modelsize candidate adapter conflicts with "
+                "--snerv-spectra-preserving-adapter: "
+                f"{candidate_adapter!r} is not {SNERV_SPECTRA_PRESERVING_ADAPTER!r}"
+            )
+        if explicit_adapter and explicit_adapter != candidate_adapter:
+            raise CompactRendererMlxSpineRunnerError(
+                "SNeRV modelsize candidate adapter conflicts with "
+                f"--snerv-model-size-adapter {explicit_adapter!r}; planner "
+                f"candidate requires {candidate_adapter!r}"
+            )
+        snerv_model_size_adapter = candidate_adapter
+    else:
+        snerv_model_size_adapter = (
+            explicit_adapter
             or (
                 SNERV_SPECTRA_PRESERVING_ADAPTER
                 if snerv_spectra_preserving_adapter
                 else "snerv_fc_dim_emb_size_adapter_v1"
-            ),
+            )
         )
-    )
     resolved_step_map_coder_mode = (
         step_map_coder_mode
         if step_map_coder_mode is not None
