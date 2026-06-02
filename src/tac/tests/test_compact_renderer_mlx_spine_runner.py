@@ -22,7 +22,10 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_quant_payload,
     pack_snerv_archive,
 )
-from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+    HfGenerationDecoder,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
@@ -1061,6 +1064,11 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "3",
             "--snerv-scorer-loop-start-pair",
             "7",
+            "--snerv-spectra-preserving-adapter",
+            "--snerv-mfu-scales",
+            "1,3",
+            "--snerv-hfr-gain",
+            "0.25",
         ]
     )
 
@@ -1093,6 +1101,9 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_scorer_loop_seg_slack == 0.002
     assert sn.snerv_scorer_loop_pair_stride == 3
     assert sn.snerv_scorer_loop_start_pair == 7
+    assert sn.snerv_spectra_preserving_adapter is True
+    assert sn.snerv_mfu_scales == "1,3"
+    assert sn.snerv_hfr_gain == 0.25
     assert sn.modelsize_candidate_id == "auto"
     assert sn.post_export_materializer_max_experiments == 1
 
@@ -3027,9 +3038,13 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert out["reusable_optimization_followups"][
         "post_export_experiment_queue_path"
     ] == post_export["experiment_queue_path"]
+    assert out["candidate_curriculum_plan"]["training_plan"][
+        "receiver_proof_attached"
+    ] is True
     assert "snerv_mlx_native_train_export_archive_adapter_missing" in out[
         "blockers"
     ]
+    assert "snerv_receiver_proof_missing" not in out["blockers"]
     assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
 
@@ -3039,9 +3054,12 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     monkeypatch,
 ) -> None:
     packet = _synthetic_snerv_packet(pairs=2)
+    captured_advisory_kwargs: dict[str, object] = {}
     captured_qat_kwargs: dict[str, object] = {}
 
     def fake_run_snerv_advisory(**kwargs):
+        captured_advisory_kwargs.update(kwargs)
+
         def as_jsonable() -> dict[str, object]:
             return {
                 "schema": "fake_snerv_advisory.v1",
@@ -3069,6 +3087,10 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
             snerv_fc_dim=9,
             snerv_emb_size=0,
             snerv_patch_radius=1,
+            snerv_model_size_adapter=kwargs["snerv_model_size_adapter"],
+            snerv_mfu_scales=kwargs["snerv_mfu_scales"],
+            snerv_hfr_gain=kwargs["snerv_hfr_gain"],
+            snerv_temporal_context=0,
             decoder_feature_count=9,
             beats_frontier_rate=True,
             receiver_archive_replay_verified=True,
@@ -3188,6 +3210,9 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },
+        snerv_spectra_preserving_adapter=True,
+        snerv_mfu_scales=(1, 3),
+        snerv_hfr_gain=0.25,
         run_scorer_loop_qat=True,
         snerv_scorer_loop_qat_bits=4,
         snerv_scorer_loop_max_trials=5,
@@ -3206,6 +3231,11 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
         repo_root=REPO_ROOT,
     )
 
+    assert captured_advisory_kwargs["snerv_model_size_adapter"] == (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
+    assert captured_advisory_kwargs["snerv_mfu_scales"] == (1, 3)
+    assert captured_advisory_kwargs["snerv_hfr_gain"] == 0.25
     assert captured_qat_kwargs["n_pairs"] == 2
     assert captured_qat_kwargs["levels"] == 2
     assert captured_qat_kwargs["target_bits_per_coeff"] == 1.5
@@ -3237,11 +3267,13 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     plan = out["candidate_curriculum_plan"]
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["scorer_loop_qat_receiver_contract_satisfied"] is True
+    assert plan["training_plan"]["receiver_proof_attached"] is True
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
     assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
     assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
     assert "snerv_qat_forward_missing" not in plan["blockers"]
     assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
+    assert "snerv_receiver_proof_missing" not in plan["blockers"]
     assert "snerv_mlx_native_train_export_adapter_missing" in out["blockers"]
     assert "snerv_mlx_native_longer_staged_training_not_executed" in out[
         "blockers"

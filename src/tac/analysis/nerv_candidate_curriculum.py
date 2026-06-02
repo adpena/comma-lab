@@ -295,6 +295,9 @@ def build_snerv_candidate_curriculum_plan(
     scorer_loop_qat_receiver_contract_satisfied: bool = False,
     scorer_loop_qat_ready_for_pose_guard_gate: bool = False,
     scorer_loop_qat_accepted_improvement: bool = False,
+    receiver_proof_attached: bool = False,
+    full_video_local_prefilter_attached: bool = False,
+    local_cpu_replay_gate_attached: bool = False,
 ) -> dict[str, Any]:
     """Bind a SNeRV receiver-grammar candidate to byte feedback and blockers."""
 
@@ -359,6 +362,9 @@ def build_snerv_candidate_curriculum_plan(
             coder_aware_regularizer=bool(scorer_loop_qat_attached),
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
+            receiver_proof=bool(receiver_proof_attached),
+            full_video_local_prefilter=bool(full_video_local_prefilter_attached),
+            local_cpu_replay_gate=bool(local_cpu_replay_gate_attached),
         ),
     )
     long_campaign_prelaunch_gate = build_pr95_long_campaign_prelaunch_gate(
@@ -394,6 +400,11 @@ def build_snerv_candidate_curriculum_plan(
             "scorer_loop_qat_accepted_improvement": bool(
                 scorer_loop_qat_accepted_improvement
             ),
+            "receiver_proof_attached": bool(receiver_proof_attached),
+            "full_video_local_prefilter_attached": bool(
+                full_video_local_prefilter_attached
+            ),
+            "local_cpu_replay_gate_attached": bool(local_cpu_replay_gate_attached),
         },
         "byte_oracle_logging": byte_feedback,
         "pr95_stack_binding": pr95_binding,

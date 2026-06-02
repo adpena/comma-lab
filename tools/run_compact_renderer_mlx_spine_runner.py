@@ -2179,6 +2179,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     archive_path = row.get("candidate_archive_path")
     receiver_proof = dict(package.get("receiver_proof") or {})
     receiver_proof_path = receiver_proof.get("proof_path")
+    receiver_proof_attached = bool(receiver_proof_path) and (
+        receiver_proof.get("receiver_contract_satisfied") is True
+        or receiver_proof.get("runtime_consumption_proof_ready") is True
+        or receiver_proof.get("runtime_consumption_proof_passed") is True
+    )
     trained_ladder_row_payload = build_snerv_trained_ladder_row_from_advisory(
         advisory_result=advisory,
         archive_path=_resolve(archive_path, base=root) if archive_path else packet_path,
@@ -2301,6 +2306,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         scorer_loop_qat_accepted_improvement=bool(
             snerv_scorer_loop_qat.get("accepted_improvement")
         ),
+        receiver_proof_attached=receiver_proof_attached,
+        full_video_local_prefilter_attached=has_full_video_mlx_prefilter,
+        local_cpu_replay_gate_attached=local_cpu_replay_summary is not None,
     )
 
     blockers = _dedupe(

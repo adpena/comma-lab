@@ -252,6 +252,7 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
     assert "snerv_archive_in_loop_byte_oracle_missing" not in plan["blockers"]
     assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
+    assert "snerv_receiver_proof_missing" in plan["blockers"]
     assert "snerv_scorer_loop_qat_not_attached" in plan["blockers"]
     assert plan["score_claim"] is False
 
@@ -277,12 +278,18 @@ def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
         scorer_loop_qat_receiver_contract_satisfied=True,
         scorer_loop_qat_ready_for_pose_guard_gate=True,
         scorer_loop_qat_accepted_improvement=True,
+        receiver_proof_attached=True,
+        full_video_local_prefilter_attached=True,
+        local_cpu_replay_gate_attached=True,
     )
 
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["scorer_loop_qat_receiver_contract_satisfied"] is True
     assert plan["training_plan"]["scorer_loop_qat_ready_for_pose_guard_gate"] is True
     assert plan["training_plan"]["scorer_loop_qat_accepted_improvement"] is True
+    assert plan["training_plan"]["receiver_proof_attached"] is True
+    assert plan["training_plan"]["full_video_local_prefilter_attached"] is True
+    assert plan["training_plan"]["local_cpu_replay_gate_attached"] is True
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
     assert "snerv_scorer_loop_qat_receiver_contract_failed" not in plan["blockers"]
     assert "snerv_scorer_loop_qat_no_accepted_improvement" not in plan["blockers"]
@@ -290,6 +297,9 @@ def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
     assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
     assert "snerv_qat_forward_missing" not in plan["blockers"]
     assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
+    assert "snerv_receiver_proof_missing" not in plan["blockers"]
+    assert "snerv_full_video_local_prefilter_missing" not in plan["blockers"]
+    assert "snerv_local_cpu_replay_gate_missing" not in plan["blockers"]
     assert "snerv_mlx_native_train_export_adapter_missing" in plan["blockers"]
     assert "snerv_score_aware_curriculum_not_native_mlx_yet" in plan["blockers"]
 
