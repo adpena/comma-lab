@@ -1930,6 +1930,7 @@ _SNERV_PARTIAL_MODEL_SIZE_ID_RE = re.compile(
     r"lfb(?P<bits_per_coeff>\d+(?:p\d+)?)_"
     r"stepb(?P<step_map_bits_per_coeff>\d+(?:p\d+)?)_"
     r"fc(?P<fc_dim>\d+)e(?P<emb_size>\d+)_"
+    r"(?!(?:p\d+_mfu))"
     r"(?P<decoder_payload_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
 )
 _SNERV_LEGACY_MODEL_SIZE_ID_RE = re.compile(
