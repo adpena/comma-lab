@@ -1172,6 +1172,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "learned_random_subspace",
             "--snerv-scorer-loop-byte-pressure-multiplier",
             "1.25",
+            "--snerv-scorer-loop-section-value-pressure-multiplier",
+            "1.75",
             "--snerv-scorer-loop-pose-slack",
             "0.001",
             "--snerv-scorer-loop-seg-slack",
@@ -1217,6 +1219,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_scorer_loop_max_trials == 5
     assert sn.snerv_scorer_loop_search_mode == "learned_random_subspace"
     assert sn.snerv_scorer_loop_byte_pressure_multiplier == 1.25
+    assert sn.snerv_scorer_loop_section_value_pressure_multiplier == 1.75
     assert sn.snerv_scorer_loop_pose_slack == 0.001
     assert sn.snerv_scorer_loop_seg_slack == 0.002
     assert sn.snerv_scorer_loop_pair_stride == 3
