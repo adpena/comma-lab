@@ -48,6 +48,16 @@ _LOWER_BOUND_MARKER_KEYS = (
     "fit_is_lower_bound_only",
     "modelsize_curve_is_ideal_packed_lower_bound",
 )
+_SOURCE_BOUND_CAPACITY_PATHS = (
+    ("modelsize_mparams",),
+    ("fc_dim",),
+    ("official_controls", "--modelsize"),
+    ("official_controls", "fc_dim"),
+    ("solved_budget", "modelsize_mparams"),
+    ("solved_budget", "fc_dim"),
+    ("solved_budget", "official_controls", "--modelsize"),
+    ("solved_budget", "official_controls", "fc_dim"),
+)
 
 
 class ModelSizeBudgetPlanError(ValueError):
@@ -62,6 +72,7 @@ class ModelSizeBudgetPoint:
     archive_bytes_key: str
     evidence_kind: str
     receiver_closed_bytes: bool
+    source_bound_capacity_control: bool
     evidence_blockers: tuple[str, ...]
     source: dict[str, Any]
 
@@ -73,6 +84,9 @@ class ModelSizeBudgetPoint:
             "nonrate_score": float(self.nonrate_score),
             "evidence_kind": self.evidence_kind,
             "receiver_closed_bytes": bool(self.receiver_closed_bytes),
+            "source_bound_capacity_control": bool(
+                self.source_bound_capacity_control
+            ),
             "evidence_blockers": list(self.evidence_blockers),
             "rate_score_at_contest_price": float(
                 self.archive_bytes * CONTEST_BYTE_PRICE_SCORE
@@ -244,9 +258,12 @@ def _parse_points(rows: Sequence[Mapping[str, Any]]) -> list[ModelSizeBudgetPoin
         archive_bytes, archive_bytes_key = _extract_archive_bytes(row)
         nonrate_score = _extract_nonrate_score(row, archive_bytes=archive_bytes)
         row_id = str(row.get("row_id") or row.get("id") or f"modelsize_{index}")
-        evidence_kind, receiver_closed_bytes, evidence_blockers = (
-            _classify_point_evidence(row, archive_bytes_key=archive_bytes_key)
-        )
+        (
+            evidence_kind,
+            receiver_closed_bytes,
+            source_bound_capacity_control,
+            evidence_blockers,
+        ) = _classify_point_evidence(row, archive_bytes_key=archive_bytes_key)
         points.append(
             ModelSizeBudgetPoint(
                 row_id=row_id,
@@ -255,6 +272,7 @@ def _parse_points(rows: Sequence[Mapping[str, Any]]) -> list[ModelSizeBudgetPoin
                 archive_bytes_key=archive_bytes_key,
                 evidence_kind=evidence_kind,
                 receiver_closed_bytes=receiver_closed_bytes,
+                source_bound_capacity_control=source_bound_capacity_control,
                 evidence_blockers=tuple(evidence_blockers),
                 source=dict(row),
             )
@@ -348,6 +366,8 @@ def _recommended_next_actions(
         "train_selected_budget_with_score_aware_decoder_weight_objective",
         "preserve_smaller_and_larger_budget_rows_as_rd_curve_evidence",
     ]
+    if any(not point.source_bound_capacity_control for point in points):
+        actions.insert(0, "emit_source_bound_modelsize_mparams_or_fc_dim_for_budget_points")
     if not receiver_closed_ladder_ready:
         actions.insert(0, "replace_projected_rows_with_receiver_closed_archive_ladder")
         actions.insert(1, "run_receiver_inflate_proof_for_each_modelsize_point")
@@ -364,11 +384,12 @@ def _classify_point_evidence(
     row: Mapping[str, Any],
     *,
     archive_bytes_key: str,
-) -> tuple[str, bool, list[str]]:
+) -> tuple[str, bool, bool, list[str]]:
     blockers: list[str] = []
     proof_present = any(_truthy(row.get(key)) for key in _RECEIVER_CLOSED_PROOF_KEYS)
     lower_bound = any(_truthy(row.get(key)) for key in _LOWER_BOUND_MARKER_KEYS)
     projected = archive_bytes_key in _PROJECTED_ARCHIVE_BYTE_KEYS or lower_bound
+    source_bound_capacity = _has_source_bound_capacity_control(row)
 
     if projected:
         blockers.append("projected_or_lower_bound_archive_bytes_not_receiver_closed")
@@ -376,6 +397,8 @@ def _classify_point_evidence(
         blockers.append("receiver_closed_byte_proof_missing")
     if archive_bytes_key not in _MEASURED_ARCHIVE_BYTE_KEYS:
         blockers.append("measured_archive_byte_field_missing")
+    if not source_bound_capacity:
+        blockers.append("source_bound_modelsize_or_fc_dim_missing")
 
     receiver_closed = (
         proof_present
@@ -383,10 +406,33 @@ def _classify_point_evidence(
         and archive_bytes_key in _MEASURED_ARCHIVE_BYTE_KEYS
     )
     if receiver_closed:
-        return "receiver_closed_measured_bytes", True, []
+        return "receiver_closed_measured_bytes", True, source_bound_capacity, blockers
     if projected:
-        return "projected_or_lower_bound_bytes", False, blockers
-    return "advisory_measured_bytes_without_receiver_proof", False, blockers
+        return "projected_or_lower_bound_bytes", False, source_bound_capacity, blockers
+    return (
+        "advisory_measured_bytes_without_receiver_proof",
+        False,
+        source_bound_capacity,
+        blockers,
+    )
+
+
+def _has_source_bound_capacity_control(row: Mapping[str, Any]) -> bool:
+    return any(
+        _lookup_path(row, path) is not None
+        for path in _SOURCE_BOUND_CAPACITY_PATHS
+    )
+
+
+def _lookup_path(row: Mapping[str, Any], path: Sequence[str]) -> Any:
+    current: Any = row
+    for key in path:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+        if current is None:
+            return None
+    return current
 
 
 def _point_evidence_blockers(points: Sequence[ModelSizeBudgetPoint]) -> list[str]:

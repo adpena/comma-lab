@@ -621,6 +621,71 @@ def test_long_training_campaign_plan_applies_hinerv_segnet_stagnation_feedback(
     assert hi["output_dir_reuse_policy"] == "fresh_feedback_mutation_path"
 
 
+def test_long_training_campaign_plan_prefers_newer_running_telemetry_feedback(
+) -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "training_stopped": True,
+                "pose_instability_detected": True,
+                "observed_learning_rate": 2.7e-5,
+                "recommended_learning_rate": 8.1e-6,
+                "training_telemetry": {"last_epoch": 560},
+                "recommended_launch_mutations": [
+                    "lower_learning_rate_from_pose_instability_telemetry"
+                ],
+            },
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "training_stopped": False,
+                "pose_instability_detected": False,
+                "pose_instability_recovered": True,
+                "seg_stagnation_detected": True,
+                "recommended_segnet_distillation_weight": 2.0,
+                "training_telemetry": {"last_epoch": 938},
+                "recommended_launch_mutations": [
+                    "increase_segnet_distillation_weight_from_stagnation_telemetry"
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    feedback = hi["candidate_feedback"]
+    adjustment = hi["feedback_launch_adjustment"]
+    assert feedback["training_stopped"] is False
+    assert feedback["training_telemetry"]["last_epoch"] == 938
+    assert adjustment["segnet_weight_applied"] is True
+    assert adjustment["pose_protected_pathway_applied"] is False
+    assert adjustment["reason"] == (
+        "segnet_stagnation_recommended_higher_segnet_weight"
+    )
+
+
 def test_long_training_campaign_plan_reuses_family_segnet_stagnation_feedback(
 ) -> None:
     hinerv_budget = _hinerv_budget()

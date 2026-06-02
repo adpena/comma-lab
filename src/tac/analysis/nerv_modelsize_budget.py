@@ -102,6 +102,14 @@ class SnervModelSizeCandidate:
     bits_per_coeff: float
     step_map_bits_per_coeff: float
     decoder_payload_codec: str
+    snerv_model_size_adapter: str
+    fc_dim: int
+    emb_size: int
+    patch_radius: int
+    mfu_scales: tuple[int, ...]
+    hfr_gain: float
+    temporal_context: int
+    decoder_feature_count: int
     lf_coeffs_per_plane: int
     lf_plane_count: int
     lf_coeff_count_total: int
@@ -124,6 +132,7 @@ class SnervModelSizeCandidate:
     def as_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["carrier_hw"] = list(self.carrier_hw)
+        payload["mfu_scales"] = list(self.mfu_scales)
         return payload
 
 
@@ -437,6 +446,13 @@ def analyze_snerv_modelsize_candidate(
     bits_per_coeff: float,
     step_map_bits_per_coeff: float,
     decoder_payload_codec: str,
+    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    fc_dim: int = 9,
+    emb_size: int = 0,
+    patch_radius: int = 1,
+    mfu_scales: tuple[int, ...] = (1, 2, 4),
+    hfr_gain: float = 0.0,
+    temporal_context: int = 0,
 ) -> SnervModelSizeCandidate:
     """Analyze one SNeRV receiver-grammar point against an archive ceiling."""
 
@@ -450,12 +466,24 @@ def analyze_snerv_modelsize_candidate(
         raise NervModelSizeBudgetError(
             "bits_per_coeff must be positive and step_map_bits_per_coeff non-negative"
         )
+    from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+        SnervModelSizeConfig,
+    )
     from tac.substrates.snerv_inverse_steg_carrier.dwt import lf_coeff_count
 
     lf_per_plane = lf_coeff_count(carrier_hw, levels=levels, wavelet=wavelet)
     plane_count = int(num_pairs) * 2 * 3
     lf_total = int(lf_per_plane * plane_count)
-    decoder_weight_count = int(levels) * 3 * 9
+    model_size = SnervModelSizeConfig(
+        fc_dim=int(fc_dim),
+        emb_size=int(emb_size),
+        patch_radius=int(patch_radius),
+        mfu_scales=tuple(int(v) for v in mfu_scales),
+        hfr_gain=float(hfr_gain),
+        temporal_context=int(temporal_context),
+        adapter=str(snerv_model_size_adapter),
+    )
+    decoder_weight_count = int(levels) * 3 * int(model_size.feature_count)
     decoder_bits = snerv_decoder_codec_nominal_bits(decoder_payload_codec)
     lf_payload = ceil(lf_total * float(bits_per_coeff) / 8.0)
     step_payload = ceil(lf_total * float(step_map_bits_per_coeff) / 8.0)
@@ -468,12 +496,15 @@ def analyze_snerv_modelsize_candidate(
     headroom = int(hard_byte_ceiling) - int(total_payload)
     bits_label = f"{float(bits_per_coeff):g}".replace(".", "p")
     step_label = f"{float(step_map_bits_per_coeff):g}".replace(".", "p")
+    wavelet_label = str(wavelet).replace(".", "p").replace("_", "")
+    feature_label = f"fc{int(model_size.fc_dim)}e{int(model_size.emb_size)}"
     return SnervModelSizeCandidate(
         schema="snerv_modelsize_candidate.v1",
         family="snerv",
         candidate_id=(
-            f"snerv_np{int(num_pairs)}_lv{int(levels)}_lfb{bits_label}_"
-            f"stepb{step_label}_{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
+            f"snerv_np{int(num_pairs)}_{wavelet_label}_lv{int(levels)}_"
+            f"lfb{bits_label}_stepb{step_label}_{feature_label}_"
+            f"{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
         ),
         num_pairs=int(num_pairs),
         hard_byte_ceiling=int(hard_byte_ceiling),
@@ -483,6 +514,14 @@ def analyze_snerv_modelsize_candidate(
         bits_per_coeff=float(bits_per_coeff),
         step_map_bits_per_coeff=float(step_map_bits_per_coeff),
         decoder_payload_codec=str(decoder_payload_codec),
+        snerv_model_size_adapter=str(snerv_model_size_adapter),
+        fc_dim=int(model_size.fc_dim),
+        emb_size=int(model_size.emb_size),
+        patch_radius=int(model_size.patch_radius),
+        mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
+        hfr_gain=float(model_size.hfr_gain),
+        temporal_context=int(model_size.temporal_context),
+        decoder_feature_count=int(model_size.feature_count),
         lf_coeffs_per_plane=lf_per_plane,
         lf_plane_count=plane_count,
         lf_coeff_count_total=lf_total,
@@ -498,8 +537,9 @@ def analyze_snerv_modelsize_candidate(
         byte_headroom=headroom,
         upstream_modelsize_analogue=(
             "SNeRV local analogue of upstream --modelsize: LF resolution/bit "
-            "budget plus shared HF decoder payload define archive capacity; "
-            "real authority is measured SNAR1 archive bytes"
+            "budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal "
+            "decoder feature payload define archive capacity; real authority "
+            "is measured SNAR1 archive bytes"
         ),
         requires_snAR1_archive_byte_oracle=True,
         score_claim=False,
@@ -513,11 +553,18 @@ def enumerate_snerv_modelsize_candidates(
     hard_byte_ceilings: tuple[int, ...],
     num_pairs: int,
     carrier_hw: tuple[int, int] = (384, 512),
-    wavelet: str = "db2",
+    wavelet: str = "haar",
     levels: tuple[int, ...] = DEFAULT_SNERV_LEVELS,
     bits_per_coeffs: tuple[float, ...] = DEFAULT_SNERV_BITS_PER_COEFF,
     step_map_bits_per_coeffs: tuple[float, ...] = DEFAULT_SNERV_STEP_MAP_BITS_PER_COEFF,
     decoder_codecs: tuple[str, ...] = DEFAULT_SNERV_DECODER_CODECS,
+    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    fc_dims: tuple[int, ...] = (9,),
+    emb_sizes: tuple[int, ...] = (0,),
+    patch_radius: int = 1,
+    mfu_scales: tuple[int, ...] = (1, 2, 4),
+    hfr_gain: float = 0.0,
+    temporal_context: int = 0,
 ) -> list[SnervModelSizeCandidate]:
     """Enumerate SNeRV LF/HF receiver-grammar capacity points."""
 
@@ -527,18 +574,29 @@ def enumerate_snerv_modelsize_candidates(
             for bits in bits_per_coeffs:
                 for step_bits in step_map_bits_per_coeffs:
                     for decoder_codec in decoder_codecs:
-                        rows.append(
-                            analyze_snerv_modelsize_candidate(
-                                hard_byte_ceiling=ceiling,
-                                num_pairs=num_pairs,
-                                carrier_hw=carrier_hw,
-                                wavelet=wavelet,
-                                levels=lvl,
-                                bits_per_coeff=bits,
-                                step_map_bits_per_coeff=step_bits,
-                                decoder_payload_codec=decoder_codec,
-                            )
-                        )
+                        for fc_dim in fc_dims:
+                            for emb_size in emb_sizes:
+                                rows.append(
+                                    analyze_snerv_modelsize_candidate(
+                                        hard_byte_ceiling=ceiling,
+                                        num_pairs=num_pairs,
+                                        carrier_hw=carrier_hw,
+                                        wavelet=wavelet,
+                                        levels=lvl,
+                                        bits_per_coeff=bits,
+                                        step_map_bits_per_coeff=step_bits,
+                                        decoder_payload_codec=decoder_codec,
+                                        snerv_model_size_adapter=(
+                                            snerv_model_size_adapter
+                                        ),
+                                        fc_dim=int(fc_dim),
+                                        emb_size=int(emb_size),
+                                        patch_radius=int(patch_radius),
+                                        mfu_scales=tuple(int(v) for v in mfu_scales),
+                                        hfr_gain=float(hfr_gain),
+                                        temporal_context=int(temporal_context),
+                                    )
+                                )
     return rows
 
 
@@ -609,7 +667,14 @@ def build_snerv_modelsize_budget_report(
     num_pairs: int,
     per_ceiling_limit: int = 8,
     carrier_hw: tuple[int, int] = (384, 512),
-    wavelet: str = "db2",
+    wavelet: str = "haar",
+    fc_dims: tuple[int, ...] = (9,),
+    emb_sizes: tuple[int, ...] = (0,),
+    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    patch_radius: int = 1,
+    mfu_scales: tuple[int, ...] = (1, 2, 4),
+    hfr_gain: float = 0.0,
+    temporal_context: int = 0,
 ) -> dict[str, Any]:
     """Return a planner-safe SNeRV model-size budget report."""
 
@@ -618,6 +683,13 @@ def build_snerv_modelsize_budget_report(
         num_pairs=num_pairs,
         carrier_hw=carrier_hw,
         wavelet=wavelet,
+        fc_dims=fc_dims,
+        emb_sizes=emb_sizes,
+        snerv_model_size_adapter=snerv_model_size_adapter,
+        patch_radius=patch_radius,
+        mfu_scales=mfu_scales,
+        hfr_gain=hfr_gain,
+        temporal_context=temporal_context,
     )
     selected = select_snerv_modelsize_candidates(
         candidates,
@@ -632,6 +704,13 @@ def build_snerv_modelsize_budget_report(
         "num_pairs": int(num_pairs),
         "carrier_hw": [int(carrier_hw[0]), int(carrier_hw[1])],
         "wavelet": str(wavelet),
+        "snerv_model_size_adapter": str(snerv_model_size_adapter),
+        "fc_dims": [int(v) for v in fc_dims],
+        "emb_sizes": [int(v) for v in emb_sizes],
+        "patch_radius": int(patch_radius),
+        "mfu_scales": [int(v) for v in mfu_scales],
+        "hfr_gain": float(hfr_gain),
+        "temporal_context": int(temporal_context),
         "hard_byte_ceilings": sorted({int(v) for v in hard_byte_ceilings}),
         "candidate_count": len(candidates),
         "selected_candidate_count": len(selected),

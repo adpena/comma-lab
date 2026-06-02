@@ -14,6 +14,7 @@ from tac.analysis.nerv_candidate_feedback import (
     write_nerv_training_telemetry_feedback_files,
     write_refreshed_nerv_candidate_feedback_files,
 )
+from tools.harvest_nerv_training_telemetry_feedback import _effective_stop_reason
 
 
 def _runner_report(tmp_path: Path) -> dict[str, object]:
@@ -406,6 +407,18 @@ def test_write_training_telemetry_feedback_files_writes_manifest_and_ledger(
     assert ledger_rows == [row]
     assert row["pose_instability_detected"] is False
     assert output["score_claim"] is False
+
+
+def test_training_telemetry_harvester_marks_running_snapshot_explicitly() -> None:
+    assert (
+        _effective_stop_reason(stop_reason=None, training_running=True)
+        == "training_running_midrun_feedback_snapshot"
+    )
+    assert (
+        _effective_stop_reason(stop_reason="completed", training_running=True)
+        == "completed"
+    )
+    assert _effective_stop_reason(stop_reason=None, training_running=False) is None
 
 
 def test_refresh_nerv_candidate_feedback_report_repairs_batched_mlx_signal(

@@ -1007,10 +1007,20 @@ def _candidate_feedback_index(
     }
 
 
-def _candidate_feedback_sort_key(row: Mapping[str, Any]) -> tuple[bool, int, bool, bool, bool]:
+def _candidate_feedback_sort_key(
+    row: Mapping[str, Any],
+) -> tuple[bool, int, bool, int, bool, bool, bool]:
+    telemetry = row.get("training_telemetry")
+    last_epoch = (
+        int(telemetry.get("last_epoch") or 0)
+        if isinstance(telemetry, Mapping)
+        else 0
+    )
     return (
         bool(row.get("scope_matches_candidate")),
         int(row.get("measured_num_pairs") or 0),
+        row.get("training_stopped") is not True,
+        last_epoch,
         bool(row.get("receiver_proof_attached")),
         bool(row.get("full_video_local_prefilter_attached")),
         bool(row.get("local_cpu_replay_gate_attached")),

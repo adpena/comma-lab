@@ -2036,6 +2036,7 @@ def _run_snerv_scorer_loop_qat_attachment(
     output_dir: str | Path,
     num_pairs: int,
     levels: int,
+    wavelet: str,
     target_bits_per_coeff: float,
     source_video_path: str | Path,
     upstream_dir: str | Path,
@@ -2043,6 +2044,14 @@ def _run_snerv_scorer_loop_qat_attachment(
     step_map_bins: int,
     qat_bits: int,
     decoder_payload_codec: str,
+    snerv_spectra_preserving_adapter: bool,
+    snerv_model_size_adapter: str,
+    snerv_fc_dim: int,
+    snerv_emb_size: int,
+    snerv_patch_radius: int,
+    snerv_mfu_scales: tuple[int, ...],
+    snerv_hfr_gain: float,
+    snerv_temporal_context: int,
     max_trials: int,
     search_mode: str,
     perturb_scale: float,
@@ -2088,7 +2097,7 @@ def _run_snerv_scorer_loop_qat_attachment(
         result = qat_mod.run_snerv_scorer_loop_decoder_qat(
             n_pairs=int(num_pairs),
             levels=int(levels),
-            wavelet="db2",
+            wavelet=str(wavelet),
             target_bits_per_coeff=float(target_bits_per_coeff),
             pair_stride=int(pair_stride),
             start_pair=int(start_pair),
@@ -2096,6 +2105,14 @@ def _run_snerv_scorer_loop_qat_attachment(
             video_path=Path(source_video_path).as_posix(),
             device=str(distillation_device),
             step_map_bins=int(step_map_bins),
+            snerv_spectra_preserving_adapter=bool(snerv_spectra_preserving_adapter),
+            snerv_model_size_adapter=str(snerv_model_size_adapter),
+            snerv_fc_dim=int(snerv_fc_dim),
+            snerv_emb_size=int(snerv_emb_size),
+            snerv_patch_radius=int(snerv_patch_radius),
+            snerv_mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
+            snerv_hfr_gain=float(snerv_hfr_gain),
+            snerv_temporal_context=int(snerv_temporal_context),
             decoder_payload_codec=str(decoder_payload_codec),
             qat_bits=int(qat_bits),
             max_trials=int(max_trials),
@@ -2131,7 +2148,16 @@ def _run_snerv_scorer_loop_qat_attachment(
             "axis_tag": "[macOS-CPU advisory]",
             "n_pairs": int(num_pairs),
             "levels": int(levels),
+            "wavelet": str(wavelet),
             "target_bits_per_coeff": float(target_bits_per_coeff),
+            "snerv_model_size_adapter": str(snerv_model_size_adapter),
+            "snerv_spectra_preserving_adapter": bool(snerv_spectra_preserving_adapter),
+            "snerv_fc_dim": int(snerv_fc_dim),
+            "snerv_emb_size": int(snerv_emb_size),
+            "snerv_patch_radius": int(snerv_patch_radius),
+            "snerv_mfu_scales": [int(v) for v in snerv_mfu_scales],
+            "snerv_hfr_gain": float(snerv_hfr_gain),
+            "snerv_temporal_context": int(snerv_temporal_context),
             "qat_bits": int(qat_bits),
             "max_trials": int(max_trials),
             "search_mode": str(search_mode),
@@ -2485,12 +2511,29 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_mlx_native_adapter_contract = build_snerv_mlx_native_adapter_contract()
     candidate = dict(modelsize_candidate or {})
     levels = int(candidate.get("levels", 3))
+    wavelet = str(candidate.get("wavelet", "haar"))
     target_bits_per_coeff = float(candidate.get("bits_per_coeff", 2.5))
     step_map_waterfill_bits_per_coeff = float(
         candidate.get("step_map_bits_per_coeff", 4.0)
     )
     decoder_payload_codec = str(
         candidate.get("decoder_payload_codec", "float32_lzma")
+    )
+    snerv_fc_dim = int(candidate.get("fc_dim", candidate.get("snerv_fc_dim", 9)))
+    snerv_emb_size = int(candidate.get("emb_size", candidate.get("snerv_emb_size", 0)))
+    snerv_patch_radius = int(
+        candidate.get("patch_radius", candidate.get("snerv_patch_radius", 1))
+    )
+    snerv_temporal_context = int(
+        candidate.get("temporal_context", candidate.get("snerv_temporal_context", 0))
+    )
+    snerv_model_size_adapter = str(
+        candidate.get(
+            "snerv_model_size_adapter",
+            SNERV_SPECTRA_PRESERVING_ADAPTER
+            if snerv_spectra_preserving_adapter
+            else "snerv_fc_dim_emb_size_adapter_v1",
+        )
     )
     resolved_step_map_coder_mode = (
         step_map_coder_mode
@@ -2550,7 +2593,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     advisory = run_snerv_advisory(
         n_pairs=int(num_pairs),
         levels=levels,
-        wavelet="db2",
+        wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
         video_path=resolved_source_video.as_posix(),
         upstream_dir=scorer_upstream.as_posix(),
@@ -2558,13 +2601,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         step_map_coder_mode=str(resolved_step_map_coder_mode),
         step_map_waterfill_bits_per_coeff=step_map_waterfill_bits_per_coeff,
         decoder_payload_codec=decoder_payload_codec,
-        snerv_model_size_adapter=(
-            SNERV_SPECTRA_PRESERVING_ADAPTER
-            if snerv_spectra_preserving_adapter
-            else "snerv_fc_dim_emb_size_adapter_v1"
-        ),
+        snerv_model_size_adapter=snerv_model_size_adapter,
+        snerv_fc_dim=snerv_fc_dim,
+        snerv_emb_size=snerv_emb_size,
+        snerv_patch_radius=snerv_patch_radius,
         snerv_mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
         snerv_hfr_gain=float(snerv_hfr_gain),
+        snerv_temporal_context=snerv_temporal_context,
     )
     packet_path = out / "snerv_inverse_steg_advisory.snar"
     packet_path.write_bytes(advisory.receiver_archive_packet)
@@ -2609,7 +2652,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         archive_path=_resolve(archive_path, base=root) if archive_path else packet_path,
         archive_path_kind="contest_archive_zip" if archive_path else "receiver_snar_packet",
         receiver_proof=receiver_proof if archive_path else None,
-        target_bits_per_coeff=2.5,
+        target_bits_per_coeff=target_bits_per_coeff,
         repo_root=root,
     )
     trained_ladder_row_path = out / "snerv_trained_ladder_row_payload.json"
@@ -2680,6 +2723,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         output_dir=out / "snerv_scorer_loop_qat",
         num_pairs=int(num_pairs),
         levels=levels,
+        wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
         source_video_path=resolved_source_video,
         upstream_dir=scorer_upstream,
@@ -2687,6 +2731,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         step_map_bins=int(snerv_scorer_loop_step_map_bins),
         qat_bits=int(snerv_scorer_loop_qat_bits),
         decoder_payload_codec=decoder_payload_codec,
+        snerv_spectra_preserving_adapter=bool(snerv_spectra_preserving_adapter),
+        snerv_model_size_adapter=snerv_model_size_adapter,
+        snerv_fc_dim=snerv_fc_dim,
+        snerv_emb_size=snerv_emb_size,
+        snerv_patch_radius=snerv_patch_radius,
+        snerv_mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
+        snerv_hfr_gain=float(snerv_hfr_gain),
+        snerv_temporal_context=snerv_temporal_context,
         max_trials=int(snerv_scorer_loop_max_trials),
         search_mode=str(snerv_scorer_loop_search_mode),
         perturb_scale=float(snerv_scorer_loop_perturb_scale),

@@ -3490,7 +3490,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             receiver_archive_packet=packet,
             as_jsonable=as_jsonable,
             levels=int(kwargs["levels"]),
-            wavelet="db2",
+            wavelet=str(kwargs["wavelet"]),
             score_linf=12.0,
             score_l2=13.0,
             d_seg_mean_linf=0.1,
@@ -3751,14 +3751,16 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             d_seg_mean_linf=0.1,
             d_pose_mean_linf=0.01,
             archive_bytes_total=len(packet),
-            snerv_fc_dim=9,
-            snerv_emb_size=0,
-            snerv_patch_radius=1,
+            snerv_fc_dim=kwargs["snerv_fc_dim"],
+            snerv_emb_size=kwargs["snerv_emb_size"],
+            snerv_patch_radius=kwargs["snerv_patch_radius"],
             snerv_model_size_adapter=kwargs["snerv_model_size_adapter"],
             snerv_mfu_scales=kwargs["snerv_mfu_scales"],
             snerv_hfr_gain=kwargs["snerv_hfr_gain"],
-            snerv_temporal_context=0,
-            decoder_feature_count=9,
+            snerv_temporal_context=kwargs["snerv_temporal_context"],
+            decoder_feature_count=(
+                int(kwargs["snerv_fc_dim"]) + int(kwargs["snerv_emb_size"])
+            ),
             beats_frontier_rate=True,
             receiver_archive_replay_verified=True,
         )
@@ -4131,10 +4133,15 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
             "schema": "snerv_modelsize_candidate.v1",
             "family": "snerv",
             "candidate_id": "snerv-q-smoke",
+            "wavelet": "haar",
             "levels": 2,
             "bits_per_coeff": 1.5,
             "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int2_symmetric",
+            "fc_dim": 11,
+            "emb_size": 2,
+            "patch_radius": 1,
+            "temporal_context": 1,
             "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 150_000,
@@ -4167,11 +4174,26 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_advisory_kwargs["snerv_model_size_adapter"] == (
         SNERV_SPECTRA_PRESERVING_ADAPTER
     )
+    assert captured_advisory_kwargs["wavelet"] == "haar"
+    assert captured_advisory_kwargs["target_bits_per_coeff"] == 1.5
+    assert captured_advisory_kwargs["snerv_fc_dim"] == 11
+    assert captured_advisory_kwargs["snerv_emb_size"] == 2
+    assert captured_advisory_kwargs["snerv_temporal_context"] == 1
     assert captured_advisory_kwargs["snerv_mfu_scales"] == (1, 3)
     assert captured_advisory_kwargs["snerv_hfr_gain"] == 0.25
     assert captured_qat_kwargs["n_pairs"] == 2
     assert captured_qat_kwargs["levels"] == 2
+    assert captured_qat_kwargs["wavelet"] == "haar"
     assert captured_qat_kwargs["target_bits_per_coeff"] == 1.5
+    assert captured_qat_kwargs["snerv_spectra_preserving_adapter"] is True
+    assert captured_qat_kwargs["snerv_model_size_adapter"] == (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
+    assert captured_qat_kwargs["snerv_fc_dim"] == 11
+    assert captured_qat_kwargs["snerv_emb_size"] == 2
+    assert captured_qat_kwargs["snerv_temporal_context"] == 1
+    assert captured_qat_kwargs["snerv_mfu_scales"] == (1, 3)
+    assert captured_qat_kwargs["snerv_hfr_gain"] == 0.25
     assert captured_qat_kwargs["qat_bits"] == 4
     assert captured_qat_kwargs["decoder_payload_codec"] == "int2_symmetric"
     assert captured_qat_kwargs["max_trials"] == 5

@@ -30,6 +30,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--candidate-num-pairs", type=int, default=600)
     parser.add_argument("--source-queue")
     parser.add_argument("--stop-reason")
+    parser.add_argument(
+        "--training-running",
+        action="store_true",
+        help=(
+            "Mark this as a midrun feedback snapshot. Without this flag, the "
+            "row is treated as terminal unless --stop-reason is already a "
+            "recognized midrun reason."
+        ),
+    )
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--output-json", help="Optional copy of the manifest JSON")
     return parser
@@ -44,7 +53,10 @@ def main(argv: list[str] | None = None) -> int:
         candidate_id=args.candidate_id,
         candidate_num_pairs=args.candidate_num_pairs,
         source_queue_path=args.source_queue,
-        stop_reason=args.stop_reason,
+        stop_reason=_effective_stop_reason(
+            stop_reason=args.stop_reason,
+            training_running=bool(args.training_running),
+        ),
     )
     if args.output_json:
         output_json = Path(args.output_json).expanduser().resolve(strict=False)
@@ -89,6 +101,12 @@ def _summary(result: dict[str, Any]) -> dict[str, Any]:
         "score_claim": result.get("score_claim"),
         "ready_for_exact_eval_dispatch": result.get("ready_for_exact_eval_dispatch"),
     }
+
+
+def _effective_stop_reason(*, stop_reason: str | None, training_running: bool) -> str | None:
+    if training_running and not str(stop_reason or "").strip():
+        return "training_running_midrun_feedback_snapshot"
+    return stop_reason
 
 
 if __name__ == "__main__":  # pragma: no cover

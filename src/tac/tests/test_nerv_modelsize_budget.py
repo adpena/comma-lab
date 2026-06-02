@@ -76,9 +76,22 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
         bits_per_coeff=2.0,
         step_map_bits_per_coeff=1.0,
         decoder_payload_codec="int4_symmetric",
+        fc_dim=11,
+        emb_size=2,
+        mfu_scales=(1, 3),
+        hfr_gain=0.25,
+        temporal_context=1,
     )
 
     assert row.family == "snerv"
+    assert row.wavelet == "db2"
+    assert row.fc_dim == 11
+    assert row.emb_size == 2
+    assert row.decoder_feature_count == 13
+    assert row.hf_decoder_weight_count == 3 * 3 * 13
+    assert row.mfu_scales == (1, 3)
+    assert row.hfr_gain == 0.25
+    assert row.temporal_context == 1
     assert row.lf_plane_count == 600 * 2 * 3
     assert row.lf_coeff_count_total == row.lf_plane_count * row.lf_coeffs_per_plane
     assert row.nominal_lf_payload_bytes == int(
@@ -94,12 +107,17 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
         per_ceiling_limit=8,
     )
     assert report["schema"] == "snerv_modelsize_budget.v1"
+    assert report["wavelet"] == "haar"
     assert report["candidate_count"] > report["selected_candidate_count"] > 0
     assert report["budget_math"]["nominal_payload_is_not_authority"] is True
     selected = report["selected_candidates"]
     assert all(row["hard_byte_ceiling"] == 178_000 for row in selected)
     assert {row["levels"] for row in selected} >= {3, 4, 5}
     assert len({row["bits_per_coeff"] for row in selected}) >= 3
+    assert all(row["wavelet"] == "haar" for row in selected)
+    assert all(row["decoder_feature_count"] == 9 for row in selected)
+    assert all(row["fc_dim"] == 9 for row in selected)
+    assert all(row["emb_size"] == 0 for row in selected)
     assert report["score_claim"] is False
 
 

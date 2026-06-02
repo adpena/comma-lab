@@ -13,18 +13,21 @@ def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
             "row_id": "tiny",
             "archive_bytes": 20_000,
             "nonrate_score": 0.240,
+            "modelsize_mparams": 0.04,
             "receiver_proof_passed": True,
         },
         {
             "row_id": "small",
             "archive_bytes": 40_000,
             "nonrate_score": 0.205,
+            "modelsize_mparams": 0.08,
             "receiver_proof_passed": True,
         },
         {
             "row_id": "medium",
             "archive_bytes": 80_000,
             "nonrate_score": 0.200,
+            "modelsize_mparams": 0.16,
             "receiver_proof_passed": True,
         },
     ]
@@ -53,12 +56,14 @@ def test_modelsize_budget_plan_splits_projected_and_advisory_rows() -> None:
                 "row_id": "ideal_curve",
                 "projected_archive_bytes_600pair": 36_000,
                 "nonrate_score": 0.240,
+                "modelsize_mparams": 0.04,
                 "lower_bound_only": True,
             },
             {
                 "row_id": "zip_without_receiver",
                 "archive_zip_bytes": 72_000,
                 "nonrate_score": 0.210,
+                "fc_dim": 16,
             },
         ],
         carrier_id="snerv",
@@ -91,12 +96,14 @@ def test_modelsize_budget_plan_can_extract_nonrate_from_component_distortions() 
             {
                 "row_id": "narrow",
                 "archive_zip_bytes": 10_000,
+                "fc_dim": 8,
                 "avg_segnet_dist": 0.002,
                 "avg_posenet_dist": 0.030,
             },
             {
                 "row_id": "wide",
                 "archive_zip_bytes": 12_000,
+                "fc_dim": 16,
                 "avg_segnet_dist": 0.001,
                 "avg_posenet_dist": 0.025,
             },
@@ -115,7 +122,14 @@ def test_modelsize_budget_plan_can_extract_nonrate_from_component_distortions() 
 
 def test_modelsize_budget_plan_blocks_single_point_ladder() -> None:
     plan = build_modelsize_budget_plan(
-        [{"row_id": "only", "archive_bytes": 20_000, "nonrate_score": 0.22}]
+        [
+            {
+                "row_id": "only",
+                "archive_bytes": 20_000,
+                "nonrate_score": 0.22,
+                "modelsize_mparams": 0.04,
+            }
+        ]
     )
 
     assert plan["status"] == "insufficient_modelsize_ladder"
@@ -126,3 +140,34 @@ def test_modelsize_budget_plan_blocks_single_point_ladder() -> None:
         in plan["blockers"]
     )
     assert plan["score_claim"] is False
+
+
+def test_modelsize_budget_plan_blocks_unbound_capacity_controls() -> None:
+    plan = build_modelsize_budget_plan(
+        [
+            {
+                "row_id": "tiny_unbound",
+                "archive_bytes": 20_000,
+                "nonrate_score": 0.240,
+                "receiver_proof_passed": True,
+            },
+            {
+                "row_id": "small_unbound",
+                "archive_bytes": 40_000,
+                "nonrate_score": 0.205,
+                "receiver_proof_passed": True,
+            },
+        ],
+        carrier_id="hi_nerv",
+    )
+
+    assert plan["status"] == "receiver_closed_modelsize_budget_selected"
+    assert "source_bound_modelsize_or_fc_dim_missing" in plan["blockers"]
+    assert all(
+        point["source_bound_capacity_control"] is False
+        for point in plan["points"]
+    )
+    assert (
+        "emit_source_bound_modelsize_mparams_or_fc_dim_for_budget_points"
+        in plan["recommended_next_actions"]
+    )
