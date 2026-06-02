@@ -33,6 +33,7 @@ def build_nerv_control_inventory(
     repo_root: str | Path | None = None,
     hinerv_archive_size_ladder_report: Mapping[str, Any] | None = None,
     hinerv_archive_ladder_waterfill_report: Mapping[str, Any] | None = None,
+    snerv_trained_ladder_waterfill_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a machine-readable map of NeRV controls and required bindings."""
 
@@ -64,6 +65,9 @@ def build_nerv_control_inventory(
         "decoder_weight_waterfill_reports": _decoder_weight_waterfill_reports(
             hinerv_archive_ladder_waterfill_report=(
                 hinerv_archive_ladder_waterfill_report
+            ),
+            snerv_trained_ladder_waterfill_report=(
+                snerv_trained_ladder_waterfill_report
             ),
             focus_families=focus,
         ),
@@ -137,6 +141,15 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
             lines.append(
                 f"- `{family}`: `{ladder_row.get('status')}` "
                 f"({ladder_row.get('row_count', 0)} rows)"
+            )
+    waterfills = report.get("decoder_weight_waterfill_reports")
+    if isinstance(waterfills, Mapping):
+        lines.extend(["", "## Decoder Weight Waterfill", ""])
+        for family, waterfill_row in waterfills.items():
+            lines.append(
+                f"- `{family}`: `{waterfill_row.get('status')}` "
+                f"({waterfill_row.get('row_count', 0)} rows, "
+                f"{waterfill_row.get('section_value_row_count', 0)} section values)"
             )
     lines.extend(["", "## Sources", ""])
     for source in report.get("upstream_sources_checked", []):
@@ -257,6 +270,7 @@ def _measured_archive_size_ladders(
 def _decoder_weight_waterfill_reports(
     *,
     hinerv_archive_ladder_waterfill_report: Mapping[str, Any] | None,
+    snerv_trained_ladder_waterfill_report: Mapping[str, Any] | None,
     focus_families: Iterable[str],
 ) -> dict[str, Any]:
     focus = {str(family) for family in focus_families}
@@ -279,6 +293,37 @@ def _decoder_weight_waterfill_reports(
                     "archive_bytes": row.get("archive_bytes"),
                     "archive_sha256": row.get("archive_sha256"),
                     "state_npz_artifact_sha256": row.get("state_npz_artifact_sha256"),
+                    "waterfill_summary": row.get("waterfill_summary"),
+                    "blockers": list(row.get("blockers") or ()),
+                }
+                for row in report.get("rows", ())
+                if isinstance(row, Mapping)
+            ],
+            "blockers": list(report.get("blockers") or ()),
+            **FALSE_AUTHORITY,
+        }
+    if snerv_trained_ladder_waterfill_report is not None and (
+        not focus or "snerv" in focus
+    ):
+        report = snerv_trained_ladder_waterfill_report
+        rows["snerv"] = {
+            "schema": report.get("schema"),
+            "status": "decoder_weight_waterfill_rows_available_false_authority",
+            "report_path": report.get("report_path"),
+            "row_count": int(report.get("row_count", 0) or 0),
+            "section_value_row_count": len(report.get("section_value_rows") or ()),
+            "source_status": report.get("source_status"),
+            "source_verdict": report.get("source_verdict"),
+            "waterfill_rows": [
+                {
+                    "row_id": row.get("row_id"),
+                    "archive_bytes": row.get("archive_bytes"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "archive_sha256_actual": row.get("archive_sha256_actual"),
+                    "receiver_codec_mode": row.get("receiver_codec_mode"),
+                    "decoder_precision_mode": row.get("decoder_precision_mode"),
+                    "decoder_payload_schema": row.get("decoder_payload_schema"),
+                    "decoder_state_group_count": row.get("decoder_state_group_count"),
                     "waterfill_summary": row.get("waterfill_summary"),
                     "blockers": list(row.get("blockers") or ()),
                 }
@@ -1154,8 +1199,10 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "src/tac/analysis/scorer_conditional_mdl.py",
             "src/tac/analysis/nerv_decoder_weight_waterfill.py",
             "src/tac/analysis/hinerv_archive_ladder_waterfill.py",
+            "src/tac/analysis/snerv_trained_ladder_waterfill.py",
             "tools/build_nerv_decoder_weight_waterfill_plan.py",
             "tools/build_hinerv_archive_ladder_waterfill.py",
+            "tools/build_snerv_trained_ladder_waterfill.py",
         ],
         "receiver_and_exact_custody": [
             "src/tac/substrates/hprc/archive_candidate.py",

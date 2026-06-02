@@ -95,10 +95,16 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "src/tac/analysis/hinerv_archive_ladder_waterfill.py" in surfaces[
         "section_value_and_codebook"
     ]
+    assert "src/tac/analysis/snerv_trained_ladder_waterfill.py" in surfaces[
+        "section_value_and_codebook"
+    ]
     assert "tools/build_nerv_decoder_weight_waterfill_plan.py" in surfaces[
         "section_value_and_codebook"
     ]
     assert "tools/build_hinerv_archive_ladder_waterfill.py" in surfaces[
+        "section_value_and_codebook"
+    ]
+    assert "tools/build_snerv_trained_ladder_waterfill.py" in surfaces[
         "section_value_and_codebook"
     ]
     assert "src/tac/submission_packet/paired_auth_eval.py" in surfaces[
@@ -243,6 +249,52 @@ def test_nerv_control_inventory_accepts_hinerv_archive_ladder_waterfill_report()
     assert measured["waterfill_rows"][0]["waterfill_summary"]["group_count"] == 2
 
 
+def test_nerv_control_inventory_accepts_snerv_trained_ladder_waterfill_report() -> None:
+    waterfill_report = {
+        "schema": "snerv_trained_ladder_waterfill.v1",
+        "report_path": ".omx/research/snerv_trained_ladder_waterfill_fake.json",
+        "row_count": 1,
+        "source_status": "trained_ladder_row_blocked",
+        "source_verdict": "NO_GO_HARVEST_INPUT__TRAINED_ROW_PROOF_INCOMPLETE",
+        "rows": [
+            {
+                "row_id": "snerv_local_tiny",
+                "archive_bytes": 123,
+                "archive_sha256": "a" * 64,
+                "archive_sha256_actual": "a" * 64,
+                "receiver_codec_mode": "contest_archive_zip",
+                "decoder_precision_mode": "mixed_magnitude_symmetric",
+                "decoder_payload_schema": "snerv_decoder_payload.v3",
+                "decoder_state_group_count": 3,
+                "waterfill_summary": {
+                    "group_count": 3,
+                    "total_selected_byte_delta": 0,
+                },
+                "blockers": ["decoder_weight_saliency_missing_for_some_groups"],
+            }
+        ],
+        "section_value_rows": [{"row_id": "r0"}],
+        "blockers": ["decoder_weight_saliency_replay_required_for_authority"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("snerv",),
+        snerv_trained_ladder_waterfill_report=waterfill_report,
+    )
+
+    measured = report["decoder_weight_waterfill_reports"]["snerv"]
+    assert measured["schema"] == "snerv_trained_ladder_waterfill.v1"
+    assert measured["score_claim"] is False
+    assert measured["row_count"] == 1
+    assert measured["section_value_row_count"] == 1
+    assert measured["waterfill_rows"][0]["decoder_payload_schema"] == (
+        "snerv_decoder_payload.v3"
+    )
+    assert measured["waterfill_rows"][0]["waterfill_summary"]["group_count"] == 3
+
+
 def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
     tmp_path: Path,
 ) -> None:
@@ -291,4 +343,61 @@ def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
     assert rc == 0
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["decoder_weight_waterfill_reports"]["hi_nerv"]["row_count"] == 1
+    assert payload["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_snerv_waterfill_report(
+    tmp_path: Path,
+) -> None:
+    waterfill_path = tmp_path / "waterfill.json"
+    output_json = tmp_path / "inventory.json"
+    waterfill_path.write_text(
+        """
+        {
+          "schema": "snerv_trained_ladder_waterfill.v1",
+          "report_path": ".omx/research/snerv_trained_ladder_waterfill_fake.json",
+          "row_count": 1,
+          "source_status": "trained_ladder_row_blocked",
+          "rows": [
+            {
+              "row_id": "snerv_local_tiny",
+              "archive_bytes": 123,
+              "archive_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "archive_sha256_actual": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "receiver_codec_mode": "contest_archive_zip",
+              "decoder_precision_mode": "mixed_magnitude_symmetric",
+              "decoder_payload_schema": "snerv_decoder_payload.v3",
+              "decoder_state_group_count": 3,
+              "waterfill_summary": {"group_count": 3},
+              "blockers": ["decoder_weight_saliency_missing_for_some_groups"]
+            }
+          ],
+          "section_value_rows": [{"row_id": "r0"}],
+          "blockers": ["decoder_weight_saliency_replay_required_for_authority"],
+          "score_claim": false,
+          "ready_for_exact_eval_dispatch": false
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "snerv",
+            "--repo-root",
+            str(REPO),
+            "--snerv-trained-ladder-waterfill-json",
+            str(waterfill_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["decoder_weight_waterfill_reports"]["snerv"]["row_count"] == 1
+    assert payload["decoder_weight_waterfill_reports"]["snerv"][
+        "section_value_row_count"
+    ] == 1
     assert payload["score_claim"] is False

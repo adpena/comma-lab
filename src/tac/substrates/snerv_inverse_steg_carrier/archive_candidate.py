@@ -56,6 +56,7 @@ def write_snerv_contest_runtime(
         ),
         vendor_extra_tac_subpackages=(
             ("analysis", ("snerv_step_map_coder.py",)),
+            ("codec", ("receiver_integer_plane_codec.py",)),
             ("substrates._shared", ("int_stream_codec.py",)),
         ),
     )
