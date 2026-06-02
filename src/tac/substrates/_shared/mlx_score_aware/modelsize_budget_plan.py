@@ -18,8 +18,28 @@ from typing import Any
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
-MODEL_SIZE_BUDGET_PLAN_SCHEMA = "compact_carrier_modelsize_budget_plan.v1"
+MODEL_SIZE_BUDGET_PLAN_SCHEMA = "compact_carrier_modelsize_budget_plan.v2"
 CONTEST_BYTE_PRICE_SCORE = 25.0 / float(ORIGINAL_VIDEO_BYTES)
+
+_RECEIVER_CLOSED_PROOF_KEYS = (
+    "receiver_closed",
+    "receiver_proof_passed",
+    "receiver_archive_replay_verified",
+    "receiver_contract_satisfied",
+    "byte_closed_receiver_proof",
+)
+_MEASURED_ARCHIVE_BYTE_KEYS = (
+    "measured_archive_bytes",
+    "archive_bytes",
+    "archive_zip_bytes",
+    "candidate_archive_bytes",
+)
+_PROJECTED_ARCHIVE_BYTE_KEYS = ("projected_archive_bytes_600pair",)
+_LOWER_BOUND_MARKER_KEYS = (
+    "lower_bound_only",
+    "fit_is_lower_bound_only",
+    "modelsize_curve_is_ideal_packed_lower_bound",
+)
 
 
 class ModelSizeBudgetPlanError(ValueError):
@@ -31,13 +51,21 @@ class ModelSizeBudgetPoint:
     row_id: str
     archive_bytes: int
     nonrate_score: float
+    archive_bytes_key: str
+    evidence_kind: str
+    receiver_closed_bytes: bool
+    evidence_blockers: tuple[str, ...]
     source: dict[str, Any]
 
     def as_jsonable(self) -> dict[str, Any]:
         return {
             "row_id": self.row_id,
             "archive_bytes": int(self.archive_bytes),
+            "archive_bytes_key": self.archive_bytes_key,
             "nonrate_score": float(self.nonrate_score),
+            "evidence_kind": self.evidence_kind,
+            "receiver_closed_bytes": bool(self.receiver_closed_bytes),
+            "evidence_blockers": list(self.evidence_blockers),
             "rate_score_at_contest_price": float(
                 self.archive_bytes * CONTEST_BYTE_PRICE_SCORE
             ),
@@ -57,31 +85,56 @@ def build_modelsize_budget_plan(
     """Choose a measured model-size budget from contest byte-price math."""
 
     points = _parse_points(rows)
+    receiver_closed_points = [
+        point for point in points if point.receiver_closed_bytes
+    ]
+    decision_points = (
+        receiver_closed_points if len(receiver_closed_points) >= 2 else points
+    )
     if len(points) < 2:
         return {
             "schema": MODEL_SIZE_BUDGET_PLAN_SCHEMA,
             "carrier_id": str(carrier_id),
             "baseline_id": str(baseline_id),
             "status": "insufficient_modelsize_ladder",
+            "decision_basis": "all_rows",
             "contest_byte_price_score": CONTEST_BYTE_PRICE_SCORE,
             "original_video_bytes": int(ORIGINAL_VIDEO_BYTES),
-            "measured_points": [point.as_jsonable() for point in points],
+            "points": [point.as_jsonable() for point in points],
+            "measured_points": [
+                point.as_jsonable() for point in receiver_closed_points
+            ],
+            "receiver_closed_points": [
+                point.as_jsonable() for point in receiver_closed_points
+            ],
+            "point_count_by_evidence": _point_count_by_evidence(points),
             "marginal_steps": [],
             "selected_point": points[0].as_jsonable() if points else None,
             "selected_archive_bytes": int(points[0].archive_bytes) if points else None,
+            "receiver_closed_selected_point": None,
+            "receiver_closed_selected_archive_bytes": None,
             "recommended_next_actions": [
-                "run_measured_modelsize_ladder_before_long_budget_spend",
+                "run_receiver_closed_modelsize_ladder_before_long_budget_spend",
                 "include_archive_bytes_and_nonrate_score_for_each_size_point",
             ],
-            "blockers": ["modelsize_budget_ladder_has_fewer_than_two_points"],
+            "blockers": _ordered_unique(
+                [
+                    "modelsize_budget_ladder_has_fewer_than_two_points",
+                    "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+                    *_point_evidence_blockers(points),
+                ]
+            ),
             **FALSE_AUTHORITY,
         }
 
-    marginal_steps = _marginal_steps(points)
+    marginal_steps = _marginal_steps(decision_points)
     selected = min(
-        points,
+        decision_points,
         key=lambda point: point.nonrate_score
         + point.archive_bytes * CONTEST_BYTE_PRICE_SCORE,
+    )
+    receiver_closed_selected = (
+        selected if len(receiver_closed_points) >= 2 else None
     )
     last_value_step = next(
         (
@@ -91,24 +144,73 @@ def build_modelsize_budget_plan(
         ),
         None,
     )
+    receiver_closed_ladder_ready = len(receiver_closed_points) >= 2
+    status = (
+        "receiver_closed_modelsize_budget_selected"
+        if receiver_closed_ladder_ready
+        else "advisory_or_projected_modelsize_budget_selected"
+    )
+    decision_basis = (
+        "receiver_closed_rows"
+        if receiver_closed_ladder_ready
+        else "all_rows_advisory_planning_only"
+    )
     return {
         "schema": MODEL_SIZE_BUDGET_PLAN_SCHEMA,
         "carrier_id": str(carrier_id),
         "baseline_id": str(baseline_id),
-        "status": "measured_modelsize_budget_selected",
+        "status": status,
+        "decision_basis": decision_basis,
         "contest_byte_price_score": CONTEST_BYTE_PRICE_SCORE,
         "original_video_bytes": int(ORIGINAL_VIDEO_BYTES),
         "selection_rule": (
-            "minimize measured nonrate_score + archive_bytes * (25 / original_video_bytes); "
-            "spend a size step only when marginal nonrate improvement per byte exceeds byte price"
+            "minimize nonrate_score + archive_bytes * (25 / original_video_bytes); "
+            "use receiver-closed rows when at least two are available, otherwise "
+            "emit advisory planning only; spend a size step only when marginal "
+            "nonrate improvement per byte exceeds byte price"
         ),
-        "measured_points": [point.as_jsonable() for point in points],
+        "points": [point.as_jsonable() for point in points],
+        "measured_points": [
+            point.as_jsonable() for point in receiver_closed_points
+        ],
+        "receiver_closed_points": [
+            point.as_jsonable() for point in receiver_closed_points
+        ],
+        "point_count_by_evidence": _point_count_by_evidence(points),
         "marginal_steps": marginal_steps,
         "selected_point": selected.as_jsonable(),
         "selected_archive_bytes": int(selected.archive_bytes),
+        "receiver_closed_selected_point": (
+            receiver_closed_selected.as_jsonable()
+            if receiver_closed_selected is not None
+            else None
+        ),
+        "receiver_closed_selected_archive_bytes": (
+            int(receiver_closed_selected.archive_bytes)
+            if receiver_closed_selected is not None
+            else None
+        ),
         "last_marginally_worthwhile_step": last_value_step,
-        "recommended_next_actions": _recommended_next_actions(points, selected, marginal_steps),
-        "blockers": ["modelsize_budget_plan_is_false_authority"],
+        "recommended_next_actions": _recommended_next_actions(
+            decision_points,
+            selected,
+            marginal_steps,
+            receiver_closed_ladder_ready=receiver_closed_ladder_ready,
+        ),
+        "blockers": _ordered_unique(
+            [
+                "modelsize_budget_plan_is_false_authority",
+                *(
+                    []
+                    if receiver_closed_ladder_ready
+                    else [
+                        "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+                        "modelsize_budget_selection_is_advisory_or_projected",
+                    ]
+                ),
+                *_point_evidence_blockers(points),
+            ]
+        ),
         **FALSE_AUTHORITY,
     }
 
@@ -131,14 +233,21 @@ def build_modelsize_budget_plan_from_iterable(
 def _parse_points(rows: Sequence[Mapping[str, Any]]) -> list[ModelSizeBudgetPoint]:
     points = []
     for index, row in enumerate(rows):
-        archive_bytes = _extract_archive_bytes(row)
+        archive_bytes, archive_bytes_key = _extract_archive_bytes(row)
         nonrate_score = _extract_nonrate_score(row, archive_bytes=archive_bytes)
         row_id = str(row.get("row_id") or row.get("id") or f"modelsize_{index}")
+        evidence_kind, receiver_closed_bytes, evidence_blockers = (
+            _classify_point_evidence(row, archive_bytes_key=archive_bytes_key)
+        )
         points.append(
             ModelSizeBudgetPoint(
                 row_id=row_id,
                 archive_bytes=archive_bytes,
                 nonrate_score=nonrate_score,
+                archive_bytes_key=archive_bytes_key,
+                evidence_kind=evidence_kind,
+                receiver_closed_bytes=receiver_closed_bytes,
+                evidence_blockers=tuple(evidence_blockers),
                 source=dict(row),
             )
         )
@@ -153,13 +262,8 @@ def _parse_points(rows: Sequence[Mapping[str, Any]]) -> list[ModelSizeBudgetPoin
     return deduped
 
 
-def _extract_archive_bytes(row: Mapping[str, Any]) -> int:
-    for key in (
-        "archive_bytes",
-        "archive_zip_bytes",
-        "candidate_archive_bytes",
-        "projected_archive_bytes_600pair",
-    ):
+def _extract_archive_bytes(row: Mapping[str, Any]) -> tuple[int, str]:
+    for key in (*_MEASURED_ARCHIVE_BYTE_KEYS, *_PROJECTED_ARCHIVE_BYTE_KEYS):
         value = row.get(key)
         if value is None:
             continue
@@ -168,7 +272,7 @@ def _extract_archive_bytes(row: Mapping[str, Any]) -> int:
         except (TypeError, ValueError):
             continue
         if out > 0:
-            return out
+            return out, key
     raise ModelSizeBudgetPlanError(f"modelsize row missing positive archive bytes: {row}")
 
 
@@ -229,11 +333,16 @@ def _recommended_next_actions(
     points: Sequence[ModelSizeBudgetPoint],
     selected: ModelSizeBudgetPoint,
     marginal_steps: Sequence[Mapping[str, Any]],
+    *,
+    receiver_closed_ladder_ready: bool,
 ) -> list[str]:
     actions = [
         "train_selected_budget_with_score_aware_decoder_weight_objective",
         "preserve_smaller_and_larger_budget_rows_as_rd_curve_evidence",
     ]
+    if not receiver_closed_ladder_ready:
+        actions.insert(0, "replace_projected_rows_with_receiver_closed_archive_ladder")
+        actions.insert(1, "run_receiver_inflate_proof_for_each_modelsize_point")
     if selected.archive_bytes == points[0].archive_bytes:
         actions.append("larger_modelsize_steps_do_not_pay_measured_byte_price")
     if selected.archive_bytes == points[-1].archive_bytes and all(
@@ -241,6 +350,73 @@ def _recommended_next_actions(
     ):
         actions.append("extend_budget_ladder_until_marginal_step_stops_paying")
     return actions
+
+
+def _classify_point_evidence(
+    row: Mapping[str, Any],
+    *,
+    archive_bytes_key: str,
+) -> tuple[str, bool, list[str]]:
+    blockers: list[str] = []
+    proof_present = any(_truthy(row.get(key)) for key in _RECEIVER_CLOSED_PROOF_KEYS)
+    lower_bound = any(_truthy(row.get(key)) for key in _LOWER_BOUND_MARKER_KEYS)
+    projected = archive_bytes_key in _PROJECTED_ARCHIVE_BYTE_KEYS or lower_bound
+
+    if projected:
+        blockers.append("projected_or_lower_bound_archive_bytes_not_receiver_closed")
+    if not proof_present:
+        blockers.append("receiver_closed_byte_proof_missing")
+    if archive_bytes_key not in _MEASURED_ARCHIVE_BYTE_KEYS:
+        blockers.append("measured_archive_byte_field_missing")
+
+    receiver_closed = (
+        proof_present
+        and not projected
+        and archive_bytes_key in _MEASURED_ARCHIVE_BYTE_KEYS
+    )
+    if receiver_closed:
+        return "receiver_closed_measured_bytes", True, []
+    if projected:
+        return "projected_or_lower_bound_bytes", False, blockers
+    return "advisory_measured_bytes_without_receiver_proof", False, blockers
+
+
+def _point_evidence_blockers(points: Sequence[ModelSizeBudgetPoint]) -> list[str]:
+    return _ordered_unique(
+        blocker
+        for point in points
+        for blocker in point.evidence_blockers
+    )
+
+
+def _point_count_by_evidence(
+    points: Sequence[ModelSizeBudgetPoint],
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for point in points:
+        counts[point.evidence_kind] = counts.get(point.evidence_kind, 0) + 1
+    return counts
+
+
+def _ordered_unique(values: Iterable[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            out.append(text)
+            seen.add(text)
+    return out
+
+
+def _truthy(value: Any) -> bool:
+    if value is True:
+        return True
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return False
 
 
 def _finite_float_or_none(value: Any) -> float | None:

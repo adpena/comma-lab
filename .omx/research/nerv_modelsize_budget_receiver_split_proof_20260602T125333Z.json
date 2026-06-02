@@ -1,0 +1,432 @@
+{
+  "authority": {
+    "frontier_score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "projected_advisory_plan": {
+    "baseline_id": "pr95_hnerv",
+    "blockers": [
+      "modelsize_budget_plan_is_false_authority",
+      "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+      "modelsize_budget_selection_is_advisory_or_projected",
+      "projected_or_lower_bound_archive_bytes_not_receiver_closed",
+      "receiver_closed_byte_proof_missing",
+      "measured_archive_byte_field_missing"
+    ],
+    "carrier_id": "snerv",
+    "contest_byte_price_score": 6.658589531221714e-07,
+    "decision_basis": "all_rows_advisory_planning_only",
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "last_marginally_worthwhile_step": {
+      "bytes_added": 36000,
+      "contest_byte_price_score": 6.658589531221714e-07,
+      "from_archive_bytes": 36000,
+      "from_row_id": "ideal_curve_projected",
+      "marginal_improvement_per_byte": 1.1111111111111112e-06,
+      "net_score_delta_if_spent": -0.016029077687601867,
+      "nonrate_score_improvement": 0.04000000000000001,
+      "spend_rule": "spend_modelsize_byte",
+      "to_archive_bytes": 72000,
+      "to_row_id": "zip_without_receiver"
+    },
+    "marginal_steps": [
+      {
+        "bytes_added": 36000,
+        "contest_byte_price_score": 6.658589531221714e-07,
+        "from_archive_bytes": 36000,
+        "from_row_id": "ideal_curve_projected",
+        "marginal_improvement_per_byte": 1.1111111111111112e-06,
+        "net_score_delta_if_spent": -0.016029077687601867,
+        "nonrate_score_improvement": 0.04000000000000001,
+        "spend_rule": "spend_modelsize_byte",
+        "to_archive_bytes": 72000,
+        "to_row_id": "zip_without_receiver"
+      },
+      {
+        "bytes_added": 48000,
+        "contest_byte_price_score": 6.658589531221714e-07,
+        "from_archive_bytes": 72000,
+        "from_row_id": "zip_without_receiver",
+        "marginal_improvement_per_byte": 6.249999999999948e-08,
+        "net_score_delta_if_spent": 0.02896122974986426,
+        "nonrate_score_improvement": 0.002999999999999975,
+        "spend_rule": "stop_or_reallocate_modelsize_byte",
+        "to_archive_bytes": 120000,
+        "to_row_id": "ideal_curve_large"
+      }
+    ],
+    "measured_points": [],
+    "original_video_bytes": 37545489,
+    "point_count_by_evidence": {
+      "advisory_measured_bytes_without_receiver_proof": 1,
+      "projected_or_lower_bound_bytes": 2
+    },
+    "points": [
+      {
+        "archive_bytes": 36000,
+        "archive_bytes_key": "projected_archive_bytes_600pair",
+        "evidence_blockers": [
+          "projected_or_lower_bound_archive_bytes_not_receiver_closed",
+          "receiver_closed_byte_proof_missing",
+          "measured_archive_byte_field_missing"
+        ],
+        "evidence_kind": "projected_or_lower_bound_bytes",
+        "nonrate_score": 0.245,
+        "rate_score_at_contest_price": 0.02397092231239817,
+        "receiver_closed_bytes": false,
+        "row_id": "ideal_curve_projected",
+        "source": {
+          "lower_bound_only": true,
+          "nonrate_score": 0.245,
+          "projected_archive_bytes_600pair": 36000,
+          "row_id": "ideal_curve_projected"
+        },
+        "total_score_at_contest_price": 0.26897092231239816
+      },
+      {
+        "archive_bytes": 72000,
+        "archive_bytes_key": "archive_zip_bytes",
+        "evidence_blockers": [
+          "receiver_closed_byte_proof_missing"
+        ],
+        "evidence_kind": "advisory_measured_bytes_without_receiver_proof",
+        "nonrate_score": 0.205,
+        "rate_score_at_contest_price": 0.04794184462479634,
+        "receiver_closed_bytes": false,
+        "row_id": "zip_without_receiver",
+        "source": {
+          "archive_zip_bytes": 72000,
+          "nonrate_score": 0.205,
+          "row_id": "zip_without_receiver"
+        },
+        "total_score_at_contest_price": 0.2529418446247963
+      },
+      {
+        "archive_bytes": 120000,
+        "archive_bytes_key": "projected_archive_bytes_600pair",
+        "evidence_blockers": [
+          "projected_or_lower_bound_archive_bytes_not_receiver_closed",
+          "receiver_closed_byte_proof_missing",
+          "measured_archive_byte_field_missing"
+        ],
+        "evidence_kind": "projected_or_lower_bound_bytes",
+        "nonrate_score": 0.202,
+        "rate_score_at_contest_price": 0.07990307437466057,
+        "receiver_closed_bytes": false,
+        "row_id": "ideal_curve_large",
+        "source": {
+          "lower_bound_only": true,
+          "nonrate_score": 0.202,
+          "projected_archive_bytes_600pair": 120000,
+          "row_id": "ideal_curve_large"
+        },
+        "total_score_at_contest_price": 0.28190307437466056
+      }
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_closed_points": [],
+    "receiver_closed_selected_archive_bytes": null,
+    "receiver_closed_selected_point": null,
+    "recommended_next_actions": [
+      "replace_projected_rows_with_receiver_closed_archive_ladder",
+      "run_receiver_inflate_proof_for_each_modelsize_point",
+      "train_selected_budget_with_score_aware_decoder_weight_objective",
+      "preserve_smaller_and_larger_budget_rows_as_rd_curve_evidence"
+    ],
+    "schema": "compact_carrier_modelsize_budget_plan.v2",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selected_archive_bytes": 72000,
+    "selected_point": {
+      "archive_bytes": 72000,
+      "archive_bytes_key": "archive_zip_bytes",
+      "evidence_blockers": [
+        "receiver_closed_byte_proof_missing"
+      ],
+      "evidence_kind": "advisory_measured_bytes_without_receiver_proof",
+      "nonrate_score": 0.205,
+      "rate_score_at_contest_price": 0.04794184462479634,
+      "receiver_closed_bytes": false,
+      "row_id": "zip_without_receiver",
+      "source": {
+        "archive_zip_bytes": 72000,
+        "nonrate_score": 0.205,
+        "row_id": "zip_without_receiver"
+      },
+      "total_score_at_contest_price": 0.2529418446247963
+    },
+    "selection_rule": "minimize nonrate_score + archive_bytes * (25 / original_video_bytes); use receiver-closed rows when at least two are available, otherwise emit advisory planning only; spend a size step only when marginal nonrate improvement per byte exceeds byte price",
+    "status": "advisory_or_projected_modelsize_budget_selected"
+  },
+  "purpose": "prove modelsize budget planner reserves receiver_closed status for receiver-proofed archive-byte rows",
+  "receiver_closed_plan": {
+    "baseline_id": "pr95_hnerv",
+    "blockers": [
+      "modelsize_budget_plan_is_false_authority"
+    ],
+    "carrier_id": "snerv",
+    "contest_byte_price_score": 6.658589531221714e-07,
+    "decision_basis": "receiver_closed_rows",
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "last_marginally_worthwhile_step": {
+      "bytes_added": 36000,
+      "contest_byte_price_score": 6.658589531221714e-07,
+      "from_archive_bytes": 36000,
+      "from_row_id": "tiny_receiver_closed",
+      "marginal_improvement_per_byte": 1.1111111111111112e-06,
+      "net_score_delta_if_spent": -0.016029077687601867,
+      "nonrate_score_improvement": 0.04000000000000001,
+      "spend_rule": "spend_modelsize_byte",
+      "to_archive_bytes": 72000,
+      "to_row_id": "small_receiver_closed"
+    },
+    "marginal_steps": [
+      {
+        "bytes_added": 36000,
+        "contest_byte_price_score": 6.658589531221714e-07,
+        "from_archive_bytes": 36000,
+        "from_row_id": "tiny_receiver_closed",
+        "marginal_improvement_per_byte": 1.1111111111111112e-06,
+        "net_score_delta_if_spent": -0.016029077687601867,
+        "nonrate_score_improvement": 0.04000000000000001,
+        "spend_rule": "spend_modelsize_byte",
+        "to_archive_bytes": 72000,
+        "to_row_id": "small_receiver_closed"
+      },
+      {
+        "bytes_added": 48000,
+        "contest_byte_price_score": 6.658589531221714e-07,
+        "from_archive_bytes": 72000,
+        "from_row_id": "small_receiver_closed",
+        "marginal_improvement_per_byte": 6.249999999999948e-08,
+        "net_score_delta_if_spent": 0.02896122974986426,
+        "nonrate_score_improvement": 0.002999999999999975,
+        "spend_rule": "stop_or_reallocate_modelsize_byte",
+        "to_archive_bytes": 120000,
+        "to_row_id": "medium_receiver_closed"
+      }
+    ],
+    "measured_points": [
+      {
+        "archive_bytes": 36000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.245,
+        "rate_score_at_contest_price": 0.02397092231239817,
+        "receiver_closed_bytes": true,
+        "row_id": "tiny_receiver_closed",
+        "source": {
+          "archive_bytes": 36000,
+          "nonrate_score": 0.245,
+          "receiver_proof_passed": true,
+          "row_id": "tiny_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.26897092231239816
+      },
+      {
+        "archive_bytes": 72000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.205,
+        "rate_score_at_contest_price": 0.04794184462479634,
+        "receiver_closed_bytes": true,
+        "row_id": "small_receiver_closed",
+        "source": {
+          "archive_bytes": 72000,
+          "nonrate_score": 0.205,
+          "receiver_proof_passed": true,
+          "row_id": "small_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.2529418446247963
+      },
+      {
+        "archive_bytes": 120000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.202,
+        "rate_score_at_contest_price": 0.07990307437466057,
+        "receiver_closed_bytes": true,
+        "row_id": "medium_receiver_closed",
+        "source": {
+          "archive_bytes": 120000,
+          "nonrate_score": 0.202,
+          "receiver_proof_passed": true,
+          "row_id": "medium_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.28190307437466056
+      }
+    ],
+    "original_video_bytes": 37545489,
+    "point_count_by_evidence": {
+      "receiver_closed_measured_bytes": 3
+    },
+    "points": [
+      {
+        "archive_bytes": 36000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.245,
+        "rate_score_at_contest_price": 0.02397092231239817,
+        "receiver_closed_bytes": true,
+        "row_id": "tiny_receiver_closed",
+        "source": {
+          "archive_bytes": 36000,
+          "nonrate_score": 0.245,
+          "receiver_proof_passed": true,
+          "row_id": "tiny_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.26897092231239816
+      },
+      {
+        "archive_bytes": 72000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.205,
+        "rate_score_at_contest_price": 0.04794184462479634,
+        "receiver_closed_bytes": true,
+        "row_id": "small_receiver_closed",
+        "source": {
+          "archive_bytes": 72000,
+          "nonrate_score": 0.205,
+          "receiver_proof_passed": true,
+          "row_id": "small_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.2529418446247963
+      },
+      {
+        "archive_bytes": 120000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.202,
+        "rate_score_at_contest_price": 0.07990307437466057,
+        "receiver_closed_bytes": true,
+        "row_id": "medium_receiver_closed",
+        "source": {
+          "archive_bytes": 120000,
+          "nonrate_score": 0.202,
+          "receiver_proof_passed": true,
+          "row_id": "medium_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.28190307437466056
+      }
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_closed_points": [
+      {
+        "archive_bytes": 36000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.245,
+        "rate_score_at_contest_price": 0.02397092231239817,
+        "receiver_closed_bytes": true,
+        "row_id": "tiny_receiver_closed",
+        "source": {
+          "archive_bytes": 36000,
+          "nonrate_score": 0.245,
+          "receiver_proof_passed": true,
+          "row_id": "tiny_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.26897092231239816
+      },
+      {
+        "archive_bytes": 72000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.205,
+        "rate_score_at_contest_price": 0.04794184462479634,
+        "receiver_closed_bytes": true,
+        "row_id": "small_receiver_closed",
+        "source": {
+          "archive_bytes": 72000,
+          "nonrate_score": 0.205,
+          "receiver_proof_passed": true,
+          "row_id": "small_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.2529418446247963
+      },
+      {
+        "archive_bytes": 120000,
+        "archive_bytes_key": "archive_bytes",
+        "evidence_blockers": [],
+        "evidence_kind": "receiver_closed_measured_bytes",
+        "nonrate_score": 0.202,
+        "rate_score_at_contest_price": 0.07990307437466057,
+        "receiver_closed_bytes": true,
+        "row_id": "medium_receiver_closed",
+        "source": {
+          "archive_bytes": 120000,
+          "nonrate_score": 0.202,
+          "receiver_proof_passed": true,
+          "row_id": "medium_receiver_closed"
+        },
+        "total_score_at_contest_price": 0.28190307437466056
+      }
+    ],
+    "receiver_closed_selected_archive_bytes": 72000,
+    "receiver_closed_selected_point": {
+      "archive_bytes": 72000,
+      "archive_bytes_key": "archive_bytes",
+      "evidence_blockers": [],
+      "evidence_kind": "receiver_closed_measured_bytes",
+      "nonrate_score": 0.205,
+      "rate_score_at_contest_price": 0.04794184462479634,
+      "receiver_closed_bytes": true,
+      "row_id": "small_receiver_closed",
+      "source": {
+        "archive_bytes": 72000,
+        "nonrate_score": 0.205,
+        "receiver_proof_passed": true,
+        "row_id": "small_receiver_closed"
+      },
+      "total_score_at_contest_price": 0.2529418446247963
+    },
+    "recommended_next_actions": [
+      "train_selected_budget_with_score_aware_decoder_weight_objective",
+      "preserve_smaller_and_larger_budget_rows_as_rd_curve_evidence"
+    ],
+    "schema": "compact_carrier_modelsize_budget_plan.v2",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selected_archive_bytes": 72000,
+    "selected_point": {
+      "archive_bytes": 72000,
+      "archive_bytes_key": "archive_bytes",
+      "evidence_blockers": [],
+      "evidence_kind": "receiver_closed_measured_bytes",
+      "nonrate_score": 0.205,
+      "rate_score_at_contest_price": 0.04794184462479634,
+      "receiver_closed_bytes": true,
+      "row_id": "small_receiver_closed",
+      "source": {
+        "archive_bytes": 72000,
+        "nonrate_score": 0.205,
+        "receiver_proof_passed": true,
+        "row_id": "small_receiver_closed"
+      },
+      "total_score_at_contest_price": 0.2529418446247963
+    },
+    "selection_rule": "minimize nonrate_score + archive_bytes * (25 / original_video_bytes); use receiver-closed rows when at least two are available, otherwise emit advisory planning only; spend a size step only when marginal nonrate improvement per byte exceeds byte price",
+    "status": "receiver_closed_modelsize_budget_selected"
+  },
+  "schema": "codex_nerv_modelsize_budget_receiver_split_proof.v1",
+  "utc": "20260602T125333Z"
+}

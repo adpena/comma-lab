@@ -143,16 +143,34 @@ def test_training_plan_consumes_measured_modelsize_budget_ladder() -> None:
             "latent_jvp_norm_max": 2.0e-3,
             "modelsize_knob_present": True,
             "modelsize_budget_rows": [
-                {"row_id": "tiny", "archive_bytes": 20_000, "nonrate_score": 0.240},
-                {"row_id": "small", "archive_bytes": 40_000, "nonrate_score": 0.205},
-                {"row_id": "medium", "archive_bytes": 80_000, "nonrate_score": 0.200},
+                {
+                    "row_id": "tiny",
+                    "archive_bytes": 20_000,
+                    "nonrate_score": 0.240,
+                    "receiver_proof_passed": True,
+                },
+                {
+                    "row_id": "small",
+                    "archive_bytes": 40_000,
+                    "nonrate_score": 0.205,
+                    "receiver_proof_passed": True,
+                },
+                {
+                    "row_id": "medium",
+                    "archive_bytes": 80_000,
+                    "nonrate_score": 0.200,
+                    "receiver_proof_passed": True,
+                },
             ],
             **_all_stack_ready(),
         },
         carrier_id="hi_nerv",
     )
 
-    assert row["modelsize_budget_plan_status"] == "measured_modelsize_budget_selected"
+    assert (
+        row["modelsize_budget_plan_status"]
+        == "receiver_closed_modelsize_budget_selected"
+    )
     assert row["modelsize_budget_plan"]["selected_point"]["row_id"] == "small"
     assert row["evidence_summary"]["selected_modelsize_archive_bytes"] == 40_000
     assert row["score_claim"] is False

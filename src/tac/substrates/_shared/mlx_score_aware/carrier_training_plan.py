@@ -26,6 +26,7 @@ from tac.optimization.proxy_candidate_contract import (
     require_no_truthy_authority_fields,
 )
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
+    MODEL_SIZE_BUDGET_PLAN_SCHEMA,
     build_modelsize_budget_plan,
 )
 
@@ -280,6 +281,9 @@ def build_score_aware_carrier_training_plan(
             "selected_modelsize_archive_bytes": modelsize_budget_plan.get(
                 "selected_archive_bytes"
             ),
+            "receiver_closed_selected_modelsize_archive_bytes": (
+                modelsize_budget_plan.get("receiver_closed_selected_archive_bytes")
+            ),
             "d_seg": evidence.get("d_seg"),
             "advisory_score": evidence.get("advisory_score"),
             "latent_jvp_norm_max": evidence.get("latent_jvp_norm_max"),
@@ -302,7 +306,7 @@ def _modelsize_budget_plan(
             baseline_id=baseline_id,
         )
     return {
-        "schema": "compact_carrier_modelsize_budget_plan.v1",
+        "schema": MODEL_SIZE_BUDGET_PLAN_SCHEMA,
         "carrier_id": carrier_id,
         "baseline_id": baseline_id,
         "status": "modelsize_budget_ladder_not_measured",
