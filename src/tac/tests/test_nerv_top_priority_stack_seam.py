@@ -90,6 +90,14 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
         item for item in work_orders["hinerv"] if item["component"] == "allocator"
     )
     assert "joint P18/P19" in hinerv_allocator["next_action"]
+    snerv_qat = next(
+        action
+        for action in payload["next_local_actions"]
+        if action["id"] == "snerv_pair_robust_decoder_qat_continuation"
+    )
+    assert "--search-mode nes_pair_robust" in snerv_qat["command"]
+    assert "--seg-slack 0.00005" in snerv_qat["command"]
+    assert "--pose-hard-guard" not in snerv_qat["command"]
     assert (
         "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video"
         in payload["dispatch_blockers"]

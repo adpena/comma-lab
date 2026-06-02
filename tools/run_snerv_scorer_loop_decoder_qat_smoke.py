@@ -51,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--perturb-scale", type=float, default=0.02)
     parser.add_argument("--pose-slack", type=float, default=0.0)
+    parser.add_argument("--seg-slack", type=float, default=0.0)
     parser.add_argument("--pair-guard-min-score-improved-fraction", type=float, default=0.0)
     parser.add_argument("--pair-guard-max-pose-worsened-fraction", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=1337)
@@ -72,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         search_mode=args.search_mode,
         perturb_scale=args.perturb_scale,
         pose_slack=args.pose_slack,
+        seg_slack=args.seg_slack,
         pair_guard_min_score_improved_fraction=(
             args.pair_guard_min_score_improved_fraction
         ),

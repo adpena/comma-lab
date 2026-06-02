@@ -62,6 +62,27 @@ def test_decoder_trial_pose_guard_refuses_score_gain_with_seg_damage() -> None:
     assert decoder_trial_passes_pose_guard(candidate, current, pose_slack=0.0) is False
 
 
+def test_decoder_trial_pose_guard_can_allow_explicit_seg_slack() -> None:
+    current = _eval(label="baseline", score=7.0, d_pose=2.0, d_seg=0.01, replay=True)
+    candidate = _eval(
+        label="lower_score_pose_safe_seg_slack",
+        score=6.8,
+        d_pose=1.9,
+        d_seg=0.011,
+        replay=True,
+    )
+
+    assert decoder_trial_passes_pose_guard(candidate, current) is False
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            seg_slack=0.001,
+        )
+        is True
+    )
+
+
 def test_decoder_trial_pose_guard_requires_receiver_replay() -> None:
     current = _eval(label="baseline", score=7.0, d_pose=2.0, d_seg=0.02, replay=True)
     candidate = _eval(label="no_replay", score=6.0, d_pose=1.0, d_seg=0.01, replay=False)
@@ -414,12 +435,14 @@ def test_nes_pair_robust_objective_penalizes_pair_pose_damage() -> None:
         pair_robust,
         current,
         pose_slack=0.0,
+        seg_slack=0.0,
         pair_guard_min_score_improved_fraction=1.0,
         pair_guard_max_pose_worsened_fraction=0.0,
     ) < _nes_pair_robust_objective(
         pose_damaged,
         current,
         pose_slack=0.0,
+        seg_slack=0.0,
         pair_guard_min_score_improved_fraction=1.0,
         pair_guard_max_pose_worsened_fraction=0.0,
     )
