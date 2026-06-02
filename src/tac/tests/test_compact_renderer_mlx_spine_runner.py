@@ -1053,6 +1053,85 @@ def test_post_export_materializer_executor_can_focus_one_chain(
     assert handoff["ready_for_exact_eval_dispatch"] is False
 
 
+def test_post_export_materializer_sweep_feedback_keeps_byte_saving_atoms(
+    tmp_path: Path,
+) -> None:
+    positive = tmp_path / "archive_zip_repack_v1" / "sweep.json"
+    positive.parent.mkdir(parents=True)
+    positive.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "target_kind": "archive_zip_repack_v1",
+                "observation_count": 1,
+                "rate_positive_count": 1,
+                "rate_nonpositive_count": 0,
+                "max_saved_bytes": 979,
+                "total_positive_saved_bytes": 979,
+                "planner_feedback": {
+                    "recommended_acquisition_rule": (
+                        "rank_rate_positive_materializer_after_inflate_parity"
+                    )
+                },
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    zero = tmp_path / "packet_member_zip_header_elide_v1" / "sweep.json"
+    zero.parent.mkdir(parents=True)
+    zero.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "target_kind": "packet_member_zip_header_elide_v1",
+                "observation_count": 1,
+                "rate_positive_count": 0,
+                "rate_nonpositive_count": 1,
+                "max_saved_bytes": 0,
+                "total_positive_saved_bytes": 0,
+                "planner_feedback": {
+                    "recommended_acquisition_rule": (
+                        "demote_packet_member_zip_header_elide_v1_for_matching_archive_class"
+                    )
+                },
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = runner_mod._post_export_materializer_sweep_feedback_summary(tmp_path)
+
+    assert summary["schema"] == (
+        "compact_carrier_post_export_sweep_feedback_summary.v1"
+    )
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["byte_saving_sweep_count"] == 1
+    assert summary["zero_save_sweep_count"] == 1
+    assert summary["total_positive_saved_bytes"] == 979
+    assert summary["retain_target_kinds"] == ["archive_zip_repack_v1"]
+    assert summary["zero_save_target_kinds"] == [
+        "packet_member_zip_header_elide_v1"
+    ]
+    assert summary["recommended_global_rule"] == (
+        "retain_and_order_byte_saving_atoms_before_demoting_full_lane"
+    )
+    dispositions = {
+        row["target_kind"]: row["full_stack_chain_disposition"]
+        for row in summary["rows"]
+    }
+    assert dispositions["archive_zip_repack_v1"] == (
+        "retain_byte_saving_atom_for_ordered_chain_solver"
+    )
+    assert dispositions["packet_member_zip_header_elide_v1"] == (
+        "demote_only_matching_zero_save_archive_class"
+    )
+
+
 def test_recon_pixel_weight_loader_records_file_custody(
     tmp_path: Path,
 ) -> None:

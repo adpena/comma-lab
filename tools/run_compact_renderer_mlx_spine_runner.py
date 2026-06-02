@@ -813,6 +813,90 @@ def _post_export_materializer_handoff_summary(
     }
 
 
+def _post_export_materializer_sweep_feedback_summary(
+    output_root: Path,
+) -> dict[str, Any]:
+    """Preserve byte-saving post-export atoms as chain-solver signal."""
+
+    rows: list[dict[str, Any]] = []
+    for sweep_path in sorted(output_root.glob("**/sweep.json")):
+        try:
+            payload = _load_json(sweep_path)
+        except (OSError, CompactRendererMlxSpineRunnerError, json.JSONDecodeError):
+            continue
+        if payload.get("schema") != "family_agnostic_materializer_empirical_sweep.v1":
+            continue
+        target_kind = str(payload.get("target_kind") or sweep_path.parent.name)
+        rate_positive_count = int(payload.get("rate_positive_count") or 0)
+        total_positive_saved_bytes = int(
+            payload.get("total_positive_saved_bytes") or 0
+        )
+        max_saved_bytes = int(payload.get("max_saved_bytes") or 0)
+        planner_feedback = payload.get("planner_feedback")
+        recommended_rule = (
+            planner_feedback.get("recommended_acquisition_rule")
+            if isinstance(planner_feedback, Mapping)
+            else None
+        )
+        byte_saving = rate_positive_count > 0 or total_positive_saved_bytes > 0
+        rows.append(
+            {
+                "schema": "compact_carrier_post_export_sweep_feedback_row.v1",
+                "target_kind": target_kind,
+                "sweep_path": sweep_path.as_posix(),
+                "observation_count": int(payload.get("observation_count") or 0),
+                "rate_positive_count": rate_positive_count,
+                "rate_nonpositive_count": int(
+                    payload.get("rate_nonpositive_count") or 0
+                ),
+                "max_saved_bytes": max_saved_bytes,
+                "total_positive_saved_bytes": total_positive_saved_bytes,
+                "recommended_acquisition_rule": recommended_rule,
+                "full_stack_chain_disposition": (
+                    "retain_byte_saving_atom_for_ordered_chain_solver"
+                    if byte_saving
+                    else "demote_only_matching_zero_save_archive_class"
+                ),
+                "byte_saving_atom": byte_saving,
+                **FALSE_AUTHORITY,
+            }
+        )
+    byte_saving_rows = [row for row in rows if row["byte_saving_atom"] is True]
+    total_positive_saved_bytes = sum(
+        int(row["total_positive_saved_bytes"]) for row in byte_saving_rows
+    )
+    max_saved_bytes = max(
+        (int(row["max_saved_bytes"]) for row in byte_saving_rows),
+        default=0,
+    )
+    return {
+        "schema": "compact_carrier_post_export_sweep_feedback_summary.v1",
+        "sweep_count": len(rows),
+        "byte_saving_sweep_count": len(byte_saving_rows),
+        "zero_save_sweep_count": len(rows) - len(byte_saving_rows),
+        "total_positive_saved_bytes": total_positive_saved_bytes,
+        "max_saved_bytes": max_saved_bytes,
+        "retain_target_kinds": [
+            row["target_kind"] for row in rows if row["byte_saving_atom"] is True
+        ],
+        "zero_save_target_kinds": [
+            row["target_kind"] for row in rows if row["byte_saving_atom"] is False
+        ],
+        "recommended_global_rule": (
+            "retain_and_order_byte_saving_atoms_before_demoting_full_lane"
+            if byte_saving_rows
+            else "demote_only_matching_zero_save_archive_classes"
+        ),
+        "full_stack_ordering_note": (
+            "A non-exact-ready byte-saving materializer is still reusable chain "
+            "signal. Compose it with upstream/downstream atoms and order it in the "
+            "full stack before declaring the family exhausted."
+        ),
+        "rows": rows,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _execute_carrier_post_export_materializer_plan(
     *,
     plan: Mapping[str, Any],
@@ -944,6 +1028,9 @@ def _execute_carrier_post_export_materializer_plan(
             "after": after,
             "handoff_summary": _post_export_materializer_handoff_summary(
                 output_root
+            ),
+            "sweep_feedback_summary": (
+                _post_export_materializer_sweep_feedback_summary(output_root)
             ),
             "blockers": _dedupe(blockers),
         }
