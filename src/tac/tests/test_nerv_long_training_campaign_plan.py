@@ -9,6 +9,7 @@ import pytest
 
 from comma_lab.scheduler.experiment_queue import load_queue_definition
 from tac.analysis.nerv_long_training_campaign_plan import (
+    HINERV_POSE_INSTABILITY_LOW_LR_FLOOR,
     NervLongTrainingCampaignPlanError,
     build_nerv_long_training_campaign_plan,
     render_nerv_long_training_campaign_plan_markdown,
@@ -350,7 +351,7 @@ def test_long_training_campaign_plan_applies_hinerv_pose_instability_feedback(
     assert hi["score_claim"] is False
 
 
-def test_long_training_campaign_plan_pose_protects_hinerv_lr9e5_recovery_feedback(
+def test_long_training_campaign_plan_applies_hinerv_lr9e5_recovery_feedback(
 ) -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -383,30 +384,28 @@ def test_long_training_campaign_plan_pose_protects_hinerv_lr9e5_recovery_feedbac
 
     hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
     adjustment = hi["feedback_launch_adjustment"]
+    assert HINERV_POSE_INSTABILITY_LOW_LR_FLOOR == 3.0e-5
     assert adjustment["applied"] is True
-    assert adjustment["lower_learning_rate_applied"] is False
-    assert adjustment["pose_protected_pathway_applied"] is True
-    assert adjustment["repeated_low_lr_pose_instability"] is True
-    assert adjustment["learning_rate"] == 9.0e-5
-    assert adjustment["pose_distillation_loss"] == "huber"
-    assert adjustment["pose_distillation_huber_delta"] == 1.0
+    assert adjustment["lower_learning_rate_applied"] is True
+    assert adjustment["pose_protected_pathway_applied"] is False
+    assert adjustment["repeated_low_lr_pose_instability"] is False
+    assert adjustment["learning_rate"] == 2.7e-5
+    assert adjustment["pose_distillation_loss"] == "mse"
+    assert adjustment["pose_distillation_huber_delta"] is None
     assert adjustment["reason"] == (
-        "repeated_pose_instability_at_low_lr_pose_protected_pathway"
+        "pose_instability_recommended_lower_learning_rate"
     )
+    assert "above low_learning_rate_floor applies" in adjustment["policy_logic"]
     assert "hinerv_pose_instability_feedback_unapplied" not in hi["blockers"]
     assert (
         "hinerv_repeated_low_lr_pose_instability_requires_pose_protected_pathway"
         not in hi["blockers"]
     )
     assert hi["command_argv"][hi["command_argv"].index("--learning-rate") + 1] == (
-        "9e-05"
+        "2.7e-05"
     )
-    assert hi["command_argv"][
-        hi["command_argv"].index("--pose-distillation-loss") + 1
-    ] == "huber"
-    assert hi["command_argv"][
-        hi["command_argv"].index("--pose-distillation-huber-delta") + 1
-    ] == "1"
+    assert "--pose-distillation-loss" not in hi["command_argv"]
+    assert "--pose-distillation-huber-delta" not in hi["command_argv"]
 
 
 def test_long_training_campaign_plan_blocks_repeated_low_lr_pose_instability(
@@ -446,10 +445,11 @@ def test_long_training_campaign_plan_blocks_repeated_low_lr_pose_instability(
     assert adjustment["pose_protected_pathway_applied"] is True
     assert adjustment["repeated_low_lr_pose_instability"] is True
     assert adjustment["learning_rate"] == 2.7e-5
-    assert adjustment["low_learning_rate_floor"] == 1.0e-4
+    assert adjustment["low_learning_rate_floor"] == 3.0e-5
     assert adjustment["reason"] == (
         "repeated_pose_instability_at_low_lr_pose_protected_pathway"
     )
+    assert "switches to pose_distillation_loss=huber" in adjustment["policy_logic"]
     assert "hinerv_pose_instability_feedback_unapplied" not in hi["blockers"]
     assert (
         "hinerv_repeated_low_lr_pose_instability_requires_pose_protected_pathway"

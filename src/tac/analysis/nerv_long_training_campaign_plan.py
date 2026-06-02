@@ -50,7 +50,15 @@ DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaign
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
 DEFAULT_LEARNING_RATE = 1.0e-3
-HINERV_POSE_INSTABILITY_LOW_LR_FLOOR = 1.0e-4
+# First pose-instability feedback at 9e-5 should recover to the measured
+# recommendation, 2.7e-5. Only repeated instability at or below this lower
+# floor switches from more LR ratcheting to the robust pose-protected path.
+HINERV_POSE_INSTABILITY_LOW_LR_FLOOR = 3.0e-5
+HINERV_POSE_INSTABILITY_POLICY_LOGIC = (
+    "pose instability above low_learning_rate_floor applies the measured lower "
+    "learning-rate recommendation; repeated instability at or below the floor "
+    "switches to pose_distillation_loss=huber while preserving raw MSE telemetry"
+)
 HINERV_POSE_PROTECTED_LOSS = "huber"
 HINERV_POSE_PROTECTED_HUBER_DELTA = 1.0
 DEFAULT_OPTIMIZER_KINDS = (
@@ -1143,6 +1151,7 @@ def _hinerv_feedback_launch_adjustment(
             "schema": "hinerv_feedback_launch_adjustment.v1",
             "applied": False,
             "reason": "no_candidate_feedback",
+            "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
             "learning_rate": float(learning_rate),
             **FALSE_AUTHORITY,
         }
@@ -1174,6 +1183,7 @@ def _hinerv_feedback_launch_adjustment(
         "applied": applied,
         "lower_learning_rate_applied": lower_learning_rate_applied,
         "pose_protected_pathway_applied": pose_protected_pathway_applied,
+        "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
         "reason": (
             "pose_instability_recommended_lower_learning_rate"
             if lower_learning_rate_applied
