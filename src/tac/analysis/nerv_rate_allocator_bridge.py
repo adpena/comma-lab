@@ -695,6 +695,10 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                         "best_pair_deltas": _mapping_list(
                             unit.get("best_pair_deltas")
                         ),
+                        "section_value_rows": _mapping_list(
+                            unit.get("section_value_rows")
+                        ),
+                        "byte_price_plan": dict(unit.get("byte_price_plan") or {}),
                         "accepted_improvement": unit.get("accepted_improvement"),
                         "ready_for_pose_guard_gate": unit.get(
                             "ready_for_pose_guard_gate"

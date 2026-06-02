@@ -26,6 +26,9 @@ from tac.score_geometry import (
     SEG_COEFFICIENT,
     operating_regime,
 )
+from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
+    build_nerv_byte_price_plan,
+)
 
 SCHEMA = "snerv_scorer_loop_geometry.v1"
 AUTHORITY = "false_authority_macos_cpu_snerv_scorer_loop_geometry_no_score_claim"
@@ -180,15 +183,37 @@ def _analyze_one(path: Path) -> dict[str, Any]:
         reference=baseline,
         label=str(best.get("label") or "best"),
     )
+    axis_tag = result.get("axis_tag", payload.get("axis_tag"))
+    n_pairs = int(result.get("n_pairs") or payload.get("n_pairs") or 0)
+    receiver_contract_satisfied = bool(result.get("receiver_contract_satisfied"))
+    section_value_rows = _section_value_rows_for_contributions(
+        move_contributions,
+        axis_tag=axis_tag,
+        n_pairs=n_pairs,
+        receiver_contract_satisfied=receiver_contract_satisfied,
+    )
+    byte_price_plan = build_nerv_byte_price_plan(
+        {
+            "schema": f"{SCHEMA}.section_value_rows",
+            "family": "snerv",
+            "candidate_id": f"snerv_scorer_loop:{path.parent.name}",
+            "axis_tag": axis_tag,
+            "receiver_proof_status": (
+                "satisfied" if receiver_contract_satisfied else "missing"
+            ),
+            "full_video_coverage": n_pairs >= 600,
+            "section_value_rows": section_value_rows,
+        }
+    )
     regime = operating_regime(float(baseline.get("d_pose_linf") or 0.0))
     return {
         "unit_type": "snerv_scorer_loop_geometry_result",
         "family": "snerv",
         "input_path": path.as_posix(),
         "input_sha256": sha256_file(path),
-        "axis_tag": result.get("axis_tag", payload.get("axis_tag")),
+        "axis_tag": axis_tag,
         "schema": result.get("schema"),
-        "n_pairs": int(result.get("n_pairs") or payload.get("n_pairs") or 0),
+        "n_pairs": n_pairs,
         "levels": result.get("levels"),
         "wavelet": result.get("wavelet"),
         "qat_bits": result.get("qat_bits"),
@@ -204,6 +229,8 @@ def _analyze_one(path: Path) -> dict[str, Any]:
         "baseline_contribution": baseline_contribution,
         "best_contribution": best_contribution,
         "move_contributions": move_contributions,
+        "section_value_rows": section_value_rows,
+        "byte_price_plan": byte_price_plan,
         "accepted_trial_count": len(accepted_trials),
         "rejected_trial_count": max(len(move_contributions) - 1 - len(accepted_trials), 0),
         "accepted_trials": accepted_trials,
@@ -218,7 +245,7 @@ def _analyze_one(path: Path) -> dict[str, Any]:
         },
         "accepted_improvement": bool(result.get("accepted_improvement")),
         "ready_for_pose_guard_gate": bool(result.get("ready_for_pose_guard_gate")),
-        "receiver_contract_satisfied": bool(result.get("receiver_contract_satisfied")),
+        "receiver_contract_satisfied": receiver_contract_satisfied,
         "result_sha256": sha256_file(path),
         "blockers": list(result.get("blockers") or payload.get("blockers") or ()),
         "geometry_verdicts": _geometry_verdicts(best_contribution, accepted_trials),
@@ -254,6 +281,7 @@ def _contribution(
         "label": str(label),
         "accepted": bool(candidate.get("accepted")),
         "archive_bytes": cand_bytes,
+        "archive_sha256": str(candidate.get("archive_sha256") or ""),
         "byte_delta": cand_bytes - ref_bytes,
         "score_linf": cand_score,
         "score_delta_linf": cand_score - ref_score,
@@ -278,6 +306,68 @@ def _contribution(
         "component_tradeoff": _component_tradeoff(delta_seg_term, delta_pose_term),
         "blockers": list(candidate.get("blockers") or ()),
     }
+
+
+def _section_value_rows_for_contributions(
+    contributions: Sequence[Mapping[str, Any]],
+    *,
+    axis_tag: Any,
+    n_pairs: int,
+    receiver_contract_satisfied: bool,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    full_video = int(n_pairs) >= 600
+    receiver_status = "satisfied" if receiver_contract_satisfied else "missing"
+    for contrib in contributions:
+        label = str(contrib.get("label") or "")
+        if _is_baseline_contribution(contrib):
+            continue
+        byte_delta = int(contrib.get("byte_delta") or 0)
+        rows.append(
+            {
+                "row_id": f"snerv_scorer_loop_move:{_safe_row_label(label)}",
+                "section_id": f"snerv_scorer_loop_move:{_safe_row_label(label)}",
+                "row_kind": (
+                    "new_residual_or_sidecar"
+                    if byte_delta > 0
+                    else "existing_section_cut"
+                ),
+                "family": "snerv",
+                "scope": "scorer_loop_decoder_candidate",
+                "byte_delta": byte_delta,
+                "section_bytes": abs(byte_delta)
+                or int(contrib.get("archive_bytes") or 0),
+                "delta_nonrate_score": float(
+                    contrib.get("delta_non_rate_term") or 0.0
+                ),
+                "axis_tag": str(axis_tag or ""),
+                "receiver_proof_status": receiver_status,
+                "full_video_coverage": full_video,
+                "archive_sha256": str(contrib.get("archive_sha256") or "") or None,
+                "accepted": bool(contrib.get("accepted")),
+                "score_delta_linf": contrib.get("score_delta_linf"),
+                "delta_seg_term": contrib.get("delta_seg_term"),
+                "delta_pose_term": contrib.get("delta_pose_term"),
+                "delta_rate_term": contrib.get("delta_rate_term"),
+                "dominant_lowering_axis": contrib.get("dominant_lowering_axis"),
+                "blockers": list(contrib.get("blockers") or ()),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def _is_baseline_contribution(contrib: Mapping[str, Any]) -> bool:
+    return (
+        int(contrib.get("byte_delta") or 0) == 0
+        and abs(float(contrib.get("score_delta_linf") or 0.0)) <= 1e-15
+        and abs(float(contrib.get("delta_non_rate_term") or 0.0)) <= 1e-15
+    )
+
+
+def _safe_row_label(label: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in label)
+    return safe or "candidate"
 
 
 def _aggregate_reports(
@@ -359,6 +449,8 @@ def _allocator_unit(row: Mapping[str, Any]) -> dict[str, Any]:
         "accepted_candidate_count": row.get("accepted_trial_count"),
         "rejected_candidate_count": row.get("rejected_trial_count"),
         "best_pair_deltas": row.get("best_pair_deltas"),
+        "section_value_rows": row.get("section_value_rows") or [],
+        "byte_price_plan": row.get("byte_price_plan") or {},
         "accepted_improvement": row.get("accepted_improvement"),
         "ready_for_pose_guard_gate": row.get("ready_for_pose_guard_gate"),
         "receiver_contract_satisfied": row.get("receiver_contract_satisfied"),

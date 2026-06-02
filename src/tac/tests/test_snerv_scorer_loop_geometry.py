@@ -51,7 +51,16 @@ def test_snerv_scorer_loop_geometry_decomposes_contest_lagrangian(
     assert "component_tradeoff_admitted_by_lagrangian" in row["geometry_verdicts"]
     assert report["aggregate"]["best_search_mode"] == "learned_random_subspace"
     assert report["aggregate"]["rate_is_current_descent_driver"] is False
+    assert row["section_value_rows"][0]["delta_nonrate_score"] < 0.0
+    assert row["byte_price_plan"]["decision_rows"][0]["economic_decision"] == "admit"
+    assert row["byte_price_plan"]["decision_rows"][0]["decision"] == "demote"
+    assert "advisory_or_proxy_axis_not_promotion_authority" in row[
+        "byte_price_plan"
+    ]["blockers"]
     assert report["allocator_units"][0]["unit_type"] == "snerv_scorer_loop_qat_result"
+    assert report["allocator_units"][0]["section_value_rows"] == row[
+        "section_value_rows"
+    ]
 
 
 def test_snerv_scorer_loop_geometry_units_feed_rate_allocator_bridge(
@@ -77,6 +86,10 @@ def test_snerv_scorer_loop_geometry_units_feed_rate_allocator_bridge(
     assert bridge["rate_allocator_work_orders"][0]["payload"]["selection_policy"] == (
         "score_primary_lagrangian_geometry"
     )
+    assert bridge["rate_allocator_work_orders"][0]["payload"]["section_value_rows"]
+    assert bridge["rate_allocator_work_orders"][0]["payload"]["byte_price_plan"][
+        "schema"
+    ] == "compact_nerv_byte_price_controller.v1"
 
 
 def test_snerv_scorer_loop_geometry_cli_writes_json_and_markdown(
