@@ -1935,6 +1935,7 @@ def _run_snerv_scorer_loop_qat_attachment(
     search_mode: str,
     perturb_scale: float,
     byte_pressure_multiplier: float,
+    section_value_pressure_multiplier: float,
     max_archive_byte_growth: int | None,
     pose_slack: float,
     seg_slack: float,
@@ -1989,6 +1990,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             search_mode=str(search_mode),
             perturb_scale=float(perturb_scale),
             byte_pressure_multiplier=float(byte_pressure_multiplier),
+            section_value_pressure_multiplier=float(section_value_pressure_multiplier),
             max_archive_byte_growth=(
                 None
                 if max_archive_byte_growth is None
@@ -2021,6 +2023,9 @@ def _run_snerv_scorer_loop_qat_attachment(
             "qat_bits": int(qat_bits),
             "max_trials": int(max_trials),
             "search_mode": str(search_mode),
+            "section_value_pressure_multiplier": float(
+                section_value_pressure_multiplier
+            ),
             "result": result_payload,
             "accepted_improvement": bool(
                 result_payload.get("accepted_improvement")
@@ -2317,6 +2322,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_scorer_loop_qat_bits: int = 8,
     snerv_scorer_loop_perturb_scale: float = 0.02,
     snerv_scorer_loop_byte_pressure_multiplier: float = 1.0,
+    snerv_scorer_loop_section_value_pressure_multiplier: float = 1.0,
     snerv_scorer_loop_max_archive_byte_growth: int | None = None,
     snerv_scorer_loop_pose_slack: float = 0.0,
     snerv_scorer_loop_seg_slack: float = 0.0,
@@ -2568,6 +2574,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         perturb_scale=float(snerv_scorer_loop_perturb_scale),
         byte_pressure_multiplier=float(
             snerv_scorer_loop_byte_pressure_multiplier
+        ),
+        section_value_pressure_multiplier=float(
+            snerv_scorer_loop_section_value_pressure_multiplier
         ),
         max_archive_byte_growth=snerv_scorer_loop_max_archive_byte_growth,
         pose_slack=float(snerv_scorer_loop_pose_slack),
@@ -7892,6 +7901,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=1.0,
         type=float,
     )
+    parser.add_argument(
+        "--snerv-scorer-loop-section-value-pressure-multiplier",
+        default=1.0,
+        type=float,
+        help=(
+            "SNeRV scorer-loop QAT: multiply the train-time SNAR1 "
+            "optional-section neutralization pressure term."
+        ),
+    )
     parser.add_argument("--snerv-scorer-loop-max-archive-byte-growth", type=int)
     parser.add_argument("--snerv-scorer-loop-pose-slack", default=0.0, type=float)
     parser.add_argument("--snerv-scorer-loop-seg-slack", default=0.0, type=float)
@@ -8299,6 +8317,9 @@ def main(argv: list[str] | None = None) -> int:
             snerv_scorer_loop_perturb_scale=args.snerv_scorer_loop_perturb_scale,
             snerv_scorer_loop_byte_pressure_multiplier=(
                 args.snerv_scorer_loop_byte_pressure_multiplier
+            ),
+            snerv_scorer_loop_section_value_pressure_multiplier=(
+                args.snerv_scorer_loop_section_value_pressure_multiplier
             ),
             snerv_scorer_loop_max_archive_byte_growth=(
                 args.snerv_scorer_loop_max_archive_byte_growth

@@ -59,6 +59,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--perturb-scale", type=float, default=0.02)
     parser.add_argument("--byte-pressure-multiplier", type=float, default=1.0)
+    parser.add_argument(
+        "--section-value-pressure-multiplier",
+        type=float,
+        default=1.0,
+        help=(
+            "Multiplier for train-time SNAR1 optional-section neutralization "
+            "pressure. Zero disables this binding and leaves the run advisory."
+        ),
+    )
     parser.add_argument("--max-archive-byte-growth", type=int, default=None)
     parser.add_argument("--pose-slack", type=float, default=0.0)
     parser.add_argument("--seg-slack", type=float, default=0.0)
@@ -95,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         search_mode=args.search_mode,
         perturb_scale=args.perturb_scale,
         byte_pressure_multiplier=args.byte_pressure_multiplier,
+        section_value_pressure_multiplier=args.section_value_pressure_multiplier,
         max_archive_byte_growth=args.max_archive_byte_growth,
         pose_slack=args.pose_slack,
         seg_slack=args.seg_slack,
@@ -128,6 +138,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  best_score_linf: {result.best.score_linf}")
     print(f"  component_guard_mode: {result.component_guard_mode}")
     print(f"  byte_pressure_multiplier: {result.byte_pressure_multiplier}")
+    print(
+        "  section_value_pressure_multiplier: "
+        f"{result.section_value_pressure_multiplier}"
+    )
     print(f"  max_archive_byte_growth: {result.max_archive_byte_growth}")
     print(
         "  best_rate_aware_objective_linf: "

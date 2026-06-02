@@ -48,11 +48,18 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     fit_hf_decoder_least_squares,
     quantize_lf,
 )
+from tac.substrates.snerv_inverse_steg_carrier.section_value import (
+    NEUTRALIZABLE_SNERV_SECTIONS,
+    neutralize_snerv_section,
+)
 
 SCHEMA = "snerv_scorer_loop_decoder_qat_smoke.v1"
 AXIS_TAG = "[macOS-CPU advisory]"
 SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF = (
     "snerv_scorer_loop_decoder_qat_packs_receiver_archive_and_prices_total_bytes"
+)
+SNERV_QAT_SECTION_VALUE_PRESSURE_PROOF = (
+    "snerv_scorer_loop_decoder_qat_scores_snar1_optional_section_neutralization"
 )
 COMPONENT_GUARD_MODES: tuple[str, ...] = (
     "score_primary",
@@ -110,6 +117,28 @@ class SnervPairDelta:
 
 
 @dataclass(frozen=True)
+class SnervSectionNeutralizationEval:
+    """Train-time scored neutralization row for one optional SNAR1 section."""
+
+    section: str
+    neutralization_method: str
+    baseline_section_bytes: int
+    neutralized_section_bytes: int
+    d_seg_linf: float
+    d_pose_linf: float
+    score_linf_without_rate: float
+    delta_nonrate_score: float
+    section_rate_cost_linf: float
+    economic_surplus_linf: float
+    pressure_linf: float
+    receiver_decode_status: str
+    blockers: tuple[str, ...]
+
+    def as_jsonable(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class SnervDecoderEval:
     """One receiver-replayed decoder evaluation in the local scorer loop."""
 
@@ -127,11 +156,17 @@ class SnervDecoderEval:
     blockers: tuple[str, ...]
     quantized_decoder: QuantizedDecoderStats
     per_pair: tuple[SnervPairEval, ...]
+    section_value_pressure_linf: float = 0.0
+    section_value_pressure_ready: bool = True
+    section_value_neutralizations: tuple[SnervSectionNeutralizationEval, ...] = ()
 
     def as_jsonable(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["quantized_decoder"] = self.quantized_decoder.as_jsonable()
         payload["per_pair"] = [row.as_jsonable() for row in self.per_pair]
+        payload["section_value_neutralizations"] = [
+            row.as_jsonable() for row in self.section_value_neutralizations
+        ]
         return payload
 
 
@@ -156,6 +191,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     search_mode: str
     perturb_scale: float
     byte_pressure_multiplier: float
+    section_value_pressure_multiplier: float
     max_archive_byte_growth: int | None
     pose_slack: float
     seg_slack: float
@@ -219,6 +255,7 @@ class _PreparedState:
     levels: int
     wavelet: str
     orig_hw: tuple[int, int]
+    step_map_bins: int = 16
 
 
 def run_snerv_scorer_loop_decoder_qat_smoke(
@@ -247,6 +284,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     search_mode: str = "random_signed",
     perturb_scale: float = 0.02,
     byte_pressure_multiplier: float = 1.0,
+    section_value_pressure_multiplier: float = 1.0,
     max_archive_byte_growth: int | None = None,
     pose_slack: float = 0.0,
     seg_slack: float = 0.0,
@@ -281,6 +319,10 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     if byte_pressure_multiplier < 1.0:
         raise SnervScorerLoopDecoderQatError(
             "byte_pressure_multiplier must be >= 1.0"
+        )
+    if section_value_pressure_multiplier < 0.0:
+        raise SnervScorerLoopDecoderQatError(
+            "section_value_pressure_multiplier must be >= 0.0"
         )
     if max_archive_byte_growth is not None and max_archive_byte_growth < 0:
         raise SnervScorerLoopDecoderQatError(
@@ -353,6 +395,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         iteration=0,
         accepted=True,
         byte_pressure_multiplier=byte_pressure_multiplier,
+        section_value_pressure_multiplier=section_value_pressure_multiplier,
     )
     best_decoder = prepared.baseline_decoder
     best_eval = baseline
@@ -384,6 +427,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 iteration=trial,
                 accepted=False,
                 byte_pressure_multiplier=byte_pressure_multiplier,
+                section_value_pressure_multiplier=section_value_pressure_multiplier,
             )
             minus_row = _evaluate_decoder(
                 _vector_to_decoder(current_vec - scale * direction, layout),
@@ -396,6 +440,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 iteration=trial,
                 accepted=False,
                 byte_pressure_multiplier=byte_pressure_multiplier,
+                section_value_pressure_multiplier=section_value_pressure_multiplier,
             )
             plus_objective = _nes_pair_robust_objective(
                 plus_row,
@@ -403,6 +448,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 pose_slack=pose_slack,
                 seg_slack=seg_slack,
                 byte_pressure_multiplier=byte_pressure_multiplier,
+                section_value_pressure_multiplier=section_value_pressure_multiplier,
                 max_archive_byte_growth=max_archive_byte_growth,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
@@ -417,6 +463,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 pose_slack=pose_slack,
                 seg_slack=seg_slack,
                 byte_pressure_multiplier=byte_pressure_multiplier,
+                section_value_pressure_multiplier=section_value_pressure_multiplier,
                 max_archive_byte_growth=max_archive_byte_growth,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
@@ -442,6 +489,9 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                                         seg_slack=seg_slack,
                                         byte_pressure_multiplier=(
                                             byte_pressure_multiplier
+                                        ),
+                                        section_value_pressure_multiplier=(
+                                            section_value_pressure_multiplier
                                         ),
                                         max_archive_byte_growth=(
                                             max_archive_byte_growth
@@ -474,6 +524,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 iteration=max_trials + 1,
                 accepted=False,
                 byte_pressure_multiplier=byte_pressure_multiplier,
+                section_value_pressure_multiplier=section_value_pressure_multiplier,
             )
             accepted = decoder_trial_passes_pose_guard(
                 row,
@@ -481,6 +532,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 pose_slack=pose_slack,
                 seg_slack=seg_slack,
                 byte_pressure_multiplier=byte_pressure_multiplier,
+                section_value_pressure_multiplier=section_value_pressure_multiplier,
                 max_archive_byte_growth=max_archive_byte_growth,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
@@ -504,6 +556,9 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                         pose_slack=pose_slack,
                         seg_slack=seg_slack,
                         byte_pressure_multiplier=byte_pressure_multiplier,
+                        section_value_pressure_multiplier=(
+                            section_value_pressure_multiplier
+                        ),
                         max_archive_byte_growth=max_archive_byte_growth,
                         pair_guard_min_score_improved_fraction=(
                             pair_guard_min_score_improved_fraction
@@ -533,6 +588,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     iteration=trial,
                     accepted=False,
                     byte_pressure_multiplier=byte_pressure_multiplier,
+                    section_value_pressure_multiplier=section_value_pressure_multiplier,
                 )
                 accepted = decoder_trial_passes_pose_guard(
                     row,
@@ -540,6 +596,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     pose_slack=pose_slack,
                     seg_slack=seg_slack,
                     byte_pressure_multiplier=byte_pressure_multiplier,
+                    section_value_pressure_multiplier=section_value_pressure_multiplier,
                     max_archive_byte_growth=max_archive_byte_growth,
                     pair_guard_min_score_improved_fraction=(
                         pair_guard_min_score_improved_fraction
@@ -563,6 +620,9 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                             pose_slack=pose_slack,
                             seg_slack=seg_slack,
                             byte_pressure_multiplier=byte_pressure_multiplier,
+                            section_value_pressure_multiplier=(
+                                section_value_pressure_multiplier
+                            ),
                             max_archive_byte_growth=max_archive_byte_growth,
                             pair_guard_min_score_improved_fraction=(
                                 pair_guard_min_score_improved_fraction
@@ -590,6 +650,10 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         blockers.append("no_quantized_decoder_trial_improved_score_under_component_guard")
     if not all(row.receiver_archive_replay_verified for row in rows):
         blockers.append("receiver_archive_replay_failed_for_some_trials")
+    if section_value_pressure_multiplier > 0.0 and not all(
+        row.section_value_pressure_ready for row in rows
+    ):
+        blockers.append("snerv_section_value_pressure_binding_failed")
     blockers.extend(
         [
             "local_smoke_only_not_full_600_pairs",
@@ -597,7 +661,15 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             "mixed_precision_decoder_payload_grammar_not_byte_optimized",
         ]
     )
-    ready_for_gate = bool(accepted_improvement and best_eval.receiver_archive_replay_verified)
+    section_value_binding_satisfied = (
+        section_value_pressure_multiplier <= 0.0
+        or all(row.section_value_pressure_ready for row in rows)
+    )
+    ready_for_gate = bool(
+        accepted_improvement
+        and best_eval.receiver_archive_replay_verified
+        and section_value_binding_satisfied
+    )
     return SnervScorerLoopDecoderQatSmokeResult(
         schema=SCHEMA,
         axis_tag=AXIS_TAG,
@@ -616,6 +688,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         search_mode=search_mode,
         perturb_scale=float(perturb_scale),
         byte_pressure_multiplier=float(byte_pressure_multiplier),
+        section_value_pressure_multiplier=float(section_value_pressure_multiplier),
         max_archive_byte_growth=(
             None
             if max_archive_byte_growth is None
@@ -730,6 +803,7 @@ def decoder_trial_passes_pose_guard(
     pose_slack: float = 0.0,
     seg_slack: float = 0.0,
     byte_pressure_multiplier: float = 1.0,
+    section_value_pressure_multiplier: float = 1.0,
     max_archive_byte_growth: int | None = None,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
@@ -745,6 +819,10 @@ def decoder_trial_passes_pose_guard(
     if byte_pressure_multiplier < 1.0:
         raise SnervScorerLoopDecoderQatError(
             "byte_pressure_multiplier must be >= 1.0"
+        )
+    if section_value_pressure_multiplier < 0.0:
+        raise SnervScorerLoopDecoderQatError(
+            "section_value_pressure_multiplier must be >= 0.0"
         )
     if max_archive_byte_growth is not None and max_archive_byte_growth < 0:
         raise SnervScorerLoopDecoderQatError(
@@ -767,16 +845,25 @@ def decoder_trial_passes_pose_guard(
     )
     return bool(
         candidate.receiver_archive_replay_verified
+        and (
+            section_value_pressure_multiplier <= 0.0
+            or (
+                candidate.section_value_pressure_ready
+                and current_best.section_value_pressure_ready
+            )
+        )
         and pose_component_ok
         and seg_component_ok
         and candidate.score_linf < current_best.score_linf
         and _rate_aware_eval_objective(
             candidate,
             byte_pressure_multiplier=byte_pressure_multiplier,
+            section_value_pressure_multiplier=section_value_pressure_multiplier,
         )
         < _rate_aware_eval_objective(
             current_best,
             byte_pressure_multiplier=byte_pressure_multiplier,
+            section_value_pressure_multiplier=section_value_pressure_multiplier,
         )
         and (
             max_archive_byte_growth is None
@@ -842,6 +929,7 @@ def _trial_blockers(
     pose_slack: float,
     seg_slack: float,
     byte_pressure_multiplier: float = 1.0,
+    section_value_pressure_multiplier: float = 1.0,
     max_archive_byte_growth: int | None = None,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
@@ -851,6 +939,11 @@ def _trial_blockers(
     blockers = list(candidate.blockers)
     if not candidate.receiver_archive_replay_verified:
         blockers.append("receiver_archive_replay_failed")
+    if section_value_pressure_multiplier > 0.0 and not (
+        candidate.section_value_pressure_ready
+        and current_best.section_value_pressure_ready
+    ):
+        blockers.append("section_value_pressure_binding_failed")
     if (
         component_mode in {"pose_hard", "pose_seg_hard"}
         and candidate.d_pose_linf > current_best.d_pose_linf + float(pose_slack)
@@ -866,9 +959,11 @@ def _trial_blockers(
     if _rate_aware_eval_objective(
         candidate,
         byte_pressure_multiplier=byte_pressure_multiplier,
+        section_value_pressure_multiplier=section_value_pressure_multiplier,
     ) >= _rate_aware_eval_objective(
         current_best,
         byte_pressure_multiplier=byte_pressure_multiplier,
+        section_value_pressure_multiplier=section_value_pressure_multiplier,
     ):
         blockers.append("rate_aware_score_gate_failed")
     if (
@@ -943,6 +1038,7 @@ def _nes_pair_robust_objective(
     pose_slack: float,
     seg_slack: float,
     byte_pressure_multiplier: float = 1.0,
+    section_value_pressure_multiplier: float = 1.0,
     max_archive_byte_growth: int | None = None,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
@@ -957,6 +1053,7 @@ def _nes_pair_robust_objective(
     score = _rate_aware_eval_objective(
         candidate,
         byte_pressure_multiplier=byte_pressure_multiplier,
+        section_value_pressure_multiplier=section_value_pressure_multiplier,
     )
     objective = score if np.isfinite(score) else 1.0e12
     penalty = 0.0
@@ -1033,14 +1130,21 @@ def _rate_aware_eval_objective(
     row: SnervDecoderEval,
     *,
     byte_pressure_multiplier: float,
+    section_value_pressure_multiplier: float = 1.0,
 ) -> float:
     if byte_pressure_multiplier < 1.0:
         raise SnervScorerLoopDecoderQatError(
             "byte_pressure_multiplier must be >= 1.0"
         )
+    if section_value_pressure_multiplier < 0.0:
+        raise SnervScorerLoopDecoderQatError(
+            "section_value_pressure_multiplier must be >= 0.0"
+        )
     return float(row.score_linf) + (
         float(byte_pressure_multiplier) - 1.0
-    ) * float(row.rate_term)
+    ) * float(row.rate_term) + float(section_value_pressure_multiplier) * float(
+        row.section_value_pressure_linf
+    )
 
 
 def _decoder_search_directions(
@@ -1205,6 +1309,7 @@ def _prepare_state(
         levels=int(levels),
         wavelet=wavelet,
         orig_hw=(h, w),
+        step_map_bins=int(step_map_bins),
     )
 
 
@@ -1220,6 +1325,7 @@ def _evaluate_decoder(
     iteration: int,
     accepted: bool,
     byte_pressure_multiplier: float,
+    section_value_pressure_multiplier: float,
 ) -> SnervDecoderEval:
     quantized, qstats = quantize_decoder_for_qat(decoder, bits=qat_bits)
     archive = _pack_receiver_archive(
@@ -1262,11 +1368,24 @@ def _evaluate_decoder(
     d_seg = float(np.mean(dsegs))
     d_pose = float(np.mean(dposes))
     rate = CONTEST_BYTE_PRICE * archive.total_bytes
-    score = 100.0 * d_seg + float(np.sqrt(10.0 * max(d_pose, 0.0))) + rate
-    blockers = () if replay_ok else ("receiver_archive_replay_failed",)
+    nonrate_score = _nonrate_linf_score(d_seg, d_pose)
+    score = nonrate_score + rate
+    section_pressure, section_rows, section_ready, section_blockers = (
+        _score_section_value_pressure(
+            archive.packet,
+            prepared=prepared,
+            posenet=posenet,
+            segnet=segnet,
+            baseline_nonrate_score=nonrate_score,
+        )
+    )
+    blockers = [] if replay_ok else ["receiver_archive_replay_failed"]
+    blockers.extend(section_blockers)
     rate_aware_objective = score + (
         float(byte_pressure_multiplier) - 1.0
-    ) * float(rate)
+    ) * float(rate) + float(section_value_pressure_multiplier) * float(
+        section_pressure
+    )
     return SnervDecoderEval(
         label=label,
         iteration=int(iteration),
@@ -1279,10 +1398,114 @@ def _evaluate_decoder(
         rate_term=rate,
         receiver_archive_replay_verified=bool(replay_ok),
         accepted=bool(accepted),
-        blockers=blockers,
+        blockers=tuple(dict.fromkeys(blockers)),
         quantized_decoder=qstats,
         per_pair=tuple(per_pair),
+        section_value_pressure_linf=float(section_pressure),
+        section_value_pressure_ready=bool(section_ready),
+        section_value_neutralizations=tuple(section_rows),
     )
+
+
+def _score_section_value_pressure(
+    packet: bytes,
+    *,
+    prepared: _PreparedState,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    baseline_nonrate_score: float,
+) -> tuple[float, tuple[SnervSectionNeutralizationEval, ...], bool, tuple[str, ...]]:
+    rows: list[SnervSectionNeutralizationEval] = []
+    blockers: list[str] = []
+    pressure_total = 0.0
+    for section in NEUTRALIZABLE_SNERV_SECTIONS:
+        try:
+            variant = neutralize_snerv_section(
+                packet,
+                section,
+                step_map_bins=int(prepared.step_map_bins),
+                verify_receiver_decode=False,
+            )
+            receiver_np = decode_snerv_archive_frames(bytes(variant["packet"]))
+            if receiver_np.shape != tuple(prepared.pairs.shape):
+                raise SnervScorerLoopDecoderQatError(
+                    "neutralized receiver output shape mismatch"
+                )
+            receiver = torch.from_numpy(receiver_np).to(prepared.pairs)
+            d_seg, d_pose = _measure_mean_pair_response(
+                prepared=prepared,
+                receiver=receiver,
+                posenet=posenet,
+                segnet=segnet,
+            )
+            neutralized_score = _nonrate_linf_score(d_seg, d_pose)
+            delta_nonrate = float(neutralized_score - float(baseline_nonrate_score))
+            section_rate_cost = CONTEST_BYTE_PRICE * int(
+                variant["baseline_section_bytes"]
+            )
+            pressure = max(0.0, float(section_rate_cost) - delta_nonrate)
+            pressure_total += pressure
+            rows.append(
+                SnervSectionNeutralizationEval(
+                    section=str(section),
+                    neutralization_method=str(variant["neutralization_method"]),
+                    baseline_section_bytes=int(variant["baseline_section_bytes"]),
+                    neutralized_section_bytes=int(
+                        variant["neutralized_section_bytes"]
+                    ),
+                    d_seg_linf=float(d_seg),
+                    d_pose_linf=float(d_pose),
+                    score_linf_without_rate=float(neutralized_score),
+                    delta_nonrate_score=delta_nonrate,
+                    section_rate_cost_linf=float(section_rate_cost),
+                    economic_surplus_linf=float(delta_nonrate - section_rate_cost),
+                    pressure_linf=float(pressure),
+                    receiver_decode_status="receiver_decode_succeeded",
+                    blockers=(
+                        "local_section_value_advisory_not_exact_authority",
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                    ),
+                )
+            )
+        except Exception as exc:
+            blockers.append(
+                "snerv_section_value_neutralization_failed:"
+                f"{section}:{type(exc).__name__}:{exc}"
+            )
+    ready = len(rows) == len(NEUTRALIZABLE_SNERV_SECTIONS) and not blockers
+    if not ready:
+        blockers.append("snerv_section_value_pressure_binding_missing")
+    return (
+        float(pressure_total),
+        tuple(rows),
+        bool(ready),
+        tuple(dict.fromkeys(blockers)),
+    )
+
+
+def _measure_mean_pair_response(
+    *,
+    prepared: _PreparedState,
+    receiver: torch.Tensor,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+) -> tuple[float, float]:
+    dsegs = []
+    dposes = []
+    for pair_idx in range(int(prepared.pairs.shape[0])):
+        ds, dp = measure_pair_d_seg_d_pose(
+            posenet,
+            segnet,
+            prepared.pairs[pair_idx : pair_idx + 1],
+            receiver[pair_idx : pair_idx + 1],
+        )
+        dsegs.append(float(ds))
+        dposes.append(float(dp))
+    return float(np.mean(dsegs)), float(np.mean(dposes))
+
+
+def _nonrate_linf_score(d_seg: float, d_pose: float) -> float:
+    return 100.0 * float(d_seg) + float(np.sqrt(10.0 * max(float(d_pose), 0.0)))
 
 
 def _pack_receiver_archive(
@@ -1387,6 +1610,9 @@ def _replace_eval_acceptance(
         blockers=blockers,
         quantized_decoder=row.quantized_decoder,
         per_pair=row.per_pair,
+        section_value_pressure_linf=row.section_value_pressure_linf,
+        section_value_pressure_ready=row.section_value_pressure_ready,
+        section_value_neutralizations=row.section_value_neutralizations,
     )
 
 
@@ -1408,6 +1634,11 @@ def _eval_as_gate_row(row: SnervDecoderEval) -> dict[str, Any]:
         "score_linf": row.score_linf,
         "rate_aware_objective_linf": row.rate_aware_objective_linf,
         "rate_term": row.rate_term,
+        "section_value_pressure_linf": row.section_value_pressure_linf,
+        "section_value_pressure_ready": row.section_value_pressure_ready,
+        "section_value_neutralizations": [
+            item.as_jsonable() for item in row.section_value_neutralizations
+        ],
         "accepted": row.accepted,
         "blockers": list(row.blockers),
         "pair_count": len(row.per_pair),
@@ -1432,12 +1663,14 @@ __all__ = [
     "COMPONENT_GUARD_MODES",
     "SCHEMA",
     "SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF",
+    "SNERV_QAT_SECTION_VALUE_PRESSURE_PROOF",
     "QuantizedDecoderStats",
     "SnervDecoderEval",
     "SnervPairDelta",
     "SnervPairEval",
     "SnervScorerLoopDecoderQatError",
     "SnervScorerLoopDecoderQatSmokeResult",
+    "SnervSectionNeutralizationEval",
     "decoder_eval_pair_deltas",
     "decoder_search_direction_labels",
     "decoder_trial_passes_pose_guard",

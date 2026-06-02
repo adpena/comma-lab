@@ -286,7 +286,7 @@ def test_mlx_decoder_fake_quant_can_target_named_receiver_tensors() -> None:
 
     model.configure_decoder_fake_quant_forward(
         enabled=True,
-        quant_bits=32,
+        quant_bits=None,
         per_tensor_bits={"head_rgb_1.weight": 0},
     )
     targeted = model(pair_indices)
@@ -306,6 +306,12 @@ def test_mlx_decoder_fake_quant_rejects_invalid_quant_bits() -> None:
     model = HinervSubstrateMLX(_smoke_cfg())
     with pytest.raises(ValueError, match="quant_bits"):
         model.configure_decoder_fake_quant_forward(enabled=True, quant_bits=0)
+    with pytest.raises(ValueError, match="per_tensor_bits"):
+        model.configure_decoder_fake_quant_forward(
+            enabled=True,
+            quant_bits=None,
+            per_tensor_bits={"head_rgb_1.weight": 3},
+        )
 
 
 @skip_no_mlx

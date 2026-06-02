@@ -17,6 +17,7 @@ from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     COMPONENT_GUARD_MODES,
     CONTEST_BYTE_PRICE,
     SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF,
+    SNERV_QAT_SECTION_VALUE_PRESSURE_PROOF,
     QuantizedDecoderStats,
     SnervDecoderEval,
     SnervPairEval,
@@ -73,6 +74,7 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
     from tac.substrates.snerv_inverse_steg_carrier import scorer_loop_decoder_qat
 
     assert SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF
+    assert SNERV_QAT_SECTION_VALUE_PRESSURE_PROOF
 
     monkeypatch.setattr(
         scorer_loop_decoder_qat,
@@ -106,13 +108,17 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
         iteration=1,
         accepted=False,
         byte_pressure_multiplier=3.0,
+        section_value_pressure_multiplier=2.0,
     )
 
     assert row.receiver_archive_replay_verified is True
+    assert row.section_value_pressure_ready is True
+    assert len(row.section_value_neutralizations) == 2
+    assert row.section_value_pressure_linf >= 0.0
     assert row.rate_term == pytest.approx(CONTEST_BYTE_PRICE * row.archive_bytes)
     assert row.score_linf == pytest.approx(12.5 + np.sqrt(0.9) + row.rate_term)
     assert row.rate_aware_objective_linf == pytest.approx(
-        row.score_linf + 2.0 * row.rate_term
+        row.score_linf + 2.0 * row.rate_term + 2.0 * row.section_value_pressure_linf
     )
 
 

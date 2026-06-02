@@ -2903,6 +2903,32 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     }
 
 
+def test_hinerv_waterfill_plan_compiles_train_time_fake_quant_bits() -> None:
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {"group_name": "head_rgb_1.weight", "selected_bits": 0},
+            {"group_name": "blocks.0.conv.weight", "selected_bits": 4},
+            {"group_name": "latent_embed.bias", "selected_bits": 32},
+        ],
+    }
+
+    assert runner_mod._decoder_weight_waterfill_fake_quant_bits_by_name(plan) == {
+        "head_rgb_1.weight": 0,
+        "blocks.0.conv.weight": 4,
+        "latent_embed.bias": 32,
+    }
+
+    invalid = {**plan, "rows": [{"group_name": "x", "selected_bits": 3}]}
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="selected_bits",
+    ):
+        runner_mod._decoder_weight_waterfill_fake_quant_bits_by_name(invalid)
+
+
 def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     tmp_path: Path,
     monkeypatch,
