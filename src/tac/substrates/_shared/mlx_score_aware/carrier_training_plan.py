@@ -68,6 +68,8 @@ _STACK_READINESS_KEYS: dict[str, str] = {
     "byte_closed_archive_export_smoke": "byte_closed_archive_export_ready",
 }
 
+_RECEIVER_CLOSED_MODELSIZE_STATUS = "receiver_closed_modelsize_budget_selected"
+
 
 @dataclass(frozen=True)
 class CarrierTrainingThresholds:
@@ -216,6 +218,9 @@ def build_score_aware_carrier_training_plan(
         carrier_id=carrier,
         baseline_id=baseline_id,
     )
+    modelsize_budget_ready = _receiver_closed_modelsize_budget_ready(
+        modelsize_budget_plan
+    )
     g3_status = (
         "verified_exact"
         if _truthy(evidence.get("g3_adjoint_exact"))
@@ -227,8 +232,10 @@ def build_score_aware_carrier_training_plan(
         if latent_status == "near_zero"
         else "decoder_weights_plus_latents_pending_leverage_probe"
     )
-    route = "run_score_aware_decoder_weight_training_full_main"
-    if fit_status == "locally_plausible" and not missing_stack:
+    route = "run_receiver_closed_modelsize_ladder_before_score_aware_training"
+    if modelsize_budget_ready:
+        route = "run_score_aware_decoder_weight_training_full_main"
+    if fit_status == "locally_plausible" and not missing_stack and modelsize_budget_ready:
         route = "run_byte_closed_local_replay_gate_before_exact_auth"
 
     blockers = _ordered_unique(
@@ -236,6 +243,15 @@ def build_score_aware_carrier_training_plan(
             *fit_blockers,
             *latent_blockers,
             *(f"missing_training_stack:{item}" for item in missing_stack),
+            *(
+                []
+                if modelsize_budget_ready
+                else ["receiver_closed_modelsize_budget_ladder_missing"]
+            ),
+            *(
+                f"modelsize_budget:{blocker}"
+                for blocker in modelsize_budget_plan.get("blockers", [])
+            ),
             *([] if g3_status == "verified_exact" else ["g3_adjoint_exactness_unverified"]),
             "no_score_claim_from_advisory_carrier_probe",
             "requires_byte_closed_archive_before_promotion",
@@ -253,6 +269,7 @@ def build_score_aware_carrier_training_plan(
         "carrier_fit_status": fit_status,
         "rate_knob_status": modelsize_status,
         "modelsize_budget_plan_status": modelsize_budget_plan["status"],
+        "modelsize_budget_receiver_closed_ready": modelsize_budget_ready,
         "modelsize_budget_plan": modelsize_budget_plan,
         "g3_adjoint_status": g3_status,
         "latent_leverage_status": latent_status,
@@ -264,7 +281,11 @@ def build_score_aware_carrier_training_plan(
         ),
         "required_training_stack": list(CANONICAL_SCORE_AWARE_DECODER_TRAINING_STACK),
         "missing_training_stack": missing_stack,
-        "score_aware_training_ready": not missing_stack and g3_status == "verified_exact",
+        "score_aware_training_ready": (
+            not missing_stack
+            and g3_status == "verified_exact"
+            and modelsize_budget_ready
+        ),
         "q_at_rate_levers": [
             "coder_aware_regularization_c1a",
             "sigma_noise_qat",
@@ -310,16 +331,31 @@ def _modelsize_budget_plan(
         "carrier_id": carrier_id,
         "baseline_id": baseline_id,
         "status": "modelsize_budget_ladder_not_measured",
+        "decision_basis": "no_modelsize_budget_rows",
         "selected_archive_bytes": None,
+        "receiver_closed_selected_archive_bytes": None,
+        "points": [],
         "measured_points": [],
+        "receiver_closed_points": [],
+        "point_count_by_evidence": {},
         "marginal_steps": [],
         "recommended_next_actions": [
-            "run_measured_modelsize_ladder_before_long_budget_spend",
+            "run_receiver_closed_modelsize_ladder_before_long_budget_spend",
             "sweep_latent_dim_embed_dim_decoder_channel_and_codec_under_byte_ceiling",
         ],
-        "blockers": ["modelsize_budget_ladder_not_measured"],
+        "blockers": [
+            "modelsize_budget_ladder_not_measured",
+            "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+        ],
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _receiver_closed_modelsize_budget_ready(plan: Mapping[str, Any]) -> bool:
+    return (
+        plan.get("status") == _RECEIVER_CLOSED_MODELSIZE_STATUS
+        and plan.get("receiver_closed_selected_archive_bytes") is not None
+    )

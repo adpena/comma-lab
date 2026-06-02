@@ -1,0 +1,57 @@
+{
+  "advisory_case": {
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "receiver_closed_modelsize_budget_ladder_missing",
+      "modelsize_budget:modelsize_budget_plan_is_false_authority",
+      "modelsize_budget:receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+      "modelsize_budget:modelsize_budget_selection_is_advisory_or_projected",
+      "modelsize_budget:projected_or_lower_bound_archive_bytes_not_receiver_closed",
+      "modelsize_budget:receiver_closed_byte_proof_missing",
+      "modelsize_budget:measured_archive_byte_field_missing",
+      "no_score_claim_from_advisory_carrier_probe",
+      "requires_byte_closed_archive_before_promotion",
+      "requires_receiver_proof_before_exact_auth",
+      "requires_full_video_local_replay_before_exact_auth",
+      "requires_contest_cpu_then_cuda_auth_only_after_local_win"
+    ],
+    "modelsize_budget_plan_status": "advisory_or_projected_modelsize_budget_selected",
+    "modelsize_budget_receiver_closed_ready": false,
+    "planner_action": "run_receiver_closed_modelsize_ladder_before_score_aware_training",
+    "receiver_closed_selected_modelsize_archive_bytes": null,
+    "score_aware_training_ready": false,
+    "selected_modelsize_archive_bytes": 40000
+  },
+  "authority": {
+    "frontier_score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "purpose": "prove score-aware carrier training readiness requires receiver-closed modelsize selection",
+  "receiver_closed_case": {
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "modelsize_budget:modelsize_budget_plan_is_false_authority",
+      "no_score_claim_from_advisory_carrier_probe",
+      "requires_byte_closed_archive_before_promotion",
+      "requires_receiver_proof_before_exact_auth",
+      "requires_full_video_local_replay_before_exact_auth",
+      "requires_contest_cpu_then_cuda_auth_only_after_local_win"
+    ],
+    "modelsize_budget_plan_status": "receiver_closed_modelsize_budget_selected",
+    "modelsize_budget_receiver_closed_ready": true,
+    "planner_action": "run_byte_closed_local_replay_gate_before_exact_auth",
+    "receiver_closed_selected_modelsize_archive_bytes": 40000,
+    "score_aware_training_ready": true
+  },
+  "schema": "codex_carrier_training_modelsize_gate_proof.v1",
+  "utc": "20260602T130023Z"
+}
