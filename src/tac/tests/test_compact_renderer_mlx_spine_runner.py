@@ -672,6 +672,117 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
 
 
+def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=600)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        (out / "local_mlx_prefilter_profile.json").write_text(
+            json.dumps(
+                {
+                    "schema": "hprc_mlx_component_neutralization_profile.v1",
+                    "producer": "tac.local_acceleration.mlx_renderer_prefilter_profile",
+                    "max_pairs": 600,
+                    "num_pairs": 600,
+                    "n_samples": 600,
+                    "scorer_batch_pairs": 1,
+                    "scope_status": {"full_video": "executed"},
+                    "score_components": {"canonical_score": 0.1},
+                    "mlx_response_summary": {
+                        "batch_pairs": 1,
+                        "max_pairs": 600,
+                        "n_samples": 600,
+                    },
+                    "section_value_rows": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    replay_calls: list[dict[str, object]] = []
+
+    def fake_stage_local_replay_submission(**kwargs):
+        staged = Path(kwargs["output_dir"]) / "submission"
+        staged.mkdir(parents=True)
+        (staged / "archive.zip").write_bytes(b"archive")
+        (staged / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return staged
+
+    class FakeReplaySummary:
+        def to_json(self) -> str:
+            return json.dumps(
+                {
+                    "schema": "local_submission_replay.v1",
+                    "evaluation_passed": True,
+                    "device": "cpu",
+                    "axis_tag": "[macOS-CPU advisory]",
+                    "local_score_estimate": 1.234,
+                    "blockers": [],
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            )
+
+    def fake_run_local_submission_replay(**kwargs):
+        replay_calls.append(kwargs)
+        return FakeReplaySummary()
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+    monkeypatch.setattr(
+        runner_mod,
+        "stage_local_replay_submission",
+        fake_stage_local_replay_submission,
+    )
+    monkeypatch.setattr(
+        runner_mod,
+        "run_local_submission_replay",
+        fake_run_local_submission_replay,
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_gate",
+        num_pairs=600,
+        epochs=8,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        repo_root=REPO_ROOT,
+    )
+
+    assert replay_calls
+    assert out["auto_mlx_prefilter_profile_path"].endswith(
+        "local_mlx_prefilter_profile.json"
+    )
+    assert out["mlx_profile_paths"] == [out["auto_mlx_prefilter_profile_path"]]
+    assert out["local_cpu_replay_gate"]["executed"] is True
+    assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is True
+    assert out["local_cpu_replay_gate"]["local_replay_mlx_prefilter_passed"] is True
+    assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
+
+
 def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(
     tmp_path: Path,
     monkeypatch,
@@ -938,6 +1049,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        decoder_codec="int2_scale_bundled",
         coder_aware_qat=True,
         coder_qat_quant_bits=4,
         coder_qat_quant_residual_weight=0.001,
@@ -951,6 +1063,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     )
 
     assert captured_train_kwargs["coder_aware_qat"] is True
+    assert captured_train_kwargs["decoder_codec"] == "int2_scale_bundled"
     assert captured_train_kwargs["coder_qat_quant_bits"] == 4
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
@@ -968,6 +1081,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         "delta_weight": 0.0002,
         "authority": "false_macos_mlx_research_signal",
     }
+    assert out["score_aware_training"]["decoder_codec"] == "int2_scale_bundled"
     assert out["score_aware_training"]["recon_pixel_weight"][
         "source_kind"
     ] == "file"

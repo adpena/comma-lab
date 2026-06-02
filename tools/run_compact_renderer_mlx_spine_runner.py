@@ -2049,6 +2049,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     latent_dim: int = 8,
     embed_dim: int = 8,
     decoder_channel: int = 8,
+    decoder_codec: str = "portfolio_auto",
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
@@ -2097,6 +2098,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             latent_dim=latent_dim,
             embed_dim=embed_dim,
             decoder_channel=decoder_channel,
+            decoder_codec=decoder_codec,
             ema_decay=ema_decay,
             segnet_distillation_weight=segnet_distillation_weight,
             pose_distillation_weight=pose_distillation_weight,
@@ -2143,6 +2145,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     archive_path = artifact_dict.get("archive_path")
     training_dir = out / "hi_nerv_mlx_training"
+    auto_mlx_prefilter_profile_path = training_dir / "local_mlx_prefilter_profile.json"
+    effective_mlx_profile_paths: tuple[str | Path, ...] = tuple(mlx_profile_paths)
+    if auto_mlx_prefilter_profile_path.is_file():
+        effective_mlx_profile_paths = (
+            *effective_mlx_profile_paths,
+            auto_mlx_prefilter_profile_path,
+        )
     spine_manifest = training_dir / "hprc_representation_spine_hi_nerv_manifest.json"
     receiver_proof_path = (
         training_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
@@ -2150,7 +2159,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     projection_paths = [spine_manifest] if spine_manifest.is_file() else []
     receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
-        mlx_profile_paths,
+        effective_mlx_profile_paths,
         root=root,
     )
     has_full_video_mlx_prefilter = bool(
@@ -2201,7 +2210,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         _write_json(acquisition_path, acquisition)
         runner_plan = build_spine_bounded_runner_plan(
             acquisition_report_path=acquisition_path,
-            mlx_profile_paths=mlx_profile_paths,
+            mlx_profile_paths=effective_mlx_profile_paths,
             receiver_proof_report_paths=receiver_proof_paths,
             hprc_queue_followup_report_paths=hprc_queue_followup_report_paths,
             repo_root=root,
@@ -2247,6 +2256,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "decoder_codec": str(decoder_codec),
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
@@ -2295,8 +2305,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "ready_for_exact_eval_dispatch": False,
             },
             "mlx_prefilter_coverage": mlx_prefilter_coverage,
+            "auto_mlx_prefilter_profile_path": (
+                auto_mlx_prefilter_profile_path.as_posix()
+                if auto_mlx_prefilter_profile_path.is_file()
+                else None
+            ),
             "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+                _resolve(path, base=root).as_posix()
+                for path in effective_mlx_profile_paths
             ],
             "hprc_queue_followup_report_paths": [
                 _resolve(path, base=root).as_posix()
@@ -2960,6 +2976,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     latent_dim: int,
     embed_dim: int,
     decoder_channel: int,
+    decoder_codec: str,
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
@@ -3079,7 +3096,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "--execute-family",
                 "hi_nerv",
             ],
-            decoder_codec="int8_mixed",
+            decoder_codec=str(decoder_codec),
         )
 
     artifact_metadata = {
@@ -3087,7 +3104,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "family": "hi_nerv",
         "num_pairs": pairs,
         "full_video_pairs_required_for_promotion": 600,
-        "decoder_codec": "int8_mixed",
+        "decoder_codec": str(decoder_codec),
         "model_num_parameters_at_init": int(model.num_parameters()),
         "config": {
             "latent_dim_coarse": int(cfg.latent_dim_coarse),
@@ -3205,7 +3222,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         else 6,
         allow_segnet_only_research=bool(allow_segnet_only_research),
     )
-    return run_mlx_score_aware_full_main(
+    artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
         substrate_id="compact_runner_hi_nerv_mlx",
         lane_id="lane_compact_renderer_mlx_spine_runner_hi_nerv_20260601",
@@ -3227,6 +3244,44 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "PR95-faithful curriculum routing, and false-authority MLX evidence."
         ),
     )
+    artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
+    profile_path = output_dir / "local_mlx_prefilter_profile.json"
+    archive_bytes = artifact_dict.get("archive_bytes")
+    archive_sha256 = artifact_dict.get("archive_sha256")
+    try:
+        if archive_bytes is None or archive_sha256 is None:
+            raise CompactRendererMlxSpineRunnerError(
+                "archive_bytes/archive_sha256 missing; cannot build MLX prefilter"
+            )
+        from tac.local_acceleration.mlx_renderer_prefilter_profile import (
+            write_mlx_renderer_prefilter_profile,
+        )
+
+        write_mlx_renderer_prefilter_profile(
+            bundle=bundle,
+            output_path=profile_path,
+            archive_bytes=int(archive_bytes),
+            archive_sha256=str(archive_sha256),
+            upstream_dir=scorer_upstream_dir,
+            scorer_device=distillation_device,
+            scorer_batch_pairs=1,
+            run_id="compact_runner_hi_nerv_mlx_local_prefilter",
+            source_video_path=source_video_path,
+        )
+    except Exception as exc:
+        from tac.local_acceleration.mlx_renderer_prefilter_profile import (
+            write_mlx_renderer_prefilter_failure_profile,
+        )
+
+        write_mlx_renderer_prefilter_failure_profile(
+            output_path=profile_path,
+            archive_bytes=int(archive_bytes) if archive_bytes is not None else None,
+            archive_sha256=str(archive_sha256) if archive_sha256 is not None else None,
+            num_pairs=pairs,
+            failure=repr(exc),
+            run_id="compact_runner_hi_nerv_mlx_local_prefilter",
+        )
+    return artifact
 
 
 def _run_pact_nerv_vq_mlx_smoke(
@@ -3871,7 +3926,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--compact-decoder-channel", default=8, type=int)
     parser.add_argument(
         "--compact-decoder-codec",
-        default="int8_mixed",
+        default="portfolio_auto",
         choices=(
             "int8_mixed",
             "int8_scale_bundled",
@@ -4266,6 +4321,7 @@ def main(argv: list[str] | None = None) -> int:
             latent_dim=args.compact_latent_dim,
             embed_dim=args.compact_embed_dim,
             decoder_channel=args.compact_decoder_channel,
+            decoder_codec=args.compact_decoder_codec,
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
