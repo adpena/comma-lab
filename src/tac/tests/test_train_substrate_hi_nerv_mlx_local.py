@@ -12,6 +12,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _coder_qat_config_from_args,
     _config_from_args,
     _metadata_safe,
+    _receiver_cache_quality_manifest_summary,
     _resolve_output_dir,
 )
 
@@ -129,3 +130,63 @@ def test_hinerv_mlx_trainer_metadata_safe_drops_nested_authority_keys() -> None:
     assert safe["storage"]["selected_workload_root"].endswith("/x")
     assert safe["storage"]["children"] == [{"keep": "yes"}]
     assert safe["keep_top"] is True
+
+
+def test_hinerv_mlx_trainer_parses_post_export_receiver_cache_quality_gate() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--post-export-receiver-cache-quality-gate",
+            "--receiver-cache-quality-max-pairs",
+            "4",
+            "--receiver-cache-quality-batch-pairs",
+            "2",
+            "--receiver-cache-quality-min-segnet-dynamic-range",
+            "8",
+            "--receiver-cache-quality-reference-cache-dir",
+            "/Volumes/VertigoDataTier/pact/ref_cache",
+        ]
+    )
+
+    assert args.post_export_receiver_cache_quality_gate is True
+    assert args.receiver_cache_quality_max_pairs == 4
+    assert args.receiver_cache_quality_batch_pairs == 2
+    assert args.receiver_cache_quality_min_segnet_dynamic_range == pytest.approx(8.0)
+    assert args.receiver_cache_quality_reference_cache_dir.as_posix().endswith(
+        "/ref_cache"
+    )
+
+
+def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
+    summary = _receiver_cache_quality_manifest_summary(
+        {
+            "report_path": "/Volumes/VertigoDataTier/pact/run/report.json",
+            "archive_path": "/Volumes/VertigoDataTier/pact/run/archive.zip",
+            "archive_sha256": "a" * 64,
+            "candidate_cache_dir": "/Volumes/VertigoDataTier/pact/run/cache",
+            "quality_gate_path": "/Volumes/VertigoDataTier/pact/run/gate.json",
+            "quality_gate_passed": False,
+            "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+            "score_claim": False,
+            "quality_gate": {
+                "verdict": "RENDER_OUTPUT_DYNAMIC_RANGE_TOO_LOW",
+                "distance_to_reference": {"segnet_last_rgb_mae": 3.0},
+                "stats": {
+                    "candidate_segnet_last_rgb": {
+                        "dynamic_range": 4.0,
+                        "std": 1.5,
+                    }
+                },
+                "score_claim": False,
+            },
+        }
+    )
+
+    assert summary is not None
+    assert summary["schema"] == "hi_nerv_receiver_cache_quality_summary.v1"
+    assert summary["quality_gate_passed"] is False
+    assert summary["quality_gate_verdict"] == "RENDER_OUTPUT_DYNAMIC_RANGE_TOO_LOW"
+    assert "score_claim" not in summary
+    assert summary["candidate_segnet_last_rgb_stats"]["dynamic_range"] == pytest.approx(
+        4.0
+    )

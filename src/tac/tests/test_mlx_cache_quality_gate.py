@@ -55,12 +55,45 @@ def test_nondegenerate_close_cache_passes_local_quality_gate(tmp_path: Path) -> 
     assert report["score_claim"] is False
 
 
+def test_dynamic_range_blocker_fails_fit_gate_without_constant_verdict(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "candidate"
+    reference = tmp_path / "reference"
+    candidate.mkdir()
+    reference.mkdir()
+    small = np.linspace(20.0, 24.0, num=2 * 3 * 8 * 8, dtype=np.float32).reshape(
+        2, 3, 8, 8
+    )
+    reference_seg = small + 1.0
+    _write_cache_arrays(candidate, seg=small)
+    _write_cache_arrays(reference, seg=reference_seg)
+
+    report = build_mlx_cache_quality_gate(
+        candidate_cache_dir=candidate,
+        reference_cache_dir=reference,
+        sample_pairs=2,
+    )
+
+    assert report["verdict"] == "RENDER_OUTPUT_DYNAMIC_RANGE_TOO_LOW"
+    assert report["candidate_cache_nondegenerate"] is True
+    assert report["fit_gate_passed"] is False
+    assert "candidate_segnet_last_rgb_dynamic_range_too_low" in report["blockers"]
+    assert "candidate_segnet_last_rgb_degenerate_constant_or_flat" not in report[
+        "blockers"
+    ]
+
+
 def _write_cache(root: Path, *, seg_value: float, constant: bool) -> None:
     if constant:
         seg = np.full((2, 3, 8, 8), seg_value, dtype=np.float32)
     else:
         base = np.arange(2 * 3 * 8 * 8, dtype=np.float32).reshape(2, 3, 8, 8)
         seg = (base % 96.0) + seg_value
+    _write_cache_arrays(root, seg=seg)
+
+
+def _write_cache_arrays(root: Path, *, seg: np.ndarray) -> None:
     pose = np.concatenate([seg[:, :, ::2, ::2], seg[:, :, ::2, ::2]], axis=1)
     np.save(root / "segnet_last_rgb.npy", seg)
     np.save(root / "posenet_yuv6_pair.npy", pose)

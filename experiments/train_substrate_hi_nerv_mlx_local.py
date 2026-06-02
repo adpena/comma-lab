@@ -223,6 +223,16 @@ def _full_main(args: argparse.Namespace) -> int:
             "STE, and archive export. False-authority until contest CPU/CUDA replay."
         ),
     )
+    post_export_quality = _maybe_write_post_export_receiver_cache_quality(
+        args=args,
+        output_dir=output_dir,
+        archive_path=getattr(artifact, "archive_path", None),
+    )
+    if post_export_quality is not None:
+        _attach_post_export_receiver_cache_quality_to_training_artifact(
+            output_dir=output_dir,
+            report=post_export_quality,
+        )
     print(
         json.dumps(
             {
@@ -230,6 +240,16 @@ def _full_main(args: argparse.Namespace) -> int:
                 "output_dir": output_dir.as_posix(),
                 "epochs": artifact.total_epochs_completed,
                 "archive_bytes": getattr(artifact, "archive_bytes", None),
+                "post_export_receiver_cache_quality_report": (
+                    post_export_quality.get("report_path")
+                    if post_export_quality is not None
+                    else None
+                ),
+                "post_export_receiver_cache_quality_passed": (
+                    bool(post_export_quality.get("quality_gate_passed"))
+                    if post_export_quality is not None
+                    else False
+                ),
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
             },
@@ -272,6 +292,11 @@ def _smoke_main(args: argparse.Namespace) -> int:
             source_backend="mlx",
         )
         archive_path = archive_path_obj.as_posix()
+    post_export_quality = _maybe_write_post_export_receiver_cache_quality(
+        args=args,
+        output_dir=output_dir,
+        archive_path=Path(archive_path) if archive_path else None,
+    )
     manifest = {
         "schema": "hi_nerv_mlx_trainer_smoke.v1",
         "authority": TRAINER_AUTHORITY,
@@ -295,6 +320,11 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "archive_path": archive_path,
         "archive_sha256": archive_sha256,
         "archive_bytes": archive_bytes,
+        "post_export_receiver_cache_quality": (
+            _receiver_cache_quality_manifest_summary(post_export_quality)
+            if post_export_quality is not None
+            else None
+        ),
         "blockers": [
             "contest_cpu_cuda_exact_eval_not_executed",
             "hi_nerv_smoke_no_training_score",
@@ -359,6 +389,25 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cosine-decay-min-lr-ratio", type=float, default=1.0e-2)
     parser.add_argument("--ema-archive-selection", action="store_true")
     parser.add_argument("--smoke-export-archive", action="store_true")
+    parser.add_argument("--post-export-receiver-cache-quality-gate", action="store_true")
+    parser.add_argument(
+        "--receiver-cache-quality-reference-cache-dir",
+        type=Path,
+        default=Path("experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"),
+    )
+    parser.add_argument("--receiver-cache-quality-max-pairs", type=int, default=1)
+    parser.add_argument("--receiver-cache-quality-batch-pairs", type=int, default=1)
+    parser.add_argument("--receiver-cache-quality-min-segnet-std", type=float, default=1.0)
+    parser.add_argument(
+        "--receiver-cache-quality-min-segnet-dynamic-range",
+        type=float,
+        default=16.0,
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-segnet-mae-vs-reference-for-fit-gate",
+        type=float,
+        default=64.0,
+    )
     return parser
 
 
@@ -493,6 +542,136 @@ def _metadata_safe(value: Any) -> Any:
     if isinstance(value, list):
         return [_metadata_safe(child) for child in value]
     return value
+
+
+def _maybe_write_post_export_receiver_cache_quality(
+    *,
+    args: argparse.Namespace,
+    output_dir: Path,
+    archive_path: str | Path | None,
+) -> dict[str, Any] | None:
+    if not bool(args.post_export_receiver_cache_quality_gate):
+        return None
+    if archive_path is None:
+        return _write_post_export_receiver_cache_quality_refusal(
+            output_dir=output_dir,
+            blockers=["hi_nerv_archive_export_missing_for_receiver_cache_quality"],
+        )
+    archive = Path(archive_path).expanduser().resolve(strict=False)
+    reference = args.receiver_cache_quality_reference_cache_dir.expanduser()
+    if not reference.is_absolute():
+        reference = (REPO_ROOT / reference).resolve(strict=False)
+    if not archive.is_file():
+        return _write_post_export_receiver_cache_quality_refusal(
+            output_dir=output_dir,
+            blockers=["hi_nerv_archive_export_path_missing_for_receiver_cache_quality"],
+            archive_path=archive,
+            reference_cache_dir=reference,
+        )
+    if not reference.is_dir():
+        return _write_post_export_receiver_cache_quality_refusal(
+            output_dir=output_dir,
+            blockers=["hi_nerv_reference_cache_missing_for_receiver_cache_quality"],
+            archive_path=archive,
+            reference_cache_dir=reference,
+        )
+    from tac.substrates.hi_nerv.receiver_cache_quality import (
+        write_hi_nerv_receiver_cache_quality_report,
+    )
+
+    return write_hi_nerv_receiver_cache_quality_report(
+        archive_zip_path=archive,
+        output_dir=output_dir / "post_export_receiver_cache_quality",
+        reference_cache_dir=reference,
+        max_pairs=int(args.receiver_cache_quality_max_pairs),
+        batch_pairs=int(args.receiver_cache_quality_batch_pairs),
+        sample_pairs=int(args.receiver_cache_quality_max_pairs),
+        min_segnet_std=float(args.receiver_cache_quality_min_segnet_std),
+        min_segnet_dynamic_range=float(
+            args.receiver_cache_quality_min_segnet_dynamic_range
+        ),
+        max_segnet_mae_vs_reference_for_fit_gate=float(
+            args.receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
+        ),
+    )
+
+
+def _write_post_export_receiver_cache_quality_refusal(
+    *,
+    output_dir: Path,
+    blockers: list[str],
+    archive_path: Path | None = None,
+    reference_cache_dir: Path | None = None,
+) -> dict[str, Any]:
+    report = {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "output_dir": (output_dir / "post_export_receiver_cache_quality").as_posix(),
+        "archive_path": archive_path.as_posix() if archive_path is not None else None,
+        "reference_cache_dir": (
+            reference_cache_dir.as_posix() if reference_cache_dir is not None else None
+        ),
+        "quality_gate": None,
+        "quality_gate_passed": False,
+        "blockers": [
+            "hi_nerv_receiver_cache_quality_is_false_authority",
+            *[str(blocker) for blocker in blockers],
+        ],
+        **FALSE_AUTHORITY,
+    }
+    out = output_dir / "post_export_receiver_cache_quality"
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / "hi_nerv_receiver_cache_quality_report.json"
+    report["report_path"] = path.as_posix()
+    write_json(path, report)
+    return report
+
+
+def _attach_post_export_receiver_cache_quality_to_training_artifact(
+    *,
+    output_dir: Path,
+    report: dict[str, Any],
+) -> None:
+    artifact_path = output_dir / "training_artifact.json"
+    if not artifact_path.is_file():
+        return
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+    metadata["post_export_receiver_cache_quality"] = (
+        _receiver_cache_quality_manifest_summary(report)
+    )
+    artifact["substrate_artifact_metadata"] = metadata
+    artifact_path.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _receiver_cache_quality_manifest_summary(
+    report: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if report is None:
+        return None
+    gate = report.get("quality_gate") if isinstance(report, dict) else None
+    gate_stats = gate.get("stats") if isinstance(gate, dict) else None
+    return {
+        "schema": "hi_nerv_receiver_cache_quality_summary.v1",
+        "report_path": report.get("report_path"),
+        "archive_path": report.get("archive_path"),
+        "archive_sha256": report.get("archive_sha256"),
+        "candidate_cache_dir": report.get("candidate_cache_dir"),
+        "quality_gate_path": report.get("quality_gate_path"),
+        "quality_gate_verdict": gate.get("verdict") if isinstance(gate, dict) else None,
+        "quality_gate_passed": bool(report.get("quality_gate_passed")),
+        "candidate_segnet_last_rgb_stats": (
+            gate_stats.get("candidate_segnet_last_rgb")
+            if isinstance(gate_stats, dict)
+            else None
+        ),
+        "distance_to_reference": (
+            gate.get("distance_to_reference") if isinstance(gate, dict) else None
+        ),
+        "blockers": [str(blocker) for blocker in report.get("blockers") or []],
+    }
 
 
 def main(argv: list[str] | None = None) -> int:

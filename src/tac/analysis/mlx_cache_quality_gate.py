@@ -97,12 +97,20 @@ def build_mlx_cache_quality_gate(
         blockers.append("posenet_cache_shape_mismatch")
     blockers = _ordered_unique(blockers)
 
+    non_authority_blockers = [
+        blocker
+        for blocker in blockers
+        if blocker != "mlx_cache_quality_gate_is_false_authority"
+    ]
     if "candidate_segnet_last_rgb_degenerate_constant_or_flat" in blockers:
         verdict = "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+    elif "candidate_segnet_last_rgb_dynamic_range_too_low" in blockers:
+        verdict = "RENDER_OUTPUT_DYNAMIC_RANGE_TOO_LOW"
     elif "candidate_segnet_last_rgb_far_from_reference_fit_gate" in blockers:
         verdict = "FIT_OR_SCALE_FAILURE"
     else:
         verdict = "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+    gate_passed = not non_authority_blockers
 
     return {
         "schema": MLX_CACHE_QUALITY_GATE_SCHEMA,
@@ -110,8 +118,10 @@ def build_mlx_cache_quality_gate(
         "reference_cache_dir": reference.as_posix(),
         "sample_pairs": int(sample_pairs),
         "verdict": verdict,
-        "candidate_cache_nondegenerate": verdict == "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY",
-        "fit_gate_passed": verdict == "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY",
+        "candidate_cache_nondegenerate": (
+            "candidate_segnet_last_rgb_degenerate_constant_or_flat" not in blockers
+        ),
+        "fit_gate_passed": gate_passed,
         "stats": {
             "candidate_segnet_last_rgb": cand_seg_stats.as_jsonable(),
             "reference_segnet_last_rgb": ref_seg_stats.as_jsonable(),
@@ -215,6 +225,12 @@ def _recommended_next_actions(verdict: str) -> list[str]:
             "block_exact_eval_and_score_claims",
             "inspect_renderer_initialization_training_step_and_archive_export",
             "require_nonconstant_cache_gate_before_section_value_or_spend",
+        ]
+    if verdict == "RENDER_OUTPUT_DYNAMIC_RANGE_TOO_LOW":
+        return [
+            "block_exact_eval_and_score_claims",
+            "continue_short_fit_probe_or_increase_capacity_until_byte_dynamic_range_passes",
+            "attach_receiver_cache_quality_gate_to_archive_export",
         ]
     if verdict == "FIT_OR_SCALE_FAILURE":
         return [
