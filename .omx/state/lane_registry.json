@@ -66010,6 +66010,47 @@
         }
       },
       "notes": "2026-06-02 Codex continuation: per-pair deltas added to scorer-loop artifact schema. 2-pair strided local coordinate gate remained GO_LOCAL_CONTINUATION_ONLY but pair deltas showed non-robust cancellation (pair0 pose worsened, pair1 improved). 4-pair strided coordinate continuation is NO_GO_FOR_PROMOTION_OR_EXACT_EVAL; best score-lowering candidate failed pose guard. Pivot from linear coordinate perturbation to learned/nonlinear or scorer-loop decoder QAT before more coordinate sweeps. Still false-authority: no full-600 proof, no paired contest CPU/CUDA, fp32 decoder payload grammar not byte-optimized."
+    },
+    {
+      "id": "lane_pact_vq_projection_gap_repair_20260602",
+      "name": "PACT/VQ projection-gap repair",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -66019,5 +66060,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-02T01:06:03Z"
+  "updated_at": "2026-06-02T01:36:28Z"
 }
