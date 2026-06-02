@@ -35,6 +35,8 @@ def build_nerv_control_inventory(
     hinerv_archive_ladder_waterfill_report: Mapping[str, Any] | None = None,
     snerv_trained_ladder_waterfill_report: Mapping[str, Any] | None = None,
     hinerv_decoder_weight_saliency_report: Mapping[str, Any] | None = None,
+    snerv_waterfill_mode_assignment_report: Mapping[str, Any] | None = None,
+    snerv_decoder_mode_probe_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a machine-readable map of NeRV controls and required bindings."""
 
@@ -76,6 +78,16 @@ def build_nerv_control_inventory(
             hinerv_decoder_weight_saliency_report=(
                 hinerv_decoder_weight_saliency_report
             ),
+            focus_families=focus,
+        ),
+        "decoder_mode_assignment_reports": _decoder_mode_assignment_reports(
+            snerv_waterfill_mode_assignment_report=(
+                snerv_waterfill_mode_assignment_report
+            ),
+            focus_families=focus,
+        ),
+        "decoder_mode_probe_reports": _decoder_mode_probe_reports(
+            snerv_decoder_mode_probe_report=snerv_decoder_mode_probe_report,
             focus_families=focus,
         ),
         "control_rows": controls,
@@ -166,6 +178,25 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
                 f"- `{family}`: `{saliency_row.get('status')}` "
                 f"({saliency_row.get('row_count', 0)} rows, "
                 f"full_video={saliency_row.get('full_video_coverage')})"
+            )
+    mode_assignments = report.get("decoder_mode_assignment_reports")
+    if isinstance(mode_assignments, Mapping):
+        lines.extend(["", "## Decoder Mode Assignment", ""])
+        for family, assignment_row in mode_assignments.items():
+            lines.append(
+                f"- `{family}`: `{assignment_row.get('status')}` "
+                f"({assignment_row.get('row_count', 0)} rows, "
+                f"{assignment_row.get('local_advisory_probe_ready_row_count', 0)} "
+                "local-probe ready)"
+            )
+    mode_probes = report.get("decoder_mode_probe_reports")
+    if isinstance(mode_probes, Mapping):
+        lines.extend(["", "## Decoder Mode Probe", ""])
+        for family, probe_row in mode_probes.items():
+            lines.append(
+                f"- `{family}`: best `{probe_row.get('best_plan_label')}` "
+                f"score `{probe_row.get('best_plan_score_linf_advisory')}` "
+                f"({probe_row.get('candidate_count', 0)} candidates)"
             )
     lines.extend(["", "## Sources", ""])
     for source in report.get("upstream_sources_checked", []):
@@ -379,6 +410,100 @@ def _decoder_weight_saliency_replays(
                     "score_saliency": row.get("score_saliency"),
                 }
                 for row in report.get("saliency_rows", ())
+                if isinstance(row, Mapping)
+            ],
+            "blockers": list(report.get("blockers") or ()),
+            **FALSE_AUTHORITY,
+        }
+    return rows
+
+
+def _decoder_mode_assignment_reports(
+    *,
+    snerv_waterfill_mode_assignment_report: Mapping[str, Any] | None,
+    focus_families: Iterable[str],
+) -> dict[str, Any]:
+    focus = {str(family) for family in focus_families}
+    rows: dict[str, Any] = {}
+    if snerv_waterfill_mode_assignment_report is not None and (
+        not focus or "snerv" in focus
+    ):
+        report = snerv_waterfill_mode_assignment_report
+        rows["snerv"] = {
+            "schema": report.get("schema"),
+            "status": "decoder_mode_assignment_rows_available_false_authority",
+            "report_path": report.get("report_path"),
+            "row_count": int(report.get("row_count", 0) or 0),
+            "local_advisory_probe_ready_row_count": int(
+                report.get("local_advisory_probe_ready_row_count", 0) or 0
+            ),
+            "receiver_mode_export_ready_row_count": int(
+                report.get("receiver_mode_export_ready_row_count", 0) or 0
+            ),
+            "assignment_rows": [
+                {
+                    "row_id": row.get("row_id"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "decoder_payload_schema": row.get("decoder_payload_schema"),
+                    "mode_count": row.get("mode_count"),
+                    "mode_plan_cli_arg": row.get("mode_plan_cli_arg"),
+                    "mode_histogram": row.get("mode_histogram"),
+                    "ready_for_local_advisory_probe": row.get(
+                        "ready_for_local_advisory_probe"
+                    ),
+                    "ready_for_receiver_mode_export": row.get(
+                        "ready_for_receiver_mode_export"
+                    ),
+                    "blockers": list(row.get("blockers") or ()),
+                }
+                for row in report.get("rows", ())
+                if isinstance(row, Mapping)
+            ],
+            "blockers": list(report.get("blockers") or ()),
+            **FALSE_AUTHORITY,
+        }
+    return rows
+
+
+def _decoder_mode_probe_reports(
+    *,
+    snerv_decoder_mode_probe_report: Mapping[str, Any] | None,
+    focus_families: Iterable[str],
+) -> dict[str, Any]:
+    focus = {str(family) for family in focus_families}
+    rows: dict[str, Any] = {}
+    if snerv_decoder_mode_probe_report is not None and (
+        not focus or "snerv" in focus
+    ):
+        report = snerv_decoder_mode_probe_report
+        rows["snerv"] = {
+            "schema": report.get("schema"),
+            "status": "decoder_mode_probe_rows_available_false_authority",
+            "axis_tag": report.get("axis_tag"),
+            "n_pairs": report.get("n_pairs"),
+            "levels": report.get("levels"),
+            "best_plan_label": report.get("best_plan_label"),
+            "best_plan_score_linf_advisory": report.get(
+                "best_plan_score_linf_advisory"
+            ),
+            "candidate_count": len(report.get("candidates") or ()),
+            "candidate_rows": [
+                {
+                    "label": row.get("label"),
+                    "modes": row.get("modes"),
+                    "mode_assignment_source": row.get("mode_assignment_source"),
+                    "mode_histogram": row.get("mode_histogram"),
+                    "archive_bytes_total": row.get("archive_bytes_total"),
+                    "decoder_bytes": row.get("decoder_bytes"),
+                    "d_seg_mean_linf": row.get("d_seg_mean_linf"),
+                    "d_pose_mean_linf": row.get("d_pose_mean_linf"),
+                    "score_linf": row.get("score_linf"),
+                    "receiver_archive_replay_verified": row.get(
+                        "receiver_archive_replay_verified"
+                    ),
+                    "blockers": list(row.get("blockers") or ()),
+                }
+                for row in report.get("candidates", ())
                 if isinstance(row, Mapping)
             ],
             "blockers": list(report.get("blockers") or ()),
@@ -1252,10 +1377,12 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "src/tac/analysis/hinerv_archive_ladder_waterfill.py",
             "src/tac/analysis/snerv_trained_ladder_waterfill.py",
             "src/tac/analysis/hinerv_decoder_weight_saliency_replay.py",
+            "src/tac/analysis/snerv_waterfill_mode_assignment.py",
             "tools/build_nerv_decoder_weight_waterfill_plan.py",
             "tools/build_hinerv_archive_ladder_waterfill.py",
             "tools/build_snerv_trained_ladder_waterfill.py",
             "tools/build_hinerv_decoder_weight_saliency_replay.py",
+            "tools/build_snerv_waterfill_mode_assignment.py",
         ],
         "receiver_and_exact_custody": [
             "src/tac/substrates/hprc/archive_candidate.py",

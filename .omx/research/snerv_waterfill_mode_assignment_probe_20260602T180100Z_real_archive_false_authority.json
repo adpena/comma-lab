@@ -1,0 +1,105 @@
+{
+  "schema": "snerv_decoder_mode_assignment_probe.v1",
+  "axis_tag": "[macOS-CPU advisory]",
+  "n_pairs": 1,
+  "levels": 1,
+  "wavelet": "db2",
+  "bits_per_coeff": 2.5,
+  "mode_plan_count": 2,
+  "decoder_payload_codec": "mixed_magnitude_symmetric",
+  "score_claim": false,
+  "frontier_score_claim": false,
+  "rank_or_kill_eligible": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "exact_or_full_video_launched": false,
+  "best_plan_label": "explicit_fp163",
+  "best_plan_score_linf_advisory": 3.5808290913882557,
+  "candidates": [
+    {
+      "label": "magnitude_heuristic",
+      "modes": null,
+      "mode_assignment_source": "magnitude_heuristic",
+      "mode_histogram": {
+        "fp16": 2,
+        "int2": 0,
+        "int4": 1,
+        "int8": 0,
+        "zero": 0
+      },
+      "decoder_payload_bytes": 45,
+      "decoder_bytes": 1028,
+      "receiver_archive_packet_bytes": 550370,
+      "receiver_archive_packet_sha256": "57b9390d4c16a8e285bfba83aa4e8081d61bee84225c96c4d542d271fe58e6b2",
+      "archive_bytes_total": 550370,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_replay_error": "",
+      "d_seg_mean_linf": 0.013941447250545025,
+      "d_pose_mean_linf": 0.33304765820503235,
+      "score_linf": 3.58557285417938,
+      "d_seg_mean_l2": 0.0062204995192587376,
+      "d_pose_mean_l2": 0.02732296846807003,
+      "score_l2": 1.2534352317322448,
+      "rate_term": 0.36646879202984944,
+      "blockers": [
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip"
+      ],
+      "axis_tag": "[macOS-CPU advisory]",
+      "score_claim": false,
+      "frontier_score_claim": false,
+      "rank_or_kill_eligible": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false
+    },
+    {
+      "label": "explicit_fp163",
+      "modes": [
+        "fp16",
+        "fp16",
+        "fp16"
+      ],
+      "mode_assignment_source": "explicit",
+      "mode_histogram": {
+        "fp16": 3,
+        "int2": 0,
+        "int4": 0,
+        "int8": 0,
+        "zero": 0
+      },
+      "decoder_payload_bytes": 56,
+      "decoder_bytes": 1030,
+      "receiver_archive_packet_bytes": 550390,
+      "receiver_archive_packet_sha256": "ed07a5fd477b8ea31b08e3a0d21ccadf64a8f6ead70573a8a89f6aea00a68a79",
+      "archive_bytes_total": 550390,
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_replay_error": "",
+      "d_seg_mean_linf": 0.013921101577579975,
+      "d_pose_mean_linf": 0.3320547044277191,
+      "score_linf": 3.5808290913882557,
+      "d_seg_mean_l2": 0.0062306723557412624,
+      "d_pose_mean_l2": 0.026826754212379456,
+      "score_l2": 1.24969756431107,
+      "rate_term": 0.3664821092089119,
+      "blockers": [
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip"
+      ],
+      "axis_tag": "[macOS-CPU advisory]",
+      "score_claim": false,
+      "frontier_score_claim": false,
+      "rank_or_kill_eligible": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false
+    }
+  ],
+  "blockers": [
+    "macos_cpu_advisory_only",
+    "full_600_pair_receiver_replay_missing",
+    "paired_contest_cpu_cuda_auth_eval_missing",
+    "not_packaged_as_contest_archive_zip"
+  ],
+  "notes": "Advisory-only local decoder mode assignment probe. Every candidate uses receiver-decoded mixed decoder bytes; no exact eval, full-600 promotion, or rank/kill authority is granted by this artifact."
+}

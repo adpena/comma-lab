@@ -98,6 +98,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "src/tac/analysis/snerv_trained_ladder_waterfill.py" in surfaces[
         "section_value_and_codebook"
     ]
+    assert "src/tac/analysis/snerv_waterfill_mode_assignment.py" in surfaces[
+        "section_value_and_codebook"
+    ]
     assert "tools/build_nerv_decoder_weight_waterfill_plan.py" in surfaces[
         "section_value_and_codebook"
     ]
@@ -111,6 +114,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "section_value_and_codebook"
     ]
     assert "tools/build_hinerv_decoder_weight_saliency_replay.py" in surfaces[
+        "section_value_and_codebook"
+    ]
+    assert "tools/build_snerv_waterfill_mode_assignment.py" in surfaces[
         "section_value_and_codebook"
     ]
     assert "src/tac/submission_packet/paired_auth_eval.py" in surfaces[
@@ -336,6 +342,101 @@ def test_nerv_control_inventory_accepts_hinerv_decoder_weight_saliency_report() 
     assert measured["saliency_rows"][0]["decoder_weight_saliency"] == 0.125
 
 
+def test_nerv_control_inventory_accepts_snerv_waterfill_mode_assignment_report() -> None:
+    mode_assignment_report = {
+        "schema": "snerv_waterfill_mode_assignment.v1",
+        "report_path": ".omx/research/snerv_mode_assignment_fake.json",
+        "row_count": 1,
+        "local_advisory_probe_ready_row_count": 1,
+        "receiver_mode_export_ready_row_count": 0,
+        "rows": [
+            {
+                "row_id": "snerv_local_tiny",
+                "archive_sha256": "a" * 64,
+                "decoder_payload_schema": "snerv_decoder_payload.v3",
+                "mode_count": 3,
+                "mode_plan_cli_arg": "fp16,fp16,fp16",
+                "mode_histogram": {"fp16": 3},
+                "ready_for_local_advisory_probe": True,
+                "ready_for_receiver_mode_export": False,
+                "blockers": [
+                    "fp32_protect_downgraded_to_fp16_requires_receiver_replay"
+                ],
+            }
+        ],
+        "blockers": ["mode_assignment_is_false_authority_until_receiver_replay"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("snerv",),
+        snerv_waterfill_mode_assignment_report=mode_assignment_report,
+    )
+
+    measured = report["decoder_mode_assignment_reports"]["snerv"]
+    assert measured["schema"] == "snerv_waterfill_mode_assignment.v1"
+    assert measured["score_claim"] is False
+    assert measured["row_count"] == 1
+    assert measured["local_advisory_probe_ready_row_count"] == 1
+    assert measured["receiver_mode_export_ready_row_count"] == 0
+    assert measured["assignment_rows"][0]["mode_plan_cli_arg"] == "fp16,fp16,fp16"
+
+
+def test_nerv_control_inventory_accepts_snerv_decoder_mode_probe_report() -> None:
+    probe_report = {
+        "schema": "snerv_decoder_mode_assignment_probe.v1",
+        "axis_tag": "[macOS-CPU advisory]",
+        "n_pairs": 1,
+        "levels": 1,
+        "best_plan_label": "explicit_fp163",
+        "best_plan_score_linf_advisory": 3.58,
+        "candidates": [
+            {
+                "label": "magnitude_heuristic",
+                "modes": None,
+                "mode_assignment_source": "magnitude_heuristic",
+                "mode_histogram": {"fp16": 2, "int4": 1},
+                "archive_bytes_total": 550370,
+                "decoder_bytes": 1028,
+                "d_seg_mean_linf": 0.0139,
+                "d_pose_mean_linf": 0.333,
+                "score_linf": 3.585,
+                "receiver_archive_replay_verified": True,
+                "blockers": ["paired_contest_cpu_cuda_auth_eval_missing"],
+            },
+            {
+                "label": "explicit_fp163",
+                "modes": ["fp16", "fp16", "fp16"],
+                "mode_assignment_source": "explicit",
+                "mode_histogram": {"fp16": 3},
+                "archive_bytes_total": 550390,
+                "decoder_bytes": 1030,
+                "d_seg_mean_linf": 0.0139,
+                "d_pose_mean_linf": 0.332,
+                "score_linf": 3.58,
+                "receiver_archive_replay_verified": True,
+                "blockers": ["paired_contest_cpu_cuda_auth_eval_missing"],
+            },
+        ],
+        "blockers": ["macos_cpu_advisory_only"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("snerv",),
+        snerv_decoder_mode_probe_report=probe_report,
+    )
+
+    measured = report["decoder_mode_probe_reports"]["snerv"]
+    assert measured["schema"] == "snerv_decoder_mode_assignment_probe.v1"
+    assert measured["score_claim"] is False
+    assert measured["best_plan_label"] == "explicit_fp163"
+    assert measured["candidate_count"] == 2
+    assert measured["candidate_rows"][1]["modes"] == ["fp16", "fp16", "fp16"]
+
+
 def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
     tmp_path: Path,
 ) -> None:
@@ -490,4 +591,119 @@ def test_build_nerv_control_inventory_cli_accepts_hinerv_saliency_report(
     assert rc == 0
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["decoder_weight_saliency_replays"]["hi_nerv"]["row_count"] == 1
+    assert payload["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_snerv_mode_assignment_report(
+    tmp_path: Path,
+) -> None:
+    mode_path = tmp_path / "modes.json"
+    output_json = tmp_path / "inventory.json"
+    mode_path.write_text(
+        """
+        {
+          "schema": "snerv_waterfill_mode_assignment.v1",
+          "report_path": ".omx/research/snerv_mode_assignment_fake.json",
+          "row_count": 1,
+          "local_advisory_probe_ready_row_count": 1,
+          "receiver_mode_export_ready_row_count": 0,
+          "rows": [
+            {
+              "row_id": "snerv_local_tiny",
+              "archive_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "decoder_payload_schema": "snerv_decoder_payload.v3",
+              "mode_count": 3,
+              "mode_plan_cli_arg": "fp16,fp16,fp16",
+              "mode_histogram": {"fp16": 3},
+              "ready_for_local_advisory_probe": true,
+              "ready_for_receiver_mode_export": false,
+              "blockers": ["fp32_protect_downgraded_to_fp16_requires_receiver_replay"]
+            }
+          ],
+          "blockers": ["mode_assignment_is_false_authority_until_receiver_replay"],
+          "score_claim": false,
+          "ready_for_exact_eval_dispatch": false
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "snerv",
+            "--repo-root",
+            str(REPO),
+            "--snerv-waterfill-mode-assignment-json",
+            str(mode_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["decoder_mode_assignment_reports"]["snerv"]["row_count"] == 1
+    assert payload["decoder_mode_assignment_reports"]["snerv"]["assignment_rows"][0][
+        "mode_plan_cli_arg"
+    ] == "fp16,fp16,fp16"
+    assert payload["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_snerv_decoder_mode_probe_report(
+    tmp_path: Path,
+) -> None:
+    probe_path = tmp_path / "probe.json"
+    output_json = tmp_path / "inventory.json"
+    probe_path.write_text(
+        """
+        {
+          "schema": "snerv_decoder_mode_assignment_probe.v1",
+          "axis_tag": "[macOS-CPU advisory]",
+          "n_pairs": 1,
+          "levels": 1,
+          "best_plan_label": "explicit_fp163",
+          "best_plan_score_linf_advisory": 3.58,
+          "candidates": [
+            {
+              "label": "explicit_fp163",
+              "modes": ["fp16", "fp16", "fp16"],
+              "mode_assignment_source": "explicit",
+              "mode_histogram": {"fp16": 3},
+              "archive_bytes_total": 550390,
+              "decoder_bytes": 1030,
+              "d_seg_mean_linf": 0.0139,
+              "d_pose_mean_linf": 0.332,
+              "score_linf": 3.58,
+              "receiver_archive_replay_verified": true,
+              "blockers": ["paired_contest_cpu_cuda_auth_eval_missing"]
+            }
+          ],
+          "blockers": ["macos_cpu_advisory_only"],
+          "score_claim": false,
+          "ready_for_exact_eval_dispatch": false
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "snerv",
+            "--repo-root",
+            str(REPO),
+            "--snerv-decoder-mode-probe-json",
+            str(probe_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["decoder_mode_probe_reports"]["snerv"]["best_plan_label"] == (
+        "explicit_fp163"
+    )
+    assert payload["decoder_mode_probe_reports"]["snerv"]["candidate_count"] == 1
     assert payload["score_claim"] is False

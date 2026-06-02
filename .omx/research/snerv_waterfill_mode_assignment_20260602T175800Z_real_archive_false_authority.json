@@ -1,0 +1,127 @@
+{
+  "authority": "false_authority_snerv_waterfill_mode_assignment_no_score_claim",
+  "axis_tag": "[planning/control:false-authority]",
+  "blockers": [
+    "mode_assignment_is_false_authority_until_receiver_replay_and_exact_eval",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "decoder_weight_saliency_replay_required_for_authority",
+    "sample_pair_count_below_full600",
+    "required_emission_field_missing:official_controls.--modelsize",
+    "required_emission_field_missing:official_controls.mfu_enabled",
+    "required_emission_field_missing:official_controls.hfr_enabled",
+    "required_emission_field_missing:official_controls.snerv_t_enabled",
+    "required_emission_field_missing:qat_bits",
+    "decoder_weight_saliency_missing_for_some_groups",
+    "full_video_coverage_missing",
+    "receiver_proof_not_satisfied",
+    "mixed_decoder_modes_do_not_support_fp32",
+    "fp32_protect_downgraded_to_fp16_requires_receiver_replay"
+  ],
+  "candidate_id": "snerv_trained_ladder_bridge_20260602T171500Z",
+  "dispatch_attempted": false,
+  "family": "snerv",
+  "gpu_launched": false,
+  "local_advisory_probe_ready_row_count": 1,
+  "next_actions": [
+    "run_decoder_weight_saliency_or_vjp_before_mode_export",
+    "probe_fp16_protect_substitution_before_export",
+    "rerun_on_full600_receiver_closed_snar_rows",
+    "run_local_receiver_decoded_mode_probe_with_cli_arg"
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_mode_export_ready_row_count": 0,
+  "report_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-snerv-stratified-smoke-20260602T112911Z/.omx/research/snerv_waterfill_mode_assignment_20260602T175800Z_real_archive_false_authority.json",
+  "row_count": 1,
+  "rows": [
+    {
+      "archive_sha256": "b69d7b23f000cdf05827a38060af3baed78da6c438379f842517c3138b6317cc",
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "sample_pair_count_below_full600",
+        "required_emission_field_missing:official_controls.--modelsize",
+        "required_emission_field_missing:official_controls.mfu_enabled",
+        "required_emission_field_missing:official_controls.hfr_enabled",
+        "required_emission_field_missing:official_controls.snerv_t_enabled",
+        "required_emission_field_missing:qat_bits",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_coverage_missing",
+        "receiver_proof_not_satisfied",
+        "mixed_decoder_modes_do_not_support_fp32",
+        "fp32_protect_downgraded_to_fp16_requires_receiver_replay"
+      ],
+      "candidate_id": "snerv_trained_ladder_bridge_20260602T171500Z:snerv_trained_ladder_row_archive",
+      "decoder_payload_schema": "snerv_decoder_payload.v3",
+      "decoder_precision_mode": "mixed_magnitude_symmetric",
+      "dispatch_attempted": false,
+      "expected_mode_count": 3,
+      "gpu_launched": false,
+      "levels": 1,
+      "mode_count": 3,
+      "mode_histogram": {
+        "fp16": 3
+      },
+      "mode_plan_cli_arg": "fp16,fp16,fp16",
+      "mode_rows": [
+        {
+          "blockers": [
+            "mixed_decoder_modes_do_not_support_fp32",
+            "fp32_protect_downgraded_to_fp16_requires_receiver_replay"
+          ],
+          "group_name": "decoder.level0.LH.kernel",
+          "level": 0,
+          "receiver_mode": "fp16",
+          "selected_action": "fp32_protect",
+          "selected_bits": 32,
+          "subband": "LH"
+        },
+        {
+          "blockers": [
+            "mixed_decoder_modes_do_not_support_fp32",
+            "fp32_protect_downgraded_to_fp16_requires_receiver_replay"
+          ],
+          "group_name": "decoder.level0.HL.kernel",
+          "level": 0,
+          "receiver_mode": "fp16",
+          "selected_action": "fp32_protect",
+          "selected_bits": 32,
+          "subband": "HL"
+        },
+        {
+          "blockers": [
+            "mixed_decoder_modes_do_not_support_fp32",
+            "fp32_protect_downgraded_to_fp16_requires_receiver_replay"
+          ],
+          "group_name": "decoder.level0.HH.kernel",
+          "level": 0,
+          "receiver_mode": "fp16",
+          "selected_action": "fp32_protect",
+          "selected_bits": 32,
+          "subband": "HH"
+        }
+      ],
+      "modes": [
+        "fp16",
+        "fp16",
+        "fp16"
+      ],
+      "probe_command_hint": "tools/probe_snerv_decoder_mode_assignments.py --mode-plan fp16,fp16,fp16",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_local_advisory_probe": true,
+      "ready_for_receiver_mode_export": false,
+      "row_id": "snerv_trained_ladder_row_archive",
+      "score_claim": false,
+      "score_claim_valid": false
+    }
+  ],
+  "schema": "snerv_waterfill_mode_assignment.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_schema": "snerv_trained_ladder_waterfill.v1"
+}

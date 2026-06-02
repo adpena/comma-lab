@@ -72,6 +72,18 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Optional false-authority HiNeRV decoder-weight saliency replay JSON.",
     )
+    parser.add_argument(
+        "--snerv-waterfill-mode-assignment-json",
+        default=None,
+        type=Path,
+        help="Optional false-authority SNeRV waterfill decoder-mode assignment JSON.",
+    )
+    parser.add_argument(
+        "--snerv-decoder-mode-probe-json",
+        default=None,
+        type=Path,
+        help="Optional false-authority SNeRV decoder-mode advisory probe JSON.",
+    )
     args = parser.parse_args(argv)
 
     focus = tuple(args.focus_family or ("hi_nerv", "snerv"))
@@ -103,6 +115,20 @@ def main(argv: list[str] | None = None) -> int:
                 encoding="utf-8"
             )
         )
+    snerv_waterfill_mode_assignment_report = None
+    if args.snerv_waterfill_mode_assignment_json is not None:
+        snerv_waterfill_mode_assignment_report = json.loads(
+            args.snerv_waterfill_mode_assignment_json.expanduser().read_text(
+                encoding="utf-8"
+            )
+        )
+    snerv_decoder_mode_probe_report = None
+    if args.snerv_decoder_mode_probe_json is not None:
+        snerv_decoder_mode_probe_report = json.loads(
+            args.snerv_decoder_mode_probe_json.expanduser().read_text(
+                encoding="utf-8"
+            )
+        )
     report = build_nerv_control_inventory(
         focus_families=focus,
         repo_root=args.repo_root,
@@ -116,6 +142,10 @@ def main(argv: list[str] | None = None) -> int:
         hinerv_decoder_weight_saliency_report=(
             hinerv_decoder_weight_saliency_report
         ),
+        snerv_waterfill_mode_assignment_report=(
+            snerv_waterfill_mode_assignment_report
+        ),
+        snerv_decoder_mode_probe_report=snerv_decoder_mode_probe_report,
     )
     output = Path(args.output_json).expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)
