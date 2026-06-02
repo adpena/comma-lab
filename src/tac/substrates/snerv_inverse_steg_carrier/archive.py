@@ -31,11 +31,21 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SnervFrameCode,
     decode_frame,
 )
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+    SNERV_LF_PAYLOAD_INTN_CODEC_PROOF as _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF,
+)
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+    SnervLfPayloadCodecError,
+    decode_lf_quant_payload_v2,
+    encode_lf_quant_payload_v2,
+    is_lf_quant_payload_v2,
+)
 
 SNERV_ARCHIVE_SCHEMA = "snerv_inverse_steg_archive.v1"
 SNERV_ARCHIVE_MAGIC = b"SNAR1"
 SNERV_LF_QUANT_MAGIC = b"SNQL1"
 SNERV_DECODER_MAGIC = b"SNDC1"
+SNERV_LF_PAYLOAD_INTN_CODEC_PROOF = _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF
 HEADER_LEN_FMT = "<I"
 SECTION_ORDER = ("metadata_payload", "lf_payload", "decoder_payload", "step_map_packet")
 DECODER_SUBBANDS = ("LH", "HL", "HH")
@@ -390,12 +400,22 @@ def encode_lf_metadata_payload(
     return zeros.tobytes()
 
 
-def encode_lf_quant_payload(lf_quant_planes: list[np.ndarray]) -> bytes:
+def encode_lf_quant_payload(
+    lf_quant_planes: list[np.ndarray],
+    *,
+    codec: str = "int64_lzma",
+) -> bytes:
     """Encode quantized LF planes as deterministic scorer-free receiver bytes."""
 
     arrays = [_validate_lf_quant_plane(a) for a in lf_quant_planes]
     if not arrays:
         raise SnervArchiveError("lf_quant_planes must be non-empty")
+    normalized = str(codec).strip().lower()
+    if normalized not in {"int64_lzma", "legacy", "raw_int64_lzma"}:
+        try:
+            return encode_lf_quant_payload_v2(arrays, mode=normalized)
+        except SnervLfPayloadCodecError as exc:
+            raise SnervArchiveError(str(exc)) from exc
     raw = b"".join(np.asarray(a, dtype="<i8").reshape(-1).tobytes() for a in arrays)
     compressed = lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
     header = {
@@ -412,6 +432,11 @@ def encode_lf_quant_payload(lf_quant_planes: list[np.ndarray]) -> bytes:
 def decode_lf_quant_payload(payload: bytes) -> list[np.ndarray]:
     """Decode LF quantized coefficient planes from receiver payload bytes."""
 
+    if is_lf_quant_payload_v2(payload):
+        try:
+            return decode_lf_quant_payload_v2(payload)
+        except SnervLfPayloadCodecError as exc:
+            raise SnervArchiveError(str(exc)) from exc
     header, compressed = _unpack_subpacket(
         payload,
         magic=SNERV_LF_QUANT_MAGIC,

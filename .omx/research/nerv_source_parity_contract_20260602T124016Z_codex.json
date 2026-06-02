@@ -1,0 +1,599 @@
+{
+  "authority": "false_authority_source_parity_no_score_claim",
+  "blockers": [
+    "snerv_mfu_hfr_stride_stack_missing",
+    "snerv_scorer_loop_decoder_qat_missing",
+    "snerv_qat_receiver_codec_pricing_missing",
+    "snerv_official_haar_mode_missing",
+    "snerv_receiver_dependency_custody_missing",
+    "snerv_fc_dim_modelsize_control_missing"
+  ],
+  "control_rows": [
+    {
+      "blockers": [],
+      "control_id": "hi_nerv_modelsize_config_ladder",
+      "family": "hi_nerv",
+      "markers": [
+        "latent_dim_coarse",
+        "embed_dim",
+        "decoder_channels"
+      ],
+      "missing_markers": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_files": [
+        "src/tac/substrates/hi_nerv/architecture.py"
+      ],
+      "status": "implemented_or_declared"
+    },
+    {
+      "blockers": [],
+      "control_id": "hi_nerv_bitstream_q_control",
+      "family": "hi_nerv",
+      "markers": [
+        "decoder_codec",
+        "int8_mixed"
+      ],
+      "missing_markers": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_files": [
+        "src/tac/substrates/hi_nerv/archive.py",
+        "src/tac/substrates/hi_nerv/archive_candidate.py"
+      ],
+      "status": "implemented_or_declared"
+    },
+    {
+      "blockers": [
+        "snerv_fc_dim_modelsize_control_missing"
+      ],
+      "control_id": "snerv_fc_dim_modelsize_control",
+      "family": "snerv",
+      "markers": [
+        "fc_dim",
+        "emb_size"
+      ],
+      "missing_markers": [
+        "fc_dim",
+        "emb_size"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_files": [
+        "src/tac/substrates/snerv_inverse_steg_carrier"
+      ],
+      "status": "missing_or_partial"
+    },
+    {
+      "blockers": [],
+      "control_id": "snerv_lf_stepmap_and_intN_control",
+      "family": "snerv",
+      "markers": [
+        "SNERV_LF_PAYLOAD_INTN_CODEC_PROOF"
+      ],
+      "missing_markers": [],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_files": [
+        "src/tac/substrates/snerv_inverse_steg_carrier/archive.py"
+      ],
+      "status": "implemented_or_declared"
+    }
+  ],
+  "families": [
+    "hi_nerv",
+    "snerv"
+  ],
+  "family_rows": [
+    {
+      "blockers": [],
+      "family": "hi_nerv",
+      "long_training_ready": true,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "blockers": [
+        "snerv_mfu_hfr_stride_stack_missing",
+        "snerv_scorer_loop_decoder_qat_missing",
+        "snerv_qat_receiver_codec_pricing_missing",
+        "snerv_official_haar_mode_missing",
+        "snerv_receiver_dependency_custody_missing",
+        "snerv_fc_dim_modelsize_control_missing"
+      ],
+      "family": "snerv",
+      "long_training_ready": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    }
+  ],
+  "feature_rows": [
+    {
+      "blockers": [],
+      "family": "hi_nerv",
+      "feature_id": "hi_nerv_symbol_map",
+      "implementation_target": "architecture/archive/export symbols resolve",
+      "official_source_id": "hi_nerv_official_repo",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "implemented_or_bound",
+      "symbol_rows": [
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_symbol_map",
+          "module": "tac.substrates.hi_nerv.architecture",
+          "requirement": "config surface",
+          "status": "present",
+          "symbol": "HinervConfig"
+        },
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_symbol_map",
+          "module": "tac.substrates.hi_nerv.architecture",
+          "requirement": "torch forward surface",
+          "status": "present",
+          "symbol": "HinervSubstrate"
+        },
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_symbol_map",
+          "module": "tac.substrates.hi_nerv.archive",
+          "requirement": "receiver packet packer",
+          "status": "present",
+          "symbol": "pack_archive"
+        },
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_symbol_map",
+          "module": "tac.substrates.hi_nerv.archive",
+          "requirement": "receiver packet parser",
+          "status": "present",
+          "symbol": "parse_archive"
+        },
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_symbol_map",
+          "module": "tac.substrates.hi_nerv.archive_candidate",
+          "requirement": "archive-bound export",
+          "status": "present",
+          "symbol": "export_hi_nerv_mlx_archive"
+        }
+      ]
+    },
+    {
+      "blockers": [],
+      "family": "hi_nerv",
+      "feature_id": "hi_nerv_mlx_tiny_forward_parity",
+      "implementation_target": "MLX forward and PyTorch-layout export parity",
+      "official_source_id": "hi_nerv_official_repo",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "implemented_or_bound",
+      "symbol_rows": [
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_mlx_tiny_forward_parity",
+          "module": "tac.substrates.hi_nerv.mlx_renderer",
+          "requirement": "MLX renderer",
+          "status": "present",
+          "symbol": "HinervSubstrateMLX"
+        },
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_mlx_tiny_forward_parity",
+          "module": "tac.substrates.hi_nerv.mlx_renderer",
+          "requirement": "resolution path",
+          "status": "present",
+          "symbol": "_bilinear_resize_nhwc"
+        }
+      ]
+    },
+    {
+      "blockers": [],
+      "family": "hi_nerv",
+      "feature_id": "hi_nerv_generic_resolution_path",
+      "implementation_target": "arbitrary patch/resolution resize matches torch align_corners=False",
+      "official_source_id": "hi_nerv_official_repo",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [
+        {
+          "marker": "bilinear_resize_nhwc",
+          "status": "present"
+        },
+        {
+          "marker": "align_corners=False",
+          "status": "present"
+        }
+      ],
+      "status": "implemented_or_bound",
+      "symbol_rows": []
+    },
+    {
+      "blockers": [],
+      "family": "hi_nerv",
+      "feature_id": "hi_nerv_bitstream_quantization_roundtrip",
+      "implementation_target": "receiver-visible compressed decoder and latent bitstream",
+      "official_source_id": "hi_nerv_official_repo",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "implemented_or_bound",
+      "symbol_rows": [
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_bitstream_quantization_roundtrip",
+          "module": "tac.substrates.hi_nerv.archive",
+          "requirement": "packet packer",
+          "status": "present",
+          "symbol": "pack_archive"
+        },
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_bitstream_quantization_roundtrip",
+          "module": "tac.substrates._shared.decoder_state_codec",
+          "requirement": "decoder codec",
+          "status": "present",
+          "symbol": "serialize_decoder_state_dict"
+        }
+      ]
+    },
+    {
+      "blockers": [],
+      "family": "hi_nerv",
+      "feature_id": "hi_nerv_decoder_weight_saliency_binding",
+      "implementation_target": "score saliency pushes into decoder/latent fit before export",
+      "official_source_id": "hi_nerv_paper",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "implemented_or_bound",
+      "symbol_rows": [
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_decoder_weight_saliency_binding",
+          "module": "tac.analysis.hinerv_latent_linf_allocation",
+          "requirement": "dense VJP adjoint",
+          "status": "present",
+          "symbol": "decoder_jacobian_vjp"
+        },
+        {
+          "error": null,
+          "family": "hi_nerv",
+          "feature_id": "hi_nerv_decoder_weight_saliency_binding",
+          "module": "tac.analysis.hinerv_latent_linf_allocation",
+          "requirement": "latent allocator",
+          "status": "present",
+          "symbol": "allocate_linf_latent_steps"
+        }
+      ]
+    },
+    {
+      "blockers": [],
+      "family": "snerv",
+      "feature_id": "snerv_symbol_map",
+      "implementation_target": "DWT, LF/HF carrier, archive, and receiver symbols resolve",
+      "official_source_id": "snerv_official_repo",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "implemented_or_bound",
+      "symbol_rows": [
+        {
+          "error": null,
+          "family": "snerv",
+          "feature_id": "snerv_symbol_map",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.dwt",
+          "requirement": "DWT analysis",
+          "status": "present",
+          "symbol": "dwt2_multilevel"
+        },
+        {
+          "error": null,
+          "family": "snerv",
+          "feature_id": "snerv_symbol_map",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.dwt",
+          "requirement": "DWT synthesis",
+          "status": "present",
+          "symbol": "idwt2_multilevel"
+        },
+        {
+          "error": null,
+          "family": "snerv",
+          "feature_id": "snerv_symbol_map",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.carrier",
+          "requirement": "HF generator",
+          "status": "present",
+          "symbol": "HfGenerationDecoder"
+        },
+        {
+          "error": null,
+          "family": "snerv",
+          "feature_id": "snerv_symbol_map",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.archive",
+          "requirement": "archive packer",
+          "status": "present",
+          "symbol": "pack_snerv_archive"
+        },
+        {
+          "error": null,
+          "family": "snerv",
+          "feature_id": "snerv_symbol_map",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.archive",
+          "requirement": "receiver decode",
+          "status": "present",
+          "symbol": "decode_snerv_archive_frames"
+        }
+      ]
+    },
+    {
+      "blockers": [],
+      "family": "snerv",
+      "feature_id": "snerv_receiver_bitstream_roundtrip",
+      "implementation_target": "SNAR1 packet consumes LF, decoder, step maps into frames",
+      "official_source_id": "snerv_official_repo",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "implemented_or_bound",
+      "symbol_rows": [
+        {
+          "error": null,
+          "family": "snerv",
+          "feature_id": "snerv_receiver_bitstream_roundtrip",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.archive",
+          "requirement": "archive parser",
+          "status": "present",
+          "symbol": "unpack_snerv_archive"
+        },
+        {
+          "error": null,
+          "family": "snerv",
+          "feature_id": "snerv_receiver_bitstream_roundtrip",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.receiver_proof",
+          "requirement": "receiver proof",
+          "status": "present",
+          "symbol": "build_snerv_receiver_archive_proof"
+        }
+      ]
+    },
+    {
+      "blockers": [
+        "snerv_mfu_hfr_stride_stack_missing"
+      ],
+      "family": "snerv",
+      "feature_id": "snerv_official_mfu_hfr_stride_stack",
+      "implementation_target": "official MFU/HFR/stride-stack parity or explicit no-go",
+      "official_source_id": "snerv_paper",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "missing_or_partial",
+      "symbol_rows": [
+        {
+          "error": "AttributeError(\"module 'tac.substrates.snerv_inverse_steg_carrier.carrier' has no attribute 'MultiResolutionFusionUnit'\")",
+          "family": "snerv",
+          "feature_id": "snerv_official_mfu_hfr_stride_stack",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.carrier",
+          "requirement": "official MFU block",
+          "status": "missing",
+          "symbol": "MultiResolutionFusionUnit"
+        },
+        {
+          "error": "AttributeError(\"module 'tac.substrates.snerv_inverse_steg_carrier.carrier' has no attribute 'HighFrequencyRestorer'\")",
+          "family": "snerv",
+          "feature_id": "snerv_official_mfu_hfr_stride_stack",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.carrier",
+          "requirement": "official HFR block",
+          "status": "missing",
+          "symbol": "HighFrequencyRestorer"
+        },
+        {
+          "error": "AttributeError(\"module 'tac.substrates.snerv_inverse_steg_carrier.carrier' has no attribute 'SnervTemporalExtension'\")",
+          "family": "snerv",
+          "feature_id": "snerv_official_mfu_hfr_stride_stack",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.carrier",
+          "requirement": "official SNeRV_T temporal path",
+          "status": "missing",
+          "symbol": "SnervTemporalExtension"
+        }
+      ]
+    },
+    {
+      "blockers": [
+        "snerv_scorer_loop_decoder_qat_missing"
+      ],
+      "family": "snerv",
+      "feature_id": "snerv_scorer_loop_decoder_qat",
+      "implementation_target": "score-aware decoder-weight QAT before packet export",
+      "official_source_id": "snerv_paper",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "missing_or_partial",
+      "symbol_rows": [
+        {
+          "error": "AttributeError(\"module 'tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat' has no attribute 'run_snerv_scorer_loop_decoder_qat'\")",
+          "family": "snerv",
+          "feature_id": "snerv_scorer_loop_decoder_qat",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat",
+          "requirement": "full trainer entrypoint",
+          "status": "missing",
+          "symbol": "run_snerv_scorer_loop_decoder_qat"
+        }
+      ]
+    },
+    {
+      "blockers": [
+        "snerv_qat_receiver_codec_pricing_missing"
+      ],
+      "family": "snerv",
+      "feature_id": "snerv_qat_receiver_codec_pricing",
+      "implementation_target": "QAT objective prices the same decoder codec consumed by receiver",
+      "official_source_id": "snerv_paper",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "missing_or_partial",
+      "symbol_rows": [
+        {
+          "error": "AttributeError(\"module 'tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat' has no attribute 'SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF'\")",
+          "family": "snerv",
+          "feature_id": "snerv_qat_receiver_codec_pricing",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat",
+          "requirement": "receiver-priced QAT proof constant",
+          "status": "missing",
+          "symbol": "SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF"
+        }
+      ]
+    },
+    {
+      "blockers": [
+        "snerv_official_haar_mode_missing"
+      ],
+      "family": "snerv",
+      "feature_id": "snerv_official_haar_mode",
+      "implementation_target": "official Haar DWT/IDWT path or explicit forked-adapter label",
+      "official_source_id": "snerv_official_repo",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "missing_or_partial",
+      "symbol_rows": [
+        {
+          "error": "AttributeError(\"module 'tac.substrates.snerv_inverse_steg_carrier.dwt' has no attribute 'OFFICIAL_SNERV_HAAR_MODE_PROOF'\")",
+          "family": "snerv",
+          "feature_id": "snerv_official_haar_mode",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.dwt",
+          "requirement": "official Haar mode proof constant",
+          "status": "missing",
+          "symbol": "OFFICIAL_SNERV_HAAR_MODE_PROOF"
+        }
+      ]
+    },
+    {
+      "blockers": [
+        "snerv_receiver_dependency_custody_missing"
+      ],
+      "family": "snerv",
+      "feature_id": "snerv_receiver_dependency_custody",
+      "implementation_target": "receiver DWT runtime is pure NumPy or contest-proven dependency closure",
+      "official_source_id": "snerv_official_repo",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_for_long_training": true,
+      "score_claim": false,
+      "source_marker_rows": [],
+      "status": "missing_or_partial",
+      "symbol_rows": [
+        {
+          "error": "AttributeError(\"module 'tac.substrates.snerv_inverse_steg_carrier.dwt' has no attribute 'SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF'\")",
+          "family": "snerv",
+          "feature_id": "snerv_receiver_dependency_custody",
+          "module": "tac.substrates.snerv_inverse_steg_carrier.dwt",
+          "requirement": "receiver dependency custody proof constant",
+          "status": "missing",
+          "symbol": "SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF"
+        }
+      ]
+    }
+  ],
+  "next_actions": [
+    "close SNeRV fc_dim/MFU/HFR or explicitly block source-faithful SNeRV before long run"
+  ],
+  "official_source_refs": [
+    {
+      "family": "hi_nerv",
+      "source_id": "hi_nerv_official_repo",
+      "url": "https://github.com/hmkx/HiNeRV",
+      "why": "S/M/L configs, patch mode, bitstream-q, pruning and quantization pipeline"
+    },
+    {
+      "family": "hi_nerv",
+      "source_id": "hi_nerv_paper",
+      "url": "https://arxiv.org/abs/2306.09818",
+      "why": "hierarchical encodings and compressed bitstream procedure"
+    },
+    {
+      "family": "snerv",
+      "source_id": "snerv_official_repo",
+      "url": "https://github.com/qwertja/SNeRV",
+      "why": "DWT LF/HF stack, encoder/decoder strides, MFU, HFR, SNeRV_T and fc_dim controls"
+    },
+    {
+      "family": "snerv",
+      "source_id": "snerv_paper",
+      "url": "https://arxiv.org/abs/2501.01681",
+      "why": "spectral split, high-frequency restoration, multi-resolution fusion"
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "repo_root": "/Users/adpena/Projects/pact",
+  "required_for_long_training_ready": false,
+  "schema": "nerv_source_parity_contract.v1",
+  "score_claim": false
+}

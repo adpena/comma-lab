@@ -38,7 +38,7 @@ def test_snerv_official_mfu_hfr_and_fc_dim_controls_still_block_long_training() 
     assert "snerv_mfu_hfr_stride_stack_missing" in report["blockers"]
     assert "snerv_fc_dim_modelsize_control_missing" in report["blockers"]
     assert "snerv_scorer_loop_decoder_qat_missing" in report["blockers"]
-    assert "snerv_lf_quant_intn_codec_missing" in report["blockers"]
+    assert "snerv_lf_quant_intn_codec_missing" not in report["blockers"]
     assert "snerv_qat_receiver_codec_pricing_missing" in report["blockers"]
     assert "snerv_official_haar_mode_missing" in report["blockers"]
     assert "snerv_receiver_dependency_custody_missing" in report["blockers"]
@@ -55,11 +55,9 @@ def test_snerv_official_mfu_hfr_and_fc_dim_controls_still_block_long_training() 
     }.issubset(missing_symbols)
     controls = {row["control_id"]: row for row in report["control_rows"]}
     assert controls["snerv_lf_stepmap_and_intN_control"]["status"] == (
-        "missing_or_partial"
+        "implemented_or_declared"
     )
-    assert controls["snerv_lf_stepmap_and_intN_control"]["missing_markers"] == [
-        "SNERV_LF_PAYLOAD_INTN_CODEC_PROOF"
-    ]
+    assert controls["snerv_lf_stepmap_and_intN_control"]["missing_markers"] == []
 
 
 def test_source_parity_contract_writes_json_and_markdown(tmp_path: Path) -> None:
