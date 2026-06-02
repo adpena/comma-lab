@@ -10,7 +10,9 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecode
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     QuantizedDecoderStats,
     SnervDecoderEval,
+    SnervPairEval,
     SnervScorerLoopDecoderQatError,
+    decoder_eval_pair_deltas,
     decoder_search_direction_labels,
     decoder_trial_passes_pose_guard,
     quantize_decoder_for_qat,
@@ -66,6 +68,131 @@ def test_decoder_trial_pose_guard_requires_receiver_replay() -> None:
     assert decoder_trial_passes_pose_guard(candidate, current) is False
 
 
+def test_decoder_eval_json_preserves_pair_local_detector_response() -> None:
+    row = _eval(
+        label="candidate",
+        score=6.0,
+        d_pose=0.5,
+        d_seg=0.01,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.01,
+                d_pose_linf=0.5,
+                score_linf_without_rate=3.23606797749979,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.02,
+                d_pose_linf=0.25,
+                score_linf_without_rate=3.58113883008419,
+            ),
+        ),
+    )
+
+    payload = row.as_jsonable()
+
+    assert payload["per_pair"] == [
+        {
+            "pair_index": 0,
+            "d_seg_linf": 0.01,
+            "d_pose_linf": 0.5,
+            "score_linf_without_rate": 3.23606797749979,
+        },
+        {
+            "pair_index": 1,
+            "d_seg_linf": 0.02,
+            "d_pose_linf": 0.25,
+            "score_linf_without_rate": 3.58113883008419,
+        },
+    ]
+
+
+def test_decoder_eval_pair_deltas_preserve_direction_per_pair() -> None:
+    baseline = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.4,
+        d_seg=0.02,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.01,
+                d_pose_linf=0.3,
+                score_linf_without_rate=2.7,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.03,
+                d_pose_linf=0.5,
+                score_linf_without_rate=5.0,
+            ),
+        ),
+    )
+    candidate = _eval(
+        label="candidate",
+        score=6.9,
+        d_pose=0.39,
+        d_seg=0.019,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.009,
+                d_pose_linf=0.25,
+                score_linf_without_rate=2.1,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.031,
+                d_pose_linf=0.53,
+                score_linf_without_rate=5.2,
+            ),
+        ),
+    )
+
+    deltas = decoder_eval_pair_deltas(baseline, candidate)
+
+    assert [row.as_jsonable() for row in deltas] == [
+        {
+            "pair_index": 0,
+            "d_seg_linf_delta": pytest.approx(-0.001),
+            "d_pose_linf_delta": pytest.approx(-0.05),
+            "score_linf_without_rate_delta": pytest.approx(-0.6),
+        },
+        {
+            "pair_index": 1,
+            "d_seg_linf_delta": pytest.approx(0.001),
+            "d_pose_linf_delta": pytest.approx(0.03),
+            "score_linf_without_rate_delta": pytest.approx(0.2),
+        },
+    ]
+
+
+def test_decoder_eval_pair_deltas_fail_closed_on_pair_mismatch() -> None:
+    baseline = _eval(label="baseline", score=7.0, d_pose=0.4, d_seg=0.02, replay=True)
+    candidate = _eval(
+        label="candidate",
+        score=6.9,
+        d_pose=0.39,
+        d_seg=0.019,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=9,
+                d_seg_linf=0.009,
+                d_pose_linf=0.25,
+                score_linf_without_rate=2.1,
+            ),
+        ),
+    )
+
+    with pytest.raises(SnervScorerLoopDecoderQatError, match="missing from baseline"):
+        decoder_eval_pair_deltas(baseline, candidate)
+
+
 def test_quantize_decoder_rejects_invalid_bit_width() -> None:
     with pytest.raises(SnervScorerLoopDecoderQatError, match="bits"):
         quantize_decoder_for_qat(_decoder(), bits=1)
@@ -118,7 +245,18 @@ def _eval(
     d_pose: float,
     replay: bool,
     d_seg: float = 0.01,
+    per_pair: tuple[SnervPairEval, ...] | None = None,
 ) -> SnervDecoderEval:
+    if per_pair is None:
+        per_pair = (
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=float(d_seg),
+                d_pose_linf=float(d_pose),
+                score_linf_without_rate=100.0 * float(d_seg)
+                + float(np.sqrt(10.0 * max(float(d_pose), 0.0))),
+            ),
+        )
     return SnervDecoderEval(
         label=label,
         iteration=0,
@@ -142,4 +280,5 @@ def _eval(
             payload_bytes_fp32_receiver=99,
             payload_sha256_fp32_receiver="1" * 64,
         ),
+        per_pair=per_pair,
     )

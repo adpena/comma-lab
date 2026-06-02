@@ -74,6 +74,32 @@ class QuantizedDecoderStats:
 
 
 @dataclass(frozen=True)
+class SnervPairEval:
+    """Per-pair detector response for one receiver-replayed decoder evaluation."""
+
+    pair_index: int
+    d_seg_linf: float
+    d_pose_linf: float
+    score_linf_without_rate: float
+
+    def as_jsonable(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class SnervPairDelta:
+    """Per-pair delta against the baseline decoder evaluation."""
+
+    pair_index: int
+    d_seg_linf_delta: float
+    d_pose_linf_delta: float
+    score_linf_without_rate_delta: float
+
+    def as_jsonable(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class SnervDecoderEval:
     """One receiver-replayed decoder evaluation in the local scorer loop."""
 
@@ -89,10 +115,12 @@ class SnervDecoderEval:
     accepted: bool
     blockers: tuple[str, ...]
     quantized_decoder: QuantizedDecoderStats
+    per_pair: tuple[SnervPairEval, ...]
 
     def as_jsonable(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["quantized_decoder"] = self.quantized_decoder.as_jsonable()
+        payload["per_pair"] = [row.as_jsonable() for row in self.per_pair]
         return payload
 
 
@@ -118,6 +146,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     improvement_score_delta: float
     improvement_d_pose_delta: float
     improvement_d_seg_delta: float
+    best_pair_deltas: tuple[SnervPairDelta, ...]
     scorer_loop_evaluations: int
     real_frame_source: str
     receiver_contract_satisfied: bool
@@ -135,6 +164,9 @@ class SnervScorerLoopDecoderQatSmokeResult:
         payload["baseline"] = self.baseline.as_jsonable()
         payload["best"] = self.best.as_jsonable()
         payload["evaluations"] = [row.as_jsonable() for row in self.evaluations]
+        payload["best_pair_deltas"] = [
+            row.as_jsonable() for row in self.best_pair_deltas
+        ]
         payload["rows"] = [_eval_as_gate_row(row) for row in self.evaluations]
         return payload
 
@@ -308,6 +340,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         improvement_score_delta=float(best_eval.score_linf - baseline.score_linf),
         improvement_d_pose_delta=float(best_eval.d_pose_linf - baseline.d_pose_linf),
         improvement_d_seg_delta=float(best_eval.d_seg_linf - baseline.d_seg_linf),
+        best_pair_deltas=decoder_eval_pair_deltas(baseline, best_eval),
         scorer_loop_evaluations=len(rows),
         real_frame_source=video_path,
         receiver_contract_satisfied=all(row.receiver_archive_replay_verified for row in rows),
@@ -389,6 +422,33 @@ def decoder_trial_passes_pose_guard(
         and candidate.d_seg_linf < current_best.d_seg_linf
         and candidate.score_linf < current_best.score_linf
     )
+
+
+def decoder_eval_pair_deltas(
+    baseline: SnervDecoderEval,
+    candidate: SnervDecoderEval,
+) -> tuple[SnervPairDelta, ...]:
+    """Return pair-local detector deltas for a candidate vs. baseline eval."""
+
+    baseline_by_pair = {row.pair_index: row for row in baseline.per_pair}
+    deltas = []
+    for row in candidate.per_pair:
+        base = baseline_by_pair.get(row.pair_index)
+        if base is None:
+            raise SnervScorerLoopDecoderQatError(
+                f"candidate pair {row.pair_index} missing from baseline"
+            )
+        deltas.append(
+            SnervPairDelta(
+                pair_index=int(row.pair_index),
+                d_seg_linf_delta=float(row.d_seg_linf - base.d_seg_linf),
+                d_pose_linf_delta=float(row.d_pose_linf - base.d_pose_linf),
+                score_linf_without_rate_delta=float(
+                    row.score_linf_without_rate - base.score_linf_without_rate
+                ),
+            )
+        )
+    return tuple(deltas)
 
 
 def decoder_search_direction_labels(
@@ -588,6 +648,7 @@ def _evaluate_decoder(
     receiver = torch.from_numpy(receiver_np).to(prepared.pairs)
     dsegs = []
     dposes = []
+    per_pair = []
     for pair_idx in range(int(prepared.pairs.shape[0])):
         ds, dp = measure_pair_d_seg_d_pose(
             posenet,
@@ -595,8 +656,21 @@ def _evaluate_decoder(
             prepared.pairs[pair_idx : pair_idx + 1],
             receiver[pair_idx : pair_idx + 1],
         )
-        dsegs.append(ds)
-        dposes.append(dp)
+        d_seg_pair = float(ds)
+        d_pose_pair = float(dp)
+        dsegs.append(d_seg_pair)
+        dposes.append(d_pose_pair)
+        per_pair.append(
+            SnervPairEval(
+                pair_index=int(pair_idx),
+                d_seg_linf=d_seg_pair,
+                d_pose_linf=d_pose_pair,
+                score_linf_without_rate=(
+                    100.0 * d_seg_pair
+                    + float(np.sqrt(10.0 * max(d_pose_pair, 0.0)))
+                ),
+            )
+        )
     d_seg = float(np.mean(dsegs))
     d_pose = float(np.mean(dposes))
     rate = CONTEST_BYTE_PRICE * archive.total_bytes
@@ -615,6 +689,7 @@ def _evaluate_decoder(
         accepted=bool(accepted),
         blockers=blockers,
         quantized_decoder=qstats,
+        per_pair=tuple(per_pair),
     )
 
 
@@ -694,6 +769,7 @@ def _replace_eval_acceptance(
         accepted=accepted,
         blockers=blockers,
         quantized_decoder=row.quantized_decoder,
+        per_pair=row.per_pair,
     )
 
 
@@ -713,6 +789,8 @@ def _eval_as_gate_row(row: SnervDecoderEval) -> dict[str, Any]:
         "d_seg_mean_linf": row.d_seg_linf,
         "d_pose_mean_linf": row.d_pose_linf,
         "score_linf": row.score_linf,
+        "pair_count": len(row.per_pair),
+        "per_pair": [pair.as_jsonable() for pair in row.per_pair],
         "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
     }
 
@@ -733,8 +811,11 @@ __all__ = [
     "SCHEMA",
     "QuantizedDecoderStats",
     "SnervDecoderEval",
+    "SnervPairDelta",
+    "SnervPairEval",
     "SnervScorerLoopDecoderQatError",
     "SnervScorerLoopDecoderQatSmokeResult",
+    "decoder_eval_pair_deltas",
     "decoder_search_direction_labels",
     "decoder_trial_passes_pose_guard",
     "quantize_decoder_for_qat",

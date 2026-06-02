@@ -1,0 +1,983 @@
+{
+  "accepted_improvement": false,
+  "axis_tag": "[macOS-CPU advisory]",
+  "baseline": {
+    "accepted": true,
+    "archive_bytes": 1230018,
+    "archive_sha256": "6664b506b98a60717d63e73edfe8a468822f858ed3309591e7c1f2f2a6701577",
+    "blockers": [],
+    "d_pose_linf": 0.007281367259565741,
+    "d_seg_linf": 0.0027834573993459344,
+    "iteration": 0,
+    "label": "least_squares_qat_baseline",
+    "per_pair": [
+      {
+        "d_pose_linf": 0.0018365876749157906,
+        "d_seg_linf": 0.0023956298828125,
+        "pair_index": 0,
+        "score_linf_without_rate": 0.37508374960274604
+      },
+      {
+        "d_pose_linf": 0.002191230421885848,
+        "d_seg_linf": 0.0035603840369731188,
+        "pair_index": 1,
+        "score_linf_without_rate": 0.5040664558322315
+      },
+      {
+        "d_pose_linf": 0.006428308319300413,
+        "d_seg_linf": 0.0025634765625,
+        "pair_index": 2,
+        "score_linf_without_rate": 0.5098887440306674
+      },
+      {
+        "d_pose_linf": 0.01866934262216091,
+        "d_seg_linf": 0.0026143391150981188,
+        "pair_index": 3,
+        "score_linf_without_rate": 0.6935142584611735
+      }
+    ],
+    "quantized_decoder": {
+      "bits": 8,
+      "max_abs_error": 0.000607367571117165,
+      "mean_abs_error": 0.00016855012420090719,
+      "payload_bytes_fp32_receiver": 522,
+      "payload_sha256_fp32_receiver": "83d7c8bfcbeff1d6794077ab3e297758369328f2a2b47edb765608741b2a158d",
+      "scale_count": 6,
+      "total_weights": 54,
+      "zero_scale_count": 0,
+      "zero_weight_fraction": 0.0
+    },
+    "rate_term": 0.819018497801427,
+    "receiver_archive_replay_verified": true,
+    "score_linf": 1.3672043248166048
+  },
+  "best": {
+    "accepted": true,
+    "archive_bytes": 1230018,
+    "archive_sha256": "6664b506b98a60717d63e73edfe8a468822f858ed3309591e7c1f2f2a6701577",
+    "blockers": [],
+    "d_pose_linf": 0.007281367259565741,
+    "d_seg_linf": 0.0027834573993459344,
+    "iteration": 0,
+    "label": "least_squares_qat_baseline",
+    "per_pair": [
+      {
+        "d_pose_linf": 0.0018365876749157906,
+        "d_seg_linf": 0.0023956298828125,
+        "pair_index": 0,
+        "score_linf_without_rate": 0.37508374960274604
+      },
+      {
+        "d_pose_linf": 0.002191230421885848,
+        "d_seg_linf": 0.0035603840369731188,
+        "pair_index": 1,
+        "score_linf_without_rate": 0.5040664558322315
+      },
+      {
+        "d_pose_linf": 0.006428308319300413,
+        "d_seg_linf": 0.0025634765625,
+        "pair_index": 2,
+        "score_linf_without_rate": 0.5098887440306674
+      },
+      {
+        "d_pose_linf": 0.01866934262216091,
+        "d_seg_linf": 0.0026143391150981188,
+        "pair_index": 3,
+        "score_linf_without_rate": 0.6935142584611735
+      }
+    ],
+    "quantized_decoder": {
+      "bits": 8,
+      "max_abs_error": 0.000607367571117165,
+      "mean_abs_error": 0.00016855012420090719,
+      "payload_bytes_fp32_receiver": 522,
+      "payload_sha256_fp32_receiver": "83d7c8bfcbeff1d6794077ab3e297758369328f2a2b47edb765608741b2a158d",
+      "scale_count": 6,
+      "total_weights": 54,
+      "zero_scale_count": 0,
+      "zero_weight_fraction": 0.0
+    },
+    "rate_term": 0.819018497801427,
+    "receiver_archive_replay_verified": true,
+    "score_linf": 1.3672043248166048
+  },
+  "best_pair_deltas": [
+    {
+      "d_pose_linf_delta": 0.0,
+      "d_seg_linf_delta": 0.0,
+      "pair_index": 0,
+      "score_linf_without_rate_delta": 0.0
+    },
+    {
+      "d_pose_linf_delta": 0.0,
+      "d_seg_linf_delta": 0.0,
+      "pair_index": 1,
+      "score_linf_without_rate_delta": 0.0
+    },
+    {
+      "d_pose_linf_delta": 0.0,
+      "d_seg_linf_delta": 0.0,
+      "pair_index": 2,
+      "score_linf_without_rate_delta": 0.0
+    },
+    {
+      "d_pose_linf_delta": 0.0,
+      "d_seg_linf_delta": 0.0,
+      "pair_index": 3,
+      "score_linf_without_rate_delta": 0.0
+    }
+  ],
+  "blockers": [
+    "no_quantized_decoder_trial_improved_score_under_pose_guard",
+    "local_smoke_only_not_full_600_pairs",
+    "paired_contest_cpu_cuda_pass_missing",
+    "mixed_precision_decoder_payload_grammar_not_byte_optimized"
+  ],
+  "evaluations": [
+    {
+      "accepted": true,
+      "archive_bytes": 1230018,
+      "archive_sha256": "6664b506b98a60717d63e73edfe8a468822f858ed3309591e7c1f2f2a6701577",
+      "blockers": [],
+      "d_pose_linf": 0.007281367259565741,
+      "d_seg_linf": 0.0027834573993459344,
+      "iteration": 0,
+      "label": "least_squares_qat_baseline",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018365876749157906,
+          "d_seg_linf": 0.0023956298828125,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.37508374960274604
+        },
+        {
+          "d_pose_linf": 0.002191230421885848,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5040664558322315
+        },
+        {
+          "d_pose_linf": 0.006428308319300413,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5098887440306674
+        },
+        {
+          "d_pose_linf": 0.01866934262216091,
+          "d_seg_linf": 0.0026143391150981188,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6935142584611735
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.000607367571117165,
+        "mean_abs_error": 0.00016855012420090719,
+        "payload_bytes_fp32_receiver": 522,
+        "payload_sha256_fp32_receiver": "83d7c8bfcbeff1d6794077ab3e297758369328f2a2b47edb765608741b2a158d",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.819018497801427,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.3672043248166048
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 1230018,
+      "archive_sha256": "153f13249ed8335b7d02c27e1cb22e849a1fb035518f7b84d5eb0ad905e0c7d9",
+      "blockers": [
+        "pose_guard_failed",
+        "score_gate_failed"
+      ],
+      "d_pose_linf": 0.007291246758541092,
+      "d_seg_linf": 0.0027821858529932797,
+      "iteration": 1,
+      "label": "coord_040_plus",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018463419983163476,
+          "d_seg_linf": 0.0023905436974018812,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.3749345374732443
+        },
+        {
+          "d_pose_linf": 0.002193126594647765,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5041304897332566
+        },
+        {
+          "d_pose_linf": 0.006454048678278923,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5103958540054441
+        },
+        {
+          "d_pose_linf": 0.018671469762921333,
+          "d_seg_linf": 0.0026143391150981188,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6935388728666717
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.000607367571117165,
+        "mean_abs_error": 0.00015281962240444407,
+        "payload_bytes_fp32_receiver": 522,
+        "payload_sha256_fp32_receiver": "e02a80c7549d705c37ec7538f29502d6d2aae806505e4d32f8c37d748d9057a4",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.819018497801427,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.3672601702348202
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 1230018,
+      "archive_sha256": "13756ff2cb8e3bc9e4a7e4bb1e1a3af3d8920e123fd2d6b7fc6783540b8f1a31",
+      "blockers": [
+        "pose_guard_failed"
+      ],
+      "d_pose_linf": 0.007283248327439651,
+      "d_seg_linf": 0.0027821858529932797,
+      "iteration": 1,
+      "label": "coord_040_minus",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018367237644270062,
+          "d_seg_linf": 0.0023905436974018812,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.37458015195254085
+        },
+        {
+          "d_pose_linf": 0.0021713098976761103,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5033920564405034
+        },
+        {
+          "d_pose_linf": 0.006470071151852608,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5107110017196766
+        },
+        {
+          "d_pose_linf": 0.01865488849580288,
+          "d_seg_linf": 0.0026143391150981188,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6933469640539887
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.000607367571117165,
+        "mean_abs_error": 0.00017276216542270242,
+        "payload_bytes_fp32_receiver": 522,
+        "payload_sha256_fp32_receiver": "39a173eb563457f0df3a5d9130f9c7fe0e1ef97ea8111dee53fdfe3e5d2c47e5",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.819018497801427,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.367112023164475
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 1230022,
+      "archive_sha256": "f90e7a1b5a86048d81bc93a2de836b69d19585c19460e0089e50294b7cdfa3b3",
+      "blockers": [
+        "pose_guard_failed",
+        "seg_gate_failed",
+        "score_gate_failed"
+      ],
+      "d_pose_linf": 0.007617577735800296,
+      "d_seg_linf": 0.0027898152475245297,
+      "iteration": 2,
+      "label": "coord_031_plus",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0020779604092240334,
+          "d_seg_linf": 0.0024007160682231188,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.3842229304105479
+        },
+        {
+          "d_pose_linf": 0.0022891692351549864,
+          "d_seg_linf": 0.0035858154296875,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5098815507398994
+        },
+        {
+          "d_pose_linf": 0.007229852955788374,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.525231515114536
+        },
+        {
+          "d_pose_linf": 0.01887332834303379,
+          "d_seg_linf": 0.0026092529296875,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6953597338575197
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.0006130250981162344,
+        "mean_abs_error": 0.0001556392500629469,
+        "payload_bytes_fp32_receiver": 526,
+        "payload_sha256_fp32_receiver": "e2d942c9bbbaefd0079312c2188b343aaba8f55f5bf9b667bb25899400662e70",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.8190211612372396,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.3740022826524467
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 1230018,
+      "archive_sha256": "025074ae60fbe91242fe530e8163f702c459048c7bcbb32a1acbe51a9ebdb177",
+      "blockers": [
+        "pose_guard_failed",
+        "score_gate_failed"
+      ],
+      "d_pose_linf": 0.008464185055345297,
+      "d_seg_linf": 0.002750396786723286,
+      "iteration": 2,
+      "label": "coord_031_minus",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0033109949436038733,
+          "d_seg_linf": 0.0024515788536518812,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.42711928082048445
+        },
+        {
+          "d_pose_linf": 0.002581946784630418,
+          "d_seg_linf": 0.0034586589317768812,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5065502665507831
+        },
+        {
+          "d_pose_linf": 0.005450215190649033,
+          "d_seg_linf": 0.0025278727989643812,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.48624423932684435
+        },
+        {
+          "d_pose_linf": 0.022513583302497864,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.7308324642522991
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.0005927575239282369,
+        "mean_abs_error": 0.00016103031537931242,
+        "payload_bytes_fp32_receiver": 522,
+        "payload_sha256_fp32_receiver": "68be54549ad63c960c581e5db35c6039f1bcabef5d371c0c2aab40153886d48b",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.819018497801427,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.384990901606995
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 1230018,
+      "archive_sha256": "6664b506b98a60717d63e73edfe8a468822f858ed3309591e7c1f2f2a6701577",
+      "blockers": [
+        "seg_gate_failed",
+        "score_gate_failed"
+      ],
+      "d_pose_linf": 0.007281367259565741,
+      "d_seg_linf": 0.0027834573993459344,
+      "iteration": 3,
+      "label": "coord_039_plus",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018365876749157906,
+          "d_seg_linf": 0.0023956298828125,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.37508374960274604
+        },
+        {
+          "d_pose_linf": 0.002191230421885848,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5040664558322315
+        },
+        {
+          "d_pose_linf": 0.006428308319300413,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5098887440306674
+        },
+        {
+          "d_pose_linf": 0.01866934262216091,
+          "d_seg_linf": 0.0026143391150981188,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6935142584611735
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.000607367571117165,
+        "mean_abs_error": 0.00016299341053730663,
+        "payload_bytes_fp32_receiver": 522,
+        "payload_sha256_fp32_receiver": "83d7c8bfcbeff1d6794077ab3e297758369328f2a2b47edb765608741b2a158d",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.819018497801427,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.3672043248166048
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 1230018,
+      "archive_sha256": "1d31dad0784406f452ed1ac43a164bf3d6b33d2b6574a108ae13d8f901d79506",
+      "blockers": [
+        "pose_guard_failed",
+        "score_gate_failed"
+      ],
+      "d_pose_linf": 0.007455559883965179,
+      "d_seg_linf": 0.0027821858529932797,
+      "iteration": 3,
+      "label": "coord_039_minus",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0015458752168342471,
+          "d_seg_linf": 0.0024007160682231188,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.3644048371685973
+        },
+        {
+          "d_pose_linf": 0.002522536553442478,
+          "d_seg_linf": 0.003570556640625,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5158806165555664
+        },
+        {
+          "d_pose_linf": 0.005751520395278931,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.49617093275332297
+        },
+        {
+          "d_pose_linf": 0.02000230737030506,
+          "d_seg_linf": 0.002593994140625,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.706638806002712
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.000607367571117165,
+        "mean_abs_error": 0.0001640367267914339,
+        "payload_bytes_fp32_receiver": 522,
+        "payload_sha256_fp32_receiver": "da4dc18dae39422f11bf38d82ca766e0fed89c098f1865e002e330a4103f249e",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.819018497801427,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.3702857945784908
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 1230018,
+      "archive_sha256": "fb32a139fb046006382f0a75945b4009775dd69621f5cb0a2f1ebf9c0e14c82b",
+      "blockers": [
+        "pose_guard_failed",
+        "score_gate_failed"
+      ],
+      "d_pose_linf": 0.007406016084132716,
+      "d_seg_linf": 0.0027796427602879703,
+      "iteration": 4,
+      "label": "coord_001_plus",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018741487292572856,
+          "d_seg_linf": 0.0023905436974018812,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.37595392157500185
+        },
+        {
+          "d_pose_linf": 0.00223137391731143,
+          "d_seg_linf": 0.0035451252479106188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5038903650924744
+        },
+        {
+          "d_pose_linf": 0.006498671602457762,
+          "d_seg_linf": 0.0025583903770893812,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5107639600381949
+        },
+        {
+          "d_pose_linf": 0.019019870087504387,
+          "d_seg_linf": 0.00262451171875,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6985689322047576
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.000607367571117165,
+        "mean_abs_error": 0.00016628840401473478,
+        "payload_bytes_fp32_receiver": 522,
+        "payload_sha256_fp32_receiver": "91ff1f01f338a6b0f6560d439aaeaf1d1872797e323b8daaf321a3709b4434c5",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.819018497801427,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.3691227393651069
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 1230018,
+      "archive_sha256": "6bc2ce9bfda86c60b082414e48651a5627796e6adacebd0e8dd479e420e7ddc0",
+      "blockers": [
+        "pose_guard_failed",
+        "score_gate_failed"
+      ],
+      "d_pose_linf": 0.007306791638256982,
+      "d_seg_linf": 0.0027821858529932797,
+      "iteration": 4,
+      "label": "coord_001_minus",
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018391202902421355,
+          "d_seg_linf": 0.0024007160682231188,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.3756857760761968
+        },
+        {
+          "d_pose_linf": 0.0022040645126253366,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5044993249064077
+        },
+        {
+          "d_pose_linf": 0.006456301081925631,
+          "d_seg_linf": 0.0025583903770893812,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5099315618399254
+        },
+        {
+          "d_pose_linf": 0.018727680668234825,
+          "d_seg_linf": 0.0026092529296875,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6936801966756269
+        }
+      ],
+      "quantized_decoder": {
+        "bits": 8,
+        "max_abs_error": 0.000607367571117165,
+        "mean_abs_error": 0.00015649401050931767,
+        "payload_bytes_fp32_receiver": 522,
+        "payload_sha256_fp32_receiver": "20d868acfc2088a796fe87aae3bac0113d1486917f7a483d02a77250dc19800e",
+        "scale_count": 6,
+        "total_weights": 54,
+        "zero_scale_count": 0,
+        "zero_weight_fraction": 0.0
+      },
+      "rate_term": 0.819018497801427,
+      "receiver_archive_replay_verified": true,
+      "score_linf": 1.3675478605081122
+    }
+  ],
+  "forbidden_next_actions": [
+    "claim_score_from_this_smoke",
+    "dispatch_exact_eval_from_this_smoke",
+    "promote_without_full600_receiver_proof"
+  ],
+  "improvement_d_pose_delta": 0.0,
+  "improvement_d_seg_delta": 0.0,
+  "improvement_score_delta": 0.0,
+  "levels": 2,
+  "max_trials": 4,
+  "n_pairs": 4,
+  "perturb_scale": 0.02,
+  "pose_slack": 0.0,
+  "promotion_eligible": false,
+  "qat_bits": 8,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_pose_guard_gate": false,
+  "real_frame_source": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+  "receiver_contract_satisfied": true,
+  "rows": [
+    {
+      "archive_bytes_total": 1230018,
+      "d_pose_mean_linf": 0.007281367259565741,
+      "d_seg_mean_linf": 0.0027834573993459344,
+      "hf_decoder_fit_mode": "least_squares",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018365876749157906,
+          "d_seg_linf": 0.0023956298828125,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.37508374960274604
+        },
+        {
+          "d_pose_linf": 0.002191230421885848,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5040664558322315
+        },
+        {
+          "d_pose_linf": 0.006428308319300413,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5098887440306674
+        },
+        {
+          "d_pose_linf": 0.01866934262216091,
+          "d_seg_linf": 0.0026143391150981188,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6935142584611735
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "6664b506b98a60717d63e73edfe8a468822f858ed3309591e7c1f2f2a6701577",
+      "score_linf": 1.3672043248166048,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "least_squares_baseline_existing"
+    },
+    {
+      "archive_bytes_total": 1230018,
+      "d_pose_mean_linf": 0.007291246758541092,
+      "d_seg_mean_linf": 0.0027821858529932797,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018463419983163476,
+          "d_seg_linf": 0.0023905436974018812,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.3749345374732443
+        },
+        {
+          "d_pose_linf": 0.002193126594647765,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5041304897332566
+        },
+        {
+          "d_pose_linf": 0.006454048678278923,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5103958540054441
+        },
+        {
+          "d_pose_linf": 0.018671469762921333,
+          "d_seg_linf": 0.0026143391150981188,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6935388728666717
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "153f13249ed8335b7d02c27e1cb22e849a1fb035518f7b84d5eb0ad905e0c7d9",
+      "score_linf": 1.3672601702348202,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "coord_040_plus"
+    },
+    {
+      "archive_bytes_total": 1230018,
+      "d_pose_mean_linf": 0.007283248327439651,
+      "d_seg_mean_linf": 0.0027821858529932797,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018367237644270062,
+          "d_seg_linf": 0.0023905436974018812,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.37458015195254085
+        },
+        {
+          "d_pose_linf": 0.0021713098976761103,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5033920564405034
+        },
+        {
+          "d_pose_linf": 0.006470071151852608,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5107110017196766
+        },
+        {
+          "d_pose_linf": 0.01865488849580288,
+          "d_seg_linf": 0.0026143391150981188,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6933469640539887
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "13756ff2cb8e3bc9e4a7e4bb1e1a3af3d8920e123fd2d6b7fc6783540b8f1a31",
+      "score_linf": 1.367112023164475,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "coord_040_minus"
+    },
+    {
+      "archive_bytes_total": 1230022,
+      "d_pose_mean_linf": 0.007617577735800296,
+      "d_seg_mean_linf": 0.0027898152475245297,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0020779604092240334,
+          "d_seg_linf": 0.0024007160682231188,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.3842229304105479
+        },
+        {
+          "d_pose_linf": 0.0022891692351549864,
+          "d_seg_linf": 0.0035858154296875,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5098815507398994
+        },
+        {
+          "d_pose_linf": 0.007229852955788374,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.525231515114536
+        },
+        {
+          "d_pose_linf": 0.01887332834303379,
+          "d_seg_linf": 0.0026092529296875,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6953597338575197
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "f90e7a1b5a86048d81bc93a2de836b69d19585c19460e0089e50294b7cdfa3b3",
+      "score_linf": 1.3740022826524467,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "coord_031_plus"
+    },
+    {
+      "archive_bytes_total": 1230018,
+      "d_pose_mean_linf": 0.008464185055345297,
+      "d_seg_mean_linf": 0.002750396786723286,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0033109949436038733,
+          "d_seg_linf": 0.0024515788536518812,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.42711928082048445
+        },
+        {
+          "d_pose_linf": 0.002581946784630418,
+          "d_seg_linf": 0.0034586589317768812,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5065502665507831
+        },
+        {
+          "d_pose_linf": 0.005450215190649033,
+          "d_seg_linf": 0.0025278727989643812,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.48624423932684435
+        },
+        {
+          "d_pose_linf": 0.022513583302497864,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.7308324642522991
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "025074ae60fbe91242fe530e8163f702c459048c7bcbb32a1acbe51a9ebdb177",
+      "score_linf": 1.384990901606995,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "coord_031_minus"
+    },
+    {
+      "archive_bytes_total": 1230018,
+      "d_pose_mean_linf": 0.007281367259565741,
+      "d_seg_mean_linf": 0.0027834573993459344,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018365876749157906,
+          "d_seg_linf": 0.0023956298828125,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.37508374960274604
+        },
+        {
+          "d_pose_linf": 0.002191230421885848,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5040664558322315
+        },
+        {
+          "d_pose_linf": 0.006428308319300413,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5098887440306674
+        },
+        {
+          "d_pose_linf": 0.01866934262216091,
+          "d_seg_linf": 0.0026143391150981188,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6935142584611735
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "6664b506b98a60717d63e73edfe8a468822f858ed3309591e7c1f2f2a6701577",
+      "score_linf": 1.3672043248166048,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "coord_039_plus"
+    },
+    {
+      "archive_bytes_total": 1230018,
+      "d_pose_mean_linf": 0.007455559883965179,
+      "d_seg_mean_linf": 0.0027821858529932797,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0015458752168342471,
+          "d_seg_linf": 0.0024007160682231188,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.3644048371685973
+        },
+        {
+          "d_pose_linf": 0.002522536553442478,
+          "d_seg_linf": 0.003570556640625,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5158806165555664
+        },
+        {
+          "d_pose_linf": 0.005751520395278931,
+          "d_seg_linf": 0.0025634765625,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.49617093275332297
+        },
+        {
+          "d_pose_linf": 0.02000230737030506,
+          "d_seg_linf": 0.002593994140625,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.706638806002712
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "1d31dad0784406f452ed1ac43a164bf3d6b33d2b6574a108ae13d8f901d79506",
+      "score_linf": 1.3702857945784908,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "coord_039_minus"
+    },
+    {
+      "archive_bytes_total": 1230018,
+      "d_pose_mean_linf": 0.007406016084132716,
+      "d_seg_mean_linf": 0.0027796427602879703,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018741487292572856,
+          "d_seg_linf": 0.0023905436974018812,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.37595392157500185
+        },
+        {
+          "d_pose_linf": 0.00223137391731143,
+          "d_seg_linf": 0.0035451252479106188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5038903650924744
+        },
+        {
+          "d_pose_linf": 0.006498671602457762,
+          "d_seg_linf": 0.0025583903770893812,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5107639600381949
+        },
+        {
+          "d_pose_linf": 0.019019870087504387,
+          "d_seg_linf": 0.00262451171875,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6985689322047576
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "fb32a139fb046006382f0a75945b4009775dd69621f5cb0a2f1ebf9c0e14c82b",
+      "score_linf": 1.3691227393651069,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "coord_001_plus"
+    },
+    {
+      "archive_bytes_total": 1230018,
+      "d_pose_mean_linf": 0.007306791638256982,
+      "d_seg_mean_linf": 0.0027821858529932797,
+      "hf_decoder_fit_mode": "scorer_loop_qat",
+      "pair_count": 4,
+      "per_pair": [
+        {
+          "d_pose_linf": 0.0018391202902421355,
+          "d_seg_linf": 0.0024007160682231188,
+          "pair_index": 0,
+          "score_linf_without_rate": 0.3756857760761968
+        },
+        {
+          "d_pose_linf": 0.0022040645126253366,
+          "d_seg_linf": 0.0035603840369731188,
+          "pair_index": 1,
+          "score_linf_without_rate": 0.5044993249064077
+        },
+        {
+          "d_pose_linf": 0.006456301081925631,
+          "d_seg_linf": 0.0025583903770893812,
+          "pair_index": 2,
+          "score_linf_without_rate": 0.5099315618399254
+        },
+        {
+          "d_pose_linf": 0.018727680668234825,
+          "d_seg_linf": 0.0026092529296875,
+          "pair_index": 3,
+          "score_linf_without_rate": 0.6936801966756269
+        }
+      ],
+      "receiver_archive_replay_verified": true,
+      "receiver_archive_sha256": "6bc2ce9bfda86c60b082414e48651a5627796e6adacebd0e8dd479e420e7ddc0",
+      "score_linf": 1.3675478605081122,
+      "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
+      "sweep_label": "coord_001_minus"
+    }
+  ],
+  "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+  "score_claim": false,
+  "scorer_loop_evaluations": 9,
+  "search_mode": "top_weight_coordinate",
+  "target_bits_per_coeff": 5.0,
+  "wall_seconds": 130.15612004202558,
+  "wavelet": "db2"
+}

@@ -66009,7 +66009,7 @@
           "evidence": ""
         }
       },
-      "notes": "False-authority coordinate-search continuation is GO_LOCAL_CONTINUATION_ONLY at 1-pair and 2-pair; 2-pair gate .omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_pose_gate_20260601T2355Z.json; no promotion/exact authority."
+      "notes": "2026-06-02 Codex continuation: per-pair deltas added to scorer-loop artifact schema. 2-pair strided local coordinate gate remained GO_LOCAL_CONTINUATION_ONLY but pair deltas showed non-robust cancellation (pair0 pose worsened, pair1 improved). 4-pair strided coordinate continuation is NO_GO_FOR_PROMOTION_OR_EXACT_EVAL; best score-lowering candidate failed pose guard. Pivot from linear coordinate perturbation to learned/nonlinear or scorer-loop decoder QAT before more coordinate sweeps. Still false-authority: no full-600 proof, no paired contest CPU/CUDA, fp32 decoder payload grammar not byte-optimized."
     }
   ],
   "level_rules": {
@@ -66019,5 +66019,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-01T23:52:28Z"
+  "updated_at": "2026-06-02T01:06:03Z"
 }
