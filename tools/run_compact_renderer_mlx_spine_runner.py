@@ -1974,6 +1974,114 @@ def _run_snerv_scorer_loop_qat_attachment(
     }
 
 
+def _run_snerv_native_mlx_export_attachment(
+    *,
+    requested: bool,
+    output_dir: str | Path,
+    num_pairs: int,
+    source_video_path: str | Path,
+    scorer_upstream_dir: str | Path,
+    modelsize_candidate: Mapping[str, Any] | None,
+    repo_root: str | Path,
+    allow_overwrite: bool,
+    retain_receiver_output: bool,
+    receiver_proof_timeout_seconds: int,
+) -> dict[str, Any]:
+    """Run the native MLX SNeRV train/export/archive bridge.
+
+    This attachment is the first real MLX-owned SNeRV export path. It remains
+    false-authority until scorer-aware long training and exact auth replay
+    clear, but a receiver-proofed archive here is stronger than a surface-only
+    adapter contract and should feed the curriculum gate.
+    """
+
+    attachment_dir = Path(output_dir).expanduser().resolve(strict=False)
+    result_path = attachment_dir / "snerv_mlx_native_export_attachment.json"
+    attachment_dir.mkdir(parents=True, exist_ok=True)
+    if not requested:
+        payload = {
+            "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
+            "executed": False,
+            "requested": False,
+            "blockers": ["snerv_mlx_native_export_not_requested"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        _write_json(result_path, payload)
+        return {**payload, "result_path": result_path.as_posix()}
+
+    try:
+        from tac.substrates.snerv_inverse_steg_carrier import (
+            mlx_native_train_export as native_mod,
+        )
+
+        artifact = native_mod.train_export_snerv_mlx_native(
+            output_dir=attachment_dir / "native_train_export",
+            num_pairs=int(num_pairs),
+            source_video_path=Path(source_video_path),
+            modelsize_candidate=modelsize_candidate,
+            scorer_upstream_dir=Path(scorer_upstream_dir),
+            repo_root=Path(repo_root),
+            run_archive_export=True,
+            retain_receiver_output=bool(retain_receiver_output),
+            receiver_proof_timeout_seconds=int(receiver_proof_timeout_seconds),
+            allow_overwrite=bool(allow_overwrite),
+        )
+        blockers = list(artifact.get("blockers") or [])
+        if int(num_pairs) < CONTEST_PAIR_COUNT:
+            blockers.append("snerv_mlx_native_export_partial_pair_coverage")
+        if artifact.get("receiver_proof_passed") is not True:
+            blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
+        payload = {
+            "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
+            "executed": True,
+            "requested": True,
+            "axis_tag": "[macOS-MLX research-signal]",
+            "num_pairs": int(num_pairs),
+            "artifact_schema": artifact.get("schema"),
+            "artifact_report_path": artifact.get("report_path"),
+            "packet_path": artifact.get("packet_path"),
+            "packet_bytes": artifact.get("packet_bytes"),
+            "packet_sha256": artifact.get("packet_sha256"),
+            "archive_path": artifact.get("archive_path"),
+            "archive_bytes": artifact.get("archive_bytes"),
+            "archive_sha256": artifact.get("archive_sha256"),
+            "receiver_proof_path": artifact.get("receiver_proof_path"),
+            "receiver_proof_passed": bool(artifact.get("receiver_proof_passed")),
+            "receiver_contract_satisfied": bool(
+                artifact.get("receiver_contract_satisfied")
+            ),
+            "native_mlx_train_export_attached": True,
+            "native_mlx_full600_campaign_ready": int(num_pairs) >= CONTEST_PAIR_COUNT,
+            "blockers": _dedupe(blockers),
+            "artifact": artifact,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    except Exception as exc:  # pragma: no cover - exercised through runner tests
+        payload = {
+            "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
+            "executed": False,
+            "requested": True,
+            "failure": repr(exc),
+            "blockers": ["snerv_mlx_native_export_failed"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    _write_json(result_path, payload)
+    return {
+        **payload,
+        "result_path": result_path.as_posix(),
+        "result_sha256": _sha256_file(result_path),
+    }
+
+
 def _pr95_long_campaign_prelaunch_blockers(
     candidate_curriculum_plan: Mapping[str, Any],
     *,
@@ -2018,6 +2126,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_spectra_preserving_adapter: bool = False,
     snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
     snerv_hfr_gain: float = 0.0,
+    run_native_mlx_export: bool = False,
+    snerv_native_mlx_receiver_proof_timeout_seconds: int = 1800,
     run_scorer_loop_qat: bool = False,
     snerv_scorer_loop_max_trials: int = 2,
     snerv_scorer_loop_search_mode: str = "nes_pair_robust",
@@ -2289,6 +2399,25 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         seed=int(random_seed),
     )
+    snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
+        requested=bool(run_native_mlx_export),
+        output_dir=out / "snerv_mlx_native_export",
+        num_pairs=int(num_pairs),
+        source_video_path=resolved_source_video,
+        scorer_upstream_dir=scorer_upstream,
+        modelsize_candidate=candidate or None,
+        repo_root=root,
+        allow_overwrite=bool(allow_overwrite),
+        retain_receiver_output=bool(keep_local_replay_inflated),
+        receiver_proof_timeout_seconds=int(
+            snerv_native_mlx_receiver_proof_timeout_seconds
+        ),
+    )
+    snerv_mlx_native_export_verified = bool(
+        snerv_mlx_native_export.get("executed")
+        and snerv_mlx_native_export.get("receiver_proof_passed") is True
+        and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
+    )
     candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
@@ -2313,18 +2442,30 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         receiver_proof_attached=receiver_proof_attached,
         full_video_local_prefilter_attached=has_full_video_mlx_prefilter,
         local_cpu_replay_gate_attached=local_cpu_replay_summary is not None,
+        native_mlx_train_export_attached=bool(
+            snerv_mlx_native_export.get("executed")
+        ),
+        native_mlx_receiver_proof_passed=snerv_mlx_native_export_verified,
+        native_mlx_full600_campaign_ready=bool(
+            snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")
+        ),
     )
 
     blockers = _dedupe(
         [
             "contest_cpu_cuda_exact_eval_not_executed",
-            *list(snerv_mlx_native_adapter_contract.get("blockers") or []),
+            *(
+                []
+                if snerv_mlx_native_export_verified
+                else list(snerv_mlx_native_adapter_contract.get("blockers") or [])
+            ),
             (
                 "snerv_mlx_native_longer_staged_training_not_executed"
                 if snerv_scorer_loop_qat.get("executed")
                 else "snerv_longer_staged_score_aware_training_not_executed"
             ),
             *list(candidate_curriculum_plan.get("blockers") or []),
+            *list(snerv_mlx_native_export.get("blockers") or []),
             *local_cpu_replay_blockers,
             *list(post_export_materializer_plan.get("blockers") or []),
             *list(post_export_materializer_execution.get("blockers") or []),
@@ -2417,7 +2558,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     advisory.receiver_archive_replay_verified
                 ),
                 "scorer_loop_qat": snerv_scorer_loop_qat,
-                "mlx_native_training_required_next": True,
+                "mlx_native_export": snerv_mlx_native_export,
+                "mlx_native_train_export_attached": bool(
+                    snerv_mlx_native_export.get("executed")
+                ),
+                "mlx_native_receiver_proof_passed": snerv_mlx_native_export_verified,
+                "mlx_native_training_required_next": (
+                    not snerv_mlx_native_export_verified
+                ),
                 "authority": "macos_cpu_advisory_false_authority",
             },
             "reusable_optimization_followups": {
@@ -2451,6 +2599,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "post_export_materializer_execution": post_export_materializer_execution,
             "snerv_binary_profile": snerv_binary_profile,
             "snerv_scorer_loop_qat": snerv_scorer_loop_qat,
+            "snerv_mlx_native_export": snerv_mlx_native_export,
             "local_cpu_replay_summary_paths": [
                 path.as_posix() for path in local_cpu_replay_paths
             ],
@@ -2636,7 +2785,7 @@ def adapt_snerv_advisory_report_to_spine(
     blockers = _dedupe(
         [
             "contest_cpu_cuda_exact_eval_not_executed",
-            "snerv_mlx_native_train_export_archive_adapter_missing",
+            "snerv_mlx_native_adapter_surfaces_present_but_unproven",
             "snerv_longer_staged_score_aware_training_not_executed",
             *(
                 []
@@ -7227,6 +7376,21 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Deterministic HFR residual gain for the SNeRV adapter.",
     )
     parser.add_argument(
+        "--skip-snerv-native-mlx-export",
+        action="store_true",
+        help=(
+            "For --execute-family snerv, skip the MLX-native "
+            "train/export/archive receiver-proof attachment. The CLI runs it "
+            "by default so SNeRV execution is MLX-first."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-native-mlx-receiver-proof-timeout",
+        default=1800,
+        type=int,
+        help="Timeout seconds for the SNeRV MLX-native receiver proof.",
+    )
+    parser.add_argument(
         "--snerv-scorer-loop-qat",
         action="store_true",
         help=(
@@ -7646,6 +7810,10 @@ def main(argv: list[str] | None = None) -> int:
             snerv_spectra_preserving_adapter=args.snerv_spectra_preserving_adapter,
             snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
             snerv_hfr_gain=args.snerv_hfr_gain,
+            run_native_mlx_export=not args.skip_snerv_native_mlx_export,
+            snerv_native_mlx_receiver_proof_timeout_seconds=(
+                args.snerv_native_mlx_receiver_proof_timeout
+            ),
             run_scorer_loop_qat=bool(
                 args.coder_aware_qat or args.snerv_scorer_loop_qat
             ),

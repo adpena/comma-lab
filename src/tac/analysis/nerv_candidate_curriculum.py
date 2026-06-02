@@ -22,6 +22,9 @@ from tac.analysis.pr95_stack_binding_requirements import (
 from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
     CANONICAL_PR95_TOTAL_EPOCHS,
 )
+from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (
+    build_snerv_mlx_native_adapter_contract,
+)
 
 SCHEMA = "nerv_candidate_curriculum_plan.v1"
 BYTE_FEEDBACK_SCHEMA = "nerv_candidate_byte_feedback.v1"
@@ -298,10 +301,17 @@ def build_snerv_candidate_curriculum_plan(
     receiver_proof_attached: bool = False,
     full_video_local_prefilter_attached: bool = False,
     local_cpu_replay_gate_attached: bool = False,
+    native_mlx_train_export_attached: bool = False,
+    native_mlx_receiver_proof_passed: bool = False,
+    native_mlx_full600_campaign_ready: bool = False,
 ) -> dict[str, Any]:
     """Bind a SNeRV receiver-grammar candidate to byte feedback and blockers."""
 
     candidate_row = dict(candidate or {})
+    native_contract = build_snerv_mlx_native_adapter_contract()
+    native_export_verified = bool(
+        native_mlx_train_export_attached and native_mlx_receiver_proof_passed
+    )
     candidate_selected = bool(candidate_row)
     full_video = int(num_pairs) >= 600
     levels = _int(candidate_row.get("levels"), 3)
@@ -326,11 +336,25 @@ def build_snerv_candidate_curriculum_plan(
         "ready_for_exact_eval_dispatch": False,
     }
     blockers: list[str] = [
-        "snerv_mlx_native_train_export_adapter_missing",
+        str(blocker)
+        for blocker in list(native_contract.get("blockers") or [])
+        if not (
+            native_export_verified
+            and str(blocker)
+            == "snerv_mlx_native_adapter_surfaces_present_but_unproven"
+        )
     ]
+    if not bool(native_contract.get("surfaces_ready")):
+        blockers.append("snerv_mlx_native_train_export_adapter_missing")
+    elif not native_export_verified:
+        blockers.append("snerv_mlx_native_adapter_surfaces_present_but_unproven")
+    if native_mlx_train_export_attached and not native_mlx_receiver_proof_passed:
+        blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
     if not scorer_loop_qat_attached:
         blockers.append("snerv_scorer_loop_qat_not_attached")
     blockers.append("snerv_score_aware_curriculum_not_native_mlx_yet")
+    if not native_mlx_full600_campaign_ready:
+        blockers.append("snerv_mlx_native_full600_campaign_not_ready")
     if not candidate_selected:
         blockers.append("snerv_modelsize_candidate_not_selected_manual_probe")
     if not full_video:
@@ -390,6 +414,21 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_training_required": True,
             "current_execution_path": "cpu_advisory_receiver_bound_packet",
             "next_required_adapter": "snerv_mlx_native_train_export_archive",
+            "native_mlx_adapter_contract": native_contract,
+            "native_mlx_adapter_surfaces_ready": bool(
+                native_contract.get("surfaces_ready")
+            ),
+            "native_mlx_adapter_full600_campaign_ready": bool(
+                native_contract.get("full600_campaign_ready")
+            ),
+            "native_mlx_train_export_attached": bool(native_mlx_train_export_attached),
+            "native_mlx_receiver_proof_passed": bool(
+                native_mlx_receiver_proof_passed
+            ),
+            "native_mlx_export_verified": native_export_verified,
+            "native_mlx_export_full600_campaign_ready": bool(
+                native_mlx_full600_campaign_ready
+            ),
             "scorer_loop_qat_attached": bool(scorer_loop_qat_attached),
             "scorer_loop_qat_receiver_contract_satisfied": bool(
                 scorer_loop_qat_receiver_contract_satisfied

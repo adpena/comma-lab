@@ -246,7 +246,11 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     assert "snerv_candidate_curriculum_requires_waterfill_step_maps" not in plan[
         "blockers"
     ]
-    assert "snerv_mlx_native_train_export_adapter_missing" in plan["blockers"]
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in plan[
+        "blockers"
+    ]
+    assert plan["training_plan"]["native_mlx_adapter_surfaces_ready"] is True
+    assert plan["training_plan"]["native_mlx_adapter_full600_campaign_ready"] is False
     assert plan["pr95_stack_binding"]["family"] == "snerv"
     assert plan["pr95_stack_binding"]["complete"] is False
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
@@ -300,8 +304,46 @@ def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
     assert "snerv_receiver_proof_missing" not in plan["blockers"]
     assert "snerv_full_video_local_prefilter_missing" not in plan["blockers"]
     assert "snerv_local_cpu_replay_gate_missing" not in plan["blockers"]
-    assert "snerv_mlx_native_train_export_adapter_missing" in plan["blockers"]
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in plan[
+        "blockers"
+    ]
+    assert plan["training_plan"]["native_mlx_adapter_surfaces_ready"] is True
     assert "snerv_score_aware_curriculum_not_native_mlx_yet" in plan["blockers"]
+
+
+def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence() -> None:
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=600,
+        levels=5,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+    ).as_dict()
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=3,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=190_000,
+        measured_archive_bytes=191_000,
+        native_mlx_train_export_attached=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_full600_campaign_ready=True,
+    )
+
+    training_plan = plan["training_plan"]
+    assert training_plan["native_mlx_train_export_attached"] is True
+    assert training_plan["native_mlx_receiver_proof_passed"] is True
+    assert training_plan["native_mlx_export_verified"] is True
+    assert training_plan["native_mlx_export_full600_campaign_ready"] is True
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" not in plan[
+        "blockers"
+    ]
+    assert "snerv_mlx_native_full600_campaign_not_ready" not in plan["blockers"]
+    assert "snerv_score_aware_curriculum_not_native_mlx_yet" in plan["blockers"]
+    assert "snerv_scorer_loop_qat_not_attached" in plan["blockers"]
 
 
 def test_snerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:

@@ -1069,6 +1069,9 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "1,3",
             "--snerv-hfr-gain",
             "0.25",
+            "--skip-snerv-native-mlx-export",
+            "--snerv-native-mlx-receiver-proof-timeout",
+            "123",
         ]
     )
 
@@ -1104,6 +1107,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_spectra_preserving_adapter is True
     assert sn.snerv_mfu_scales == "1,3"
     assert sn.snerv_hfr_gain == 0.25
+    assert sn.skip_snerv_native_mlx_export is True
+    assert sn.snerv_native_mlx_receiver_proof_timeout == 123
     assert sn.modelsize_candidate_id == "auto"
     assert sn.post_export_materializer_max_experiments == 1
 
@@ -3056,6 +3061,203 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
 
 
+def test_execute_snerv_attaches_native_mlx_export_evidence(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet = _synthetic_snerv_packet(pairs=2)
+    native_calls: list[dict[str, object]] = []
+
+    def fake_run_snerv_advisory(**kwargs):
+        def as_jsonable() -> dict[str, object]:
+            return {
+                "schema": "fake_snerv_advisory.v1",
+                "receiver_archive_packet": {
+                    "bytes": len(packet),
+                    "sha256": "0" * 64,
+                    "redacted": True,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+        return SimpleNamespace(
+            n_pairs=int(kwargs["n_pairs"]),
+            receiver_archive_packet=packet,
+            as_jsonable=as_jsonable,
+            levels=int(kwargs["levels"]),
+            wavelet="db2",
+            score_linf=12.0,
+            score_l2=13.0,
+            d_seg_mean_linf=0.1,
+            d_pose_mean_linf=0.01,
+            archive_bytes_total=len(packet),
+            snerv_fc_dim=9,
+            snerv_emb_size=0,
+            snerv_patch_radius=1,
+            snerv_model_size_adapter=kwargs["snerv_model_size_adapter"],
+            snerv_mfu_scales=kwargs["snerv_mfu_scales"],
+            snerv_hfr_gain=kwargs["snerv_hfr_gain"],
+            snerv_temporal_context=0,
+            decoder_feature_count=9,
+            beats_frontier_rate=True,
+            receiver_archive_replay_verified=True,
+        )
+
+    def fake_export_snerv_archive_bound_candidate_package(**kwargs):
+        package_dir = Path(kwargs["output_dir"])
+        package_dir.mkdir(parents=True, exist_ok=True)
+        archive = package_dir / "archive.zip"
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", bytes(kwargs["packet"]))
+        submission = package_dir / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        proof = package_dir / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+        proof.parent.mkdir()
+        proof.write_text(
+            json.dumps(
+                {
+                    "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+                    "runtime_consumption_proof_ready": True,
+                    "runtime_consumption_proof_passed": True,
+                    "receiver_contract_satisfied": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        row = {
+            "candidate_archive_path": archive.as_posix(),
+            "candidate_archive_bytes": archive.stat().st_size,
+            "candidate_archive_sha256": runner_mod._sha256_file(archive),
+            "runtime_consumption_proof_ready": True,
+            "receiver_contract_satisfied": True,
+            "blockers": ["snerv_packet_not_full_600_pairs"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        (package_dir / "archive_bound_candidate_adapter_package.json").write_text(
+            json.dumps({"candidate_rows": [row]}, sort_keys=True),
+            encoding="utf-8",
+        )
+        return {
+            "archive_bound_candidate_adapter_package": {"candidate_rows": [row]},
+            "receiver_proof": {
+                "proof_path": proof.as_posix(),
+                "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "blockers": [],
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    def fake_train_export_snerv_mlx_native(**kwargs):
+        native_calls.append(dict(kwargs))
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        packet_path = out / "snerv_mlx_native_packet.snar"
+        packet_path.write_bytes(b"native-snar")
+        archive = out / "archive.zip"
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", b"native-snar")
+        proof = out / "receiver_proof.json"
+        proof.write_text(
+            json.dumps({"receiver_contract_satisfied": True}),
+            encoding="utf-8",
+        )
+        report = out / "snerv_mlx_native_train_export.json"
+        payload = {
+            "schema": "snerv_mlx_native_train_export.v1",
+            "report_path": report.as_posix(),
+            "packet_path": packet_path.as_posix(),
+            "packet_bytes": packet_path.stat().st_size,
+            "packet_sha256": runner_mod._sha256_file(packet_path),
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "receiver_proof_path": proof.as_posix(),
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "num_pairs": int(kwargs["num_pairs"]),
+            "blockers": [
+                "snerv_mlx_score_aware_long_training_not_executed",
+                "contest_cpu_cuda_exact_eval_not_executed",
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        report.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+        return payload
+
+    import tac.substrates.snerv_inverse_steg_carrier.advisory as advisory_mod
+    import tac.substrates.snerv_inverse_steg_carrier.archive_candidate as package_mod
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as native_mod
+
+    monkeypatch.setattr(advisory_mod, "run_snerv_advisory", fake_run_snerv_advisory)
+    monkeypatch.setattr(
+        package_mod,
+        "export_snerv_archive_bound_candidate_package",
+        fake_export_snerv_archive_bound_candidate_package,
+    )
+    monkeypatch.setattr(
+        native_mod,
+        "train_export_snerv_mlx_native",
+        fake_train_export_snerv_mlx_native,
+    )
+
+    out = execute_snerv_inverse_steg_advisory_and_adapt(
+        output_dir=tmp_path / "snerv_native_gate",
+        num_pairs=2,
+        epochs=3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        modelsize_candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "snerv-native-smoke",
+            "levels": 2,
+            "bits_per_coeff": 1.5,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int2_symmetric",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
+            "nominal_under_ceiling": True,
+        },
+        run_native_mlx_export=True,
+        repo_root=REPO_ROOT,
+    )
+
+    assert native_calls
+    assert native_calls[0]["num_pairs"] == 2
+    native = out["snerv_mlx_native_export"]
+    assert native["executed"] is True
+    assert native["receiver_proof_passed"] is True
+    assert native["receiver_contract_satisfied"] is True
+    assert Path(native["artifact_report_path"]).is_file()
+    assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
+    assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is True
+    plan = out["candidate_curriculum_plan"]
+    assert plan["training_plan"]["native_mlx_train_export_attached"] is True
+    assert plan["training_plan"]["native_mlx_receiver_proof_passed"] is True
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" not in plan[
+        "blockers"
+    ]
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" not in out[
+        "blockers"
+    ]
+    assert "snerv_mlx_native_export_partial_pair_coverage" in out["blockers"]
+    assert "snerv_score_aware_curriculum_not_native_mlx_yet" in out["blockers"]
+
+
 def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     tmp_path: Path,
     monkeypatch,
@@ -3281,7 +3483,9 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert "snerv_qat_forward_missing" not in plan["blockers"]
     assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
     assert "snerv_receiver_proof_missing" not in plan["blockers"]
-    assert "snerv_mlx_native_train_export_adapter_missing" in out["blockers"]
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out[
+        "blockers"
+    ]
     assert "snerv_mlx_native_longer_staged_training_not_executed" in out[
         "blockers"
     ]
