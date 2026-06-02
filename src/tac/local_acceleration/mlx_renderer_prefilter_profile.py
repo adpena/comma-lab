@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import statistics
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -49,6 +50,8 @@ def write_mlx_renderer_prefilter_profile(
     required_pairs: int = CONTEST_PAIR_COUNT,
     run_id: str | None = None,
     source_video_path: str | Path | None = None,
+    progress_jsonl_path: str | Path | None = None,
+    progress_every: int = 0,
 ) -> dict[str, Any]:
     """Run the MLX scorer mirror on ``bundle`` and write a prefilter profile.
 
@@ -69,6 +72,10 @@ def write_mlx_renderer_prefilter_profile(
         required_pairs: Full-video pair count required by downstream gates.
         run_id: Optional provenance label.
         source_video_path: Optional source video path recorded for provenance.
+        progress_jsonl_path: Optional JSONL path for crash-visible chunk
+            progress. Rows are false-authority telemetry only.
+        progress_every: Emit one progress row every N chunks. ``0`` disables
+            progress rows; when enabled, the final chunk is always emitted.
 
     Returns:
         The written profile.
@@ -95,6 +102,8 @@ def write_mlx_renderer_prefilter_profile(
             source_video_path=source_video_path,
             upstream_dir=upstream_dir,
             scorer_device=scorer_device,
+            progress_jsonl_path=progress_jsonl_path,
+            progress_every=progress_every,
         )
 
     out = Path(output_path)
@@ -118,6 +127,8 @@ def build_mlx_renderer_prefilter_profile_loaded(
     source_video_path: str | Path | None = None,
     upstream_dir: str | Path | None = None,
     scorer_device: str = "cpu",
+    progress_jsonl_path: str | Path | None = None,
+    progress_every: int = 0,
 ) -> dict[str, Any]:
     """Build a profile with a pre-loaded MLX scorer adapter.
 
@@ -133,19 +144,32 @@ def build_mlx_renderer_prefilter_profile_loaded(
     )
     from tac.substrates._shared.mlx_score_aware.loss import decode_frames_nhwc01
 
-    pair_count = _positive_int(getattr(bundle, "num_pairs"), "bundle.num_pairs")
+    pair_count = _positive_int(bundle.num_pairs, "bundle.num_pairs")
     batch_pairs = _positive_int(scorer_batch_pairs, "scorer_batch_pairs")
     archive_size = _positive_int(archive_bytes, "archive_bytes")
     archive_hash = _required_sha256(archive_sha256, "archive_sha256")
     required = _positive_int(required_pairs, "required_pairs")
+    progress_interval = _nonnegative_int(progress_every, "progress_every")
+    progress_path = (
+        Path(progress_jsonl_path).expanduser().resolve(strict=False)
+        if progress_jsonl_path is not None
+        else None
+    )
+    if progress_path is not None:
+        progress_path.parent.mkdir(parents=True, exist_ok=True)
+        progress_path.write_text("", encoding="utf-8")
 
     started = time.time()
     pose_sum = 0.0
     seg_sum = 0.0
     count = 0
     output_hashes = _OutputHashes()
+    chunk_elapsed_seconds: list[float] = []
+    chunk_pairs_per_second: list[float] = []
 
-    for start in range(0, pair_count, batch_pairs):
+    total_chunks = math.ceil(pair_count / float(batch_pairs))
+    for chunk_index, start in enumerate(range(0, pair_count, batch_pairs), start=1):
+        chunk_started = time.time()
         stop = min(pair_count, start + batch_pairs)
         idx = mx.arange(start, stop)
         cand_0, cand_1 = decode_frames_nhwc01(bundle, idx)
@@ -181,6 +205,62 @@ def build_mlx_renderer_prefilter_profile_loaded(
         seg_sum += float(np.sum(seg, dtype=np.float64))
         count += int(pose.shape[0])
         mx.eval(cand_pose, cand_seg, ref_pose, ref_seg)
+        chunk_elapsed = time.time() - chunk_started
+        chunk_pair_count = int(stop - start)
+        chunk_rate = (
+            float(chunk_pair_count) / chunk_elapsed if chunk_elapsed > 0.0 else None
+        )
+        chunk_elapsed_seconds.append(chunk_elapsed)
+        if chunk_rate is not None:
+            chunk_pairs_per_second.append(chunk_rate)
+        if _should_emit_progress(
+            chunk_index=chunk_index,
+            total_chunks=total_chunks,
+            progress_every=progress_interval,
+        ):
+            elapsed_so_far = time.time() - started
+            avg_pose_so_far = pose_sum / float(count)
+            avg_seg_so_far = seg_sum / float(count)
+            _append_progress_row(
+                progress_path,
+                {
+                    "schema": "mlx_renderer_prefilter_progress.v1",
+                    "producer": "tac.local_acceleration.mlx_renderer_prefilter_profile",
+                    "generated_utc": datetime.now(UTC).isoformat(),
+                    "run_id": run_id,
+                    "archive_sha256": archive_hash,
+                    "archive_bytes": archive_size,
+                    "scorer_device": scorer_device,
+                    "scorer_batch_pairs": batch_pairs,
+                    "chunk_index": chunk_index,
+                    "chunk_count": total_chunks,
+                    "pair_start": int(start),
+                    "pair_stop": int(stop),
+                    "pair_count": chunk_pair_count,
+                    "cumulative_pair_count": int(count),
+                    "required_pairs": required,
+                    "elapsed_seconds": elapsed_so_far,
+                    "chunk_elapsed_seconds": chunk_elapsed,
+                    "chunk_pairs_per_second": chunk_rate,
+                    "cumulative_pairs_per_second": (
+                        float(count) / elapsed_so_far
+                        if elapsed_so_far > 0.0
+                        else None
+                    ),
+                    "cumulative_avg_posenet_dist": avg_pose_so_far,
+                    "cumulative_avg_segnet_dist": avg_seg_so_far,
+                    "cumulative_canonical_score": contest_formula_score(
+                        seg_dist=avg_seg_so_far,
+                        pose_dist=avg_pose_so_far,
+                        archive_bytes=archive_size,
+                    ),
+                    **FALSE_AUTHORITY,
+                    "authority": (
+                        "macOS MLX progress telemetry only; not a contest score, "
+                        "promotion, rank, or kill authority."
+                    ),
+                },
+            )
 
     if count != pair_count:
         raise ValueError(f"internal pair count mismatch: accumulated {count}, expected {pair_count}")
@@ -192,6 +272,7 @@ def build_mlx_renderer_prefilter_profile_loaded(
         archive_bytes=archive_size,
     )
     elapsed = time.time() - started
+    throughput = float(count) / elapsed if elapsed > 0.0 else None
     full_scope = (
         "executed"
         if pair_count >= required
@@ -248,7 +329,43 @@ def build_mlx_renderer_prefilter_profile_loaded(
             "num_pairs": pair_count,
             "local_score_estimate": canonical_score,
             "elapsed_seconds": elapsed,
+            "pair_throughput_per_second": throughput,
             "scorer_layout": "direct_mlx_nhwc",
+        },
+        "progress": {
+            "schema": "mlx_renderer_prefilter_progress_summary.v1",
+            "progress_jsonl_path": progress_path.as_posix() if progress_path else None,
+            "progress_every": progress_interval,
+            "chunk_count": total_chunks,
+            "batch_pairs": batch_pairs,
+            "pair_throughput_per_second": throughput,
+            "mean_chunk_elapsed_seconds": (
+                statistics.fmean(chunk_elapsed_seconds)
+                if chunk_elapsed_seconds
+                else None
+            ),
+            "median_chunk_elapsed_seconds": (
+                statistics.median(chunk_elapsed_seconds)
+                if chunk_elapsed_seconds
+                else None
+            ),
+            "slowest_chunk_seconds": (
+                max(chunk_elapsed_seconds) if chunk_elapsed_seconds else None
+            ),
+            "fastest_chunk_seconds": (
+                min(chunk_elapsed_seconds) if chunk_elapsed_seconds else None
+            ),
+            "mean_chunk_pairs_per_second": (
+                statistics.fmean(chunk_pairs_per_second)
+                if chunk_pairs_per_second
+                else None
+            ),
+            "cache_reuse_contract": (
+                "build_mlx_renderer_prefilter_profile_loaded accepts a preloaded "
+                "MLX scorer adapter so queue runners can reuse scorer weights "
+                "across candidates without re-importing upstream PyTorch scorers."
+            ),
+            **FALSE_AUTHORITY,
         },
         "component_output_hashes": output_hashes.hexdigests(),
         "section_value_rows": [],
@@ -380,7 +497,7 @@ def _segnet_argmax_distortion_nhwc(candidate: np.ndarray, reference: np.ndarray)
     return np.mean(diff.astype(np.float32), axis=(1, 2), dtype=np.float32)
 
 
-def _update_array_digest(digest: "hashlib._Hash", array: np.ndarray) -> None:
+def _update_array_digest(digest: hashlib._Hash, array: np.ndarray) -> None:
     contiguous = np.ascontiguousarray(array)
     digest.update(str(contiguous.dtype).encode("utf-8"))
     digest.update(json.dumps(list(contiguous.shape)).encode("utf-8"))
@@ -397,11 +514,42 @@ def _positive_int(value: Any, name: str) -> int:
     return parsed
 
 
+def _nonnegative_int(value: Any, name: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a nonnegative integer, got {value!r}") from exc
+    if parsed < 0:
+        raise ValueError(f"{name} must be nonnegative, got {parsed}")
+    return parsed
+
+
 def _required_sha256(value: Any, name: str) -> str:
     text = str(value)
     if len(text) != 64 or any(ch not in "0123456789abcdef" for ch in text.lower()):
         raise ValueError(f"{name} must be a 64-char lowercase SHA-256 hex string")
     return text.lower()
+
+
+def _should_emit_progress(
+    *,
+    chunk_index: int,
+    total_chunks: int,
+    progress_every: int,
+) -> bool:
+    if progress_every <= 0:
+        return False
+    if chunk_index >= total_chunks:
+        return True
+    return chunk_index % progress_every == 0
+
+
+def _append_progress_row(path: Path | None, row: dict[str, Any]) -> None:
+    if path is None:
+        return
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(_jsonable(row), sort_keys=True, allow_nan=False))
+        fh.write("\n")
 
 
 def _jsonable(value: Any) -> Any:

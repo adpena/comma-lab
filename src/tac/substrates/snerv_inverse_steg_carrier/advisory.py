@@ -34,8 +34,10 @@ from __future__ import annotations
 
 import hashlib
 import lzma
+import sys
 import time
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -330,6 +332,7 @@ def run_snerv_advisory(
     start_pair: int = 0,
     pr101_frontier_bytes: int = 178_493,
     video_path: str = "upstream/videos/0.mkv",
+    upstream_dir: str | None = None,
     device: str = "cpu",
     step_map_coder_bins: int = STEP_MAP_CODER_BINS,
     step_map_coder_mode: str = "uniform",
@@ -348,7 +351,14 @@ def run_snerv_advisory(
     default = PR101/HNeRV 178,493 B).
     """
     t0 = time.time()
-    posenet, segnet = load_score_exact_scorers(device=device)
+    if upstream_dir is not None:
+        upstream_path = Path(upstream_dir).expanduser().resolve(strict=False)
+        if str(upstream_path) not in sys.path:
+            sys.path.insert(0, str(upstream_path))
+    posenet, segnet = load_score_exact_scorers(
+        upstream_dir=upstream_dir or "upstream",
+        device=device,
+    )
     pairs = decode_real_pairs(
         video_path, n_pairs, pair_stride=pair_stride, start_pair=start_pair, device=device
     )  # (n_pairs, 2, 3, H, W)

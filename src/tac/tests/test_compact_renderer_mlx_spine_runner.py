@@ -10,6 +10,7 @@ import struct
 import sys
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -29,8 +30,8 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     build_plan_only_report,
     execute_hi_nerv_mlx_scoreaware_and_adapt,
     execute_pact_nerv_selector_v4_mlx_smoke_and_adapt,
-    execute_planner_gated_compact_family,
     execute_pr95_hnerv_mlx_scoreaware_and_adapt,
+    execute_snerv_inverse_steg_advisory_and_adapt,
 )
 
 try:
@@ -205,7 +206,13 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         "latent_posthoc_allocator_demoted_low_leverage"
         in hinerv_plan["dispatch_blockers"]
     )
-    assert families["snerv"]["status"] == "migration_required"
+    assert families["snerv"]["status"] == (
+        "executable_archive_bound_cpu_advisory_mlx_migration_required"
+    )
+    assert families["snerv"]["archive_exporter"] == (
+        "tac.substrates.snerv_inverse_steg_carrier.archive_candidate."
+        "export_snerv_archive_bound_candidate_package"
+    )
     assert families["snerv"]["stack_role"] == "primary_carrier"
     assert families["snerv"]["score_aware_carrier_training_plan"][
         "score_aware_training_ready"
@@ -570,6 +577,10 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "0.75",
             "--recon-pixel-weight-normalize",
             "none",
+            "--mlx-prefilter-scorer-batch-pairs",
+            "8",
+            "--mlx-prefilter-progress-every",
+            "10",
         ]
     )
     sn = _parse_args(["--execute-family", "snerv", "--num-pairs", "128"])
@@ -583,6 +594,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.auto_segnet_boundary_recon_weight is True
     assert hi.recon_pixel_weight_tau == 0.75
     assert hi.recon_pixel_weight_normalize == "none"
+    assert hi.mlx_prefilter_scorer_batch_pairs == 8
+    assert hi.mlx_prefilter_progress_every == 10
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
 
@@ -862,6 +875,8 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        mlx_prefilter_scorer_batch_pairs=4,
+        mlx_prefilter_progress_every=7,
         upstream_dir=tmp_path / "canonical_upstream",
         repo_root=REPO_ROOT,
     )
@@ -869,6 +884,16 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert Path(captured_train_kwargs["scorer_upstream_dir"]) == (
         tmp_path / "canonical_upstream"
     )
+    assert captured_train_kwargs["mlx_prefilter_scorer_batch_pairs"] == 4
+    assert captured_train_kwargs["mlx_prefilter_progress_every"] == 7
+    assert out["score_aware_training"]["local_mlx_prefilter"] == {
+        "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
+        "scorer_batch_pairs": 4,
+        "progress_every": 7,
+        "singleton_required_for_local_cpu_replay_unlock": True,
+        "batched_profiles_are_prefilter_only": True,
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
     assert staged_calls
     assert replay_calls
     assert out["local_cpu_replay_gate"]["executed"] is True
@@ -1352,31 +1377,141 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     assert Path(out["report_path"]).is_file()
 
 
-def test_planner_gated_snerv_execution_writes_missing_stack_blockers(
+def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
-    out = execute_planner_gated_compact_family(
-        family="snerv",
+    packet = b"SNERVPACKET"
+
+    def fake_run_snerv_advisory(**kwargs):
+        assert kwargs["n_pairs"] == 2
+
+        def as_jsonable() -> dict[str, object]:
+            return {
+                "schema": "fake_snerv_advisory.v1",
+                "receiver_archive_packet": {
+                    "bytes": len(packet),
+                    "sha256": "0" * 64,
+                    "redacted": True,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+        return SimpleNamespace(
+            receiver_archive_packet=packet,
+            as_jsonable=as_jsonable,
+            levels=3,
+            wavelet="db2",
+            score_linf=12.0,
+            score_l2=13.0,
+            d_seg_mean_linf=0.1,
+            d_pose_mean_linf=0.01,
+            archive_bytes_total=len(packet),
+            beats_frontier_rate=True,
+            receiver_archive_replay_verified=True,
+        )
+
+    def fake_export_snerv_archive_bound_candidate_package(**kwargs):
+        package_dir = Path(kwargs["output_dir"])
+        package_dir.mkdir(parents=True, exist_ok=True)
+        archive = package_dir / "archive.zip"
+        archive.write_bytes(b"snerv-archive")
+        submission = package_dir / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        proof = package_dir / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+        proof.parent.mkdir()
+        proof.write_text(
+            json.dumps(
+                {
+                    "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+                    "runtime_consumption_proof_ready": True,
+                    "receiver_contract_satisfied": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        package_path = package_dir / "archive_bound_candidate_adapter_package.json"
+        row = {
+            "candidate_archive_path": archive.as_posix(),
+            "candidate_archive_bytes": archive.stat().st_size,
+            "candidate_archive_sha256": runner_mod._sha256_file(archive),
+            "runtime_consumption_proof_ready": True,
+            "receiver_contract_satisfied": True,
+            "blockers": ["snerv_packet_not_full_600_pairs"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        package_path.write_text(
+            json.dumps({"candidate_rows": [row]}, sort_keys=True),
+            encoding="utf-8",
+        )
+        return {
+            "archive_bound_candidate_adapter_package": {
+                "candidate_rows": [row],
+            },
+            "receiver_proof": {
+                "proof_path": proof.as_posix(),
+                "runtime_consumption_proof_ready": True,
+                "receiver_contract_satisfied": True,
+                "blockers": [],
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    import tac.substrates.snerv_inverse_steg_carrier.advisory as advisory_mod
+    import tac.substrates.snerv_inverse_steg_carrier.archive_candidate as package_mod
+
+    monkeypatch.setattr(advisory_mod, "run_snerv_advisory", fake_run_snerv_advisory)
+    monkeypatch.setattr(
+        package_mod,
+        "export_snerv_archive_bound_candidate_package",
+        fake_export_snerv_archive_bound_candidate_package,
+    )
+
+    out = execute_snerv_inverse_steg_advisory_and_adapt(
         output_dir=tmp_path / "snerv_gate",
-        num_pairs=128,
+        num_pairs=2,
         epochs=3,
         hard_byte_ceilings=(178_000, 216_000),
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
         repo_root=REPO_ROOT,
     )
 
-    assert out["mode"] == "snerv_planner_gated_execution_refused"
-    assert out["trainer_launch_allowed"] is False
+    assert out["mode"] == "executed_snerv_archive_bound_advisory_and_exported"
+    assert out["execute_family"] == "snerv"
+    assert out["training_executed"] is False
+    assert Path(out["archive_path"]).is_file()
+    assert out["archive_bytes"] == Path(out["archive_path"]).stat().st_size
+    assert Path(out["receiver_archive_packet_path"]).read_bytes() == packet
+    assert Path(out["advisory_report_path"]).is_file()
+    assert Path(out["runtime_package_path"]).is_file()
+    assert out["receiver_proof_report_paths"]
     planner = out["score_aware_carrier_training_plan"]
     assert planner["score_aware_training_ready"] is False
-    assert "missing_training_stack:real_segnet_teacher" in planner[
-        "dispatch_blockers"
-    ]
+    assert out["score_aware_training"]["status"] == (
+        "executed_cpu_advisory_mlx_native_training_missing"
+    )
+    assert out["score_aware_training"]["beats_frontier_rate"] is True
+    assert out["reusable_optimization_followups"][
+        "applies_after_byte_closed_export"
+    ] is True
+    assert "final_rate_attack_and_repair_materializers" in out[
+        "reusable_optimization_followups"
+    ]["required_hooks"]
     assert "snerv_mlx_native_train_export_archive_adapter_missing" in out[
         "blockers"
     ]
-    assert out["adapter_contract_required"][
-        "false_authority_until_all_surfaces_exist"
-    ] is True
+    assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
+    assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
 
 
 def test_pr95_stage8_execute_parser_exposes_source_lane_controls() -> None:

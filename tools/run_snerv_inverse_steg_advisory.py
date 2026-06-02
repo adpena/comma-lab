@@ -52,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pair-stride", type=int, default=1)
     ap.add_argument("--start-pair", type=int, default=0)
     ap.add_argument("--pr101-frontier-bytes", type=int, default=178_493)
+    ap.add_argument("--upstream-dir", type=str, default="upstream")
     ap.add_argument("--video-path", type=str, default="upstream/videos/0.mkv")
     ap.add_argument(
         "--step-map-coder-bins",
@@ -133,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         start_pair=args.start_pair,
         pr101_frontier_bytes=args.pr101_frontier_bytes,
         video_path=args.video_path,
+        upstream_dir=args.upstream_dir,
         step_map_coder_bins=args.step_map_coder_bins,
         step_map_coder_mode=args.step_map_coder_mode,
         step_map_adaptive_bin_choices=_parse_bins(args.step_map_adaptive_bin_choices),

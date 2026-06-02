@@ -98,8 +98,9 @@ EXECUTABLE_FAMILIES = (
     "pact_nerv_selector_v4",
     "pact_nerv_vq",
     "hi_nerv",
+    "snerv",
 )
-PLANNER_GATED_FAMILIES = ("snerv",)
+PLANNER_GATED_FAMILIES: tuple[str, ...] = ()
 CLI_EXECUTE_FAMILIES = (*EXECUTABLE_FAMILIES, *PLANNER_GATED_FAMILIES)
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
@@ -226,19 +227,24 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     },
     "snerv": {
         "canonical_family": "snerv",
-        "backend_status": "migration_required",
-        "trainer_kind": "missing_mlx_spectra_preserving_carrier_trainer",
-        "trainer_entrypoint": None,
-        "archive_exporter": None,
-        "receiver_proof": "missing_until_adapter_implemented",
+        "backend_status": "executable_archive_bound_cpu_advisory_mlx_migration_required",
+        "trainer_kind": "cpu_advisory_snerv_lf_hf_carrier_mlx_native_trainer_missing",
+        "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family snerv",
+        "archive_exporter": (
+            "tac.substrates.snerv_inverse_steg_carrier.archive_candidate."
+            "export_snerv_archive_bound_candidate_package"
+        ),
+        "receiver_proof": "generated_inflate_sh_receiver_proof_from_snerv_packet",
         "next_action": (
-            "implement_snerv_wavelet_lf_hf_mlx_carrier_under_packet_spine_"
-            "with_charged_wavelet_features_no_hidden_sidecars"
+            "migrate_snerv_wavelet_lf_hf_carrier_to_mlx_native_train_export_"
+            "under_same_packet_spine_with_charged_wavelet_features_no_hidden_sidecars"
         ),
         "execution_scope": (
             "primary compact carrier candidate; SNeRV wavelet/frequency split "
             "must be charged as decoder/latent/selector/codebook bytes and "
-            "validated by receiver proof before promotion"
+            "validated by receiver proof before promotion. Current executable "
+            "path is CPU advisory plus archive-bound runtime package; MLX-native "
+            "score-aware training remains the next blocker."
         ),
         "stack_role": "primary_carrier",
         "carrier_priority": 9,
@@ -1054,6 +1060,242 @@ def execute_planner_gated_compact_family(
     path = out / "compact_renderer_mlx_spine_runner_report.json"
     _write_json(path, report)
     return {**report, "report_path": path.as_posix()}
+
+
+def execute_snerv_inverse_steg_advisory_and_adapt(
+    *,
+    output_dir: str | Path,
+    num_pairs: int,
+    epochs: int,
+    source_video_path: str | Path,
+    hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
+    run_local_cpu_replay: bool | None = None,
+    keep_local_replay_inflated: bool = False,
+    cleanup_failed_local_replay_scratch: bool = True,
+    distillation_device: str = "cpu",
+    upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
+    allow_overwrite: bool = False,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Run SNeRV's archive-bound advisory lane through the shared runner.
+
+    This is not the missing MLX-native SNeRV trainer. It promotes the existing
+    SNeRV packet/runtime/proof stack into the same queue-owned surface as
+    HiNeRV while preserving explicit blockers until native MLX training exists.
+    """
+
+    from tac.substrates.snerv_inverse_steg_carrier.advisory import run_snerv_advisory
+    from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (
+        export_snerv_archive_bound_candidate_package,
+    )
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
+    resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
+    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+        raise CompactRendererMlxSpineRunnerError(
+            f"output dir is non-empty; pass --overwrite: {out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+
+    planner = _score_aware_carrier_training_plan(
+        "snerv",
+        COMPACT_FAMILY_BACKENDS["snerv"],
+    )
+    advisory = run_snerv_advisory(
+        n_pairs=int(num_pairs),
+        levels=3,
+        wavelet="db2",
+        target_bits_per_coeff=2.5,
+        video_path=resolved_source_video.as_posix(),
+        upstream_dir=scorer_upstream.as_posix(),
+        device=distillation_device,
+    )
+    packet_path = out / "snerv_inverse_steg_advisory.snar"
+    packet_path.write_bytes(advisory.receiver_archive_packet)
+    advisory_payload = advisory.as_jsonable()
+    advisory_payload["receiver_archive_packet_path"] = packet_path.as_posix()
+    advisory_path = out / "snerv_inverse_steg_advisory.json"
+    _write_json(advisory_path, advisory_payload)
+
+    package_dir = out / "snerv_archive_bound_package"
+    package = export_snerv_archive_bound_candidate_package(
+        packet=advisory.receiver_archive_packet,
+        output_dir=package_dir,
+        repo_root=root,
+        retain_receiver_output=bool(keep_local_replay_inflated),
+        receiver_proof_timeout_seconds=1800,
+        mlx_triage_argv=[
+            "tools/run_compact_renderer_mlx_spine_runner.py",
+            "--execute-family",
+            "snerv",
+        ],
+    )
+    package_path = package_dir / "archive_bound_candidate_adapter_package.json"
+    candidate_rows = list(
+        package.get("archive_bound_candidate_adapter_package", {}).get(
+            "candidate_rows",
+            [],
+        )
+        or []
+    )
+    row = candidate_rows[0] if candidate_rows else {}
+    archive_path = row.get("candidate_archive_path")
+    receiver_proof = dict(package.get("receiver_proof") or {})
+    receiver_proof_path = receiver_proof.get("proof_path")
+
+    mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
+        mlx_profile_paths,
+        root=root,
+    )
+    has_full_video_mlx_prefilter = bool(
+        mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
+    )
+    mlx_prefilter_local_replay_passed = bool(
+        mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"]
+    )
+    local_cpu_replay_summary: dict[str, Any] | None = None
+    local_cpu_replay_paths: list[Path] = []
+    local_cpu_replay_blockers: list[str] = []
+    if archive_path:
+        (
+            local_cpu_replay_summary,
+            local_cpu_replay_paths,
+            local_cpu_replay_blockers,
+        ) = _run_compact_local_cpu_replay_gate(
+            archive_zip_path=_resolve(archive_path, base=root),
+            runtime_submission_dir=package_dir / "submission",
+            output_dir=out / "local_cpu_replay",
+            upstream_dir=scorer_upstream,
+            num_pairs=int(num_pairs),
+            requested=run_local_cpu_replay,
+            has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
+            mlx_prefilter_local_replay_passed=mlx_prefilter_local_replay_passed,
+            keep_inflated=keep_local_replay_inflated,
+            cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
+            repo_root=root,
+        )
+
+    blockers = _dedupe(
+        [
+            "contest_cpu_cuda_exact_eval_not_executed",
+            "snerv_mlx_native_train_export_archive_adapter_missing",
+            "snerv_longer_staged_score_aware_training_not_executed",
+            *local_cpu_replay_blockers,
+            *list(row.get("blockers") or []),
+            *list(mlx_prefilter_coverage.get("blockers") or []),
+        ]
+    )
+    final = _base_report(
+        output_dir=out,
+        mode="executed_snerv_archive_bound_advisory_and_exported",
+        hard_byte_ceilings=hard_byte_ceilings,
+        repo_root=root,
+    )
+    final.update(
+        {
+            "execute_family": "snerv",
+            "num_pairs": int(num_pairs),
+            "epochs_requested": int(epochs),
+            "coverage_valid_for_base_comparison": int(num_pairs) >= CONTEST_PAIR_COUNT,
+            "training_executed": False,
+            "adapter_smoke_only": False,
+            "archive_path": archive_path,
+            "archive_bytes": row.get("candidate_archive_bytes"),
+            "archive_sha256": row.get("candidate_archive_sha256"),
+            "advisory_report_path": advisory_path.as_posix(),
+            "receiver_archive_packet_path": packet_path.as_posix(),
+            "runtime_package_dir": package_dir.as_posix(),
+            "runtime_package_path": (
+                package_path.as_posix() if package_path.is_file() else None
+            ),
+            "receiver_proof_report_paths": (
+                [_resolve(receiver_proof_path, base=root).as_posix()]
+                if receiver_proof_path
+                else []
+            ),
+            "archive_bound_candidate_rows": candidate_rows,
+            "score_aware_carrier_training_plan": planner,
+            "score_aware_training": {
+                "schema": "compact_snerv_archive_bound_advisory.v1",
+                "status": "executed_cpu_advisory_mlx_native_training_missing",
+                "axis_tag": "[macOS-CPU advisory]",
+                "levels": int(advisory.levels),
+                "wavelet": advisory.wavelet,
+                "target_bits_per_coeff": 2.5,
+                "score_linf": float(advisory.score_linf),
+                "score_l2": float(advisory.score_l2),
+                "d_seg_mean_linf": float(advisory.d_seg_mean_linf),
+                "d_pose_mean_linf": float(advisory.d_pose_mean_linf),
+                "archive_bytes_total": int(advisory.archive_bytes_total),
+                "beats_frontier_rate": bool(advisory.beats_frontier_rate),
+                "receiver_archive_replay_verified": bool(
+                    advisory.receiver_archive_replay_verified
+                ),
+                "mlx_native_training_required_next": True,
+                "authority": "macos_cpu_advisory_false_authority",
+            },
+            "reusable_optimization_followups": {
+                "schema": "compact_carrier_reusable_optimization_hooks.v1",
+                "applies_after_byte_closed_export": True,
+                "required_hooks": [
+                    "final_rate_attack_and_repair_materializers",
+                    "bit_mask_and_step_map_entropy_recode",
+                    "p18_p19_scorer_priced_waterfill",
+                    "p11_selector_context_codec",
+                    "p15_rebrotli_repack_order_search",
+                    "receiver_proof_after_each_semantic_mutation",
+                ],
+                "no_ad_hoc_leaf_rule": (
+                    "rate/materializer work must enter as queue-owned reusable "
+                    "stages for all byte-closed carriers, not as private SNeRV "
+                    "or HiNeRV one-offs"
+                ),
+                "authority": "planner_hook_false_authority_until_executed",
+            },
+            "local_cpu_replay_summary_paths": [
+                path.as_posix() for path in local_cpu_replay_paths
+            ],
+            "local_cpu_replay_summary": local_cpu_replay_summary,
+            "local_cpu_replay_gate": {
+                "schema": "compact_runner_local_cpu_replay_gate.v1",
+                "requested": run_local_cpu_replay,
+                "default_enabled_for_full_coverage": (
+                    _local_cpu_replay_enabled_by_default(
+                        int(num_pairs),
+                        mlx_prefilter_local_replay_passed=(
+                            mlx_prefilter_local_replay_passed
+                        ),
+                    )
+                ),
+                "has_full_video_mlx_prefilter": has_full_video_mlx_prefilter,
+                "local_replay_mlx_prefilter_passed": (
+                    mlx_prefilter_local_replay_passed
+                ),
+                "coverage_valid_for_replay": int(num_pairs) >= CONTEST_PAIR_COUNT,
+                "executed": local_cpu_replay_summary is not None,
+                "axis_tag": "[macOS-CPU advisory]",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "mlx_prefilter_coverage": mlx_prefilter_coverage,
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+            ],
+            "hprc_queue_followup_report_paths": [
+                _resolve(path, base=root).as_posix()
+                for path in hprc_queue_followup_report_paths
+            ],
+            "blockers": blockers,
+        }
+    )
+    path = out / "compact_renderer_mlx_spine_runner_report.json"
+    _write_json(path, final)
+    return {**final, "report_path": path.as_posix()}
 
 
 def execute_pr95_mlx_smoke_and_adapt(
@@ -2071,6 +2313,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     auto_segnet_boundary_recon_weight: bool = False,
     recon_pixel_weight_tau: float = 1.0,
     recon_pixel_weight_normalize: str = "mean",
+    mlx_prefilter_scorer_batch_pairs: int = 1,
+    mlx_prefilter_progress_every: int = 50,
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
@@ -2120,6 +2364,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             auto_segnet_boundary_recon_weight=auto_segnet_boundary_recon_weight,
             recon_pixel_weight_tau=recon_pixel_weight_tau,
             recon_pixel_weight_normalize=recon_pixel_weight_normalize,
+            mlx_prefilter_scorer_batch_pairs=mlx_prefilter_scorer_batch_pairs,
+            mlx_prefilter_progress_every=mlx_prefilter_progress_every,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -2272,6 +2518,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "recon_pixel_weight": _recon_pixel_weight_report_metadata(
                     artifact_dict
                 ),
+                "local_mlx_prefilter": {
+                    "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
+                    "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
+                    "progress_every": int(mlx_prefilter_progress_every),
+                    "singleton_required_for_local_cpu_replay_unlock": True,
+                    "batched_profiles_are_prefilter_only": (
+                        int(mlx_prefilter_scorer_batch_pairs) != 1
+                    ),
+                    "authority": "macos_mlx_research_signal_false_authority",
+                },
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
@@ -2311,6 +2567,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "auto_mlx_prefilter_profile_path": (
                 auto_mlx_prefilter_profile_path.as_posix()
                 if auto_mlx_prefilter_profile_path.is_file()
+                else None
+            ),
+            "auto_mlx_prefilter_progress_path": (
+                (training_dir / "local_mlx_prefilter_progress.jsonl").as_posix()
+                if (training_dir / "local_mlx_prefilter_progress.jsonl").is_file()
                 else None
             ),
             "mlx_profile_paths": [
@@ -3090,6 +3351,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     auto_segnet_boundary_recon_weight: bool,
     recon_pixel_weight_tau: float,
     recon_pixel_weight_normalize: str,
+    mlx_prefilter_scorer_batch_pairs: int,
+    mlx_prefilter_progress_every: int,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -3226,6 +3489,16 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
+            "local_mlx_prefilter": {
+                "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
+                "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
+                "progress_every": int(mlx_prefilter_progress_every),
+                "singleton_required_for_local_cpu_replay_unlock": True,
+                "batched_profiles_are_prefilter_only": (
+                    int(mlx_prefilter_scorer_batch_pairs) != 1
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
@@ -3341,6 +3614,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     profile_path = output_dir / "local_mlx_prefilter_profile.json"
+    progress_path = output_dir / "local_mlx_prefilter_progress.jsonl"
     archive_bytes = artifact_dict.get("archive_bytes")
     archive_sha256 = artifact_dict.get("archive_sha256")
     try:
@@ -3359,9 +3633,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             archive_sha256=str(archive_sha256),
             upstream_dir=scorer_upstream_dir,
             scorer_device=distillation_device,
-            scorer_batch_pairs=1,
+            scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
             run_id="compact_runner_hi_nerv_mlx_local_prefilter",
             source_video_path=source_video_path,
+            progress_jsonl_path=progress_path,
+            progress_every=int(mlx_prefilter_progress_every),
         )
     except Exception as exc:
         from tac.local_acceleration.mlx_renderer_prefilter_profile import (
@@ -4276,6 +4552,25 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--mlx-prefilter-scorer-batch-pairs",
+        default=1,
+        type=int,
+        help=(
+            "Pairs per MLX scorer forward for the automatic local prefilter. "
+            "Values >1 can accelerate advisory acquisition, but singleton "
+            "batching remains required to unlock local CPU replay gates."
+        ),
+    )
+    parser.add_argument(
+        "--mlx-prefilter-progress-every",
+        default=50,
+        type=int,
+        help=(
+            "Emit MLX prefilter progress JSONL every N chunks. Use 0 to "
+            "disable progress telemetry."
+        ),
+    )
+    parser.add_argument(
         "--coder-aware-qat",
         action="store_true",
         help=(
@@ -4573,6 +4868,23 @@ def main(argv: list[str] | None = None) -> int:
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
         )
+    elif args.execute_family == "snerv":
+        report = execute_snerv_inverse_steg_advisory_and_adapt(
+            output_dir=output_dir,
+            num_pairs=args.num_pairs,
+            epochs=args.epochs,
+            source_video_path=source_video_path,
+            hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            run_local_cpu_replay=args.run_local_cpu_replay,
+            keep_local_replay_inflated=args.keep_local_replay_inflated,
+            cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
+            distillation_device=args.distillation_device,
+            upstream_dir=scorer_upstream_dir,
+            allow_overwrite=args.overwrite,
+            repo_root=args.repo_root,
+        )
     elif args.execute_family == "hi_nerv":
         report = execute_hi_nerv_mlx_scoreaware_and_adapt(
             output_dir=output_dir,
@@ -4608,6 +4920,10 @@ def main(argv: list[str] | None = None) -> int:
             ),
             recon_pixel_weight_tau=args.recon_pixel_weight_tau,
             recon_pixel_weight_normalize=args.recon_pixel_weight_normalize,
+            mlx_prefilter_scorer_batch_pairs=(
+                args.mlx_prefilter_scorer_batch_pairs
+            ),
+            mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,

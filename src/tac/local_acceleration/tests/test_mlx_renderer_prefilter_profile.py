@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 
@@ -59,3 +61,60 @@ def test_renderer_prefilter_loaded_builds_false_authority_profile() -> None:
         "candidate_seg",
         "reference_seg",
     }
+
+
+def test_renderer_prefilter_loaded_emits_progress_telemetry(tmp_path) -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    from tac.local_acceleration.mlx_renderer_prefilter_profile import (
+        build_mlx_renderer_prefilter_profile_loaded,
+    )
+
+    class FakeModel:
+        def __call__(self, idx):
+            b = int(idx.shape[0])
+            return mx.zeros((b, 2, 3, 384, 512), dtype=mx.float32)
+
+    class FakeBundle:
+        model = FakeModel()
+        forward_convention = "call_b2chw_255"
+        num_pairs = 3
+        target_rgb_0 = mx.zeros((3, 384, 512, 3), dtype=mx.float32)
+        target_rgb_1 = mx.zeros((3, 384, 512, 3), dtype=mx.float32)
+
+    class FakeAdapter:
+        def __call__(self, posenet_yuv6_pair_nhwc, segnet_last_rgb_nhwc):
+            b = int(posenet_yuv6_pair_nhwc.shape[0])
+            return {
+                "posenet": {"pose": mx.zeros((b, 12), dtype=mx.float32)},
+                "segnet": mx.zeros((b, 384, 512, 5), dtype=mx.float32),
+            }
+
+    progress_path = tmp_path / "local_mlx_prefilter_progress.jsonl"
+    profile = build_mlx_renderer_prefilter_profile_loaded(
+        bundle=FakeBundle(),
+        adapter=FakeAdapter(),
+        archive_bytes=1000,
+        archive_sha256="1" * 64,
+        scorer_batch_pairs=2,
+        required_pairs=3,
+        run_id="unit-progress",
+        progress_jsonl_path=progress_path,
+        progress_every=1,
+    )
+
+    rows = [
+        json.loads(line)
+        for line in progress_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(rows) == 2
+    assert rows[-1]["schema"] == "mlx_renderer_prefilter_progress.v1"
+    assert rows[-1]["run_id"] == "unit-progress"
+    assert rows[-1]["cumulative_pair_count"] == 3
+    assert rows[-1]["score_claim"] is False
+    assert rows[-1]["ready_for_exact_eval_dispatch"] is False
+    assert profile["progress"]["progress_jsonl_path"] == progress_path.as_posix()
+    assert profile["progress"]["chunk_count"] == 2
+    assert profile["progress"]["batch_pairs"] == 2
+    assert profile["response_metadata"]["pair_throughput_per_second"] is not None
+    assert "mlx_profile_batch_pairs_not_singleton" in profile["blockers"]
