@@ -252,7 +252,46 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
     assert "snerv_archive_in_loop_byte_oracle_missing" not in plan["blockers"]
     assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
+    assert "snerv_scorer_loop_qat_not_attached" in plan["blockers"]
     assert plan["score_claim"] is False
+
+
+def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=600,
+        levels=5,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+    ).as_dict()
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=3,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=190_000,
+        measured_archive_bytes=191_000,
+        scorer_loop_qat_attached=True,
+        scorer_loop_qat_receiver_contract_satisfied=True,
+        scorer_loop_qat_ready_for_pose_guard_gate=True,
+        scorer_loop_qat_accepted_improvement=True,
+    )
+
+    assert plan["training_plan"]["scorer_loop_qat_attached"] is True
+    assert plan["training_plan"]["scorer_loop_qat_receiver_contract_satisfied"] is True
+    assert plan["training_plan"]["scorer_loop_qat_ready_for_pose_guard_gate"] is True
+    assert plan["training_plan"]["scorer_loop_qat_accepted_improvement"] is True
+    assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
+    assert "snerv_scorer_loop_qat_receiver_contract_failed" not in plan["blockers"]
+    assert "snerv_scorer_loop_qat_no_accepted_improvement" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
+    assert "snerv_qat_forward_missing" not in plan["blockers"]
+    assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
+    assert "snerv_mlx_native_train_export_adapter_missing" in plan["blockers"]
+    assert "snerv_score_aware_curriculum_not_native_mlx_yet" in plan["blockers"]
 
 
 def test_snerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:

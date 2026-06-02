@@ -291,6 +291,10 @@ def build_snerv_candidate_curriculum_plan(
     step_map_coder_mode: str,
     measured_packet_bytes: int | None = None,
     measured_archive_bytes: int | None = None,
+    scorer_loop_qat_attached: bool = False,
+    scorer_loop_qat_receiver_contract_satisfied: bool = False,
+    scorer_loop_qat_ready_for_pose_guard_gate: bool = False,
+    scorer_loop_qat_accepted_improvement: bool = False,
 ) -> dict[str, Any]:
     """Bind a SNeRV receiver-grammar candidate to byte feedback and blockers."""
 
@@ -320,8 +324,10 @@ def build_snerv_candidate_curriculum_plan(
     }
     blockers: list[str] = [
         "snerv_mlx_native_train_export_adapter_missing",
-        "snerv_score_aware_curriculum_not_native_mlx_yet",
     ]
+    if not scorer_loop_qat_attached:
+        blockers.append("snerv_scorer_loop_qat_not_attached")
+    blockers.append("snerv_score_aware_curriculum_not_native_mlx_yet")
     if not candidate_selected:
         blockers.append("snerv_modelsize_candidate_not_selected_manual_probe")
     if not full_video:
@@ -336,10 +342,21 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("partial_pair_byte_feedback_only")
     elif candidate_selected and not byte_feedback["feedback_ready"]:
         blockers.append("snerv_snar1_byte_feedback_missing")
+    if scorer_loop_qat_attached:
+        if not scorer_loop_qat_receiver_contract_satisfied:
+            blockers.append("snerv_scorer_loop_qat_receiver_contract_failed")
+        if not scorer_loop_qat_ready_for_pose_guard_gate:
+            blockers.append("snerv_scorer_loop_qat_pose_guard_not_ready")
+        if not scorer_loop_qat_accepted_improvement:
+            blockers.append("snerv_scorer_loop_qat_no_accepted_improvement")
     pr95_binding = build_pr95_stack_binding_requirements(
         family="snerv",
         evidence=build_pr95_stack_binding_evidence(
             modelsize_archive_budget=candidate_selected,
+            real_segnet_teacher=bool(scorer_loop_qat_attached),
+            real_posenet_teacher=bool(scorer_loop_qat_attached),
+            qat_forward=bool(scorer_loop_qat_attached),
+            coder_aware_regularizer=bool(scorer_loop_qat_attached),
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
         ),
@@ -367,6 +384,16 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_training_required": True,
             "current_execution_path": "cpu_advisory_receiver_bound_packet",
             "next_required_adapter": "snerv_mlx_native_train_export_archive",
+            "scorer_loop_qat_attached": bool(scorer_loop_qat_attached),
+            "scorer_loop_qat_receiver_contract_satisfied": bool(
+                scorer_loop_qat_receiver_contract_satisfied
+            ),
+            "scorer_loop_qat_ready_for_pose_guard_gate": bool(
+                scorer_loop_qat_ready_for_pose_guard_gate
+            ),
+            "scorer_loop_qat_accepted_improvement": bool(
+                scorer_loop_qat_accepted_improvement
+            ),
         },
         "byte_oracle_logging": byte_feedback,
         "pr95_stack_binding": pr95_binding,

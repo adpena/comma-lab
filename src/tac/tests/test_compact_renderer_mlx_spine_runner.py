@@ -1038,7 +1038,31 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "manual",
         ]
     )
-    sn = _parse_args(["--execute-family", "snerv", "--num-pairs", "128"])
+    sn = _parse_args(
+        [
+            "--execute-family",
+            "snerv",
+            "--num-pairs",
+            "128",
+            "--coder-aware-qat",
+            "--coder-qat-quant-bits",
+            "4",
+            "--snerv-scorer-loop-max-trials",
+            "5",
+            "--snerv-scorer-loop-search-mode",
+            "learned_random_subspace",
+            "--snerv-scorer-loop-byte-pressure-multiplier",
+            "1.25",
+            "--snerv-scorer-loop-pose-slack",
+            "0.001",
+            "--snerv-scorer-loop-seg-slack",
+            "0.002",
+            "--snerv-scorer-loop-pair-stride",
+            "3",
+            "--snerv-scorer-loop-start-pair",
+            "7",
+        ]
+    )
 
     assert hi.execute_family == "hi_nerv"
     assert hi.num_pairs == 32
@@ -1060,6 +1084,15 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.modelsize_candidate_id == "manual"
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
+    assert sn.coder_aware_qat is True
+    assert sn.coder_qat_quant_bits == 4
+    assert sn.snerv_scorer_loop_max_trials == 5
+    assert sn.snerv_scorer_loop_search_mode == "learned_random_subspace"
+    assert sn.snerv_scorer_loop_byte_pressure_multiplier == 1.25
+    assert sn.snerv_scorer_loop_pose_slack == 0.001
+    assert sn.snerv_scorer_loop_seg_slack == 0.002
+    assert sn.snerv_scorer_loop_pair_stride == 3
+    assert sn.snerv_scorer_loop_start_pair == 7
     assert sn.modelsize_candidate_id == "auto"
     assert sn.post_export_materializer_max_experiments == 1
 
@@ -2999,6 +3032,223 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     ]
     assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
+
+
+def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet = _synthetic_snerv_packet(pairs=2)
+    captured_qat_kwargs: dict[str, object] = {}
+
+    def fake_run_snerv_advisory(**kwargs):
+        def as_jsonable() -> dict[str, object]:
+            return {
+                "schema": "fake_snerv_advisory.v1",
+                "receiver_archive_packet": {
+                    "bytes": len(packet),
+                    "sha256": "0" * 64,
+                    "redacted": True,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+        return SimpleNamespace(
+            n_pairs=int(kwargs["n_pairs"]),
+            receiver_archive_packet=packet,
+            as_jsonable=as_jsonable,
+            levels=int(kwargs["levels"]),
+            wavelet="db2",
+            score_linf=12.0,
+            score_l2=13.0,
+            d_seg_mean_linf=0.1,
+            d_pose_mean_linf=0.01,
+            archive_bytes_total=len(packet),
+            snerv_fc_dim=9,
+            snerv_emb_size=0,
+            snerv_patch_radius=1,
+            decoder_feature_count=9,
+            beats_frontier_rate=True,
+            receiver_archive_replay_verified=True,
+        )
+
+    def fake_export_snerv_archive_bound_candidate_package(**kwargs):
+        package_dir = Path(kwargs["output_dir"])
+        package_dir.mkdir(parents=True, exist_ok=True)
+        archive = package_dir / "archive.zip"
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", bytes(kwargs["packet"]))
+        submission = package_dir / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        proof = package_dir / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+        proof.parent.mkdir()
+        proof.write_text(
+            json.dumps(
+                {
+                    "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+                    "runtime_consumption_proof_ready": True,
+                    "receiver_contract_satisfied": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        row = {
+            "candidate_archive_path": archive.as_posix(),
+            "candidate_archive_bytes": archive.stat().st_size,
+            "candidate_archive_sha256": runner_mod._sha256_file(archive),
+            "runtime_consumption_proof_ready": True,
+            "receiver_contract_satisfied": True,
+            "blockers": ["snerv_packet_not_full_600_pairs"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        (package_dir / "archive_bound_candidate_adapter_package.json").write_text(
+            json.dumps({"candidate_rows": [row]}, sort_keys=True),
+            encoding="utf-8",
+        )
+        return {
+            "archive_bound_candidate_adapter_package": {
+                "candidate_rows": [row],
+            },
+            "receiver_proof": {
+                "proof_path": proof.as_posix(),
+                "runtime_consumption_proof_ready": True,
+                "receiver_contract_satisfied": True,
+                "blockers": [],
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    def fake_run_snerv_scorer_loop_decoder_qat(**kwargs):
+        captured_qat_kwargs.update(kwargs)
+
+        def as_jsonable() -> dict[str, object]:
+            return {
+                "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "improvement_score_delta": -0.01,
+                "improvement_d_pose_delta": 0.0,
+                "improvement_d_seg_delta": -0.001,
+                "scorer_loop_evaluations": 3,
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+        return SimpleNamespace(as_jsonable=as_jsonable)
+
+    import tac.substrates.snerv_inverse_steg_carrier.advisory as advisory_mod
+    import tac.substrates.snerv_inverse_steg_carrier.archive_candidate as package_mod
+    import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
+
+    monkeypatch.setattr(advisory_mod, "run_snerv_advisory", fake_run_snerv_advisory)
+    monkeypatch.setattr(
+        package_mod,
+        "export_snerv_archive_bound_candidate_package",
+        fake_export_snerv_archive_bound_candidate_package,
+    )
+    monkeypatch.setattr(
+        qat_mod,
+        "run_snerv_scorer_loop_decoder_qat",
+        fake_run_snerv_scorer_loop_decoder_qat,
+    )
+
+    out = execute_snerv_inverse_steg_advisory_and_adapt(
+        output_dir=tmp_path / "snerv_qat_gate",
+        num_pairs=2,
+        epochs=3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        modelsize_candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "snerv-q-smoke",
+            "levels": 2,
+            "bits_per_coeff": 1.5,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int2_symmetric",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
+            "nominal_under_ceiling": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        run_scorer_loop_qat=True,
+        snerv_scorer_loop_qat_bits=4,
+        snerv_scorer_loop_max_trials=5,
+        snerv_scorer_loop_search_mode="learned_random_subspace",
+        snerv_scorer_loop_step_map_bins=8,
+        snerv_scorer_loop_perturb_scale=0.03,
+        snerv_scorer_loop_byte_pressure_multiplier=1.25,
+        snerv_scorer_loop_max_archive_byte_growth=77,
+        snerv_scorer_loop_pose_slack=0.001,
+        snerv_scorer_loop_seg_slack=0.002,
+        snerv_scorer_loop_pair_stride=3,
+        snerv_scorer_loop_start_pair=7,
+        snerv_scorer_loop_pair_guard_min_score_improved_fraction=0.5,
+        snerv_scorer_loop_pair_guard_max_pose_worsened_fraction=0.25,
+        random_seed=123,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_qat_kwargs["n_pairs"] == 2
+    assert captured_qat_kwargs["levels"] == 2
+    assert captured_qat_kwargs["target_bits_per_coeff"] == 1.5
+    assert captured_qat_kwargs["qat_bits"] == 4
+    assert captured_qat_kwargs["max_trials"] == 5
+    assert captured_qat_kwargs["search_mode"] == "learned_random_subspace"
+    assert captured_qat_kwargs["step_map_bins"] == 8
+    assert captured_qat_kwargs["byte_pressure_multiplier"] == 1.25
+    assert captured_qat_kwargs["max_archive_byte_growth"] == 77
+    assert captured_qat_kwargs["pose_slack"] == 0.001
+    assert captured_qat_kwargs["seg_slack"] == 0.002
+    assert captured_qat_kwargs["pair_stride"] == 3
+    assert captured_qat_kwargs["start_pair"] == 7
+    assert captured_qat_kwargs["pair_guard_min_score_improved_fraction"] == 0.5
+    assert captured_qat_kwargs["pair_guard_max_pose_worsened_fraction"] == 0.25
+    assert captured_qat_kwargs["seed"] == 123
+
+    qat = out["snerv_scorer_loop_qat"]
+    assert qat["executed"] is True
+    assert qat["accepted_improvement"] is True
+    assert qat["receiver_contract_satisfied"] is True
+    assert qat["ready_for_pose_guard_gate"] is True
+    assert Path(qat["result_path"]).is_file()
+    assert out["score_aware_training"]["scorer_loop_qat"]["executed"] is True
+    assert out["score_aware_training"]["status"] == (
+        "executed_cpu_advisory_plus_receiver_priced_scorer_loop_qat_"
+        "mlx_native_training_missing"
+    )
+    plan = out["candidate_curriculum_plan"]
+    assert plan["training_plan"]["scorer_loop_qat_attached"] is True
+    assert plan["training_plan"]["scorer_loop_qat_receiver_contract_satisfied"] is True
+    assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
+    assert "snerv_qat_forward_missing" not in plan["blockers"]
+    assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
+    assert "snerv_mlx_native_train_export_adapter_missing" in out["blockers"]
+    assert "snerv_mlx_native_longer_staged_training_not_executed" in out[
+        "blockers"
+    ]
+    assert "snerv_longer_staged_score_aware_training_not_executed" not in out[
+        "blockers"
+    ]
 
 
 def test_snerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(

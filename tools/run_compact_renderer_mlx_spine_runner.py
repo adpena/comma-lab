@@ -89,6 +89,9 @@ from tac.substrates.hprc.spine_bounded_runner import (  # noqa: E402
 from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
     SnervArchiveError,
 )
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+)
 from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
     emit_compact_renderer_spine_adapter,
 )
@@ -1825,6 +1828,149 @@ def _write_snerv_binary_profile_attachment(
     }
 
 
+def _run_snerv_scorer_loop_qat_attachment(
+    *,
+    requested: bool,
+    output_dir: str | Path,
+    num_pairs: int,
+    levels: int,
+    target_bits_per_coeff: float,
+    source_video_path: str | Path,
+    upstream_dir: str | Path,
+    distillation_device: str,
+    step_map_bins: int,
+    qat_bits: int,
+    max_trials: int,
+    search_mode: str,
+    perturb_scale: float,
+    byte_pressure_multiplier: float,
+    max_archive_byte_growth: int | None,
+    pose_slack: float,
+    seg_slack: float,
+    pair_stride: int,
+    start_pair: int,
+    pair_guard_min_score_improved_fraction: float,
+    pair_guard_max_pose_worsened_fraction: float,
+    seed: int,
+) -> dict[str, Any]:
+    """Run SNeRV receiver-priced scorer-loop QAT and persist its result.
+
+    This is executable score-aware evidence for the SNeRV carrier, but it is not
+    native MLX training and it never becomes promotion authority by itself.
+    """
+
+    attachment_dir = Path(output_dir).expanduser().resolve(strict=False)
+    result_path = attachment_dir / "snerv_scorer_loop_qat_result.json"
+    attachment_dir.mkdir(parents=True, exist_ok=True)
+    if not requested:
+        payload = {
+            "schema": "compact_runner_snerv_scorer_loop_qat_attachment.v1",
+            "executed": False,
+            "requested": False,
+            "blockers": ["snerv_scorer_loop_qat_not_requested"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        _write_json(result_path, payload)
+        return {**payload, "result_path": result_path.as_posix()}
+
+    try:
+        from tac.substrates.snerv_inverse_steg_carrier import (
+            scorer_loop_decoder_qat as qat_mod,
+        )
+
+        result = qat_mod.run_snerv_scorer_loop_decoder_qat(
+            n_pairs=int(num_pairs),
+            levels=int(levels),
+            wavelet="db2",
+            target_bits_per_coeff=float(target_bits_per_coeff),
+            pair_stride=int(pair_stride),
+            start_pair=int(start_pair),
+            upstream_dir=Path(upstream_dir).as_posix(),
+            video_path=Path(source_video_path).as_posix(),
+            device=str(distillation_device),
+            step_map_bins=int(step_map_bins),
+            qat_bits=int(qat_bits),
+            max_trials=int(max_trials),
+            search_mode=str(search_mode),
+            perturb_scale=float(perturb_scale),
+            byte_pressure_multiplier=float(byte_pressure_multiplier),
+            max_archive_byte_growth=(
+                None
+                if max_archive_byte_growth is None
+                else int(max_archive_byte_growth)
+            ),
+            pose_slack=float(pose_slack),
+            seg_slack=float(seg_slack),
+            pair_guard_min_score_improved_fraction=float(
+                pair_guard_min_score_improved_fraction
+            ),
+            pair_guard_max_pose_worsened_fraction=float(
+                pair_guard_max_pose_worsened_fraction
+            ),
+            seed=int(seed),
+        )
+        result_payload = (
+            result.as_jsonable() if hasattr(result, "as_jsonable") else dict(result)
+        )
+        blockers = list(result_payload.get("blockers") or [])
+        if int(num_pairs) < CONTEST_PAIR_COUNT:
+            blockers.append("snerv_scorer_loop_qat_partial_pair_coverage")
+        payload = {
+            "schema": "compact_runner_snerv_scorer_loop_qat_attachment.v1",
+            "executed": True,
+            "requested": True,
+            "axis_tag": "[macOS-CPU advisory]",
+            "n_pairs": int(num_pairs),
+            "levels": int(levels),
+            "target_bits_per_coeff": float(target_bits_per_coeff),
+            "qat_bits": int(qat_bits),
+            "max_trials": int(max_trials),
+            "search_mode": str(search_mode),
+            "result": result_payload,
+            "accepted_improvement": bool(
+                result_payload.get("accepted_improvement")
+            ),
+            "receiver_contract_satisfied": bool(
+                result_payload.get("receiver_contract_satisfied")
+            ),
+            "ready_for_pose_guard_gate": bool(
+                result_payload.get("ready_for_pose_guard_gate")
+            ),
+            "improvement_score_delta": result_payload.get("improvement_score_delta"),
+            "improvement_d_pose_delta": result_payload.get("improvement_d_pose_delta"),
+            "improvement_d_seg_delta": result_payload.get("improvement_d_seg_delta"),
+            "scorer_loop_evaluations": result_payload.get(
+                "scorer_loop_evaluations"
+            ),
+            "blockers": _dedupe(blockers),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    except Exception as exc:  # pragma: no cover - covered through runner contract
+        payload = {
+            "schema": "compact_runner_snerv_scorer_loop_qat_attachment.v1",
+            "executed": False,
+            "requested": True,
+            "failure": repr(exc),
+            "blockers": ["snerv_scorer_loop_qat_failed"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    _write_json(result_path, payload)
+    return {
+        **payload,
+        "result_path": result_path.as_posix(),
+        "result_sha256": _sha256_file(result_path),
+    }
+
+
 def _pr95_long_campaign_prelaunch_blockers(
     candidate_curriculum_plan: Mapping[str, Any],
     *,
@@ -1866,6 +2012,24 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     distillation_device: str = "cpu",
     modelsize_candidate: Mapping[str, Any] | None = None,
     step_map_coder_mode: str | None = None,
+    snerv_spectra_preserving_adapter: bool = False,
+    snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
+    snerv_hfr_gain: float = 0.0,
+    run_scorer_loop_qat: bool = False,
+    snerv_scorer_loop_max_trials: int = 2,
+    snerv_scorer_loop_search_mode: str = "nes_pair_robust",
+    snerv_scorer_loop_step_map_bins: int = 16,
+    snerv_scorer_loop_qat_bits: int = 8,
+    snerv_scorer_loop_perturb_scale: float = 0.02,
+    snerv_scorer_loop_byte_pressure_multiplier: float = 1.0,
+    snerv_scorer_loop_max_archive_byte_growth: int | None = None,
+    snerv_scorer_loop_pose_slack: float = 0.0,
+    snerv_scorer_loop_seg_slack: float = 0.0,
+    snerv_scorer_loop_pair_stride: int = 1,
+    snerv_scorer_loop_start_pair: int = 0,
+    snerv_scorer_loop_pair_guard_min_score_improved_fraction: float = 0.0,
+    snerv_scorer_loop_pair_guard_max_pose_worsened_fraction: float = 1.0,
+    random_seed: int = 0,
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -1974,6 +2138,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         step_map_coder_mode=str(resolved_step_map_coder_mode),
         step_map_waterfill_bits_per_coeff=step_map_waterfill_bits_per_coeff,
         decoder_payload_codec=decoder_payload_codec,
+        snerv_model_size_adapter=(
+            SNERV_SPECTRA_PRESERVING_ADAPTER
+            if snerv_spectra_preserving_adapter
+            else "snerv_fc_dim_emb_size_adapter_v1"
+        ),
+        snerv_mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
+        snerv_hfr_gain=float(snerv_hfr_gain),
     )
     packet_path = out / "snerv_inverse_steg_advisory.snar"
     packet_path.write_bytes(advisory.receiver_archive_packet)
@@ -2079,6 +2250,36 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         output_dir=out,
         repo_root=root,
     )
+    snerv_scorer_loop_qat = _run_snerv_scorer_loop_qat_attachment(
+        requested=bool(run_scorer_loop_qat),
+        output_dir=out / "snerv_scorer_loop_qat",
+        num_pairs=int(num_pairs),
+        levels=levels,
+        target_bits_per_coeff=target_bits_per_coeff,
+        source_video_path=resolved_source_video,
+        upstream_dir=scorer_upstream,
+        distillation_device=distillation_device,
+        step_map_bins=int(snerv_scorer_loop_step_map_bins),
+        qat_bits=int(snerv_scorer_loop_qat_bits),
+        max_trials=int(snerv_scorer_loop_max_trials),
+        search_mode=str(snerv_scorer_loop_search_mode),
+        perturb_scale=float(snerv_scorer_loop_perturb_scale),
+        byte_pressure_multiplier=float(
+            snerv_scorer_loop_byte_pressure_multiplier
+        ),
+        max_archive_byte_growth=snerv_scorer_loop_max_archive_byte_growth,
+        pose_slack=float(snerv_scorer_loop_pose_slack),
+        seg_slack=float(snerv_scorer_loop_seg_slack),
+        pair_stride=int(snerv_scorer_loop_pair_stride),
+        start_pair=int(snerv_scorer_loop_start_pair),
+        pair_guard_min_score_improved_fraction=float(
+            snerv_scorer_loop_pair_guard_min_score_improved_fraction
+        ),
+        pair_guard_max_pose_worsened_fraction=float(
+            snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
+        ),
+        seed=int(random_seed),
+    )
     candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
@@ -2090,17 +2291,32 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             if row.get("candidate_archive_bytes") is not None
             else None
         ),
+        scorer_loop_qat_attached=bool(snerv_scorer_loop_qat.get("executed")),
+        scorer_loop_qat_receiver_contract_satisfied=bool(
+            snerv_scorer_loop_qat.get("receiver_contract_satisfied")
+        ),
+        scorer_loop_qat_ready_for_pose_guard_gate=bool(
+            snerv_scorer_loop_qat.get("ready_for_pose_guard_gate")
+        ),
+        scorer_loop_qat_accepted_improvement=bool(
+            snerv_scorer_loop_qat.get("accepted_improvement")
+        ),
     )
 
     blockers = _dedupe(
         [
             "contest_cpu_cuda_exact_eval_not_executed",
             "snerv_mlx_native_train_export_archive_adapter_missing",
-            "snerv_longer_staged_score_aware_training_not_executed",
+            (
+                "snerv_mlx_native_longer_staged_training_not_executed"
+                if snerv_scorer_loop_qat.get("executed")
+                else "snerv_longer_staged_score_aware_training_not_executed"
+            ),
             *list(candidate_curriculum_plan.get("blockers") or []),
             *local_cpu_replay_blockers,
             *list(post_export_materializer_plan.get("blockers") or []),
             *list(post_export_materializer_execution.get("blockers") or []),
+            *list(snerv_scorer_loop_qat.get("blockers") or []),
             *(
                 []
                 if snerv_binary_profile.get("profile_written")
@@ -2163,7 +2379,12 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "score_aware_carrier_training_plan": planner,
             "score_aware_training": {
                 "schema": "compact_snerv_archive_bound_advisory.v1",
-                "status": "executed_cpu_advisory_mlx_native_training_missing",
+                "status": (
+                    "executed_cpu_advisory_plus_receiver_priced_scorer_loop_qat_"
+                    "mlx_native_training_missing"
+                    if snerv_scorer_loop_qat.get("executed")
+                    else "executed_cpu_advisory_mlx_native_training_missing"
+                ),
                 "axis_tag": "[macOS-CPU advisory]",
                 "levels": int(advisory.levels),
                 "wavelet": advisory.wavelet,
@@ -2182,6 +2403,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "receiver_archive_replay_verified": bool(
                     advisory.receiver_archive_replay_verified
                 ),
+                "scorer_loop_qat": snerv_scorer_loop_qat,
                 "mlx_native_training_required_next": True,
                 "authority": "macos_cpu_advisory_false_authority",
             },
@@ -2215,6 +2437,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
             "snerv_binary_profile": snerv_binary_profile,
+            "snerv_scorer_loop_qat": snerv_scorer_loop_qat,
             "local_cpu_replay_summary_paths": [
                 path.as_posix() for path in local_cpu_replay_paths
             ],
@@ -6289,6 +6512,28 @@ def _positive_int(value: Any) -> int | None:
     return parsed if parsed > 0 else None
 
 
+def _parse_positive_int_csv(value: str) -> tuple[int, ...]:
+    parts = [part.strip() for part in str(value).split(",") if part.strip()]
+    if not parts:
+        raise CompactRendererMlxSpineRunnerError(
+            "expected at least one positive integer in comma-separated list"
+        )
+    out = []
+    for part in parts:
+        try:
+            parsed = int(part)
+        except ValueError as exc:
+            raise CompactRendererMlxSpineRunnerError(
+                f"invalid positive integer {part!r} in comma-separated list"
+            ) from exc
+        if parsed < 1:
+            raise CompactRendererMlxSpineRunnerError(
+                f"invalid non-positive integer {part!r} in comma-separated list"
+            )
+        out.append(parsed)
+    return tuple(out)
+
+
 def _checkpoint_summary(row: dict[str, Any], *, base: Path) -> dict[str, Any]:
     summary = dict(row)
     for key in (
@@ -6949,6 +7194,68 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--coder-qat-magnitude-weight", default=0.0, type=float)
     parser.add_argument("--coder-qat-delta-weight", default=0.0, type=float)
     parser.add_argument(
+        "--snerv-spectra-preserving-adapter",
+        action="store_true",
+        help=(
+            "For --execute-family snerv, use the receiver-visible "
+            "spectra-preserving MFU/HFR feature adapter instead of the "
+            "historical 3x3 LF-patch adapter."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-mfu-scales",
+        default="1,2,4",
+        help="Comma-separated deterministic MFU scales for the SNeRV adapter.",
+    )
+    parser.add_argument(
+        "--snerv-hfr-gain",
+        default=0.0,
+        type=float,
+        help="Deterministic HFR residual gain for the SNeRV adapter.",
+    )
+    parser.add_argument(
+        "--snerv-scorer-loop-qat",
+        action="store_true",
+        help=(
+            "For --execute-family snerv, run the receiver-priced local "
+            "SegNet/PoseNet scorer-loop decoder/QAT attachment. "
+            "--coder-aware-qat also enables this path for SNeRV."
+        ),
+    )
+    parser.add_argument("--snerv-scorer-loop-max-trials", default=2, type=int)
+    parser.add_argument(
+        "--snerv-scorer-loop-search-mode",
+        choices=(
+            "random_signed",
+            "top_weight_coordinate",
+            "learned_random_subspace",
+            "nes_pair_robust",
+        ),
+        default="nes_pair_robust",
+    )
+    parser.add_argument("--snerv-scorer-loop-step-map-bins", default=16, type=int)
+    parser.add_argument("--snerv-scorer-loop-perturb-scale", default=0.02, type=float)
+    parser.add_argument(
+        "--snerv-scorer-loop-byte-pressure-multiplier",
+        default=1.0,
+        type=float,
+    )
+    parser.add_argument("--snerv-scorer-loop-max-archive-byte-growth", type=int)
+    parser.add_argument("--snerv-scorer-loop-pose-slack", default=0.0, type=float)
+    parser.add_argument("--snerv-scorer-loop-seg-slack", default=0.0, type=float)
+    parser.add_argument("--snerv-scorer-loop-pair-stride", default=1, type=int)
+    parser.add_argument("--snerv-scorer-loop-start-pair", default=0, type=int)
+    parser.add_argument(
+        "--snerv-scorer-loop-pair-guard-min-score-improved-fraction",
+        default=0.0,
+        type=float,
+    )
+    parser.add_argument(
+        "--snerv-scorer-loop-pair-guard-max-pose-worsened-fraction",
+        default=1.0,
+        type=float,
+    )
+    parser.add_argument(
         "--recon-pixel-weight-path",
         type=Path,
         help=(
@@ -7323,6 +7630,34 @@ def main(argv: list[str] | None = None) -> int:
             post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             distillation_device=args.distillation_device,
             modelsize_candidate=modelsize_candidate,
+            snerv_spectra_preserving_adapter=args.snerv_spectra_preserving_adapter,
+            snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
+            snerv_hfr_gain=args.snerv_hfr_gain,
+            run_scorer_loop_qat=bool(
+                args.coder_aware_qat or args.snerv_scorer_loop_qat
+            ),
+            snerv_scorer_loop_max_trials=args.snerv_scorer_loop_max_trials,
+            snerv_scorer_loop_search_mode=args.snerv_scorer_loop_search_mode,
+            snerv_scorer_loop_step_map_bins=args.snerv_scorer_loop_step_map_bins,
+            snerv_scorer_loop_qat_bits=args.coder_qat_quant_bits,
+            snerv_scorer_loop_perturb_scale=args.snerv_scorer_loop_perturb_scale,
+            snerv_scorer_loop_byte_pressure_multiplier=(
+                args.snerv_scorer_loop_byte_pressure_multiplier
+            ),
+            snerv_scorer_loop_max_archive_byte_growth=(
+                args.snerv_scorer_loop_max_archive_byte_growth
+            ),
+            snerv_scorer_loop_pose_slack=args.snerv_scorer_loop_pose_slack,
+            snerv_scorer_loop_seg_slack=args.snerv_scorer_loop_seg_slack,
+            snerv_scorer_loop_pair_stride=args.snerv_scorer_loop_pair_stride,
+            snerv_scorer_loop_start_pair=args.snerv_scorer_loop_start_pair,
+            snerv_scorer_loop_pair_guard_min_score_improved_fraction=(
+                args.snerv_scorer_loop_pair_guard_min_score_improved_fraction
+            ),
+            snerv_scorer_loop_pair_guard_max_pose_worsened_fraction=(
+                args.snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
+            ),
+            random_seed=args.random_seed,
             upstream_dir=scorer_upstream_dir,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
