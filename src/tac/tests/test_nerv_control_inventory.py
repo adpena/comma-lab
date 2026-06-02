@@ -21,6 +21,8 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["objective_authority"]["objective"] == "contest_auth_eval_scorer_only"
+    assert "SSIM" in report["objective_authority"]["forbidden_selection_terms"]
     assert report["rate_constraint"]["constraint_id"] == "fixed_contest_byte_price"
     assert report["rate_constraint"]["contest_byte_price_score_per_byte"] > 0.0
     assert "waterfilled_int8_int4_int2_zero_allocation" in report["rate_constraint"][
@@ -88,6 +90,13 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     ]
     assert report["runner_spend_rule"]["score_claim"] is False
     assert report["runner_policy"]["bounded_runner_must_select_from_inventory_rows"]
+    ladder = report["modelsize_ladder"]
+    assert ladder["schema"] == "nerv_modelsize_ladder.v1"
+    assert ladder["score_claim"] is False
+    ladder_families = {row["family"]: row for row in ladder["family_rows"]}
+    assert {"hi_nerv", "snerv"} == set(ladder_families)
+    assert ladder_families["hi_nerv"]["marginal_gates"]
+    assert ladder_families["snerv"]["marginal_gates"]
 
     sweep = report["implementation_sweep"]
     assert sweep["status"] == "implementation_sweep_completed_false_authority"
@@ -115,6 +124,7 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
 
     markdown = render_nerv_control_inventory_markdown(report)
     assert "## Implementation Sweep" in markdown
+    assert "## Model-Size Ladder" in markdown
     assert "full_video_vjp_master_gradient_authority" in markdown
 
 
@@ -126,4 +136,50 @@ def test_nerv_control_inventory_can_focus_on_snerv_plus_cross_stack_only() -> No
     assert "snerv" in applies_to
     assert "cross_stack" in applies_to
     assert report["score_claim"] is False
+    assert [row["family"] for row in report["modelsize_ladder"]["family_rows"]] == [
+        "snerv"
+    ]
+    assert report["measured_archive_size_ladders"] == {}
     assert report["implementation_sweep"]["status"] == "repo_root_not_supplied"
+
+
+def test_nerv_control_inventory_accepts_measured_hinerv_archive_size_ladder() -> None:
+    archive_ladder = {
+        "schema": "hinerv_archive_size_ladder.v1",
+        "report_path": ".omx/research/hinerv_archive_size_ladder_fake.json",
+        "output_dir": "/Volumes/VertigoDataTier/pact/fake",
+        "decoder_codec": "int8_mixed",
+        "row_count": 1,
+        "selection_rule": "adaptive quantization and waterfilling required",
+        "required_allocator_bindings": [
+            "adaptive_quantization_by_decoder_weight_group",
+            "waterfill_group_bits_against_fixed_contest_byte_price",
+            "inverse_steg_saliency_decoder_weight_binding",
+        ],
+        "archive_rows": [
+            {
+                "row_id": "hi_nerv_local_tiny",
+                "archive_bytes": 123,
+                "archive_sha256": "a" * 64,
+                "archive_path": "/Volumes/VertigoDataTier/pact/fake/archive.zip",
+                "runtime_consumption_proof_ready": None,
+                "blockers": ["receiver_proof_not_executed_for_archive_size_ladder"],
+            }
+        ],
+        "marginal_archive_gates": [],
+        "blockers": ["hinerv_archive_size_ladder_false_authority_no_nonrate_score"],
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("hi_nerv",),
+        hinerv_archive_size_ladder_report=archive_ladder,
+    )
+
+    measured = report["measured_archive_size_ladders"]["hi_nerv"]
+    assert measured["schema"] == "hinerv_archive_size_ladder.v1"
+    assert measured["score_claim"] is False
+    assert measured["row_count"] == 1
+    assert measured["archive_rows"][0]["archive_bytes"] == 123
+    assert "inverse_steg_saliency_decoder_weight_binding" in measured[
+        "required_allocator_bindings"
+    ]

@@ -15,6 +15,10 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.nerv_modelsize_ladder import (
+    SCORER_ONLY_OBJECTIVE_AUTHORITY,
+    build_nerv_modelsize_ladder,
+)
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
 )
@@ -27,6 +31,7 @@ def build_nerv_control_inventory(
     *,
     focus_families: Iterable[str] = ("hi_nerv", "snerv"),
     repo_root: str | Path | None = None,
+    hinerv_archive_size_ladder_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a machine-readable map of NeRV controls and required bindings."""
 
@@ -44,11 +49,17 @@ def build_nerv_control_inventory(
         "schema": NERV_CONTROL_INVENTORY_SCHEMA,
         "focus_families": list(focus),
         "authority": "false_authority_control_inventory_no_score_claim",
+        "objective_authority": SCORER_ONLY_OBJECTIVE_AUTHORITY,
         "upstream_sources_checked": _upstream_sources(),
         "rate_constraint": _rate_constraint(),
         "runner_spend_rule": _runner_spend_rule(),
         "stack_transfer_matrix": _stack_transfer_matrix(),
         "local_binding_surfaces": _local_binding_surfaces(),
+        "modelsize_ladder": build_nerv_modelsize_ladder(focus_families=focus),
+        "measured_archive_size_ladders": _measured_archive_size_ladders(
+            hinerv_archive_size_ladder_report=hinerv_archive_size_ladder_report,
+            focus_families=focus,
+        ),
         "control_rows": controls,
         "binding_gap_rows": gaps,
         "status_counts": dict(sorted(status_counts.items())),
@@ -103,6 +114,22 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
             lines.append(
                 f"- `{row['family']}`: `{row['overall_status']}` "
                 f"({len(row.get('blocking_gaps') or [])} blocking gaps)"
+            )
+    ladder = report.get("modelsize_ladder")
+    if isinstance(ladder, Mapping):
+        lines.extend(["", "## Model-Size Ladder", ""])
+        for row in ladder.get("family_rows", []):
+            lines.append(
+                f"- `{row['family']}`: {len(row.get('ladder_rows') or [])} rows, "
+                f"{len(row.get('marginal_gates') or [])} marginal gates"
+            )
+    measured_ladders = report.get("measured_archive_size_ladders")
+    if isinstance(measured_ladders, Mapping):
+        lines.extend(["", "## Measured Archive Size Ladders", ""])
+        for family, ladder_row in measured_ladders.items():
+            lines.append(
+                f"- `{family}`: `{ladder_row.get('status')}` "
+                f"({ladder_row.get('row_count', 0)} rows)"
             )
     lines.extend(["", "## Sources", ""])
     for source in report.get("upstream_sources_checked", []):
@@ -173,6 +200,51 @@ def build_nerv_design_implementation_sweep(
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def _measured_archive_size_ladders(
+    *,
+    hinerv_archive_size_ladder_report: Mapping[str, Any] | None,
+    focus_families: Iterable[str],
+) -> dict[str, Any]:
+    focus = {str(family) for family in focus_families}
+    rows: dict[str, Any] = {}
+    if hinerv_archive_size_ladder_report is not None and (
+        not focus or "hi_nerv" in focus
+    ):
+        report = hinerv_archive_size_ladder_report
+        rows["hi_nerv"] = {
+            "schema": report.get("schema"),
+            "status": "measured_archive_bytes_available_false_authority",
+            "report_path": report.get("report_path"),
+            "output_dir": report.get("output_dir"),
+            "decoder_codec": report.get("decoder_codec"),
+            "required_allocator_bindings": list(
+                report.get("required_allocator_bindings") or ()
+            ),
+            "selection_rule": report.get("selection_rule"),
+            "row_count": int(report.get("row_count", 0) or 0),
+            "archive_rows": [
+                {
+                    "row_id": row.get("row_id"),
+                    "archive_bytes": row.get("archive_bytes"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "archive_path": row.get("archive_path"),
+                    "runtime_consumption_proof_ready": row.get(
+                        "runtime_consumption_proof_ready"
+                    ),
+                    "blockers": list(row.get("blockers") or ()),
+                }
+                for row in report.get("archive_rows", ())
+                if isinstance(row, Mapping)
+            ],
+            "marginal_archive_gates": list(
+                report.get("marginal_archive_gates") or ()
+            ),
+            "blockers": list(report.get("blockers") or ()),
+            **FALSE_AUTHORITY,
+        }
+    return rows
 
 
 def _control_rows() -> list[dict[str, Any]]:

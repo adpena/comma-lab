@@ -48,12 +48,26 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Repository root used for the implementation sweep.",
     )
+    parser.add_argument(
+        "--hinerv-archive-size-ladder-json",
+        default=None,
+        type=Path,
+        help="Optional measured false-authority HiNeRV archive-size ladder JSON.",
+    )
     args = parser.parse_args(argv)
 
     focus = tuple(args.focus_family or ("hi_nerv", "snerv"))
+    hinerv_archive_size_ladder_report = None
+    if args.hinerv_archive_size_ladder_json is not None:
+        hinerv_archive_size_ladder_report = json.loads(
+            args.hinerv_archive_size_ladder_json.expanduser().read_text(
+                encoding="utf-8"
+            )
+        )
     report = build_nerv_control_inventory(
         focus_families=focus,
         repo_root=args.repo_root,
+        hinerv_archive_size_ladder_report=hinerv_archive_size_ladder_report,
     )
     output = Path(args.output_json).expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)
