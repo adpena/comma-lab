@@ -110,6 +110,46 @@ def test_hinerv_modelsize_budget_report_is_false_authority_and_budgeted() -> Non
     assert "selection_strategy" in report["budget_math"]
 
 
+def test_hinerv_modelsize_knobs_are_real_capacity_and_codec_controls() -> None:
+    small = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        latent_dim=8,
+        embed_dim=8,
+        decoder_channel=8,
+        decoder_codec="int4_mixed",
+    )
+    wider = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        latent_dim=16,
+        embed_dim=16,
+        decoder_channel=16,
+        decoder_codec="int4_mixed",
+    )
+    same_wider_int2 = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        latent_dim=16,
+        embed_dim=16,
+        decoder_channel=16,
+        decoder_codec="int2_mixed",
+    )
+
+    assert wider.modelsize_mparams > small.modelsize_mparams
+    assert wider.total_trainable_params > small.total_trainable_params
+    assert wider.latent_int16_payload_bytes > small.latent_int16_payload_bytes
+    assert wider.nominal_decoder_payload_bytes > small.nominal_decoder_payload_bytes
+    assert same_wider_int2.total_trainable_params == wider.total_trainable_params
+    assert same_wider_int2.latent_int16_payload_bytes == (
+        wider.latent_int16_payload_bytes
+    )
+    assert same_wider_int2.nominal_decoder_payload_bytes < (
+        wider.nominal_decoder_payload_bytes
+    )
+    assert same_wider_int2.nominal_rate_score < wider.nominal_rate_score
+
+
 def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     row = analyze_snerv_modelsize_candidate(
         hard_byte_ceiling=178_000,
@@ -163,6 +203,44 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     assert all(row["fc_dim"] == 9 for row in selected)
     assert all(row["emb_size"] == 0 for row in selected)
     assert report["score_claim"] is False
+
+
+def test_snerv_fc_dim_and_emb_size_are_receiver_decoder_controls() -> None:
+    base = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        levels=4,
+        bits_per_coeff=2.0,
+        step_map_bits_per_coeff=1.0,
+        decoder_payload_codec="int4_symmetric",
+        fc_dim=9,
+        emb_size=0,
+    )
+    larger_decoder = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        levels=4,
+        bits_per_coeff=2.0,
+        step_map_bits_per_coeff=1.0,
+        decoder_payload_codec="int4_symmetric",
+        fc_dim=17,
+        emb_size=4,
+    )
+
+    assert larger_decoder.decoder_feature_count > base.decoder_feature_count
+    assert larger_decoder.hf_decoder_weight_count > base.hf_decoder_weight_count
+    assert larger_decoder.nominal_decoder_payload_bytes > (
+        base.nominal_decoder_payload_bytes
+    )
+    assert larger_decoder.nominal_lf_payload_bytes == base.nominal_lf_payload_bytes
+    assert larger_decoder.nominal_step_map_payload_bytes == (
+        base.nominal_step_map_payload_bytes
+    )
+    assert larger_decoder.nominal_rate_score > base.nominal_rate_score
 
 
 def test_official_nerv_oss_flag_audit_maps_controls_to_local_consumers() -> None:
