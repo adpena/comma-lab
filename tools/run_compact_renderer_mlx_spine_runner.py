@@ -1220,7 +1220,10 @@ def adapt_pr95_stage8_report_to_spine(
         if isinstance(proof_path, str) and proof_path:
             receiver_proof_paths = [Path(proof_path)]
 
-    spine = build_pr95_hnerv_spine_from_archive(archive)
+    spine = build_pr95_hnerv_spine_from_archive(
+        archive,
+        runtime_submission_dir=receiver_proof_runtime_dir,
+    )
     projection = write_representation_spine_projection(
         output_dir=out / "pr95_stage8_hnerv_spine",
         spine=spine,
@@ -2469,7 +2472,10 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                     **FALSE_AUTHORITY,
                 }
         try:
-            spine = build_pr95_hnerv_spine_from_archive(archive_file)
+            spine = build_pr95_hnerv_spine_from_archive(
+                archive_file,
+                runtime_submission_dir=receiver_proof_runtime_dir,
+            )
             projection = write_representation_spine_projection(
                 output_dir=out / "pr95_hnerv_spine",
                 spine=spine,

@@ -185,6 +185,8 @@ def build_representation_spine_packet(
 
 def build_pr95_hnerv_spine_from_archive(
     archive_zip: str | Path,
+    *,
+    runtime_submission_dir: str | Path | None = None,
 ) -> HprcRepresentationSpinePacket:
     """Project PR95's u32-section HNeRV packet into the common spine."""
 
@@ -200,12 +202,21 @@ def build_pr95_hnerv_spine_from_archive(
     )
     if num_pairs is not None:
         manifest_extra["num_pairs"] = num_pairs
+    source = _source_archive_row(
+        archive,
+        member_name=view.member_name,
+        member_bytes=view.member_bytes,
+    )
+    if runtime_submission_dir is not None:
+        runtime = Path(runtime_submission_dir).expanduser().resolve(strict=False)
+        source["submission_dir"] = runtime.as_posix()
+        source["runtime_dir"] = runtime.as_posix()
     return build_representation_spine_packet(
         family=HprcRepresentationFamily.PR95_HNERV,
         decoder_blob=_expect_bytes(parsed["decoder_blob"], "decoder_blob"),
         latents_blob=_expect_bytes(parsed["latents_blob"], "latents_blob"),
         receiver_state_blob=_expect_bytes(parsed["meta_blob"], "meta_blob"),
-        source=_source_archive_row(archive, member_name=view.member_name, member_bytes=view.member_bytes),
+        source=source,
         manifest_extra=manifest_extra,
     )
 

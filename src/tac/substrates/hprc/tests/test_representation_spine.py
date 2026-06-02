@@ -111,8 +111,13 @@ def _hinerv_payload() -> bytes:
 
 def test_pr95_hnerv_projects_to_common_spine(tmp_path: Path) -> None:
     archive = _single_member_zip(tmp_path / "pr95.zip", _pr95_payload())
+    runtime = tmp_path / "hnerv_muon"
+    runtime.mkdir()
 
-    spine = build_pr95_hnerv_spine_from_archive(archive)
+    spine = build_pr95_hnerv_spine_from_archive(
+        archive,
+        runtime_submission_dir=runtime,
+    )
     packet = parse_hprc_packet(spine.hprc_bin)
     sections = packet.section_map()
     embedded = json.loads(sections[HprcSectionKind.MANIFEST_JSON])
@@ -124,6 +129,7 @@ def test_pr95_hnerv_projects_to_common_spine(tmp_path: Path) -> None:
     assert sections[HprcSectionKind.RECEIVER_STATE] == b'{"pairs":600}'
     assert embedded["schema"] == "hprc_representation_spine_manifest.v1"
     assert embedded["manifest_extra"]["num_pairs"] == 600
+    assert embedded["source"]["submission_dir"] == runtime.resolve().as_posix()
     assert embedded["score_claim"] is False
 
 

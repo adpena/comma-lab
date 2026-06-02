@@ -473,6 +473,56 @@ def test_sampled_section_value_profile_opens_full_video_work_order(
     ]
 
 
+def test_pr95_section_value_profile_work_order_requires_runtime_custody(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "pr95_archive.zip"
+    archive.write_bytes(b"archive")
+    runtime = tmp_path / "hnerv_muon"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    manifest = _projection(
+        tmp_path / "pr95",
+        family=HprcRepresentationFamily.PR95_HNERV,
+        decoder=b"d" * 20,
+        latents=b"l" * 8,
+        source={
+            "archive_zip_path": archive.as_posix(),
+            "archive_zip_sha256": "9" * 64,
+            "archive_zip_bytes": archive.stat().st_size,
+            "submission_dir": runtime.as_posix(),
+        },
+        manifest_extra={
+            "num_pairs": 600,
+            "source_payload_kind": "pr95_u32_prefixed_hnerv",
+        },
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+    )
+
+    work_orders = plan["section_value_profile_work_orders"]
+    assert len(work_orders) == 1
+    order = work_orders[0]
+    assert order["status"] == "queued_for_full_video_mlx_section_value_profile"
+    assert order["profile_tool"] == "tools/profile_pr95_hnerv_mlx_section_value.py"
+    assert order["profile_sections"] == ["decoder_qw", "latents_rc"]
+    assert order["submission_runtime_dir"] == runtime.as_posix()
+    assert "--submission-dir" in order["argv"]
+    assert runtime.as_posix() in order["argv"]
+    assert "submission_runtime_dir_missing_for_section_value_profile" not in order[
+        "blockers"
+    ]
+
+
 def test_full_video_section_value_profile_satisfies_work_order(
     tmp_path: Path,
 ) -> None:
