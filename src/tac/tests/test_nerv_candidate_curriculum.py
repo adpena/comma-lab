@@ -70,6 +70,10 @@ def test_hinerv_candidate_curriculum_enables_lowbit_qat_and_blocks_missing_score
         "pr95_stack_binding_requirements.v1"
     )
     assert plan["pr95_stack_binding"]["complete"] is False
+    assert plan["long_campaign_prelaunch_gate"]["schema"] == (
+        "pr95_stack_binding_long_campaign_prelaunch_gate.v1"
+    )
+    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
     assert "hi_nerv_real_segnet_teacher_missing" in plan["blockers"]
     assert "hi_nerv_eval_roundtrip_ste_missing" in plan["blockers"]
     assert plan["score_claim"] is False
@@ -119,6 +123,13 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     assert plan["pr95_stack_binding"]["rows"][1]["satisfied"] is True
     assert "hi_nerv_archive_in_loop_byte_oracle_missing" not in plan["blockers"]
     assert "hi_nerv_receiver_proof_missing" in plan["blockers"]
+    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
+    assert "hi_nerv_eval_roundtrip_ste_missing" in plan[
+        "long_campaign_prelaunch_gate"
+    ]["blockers"]
+    assert "hi_nerv_receiver_proof_missing" not in plan[
+        "long_campaign_prelaunch_gate"
+    ]["blockers"]
 
 
 def test_hinerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:
@@ -199,6 +210,7 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     assert "snerv_mlx_native_train_export_adapter_missing" in plan["blockers"]
     assert plan["pr95_stack_binding"]["family"] == "snerv"
     assert plan["pr95_stack_binding"]["complete"] is False
+    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
     assert "snerv_archive_in_loop_byte_oracle_missing" not in plan["blockers"]
     assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
     assert plan["score_claim"] is False
@@ -269,6 +281,7 @@ def test_candidate_curriculum_metadata_sanitizer_removes_authority_fields() -> N
     assert "score_claim" not in sanitized["byte_oracle_logging"]
     assert "score_claim" not in sanitized["pr95_stack_binding"]
     assert "promotion_eligible" not in sanitized["pr95_stack_binding"]
+    assert "score_claim" not in sanitized["long_campaign_prelaunch_gate"]
     assert sanitized["schema"] == "nerv_candidate_curriculum_plan.v1"
     assert sanitized["byte_oracle_logging"]["schema"] == (
         "nerv_candidate_byte_feedback.v1"

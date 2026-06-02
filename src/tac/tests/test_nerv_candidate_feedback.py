@@ -34,6 +34,13 @@ def _runner_report(tmp_path: Path) -> dict[str, object]:
                     "hi_nerv_archive_in_loop_byte_oracle_missing",
                 ],
             },
+            "long_campaign_prelaunch_gate": {
+                "schema": "pr95_stack_binding_long_campaign_prelaunch_gate.v1",
+                "launch_allowed": False,
+                "blockers": [
+                    "hi_nerv_real_posenet_teacher_missing",
+                ],
+            },
         },
         "candidate_curriculum_plan": {
             "candidate_id": "hinerv_np600_ld12_ed24_dc32_int4",
@@ -110,6 +117,13 @@ def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
     assert row["pr95_stack_binding_blockers"] == [
         "hi_nerv_real_posenet_teacher_missing",
         "hi_nerv_archive_in_loop_byte_oracle_missing",
+    ]
+    assert row["long_campaign_prelaunch_gate_schema"] == (
+        "pr95_stack_binding_long_campaign_prelaunch_gate.v1"
+    )
+    assert row["long_campaign_prelaunch_launch_allowed"] is False
+    assert row["long_campaign_prelaunch_blockers"] == [
+        "hi_nerv_real_posenet_teacher_missing"
     ]
     assert row["source_report_sha256"] is not None
     assert row["blockers"] == ["partial_pair_byte_feedback_only"]

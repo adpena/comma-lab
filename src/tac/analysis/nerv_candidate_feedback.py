@@ -52,6 +52,11 @@ def build_nerv_candidate_feedback_row(
         or selection.get("pr95_stack_binding")
         or {}
     )
+    prelaunch_gate = dict(
+        curriculum.get("long_campaign_prelaunch_gate")
+        or selection.get("long_campaign_prelaunch_gate")
+        or {}
+    )
     candidate = selection.get("candidate")
     candidate_row = dict(candidate) if isinstance(candidate, Mapping) else {}
     source_path = (
@@ -109,6 +114,11 @@ def build_nerv_candidate_feedback_row(
         "pr95_stack_binding_missing_count": pr95_binding.get("missing_count"),
         "pr95_stack_binding_complete": pr95_binding.get("complete"),
         "pr95_stack_binding_blockers": list(pr95_binding.get("blockers") or []),
+        "long_campaign_prelaunch_gate_schema": prelaunch_gate.get("schema"),
+        "long_campaign_prelaunch_launch_allowed": prelaunch_gate.get(
+            "launch_allowed"
+        ),
+        "long_campaign_prelaunch_blockers": list(prelaunch_gate.get("blockers") or []),
         "receiver_proof_report_paths": list(
             runner_report.get("receiver_proof_report_paths") or []
         ),

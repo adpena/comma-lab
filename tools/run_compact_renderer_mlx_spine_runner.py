@@ -1791,6 +1791,28 @@ def _write_snerv_binary_profile_attachment(
     }
 
 
+def _pr95_long_campaign_prelaunch_blockers(
+    candidate_curriculum_plan: Mapping[str, Any],
+    *,
+    epochs: int,
+) -> list[str]:
+    """Return blockers that forbid long carrier campaigns before launch."""
+
+    if int(epochs) < 8:
+        return []
+    gate = candidate_curriculum_plan.get("long_campaign_prelaunch_gate")
+    if not isinstance(gate, Mapping):
+        return ["pr95_long_campaign_prelaunch_gate_missing"]
+    if gate.get("launch_allowed") is True:
+        return []
+    return _dedupe(
+        [
+            "pr95_long_campaign_prelaunch_gate_failed",
+            *list(gate.get("blockers") or []),
+        ]
+    )
+
+
 def execute_snerv_inverse_steg_advisory_and_adapt(
     *,
     output_dir: str | Path,
@@ -1857,6 +1879,56 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         if step_map_coder_mode is not None
         else ("waterfill" if candidate else "uniform")
     )
+    prelaunch_curriculum_plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate or None,
+        requested_epochs=int(epochs),
+        num_pairs=int(num_pairs),
+        step_map_coder_mode=str(resolved_step_map_coder_mode),
+    )
+    prelaunch_blockers = _pr95_long_campaign_prelaunch_blockers(
+        prelaunch_curriculum_plan,
+        epochs=int(epochs),
+    )
+    if prelaunch_blockers:
+        refusal = _base_report(
+            output_dir=out,
+            mode="snerv_pr95_binding_prelaunch_refused",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        refusal.update(
+            {
+                "execute_family": "snerv",
+                "num_pairs": int(num_pairs),
+                "epochs_requested": int(epochs),
+                "training_executed": False,
+                "launch_refusal_reason": (
+                    "8+ epoch SNeRV campaigns require the PR95-grade "
+                    "prelaunch stack before advisory or training execution"
+                ),
+                "modelsize_candidate_selection": {
+                    "schema": "compact_execute_modelsize_candidate_selection.v1",
+                    "family": "snerv",
+                    "selection_mode": (
+                        "planner_candidate" if candidate else "manual_cli_knobs"
+                    ),
+                    "candidate": candidate or None,
+                    "candidate_curriculum_plan": prelaunch_curriculum_plan,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "candidate_curriculum_plan": prelaunch_curriculum_plan,
+                "blockers": prelaunch_blockers,
+            }
+        )
+        refusal["candidate_feedback"] = write_nerv_candidate_feedback_files(
+            runner_report=refusal,
+            output_dir=out,
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, refusal)
+        return {**refusal, "report_path": path.as_posix()}
     advisory = run_snerv_advisory(
         n_pairs=int(num_pairs),
         levels=levels,
@@ -3509,6 +3581,55 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     effective_coder_qat_quant_bits = int(
         launch_curriculum_plan["coder_pressure"]["quant_bits"]
     )
+    prelaunch_blockers = _pr95_long_campaign_prelaunch_blockers(
+        launch_curriculum_plan,
+        epochs=int(epochs),
+    )
+    if prelaunch_blockers:
+        refusal = _base_report(
+            output_dir=out,
+            mode="hi_nerv_pr95_binding_prelaunch_refused",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        refusal.update(
+            {
+                "execute_family": "hi_nerv",
+                "num_pairs": int(num_pairs),
+                "epochs_requested": int(epochs),
+                "training_executed": False,
+                "launch_refusal_reason": (
+                    "8+ epoch HiNeRV campaigns require the PR95-grade "
+                    "prelaunch stack before MLX training execution"
+                ),
+                "modelsize_candidate_selection": {
+                    "schema": "compact_execute_modelsize_candidate_selection.v1",
+                    "family": "hi_nerv",
+                    "selection_mode": (
+                        "planner_candidate" if candidate else "manual_cli_knobs"
+                    ),
+                    "candidate": candidate or None,
+                    "num_pairs_for_budget": CONTEST_PAIR_COUNT,
+                    "launch_latent_dim": launch_latent_dim,
+                    "launch_embed_dim": launch_embed_dim,
+                    "launch_decoder_channel": launch_decoder_channel,
+                    "launch_decoder_codec": launch_decoder_codec,
+                    "candidate_curriculum_plan": launch_curriculum_plan,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "candidate_curriculum_plan": launch_curriculum_plan,
+                "blockers": prelaunch_blockers,
+            }
+        )
+        refusal["candidate_feedback"] = write_nerv_candidate_feedback_files(
+            runner_report=refusal,
+            output_dir=out,
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, refusal)
+        return {**refusal, "report_path": path.as_posix()}
     try:
         artifact = _run_hi_nerv_mlx_scoreaware_smoke(
             output_dir=out / "hi_nerv_mlx_training",

@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 from tac.analysis.pr95_stack_binding_requirements import (
+    PRELAUNCH_REQUIREMENT_IDS,
     REQUIREMENTS,
+    build_pr95_long_campaign_prelaunch_gate,
+    build_pr95_stack_binding_evidence,
     build_pr95_stack_binding_requirements,
 )
 
@@ -56,3 +59,33 @@ def test_pr95_stack_binding_requirements_can_reach_complete_without_authority() 
     assert audit["blockers"] == []
     assert audit["promotion_eligible"] is False
     assert audit["rank_or_kill_eligible"] is False
+
+
+def test_pr95_long_campaign_prelaunch_gate_excludes_post_run_proofs() -> None:
+    audit = build_pr95_stack_binding_requirements(
+        family="hi_nerv",
+        evidence=build_pr95_stack_binding_evidence(
+            carrier_source_or_documented_adaptation=True,
+            modelsize_archive_budget=True,
+            pr95_staged_curriculum=True,
+            real_segnet_teacher=True,
+            real_posenet_teacher=True,
+            differentiable_pose_preprocess=True,
+            eval_roundtrip_ste=True,
+            ema_archive_selection=True,
+            qat_forward=True,
+            coder_aware_regularizer=True,
+            muon_adamw_partition=True,
+            receiver_proof=False,
+            local_cpu_replay_gate=False,
+        ),
+    )
+    gate = build_pr95_long_campaign_prelaunch_gate(audit)
+
+    assert gate["schema"] == "pr95_stack_binding_long_campaign_prelaunch_gate.v1"
+    assert gate["required_count"] == len(PRELAUNCH_REQUIREMENT_IDS)
+    assert gate["launch_allowed"] is True
+    assert gate["blockers"] == []
+    assert "receiver_proof" in gate["post_run_requirements_excluded"]
+    assert "local_cpu_replay_gate" in gate["post_run_requirements_excluded"]
+    assert audit["complete"] is False

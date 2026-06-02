@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 SCHEMA = "pr95_stack_binding_requirements.v1"
+PRELAUNCH_GATE_SCHEMA = "pr95_stack_binding_long_campaign_prelaunch_gate.v1"
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -162,6 +163,22 @@ REQUIREMENTS: tuple[StackRequirement, ...] = (
     ),
 )
 
+PRELAUNCH_REQUIREMENT_IDS: frozenset[str] = frozenset(
+    {
+        "carrier_source_or_documented_adaptation",
+        "modelsize_archive_budget",
+        "pr95_staged_curriculum",
+        "real_segnet_teacher",
+        "real_posenet_teacher",
+        "differentiable_pose_preprocess",
+        "eval_roundtrip_ste",
+        "ema_archive_selection",
+        "qat_forward",
+        "coder_aware_regularizer",
+        "muon_adamw_partition",
+    }
+)
+
 
 def build_pr95_stack_binding_requirements(
     *,
@@ -220,6 +237,50 @@ def build_pr95_stack_binding_requirements(
     }
 
 
+def build_pr95_long_campaign_prelaunch_gate(
+    binding: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Return the subset gate required before 8+ epoch carrier campaigns.
+
+    Post-run proofs such as receiver proof, local replay, and exact auth are
+    intentionally excluded from this pre-launch gate. They remain in the full
+    binding matrix and promotion gates.
+    """
+
+    rows = [
+        dict(row)
+        for row in binding.get("rows", [])
+        if isinstance(row, Mapping)
+        and str(row.get("requirement_id")) in PRELAUNCH_REQUIREMENT_IDS
+    ]
+    blockers = [
+        str(row.get("blocker"))
+        for row in rows
+        if row.get("satisfied") is not True and row.get("blocker")
+    ]
+    return {
+        "schema": PRELAUNCH_GATE_SCHEMA,
+        "family": binding.get("family"),
+        "required_count": len(PRELAUNCH_REQUIREMENT_IDS),
+        "satisfied_count": sum(1 for row in rows if row.get("satisfied") is True),
+        "missing_count": len(blockers),
+        "launch_allowed": not blockers,
+        "blocking_requirement_ids": [
+            str(row.get("requirement_id"))
+            for row in rows
+            if row.get("satisfied") is not True
+        ],
+        "blockers": blockers,
+        "post_run_requirements_excluded": [
+            row["requirement_id"]
+            for row in binding.get("rows", [])
+            if isinstance(row, Mapping)
+            and str(row.get("requirement_id")) not in PRELAUNCH_REQUIREMENT_IDS
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_pr95_stack_binding_evidence(
     *,
     carrier_source_or_documented_adaptation: bool = True,
@@ -267,9 +328,12 @@ def build_pr95_stack_binding_evidence(
 
 __all__ = [
     "FALSE_AUTHORITY",
+    "PRELAUNCH_GATE_SCHEMA",
+    "PRELAUNCH_REQUIREMENT_IDS",
     "REQUIREMENTS",
     "SCHEMA",
     "StackRequirement",
+    "build_pr95_long_campaign_prelaunch_gate",
     "build_pr95_stack_binding_evidence",
     "build_pr95_stack_binding_requirements",
 ]

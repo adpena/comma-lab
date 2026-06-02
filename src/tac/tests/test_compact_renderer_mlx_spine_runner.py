@@ -1518,7 +1518,7 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     out = execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=tmp_path / "hinerv_gate",
         num_pairs=600,
-        epochs=8,
+        epochs=1,
         batch_pair_indices_per_step=1,
         learning_rate=1e-3,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
@@ -1599,6 +1599,43 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert "local_cpu_replay_not_executed" not in out["blockers"]
     assert "local_cpu_replay_not_run_partial_pair_coverage" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
+
+
+def test_hinerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fail_train(**_kwargs):
+        raise AssertionError("long campaign should refuse before MLX training")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_refusal",
+        num_pairs=600,
+        epochs=8,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "hi_nerv_pr95_binding_prelaunch_refused"
+    assert out["training_executed"] is False
+    assert "pr95_long_campaign_prelaunch_gate_failed" in out["blockers"]
+    assert "hi_nerv_modelsize_archive_budget_missing" in out["blockers"]
+    assert "hi_nerv_real_posenet_teacher_missing" in out["blockers"]
+    gate = out["candidate_curriculum_plan"]["long_campaign_prelaunch_gate"]
+    assert gate["launch_allowed"] is False
+    assert "receiver_proof" in gate["post_run_requirements_excluded"]
+    assert out["candidate_feedback"]["row"][
+        "long_campaign_prelaunch_launch_allowed"
+    ] is False
+    assert Path(out["report_path"]).is_file()
 
 
 def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
@@ -1690,7 +1727,7 @@ def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
     out = execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=tmp_path / "hinerv_gate",
         num_pairs=600,
-        epochs=8,
+        epochs=1,
         batch_pair_indices_per_step=1,
         learning_rate=1e-3,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
@@ -1765,7 +1802,7 @@ def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(
     out = execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=tmp_path / "hinerv_gate",
         num_pairs=600,
-        epochs=8,
+        epochs=1,
         batch_pair_indices_per_step=1,
         learning_rate=1e-3,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
@@ -1841,7 +1878,7 @@ def test_hinerv_full_video_bad_mlx_score_does_not_unlock_default_cpu_replay(
     out = execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=tmp_path / "hinerv_gate",
         num_pairs=600,
-        epochs=8,
+        epochs=1,
         batch_pair_indices_per_step=1,
         learning_rate=1e-3,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
@@ -1886,7 +1923,7 @@ def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
     out = execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=tmp_path / "hinerv_gate",
         num_pairs=600,
-        epochs=8,
+        epochs=1,
         batch_pair_indices_per_step=1,
         learning_rate=1e-3,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
@@ -1970,7 +2007,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     out = execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=tmp_path / "hinerv_qat",
         num_pairs=2,
-        epochs=8,
+        epochs=1,
         batch_pair_indices_per_step=1,
         learning_rate=1e-3,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
@@ -2359,6 +2396,55 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     ]
     assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
+
+
+def test_snerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.advisory as advisory_mod
+
+    def fail_run_snerv_advisory(**_kwargs):
+        raise AssertionError("long campaign should refuse before SNeRV advisory")
+
+    monkeypatch.setattr(advisory_mod, "run_snerv_advisory", fail_run_snerv_advisory)
+
+    out = execute_snerv_inverse_steg_advisory_and_adapt(
+        output_dir=tmp_path / "snerv_refusal",
+        num_pairs=600,
+        epochs=8,
+        hard_byte_ceilings=(178_000, 216_000),
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        modelsize_candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "snerv-long-candidate",
+            "levels": 2,
+            "bits_per_coeff": 1.5,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int2_symmetric",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
+        },
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "snerv_pr95_binding_prelaunch_refused"
+    assert out["training_executed"] is False
+    assert "pr95_long_campaign_prelaunch_gate_failed" in out["blockers"]
+    assert "snerv_pr95_staged_curriculum_missing" in out["blockers"]
+    assert "snerv_real_segnet_teacher_missing" in out["blockers"]
+    gate = out["candidate_curriculum_plan"]["long_campaign_prelaunch_gate"]
+    assert gate["launch_allowed"] is False
+    assert "local_cpu_replay_gate" in gate["post_run_requirements_excluded"]
+    assert out["candidate_feedback"]["row"]["candidate_id"] == (
+        "snerv-long-candidate"
+    )
+    assert out["candidate_feedback"]["row"][
+        "long_campaign_prelaunch_launch_allowed"
+    ] is False
+    assert Path(out["report_path"]).is_file()
 
 
 def test_adapt_snerv_advisory_report_consumes_existing_runtime_package(

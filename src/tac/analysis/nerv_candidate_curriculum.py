@@ -15,6 +15,7 @@ from typing import Any
 
 from tac.analysis.nerv_modelsize_budget import RATE_SCORE_PER_BYTE
 from tac.analysis.pr95_stack_binding_requirements import (
+    build_pr95_long_campaign_prelaunch_gate,
     build_pr95_stack_binding_evidence,
     build_pr95_stack_binding_requirements,
 )
@@ -208,6 +209,9 @@ def build_hinerv_candidate_curriculum_plan(
             byte_closed_archive_export=measured_archive_bytes is not None,
         ),
     )
+    long_campaign_prelaunch_gate = build_pr95_long_campaign_prelaunch_gate(
+        pr95_binding
+    )
     blockers.extend(pr95_binding["blockers"])
     return {
         "schema": SCHEMA,
@@ -241,6 +245,7 @@ def build_hinerv_candidate_curriculum_plan(
         },
         "byte_oracle_logging": byte_feedback,
         "pr95_stack_binding": pr95_binding,
+        "long_campaign_prelaunch_gate": long_campaign_prelaunch_gate,
         "launch_mutations": launch_mutations,
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
@@ -308,6 +313,9 @@ def build_snerv_candidate_curriculum_plan(
             byte_closed_archive_export=measured_archive_bytes is not None,
         ),
     )
+    long_campaign_prelaunch_gate = build_pr95_long_campaign_prelaunch_gate(
+        pr95_binding
+    )
     blockers.extend(pr95_binding["blockers"])
     return {
         "schema": SCHEMA,
@@ -331,6 +339,7 @@ def build_snerv_candidate_curriculum_plan(
         },
         "byte_oracle_logging": byte_feedback,
         "pr95_stack_binding": pr95_binding,
+        "long_campaign_prelaunch_gate": long_campaign_prelaunch_gate,
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
