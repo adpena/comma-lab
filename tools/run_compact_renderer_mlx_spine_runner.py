@@ -1736,6 +1736,199 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     return {**final, "report_path": path.as_posix()}
 
 
+def adapt_snerv_advisory_report_to_spine(
+    *,
+    snerv_advisory_report_path: str | Path,
+    output_dir: str | Path,
+    hard_byte_ceilings: tuple[int, ...] = DEFAULT_BASE_RENDERER_BYTE_CEILINGS,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
+    hprc_queue_followup_report_paths: tuple[str | Path, ...] = (),
+    run_local_cpu_replay: bool | None = None,
+    keep_local_replay_inflated: bool = False,
+    cleanup_failed_local_replay_scratch: bool = True,
+    run_post_export_materializers: bool = False,
+    post_export_materializer_max_steps: int = 1,
+    post_export_materializer_max_parallel: int = 0,
+    post_export_materializer_max_experiments: int | None = 1,
+    upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
+    allow_overwrite: bool = False,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Ingest an existing SNeRV advisory/package without rerunning SNeRV."""
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    report_path = _resolve(snerv_advisory_report_path, base=root)
+    if out.exists() and any(out.iterdir()) and not allow_overwrite:
+        raise CompactRendererMlxSpineRunnerError(
+            f"output dir is non-empty; pass --overwrite: {out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+    advisory_payload = _load_json(report_path)
+    package = advisory_payload.get("runtime_package")
+    package_payload = package if isinstance(package, Mapping) else {}
+    candidate_rows = list(
+        (
+            package_payload.get("archive_bound_candidate_adapter_package", {})
+            if isinstance(
+                package_payload.get("archive_bound_candidate_adapter_package"),
+                Mapping,
+            )
+            else {}
+        ).get("candidate_rows", [])
+        or []
+    )
+    row = dict(candidate_rows[0]) if candidate_rows else {}
+    package_dir_raw = advisory_payload.get("runtime_package_dir")
+    package_dir = (
+        _resolve(str(package_dir_raw), base=root)
+        if isinstance(package_dir_raw, str) and package_dir_raw.strip()
+        else report_path.parent
+    )
+    archive_path = row.get("candidate_archive_path") or (package_dir / "archive.zip")
+    receiver_proof = (
+        dict(package_payload.get("receiver_proof"))
+        if isinstance(package_payload.get("receiver_proof"), Mapping)
+        else {}
+    )
+    receiver_proof_path = receiver_proof.get("proof_path")
+    scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
+    mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
+        mlx_profile_paths,
+        root=root,
+    )
+    has_full_video_mlx_prefilter = bool(
+        mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
+    )
+    mlx_prefilter_local_replay_passed = bool(
+        mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"]
+    )
+    local_cpu_replay_summary: dict[str, Any] | None = None
+    local_cpu_replay_paths: list[Path] = []
+    local_cpu_replay_blockers: list[str] = []
+    resolved_archive_path = _optional_existing(archive_path, base=root)
+    runtime_submission_dir = package_dir / "submission"
+    num_pairs = int(advisory_payload.get("n_pairs") or 0)
+    if resolved_archive_path is not None:
+        (
+            local_cpu_replay_summary,
+            local_cpu_replay_paths,
+            local_cpu_replay_blockers,
+        ) = _run_compact_local_cpu_replay_gate(
+            archive_zip_path=resolved_archive_path,
+            runtime_submission_dir=runtime_submission_dir,
+            output_dir=out / "local_cpu_replay",
+            upstream_dir=scorer_upstream,
+            num_pairs=num_pairs,
+            requested=run_local_cpu_replay,
+            has_full_video_mlx_prefilter=has_full_video_mlx_prefilter,
+            mlx_prefilter_local_replay_passed=mlx_prefilter_local_replay_passed,
+            keep_inflated=keep_local_replay_inflated,
+            cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
+            repo_root=root,
+        )
+    post_export_materializer_plan = _compile_carrier_post_export_materializer_plan(
+        output_dir=out,
+        archive_path=archive_path,
+        archive_sha256=row.get("candidate_archive_sha256"),
+        archive_bytes=row.get("candidate_archive_bytes"),
+        family="snerv",
+        runtime_submission_dir=runtime_submission_dir,
+        repo_root=root,
+    )
+    post_export_materializer_execution = (
+        _execute_carrier_post_export_materializer_plan(
+            plan=post_export_materializer_plan,
+            requested=run_post_export_materializers,
+            max_steps=post_export_materializer_max_steps,
+            max_parallel=post_export_materializer_max_parallel,
+            max_experiments=post_export_materializer_max_experiments,
+            repo_root=root,
+        )
+    )
+    blockers = _dedupe(
+        [
+            "contest_cpu_cuda_exact_eval_not_executed",
+            "snerv_mlx_native_train_export_archive_adapter_missing",
+            "snerv_longer_staged_score_aware_training_not_executed",
+            *(
+                []
+                if receiver_proof.get("runtime_consumption_proof_passed") is True
+                else ["snerv_runtime_package_receiver_proof_missing_or_failed"]
+            ),
+            *(
+                []
+                if num_pairs >= CONTEST_PAIR_COUNT
+                else ["snerv_packet_not_full_600_pairs"]
+            ),
+            *list(row.get("blockers") or []),
+            *local_cpu_replay_blockers,
+            *list(post_export_materializer_plan.get("blockers") or []),
+            *list(post_export_materializer_execution.get("blockers") or []),
+        ]
+    )
+    final = _base_report(
+        output_dir=out,
+        mode="adapted_snerv_advisory_report_to_spine",
+        hard_byte_ceilings=hard_byte_ceilings,
+        repo_root=root,
+    )
+    final.update(
+        {
+            "execute_family": "snerv",
+            "source_snerv_advisory_report_path": report_path.as_posix(),
+            "source_snerv_advisory_report_sha256": _sha256_file(report_path),
+            "runtime_package_dir": package_dir.as_posix(),
+            "archive_path": str(archive_path),
+            "archive_bytes": row.get("candidate_archive_bytes"),
+            "archive_sha256": row.get("candidate_archive_sha256"),
+            "receiver_proof_report_paths": (
+                [str(receiver_proof_path)] if receiver_proof_path else []
+            ),
+            "post_export_materializer_plan": post_export_materializer_plan,
+            "post_export_materializer_execution": post_export_materializer_execution,
+            "local_cpu_replay_summary_paths": [
+                path.as_posix() for path in local_cpu_replay_paths
+            ],
+            "local_cpu_replay_summary": local_cpu_replay_summary,
+            "local_cpu_replay_gate": {
+                "schema": "compact_runner_local_cpu_replay_gate.v1",
+                "requested": run_local_cpu_replay,
+                "default_enabled_for_full_coverage": (
+                    _local_cpu_replay_enabled_by_default(
+                        num_pairs,
+                        mlx_prefilter_local_replay_passed=(
+                            mlx_prefilter_local_replay_passed
+                        ),
+                    )
+                ),
+                "has_full_video_mlx_prefilter": has_full_video_mlx_prefilter,
+                "local_replay_mlx_prefilter_passed": (
+                    mlx_prefilter_local_replay_passed
+                ),
+                "coverage_valid_for_replay": num_pairs >= CONTEST_PAIR_COUNT,
+                "executed": local_cpu_replay_summary is not None,
+                "axis_tag": "[macOS-CPU advisory]",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "mlx_prefilter_coverage": mlx_prefilter_coverage,
+            "mlx_profile_paths": [
+                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
+            ],
+            "hprc_queue_followup_report_paths": [
+                _resolve(path, base=root).as_posix()
+                for path in hprc_queue_followup_report_paths
+            ],
+            "blockers": blockers,
+        }
+    )
+    path = out / "compact_renderer_mlx_spine_runner_report.json"
+    _write_json(path, final)
+    return {**final, "report_path": path.as_posix()}
+
+
 def execute_pr95_mlx_smoke_and_adapt(
     *,
     output_dir: str | Path,
@@ -5053,6 +5246,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="Adapt a source-faithful PR95 Stage-8 report into the compact spine.",
     )
+    parser.add_argument(
+        "--from-snerv-advisory-report",
+        type=Path,
+        help=(
+            "Adapt an existing SNeRV advisory/package report into the compact "
+            "spine without rerunning SNeRV."
+        ),
+    )
     parser.add_argument("--execute-pr95-mlx-smoke", action="store_true")
     parser.add_argument(
         "--execute-pr95-stage8-source",
@@ -5397,13 +5598,15 @@ def main(argv: list[str] | None = None) -> int:
         args.execute_pr95_stage8_source,
         args.from_pr95_mlx_report is not None,
         args.from_pr95_stage8_report is not None,
+        args.from_snerv_advisory_report is not None,
         args.execute_family is not None,
     ]
     if sum(1 for item in modes if item) > 1:
         raise SystemExit(
             "pass only one of --execute-pr95-mlx-smoke, "
             "--execute-pr95-stage8-source, --from-pr95-mlx-report, "
-            "--from-pr95-stage8-report, or --execute-family"
+            "--from-pr95-stage8-report, --from-snerv-advisory-report, "
+            "or --execute-family"
         )
     ceilings = tuple(args.hard_byte_ceiling or DEFAULT_BASE_RENDERER_BYTE_CEILINGS)
     output_dir = args.output_dir or _default_output_dir()
@@ -5465,6 +5668,32 @@ def main(argv: list[str] | None = None) -> int:
             receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
             keep_receiver_proof_output=args.keep_receiver_proof_output,
             receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
+            allow_overwrite=args.overwrite,
+            repo_root=args.repo_root,
+            upstream_dir=scorer_upstream_dir,
+        )
+    elif args.from_snerv_advisory_report is not None:
+        report = adapt_snerv_advisory_report_to_spine(
+            snerv_advisory_report_path=args.from_snerv_advisory_report,
+            output_dir=output_dir,
+            hard_byte_ceilings=ceilings,
+            mlx_profile_paths=tuple(args.mlx_profile),
+            hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
+            run_local_cpu_replay=args.run_local_cpu_replay,
+            keep_local_replay_inflated=args.keep_local_replay_inflated,
+            cleanup_failed_local_replay_scratch=(
+                args.cleanup_failed_local_replay_scratch
+            ),
+            run_post_export_materializers=args.run_post_export_materializers,
+            post_export_materializer_max_steps=(
+                args.post_export_materializer_max_steps
+            ),
+            post_export_materializer_max_parallel=(
+                args.post_export_materializer_max_parallel
+            ),
+            post_export_materializer_max_experiments=(
+                post_export_materializer_max_experiments
+            ),
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
             upstream_dir=scorer_upstream_dir,

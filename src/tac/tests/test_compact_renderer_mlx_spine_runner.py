@@ -1968,6 +1968,91 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
 
 
+def test_adapt_snerv_advisory_report_consumes_existing_runtime_package(
+    tmp_path: Path,
+) -> None:
+    package_dir = tmp_path / "snerv_package"
+    submission = package_dir / "submission"
+    submission.mkdir(parents=True)
+    (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    (submission / "inflate.py").write_text("print('inflate')\n", encoding="utf-8")
+    archive = _write_synthetic_pr95_archive(package_dir / "archive.zip", pairs=600)
+    archive_sha = runner_mod._sha256_file(archive)
+    archive_bytes = archive.stat().st_size
+    proof_path = package_dir / "snerv_inverse_steg_receiver_proof.json"
+    proof_payload = {
+        "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+        "proof_path": proof_path.as_posix(),
+        "runtime_consumption_proof_passed": True,
+        "receiver_contract_satisfied": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    proof_path.write_text(json.dumps(proof_payload), encoding="utf-8")
+    report_path = tmp_path / "snerv_advisory.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_inverse_steg_advisory.v1",
+                "n_pairs": 600,
+                "runtime_package_dir": package_dir.as_posix(),
+                "runtime_package": {
+                    "archive_bound_candidate_adapter_package": {
+                        "candidate_rows": [
+                            {
+                                "candidate_archive_path": archive.as_posix(),
+                                "candidate_archive_sha256": archive_sha,
+                                "candidate_archive_bytes": archive_bytes,
+                                "blockers": [
+                                    "paired_contest_cpu_cuda_auth_eval_missing"
+                                ],
+                                "score_claim": False,
+                                "promotion_eligible": False,
+                                "ready_for_exact_eval_dispatch": False,
+                            }
+                        ]
+                    },
+                    "receiver_proof": proof_payload,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    out = runner_mod.adapt_snerv_advisory_report_to_spine(
+        snerv_advisory_report_path=report_path,
+        output_dir=tmp_path / "adapted",
+        hard_byte_ceilings=(178_000,),
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "adapted_snerv_advisory_report_to_spine"
+    assert out["source_snerv_advisory_report_sha256"] == runner_mod._sha256_file(
+        report_path
+    )
+    post_export = out["post_export_materializer_plan"]
+    assert post_export["compiled"] is True
+    assert post_export["archive_record"]["source_runtime_dir"].endswith(
+        "/snerv_package/submission"
+    )
+    contexts = json.loads(Path(post_export["materializer_contexts_path"]).read_text())
+    first_context = contexts["rows"][0]["context"]
+    assert first_context["source_runtime_dir"].endswith("/snerv_package/submission")
+    assert "--source-runtime-dir" in json.loads(
+        Path(post_export["materializer_work_queue_path"]).read_text()
+    )["rows"][0]["command"]
+    assert out["post_export_materializer_execution"]["requested"] is False
+    assert "paired_contest_cpu_cuda_auth_eval_missing" in out["blockers"]
+
+
 def test_pr95_stage8_execute_parser_exposes_source_lane_controls() -> None:
     args = _parse_args(
         [
