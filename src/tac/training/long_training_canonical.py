@@ -176,6 +176,7 @@ DEFAULT_CHECKPOINT_INTERVAL_EPOCHS: int = 100
 DEFAULT_EARLY_STOPPING_PATIENCE: int = 200
 DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS: int = 10
 EMA_ACCUMULATION_MODES: frozenset[str] = frozenset({"kahan", "naive"})
+CONTEST_RATE_SCORE_PER_BYTE: float = 25.0 / 37_545_489.0
 
 # Canonical schema version for TrainingArtifact JSON emission.
 TRAINING_ARTIFACT_SCHEMA_VERSION: str = "long_training_canonical_artifact.v1"
@@ -551,6 +552,7 @@ class LongTrainingConfig:
     device: str = "mlx"
     resume_from_checkpoint: Path | None = None
     evidence_grade: str = "[macOS-MLX research-signal]"
+    ema_archive_selection_enabled: bool = False
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -660,6 +662,11 @@ class LongTrainingConfig:
                 f"resume_from_checkpoint must be Path; "
                 f"got {type(self.resume_from_checkpoint).__name__}"
             )
+        if not isinstance(self.ema_archive_selection_enabled, bool):
+            raise TypeError(
+                "ema_archive_selection_enabled must be bool; got "
+                f"{type(self.ema_archive_selection_enabled).__name__}"
+            )
         if self.notes:
             _validate_rationale_not_placeholder(self.notes, "LongTrainingConfig.notes")
 
@@ -703,6 +710,9 @@ class LongTrainingConfig:
                 str(self.resume_from_checkpoint) if self.resume_from_checkpoint else None
             ),
             "evidence_grade": self.evidence_grade,
+            "ema_archive_selection_enabled": bool(
+                self.ema_archive_selection_enabled
+            ),
             "notes": self.notes,
         }
 
@@ -831,6 +841,7 @@ class TrainingArtifact:
     archive_path: Path | None = None
     archive_sha256: str | None = None
     archive_bytes: int | None = None
+    archive_selection_manifest_path: Path | None = None
     early_stopped: bool = False
     early_stop_reason: str = ""
     posterior_update_accepted: bool = False
@@ -889,6 +900,11 @@ class TrainingArtifact:
             "archive_path": str(self.archive_path) if self.archive_path else None,
             "archive_sha256": self.archive_sha256,
             "archive_bytes": self.archive_bytes,
+            "archive_selection_manifest_path": (
+                str(self.archive_selection_manifest_path)
+                if self.archive_selection_manifest_path
+                else None
+            ),
             "per_epoch_metrics_count": len(self.per_epoch_metrics),
             "per_epoch_metrics": [m.as_dict() for m in self.per_epoch_metrics],
             "total_wall_clock_seconds": float(self.total_wall_clock_seconds),
@@ -1995,6 +2011,211 @@ def _load_checkpoint_model_state(
     adapter.model.load_state_dict(state)
 
 
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _archive_selection_components(
+    adapter: SubstrateLongTrainingAdapter,
+    config: LongTrainingConfig,
+    *,
+    seed_offset: int,
+) -> Mapping[str, float] | None:
+    """Return deterministic local score-aware components for archive selection."""
+
+    try:
+        batch = adapter.sample_batch(
+            config.batch_pair_indices_per_step,
+            config.seed + int(seed_offset),
+        )
+        components = adapter.score_aware_components(adapter.model, batch)
+    except (NotImplementedError, AttributeError):
+        return None
+    except Exception as exc:
+        print(
+            "[long_training_canonical] WARN: archive-selection "
+            f"score_aware_components failed: {exc!r}"
+        )
+        return None
+    if components is None:
+        return None
+    out: dict[str, float] = {}
+    for key, value in components.items():
+        try:
+            out[str(key)] = float(value)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _archive_selection_proxy_score(
+    components: Mapping[str, float] | None,
+    *,
+    archive_bytes: int,
+) -> float:
+    """Compose the local false-authority proxy score for live-vs-EMA archives."""
+
+    proxy = float(int(archive_bytes) * CONTEST_RATE_SCORE_PER_BYTE)
+    if not components:
+        return proxy
+    for key, value in components.items():
+        if key in {"archive_bytes", "bytes", "rate"}:
+            continue
+        proxy += float(value)
+    return proxy
+
+
+def _export_live_ema_archive_selection(
+    *,
+    adapter: SubstrateLongTrainingAdapter,
+    config: LongTrainingConfig,
+    ema_shadow: PolyakEMAShadow,
+) -> tuple[Path | None, str | None, int | None, Path]:
+    """Export live and EMA archives, then select by local proxy score.
+
+    The manifest is the durable truth. It records both candidate archive hashes,
+    bytes, local score-aware components when available, and false-authority
+    markers. This closes the engineering gap where a run blindly exported the
+    EMA view without proving that the archive-selected view was preferable.
+    """
+
+    selection_dir = config.output_dir / "ema_archive_selection"
+    selection_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = selection_dir / "ema_archive_selection.json"
+    rows: list[dict[str, Any]] = []
+
+    def _record_failure(kind: str, exc: Exception) -> None:
+        rows.append(
+            {
+                "schema": "long_training_archive_selection_candidate.v1",
+                "candidate_kind": kind,
+                "status": "failed",
+                "failure": f"{type(exc).__name__}:{exc!s}",
+                **CANONICAL_NON_PROMOTABLE_MARKERS,
+            }
+        )
+
+    def _export_candidate(kind: str, *, seed_offset: int) -> None:
+        candidate_dir = selection_dir / kind
+        try:
+            components = _archive_selection_components(
+                adapter,
+                config,
+                seed_offset=seed_offset,
+            )
+            result = adapter.export_archive(adapter.model, candidate_dir)
+            if result is None:
+                rows.append(
+                    {
+                        "schema": "long_training_archive_selection_candidate.v1",
+                        "candidate_kind": kind,
+                        "status": "deferred",
+                        "archive_path": None,
+                        "archive_sha256": None,
+                        "archive_bytes": None,
+                        "score_components": dict(components or {}),
+                        **CANONICAL_NON_PROMOTABLE_MARKERS,
+                    }
+                )
+                return
+            archive_path, archive_sha256, archive_bytes = result
+            archive_path = Path(archive_path)
+            archive_bytes = int(archive_bytes)
+            if not archive_path.is_file():
+                raise FileNotFoundError(str(archive_path))
+            actual_sha = _sha256_file(archive_path)
+            if actual_sha != str(archive_sha256):
+                raise ValueError(
+                    "archive sha mismatch: "
+                    f"reported={archive_sha256} actual={actual_sha}"
+                )
+            proxy = _archive_selection_proxy_score(
+                components,
+                archive_bytes=archive_bytes,
+            )
+            rows.append(
+                {
+                    "schema": "long_training_archive_selection_candidate.v1",
+                    "candidate_kind": kind,
+                    "status": "exported",
+                    "archive_path": archive_path.as_posix(),
+                    "archive_sha256": str(archive_sha256),
+                    "archive_bytes": archive_bytes,
+                    "score_components": dict(components or {}),
+                    "proxy_score": float(proxy),
+                    "proxy_score_terms": {
+                        "rate_score_per_byte": CONTEST_RATE_SCORE_PER_BYTE,
+                        "score_components_are_local_training_proxy": True,
+                    },
+                    **CANONICAL_NON_PROMOTABLE_MARKERS,
+                }
+            )
+        except Exception as exc:
+            _record_failure(kind, exc)
+
+    _export_candidate("live", seed_offset=2_000_000)
+    live_snapshot = ema_shadow.apply_to(adapter.model)
+    try:
+        _export_candidate("ema", seed_offset=2_000_001)
+    finally:
+        ema_shadow.restore_from_snapshot(adapter.model, live_snapshot)
+
+    exported = [row for row in rows if row.get("status") == "exported"]
+    selected = None
+    if exported:
+        selected = min(
+            exported,
+            key=lambda row: (
+                float(row["proxy_score"]),
+                0 if row.get("candidate_kind") == "ema" else 1,
+            ),
+        )
+    manifest = {
+        "schema": "long_training_ema_archive_selection.v1",
+        "enabled": True,
+        "substrate_id": config.substrate_id,
+        "lane_id": config.lane_id,
+        "selection_metric": (
+            "local_score_aware_component_proxy_plus_charged_archive_rate"
+        ),
+        "authority": "local_training_proxy_false_authority",
+        "rate_score_per_byte": CONTEST_RATE_SCORE_PER_BYTE,
+        "candidate_count": len(rows),
+        "exported_candidate_count": len(exported),
+        "selected_candidate_kind": (
+            None if selected is None else selected.get("candidate_kind")
+        ),
+        "selected_archive_path": (
+            None if selected is None else selected.get("archive_path")
+        ),
+        "selected_archive_sha256": (
+            None if selected is None else selected.get("archive_sha256")
+        ),
+        "selected_archive_bytes": (
+            None if selected is None else selected.get("archive_bytes")
+        ),
+        "rows": rows,
+        "captured_at_utc": _utc_now_iso(),
+        **CANONICAL_NON_PROMOTABLE_MARKERS,
+    }
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    if selected is None:
+        return None, None, None, manifest_path
+    return (
+        Path(str(selected["archive_path"])),
+        str(selected["archive_sha256"]),
+        int(selected["archive_bytes"]),
+        manifest_path,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Canonical entry-point: run_long_training
 # ---------------------------------------------------------------------------
@@ -2285,15 +2506,28 @@ def run_long_training(
     archive_path: Path | None = None
     archive_sha256: str | None = None
     archive_bytes: int | None = None
+    archive_selection_manifest_path: Path | None = None
     try:
-        # Use EMA shadow for archive (canonical inference checkpoint).
-        live_snapshot = ema_shadow.apply_to(adapter.model)
-        try:
-            archive_result = adapter.export_archive(adapter.model, config.output_dir)
-            if archive_result is not None:
-                archive_path, archive_sha256, archive_bytes = archive_result
-        finally:
-            ema_shadow.restore_from_snapshot(adapter.model, live_snapshot)
+        if config.ema_archive_selection_enabled:
+            (
+                archive_path,
+                archive_sha256,
+                archive_bytes,
+                archive_selection_manifest_path,
+            ) = _export_live_ema_archive_selection(
+                adapter=adapter,
+                config=config,
+                ema_shadow=ema_shadow,
+            )
+        else:
+            # Use EMA shadow for archive (canonical inference checkpoint).
+            live_snapshot = ema_shadow.apply_to(adapter.model)
+            try:
+                archive_result = adapter.export_archive(adapter.model, config.output_dir)
+                if archive_result is not None:
+                    archive_path, archive_sha256, archive_bytes = archive_result
+            finally:
+                ema_shadow.restore_from_snapshot(adapter.model, live_snapshot)
     except NotImplementedError:
         # Substrate explicitly defers archive emission to L6 CONVERGED.
         pass
@@ -2314,6 +2548,7 @@ def run_long_training(
         archive_path=archive_path,
         archive_sha256=archive_sha256,
         archive_bytes=archive_bytes,
+        archive_selection_manifest_path=archive_selection_manifest_path,
         per_epoch_metrics=tuple(per_epoch_metrics),
         total_wall_clock_seconds=total_wall_clock,
         total_epochs_completed=total_epochs_completed,
@@ -2335,6 +2570,7 @@ def run_long_training(
         archive_path=archive_path,
         archive_sha256=archive_sha256,
         archive_bytes=archive_bytes,
+        archive_selection_manifest_path=archive_selection_manifest_path,
         per_epoch_metrics=tuple(per_epoch_metrics),
         total_wall_clock_seconds=total_wall_clock,
         total_epochs_completed=total_epochs_completed,
@@ -2356,6 +2592,7 @@ def run_long_training(
         archive_path=archive_path,
         archive_sha256=archive_sha256,
         archive_bytes=archive_bytes,
+        archive_selection_manifest_path=archive_selection_manifest_path,
         per_epoch_metrics=tuple(per_epoch_metrics),
         total_wall_clock_seconds=total_wall_clock,
         total_epochs_completed=total_epochs_completed,

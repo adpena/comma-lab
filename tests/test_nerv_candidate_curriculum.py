@@ -100,6 +100,7 @@ def test_hinerv_prelaunch_gate_consumes_eval_roundtrip_ste_evidence() -> None:
         recon_pixel_weight_attached=True,
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
     )
 
     gate = plan["long_campaign_prelaunch_gate"]
@@ -109,7 +110,9 @@ def test_hinerv_prelaunch_gate_consumes_eval_roundtrip_ste_evidence() -> None:
     assert "hi_nerv_eval_roundtrip_ste_missing" not in plan["blockers"]
     assert "hi_nerv_differentiable_pose_preprocess_missing" not in gate["blockers"]
     assert "hi_nerv_differentiable_pose_preprocess_missing" not in plan["blockers"]
-    assert set(gate["blocking_requirement_ids"]) >= {"ema_archive_selection"}
+    assert _requirement(plan, "ema_archive_selection")["satisfied"] is True
+    assert "hi_nerv_ema_archive_selection_missing" not in gate["blockers"]
+    assert gate["launch_allowed"] is True
 
 
 def test_hinerv_partial_pair_byte_feedback_remains_advisory_only() -> None:

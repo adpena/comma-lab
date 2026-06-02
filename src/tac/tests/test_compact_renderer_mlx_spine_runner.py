@@ -692,6 +692,66 @@ def test_default_source_video_resolves_from_external_upstream(
     assert resolved == video.resolve(strict=False)
 
 
+def test_default_scorer_upstream_resolves_from_canonical_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = tmp_path / "clean_worktree"
+    repo_root.mkdir()
+    canonical_upstream = tmp_path / "canonical_upstream"
+    (canonical_upstream / "models").mkdir(parents=True)
+    (canonical_upstream / "modules.py").write_text("# upstream\n", encoding="utf-8")
+    (canonical_upstream / "models" / "posenet.safetensors").write_bytes(b"pose")
+    (canonical_upstream / "models" / "segnet.safetensors").write_bytes(b"seg")
+    monkeypatch.setattr(
+        runner_mod,
+        "DEFAULT_UPSTREAM_DIR",
+        repo_root / "upstream",
+    )
+    monkeypatch.setattr(
+        runner_mod,
+        "CANONICAL_UPSTREAM_FALLBACK_DIR",
+        canonical_upstream,
+    )
+
+    resolved = runner_mod._resolve_scorer_upstream_dir(
+        repo_root,
+        runner_mod.DEFAULT_UPSTREAM_DIR,
+    )
+
+    assert resolved == canonical_upstream.resolve(strict=False)
+
+
+def test_explicit_scorer_upstream_does_not_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = tmp_path / "clean_worktree"
+    repo_root.mkdir()
+    explicit_upstream = tmp_path / "explicit_upstream"
+    (explicit_upstream / "models").mkdir(parents=True)
+    (explicit_upstream / "modules.py").write_text("# incomplete\n", encoding="utf-8")
+    canonical_upstream = tmp_path / "canonical_upstream"
+    (canonical_upstream / "models").mkdir(parents=True)
+    (canonical_upstream / "modules.py").write_text("# upstream\n", encoding="utf-8")
+    (canonical_upstream / "models" / "posenet.safetensors").write_bytes(b"pose")
+    (canonical_upstream / "models" / "segnet.safetensors").write_bytes(b"seg")
+    monkeypatch.setattr(
+        runner_mod,
+        "DEFAULT_UPSTREAM_DIR",
+        repo_root / "upstream",
+    )
+    monkeypatch.setattr(
+        runner_mod,
+        "CANONICAL_UPSTREAM_FALLBACK_DIR",
+        canonical_upstream,
+    )
+
+    resolved = runner_mod._resolve_scorer_upstream_dir(repo_root, explicit_upstream)
+
+    assert resolved == explicit_upstream.resolve(strict=False)
+
+
 def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     args = _parse_args(
         [
@@ -2369,6 +2429,9 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     assert Path(out["archive_path"]).is_file()
     assert out["archive_bytes"] == Path(out["archive_path"]).stat().st_size
     assert len(out["archive_sha256"]) == 64
+    assert out["scorer_upstream_snapshot"]["modules_py_exists"] is True
+    assert out["scorer_upstream_snapshot"]["posenet_safetensors_exists"] is True
+    assert out["scorer_upstream_snapshot"]["segnet_safetensors_exists"] is True
     assert out["projection_manifest_paths"]
     assert out["receiver_proof_report_paths"]
     proof = json.loads(Path(out["receiver_proof_report_paths"][0]).read_text())
@@ -2380,6 +2443,7 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     assert "hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs" in out[
         "blockers"
     ]
+    assert "hi_nerv_receiver_proof_missing" not in out["blockers"]
     assert "local_cpu_replay_not_run_partial_pair_coverage" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
     assert Path(out["report_path"]).is_file()

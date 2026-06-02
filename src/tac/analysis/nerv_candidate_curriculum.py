@@ -145,6 +145,8 @@ def build_hinerv_candidate_curriculum_plan(
     recon_pixel_weight_attached: bool,
     eval_roundtrip_ste_attached: bool = False,
     differentiable_pose_preprocess_attached: bool = False,
+    ema_archive_selection_attached: bool = False,
+    receiver_proof_attached: bool = False,
     measured_archive_bytes: int | None = None,
 ) -> dict[str, Any]:
     """Bind a HiNeRV modelsize candidate to its required training pressure."""
@@ -210,11 +212,13 @@ def build_hinerv_candidate_curriculum_plan(
                 differentiable_pose_preprocess_attached
             ),
             eval_roundtrip_ste=bool(eval_roundtrip_ste_attached),
+            ema_archive_selection=bool(ema_archive_selection_attached),
             qat_forward=effective_coder_regularizer,
             coder_aware_regularizer=effective_coder_regularizer,
             muon_adamw_partition=epochs >= 8,
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
+            receiver_proof=bool(receiver_proof_attached),
         ),
     )
     long_campaign_prelaunch_gate = build_pr95_long_campaign_prelaunch_gate(
@@ -241,6 +245,10 @@ def build_hinerv_candidate_curriculum_plan(
             "pose_distillation_weight": float(pose_distillation_weight),
             "joint_p18_p19_weight_attached": bool(recon_pixel_weight_attached),
             "eval_roundtrip_ste_attached": bool(eval_roundtrip_ste_attached),
+            "ema_archive_selection_attached": bool(
+                ema_archive_selection_attached
+            ),
+            "receiver_proof_attached": bool(receiver_proof_attached),
             "differentiable_pose_preprocess_attached": bool(
                 differentiable_pose_preprocess_attached
             ),

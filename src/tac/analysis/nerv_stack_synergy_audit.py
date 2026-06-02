@@ -186,6 +186,7 @@ def _hi_nerv_stack_audit(
         evidence=build_pr95_stack_binding_evidence(
             differentiable_pose_preprocess=True,
             eval_roundtrip_ste=True,
+            ema_archive_selection=True,
             qat_forward=True,
             coder_aware_regularizer=True,
         ),
@@ -243,6 +244,7 @@ def _hi_nerv_stack_audit(
             "real SegNet/PoseNet teachers must both be positive for frontier-targeted runs",
             "PR95 eval-roundtrip STE is attached in the shared MLX harness for HiNeRV execution",
             "Pose student consumes canonical differentiable PR95 YUV6 preprocessing in HiNeRV execution",
+            "final live-vs-EMA archive selection is manifest-backed in the shared long-training helper",
             "decoder fake-quant forward is wired; exact byte oracle still chooses int2/int4/int8/fp16 per candidate",
             "coder-aware regularization and recon_pixel_weight must be candidate-specific",
             "decoder-weight saliency/waterfill must feed the real MLX trainer, not only posthoc export",

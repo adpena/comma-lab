@@ -108,6 +108,7 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
         recon_pixel_weight_attached=True,
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
         measured_archive_bytes=measured,
     )
 
@@ -131,7 +132,7 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     assert plan["pr95_stack_binding"]["rows"][1]["satisfied"] is True
     assert "hi_nerv_archive_in_loop_byte_oracle_missing" not in plan["blockers"]
     assert "hi_nerv_receiver_proof_missing" in plan["blockers"]
-    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
+    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is True
     assert "hi_nerv_eval_roundtrip_ste_missing" not in plan[
         "long_campaign_prelaunch_gate"
     ]["blockers"]
@@ -142,9 +143,32 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     assert plan["scorer_pressure"][
         "differentiable_pose_preprocess_attached"
     ] is True
+    assert plan["scorer_pressure"]["ema_archive_selection_attached"] is True
+    assert "hi_nerv_ema_archive_selection_missing" not in plan[
+        "long_campaign_prelaunch_gate"
+    ]["blockers"]
     assert "hi_nerv_receiver_proof_missing" not in plan[
         "long_campaign_prelaunch_gate"
     ]["blockers"]
+    assert "hi_nerv_receiver_proof_missing" in plan["blockers"]
+
+    receiver_proven = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=8,
+        num_pairs=600,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        recon_pixel_weight_attached=True,
+        eval_roundtrip_ste_attached=True,
+        differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
+        receiver_proof_attached=True,
+        measured_archive_bytes=measured,
+    )
+    assert "hi_nerv_receiver_proof_missing" not in receiver_proven["blockers"]
+    assert receiver_proven["scorer_pressure"]["receiver_proof_attached"] is True
 
 
 def test_hinerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:

@@ -111,6 +111,7 @@ DEFAULT_PR95_RECEIVER_RUNTIME_DIR = (
     / "public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
 )
 DEFAULT_UPSTREAM_DIR = Path(os.environ.get("TAC_UPSTREAM_DIR", REPO_ROOT / "upstream"))
+CANONICAL_UPSTREAM_FALLBACK_DIR = Path.home() / "Projects" / "pact" / "upstream"
 DEFAULT_SOURCE_VIDEO_PATH = Path("upstream/videos/0.mkv")
 TARGET_FAMILIES = (
     "pr95_hnerv",
@@ -1108,8 +1109,40 @@ def _resolve_scorer_upstream_dir(
     upstream_dir: str | Path | None,
 ) -> Path:
     root = Path(repo_root).expanduser().resolve(strict=False)
+    repo_default = (root / "upstream").resolve(strict=False)
+
+    def _complete(candidate: Path) -> bool:
+        return (
+            (candidate / "modules.py").is_file()
+            and (candidate / "models" / "posenet.safetensors").is_file()
+            and (candidate / "models" / "segnet.safetensors").is_file()
+        )
+
+    def _resolve_candidate(path: str | Path) -> Path:
+        candidate = Path(path).expanduser()
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        return candidate.resolve(strict=False)
+
+    if upstream_dir is not None:
+        candidate = _resolve_candidate(upstream_dir)
+        default_candidate = _resolve_candidate(DEFAULT_UPSTREAM_DIR)
+        if candidate != default_candidate or _complete(candidate):
+            return candidate
+    candidates = [repo_default]
+    env_upstream = os.environ.get("TAC_UPSTREAM_DIR")
+    if env_upstream:
+        candidates.insert(0, _resolve_candidate(env_upstream))
+    candidates.append(CANONICAL_UPSTREAM_FALLBACK_DIR.expanduser().resolve(strict=False))
+    seen: set[Path] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        if _complete(candidate):
+            return candidate
     if upstream_dir is None:
-        return (root / "upstream").resolve(strict=False)
+        return repo_default
     candidate = Path(upstream_dir).expanduser()
     if not candidate.is_absolute():
         candidate = root / candidate
@@ -3653,6 +3686,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         ),
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
     )
     effective_coder_aware_qat = bool(
         launch_curriculum_plan["coder_pressure"]["enabled"]
@@ -3792,6 +3826,28 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
 
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     archive_path = artifact_dict.get("archive_path")
+    training_dir = out / "hi_nerv_mlx_training"
+    archive_file_path = Path(archive_path) if archive_path else None
+    archive_artifact_dir = (
+        archive_file_path.parent
+        if archive_file_path is not None and archive_file_path.parent.is_dir()
+        else training_dir
+    )
+    auto_mlx_prefilter_profile_path = training_dir / "local_mlx_prefilter_profile.json"
+    effective_mlx_profile_paths: tuple[str | Path, ...] = tuple(mlx_profile_paths)
+    if auto_mlx_prefilter_profile_path.is_file():
+        effective_mlx_profile_paths = (
+            *effective_mlx_profile_paths,
+            auto_mlx_prefilter_profile_path,
+        )
+    spine_manifest = (
+        archive_artifact_dir / "hprc_representation_spine_hi_nerv_manifest.json"
+    )
+    receiver_proof_path = (
+        archive_artifact_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
+    )
+    projection_paths = [spine_manifest] if spine_manifest.is_file() else []
+    receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
     candidate_curriculum_plan = build_hinerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
@@ -3805,26 +3861,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         ),
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
+        receiver_proof_attached=bool(receiver_proof_paths),
         measured_archive_bytes=(
             int(artifact_dict["archive_bytes"])
             if artifact_dict.get("archive_bytes") is not None
             else None
         ),
     )
-    training_dir = out / "hi_nerv_mlx_training"
-    auto_mlx_prefilter_profile_path = training_dir / "local_mlx_prefilter_profile.json"
-    effective_mlx_profile_paths: tuple[str | Path, ...] = tuple(mlx_profile_paths)
-    if auto_mlx_prefilter_profile_path.is_file():
-        effective_mlx_profile_paths = (
-            *effective_mlx_profile_paths,
-            auto_mlx_prefilter_profile_path,
-        )
-    spine_manifest = training_dir / "hprc_representation_spine_hi_nerv_manifest.json"
-    receiver_proof_path = (
-        training_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
-    )
-    projection_paths = [spine_manifest] if spine_manifest.is_file() else []
-    receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
         effective_mlx_profile_paths,
         root=root,
@@ -3844,8 +3888,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             local_cpu_replay_paths,
             local_cpu_replay_blockers,
         ) = _run_compact_local_cpu_replay_gate(
-            archive_zip_path=archive_path,
-            runtime_submission_dir=training_dir / "submission",
+            archive_zip_path=archive_file_path or Path(archive_path),
+            runtime_submission_dir=archive_artifact_dir / "submission",
             output_dir=out / "local_cpu_replay",
             upstream_dir=scorer_upstream,
             num_pairs=int(num_pairs),
@@ -3899,11 +3943,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         blockers.append("hi_nerv_archive_export_missing")
     post_export_materializer_plan = _compile_carrier_post_export_materializer_plan(
         output_dir=out,
-        archive_path=archive_path,
+        archive_path=archive_file_path,
         archive_sha256=artifact_dict.get("archive_sha256"),
         archive_bytes=artifact_dict.get("archive_bytes"),
         family="hi_nerv",
-        runtime_submission_dir=training_dir / "submission",
+        runtime_submission_dir=archive_artifact_dir / "submission",
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])
@@ -3948,6 +3992,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "archive_path": archive_path,
             "archive_bytes": artifact_dict.get("archive_bytes"),
             "archive_sha256": artifact_dict.get("archive_sha256"),
+            "archive_selection_manifest_path": artifact_dict.get(
+                "archive_selection_manifest_path"
+            ),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                scorer_upstream
+            ),
             "training_artifact": artifact_dict,
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_training_config_gate": config_gate,
@@ -5470,6 +5520,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         checkpoint_interval_epochs=max(1, int(epochs)),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
+        ema_archive_selection_enabled=True,
         grad_clip_max_norm=1.0,
         weight_decay=1e-4,
         optimizer_kind="adamw",

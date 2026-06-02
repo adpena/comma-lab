@@ -360,9 +360,13 @@ def test_harness_signature_accepts_pr95_faithful_curriculum_kwargs() -> None:
     assert "pr95_curriculum_total_epochs" in params, (
         "harness signature missing canonical kwarg; wire-in is FAKE if absent"
     )
+    assert "ema_archive_selection_enabled" in params, (
+        "harness signature missing EMA archive selector kwarg; wire-in is FAKE if absent"
+    )
     # Defaults must preserve backward compat (default off).
     assert params["pr95_faithful_curriculum_enabled"].default is False
     assert params["pr95_curriculum_total_epochs"].default is None
+    assert params["ema_archive_selection_enabled"].default is False
 
 
 def test_harness_source_constructs_adapter_with_pr95_kwargs() -> None:

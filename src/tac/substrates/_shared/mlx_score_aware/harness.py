@@ -72,6 +72,7 @@ def run_mlx_score_aware_full_main(
     cosine_decay_enabled: bool = False,
     cosine_decay_total_epochs: int | None = None,
     cosine_decay_min_lr_ratio: float = 1e-2,
+    ema_archive_selection_enabled: bool = False,
 ) -> Any:
     """Run the canonical MLX-first score-aware ``_full_main`` body.
 
@@ -129,6 +130,12 @@ def run_mlx_score_aware_full_main(
             ignored otherwise. Smaller budgets (e.g. 100 for an MLX
             smoke) scale per ``PR95FaithfulCurriculumFactory`` canonical
             proportional-ratio rule.
+        ema_archive_selection_enabled: when True, the canonical trainer exports
+            both live and EMA final archives, evaluates their local score-aware
+            proxy plus charged archive bytes, writes
+            ``ema_archive_selection/ema_archive_selection.json``, and returns
+            the selected archive. This is advisory MLX-local selection, not
+            exact CPU/CUDA authority.
 
     Returns:
         the canonical ``TrainingArtifact`` from ``run_long_training``.
@@ -206,6 +213,7 @@ def run_mlx_score_aware_full_main(
         output_dir=output_dir,
         device="mlx",
         evidence_grade=MLX_EVIDENCE_GRADE,
+        ema_archive_selection_enabled=bool(ema_archive_selection_enabled),
         notes=(
             notes
             or (

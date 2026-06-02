@@ -704,6 +704,44 @@ def test_run_long_training_emits_canonical_archive(tmp_path: Path) -> None:
     assert artifact.archive_bytes > 0
 
 
+def test_run_long_training_selects_between_live_and_ema_archives(
+    tmp_path: Path,
+) -> None:
+    config = LongTrainingConfig(
+        substrate_id="test_substrate",
+        lane_id="lane_test_substrate_archive_selection_20260526",
+        epochs=4,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(name="warmup", start_epoch=0, end_epoch=2),
+            CurriculumStage(name="main", start_epoch=2, end_epoch=4),
+        ),
+        checkpoint_interval_epochs=2,
+        early_stopping_patience=40,
+        output_dir=tmp_path / "archive_selection",
+        ema_archive_selection_enabled=True,
+    )
+    adapter = _MockSubstrateAdapter(emit_archive=True, emit_per_axis=True)
+    artifact = run_long_training(adapter, config)
+
+    assert artifact.archive_path is not None
+    assert artifact.archive_path.is_file()
+    assert artifact.archive_selection_manifest_path is not None
+    manifest_path = artifact.archive_selection_manifest_path
+    assert manifest_path.is_file()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["schema"] == "long_training_ema_archive_selection.v1"
+    assert manifest["exported_candidate_count"] == 2
+    assert {row["candidate_kind"] for row in manifest["rows"]} == {"live", "ema"}
+    assert manifest["selected_archive_path"] == artifact.archive_path.as_posix()
+    assert manifest["selected_archive_sha256"] == artifact.archive_sha256
+    assert manifest["selected_archive_bytes"] == artifact.archive_bytes
+    assert manifest["score_claim"] is False
+
+    data = artifact.as_dict()
+    assert data["archive_selection_manifest_path"] == manifest_path.as_posix()
+
+
 def test_run_long_training_defers_archive_when_adapter_returns_none(tmp_path: Path) -> None:
     config = _make_simple_config(tmp_path, epochs=4)
     adapter = _MockSubstrateAdapter(emit_archive=False)
