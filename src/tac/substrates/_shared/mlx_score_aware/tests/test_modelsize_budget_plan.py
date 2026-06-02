@@ -9,16 +9,34 @@ from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
 
 def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
     rows = [
-        {"row_id": "tiny", "archive_bytes": 20_000, "nonrate_score": 0.240},
-        {"row_id": "small", "archive_bytes": 40_000, "nonrate_score": 0.205},
-        {"row_id": "medium", "archive_bytes": 80_000, "nonrate_score": 0.200},
+        {
+            "row_id": "tiny",
+            "archive_bytes": 20_000,
+            "nonrate_score": 0.240,
+            "receiver_proof_passed": True,
+        },
+        {
+            "row_id": "small",
+            "archive_bytes": 40_000,
+            "nonrate_score": 0.205,
+            "receiver_proof_passed": True,
+        },
+        {
+            "row_id": "medium",
+            "archive_bytes": 80_000,
+            "nonrate_score": 0.200,
+            "receiver_proof_passed": True,
+        },
     ]
 
     plan = build_modelsize_budget_plan(rows, carrier_id="hi_nerv")
 
-    assert plan["status"] == "measured_modelsize_budget_selected"
+    assert plan["status"] == "receiver_closed_modelsize_budget_selected"
+    assert plan["decision_basis"] == "receiver_closed_rows"
     assert plan["selected_point"]["row_id"] == "small"
     assert plan["selected_archive_bytes"] == 40_000
+    assert plan["receiver_closed_selected_archive_bytes"] == 40_000
+    assert plan["point_count_by_evidence"] == {"receiver_closed_measured_bytes": 3}
     first, second = plan["marginal_steps"]
     assert first["spend_rule"] == "spend_modelsize_byte"
     assert first["marginal_improvement_per_byte"] > CONTEST_BYTE_PRICE_SCORE
@@ -26,6 +44,45 @@ def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
     assert second["marginal_improvement_per_byte"] < CONTEST_BYTE_PRICE_SCORE
     assert plan["score_claim"] is False
     assert plan["ready_for_exact_eval_dispatch"] is False
+
+
+def test_modelsize_budget_plan_splits_projected_and_advisory_rows() -> None:
+    plan = build_modelsize_budget_plan(
+        [
+            {
+                "row_id": "ideal_curve",
+                "projected_archive_bytes_600pair": 36_000,
+                "nonrate_score": 0.240,
+                "lower_bound_only": True,
+            },
+            {
+                "row_id": "zip_without_receiver",
+                "archive_zip_bytes": 72_000,
+                "nonrate_score": 0.210,
+            },
+        ],
+        carrier_id="snerv",
+    )
+
+    assert plan["status"] == "advisory_or_projected_modelsize_budget_selected"
+    assert plan["decision_basis"] == "all_rows_advisory_planning_only"
+    assert plan["selected_point"]["row_id"] in {
+        "ideal_curve",
+        "zip_without_receiver",
+    }
+    assert plan["receiver_closed_selected_point"] is None
+    assert plan["receiver_closed_selected_archive_bytes"] is None
+    assert plan["point_count_by_evidence"] == {
+        "projected_or_lower_bound_bytes": 1,
+        "advisory_measured_bytes_without_receiver_proof": 1,
+    }
+    assert "modelsize_budget_selection_is_advisory_or_projected" in plan["blockers"]
+    assert "receiver_closed_byte_proof_missing" in plan["blockers"]
+    assert (
+        "projected_or_lower_bound_archive_bytes_not_receiver_closed"
+        in plan["blockers"]
+    )
+    assert plan["score_claim"] is False
 
 
 def test_modelsize_budget_plan_can_extract_nonrate_from_component_distortions() -> None:
@@ -48,7 +105,10 @@ def test_modelsize_budget_plan_can_extract_nonrate_from_component_distortions() 
     )
 
     assert plan["carrier_id"] == "snerv"
-    assert plan["measured_points"][0]["nonrate_score"] > 0.0
+    assert plan["status"] == "advisory_or_projected_modelsize_budget_selected"
+    assert plan["measured_points"] == []
+    assert plan["points"][0]["nonrate_score"] > 0.0
+    assert plan["receiver_closed_selected_point"] is None
     assert plan["selected_point"]["row_id"] in {"narrow", "wide"}
     assert plan["score_claim"] is False
 
@@ -61,4 +121,8 @@ def test_modelsize_budget_plan_blocks_single_point_ladder() -> None:
     assert plan["status"] == "insufficient_modelsize_ladder"
     assert plan["selected_archive_bytes"] == 20_000
     assert "modelsize_budget_ladder_has_fewer_than_two_points" in plan["blockers"]
+    assert (
+        "receiver_closed_modelsize_ladder_has_fewer_than_two_points"
+        in plan["blockers"]
+    )
     assert plan["score_claim"] is False
