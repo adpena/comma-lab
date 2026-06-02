@@ -40,8 +40,41 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all("--optimizer-kind" in row["command_argv"] for row in hi_rows)
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
     assert all(row["local_mlx_launch_command_ready"] is True for row in hi_rows)
+    assert all(row["local_mlx_executable"] is True for row in hi_rows)
+    assert all(row["cpu_replay_ready"] is False for row in hi_rows)
+    assert all(row["exact_gate_ready"] is False for row in hi_rows)
+    assert all(
+        row["score_lowering_gate"]["schema"]
+        == "nerv_long_training_score_lowering_gate.v1"
+        for row in hi_rows
+    )
+    assert all(
+        {
+            "archive_in_loop_byte_oracle",
+            "byte_closed_archive_export",
+            "receiver_proof",
+            "full_video_local_prefilter",
+            "local_cpu_replay_gate",
+        }.issubset(
+            set(row["score_lowering_gate"]["post_run_missing_requirement_ids"])
+        )
+        for row in hi_rows
+    )
+    assert all("hi_nerv_receiver_proof_missing" in row["blockers"] for row in hi_rows)
+    assert all(
+        "hi_nerv_byte_closed_archive_export_missing" in row["promotion_blockers"]
+        for row in hi_rows
+    )
     assert all(
         row["experiment_queue_entry"]["status"] == "ready" for row in hi_rows
+    )
+    assert all(
+        row["experiment_queue_entry"]["cpu_replay_ready"] is False
+        for row in hi_rows
+    )
+    assert all(
+        row["experiment_queue_entry"]["exact_gate_ready"] is False
+        for row in hi_rows
     )
     hi_step = hi_rows[0]["experiment_queue_entry"]["steps"][0]
     assert hi_step["command"] == hi_rows[0]["command_argv"]
@@ -54,11 +87,15 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         ("execute_family", "hi_nerv"),
         ("training_executed", True),
         ("score_claim", False),
+        ("promotion_eligible", False),
         ("ready_for_exact_eval_dispatch", False),
     }
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
+    assert snerv_row["cpu_replay_ready"] is False
+    assert snerv_row["exact_gate_ready"] is False
     assert snerv_row["experiment_queue_entry"]["status"] == "blocked_dependency"
     assert snerv_row["experiment_queue_entry"]["blocked"] is True
     assert "snerv_shared_mlx_scoreaware_long_training_harness_not_bound" in snerv_row[
