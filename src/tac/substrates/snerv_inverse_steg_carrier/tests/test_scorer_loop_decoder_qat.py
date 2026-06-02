@@ -12,6 +12,7 @@ from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     SnervDecoderEval,
     SnervPairEval,
     SnervScorerLoopDecoderQatError,
+    _nes_pair_robust_objective,
     decoder_eval_pair_deltas,
     decoder_search_direction_labels,
     decoder_trial_passes_pose_guard,
@@ -330,6 +331,97 @@ def test_learned_random_subspace_direction_labels_are_deterministic() -> None:
         "learned_subspace_001",
         "learned_subspace_002",
         "learned_subspace_003",
+    )
+
+
+def test_nes_pair_robust_direction_labels_are_deterministic() -> None:
+    labels = decoder_search_direction_labels(
+        np.array([0.1, -4.0, 3.0, 0.2]),
+        max_trials=3,
+        search_mode="nes_pair_robust",
+        seed=99,
+    )
+
+    assert labels == ("nes_probe_001", "nes_probe_002", "nes_probe_003")
+
+
+def test_nes_pair_robust_objective_penalizes_pair_pose_damage() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.40,
+        d_seg=0.020,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.010,
+                d_pose_linf=0.20,
+                score_linf_without_rate=4.0,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.020,
+                d_pose_linf=0.40,
+                score_linf_without_rate=3.0,
+            ),
+        ),
+    )
+    pair_robust = _eval(
+        label="pair_robust",
+        score=6.8,
+        d_pose=0.39,
+        d_seg=0.019,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.009,
+                d_pose_linf=0.19,
+                score_linf_without_rate=3.8,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.019,
+                d_pose_linf=0.39,
+                score_linf_without_rate=2.9,
+            ),
+        ),
+    )
+    pose_damaged = _eval(
+        label="pose_damaged",
+        score=6.7,
+        d_pose=0.41,
+        d_seg=0.019,
+        replay=True,
+        per_pair=(
+            SnervPairEval(
+                pair_index=0,
+                d_seg_linf=0.009,
+                d_pose_linf=0.19,
+                score_linf_without_rate=3.8,
+            ),
+            SnervPairEval(
+                pair_index=1,
+                d_seg_linf=0.019,
+                d_pose_linf=0.42,
+                score_linf_without_rate=2.8,
+            ),
+        ),
+    )
+
+    assert _nes_pair_robust_objective(
+        pair_robust,
+        current,
+        pose_slack=0.0,
+        pair_guard_min_score_improved_fraction=1.0,
+        pair_guard_max_pose_worsened_fraction=0.0,
+    ) < _nes_pair_robust_objective(
+        pose_damaged,
+        current,
+        pose_slack=0.0,
+        pair_guard_min_score_improved_fraction=1.0,
+        pair_guard_max_pose_worsened_fraction=0.0,
     )
 
 

@@ -223,9 +223,10 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     quantization. ``random_signed`` probes global random signs; ``top_weight_
     coordinate`` probes the largest-magnitude decoder atoms one at a time;
     ``learned_random_subspace`` runs a non-coordinate scorer-loop hill climb in
-    smooth random affine subspace directions. A candidate is accepted only if it
-    improves advisory score and keeps both PoseNet and SegNet within the hard
-    continuation guard.
+    smooth random affine subspace directions. ``nes_pair_robust`` evaluates
+    symmetric probes, estimates a pair-robust objective gradient, and tests one
+    synthesized update. A candidate is accepted only if it improves advisory
+    score and keeps both PoseNet and SegNet within the hard continuation guard.
     """
 
     if n_pairs < 1:
@@ -240,10 +241,11 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         "random_signed",
         "top_weight_coordinate",
         "learned_random_subspace",
+        "nes_pair_robust",
     }:
         raise SnervScorerLoopDecoderQatError(
             "search_mode must be 'random_signed', 'top_weight_coordinate', "
-            "or 'learned_random_subspace'"
+            "'learned_random_subspace', or 'nes_pair_robust'"
         )
     if not 0.0 <= pair_guard_min_score_improved_fraction <= 1.0:
         raise SnervScorerLoopDecoderQatError(
@@ -295,18 +297,90 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         search_mode=search_mode,
         rng=rng,
     )
-    for trial, (direction_label, direction) in enumerate(directions, start=1):
-        for sign in (1.0, -1.0):
-            candidate_vec = _decoder_to_vector(best_decoder)[0] + sign * scale * direction
-            candidate = _vector_to_decoder(candidate_vec, layout)
+    if search_mode == "nes_pair_robust":
+        current_vec = _decoder_to_vector(best_decoder)[0]
+        gradient = np.zeros_like(current_vec)
+        for trial, (direction_label, direction) in enumerate(directions, start=1):
+            plus_row = _evaluate_decoder(
+                _vector_to_decoder(current_vec + scale * direction, layout),
+                prepared=prepared,
+                posenet=posenet,
+                segnet=segnet,
+                qat_bits=qat_bits,
+                label=f"{direction_label}_plus_probe",
+                iteration=trial,
+                accepted=False,
+            )
+            minus_row = _evaluate_decoder(
+                _vector_to_decoder(current_vec - scale * direction, layout),
+                prepared=prepared,
+                posenet=posenet,
+                segnet=segnet,
+                qat_bits=qat_bits,
+                label=f"{direction_label}_minus_probe",
+                iteration=trial,
+                accepted=False,
+            )
+            plus_objective = _nes_pair_robust_objective(
+                plus_row,
+                best_eval,
+                pose_slack=pose_slack,
+                pair_guard_min_score_improved_fraction=(
+                    pair_guard_min_score_improved_fraction
+                ),
+                pair_guard_max_pose_worsened_fraction=(
+                    pair_guard_max_pose_worsened_fraction
+                ),
+            )
+            minus_objective = _nes_pair_robust_objective(
+                minus_row,
+                best_eval,
+                pose_slack=pose_slack,
+                pair_guard_min_score_improved_fraction=(
+                    pair_guard_min_score_improved_fraction
+                ),
+                pair_guard_max_pose_worsened_fraction=(
+                    pair_guard_max_pose_worsened_fraction
+                ),
+            )
+            gradient += (plus_objective - minus_objective) * direction
+            for row in (plus_row, minus_row):
+                rows.append(
+                    _replace_eval_acceptance(
+                        row,
+                        accepted=False,
+                        blockers=tuple(
+                            dict.fromkeys(
+                                (
+                                    "nes_probe_only_not_candidate",
+                                    *_trial_blockers(
+                                        row,
+                                        best_eval,
+                                        pose_slack=pose_slack,
+                                        pair_guard_min_score_improved_fraction=(
+                                            pair_guard_min_score_improved_fraction
+                                        ),
+                                        pair_guard_max_pose_worsened_fraction=(
+                                            pair_guard_max_pose_worsened_fraction
+                                        ),
+                                    ),
+                                )
+                            )
+                        ),
+                    )
+                )
+        gradient_rms = float(np.sqrt(np.mean(gradient * gradient)))
+        if gradient_rms > 0.0:
+            update_direction = -gradient / gradient_rms
+            candidate = _vector_to_decoder(current_vec + scale * update_direction, layout)
             row = _evaluate_decoder(
                 candidate,
                 prepared=prepared,
                 posenet=posenet,
                 segnet=segnet,
                 qat_bits=qat_bits,
-                label=f"{direction_label}_{'plus' if sign > 0 else 'minus'}",
-                iteration=trial,
+                label="nes_pair_robust_update",
+                iteration=max_trials + 1,
                 accepted=False,
             )
             accepted = decoder_trial_passes_pose_guard(
@@ -341,6 +415,55 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     ),
                 )
             rows.append(row)
+    else:
+        for trial, (direction_label, direction) in enumerate(directions, start=1):
+            for sign in (1.0, -1.0):
+                candidate_vec = (
+                    _decoder_to_vector(best_decoder)[0] + sign * scale * direction
+                )
+                candidate = _vector_to_decoder(candidate_vec, layout)
+                row = _evaluate_decoder(
+                    candidate,
+                    prepared=prepared,
+                    posenet=posenet,
+                    segnet=segnet,
+                    qat_bits=qat_bits,
+                    label=f"{direction_label}_{'plus' if sign > 0 else 'minus'}",
+                    iteration=trial,
+                    accepted=False,
+                )
+                accepted = decoder_trial_passes_pose_guard(
+                    row,
+                    best_eval,
+                    pose_slack=pose_slack,
+                    pair_guard_min_score_improved_fraction=(
+                        pair_guard_min_score_improved_fraction
+                    ),
+                    pair_guard_max_pose_worsened_fraction=(
+                        pair_guard_max_pose_worsened_fraction
+                    ),
+                )
+                if accepted:
+                    row = _replace_eval_acceptance(row, accepted=True, blockers=())
+                    best_decoder = candidate
+                    best_eval = row
+                else:
+                    row = _replace_eval_acceptance(
+                        row,
+                        accepted=False,
+                        blockers=_trial_blockers(
+                            row,
+                            best_eval,
+                            pose_slack=pose_slack,
+                            pair_guard_min_score_improved_fraction=(
+                                pair_guard_min_score_improved_fraction
+                            ),
+                            pair_guard_max_pose_worsened_fraction=(
+                                pair_guard_max_pose_worsened_fraction
+                            ),
+                        ),
+                    )
+                rows.append(row)
 
     accepted_improvement = best_eval.label != baseline.label
     blockers = []
@@ -590,6 +713,83 @@ def _pair_guard_blockers(
     return tuple(blockers)
 
 
+def _nes_pair_robust_objective(
+    candidate: SnervDecoderEval,
+    current_best: SnervDecoderEval,
+    *,
+    pose_slack: float,
+    pair_guard_min_score_improved_fraction: float,
+    pair_guard_max_pose_worsened_fraction: float,
+) -> float:
+    """Return a lower-is-better local objective for NES probe ranking.
+
+    The hard promotion authority remains the regular pose gate. This objective
+    only chooses the synthesized NES update direction and therefore deliberately
+    over-penalizes pair-local luck and PoseNet regressions.
+    """
+
+    score = float(candidate.score_linf)
+    objective = score if np.isfinite(score) else 1.0e12
+    penalty = 0.0
+    if not candidate.receiver_archive_replay_verified:
+        penalty += 1.0e9
+    penalty += 1.0e6 * max(
+        0.0,
+        float(candidate.d_pose_linf)
+        - float(current_best.d_pose_linf)
+        - float(pose_slack),
+    )
+    penalty += 1.0e6 * max(
+        0.0,
+        float(candidate.d_seg_linf) - float(current_best.d_seg_linf),
+    )
+
+    try:
+        deltas = decoder_eval_pair_deltas(current_best, candidate)
+    except SnervScorerLoopDecoderQatError:
+        return float(objective + penalty + 1.0e9)
+    if not deltas:
+        return float(objective + penalty + 1.0e6)
+
+    n_pairs = float(len(deltas))
+    score_deltas = np.asarray(
+        [row.score_linf_without_rate_delta for row in deltas],
+        dtype=np.float64,
+    )
+    pose_deltas = np.asarray(
+        [row.d_pose_linf_delta for row in deltas],
+        dtype=np.float64,
+    )
+    seg_deltas = np.asarray(
+        [row.d_seg_linf_delta for row in deltas],
+        dtype=np.float64,
+    )
+    score_improved_fraction = float(np.count_nonzero(score_deltas < 0.0) / n_pairs)
+    pose_worsened_fraction = float(
+        np.count_nonzero(pose_deltas > float(pose_slack)) / n_pairs
+    )
+    penalty += 1.0e5 * max(
+        0.0,
+        float(pair_guard_min_score_improved_fraction) - score_improved_fraction,
+    )
+    penalty += 1.0e5 * max(
+        0.0,
+        pose_worsened_fraction - float(pair_guard_max_pose_worsened_fraction),
+    )
+    penalty += 1.0e4 * float(
+        np.mean(np.maximum(0.0, pose_deltas - float(pose_slack)))
+    )
+    penalty += 1.0e4 * float(np.mean(np.maximum(0.0, seg_deltas)))
+    penalty += 1.0e3 * float(np.mean(np.maximum(0.0, score_deltas)))
+
+    return float(
+        objective
+        + penalty
+        + 0.25 * float(np.mean(score_deltas))
+        + 0.25 * float(np.max(score_deltas))
+    )
+
+
 def _decoder_search_directions(
     vector: np.ndarray,
     *,
@@ -619,6 +819,17 @@ def _decoder_search_directions(
                 direction = direction / rms
             rows.append((f"learned_subspace_{idx:03d}", direction))
         return tuple(rows)
+    if search_mode == "nes_pair_robust":
+        rows = []
+        for idx in range(1, int(max_trials) + 1):
+            raw = rng.normal(0.0, 1.0, size=vec.shape)
+            mixed = raw + 0.20 * np.roll(raw, 1) - 0.10 * np.roll(raw, 3)
+            direction = mixed
+            rms = float(np.sqrt(np.mean(direction * direction)))
+            if rms > 0.0:
+                direction = direction / rms
+            rows.append((f"nes_probe_{idx:03d}", direction))
+        return tuple(rows)
     if search_mode == "top_weight_coordinate":
         order = np.argsort(-np.abs(vec), kind="stable")[: int(max_trials)]
         rows = []
@@ -629,7 +840,7 @@ def _decoder_search_directions(
         return tuple(rows)
     raise SnervScorerLoopDecoderQatError(
         "search_mode must be 'random_signed', 'top_weight_coordinate', "
-        "or 'learned_random_subspace'"
+        "'learned_random_subspace', or 'nes_pair_robust'"
     )
 
 

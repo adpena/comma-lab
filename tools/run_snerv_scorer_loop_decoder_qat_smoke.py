@@ -41,7 +41,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-trials", type=int, default=2)
     parser.add_argument(
         "--search-mode",
-        choices=("random_signed", "top_weight_coordinate", "learned_random_subspace"),
+        choices=(
+            "random_signed",
+            "top_weight_coordinate",
+            "learned_random_subspace",
+            "nes_pair_robust",
+        ),
         default="random_signed",
     )
     parser.add_argument("--perturb-scale", type=float, default=0.02)
