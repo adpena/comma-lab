@@ -43,6 +43,26 @@ def test_bridge_emits_strict_false_authority_row_from_real_packet(
     assert "required_emission_field_missing:official_controls.--modelsize" in payload[
         "blockers"
     ]
+    assert (
+        "required_emission_field_false:official_controls.source_faithful_stack"
+        in payload["blockers"]
+    )
+    assert "required_emission_field_false:official_controls.mfu_enabled" in payload[
+        "blockers"
+    ]
+    assert "required_emission_field_false:official_controls.hfr_enabled" in payload[
+        "blockers"
+    ]
+    assert row["official_controls"]["source_faithful_stack"] is False
+    assert row["official_controls"]["official_parity_status"] == (
+        "blocked_official_mfu_hfr_not_implemented"
+    )
+    local_modelsize = row["official_controls"]["local_modelsize_analogue"]
+    assert local_modelsize["schema"] == "snerv_local_modelsize_analogue.v1"
+    assert local_modelsize["fc_dim"] == 12
+    assert local_modelsize["emb_size"] == 4
+    assert local_modelsize["decoder_feature_count"] == 16
+    assert local_modelsize["official_modelsize_authority"] is False
     assert "required_emission_field_missing:official_controls.fc_dim" not in payload[
         "blockers"
     ]

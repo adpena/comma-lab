@@ -61,6 +61,14 @@ FAMILY_REQUIRED_FIELDS: dict[str, tuple[Any, ...]] = {
     ),
 }
 
+FAMILY_TRUTHY_REQUIRED_FIELDS: dict[str, tuple[Any, ...]] = {
+    "snerv": (
+        ("official_controls", "source_faithful_stack"),
+        ("official_controls", "mfu_enabled"),
+        ("official_controls", "hfr_enabled"),
+    ),
+}
+
 _PAIR_COUNT_KEYS = ("pair_count", "n_pairs", "sample_pair_count", "n_samples", "sample_count")
 _ARCHIVE_BYTE_KEYS = (
     "archive_bytes",
@@ -333,6 +341,10 @@ def _required_field_blockers(family: str, row: Mapping[str, Any]) -> list[str]:
     for key in FAMILY_REQUIRED_FIELDS[family]:
         if _lookup(row, key) is None:
             blockers.append(f"required_emission_field_missing:{_path_label(key)}")
+    for key in FAMILY_TRUTHY_REQUIRED_FIELDS.get(family, ()):
+        value = _lookup(row, key)
+        if value is not None and not _truthy(value):
+            blockers.append(f"required_emission_field_false:{_path_label(key)}")
     return blockers
 
 

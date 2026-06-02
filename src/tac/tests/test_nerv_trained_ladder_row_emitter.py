@@ -93,6 +93,81 @@ def test_archive_metadata_mismatch_blocks_row_acceptance(tmp_path: Path) -> None
     assert payload["rows"][0]["accepted"] is False
 
 
+def test_snerv_rows_with_false_mfu_hfr_remain_source_parity_blocked(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"receiver-closed")
+    controls = _snerv_controls()
+    controls["mfu_enabled"] = False
+    controls["hfr_enabled"] = False
+
+    payload = build_nerv_trained_ladder_row_payload(
+        family="snerv",
+        archive_path=archive,
+        trainer_metadata={
+            "n_pairs": 600,
+            "modelsize_mparams": 0.04,
+            "fc_dim": 16,
+            "official_controls": controls,
+            "receiver_codec_mode": "snar1",
+            "lf_payload_codec": "portfolio_auto",
+            "decoder_precision_mode": "mixed_magnitude_symmetric",
+            "step_map_codec": "waterfill",
+            "target_bits_per_coeff": 6,
+            "qat_bits": 4,
+        },
+        receiver_proof={"receiver_archive_replay_verified": True},
+        scorer_eval={"avg_segnet_dist": 0.004, "avg_posenet_dist": 0.002},
+        repo_root=tmp_path,
+    )
+
+    assert payload["status"] == "trained_ladder_row_blocked"
+    assert "required_emission_field_false:official_controls.mfu_enabled" in payload[
+        "blockers"
+    ]
+    assert "required_emission_field_false:official_controls.hfr_enabled" in payload[
+        "blockers"
+    ]
+    assert payload["rows"][0]["accepted"] is False
+
+
+def test_snerv_rows_with_false_source_faithful_stack_remain_blocked(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"receiver-closed")
+    controls = _snerv_controls()
+    controls["source_faithful_stack"] = False
+
+    payload = build_nerv_trained_ladder_row_payload(
+        family="snerv",
+        archive_path=archive,
+        trainer_metadata={
+            "n_pairs": 600,
+            "modelsize_mparams": 0.04,
+            "fc_dim": 16,
+            "official_controls": controls,
+            "receiver_codec_mode": "snar1",
+            "lf_payload_codec": "portfolio_auto",
+            "decoder_precision_mode": "mixed_magnitude_symmetric",
+            "step_map_codec": "waterfill",
+            "target_bits_per_coeff": 6,
+            "qat_bits": 4,
+        },
+        receiver_proof={"receiver_archive_replay_verified": True},
+        scorer_eval={"avg_segnet_dist": 0.004, "avg_posenet_dist": 0.002},
+        repo_root=tmp_path,
+    )
+
+    assert payload["status"] == "trained_ladder_row_blocked"
+    assert (
+        "required_emission_field_false:official_controls.source_faithful_stack"
+        in payload["blockers"]
+    )
+    assert payload["rows"][0]["accepted"] is False
+
+
 def test_hinerv_alias_requires_official_controls_and_receiver_codec(tmp_path: Path) -> None:
     archive = tmp_path / "hinerv.zip"
     archive.write_bytes(b"hinerv")
@@ -157,6 +232,7 @@ def _snerv_controls(
         "emb_size": 8,
         "wavelet": "haar",
         "levels": 1,
+        "source_faithful_stack": True,
         "mfu_enabled": True,
         "hfr_enabled": True,
         "snerv_t_enabled": False,

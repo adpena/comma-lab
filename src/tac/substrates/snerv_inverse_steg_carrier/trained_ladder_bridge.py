@@ -78,7 +78,14 @@ def build_snerv_trained_ladder_row_from_advisory(
 
 
 def _actual_controls(advisory_result: Any) -> dict[str, Any]:
-    controls: dict[str, Any] = {}
+    controls: dict[str, Any] = {
+        "source_faithful_stack": False,
+        "official_parity_status": "blocked_official_mfu_hfr_not_implemented",
+        "adapter": "snerv_inverse_steg_principled_fork",
+        "mfu_enabled": False,
+        "hfr_enabled": False,
+        "snerv_t_enabled": False,
+    }
     wavelet = _attr(advisory_result, "wavelet")
     levels = _attr(advisory_result, "levels")
     fc_dim = _int_attr(advisory_result, "snerv_fc_dim")
@@ -97,6 +104,20 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
         controls["patch_radius"] = patch_radius
     if feature_count is not None:
         controls["decoder_feature_count"] = feature_count
+    if fc_dim is not None or emb_size is not None or feature_count is not None:
+        controls["local_modelsize_analogue"] = {
+            "schema": "snerv_local_modelsize_analogue.v1",
+            "fc_dim": fc_dim,
+            "emb_size": emb_size,
+            "patch_radius": patch_radius,
+            "decoder_feature_count": feature_count,
+            "official_modelsize_authority": False,
+            "authority_note": (
+                "local fc_dim/emb_size controls alter receiver decoder features "
+                "and bytes, but are not official SNeRV --modelsize authority "
+                "until MFU/HFR/source parity closes"
+            ),
+        }
     return controls
 
 
