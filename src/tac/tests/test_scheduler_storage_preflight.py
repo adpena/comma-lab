@@ -132,6 +132,10 @@ def test_storage_and_cleanup_tools_emit_artifact_catalog_metadata(
         ]
     ) == 0
     cleanup_payload = json.loads(cleanup_output.read_text(encoding="utf-8"))
+    assert cleanup_payload["schema"] == "comma_lab.experiment_artifact_compaction_plan.v1"
+    assert cleanup_payload["score_claim"] is False
+    assert cleanup_payload["promotion_eligible"] is False
+    assert cleanup_payload["ready_for_exact_eval_dispatch"] is False
     assert cleanup_payload["operator_storage_policy"]["policy_id"] == POLICY_ID
     assert cleanup_payload["artifact_catalog_metadata"]["storage_plan_path"] == storage_plan
     assert cleanup_payload["artifact_catalog_metadata"]["cleanup_plan_path"] == cleanup_plan
@@ -223,6 +227,9 @@ def test_compact_tool_allows_expected_sha_overwrite(tmp_path: Path) -> None:
         == 0
     )
     payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["artifact_catalog_metadata"]["score_claim"] is False
 
 
@@ -249,6 +256,9 @@ def test_compact_tool_self_guards_existing_output_on_queue_rerun(
         == 0
     )
     payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["artifact_catalog_metadata"]["score_claim"] is False
 
 

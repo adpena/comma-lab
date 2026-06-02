@@ -163,8 +163,19 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     payload = {
+        "schema": "comma_lab.experiment_artifact_compaction_plan.v1",
         "plan": plan.to_dict(),
         "execution": None,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
         "cleanup_safety_policy": {
             "default_action": "move",
             "delete_requires_explicit_action": True,
