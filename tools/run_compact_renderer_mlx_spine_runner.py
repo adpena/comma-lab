@@ -6558,6 +6558,11 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
             "authority, and local HiNeRV/MLX rows remain false-authority until "
             "byte-closed archive/runtime plus contest CPU/CUDA replay."
         ),
+        "score_claim": False,
+        "frontier_score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
