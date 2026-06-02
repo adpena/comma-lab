@@ -991,6 +991,11 @@ def _selected_candidates(
     ]
     if family == "snerv":
         rows.sort(key=_snerv_long_training_candidate_sort_key)
+    deduped: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        candidate_id = str(row.get("candidate_id") or "")
+        deduped.setdefault(candidate_id, row)
+    rows = list(deduped.values())
     return rows[: max(1, int(limit))]
 
 

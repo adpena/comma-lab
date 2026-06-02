@@ -299,6 +299,27 @@ def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None
     ]
 
 
+def test_long_training_campaign_plan_dedupes_snerv_candidate_ids() -> None:
+    snerv_budget = _snerv_budget()
+    first = dict(snerv_budget["selected_candidates"][0])
+    duplicate = dict(first)
+    duplicate["nominal_total_payload_bytes"] = int(first["nominal_total_payload_bytes"]) - 1
+    snerv_budget["selected_candidates"] = [first, duplicate]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=2,
+    )
+
+    snerv_rows = [row for row in report["campaign_rows"] if row["family"] == "snerv"]
+    assert len(snerv_rows) == 1
+    assert snerv_rows[0]["candidate_id"] == first["candidate_id"]
+
+
 def test_long_training_campaign_plan_refuses_far_over_ceiling_snerv_long_run() -> None:
     snerv_budget = _snerv_budget()
     huge_over = dict(snerv_budget["selected_candidates"][0])
