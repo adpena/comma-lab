@@ -39,7 +39,8 @@ from tac.substrates.hprc.spine_bounded_runner import (  # noqa: E402
 COMPACT_RENDERER_MLX_SECTION_VALUE_SOURCE_SCHEMA = (
     "compact_renderer_mlx_baseline_section_value_profile.v1"
 )
-_SECTION_ATTRIBUTION_BLOCKER = "full_video_mlx_section_value_replay_missing"
+_SECTION_ATTRIBUTION_BLOCKER = "section_neutralization_or_ablation_replay_missing"
+_METADATA_SECTION_NAMES = frozenset({"rdo_plan", "manifest_json", "receiver_state"})
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -402,18 +403,28 @@ def _projection_record(*, path: Path, payload: dict[str, Any]) -> dict[str, Any]
 
 def _section_byte_record(*, path: Path, family: str, raw: dict[str, Any]) -> dict[str, Any]:
     byte_count = _first_int(raw.get("bytes"), raw.get("length")) or 0
+    section_name = str(raw.get("name") or "")
+    is_metadata = section_name in _METADATA_SECTION_NAMES
     return {
         "schema": "compact_renderer_section_byte_record.v1",
         "projection_manifest_path": path.as_posix(),
         "family": family,
-        "section_name": str(raw.get("name") or ""),
+        "section_name": section_name,
         "section_role": str(raw.get("role") or ""),
         "section_id": raw.get("id"),
         "section_bytes": byte_count,
         "section_sha256": raw.get("sha256"),
         "rate_cost": contest_rate_term(byte_count),
-        "value_status": "blocked_missing_section_neutralization_or_ablation_evidence",
-        "blockers": [_SECTION_ATTRIBUTION_BLOCKER],
+        "value_status": (
+            "projection_contract_metadata_not_candidate_runtime_spend"
+            if is_metadata
+            else "blocked_missing_section_neutralization_or_ablation_evidence"
+        ),
+        "blockers": (
+            ["contest_cpu_cuda_exact_eval_not_executed"]
+            if is_metadata
+            else [_SECTION_ATTRIBUTION_BLOCKER]
+        ),
         **FALSE_AUTHORITY,
     }
 
@@ -469,7 +480,7 @@ def _profile_blockers(
         blockers.append("projection_manifest_unreadable_or_missing")
     if not section_records:
         blockers.append("projection_section_byte_attribution_missing")
-    else:
+    elif any(_section_requires_value_replay(row) for row in section_records):
         blockers.append(_SECTION_ATTRIBUTION_BLOCKER)
     if max_pairs is None or max_pairs < 600:
         blockers.append("full_video_mlx_response_not_executed")
@@ -529,13 +540,18 @@ def _section_attribution_blockers(section_records: list[dict[str, Any]]) -> list
             "section_bytes": row["section_bytes"],
             "blocker": _SECTION_ATTRIBUTION_BLOCKER,
             "required_evidence": (
-                "neutralized or candidate-added section replay with MLX scorer "
-                "delta_nonrate plus charged rate delta"
+                "full-video MLX replay of a neutralized or candidate-added section "
+                "with delta_nonrate plus charged rate delta"
             ),
             **FALSE_AUTHORITY,
         }
         for row in section_records
+        if _section_requires_value_replay(row)
     ]
+
+
+def _section_requires_value_replay(row: dict[str, Any]) -> bool:
+    return str(row.get("section_name") or "") not in _METADATA_SECTION_NAMES
 
 
 def _archive_byte_records(

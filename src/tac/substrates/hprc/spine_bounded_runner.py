@@ -46,6 +46,11 @@ _PROJECTION_GAP_STRUCTURAL_SECTIONS = frozenset(
     ("decoder_qw", "codebooks_q", "latents_rc")
 )
 _SECTION_VALUE_PROFILERS: dict[str, dict[str, Any]] = {
+    "pr95_u32_prefixed_hnerv": {
+        "tool": "tools/profile_pr95_hnerv_mlx_section_value.py",
+        "sections": ("decoder_qw", "latents_rc"),
+        "requires_submission_dir": True,
+    },
     "pact_nerv_vq_pvq": {
         "tool": "tools/profile_pact_nerv_vq_mlx_section_value.py",
         "sections": ("decoder_qw", "codebooks_q", "selectors_rc", "residual_rc"),
@@ -465,28 +470,28 @@ def _section_value_row(
         ]
         section_spend_recommendation = "wait_for_full_video_coverage"
     elif best_evidence is None:
-        admission_status = "blocked_until_full_video_mlx_section_value_replay"
+        admission_status = "blocked_until_section_neutralization_or_ablation_replay"
         delta_nonrate = None
         admission_delta = None
         evidence_status = "missing"
         requires_replay = True
         blockers = [
-            "full_video_mlx_section_value_replay_missing",
+            "section_neutralization_or_ablation_replay_missing",
             "contest_cpu_cuda_exact_eval_not_executed",
         ]
-        section_spend_recommendation = "run_full_video_section_value_replay"
+        section_spend_recommendation = "run_section_neutralization_or_ablation_replay"
     elif not full_video_evidence_present:
-        admission_status = "blocked_until_full_video_mlx_section_value_replay"
+        admission_status = "blocked_until_full_video_section_neutralization_or_ablation_replay"
         delta_nonrate = None
         admission_delta = None
         evidence_status = "sampled_mlx_advisory_requires_full_video_replay"
         requires_replay = True
         blockers = [
-            "full_video_mlx_section_value_replay_missing",
+            "section_neutralization_or_ablation_replay_missing",
             "sampled_mlx_section_value_replay_not_budget_authority",
             "contest_cpu_cuda_exact_eval_not_executed",
         ]
-        section_spend_recommendation = "rerun_as_full_video_section_value_replay"
+        section_spend_recommendation = "rerun_as_full_video_section_neutralization_or_ablation_replay"
     else:
         delta_nonrate = best_evidence["presence_delta_nonrate"]
         admission_delta = float(delta_nonrate) + rate_cost
@@ -618,6 +623,10 @@ def _section_value_profile_work_order(
     archive_path = _source_archive_path(source)
     archive_sha256 = source.get("archive_zip_sha256") or source.get("sha256")
     archive_bytes = source.get("archive_zip_bytes") or source.get("bytes")
+    submission_dir = _source_submission_dir(
+        acquisition_row=acquisition_row,
+        source=source,
+    )
     projection = str(acquisition_row.get("projection_manifest_path") or "")
     sections = _profile_work_order_sections(
         profiler_sections=profiler["sections"],
@@ -630,6 +639,8 @@ def _section_value_profile_work_order(
     blockers: list[str] = []
     if not archive_path:
         blockers.append("source_archive_zip_path_missing_for_section_value_profile")
+    if profiler.get("requires_submission_dir") and not submission_dir:
+        blockers.append("submission_runtime_dir_missing_for_section_value_profile")
     if not sections:
         blockers.append("no_supported_runtime_sections_missing_value_profile")
     status = (
@@ -642,6 +653,16 @@ def _section_value_profile_work_order(
         str(profiler["tool"]),
         "--archive",
         archive_path or "<missing-archive.zip>",
+    ]
+    if profiler.get("requires_submission_dir"):
+        argv.extend(
+            [
+                "--submission-dir",
+                submission_dir or "<missing-submission-runtime-dir>",
+            ]
+        )
+    argv.extend(
+        [
         "--projection-manifest",
         projection or "<missing-projection-manifest.json>",
         "--output-dir",
@@ -661,7 +682,8 @@ def _section_value_profile_work_order(
         "--device",
         "gpu",
         "--allow-large-tensor-cache",
-    ]
+        ]
+    )
     return {
         "schema": HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA,
         "work_order_id": _profile_work_order_id(
@@ -675,6 +697,7 @@ def _section_value_profile_work_order(
         "archive_zip_path": archive_path,
         "archive_zip_sha256": archive_sha256,
         "archive_zip_bytes": archive_bytes,
+        "submission_runtime_dir": submission_dir,
         "tool": profiler["tool"],
         "profile_tool": profiler["tool"],
         "sections": sections,
@@ -736,6 +759,25 @@ def _source_archive_path(source: dict[str, Any]) -> str | None:
         value = source.get(key)
         if isinstance(value, str) and value:
             return value
+    return None
+
+
+def _source_submission_dir(
+    *,
+    acquisition_row: dict[str, Any],
+    source: dict[str, Any],
+) -> str | None:
+    for container in (acquisition_row, source):
+        for key in ("submission_dir", "runtime_dir", "source_runtime_dir"):
+            value = container.get(key)
+            if isinstance(value, str) and value:
+                return value
+        runtime = container.get("runtime")
+        if isinstance(runtime, dict):
+            for key in ("submission_dir", "runtime_dir", "source_runtime_dir"):
+                value = runtime.get(key)
+                if isinstance(value, str) and value:
+                    return value
     return None
 
 

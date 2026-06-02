@@ -43,6 +43,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Source archive.zip for pr95_hnerv, hnerv_packed, or pact_nerv_vq.",
     )
+    parser.add_argument(
+        "--runtime-submission-dir",
+        type=Path,
+        help="Optional PR95 runtime directory containing inflate.sh/inflate.py.",
+    )
     parser.add_argument("--decoder-blob", type=Path)
     parser.add_argument("--latents-blob", type=Path)
     parser.add_argument("--codebooks-blob", type=Path)
@@ -65,7 +70,11 @@ def main(argv: list[str] | None = None) -> int:
     if family == HprcRepresentationFamily.PR95_HNERV:
         if archive is None:
             raise ValueError("--archive is required for pr95_hnerv")
-        spine = build_pr95_hnerv_spine_from_archive(archive)
+        runtime_submission_dir = _resolve_optional(args.runtime_submission_dir, repo_root)
+        spine = build_pr95_hnerv_spine_from_archive(
+            archive,
+            runtime_submission_dir=runtime_submission_dir,
+        )
     elif family == HprcRepresentationFamily.HNERV_PACKED:
         if archive is None:
             raise ValueError("--archive is required for hnerv_packed")

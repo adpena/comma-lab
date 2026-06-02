@@ -39,6 +39,10 @@ from comma_lab.local_submission_replay import (  # noqa: E402
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
 )
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
+    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+)
 from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (  # noqa: E402
     build_score_aware_carrier_training_plan,
 )
@@ -370,14 +374,91 @@ _SCORE_AWARE_STACK_READINESS_FALSE: dict[str, bool] = {
     "byte_closed_archive_export_ready": False,
 }
 
-PR95_HNERV_CONTROL_ARM_EXACT_BLOCKERS: tuple[str, ...] = (
-    "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction",
-    *PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
-    "pr95_hnerv_stage8_muon_continuation_not_wired",
-    "pr95_hnerv_default_scorer_distillation_weights_are_zero_unless_cli_overridden",
-    "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
-    "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+PR95_HNERV_SCOREAWARE_ADVISORY_NOT_EXACT_BLOCKER = (
+    "pr95_mlx_scoreaware_teacher_distillation_is_advisory_not_exact_contest_loss"
 )
+
+
+def _as_float(value: Any, *, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _pr95_scoreaware_training_metadata(
+    artifact_dict: Mapping[str, Any],
+) -> dict[str, Any]:
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if not isinstance(metadata, Mapping):
+        return {}
+    scoreaware = metadata.get("score_aware_training")
+    if not isinstance(scoreaware, Mapping):
+        return {}
+    return dict(scoreaware)
+
+
+def _pr95_has_joint_real_scorer_binding(
+    *,
+    artifact_dict: Mapping[str, Any],
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+) -> bool:
+    scoreaware = _pr95_scoreaware_training_metadata(artifact_dict)
+    seg_weight = _as_float(
+        scoreaware.get("segnet_distillation_weight"),
+        default=float(segnet_distillation_weight),
+    )
+    pose_weight = _as_float(
+        scoreaware.get("pose_distillation_weight"),
+        default=float(pose_distillation_weight),
+    )
+    return (
+        bool(scoreaware.get("has_real_segnet_teacher"))
+        and bool(scoreaware.get("has_real_posenet_teacher"))
+        and seg_weight > 0.0
+        and pose_weight > 0.0
+        and not bool(scoreaware.get("allow_mock_scorer_teacher"))
+        and not bool(scoreaware.get("allow_segnet_only_research"))
+    )
+
+
+def _pr95_hnerv_control_arm_exact_blockers(
+    *,
+    artifact_dict: Mapping[str, Any],
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+) -> list[str]:
+    has_joint_binding = _pr95_has_joint_real_scorer_binding(
+        artifact_dict=artifact_dict,
+        segnet_distillation_weight=segnet_distillation_weight,
+        pose_distillation_weight=pose_distillation_weight,
+    )
+    blockers: list[str] = [
+        "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction"
+    ]
+    for blocker in PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS:
+        if has_joint_binding and blocker == PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER:
+            blockers.append(PR95_HNERV_SCOREAWARE_ADVISORY_NOT_EXACT_BLOCKER)
+            continue
+        if (
+            has_joint_binding
+            and blocker == PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER
+        ):
+            continue
+        blockers.append(blocker)
+    blockers.append("pr95_hnerv_stage8_muon_continuation_not_wired")
+    if not has_joint_binding:
+        blockers.append(
+            "pr95_hnerv_default_scorer_distillation_weights_are_zero_unless_cli_overridden"
+        )
+    blockers.extend(
+        [
+            "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+            "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+        ]
+    )
+    return _dedupe(blockers)
 
 
 class CompactRendererMlxSpineRunnerError(ValueError):
@@ -1139,7 +1220,10 @@ def adapt_pr95_stage8_report_to_spine(
         if isinstance(proof_path, str) and proof_path:
             receiver_proof_paths = [Path(proof_path)]
 
-    spine = build_pr95_hnerv_spine_from_archive(archive)
+    spine = build_pr95_hnerv_spine_from_archive(
+        archive,
+        runtime_submission_dir=receiver_proof_runtime_dir,
+    )
     projection = write_representation_spine_projection(
         output_dir=out / "pr95_stage8_hnerv_spine",
         spine=spine,
@@ -2405,7 +2489,10 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                     **FALSE_AUTHORITY,
                 }
         try:
-            spine = build_pr95_hnerv_spine_from_archive(archive_file)
+            spine = build_pr95_hnerv_spine_from_archive(
+                archive_file,
+                runtime_submission_dir=receiver_proof_runtime_dir,
+            )
             projection = write_representation_spine_projection(
                 output_dir=out / "pr95_hnerv_spine",
                 spine=spine,
@@ -2449,7 +2536,13 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
         proof_refusal = receiver_proof_report.get("exact_readiness_refusal")
         if isinstance(proof_refusal, dict):
             blockers.extend(proof_refusal.get("blockers") or [])
-    blockers.extend(PR95_HNERV_CONTROL_ARM_EXACT_BLOCKERS)
+    blockers.extend(
+        _pr95_hnerv_control_arm_exact_blockers(
+            artifact_dict=artifact_dict,
+            segnet_distillation_weight=segnet_distillation_weight,
+            pose_distillation_weight=pose_distillation_weight,
+        )
+    )
     if receiver_proof_report is None or not receiver_proof_report.get(
         "runtime_consumption_proof_passed"
     ):
