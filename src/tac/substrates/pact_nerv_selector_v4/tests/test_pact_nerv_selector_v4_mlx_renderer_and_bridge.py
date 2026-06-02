@@ -87,6 +87,56 @@ def test_mlx_renderer_forward_shape_b2chw_255() -> None:
 
 
 @skip_no_mlx
+def test_mlx_render_quality_gate_flags_flat_initialization() -> None:
+    """Guard the dead-render class that produced constant scorer-cache input."""
+    from tac.substrates.pact_nerv_selector_v4.architecture import (
+        PactNervSelectorV4Config,
+    )
+    from tac.substrates.pact_nerv_selector_v4.mlx_renderer import (
+        RENDER_QUALITY_SCHEMA,
+        PactNervSelectorV4SubstrateMLX,
+        build_selector_v4_mlx_render_quality_report,
+    )
+
+    cfg = PactNervSelectorV4Config(num_pairs=2)
+    model = PactNervSelectorV4SubstrateMLX(cfg)
+    report = build_selector_v4_mlx_render_quality_report(model)
+
+    assert report["schema"] == RENDER_QUALITY_SCHEMA
+    assert report["evidence_axis"] == "[macOS-MLX research-signal]"
+    assert report["verdict"] == "RENDER_OUTPUT_DEGENERATE_BLOCK_ARCHIVE_PROFILE"
+    assert report["export_blocked_recommended"] is True
+    assert "selector_v4_render_segnet_last_frame_std_too_low" in report["blockers"]
+    assert "score_claim" not in report
+    assert report["segnet_last_frame_byte_stats"]["std"] == 0.0
+
+
+@skip_no_mlx
+def test_mlx_render_quality_gate_passes_nonflat_render_surface() -> None:
+    """The guard is narrow: it blocks flat bytes, not every unscored render."""
+    import mlx.core as mx
+
+    from tac.substrates.pact_nerv_selector_v4.architecture import (
+        PactNervSelectorV4Config,
+    )
+    from tac.substrates.pact_nerv_selector_v4.mlx_renderer import (
+        PactNervSelectorV4SubstrateMLX,
+        build_selector_v4_mlx_render_quality_report,
+    )
+
+    cfg = PactNervSelectorV4Config(num_pairs=2)
+    model = PactNervSelectorV4SubstrateMLX(cfg)
+    model.head_rgb_1.update({"bias": mx.array([-1.0, 0.0, 1.0])})
+
+    report = build_selector_v4_mlx_render_quality_report(model)
+
+    assert report["verdict"] == "RENDER_OUTPUT_NONDEGENERATE_LOCAL_ONLY"
+    assert report["export_blocked_recommended"] is False
+    assert report["blockers"] == []
+    assert report["segnet_last_frame_byte_stats"]["dynamic_range"] > 2.0
+
+
+@skip_no_mlx
 def test_mlx_renderer_export_state_dict_shape_layout() -> None:
     """Verify export_state_dict produces PyTorch-layout numpy arrays."""
     from tac.substrates.pact_nerv_selector_v4.architecture import (

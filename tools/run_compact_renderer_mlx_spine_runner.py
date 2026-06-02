@@ -3603,6 +3603,9 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
 
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     archive_path = artifact_dict.get("archive_path")
+    selector_v4_render_quality = (
+        artifact_dict.get("substrate_artifact_metadata", {}) or {}
+    ).get("selector_v4_render_quality")
     training_dir = out / "pact_nerv_selector_v4_mlx_training"
     spine_manifest = (
         training_dir / "hprc_representation_spine_pact_nerv_selector_v4_manifest.json"
@@ -3649,6 +3652,10 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
         blockers.append("pact_nerv_selector_v4_spine_projection_manifest_missing")
     if archive_path is None:
         blockers.append("pact_nerv_selector_v4_archive_export_missing")
+    if isinstance(selector_v4_render_quality, Mapping):
+        blockers.extend(selector_v4_render_quality.get("blockers") or [])
+        if selector_v4_render_quality.get("export_blocked_recommended"):
+            blockers.append("pact_nerv_selector_v4_render_quality_gate_failed")
     post_export_materializer_plan = _compile_carrier_post_export_materializer_plan(
         output_dir=out,
         archive_path=archive_path,
@@ -3684,6 +3691,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             "archive_path": archive_path,
             "archive_bytes": artifact_dict.get("archive_bytes"),
             "archive_sha256": artifact_dict.get("archive_sha256"),
+            "selector_v4_render_quality": selector_v4_render_quality,
             "ema_decay": float(ema_decay),
             "score_aware_training": {
                 "schema": "compact_pact_nerv_selector_v4_score_aware_training.v1",
@@ -4873,6 +4881,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     )
     from tac.substrates.pact_nerv_selector_v4.mlx_renderer import (
         PactNervSelectorV4SubstrateMLX,
+        build_selector_v4_mlx_render_quality_report,
     )
 
     pairs = int(num_pairs)
@@ -4924,6 +4933,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         output_width=int(cfg.output_width),
     )
     model = PactNervSelectorV4SubstrateMLX(cfg)
+    selector_render_quality_holder: dict[str, Any] = {}
     coder_qat_cfg = CoderAwareQATConfig(
         enabled=bool(coder_aware_qat),
         quant_bits=int(coder_qat_quant_bits),
@@ -4936,6 +4946,21 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
 
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
+        render_quality = build_selector_v4_mlx_render_quality_report(
+            model_obj,
+            sample_pair_indices=tuple(range(min(4, pairs))),
+        )
+        render_quality_path = archive_output_dir / "selector_v4_render_quality_report.json"
+        render_quality["report_path"] = render_quality_path.as_posix()
+        _write_json(render_quality_path, render_quality)
+        selector_render_quality_holder.clear()
+        selector_render_quality_holder.update(render_quality)
+        if render_quality.get("export_blocked_recommended"):
+            blockers = ", ".join(str(b) for b in render_quality.get("blockers", ()))
+            raise CompactRendererMlxSpineRunnerError(
+                "Selector-v4 render quality gate blocked archive export: "
+                f"{blockers}"
+            )
         return export_pact_nerv_selector_v4_mlx_archive(
             model_obj,
             archive_output_dir,
@@ -4980,6 +5005,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             "decoder_codec": str(decoder_codec),
         },
         "score_authority": "false_macos_mlx_research_signal",
+        "selector_v4_render_quality": selector_render_quality_holder,
     }
     bundle_kwargs: dict[str, Any] = {
         "model": model,

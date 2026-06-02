@@ -163,6 +163,7 @@ Cross-references
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -187,6 +188,7 @@ else:
 
 SCHEMA_VERSION = "pact_nerv_selector_v4_mlx_renderer_v1"
 MLX_EVIDENCE_GRADE = "[macOS-MLX research-signal]"
+RENDER_QUALITY_SCHEMA = "pact_nerv_selector_v4_mlx_render_quality.v1"
 
 
 def _require_mlx() -> None:
@@ -551,8 +553,100 @@ class PactNervSelectorV4SubstrateMLX(nn.Module if nn is not None else object):  
         return out
 
 
+def _byte_tensor_stats(arr: np.ndarray) -> dict[str, float]:
+    return {
+        "min": float(np.min(arr)),
+        "max": float(np.max(arr)),
+        "mean": float(np.mean(arr)),
+        "std": float(np.std(arr)),
+        "dynamic_range": float(np.max(arr) - np.min(arr)),
+    }
+
+
+def build_selector_v4_mlx_render_quality_report(
+    model: Any,
+    *,
+    sample_pair_indices: Sequence[int] | None = None,
+    min_byte_std: float = 0.5,
+    min_byte_dynamic_range: float = 2.0,
+) -> dict[str, Any]:
+    """Fail-closed local guard for undertrained flat-gray Selector-V4 renders.
+
+    This is not a score gate. It only prevents archive/profile surfaces from
+    treating a still-degenerate sigmoid-at-zero renderer as meaningful evidence.
+    Full-score authority remains with receiver-closed contest CPU/CUDA replay.
+    """
+
+    _require_mlx()
+    cfg = getattr(model, "cfg", None)
+    num_pairs = int(getattr(cfg, "num_pairs", 0) or 0)
+    if sample_pair_indices is None:
+        count = max(1, min(4, num_pairs))
+        sample_pair_indices = tuple(range(count))
+    sample = np.asarray([int(i) for i in sample_pair_indices], dtype=np.int32)
+    if sample.ndim != 1 or sample.size == 0:
+        raise ValueError("sample_pair_indices must contain at least one pair index")
+    if num_pairs > 0 and (sample.min() < 0 or sample.max() >= num_pairs):
+        raise ValueError(
+            f"sample_pair_indices out of range for num_pairs={num_pairs}: "
+            f"[{int(sample.min())}, {int(sample.max())}]"
+        )
+
+    rendered = model(mx.array(sample, dtype=mx.int32))  # type: ignore[union-attr]
+    mx.eval(rendered)  # type: ignore[union-attr]
+    out = np.asarray(rendered, dtype=np.float32)
+    blockers: list[str] = []
+    if out.ndim != 5:
+        blockers.append("selector_v4_render_quality_unexpected_output_rank")
+        full_stats = _byte_tensor_stats(out)
+        frame0_stats = {}
+        frame1_stats = {}
+    else:
+        full_stats = _byte_tensor_stats(out)
+        frame0_stats = _byte_tensor_stats(out[:, 0])
+        frame1_stats = _byte_tensor_stats(out[:, 1])
+
+    if full_stats["std"] < float(min_byte_std):
+        blockers.append("selector_v4_render_full_output_std_too_low")
+    if full_stats["dynamic_range"] < float(min_byte_dynamic_range):
+        blockers.append("selector_v4_render_full_output_dynamic_range_too_low")
+    if frame1_stats and frame1_stats["std"] < float(min_byte_std):
+        blockers.append("selector_v4_render_segnet_last_frame_std_too_low")
+    if (
+        frame1_stats
+        and frame1_stats["dynamic_range"] < float(min_byte_dynamic_range)
+    ):
+        blockers.append("selector_v4_render_segnet_last_frame_dynamic_range_too_low")
+
+    verdict = (
+        "RENDER_OUTPUT_NONDEGENERATE_LOCAL_ONLY"
+        if not blockers
+        else "RENDER_OUTPUT_DEGENERATE_BLOCK_ARCHIVE_PROFILE"
+    )
+    return {
+        "schema": RENDER_QUALITY_SCHEMA,
+        "family": "pact_nerv_selector_v4",
+        "evidence_axis": MLX_EVIDENCE_GRADE,
+        "score_authority": "false_local_render_quality_only",
+        "sample_pair_indices": [int(i) for i in sample.tolist()],
+        "thresholds": {
+            "min_byte_std": float(min_byte_std),
+            "min_byte_dynamic_range": float(min_byte_dynamic_range),
+        },
+        "output_shape": [int(s) for s in out.shape],
+        "full_output_byte_stats": full_stats,
+        "frame0_byte_stats": frame0_stats,
+        "segnet_last_frame_byte_stats": frame1_stats,
+        "verdict": verdict,
+        "export_blocked_recommended": bool(blockers),
+        "blockers": blockers,
+    }
+
+
 __all__ = [
     "MLX_EVIDENCE_GRADE",
+    "RENDER_QUALITY_SCHEMA",
     "SCHEMA_VERSION",
     "PactNervSelectorV4SubstrateMLX",
+    "build_selector_v4_mlx_render_quality_report",
 ]

@@ -133,8 +133,12 @@ def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
     assert acquisition["rows"][0]["coverage"]["declared_pairs"] == 2
     assert acquisition["rows"][0]["coverage"]["valid_for_base_comparison"] is False
     runner = json.loads(Path(out["bounded_runner_plan_path"]).read_text())
-    assert runner["selected_runner_rows"][0]["family"] == "pr95_hnerv"
-    assert runner["selected_runner_rows"][0]["coverage_valid_for_base_comparison"] is False
+    assert runner["selected_runner_rows"] == []
+    assert "no_full_coverage_compact_base_candidate" in runner["blockers"]
+    assert (
+        "implementation_readiness_blocked_fake_or_incomplete_candidate"
+        in runner["blockers"]
+    )
     assert runner["hprc_queue_followup_signal_rows"][0]["signal_id"] == (
         "hprc_rate_feasible_but_resolution_distortion_bound"
     )
@@ -195,7 +199,7 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     ]
     hinerv_plan = families["hi_nerv"]["score_aware_carrier_training_plan"]
     assert hinerv_plan["planner_action"] == (
-        "run_score_aware_decoder_weight_training_full_main"
+        "run_receiver_closed_modelsize_ladder_before_score_aware_training"
     )
     assert hinerv_plan["carrier_fit_status"] == "unusable"
     assert hinerv_plan["allocator_target_surface"] == "decoder_weights"
@@ -277,7 +281,7 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         "score_aware_carrier_training_plan"
     ]
     assert campaign_plan["planner_action"] == (
-        "run_score_aware_decoder_weight_training_full_main"
+        "run_receiver_closed_modelsize_ladder_before_score_aware_training"
     )
     assert campaign_plan["linf_latent_posthoc_status"] == "demoted"
     assert campaign_plan["promotion_eligible"] is False
@@ -2919,3 +2923,49 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert "pact_nerv_selector_v4_spine_projection_manifest_missing" not in out[
         "blockers"
     ]
+
+
+def test_selector_v4_execute_arm_threads_render_quality_blocker(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**_kwargs):
+        return {
+            "archive_path": None,
+            "archive_bytes": None,
+            "archive_sha256": None,
+            "substrate_artifact_metadata": {
+                "selector_v4_render_quality": {
+                    "schema": "pact_nerv_selector_v4_mlx_render_quality.v1",
+                    "verdict": "RENDER_OUTPUT_DEGENERATE_BLOCK_ARCHIVE_PROFILE",
+                    "export_blocked_recommended": True,
+                    "blockers": [
+                        "selector_v4_render_segnet_last_frame_std_too_low",
+                    ],
+                },
+            },
+        }
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_run_pact_nerv_selector_v4_mlx_smoke",
+        fake_train,
+    )
+
+    out = execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
+        output_dir=tmp_path / "run",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        allow_overwrite=True,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["execute_family"] == "pact_nerv_selector_v4"
+    assert out["selector_v4_render_quality"]["export_blocked_recommended"] is True
+    assert "selector_v4_render_segnet_last_frame_std_too_low" in out["blockers"]
+    assert "pact_nerv_selector_v4_render_quality_gate_failed" in out["blockers"]
+    assert "pact_nerv_selector_v4_archive_export_missing" in out["blockers"]
