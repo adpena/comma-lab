@@ -3,7 +3,8 @@
   "archive_bytes_by_row_id": {
     "hi_nerv_local_base": 398071,
     "hi_nerv_local_small": 247755,
-    "hi_nerv_local_tiny": 134908
+    "hi_nerv_local_tiny": 134908,
+    "hi_nerv_local_wide": 812333
   },
   "artifact_tag": "20260602T152507Z_codex_batch",
   "authority": "false_authority_replay_actuator_no_scorer_claim",
@@ -18,27 +19,28 @@
   "candidate_id": "hi_nerv_waterfill_ssd_replay_command_codex",
   "cwd": "/Users/adpena/Projects/pact",
   "dispatch_attempted": false,
-  "execute_ready_row_count": 3,
+  "execute_ready_row_count": 4,
   "executed_row_count": 0,
   "execution_requested": false,
   "family": "hi_nerv",
   "gpu_launched": false,
   "load_existing_requested": true,
-  "loaded_replay_report_count": 3,
+  "loaded_replay_report_count": 4,
   "missing_requested_row_ids": [],
   "promotable": false,
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
   "ready_for_exact_eval_dispatch": false,
-  "receiver_proof_ready_row_count": 3,
+  "receiver_proof_ready_row_count": 4,
   "replay_output_root": null,
   "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_replay_actuator_20260602T152507Z_codex_batch_false_authority.json",
   "requested_row_ids": [
     "hi_nerv_local_base",
     "hi_nerv_local_small",
-    "hi_nerv_local_tiny"
+    "hi_nerv_local_tiny",
+    "hi_nerv_local_wide"
   ],
-  "row_count": 3,
+  "row_count": 4,
   "rows": [
     {
       "archive_bytes": 134908,
@@ -76,6 +78,7 @@
         "0,2,4,8,16,32"
       ],
       "command_hint": ".venv/bin/python tools/build_hinerv_archive_size_ladder.py --output-dir /Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_tiny --output-json .omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_tiny_false_authority.json --output-md .omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_tiny_false_authority.md --num-pairs 600 --row-id hi_nerv_local_tiny --decoder-codec int8_mixed --emit-receiver-proof --emit-decoder-weight-waterfill-plan --decoder-weight-saliency-json .omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json --decoder-weight-waterfill-action-bits 0,2,4,8,16,32",
+      "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/decoder_weight_waterfill_plan.json",
       "dispatch_attempted": false,
       "execute_ready": true,
       "executed": false,
@@ -87,6 +90,7 @@
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
       "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/receiver_proof/hi_nerv_mlx_receiver_proof.json",
       "receiver_proof_ready": true,
       "replay_report_loaded": true,
       "replay_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_tiny_false_authority.json",
@@ -100,7 +104,9 @@
       ],
       "score_claim": false,
       "score_claim_valid": false,
-      "status": "existing_report_loaded_false_authority"
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/hprc_representation_spine_hi_nerv_manifest.json",
+      "status": "existing_report_loaded_false_authority",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/submission"
     },
     {
       "archive_bytes": 247755,
@@ -138,6 +144,7 @@
         "0,2,4,8,16,32"
       ],
       "command_hint": ".venv/bin/python tools/build_hinerv_archive_size_ladder.py --output-dir /Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_small --output-json .omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_small_false_authority.json --output-md .omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_small_false_authority.md --num-pairs 600 --row-id hi_nerv_local_small --decoder-codec int8_mixed --emit-receiver-proof --emit-decoder-weight-waterfill-plan --decoder-weight-saliency-json .omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json --decoder-weight-waterfill-action-bits 0,2,4,8,16,32",
+      "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_small/hi_nerv_local_small/decoder_weight_waterfill_plan.json",
       "dispatch_attempted": false,
       "execute_ready": true,
       "executed": false,
@@ -149,6 +156,7 @@
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
       "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_small/hi_nerv_local_small/receiver_proof/hi_nerv_mlx_receiver_proof.json",
       "receiver_proof_ready": true,
       "replay_report_loaded": true,
       "replay_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_small_false_authority.json",
@@ -162,7 +170,9 @@
       ],
       "score_claim": false,
       "score_claim_valid": false,
-      "status": "existing_report_loaded_false_authority"
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_small/hi_nerv_local_small/hprc_representation_spine_hi_nerv_manifest.json",
+      "status": "existing_report_loaded_false_authority",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_small/hi_nerv_local_small/submission"
     },
     {
       "archive_bytes": 398071,
@@ -200,6 +210,7 @@
         "0,2,4,8,16,32"
       ],
       "command_hint": ".venv/bin/python tools/build_hinerv_archive_size_ladder.py --output-dir /Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_base --output-json .omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_base_false_authority.json --output-md .omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_base_false_authority.md --num-pairs 600 --row-id hi_nerv_local_base --decoder-codec int8_mixed --emit-receiver-proof --emit-decoder-weight-waterfill-plan --decoder-weight-saliency-json .omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json --decoder-weight-waterfill-action-bits 0,2,4,8,16,32",
+      "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_base/hi_nerv_local_base/decoder_weight_waterfill_plan.json",
       "dispatch_attempted": false,
       "execute_ready": true,
       "executed": false,
@@ -211,6 +222,7 @@
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
       "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_base/hi_nerv_local_base/receiver_proof/hi_nerv_mlx_receiver_proof.json",
       "receiver_proof_ready": true,
       "replay_report_loaded": true,
       "replay_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_base_false_authority.json",
@@ -224,7 +236,75 @@
       ],
       "score_claim": false,
       "score_claim_valid": false,
-      "status": "existing_report_loaded_false_authority"
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_base/hi_nerv_local_base/hprc_representation_spine_hi_nerv_manifest.json",
+      "status": "existing_report_loaded_false_authority",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_base/hi_nerv_local_base/submission"
+    },
+    {
+      "archive_bytes": 812333,
+      "archive_export_backend_counts": {
+        "pytorch_portable_fallback": 1
+      },
+      "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/archive.zip",
+      "archive_sha256": "266e1b0bfa472870c1028c11568545cdc73d8d48ef9e7d8bf9cc127b1ef39acc",
+      "blockers": [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "archive_export_backend_not_mlx",
+        "hinerv_archive_size_ladder_false_authority_no_nonrate_score"
+      ],
+      "command_argv": [
+        ".venv/bin/python",
+        "tools/build_hinerv_archive_size_ladder.py",
+        "--output-dir",
+        "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_wide",
+        "--output-json",
+        ".omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_wide_false_authority.json",
+        "--output-md",
+        ".omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_wide_false_authority.md",
+        "--num-pairs",
+        "600",
+        "--row-id",
+        "hi_nerv_local_wide",
+        "--decoder-codec",
+        "int8_mixed",
+        "--emit-receiver-proof",
+        "--emit-decoder-weight-waterfill-plan",
+        "--decoder-weight-saliency-json",
+        ".omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json",
+        "--decoder-weight-waterfill-action-bits",
+        "0,2,4,8,16,32"
+      ],
+      "command_hint": ".venv/bin/python tools/build_hinerv_archive_size_ladder.py --output-dir /Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_wide --output-json .omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_wide_false_authority.json --output-md .omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_wide_false_authority.md --num-pairs 600 --row-id hi_nerv_local_wide --decoder-codec int8_mixed --emit-receiver-proof --emit-decoder-weight-waterfill-plan --decoder-weight-saliency-json .omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json --decoder-weight-waterfill-action-bits 0,2,4,8,16,32",
+      "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/decoder_weight_waterfill_plan.json",
+      "dispatch_attempted": false,
+      "execute_ready": true,
+      "executed": false,
+      "gpu_launched": false,
+      "output_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_wide",
+      "output_json": ".omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_wide_false_authority.json",
+      "output_md": ".omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_wide_false_authority.md",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+      "receiver_proof_ready": true,
+      "replay_report_loaded": true,
+      "replay_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_wide_false_authority.json",
+      "replay_report_row_count": 1,
+      "replay_report_sha256": "0f1eaaf08621afcb475a277c1b8c82a405a2f93671887701de62eda49cbcd21c",
+      "row_id": "hi_nerv_local_wide",
+      "row_report_blockers": [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "archive_export_backend_not_mlx"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/hprc_representation_spine_hi_nerv_manifest.json",
+      "status": "existing_report_loaded_false_authority",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/submission"
     }
   ],
   "schema": "hinerv_archive_ladder_replay_actuator.v1",

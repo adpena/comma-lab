@@ -307,6 +307,12 @@ def _bind_replay_payload(
         result["archive_bytes"] = _int_or_none(selected.get("archive_bytes"))
         result["archive_sha256"] = selected.get("archive_sha256")
         result["archive_path"] = selected.get("archive_path")
+        result["submission_dir"] = selected.get("submission_dir")
+        result["spine_manifest_path"] = selected.get("spine_manifest_path")
+        result["receiver_proof_path"] = selected.get("receiver_proof_path")
+        result["decoder_weight_waterfill_plan_path"] = selected.get(
+            "decoder_weight_waterfill_plan_path"
+        )
         result["receiver_proof_ready"] = (
             selected.get("runtime_consumption_proof_ready") is True
         )

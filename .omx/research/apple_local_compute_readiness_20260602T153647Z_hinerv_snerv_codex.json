@@ -1,0 +1,110 @@
+{
+  "allowed_uses": [
+    "local_training_dev_velocity",
+    "local_gradient_and_vjp_iteration",
+    "local_candidate_prefilter_after_drift_calibration",
+    "receiver_archive_byte_custody_when_export_path_is_byte_closed"
+  ],
+  "apple_gpu_ready": true,
+  "authority": "false_authority_local_dev_velocity_only",
+  "axis_tag": "[macOS-local-acceleration:false-authority]",
+  "backend_status": {
+    "hf_accelerate": {
+      "available": false,
+      "notes": "Only needed for source-faithful HiNeRV OSS Accelerate launches",
+      "reason": "python_accelerate_package_missing"
+    },
+    "mlx": {
+      "available": true,
+      "default_device": "Device(gpu, 0)",
+      "device_info": {
+        "architecture": "applegpu_g17s",
+        "device_name": "Apple M5 Max",
+        "max_buffer_length": 86586540032,
+        "max_recommended_working_set_size": 115448725504,
+        "memory_size": 137438953472,
+        "resource_limit": 499000
+      },
+      "metal_available": true,
+      "notes": "MLX/Metal local research-signal backend; not contest authority",
+      "version": null
+    },
+    "numpy_accelerate": {
+      "accelerate_framework_path": "/System/Library/Frameworks/Accelerate.framework",
+      "accelerate_framework_present": true,
+      "available": true,
+      "notes": "Apple Accelerate can help CPU NumPy kernels but is not a scorer authority",
+      "numpy_version": "2.4.4"
+    },
+    "torch_mps": {
+      "available": true,
+      "mps_available": true,
+      "notes": "Torch MPS is local research-signal only; scorer drift must be measured",
+      "version": "2.11.0"
+    }
+  },
+  "blockers": [
+    "macos_local_acceleration_false_authority",
+    "contest_cpu_cuda_exact_eval_required_for_promotion",
+    "python_accelerate_package_missing_for_oss_hinerv_launch"
+  ],
+  "dispatch_attempted": false,
+  "drift_policy": {
+    "calibration_required_before_spend_triage": true,
+    "drift_fields_must_be_attached": [
+      "candidate_archive_sha256",
+      "runtime_tree_sha256",
+      "inflated_outputs_aggregate_sha256",
+      "local_backend",
+      "paired_auth_axis",
+      "component_delta_pose",
+      "component_delta_seg",
+      "rate_delta_bytes"
+    ],
+    "promotion_requires_exact_contest_cpu_or_cuda": true,
+    "status": "measure_and_gate"
+  },
+  "forbidden_uses": [
+    "contest_score_claim",
+    "leaderboard_rank_or_kill",
+    "cpu_cuda_axis_conversion",
+    "promotion_without_byte_closed_archive_runtime_and_exact_replay"
+  ],
+  "gpu_launched": false,
+  "hinerv_binding": {
+    "archive_ladder_tool": "tools/build_hinerv_archive_size_ladder.py",
+    "current_priority": "use MLX for score-aware trainer/export velocity; keep archive replay false-authority until scorer deltas are paired",
+    "mlx_renderer_module": "tac.substrates.hi_nerv.mlx_renderer"
+  },
+  "mlx_metal_ready": true,
+  "numpy_accelerate_ready": true,
+  "platform": {
+    "machine": "arm64",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12",
+    "system": "Darwin"
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_dev_velocity_backend": "mlx_metal",
+  "recommended_dev_velocity_role": "primary_local_dev_velocity_backend",
+  "recommended_runner_notes": "Use for SNeRV/HiNeRV local training, gradients, VJP, and export smoke",
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/apple_local_compute_readiness_20260602T153647Z_hinerv_snerv_codex.json",
+  "schema": "apple_local_compute_readiness.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "snerv_binding": {
+    "blockers": [
+      "snerv_mlx_native_train_export_missing",
+      "snerv_source_faithful_mfu_hfr_tub_missing"
+    ],
+    "current_priority": "port source-faithful MFU/HFR/TUB and wavelet primitives onto MLX-first NumPy-portable kernels before more LF-byte sweeps"
+  },
+  "substrate_ids": [
+    "hi_nerv",
+    "snerv"
+  ],
+  "torch_mps_ready": true
+}

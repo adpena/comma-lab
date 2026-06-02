@@ -55,6 +55,10 @@ def test_hinerv_replay_actuator_executes_and_loads_replay_report(
                             "archive_bytes": 123456,
                             "archive_sha256": "a" * 64,
                             "archive_path": "/Volumes/VertigoDataTier/pact/tiny/archive.zip",
+                            "submission_dir": "/Volumes/VertigoDataTier/pact/tiny/submission",
+                            "spine_manifest_path": "/Volumes/VertigoDataTier/pact/tiny/spine.json",
+                            "receiver_proof_path": "/Volumes/VertigoDataTier/pact/tiny/proof.json",
+                            "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/tiny/plan.json",
                             "runtime_consumption_proof_ready": True,
                             "blockers": [
                                 "hinerv_archive_size_row_has_no_nonrate_score",
@@ -84,6 +88,10 @@ def test_hinerv_replay_actuator_executes_and_loads_replay_report(
     row = report["rows"][0]
     assert row["status"] == "executed_report_loaded_false_authority"
     assert row["archive_bytes"] == 123456
+    assert row["submission_dir"] == "/Volumes/VertigoDataTier/pact/tiny/submission"
+    assert row["spine_manifest_path"].endswith("/spine.json")
+    assert row["receiver_proof_path"].endswith("/proof.json")
+    assert row["decoder_weight_waterfill_plan_path"].endswith("/plan.json")
     assert row["receiver_proof_ready"] is True
     assert row["archive_export_backend_counts"] == {"mlx": 1}
     assert row["replay_report_sha256"]
@@ -109,6 +117,11 @@ def test_hinerv_replay_actuator_loads_existing_report_without_execution(
                         "row_id": "hi_nerv_local_tiny",
                         "archive_bytes": 654321,
                         "archive_sha256": "c" * 64,
+                        "archive_path": "/Volumes/VertigoDataTier/pact/existing/archive.zip",
+                        "submission_dir": "/Volumes/VertigoDataTier/pact/existing/submission",
+                        "spine_manifest_path": "/Volumes/VertigoDataTier/pact/existing/spine.json",
+                        "receiver_proof_path": "/Volumes/VertigoDataTier/pact/existing/proof.json",
+                        "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/existing/plan.json",
                         "runtime_consumption_proof_ready": True,
                         "blockers": ["archive_export_backend_not_mlx"],
                     }
@@ -133,6 +146,11 @@ def test_hinerv_replay_actuator_loads_existing_report_without_execution(
     row = report["rows"][0]
     assert row["status"] == "existing_report_loaded_false_authority"
     assert row["archive_bytes"] == 654321
+    assert row["archive_path"].endswith("/existing/archive.zip")
+    assert row["submission_dir"].endswith("/existing/submission")
+    assert row["spine_manifest_path"].endswith("/existing/spine.json")
+    assert row["receiver_proof_path"].endswith("/existing/proof.json")
+    assert row["decoder_weight_waterfill_plan_path"].endswith("/existing/plan.json")
     assert row["receiver_proof_ready"] is True
     assert row["archive_export_backend_counts"] == {"pytorch_portable_fallback": 1}
     assert row["executed"] is False

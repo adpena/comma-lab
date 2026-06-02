@@ -1,0 +1,239 @@
+{
+  "archive_export_backend_counts": {
+    "pytorch_portable_fallback": 1
+  },
+  "archive_rows": [
+    {
+      "archive_bytes": 812333,
+      "archive_export_backend": "pytorch_portable_fallback",
+      "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/archive.zip",
+      "archive_rate_score_at_contest_price": 0.5408992009665928,
+      "archive_sha256": "266e1b0bfa472870c1028c11568545cdc73d8d48ef9e7d8bf9cc127b1ef39acc",
+      "backend_claim_blockers": [
+        "archive_export_backend_not_mlx"
+      ],
+      "blockers": [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "archive_export_backend_not_mlx"
+      ],
+      "config": {
+        "decoder_channels": [
+          72,
+          60,
+          48,
+          36,
+          30,
+          24,
+          18
+        ],
+        "embed_dim": 96,
+        "latent_dim_coarse": 24,
+        "latent_dim_fine": 36,
+        "latent_dim_mid": 30,
+        "num_pairs": 600,
+        "num_upsample_blocks": 7,
+        "output_height": 384,
+        "output_width": 512
+      },
+      "decoder_codec": "int8_mixed",
+      "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/decoder_weight_waterfill_plan.json",
+      "decoder_weight_waterfill_summary": {
+        "blockers": [
+          "decoder_weight_saliency_missing_for_some_groups",
+          "full_video_coverage_missing",
+          "contest_cpu_cuda_exact_eval_not_executed"
+        ],
+        "dispatch_attempted": false,
+        "gpu_launched": false,
+        "group_count": 24,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "total_selected_byte_delta": 0,
+        "total_selected_delta_nonrate_score_proxy": null,
+        "total_selected_delta_rate_score": 0.0
+      },
+      "dispatch_attempted": false,
+      "family": "hi_nerv",
+      "gpu_launched": false,
+      "modelsize_scale": 1.5,
+      "num_parameters": 738120,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_executed": true,
+      "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+      "required_allocator_bindings": [
+        "adaptive_quantization_by_decoder_weight_group",
+        "ablate_or_zero_groups_with_nonpositive_measured_value",
+        "waterfill_group_bits_against_fixed_contest_byte_price",
+        "inverse_steg_saliency_decoder_weight_binding",
+        "packed_zero_and_entropy_coded_low_value_groups"
+      ],
+      "row_id": "hi_nerv_local_wide",
+      "runtime_consumption_proof_ready": true,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/hprc_representation_spine_hi_nerv_manifest.json",
+      "state_npz_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/hi_nerv_mlx_exported_state_npz_manifest.json",
+      "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/submission"
+    }
+  ],
+  "artifact_retention_policy": "durable_evidence_on_selected_storage; archive rows preserve bytes, sha256, paths, false-authority flags, and blockers; local output requires explicit opt-in",
+  "authority": "false_authority_archive_size_ladder_no_score_claim",
+  "axis_tag": "[planning/control]",
+  "blockers": [
+    "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "archive_export_backend_not_mlx"
+  ],
+  "byte_price_plan": {
+    "admitted_section_ids": [],
+    "baseline_id": null,
+    "blockers": [
+      "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+      "contest_cpu_cuda_exact_eval_not_executed",
+      "archive_export_backend_not_mlx"
+    ],
+    "candidate_id": null,
+    "contest_byte_price": {
+      "available": true,
+      "blockers": [],
+      "original_video_bytes": 37545489,
+      "score_per_byte": 6.658589531221714e-07,
+      "source": "tac.substrates._shared.mlx_score_aware.modelsize_budget_plan.CONTEST_BYTE_PRICE_SCORE"
+    },
+    "cut_section_ids": [],
+    "decision_counts": {
+      "admit": 0,
+      "cut": 0,
+      "demote": 0,
+      "protect": 0,
+      "retrain": 0
+    },
+    "decision_rows": [],
+    "demoted_section_ids": [],
+    "dispatch_attempted": false,
+    "full_video_coverage": false,
+    "gpu_launched": false,
+    "input_row_count": 0,
+    "promotable": false,
+    "promotion_eligible": false,
+    "protected_section_ids": [],
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "retrain_section_ids": [],
+    "schema": "compact_nerv_byte_price_controller.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selection_rule": "delta_total_score = delta_nonrate_score + delta_rate_score; existing sections are cut only when their removal lowers total score; new residual/sidecar bytes are admitted only when delta_total_score < 0",
+    "source_schema": "hinerv_archive_size_ladder.v1"
+  },
+  "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+  "decoder_codec": "int8_mixed",
+  "decoder_weight_saliency_json": ".omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json",
+  "decoder_weight_waterfill_action_bits": [
+    0,
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "decoder_weight_waterfill_schema": "nerv_decoder_weight_waterfill.v1",
+  "dispatch_attempted": false,
+  "emit_decoder_weight_waterfill_plan": true,
+  "emit_receiver_proof": true,
+  "family": "hi_nerv",
+  "gpu_launched": false,
+  "local_output_explicitly_allowed": false,
+  "marginal_archive_gates": [],
+  "missing_requested_row_ids": [],
+  "num_pairs": 600,
+  "objective_authority": {
+    "allowed_selection_terms": [
+      "SegNet_last_frame_distortion",
+      "PoseNet_pair_distortion",
+      "archive_zip_bytes_rate_term"
+    ],
+    "forbidden_selection_terms": [
+      "human_visual_fidelity",
+      "PSNR",
+      "SSIM",
+      "LPIPS",
+      "perceptual_quality_unless_proven_scorer_causal"
+    ],
+    "objective": "contest_auth_eval_scorer_only",
+    "rule": "human visual fidelity is not an authority surface; optimize only the contest auth eval scorer and byte price"
+  },
+  "output_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "repo_root": "/Users/adpena/Projects/pact",
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T152507Z_codex_batch_hi_nerv_local_wide_false_authority.json",
+  "required_allocator_bindings": [
+    "adaptive_quantization_by_decoder_weight_group",
+    "ablate_or_zero_groups_with_nonpositive_measured_value",
+    "waterfill_group_bits_against_fixed_contest_byte_price",
+    "inverse_steg_saliency_decoder_weight_binding",
+    "packed_zero_and_entropy_coded_low_value_groups"
+  ],
+  "row_count": 1,
+  "schema": "hinerv_archive_size_ladder.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "section_value_rows": [],
+  "selection_rule": "measured archive bytes are only admissible after adaptive quantization, ablation, waterfilling, inverse-steg saliency, packed-zero, and entropy coding bind per decoder/latent group",
+  "storage_expected_bytes": 536870912,
+  "storage_preflight": {
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "generated_at_utc": "20260602T153001Z",
+    "gpu_launched": false,
+    "min_free_bytes": 0,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "requested_bytes": 536870912,
+    "schema": "comma_lab.experiment_storage_tier_plan.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "selected_root": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide",
+    "selected_tier": "explicit_hinerv_archive_size_ladder_output",
+    "selected_workload_root": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide",
+    "tiers": [
+      {
+        "allow_local_disk": false,
+        "blockers": [],
+        "eligible": true,
+        "exists": true,
+        "free_bytes": 1276261634048,
+        "name": "explicit_hinerv_archive_size_ladder_output",
+        "parent_exists": true,
+        "priority": 0,
+        "requested_bytes": 536870912,
+        "reserve_free_bytes": 42949672960,
+        "root": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide",
+        "total_bytes": 2000189177856,
+        "usable_bytes": 1233311961088,
+        "workload_root": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T152507Z_codex_batch/hi_nerv_local_wide",
+        "workload_root_exists": true,
+        "writable": true
+      }
+    ],
+    "workload_subdir": "."
+  },
+  "storage_reserve_free_gb": 40.0
+}
