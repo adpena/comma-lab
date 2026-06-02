@@ -1,0 +1,2498 @@
+{
+  "axis_tag": "[planning/control]",
+  "baseline_to_beat": "pr95_hnerv_muon",
+  "bit_allocator_ingest_contract": {
+    "allowed_use": "allocate_measurement_and_receiver_grammar_followups",
+    "consumer": "bit_allocator",
+    "forbidden_use": "assign_real_bits_without_measured_sensitivity_and_receiver_proof",
+    "requires_before_real_bit_assignment": [
+      "per_atom_or_per_group_sensitivity",
+      "receiver_decoded_byte_accounting",
+      "scorer_replay_under_axis_label"
+    ]
+  },
+  "blockers": [
+    "pr95_pr_metadata_missing",
+    "pr95_pr_url_missing",
+    "pr95_pr_state_missing",
+    "pr95_pr_head_sha_missing",
+    "pr95_pr_head_ref_missing",
+    "snerv_official_oss_snapshot_missing",
+    "hinerv_official_oss_snapshot_missing",
+    "hnerv_pr95_control_official_oss_snapshot_missing",
+    "snerv_simplified_contest_adapter_not_source_faithful",
+    "hinerv_l0_sketch_not_source_faithful",
+    "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video",
+    "z5_rao_ballard_modal_claims_still_need_terminal_adjudication",
+    "full_600_byte_closed_receiver_proof_missing_for_snerv_and_hinerv",
+    "paired_contest_cpu_cuda_pass_missing_for_winner",
+    "pr95_same_axis_control_replay_required_before_beat_claim",
+    "nerv_control_binding_gap:measured_hi_nerv_modelsize_budget_ladder",
+    "nerv_control_binding_gap:full_video_decoder_weight_saliency_replay_for_hi_nerv_archive_rows",
+    "nerv_control_binding_gap:decoder_weight_saliency_into_trainer",
+    "nerv_control_binding_gap:cache_quality_gate_required_before_profile_or_spend",
+    "nerv_control_binding_gap:hi_nerv_decoder_codec_sweep_full600_replay",
+    "nerv_control_binding_gap:trained_scorer_preserving_sr_receiver_for_hi_nerv",
+    "nerv_control_binding_gap:receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv",
+    "nerv_control_binding_gap:decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
+    "nerv_control_binding_gap:decoder_weight_waterfill_plan_for_hi_nerv_full_main",
+    "nerv_control_binding_gap:snerv_mlx_native_full_video_scoreaware_train_export_proof",
+    "nerv_control_binding_gap:snerv_real_segnet_posenet_teacher_loop_for_mlx_native_export",
+    "nerv_control_binding_gap:snerv_measured_modelsize_ladder",
+    "nerv_control_binding_gap:decoder_weight_waterfill_plan_for_snerv_receiver_rows",
+    "nerv_control_binding_gap:learned_lf_generator_byte_collapse",
+    "nerv_control_binding_gap:snerv_scorer_loop_decoder_qat_full_video",
+    "nerv_control_binding_gap:feed_pr95_hnerv_measured_ladder_into_all_carrier_plans",
+    "nerv_control_binding_gap:runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls",
+    "nerv_control_binding_gap:byte_priced_flow_or_pose_support_tokens_for_hi_nerv_snerv",
+    "nerv_control_binding_gap:rate_priced_nervplusplus_block_ablation_for_hi_nerv_snerv",
+    "nerv_control_binding_gap:codebook_entropy_model_bytes_charged_in_spine",
+    "nerv_control_binding_gap:full_video_section_value_for_vq_codebook_indices",
+    "nerv_control_binding_gap:demote_codebook_sections_without_positive_total_value",
+    "nerv_control_binding_gap:push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
+    "nerv_control_binding_gap:nerv_control_inventory_consumer_for_master_gradient_rows",
+    "nerv_control_binding_gap:full_video_vjp_bundle_as_budget_spend_prerequisite",
+    "nerv_control_binding_gap:gradient_bundle_to_modelsize_and_section_allocator",
+    "nerv_control_binding_gap:hard_archive_projection_line_search_for_compact_carriers",
+    "nerv_control_binding_gap:hi_nerv_snerv_grouped_intN_zero_run_packet_layout",
+    "nerv_control_binding_gap:all_compact_carrier_emitters_on_shared_archive_bound_contract",
+    "nerv_control_binding_gap:bounded_runner_refuses_non_contract_candidate_paths",
+    "hi_nerv_official_symbol_parity_map_missing",
+    "hi_nerv_tiny_forward_parity_against_oss_missing",
+    "tools/run_compact_renderer_mlx_spine_runner.py:scoreaware_trainer_pending_requires_real_training_path",
+    "tools/run_compact_renderer_mlx_spine_runner.py:mock_scorer_teacher_escape_hatch_requires_false_authority_guard",
+    "hi_nerv_long_real_teacher_scoreaware_training_missing",
+    "hi_nerv_decoder_weight_saliency_not_bound_to_full_main",
+    "hi_nerv_measured_modelsize_budget_ladder_missing",
+    "hi_nerv_full_video_decoder_weight_saliency_replay_missing",
+    "hi_nerv_grouped_intN_zero_run_packet_layout_missing",
+    "hi_nerv_full600_receiver_proven_candidate_missing",
+    "hi_nerv_same_axis_pr95_control_missing",
+    "hi_nerv_missing_patch_frame_equivalence_proof",
+    "hi_nerv_missing_official_3d_upsampling_parity",
+    "hi_nerv_missing_measured_config_family_ladder",
+    "snerv_official_symbol_parity_map_missing",
+    "snerv_tiny_forward_parity_against_oss_missing",
+    "snerv_quantized_checkpoint_payload_replay_missing",
+    "snerv_scorer_loop_decoder_qat_full_video_missing",
+    "snerv_mlx_native_train_export_surfaces_unproven",
+    "snerv_measured_modelsize_ladder_missing",
+    "snerv_full600_receiver_proven_candidate_missing",
+    "snerv_same_axis_pr95_control_missing",
+    "snerv_missing_official_stride_stack_parity",
+    "snerv_missing_mfu_blocks",
+    "snerv_missing_official_hfr_heads",
+    "snerv_missing_snerv_t_temporal_path_or_no_go",
+    "snerv_missing_measured_fc_dim_modelsize_ladder",
+    "snerv_missing_quant_payload_receiver_replay",
+    "implementation_sweep_is_false_authority",
+    "online_sources_are_research_context_not_score_authority",
+    "snerv_proof_missing:official_forward_parity",
+    "snerv_proof_missing:source_faithful_contest_adapter",
+    "snerv_proof_missing:mixed_precision_receiver_byte_accounting",
+    "snerv_proof_missing:pair_robust_scorer_loop_QAT",
+    "snerv_proof_missing:full600_byte_closed_receiver_proof",
+    "snerv_proof_missing:paired_contest_CPU_CUDA_pass",
+    "hinerv_local_feature_missing:l0_sketch_gate",
+    "hinerv_local_feature_missing:score_aware_teacher",
+    "hinerv_local_feature_missing:dense_vjp_allocator_inputs",
+    "hinerv_proof_missing:official_forward_parity",
+    "hinerv_proof_missing:patch_mode_frame_mode_parity",
+    "hinerv_proof_missing:prune_quant_codec_roundtrip",
+    "hinerv_proof_missing:real_teacher_scorer_training",
+    "hinerv_proof_missing:full600_byte_closed_receiver_proof",
+    "hinerv_proof_missing:paired_contest_CPU_CUDA_pass",
+    "PR95_same_axis_control_replay_required_before_beat_claim",
+    "PR101_and_Z5_nonterminal_block_new_exact_or_full_video_cuda",
+    "modelsize_curve_is_ideal_packed_lower_bound_not_archive_measurement",
+    "official_source_forward_parity_missing",
+    "trained_quantized_receiver_payloads_missing",
+    "component_score_curve_missing",
+    "PR101_and_Z5_still_block_exact_full_video_cuda",
+    "rate_allocator_bridge_is_false_authority",
+    "real_bit_assignment_requires_measured_sensitivity_and_receiver_proof"
+  ],
+  "blocking_work_order_count": 43,
+  "blocking_work_order_ids": [
+    "score_hi_nerv_hi_nerv_local_base_full_video_mlx_replay",
+    "score_hi_nerv_hi_nerv_local_small_full_video_mlx_replay",
+    "score_hi_nerv_hi_nerv_local_tiny_full_video_mlx_replay",
+    "score_hi_nerv_hi_nerv_local_wide_full_video_mlx_replay",
+    "guard_hi_nerv_archive_backend_drift_local_velocity",
+    "compile_snerv_snerv_trained_ladder_row_archive_decoder_modes_to_receiver",
+    "scale_snerv_snerv_scorer_loop_qat_result_scorer_loop_qat_to_full600",
+    "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T165640Z_scorer_loop_qat_to_full600",
+    "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T170501Z_score_primary_scorer_loop_qat_to_full600",
+    "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T170543Z_score_primary_4pair4trial_scorer_loop_qat_to_full600",
+    "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T170918Z_score_primary_4pair8trial_scorer_loop_qat_to_full600",
+    "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T170918Z_score_primary_4pair_nes4_scorer_loop_qat_to_full600",
+    "replay_hi_nerv_hi_nerv_local_base_decoder_weight_waterfill",
+    "replay_hi_nerv_hi_nerv_local_small_decoder_weight_waterfill",
+    "replay_hi_nerv_hi_nerv_local_tiny_decoder_weight_waterfill",
+    "replay_hi_nerv_hi_nerv_local_wide_decoder_weight_waterfill",
+    "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill",
+    "close_hinerv_receiver_rate_promotion_gates",
+    "close_snerv_receiver_rate_promotion_gates",
+    "route_bitmask_and_zero_packing_to_rate_allocator",
+    "route_hi_nerv_bitstream_quantization_to_rate_allocator",
+    "route_receiver_exact_custody_gate_to_rate_allocator",
+    "route_sr_nerv_lowres_receiver_axis_to_rate_allocator",
+    "replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust",
+    "bind_hi_nerv_decoder_weight_saliency_to_waterfill",
+    "measure_hnerv_120000_modelsize_archive_ladder",
+    "measure_hnerv_150000_modelsize_archive_ladder",
+    "measure_hnerv_178417_modelsize_archive_ladder",
+    "measure_hnerv_36000_modelsize_archive_ladder",
+    "measure_hnerv_72000_modelsize_archive_ladder",
+    "measure_snerv_120000_modelsize_archive_ladder",
+    "measure_snerv_150000_modelsize_archive_ladder",
+    "measure_snerv_178417_modelsize_archive_ladder",
+    "measure_snerv_36000_modelsize_archive_ladder",
+    "measure_snerv_72000_modelsize_archive_ladder",
+    "route_full_video_vjp_master_gradient_authority_to_rate_allocator",
+    "route_hnerv_modelsize_control_to_rate_allocator",
+    "route_inverse_steganalysis_saliency_stack_to_rate_allocator",
+    "route_master_gradient_xray_stack_to_rate_allocator",
+    "route_snerv_lf_modelsize_and_stepmap_to_rate_allocator",
+    "route_hi_nerv_sr_resolution_axis_to_rate_allocator",
+    "route_snerv_frequency_split_to_rate_allocator",
+    "route_hi_nerv_inverse_steg_decoder_weight_fit_to_rate_allocator"
+  ],
+  "dispatch_attempted": false,
+  "final_rate_attack_ingest_contract": {
+    "allowed_use": "local_planning_and_receiver_grammar_work_order_selection",
+    "consumer": "final_rate_attack",
+    "forbidden_use": "score_claim_or_rank_or_exact_dispatch_authority",
+    "work_order_fields": [
+      "work_order_id",
+      "work_order_type",
+      "target_consumers",
+      "planner_action",
+      "receiver_precision_modes",
+      "blockers"
+    ]
+  },
+  "frontier_score_claim": false,
+  "generated_utc": "2026-06-02T17:35:46.436165+00:00",
+  "gpu_launched": false,
+  "production_hardened_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_allocator_work_orders": [
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "hinerv_archive_ladder_replay_false_authority_no_nonrate_score",
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+        "full_video_mlx_scorer_response_missing",
+        "section_value_profile_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 398074,
+        "archive_export_backend_counts": {
+          "mlx": 1
+        },
+        "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_base/hi_nerv_local_base/archive.zip",
+        "archive_sha256": "861bb36ae5824670c68b26669448593ffb705f7178226e0e0d162c68b7d43299",
+        "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_base/hi_nerv_local_base/decoder_weight_waterfill_plan.json",
+        "family": "hi_nerv",
+        "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_base/hi_nerv_local_base/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+        "receiver_proof_ready": true,
+        "replay_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T153357Z_mlx_codex_batch_hi_nerv_local_base_false_authority.json",
+        "replay_report_sha256": "5fa2483b45145b89e841cd4806f99dad2247829913f5c1711c6315d71472e800",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_replay_actuator_20260602T153357Z_mlx_codex_batch_false_authority.json",
+        "row_id": "hi_nerv_local_base",
+        "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_base/hi_nerv_local_base/hprc_representation_spine_hi_nerv_manifest.json",
+        "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_base/hi_nerv_local_base/submission"
+      },
+      "planner_action": "materialize_direct_receiver_cache_and_run_full_video_mlx_response",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 6,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "price receiver-proof compact HiNeRV archive rows by full-video SegNet/PoseNet MLX response before any decoder-byte cut, protect, or exact dispatch decision",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_hi_nerv_local_base_archive_replay_result",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "sensitivity_map",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "score_hi_nerv_hi_nerv_local_base_full_video_mlx_replay",
+      "work_order_type": "receiver_proven_archive_full_video_mlx_replay"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "hinerv_archive_ladder_replay_false_authority_no_nonrate_score",
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+        "full_video_mlx_scorer_response_missing",
+        "section_value_profile_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 247815,
+        "archive_export_backend_counts": {
+          "mlx": 1
+        },
+        "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_small/hi_nerv_local_small/archive.zip",
+        "archive_sha256": "d18b67fdb4084d18c684a28e24888f5c6dc360af9627f02c9d40acc7c71b0314",
+        "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_small/hi_nerv_local_small/decoder_weight_waterfill_plan.json",
+        "family": "hi_nerv",
+        "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_small/hi_nerv_local_small/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+        "receiver_proof_ready": true,
+        "replay_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T153357Z_mlx_codex_batch_hi_nerv_local_small_false_authority.json",
+        "replay_report_sha256": "b9b6c19197c9098b070fae4939f154afbf42361a633ae3577756332f76d45f12",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_replay_actuator_20260602T153357Z_mlx_codex_batch_false_authority.json",
+        "row_id": "hi_nerv_local_small",
+        "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_small/hi_nerv_local_small/hprc_representation_spine_hi_nerv_manifest.json",
+        "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_small/hi_nerv_local_small/submission"
+      },
+      "planner_action": "materialize_direct_receiver_cache_and_run_full_video_mlx_response",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 6,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "price receiver-proof compact HiNeRV archive rows by full-video SegNet/PoseNet MLX response before any decoder-byte cut, protect, or exact dispatch decision",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_hi_nerv_local_small_archive_replay_result",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "sensitivity_map",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "score_hi_nerv_hi_nerv_local_small_full_video_mlx_replay",
+      "work_order_type": "receiver_proven_archive_full_video_mlx_replay"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "hinerv_archive_ladder_replay_false_authority_no_nonrate_score",
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+        "full_video_mlx_scorer_response_missing",
+        "section_value_profile_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 134842,
+        "archive_export_backend_counts": {
+          "mlx": 1
+        },
+        "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/archive.zip",
+        "archive_sha256": "e6e0fd9f900ef8130a20cb3d83ec39ed8112bb07c065afd67ba17e14870995f9",
+        "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/decoder_weight_waterfill_plan.json",
+        "family": "hi_nerv",
+        "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+        "receiver_proof_ready": true,
+        "replay_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T153357Z_mlx_codex_batch_hi_nerv_local_tiny_false_authority.json",
+        "replay_report_sha256": "8467e9e6bf62788af2614d1c8cf5c0dac156f3db81375a9e28328be0b70dc326",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_replay_actuator_20260602T153357Z_mlx_codex_batch_false_authority.json",
+        "row_id": "hi_nerv_local_tiny",
+        "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/hprc_representation_spine_hi_nerv_manifest.json",
+        "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_tiny/hi_nerv_local_tiny/submission"
+      },
+      "planner_action": "materialize_direct_receiver_cache_and_run_full_video_mlx_response",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 6,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "price receiver-proof compact HiNeRV archive rows by full-video SegNet/PoseNet MLX response before any decoder-byte cut, protect, or exact dispatch decision",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_hi_nerv_local_tiny_archive_replay_result",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "sensitivity_map",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "score_hi_nerv_hi_nerv_local_tiny_full_video_mlx_replay",
+      "work_order_type": "receiver_proven_archive_full_video_mlx_replay"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "hinerv_archive_ladder_replay_false_authority_no_nonrate_score",
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+        "full_video_mlx_scorer_response_missing",
+        "section_value_profile_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 812252,
+        "archive_export_backend_counts": {
+          "mlx": 1
+        },
+        "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/archive.zip",
+        "archive_sha256": "7e3067592d269142a53516937f7a5e56d0e18625105ed098a1c525b58965d548",
+        "decoder_weight_waterfill_plan_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/decoder_weight_waterfill_plan.json",
+        "family": "hi_nerv",
+        "receiver_proof_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+        "receiver_proof_ready": true,
+        "replay_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_20260602T153357Z_mlx_codex_batch_hi_nerv_local_wide_false_authority.json",
+        "replay_report_sha256": "63e2e0b0c1bf197081aa32c0affbbd548e442997e48e688844415ff7f1377e3d",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_replay_actuator_20260602T153357Z_mlx_codex_batch_false_authority.json",
+        "row_id": "hi_nerv_local_wide",
+        "spine_manifest_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/hprc_representation_spine_hi_nerv_manifest.json",
+        "submission_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay_20260602T153357Z_mlx_codex_batch/hi_nerv_local_wide/hi_nerv_local_wide/submission"
+      },
+      "planner_action": "materialize_direct_receiver_cache_and_run_full_video_mlx_response",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 6,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "price receiver-proof compact HiNeRV archive rows by full-video SegNet/PoseNet MLX response before any decoder-byte cut, protect, or exact dispatch decision",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_hi_nerv_local_wide_archive_replay_result",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "sensitivity_map",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "score_hi_nerv_hi_nerv_local_wide_full_video_mlx_replay",
+      "work_order_type": "receiver_proven_archive_full_video_mlx_replay"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "hinerv_archive_backend_drift_false_authority_no_nonrate_score",
+        "hinerv_archive_backend_drift_not_promotion_or_rank_authority",
+        "hinerv_archive_backend_drift_local_dev_velocity_only",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "byte_ready_row_count": 4,
+        "candidate_label": "mlx_metal",
+        "family": "hi_nerv",
+        "local_dev_velocity_ready": true,
+        "matched_row_count": 4,
+        "max_abs_byte_delta_allowed": 1024,
+        "max_abs_byte_delta_observed": 81,
+        "ready_backend_for_local_iteration": "mlx_metal",
+        "reference_label": "pytorch_portable_fallback",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_backend_drift_20260602T154939Z_fallback_vs_mlx_false_authority.json",
+        "row_count": 4,
+        "sum_byte_delta_candidate_minus_reference": -84,
+        "sum_rate_score_delta_candidate_minus_reference": -5.59321520622624e-05,
+        "within_byte_drift_tolerance": true
+      },
+      "planner_action": "use_backend_drift_for_local_velocity_only",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 7,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "permit the close-matching local backend for cheap archive-byte iteration while preserving exact/score authority blockers",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_archive_backend_drift_guard",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot",
+        "continual_learning_posterior"
+      ],
+      "work_order_id": "guard_hi_nerv_archive_backend_drift_local_velocity",
+      "work_order_type": "local_backend_drift_authority_guard"
+    },
+    {
+      "blockers": [
+        "mode_assignment_is_false_authority_until_receiver_replay_and_exact_eval",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "sample_pair_count_below_full600",
+        "required_emission_field_missing:official_controls.--modelsize",
+        "required_emission_field_missing:official_controls.mfu_enabled",
+        "required_emission_field_missing:official_controls.hfr_enabled",
+        "required_emission_field_missing:official_controls.snerv_t_enabled",
+        "required_emission_field_missing:qat_bits",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_coverage_missing",
+        "receiver_proof_not_satisfied",
+        "mixed_decoder_modes_do_not_support_fp32",
+        "fp32_protect_downgraded_to_fp16_requires_receiver_replay",
+        "decoder_mode_probe_command_missing",
+        "receiver_visible_decoder_mode_export_missing",
+        "receiver_decoded_byte_accounting_required",
+        "full600_byte_closed_receiver_proof_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "decoder_payload_schema": "snerv_decoder_payload.v3",
+        "family": "snerv",
+        "mode_histogram": {
+          "fp16": 3
+        },
+        "mode_plan_cli_arg": "fp16,fp16,fp16",
+        "probe_command_argv": [],
+        "probe_command_axis_tag": null,
+        "probe_command_hint": null,
+        "probe_receiver_packet_dir": null,
+        "ready_for_local_advisory_probe": true,
+        "ready_for_receiver_mode_export": false,
+        "row_id": "snerv_trained_ladder_row_archive"
+      },
+      "planner_action": "emit_receiver_visible_mixed_precision_decoder_grammar",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "turn waterfilled decoder atom mode choices into the receiver-visible mixed-precision grammar before any rate claim",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_snerv_trained_ladder_row_archive_decoder_mode_assignment",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "probe_disambiguator"
+      ],
+      "work_order_id": "compile_snerv_snerv_trained_ladder_row_archive_decoder_modes_to_receiver",
+      "work_order_type": "receiver_visible_decoder_mode_assignment"
+    },
+    {
+      "blockers": [
+        "no_quantized_decoder_trial_improved_score_under_pose_guard",
+        "local_smoke_only_not_full_600_pairs",
+        "paired_contest_cpu_cuda_pass_missing",
+        "mixed_precision_decoder_payload_grammar_not_byte_optimized",
+        "full_600_pair_receiver_proof_missing",
+        "official_snerv_mfu_hfr_tub_parity_not_proven",
+        "snerv_scorer_loop_qat_full600_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "full600_receiver_proof_required",
+        "section_value_profile_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "accepted_candidate_count": 1,
+        "accepted_improvement": false,
+        "axis_tag": "[macOS-CPU advisory]",
+        "baseline_archive_bytes": 929937,
+        "baseline_score_linf": 0.854580455551196,
+        "best_archive_bytes": 929937,
+        "best_pair_deltas": [
+          {
+            "d_pose_linf_delta": 0.0,
+            "d_seg_linf_delta": 0.0,
+            "pair_index": 0,
+            "score_linf_without_rate_delta": 0.0
+          }
+        ],
+        "best_score_linf": 0.854580455551196,
+        "byte_price_plan": {},
+        "candidate_count": 3,
+        "family": "snerv",
+        "history_count": 3,
+        "levels": 1,
+        "n_pairs": 1,
+        "qat_bits": 8,
+        "ready_for_pose_guard_gate": false,
+        "receiver_contract_satisfied": true,
+        "rejected_candidate_count": 2,
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/snerv_scorer_loop_qat_local_trainer_20260602T160558Z_codex_false_authority.json",
+        "result_sha256": "a7e6ffcb70a9336e7dbbedf29752e9d57da49a4026cfd2dbe63cd5eddc279fc5",
+        "score_delta_fraction": 0.0,
+        "score_delta_linf": 0.0,
+        "scorer_loop_evaluations": 3,
+        "search_mode": "random_signed",
+        "section_value_rows": [],
+        "selection_policy": "largest_pair_count_then_accepted_then_evaluations",
+        "wavelet": "haar"
+      },
+      "planner_action": "scale_snerv_scorer_loop_qat_to_full600_receiver_proof",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promote the local SNeRV scorer-loop/QAT wrapper from pair smoke evidence to full600 receiver-proven section-value evidence before exact spend",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_scorer_loop_qat_result",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "probe_disambiguator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "scale_snerv_snerv_scorer_loop_qat_result_scorer_loop_qat_to_full600",
+      "work_order_type": "snerv_scorer_loop_qat_full600_followup"
+    },
+    {
+      "blockers": [
+        "snerv_scorer_loop_geometry_is_false_authority",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "full600_receiver_proof_required",
+        "section_value_profile_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "accepted_candidate_count": 0,
+        "accepted_improvement": false,
+        "axis_tag": "[macOS-CPU advisory]",
+        "baseline_archive_bytes": 336276,
+        "baseline_score_linf": 0.5505918809022246,
+        "best_archive_bytes": 336276,
+        "best_pair_deltas": [
+          {
+            "d_pose_linf_delta": 0.0,
+            "d_seg_linf_delta": 0.0,
+            "pair_index": 0,
+            "score_linf_without_rate_delta": 0.0
+          }
+        ],
+        "best_score_linf": 0.5505918809022246,
+        "byte_price_plan": {},
+        "candidate_count": 2,
+        "family": "snerv",
+        "history_count": 3,
+        "levels": 2,
+        "n_pairs": 1,
+        "qat_bits": 8,
+        "ready_for_pose_guard_gate": false,
+        "receiver_contract_satisfied": true,
+        "rejected_candidate_count": 2,
+        "report_path": "/Volumes/VertigoDataTier/pact/snerv_scorer_loop_qat_local_20260602T165640Z/snerv_scorer_loop_qat_local_result.json",
+        "result_sha256": "49f5674f3c317c920ec6674cb046f35efc3abd338e9492862570d65bbb9062aa",
+        "score_delta_fraction": 0.0,
+        "score_delta_linf": 0.0,
+        "scorer_loop_evaluations": 3,
+        "search_mode": "learned_random_subspace",
+        "section_value_rows": [],
+        "selection_policy": "score_primary_lagrangian_geometry",
+        "wavelet": "db2"
+      },
+      "planner_action": "scale_snerv_scorer_loop_qat_to_full600_receiver_proof",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promote the local SNeRV scorer-loop/QAT wrapper from pair smoke evidence to full600 receiver-proven section-value evidence before exact spend",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_scorer_loop_qat:snerv_scorer_loop_qat_local_20260602T165640Z",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "probe_disambiguator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T165640Z_scorer_loop_qat_to_full600",
+      "work_order_type": "snerv_scorer_loop_qat_full600_followup"
+    },
+    {
+      "blockers": [
+        "snerv_scorer_loop_geometry_is_false_authority",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "full600_receiver_proof_required",
+        "section_value_profile_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "accepted_candidate_count": 1,
+        "accepted_improvement": true,
+        "axis_tag": "[macOS-CPU advisory]",
+        "baseline_archive_bytes": 336276,
+        "baseline_score_linf": 0.5505918809022246,
+        "best_archive_bytes": 336268,
+        "best_pair_deltas": [
+          {
+            "d_pose_linf_delta": -1.880893250927329e-05,
+            "d_seg_linf_delta": 5.086185410618782e-06,
+            "pair_index": 0,
+            "score_linf_without_rate_delta": -0.0006107786137076743
+          }
+        ],
+        "best_score_linf": 0.5499757754168919,
+        "byte_price_plan": {},
+        "candidate_count": 2,
+        "family": "snerv",
+        "history_count": 3,
+        "levels": 2,
+        "n_pairs": 1,
+        "qat_bits": 8,
+        "ready_for_pose_guard_gate": true,
+        "receiver_contract_satisfied": true,
+        "rejected_candidate_count": 1,
+        "report_path": "/Volumes/VertigoDataTier/pact/snerv_scorer_loop_qat_local_20260602T170501Z_score_primary/snerv_scorer_loop_qat_local_result.json",
+        "result_sha256": "afdd3c6837628aedd8b1632ce82190d03960f34a2a7205ff684b463103c1e25a",
+        "score_delta_fraction": -0.0011189875962628849,
+        "score_delta_linf": -0.0006161054853326409,
+        "scorer_loop_evaluations": 3,
+        "search_mode": "learned_random_subspace",
+        "section_value_rows": [],
+        "selection_policy": "score_primary_lagrangian_geometry",
+        "wavelet": "db2"
+      },
+      "planner_action": "scale_snerv_scorer_loop_qat_to_full600_receiver_proof",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promote the local SNeRV scorer-loop/QAT wrapper from pair smoke evidence to full600 receiver-proven section-value evidence before exact spend",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_scorer_loop_qat:snerv_scorer_loop_qat_local_20260602T170501Z_score_primary",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "probe_disambiguator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T170501Z_score_primary_scorer_loop_qat_to_full600",
+      "work_order_type": "snerv_scorer_loop_qat_full600_followup"
+    },
+    {
+      "blockers": [
+        "snerv_scorer_loop_geometry_is_false_authority",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "full600_receiver_proof_required",
+        "section_value_profile_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "accepted_candidate_count": 1,
+        "accepted_improvement": true,
+        "axis_tag": "[macOS-CPU advisory]",
+        "baseline_archive_bytes": 1255661,
+        "baseline_score_linf": 1.1927130470929876,
+        "best_archive_bytes": 1255665,
+        "best_pair_deltas": [
+          {
+            "d_pose_linf_delta": -3.465480403974652e-05,
+            "d_seg_linf_delta": 5.086418241262436e-06,
+            "pair_index": 0,
+            "score_linf_without_rate_delta": -0.0018336895489354799
+          },
+          {
+            "d_pose_linf_delta": -0.0003489424707368016,
+            "d_seg_linf_delta": -5.086185410618782e-06,
+            "pair_index": 1,
+            "score_linf_without_rate_delta": -0.017801136111014915
+          },
+          {
+            "d_pose_linf_delta": 2.146445694961585e-05,
+            "d_seg_linf_delta": -3.0517578125e-05,
+            "pair_index": 2,
+            "score_linf_without_rate_delta": 0.004242799230667504
+          },
+          {
+            "d_pose_linf_delta": -0.0005317075410857797,
+            "d_seg_linf_delta": -2.0345207303762436e-05,
+            "pair_index": 3,
+            "score_linf_without_rate_delta": -0.023655807040487253
+          }
+        ],
+        "best_score_linf": 1.1787591662790842,
+        "byte_price_plan": {},
+        "candidate_count": 8,
+        "family": "snerv",
+        "history_count": 9,
+        "levels": 2,
+        "n_pairs": 4,
+        "qat_bits": 8,
+        "ready_for_pose_guard_gate": true,
+        "receiver_contract_satisfied": true,
+        "rejected_candidate_count": 7,
+        "report_path": "/Volumes/VertigoDataTier/pact/snerv_scorer_loop_qat_local_20260602T170543Z_score_primary_4pair4trial/snerv_scorer_loop_qat_local_result.json",
+        "result_sha256": "d1078fb971416c57a674e9bd8a571a0d764cdec0bf7d96c86c1426baf4e63003",
+        "score_delta_fraction": -0.01169927741455786,
+        "score_delta_linf": -0.013953880813903474,
+        "scorer_loop_evaluations": 9,
+        "search_mode": "learned_random_subspace",
+        "section_value_rows": [],
+        "selection_policy": "score_primary_lagrangian_geometry",
+        "wavelet": "db2"
+      },
+      "planner_action": "scale_snerv_scorer_loop_qat_to_full600_receiver_proof",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promote the local SNeRV scorer-loop/QAT wrapper from pair smoke evidence to full600 receiver-proven section-value evidence before exact spend",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_scorer_loop_qat:snerv_scorer_loop_qat_local_20260602T170543Z_score_primary_4pair4trial",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "probe_disambiguator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T170543Z_score_primary_4pair4trial_scorer_loop_qat_to_full600",
+      "work_order_type": "snerv_scorer_loop_qat_full600_followup"
+    },
+    {
+      "blockers": [
+        "snerv_scorer_loop_geometry_is_false_authority",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "full600_receiver_proof_required",
+        "section_value_profile_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "accepted_candidate_count": 5,
+        "accepted_improvement": true,
+        "axis_tag": "[macOS-CPU advisory]",
+        "baseline_archive_bytes": 1255661,
+        "baseline_score_linf": 1.1927130470929876,
+        "best_archive_bytes": 1255661,
+        "best_pair_deltas": [
+          {
+            "d_pose_linf_delta": -8.377002086490393e-05,
+            "d_seg_linf_delta": 1.52587890625e-05,
+            "pair_index": 0,
+            "score_linf_without_rate_delta": -0.0042715572296596616
+          },
+          {
+            "d_pose_linf_delta": -0.0006832880899310112,
+            "d_seg_linf_delta": 0.0,
+            "pair_index": 1,
+            "score_linf_without_rate_delta": -0.03766403096228127
+          },
+          {
+            "d_pose_linf_delta": 1.9684641301864758e-05,
+            "d_seg_linf_delta": -2.5431159883737564e-05,
+            "pair_index": 2,
+            "score_linf_without_rate_delta": 0.004260167254343528
+          },
+          {
+            "d_pose_linf_delta": -0.0010002440540120006,
+            "d_seg_linf_delta": 0.0,
+            "pair_index": 3,
+            "score_linf_without_rate_delta": -0.044933267327257886
+          }
+        ],
+        "best_score_linf": 1.1654646854156452,
+        "byte_price_plan": {},
+        "candidate_count": 16,
+        "family": "snerv",
+        "history_count": 17,
+        "levels": 2,
+        "n_pairs": 4,
+        "qat_bits": 8,
+        "ready_for_pose_guard_gate": true,
+        "receiver_contract_satisfied": true,
+        "rejected_candidate_count": 11,
+        "report_path": "/Volumes/VertigoDataTier/pact/snerv_scorer_loop_qat_local_20260602T170918Z_score_primary_4pair8trial/snerv_scorer_loop_qat_local_result.json",
+        "result_sha256": "833a2c2750371b85e14a8ab0cb0d01a3c42e0fbb6913f20a3e9f1f4c5056589e",
+        "score_delta_fraction": -0.02284569766697462,
+        "score_delta_linf": -0.02724836167734246,
+        "scorer_loop_evaluations": 17,
+        "search_mode": "learned_random_subspace",
+        "section_value_rows": [],
+        "selection_policy": "score_primary_lagrangian_geometry",
+        "wavelet": "db2"
+      },
+      "planner_action": "scale_snerv_scorer_loop_qat_to_full600_receiver_proof",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promote the local SNeRV scorer-loop/QAT wrapper from pair smoke evidence to full600 receiver-proven section-value evidence before exact spend",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_scorer_loop_qat:snerv_scorer_loop_qat_local_20260602T170918Z_score_primary_4pair8trial",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "probe_disambiguator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T170918Z_score_primary_4pair8trial_scorer_loop_qat_to_full600",
+      "work_order_type": "snerv_scorer_loop_qat_full600_followup"
+    },
+    {
+      "blockers": [
+        "snerv_scorer_loop_geometry_is_false_authority",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "full600_receiver_proof_required",
+        "section_value_profile_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "accepted_candidate_count": 1,
+        "accepted_improvement": true,
+        "axis_tag": "[macOS-CPU advisory]",
+        "baseline_archive_bytes": 1255661,
+        "baseline_score_linf": 1.1927130470929876,
+        "best_archive_bytes": 1255657,
+        "best_pair_deltas": [
+          {
+            "d_pose_linf_delta": 0.0001341350725851953,
+            "d_seg_linf_delta": 0.0,
+            "pair_index": 0,
+            "score_linf_without_rate_delta": 0.008449866114507376
+          },
+          {
+            "d_pose_linf_delta": -0.00029736763099208474,
+            "d_seg_linf_delta": -1.0172603651881218e-05,
+            "pair_index": 1,
+            "score_linf_without_rate_delta": -0.015555446484492974
+          },
+          {
+            "d_pose_linf_delta": -2.517967004678212e-06,
+            "d_seg_linf_delta": -2.0344974473118782e-05,
+            "pair_index": 2,
+            "score_linf_without_rate_delta": -0.0032376793854516916
+          },
+          {
+            "d_pose_linf_delta": -0.0002502762945368886,
+            "d_seg_linf_delta": -1.52587890625e-05,
+            "pair_index": 3,
+            "score_linf_without_rate_delta": -0.011232796644740306
+          }
+        ],
+        "best_score_linf": 1.1858877584913716,
+        "byte_price_plan": {},
+        "candidate_count": 9,
+        "family": "snerv",
+        "history_count": 10,
+        "levels": 2,
+        "n_pairs": 4,
+        "qat_bits": 8,
+        "ready_for_pose_guard_gate": true,
+        "receiver_contract_satisfied": true,
+        "rejected_candidate_count": 8,
+        "report_path": "/Volumes/VertigoDataTier/pact/snerv_scorer_loop_qat_local_20260602T170918Z_score_primary_4pair_nes4/snerv_scorer_loop_qat_local_result.json",
+        "result_sha256": "1c3924ca6564562f6c3f3e92aa8ed03260b17aa5a883d66dfeb1f83d93935eb0",
+        "score_delta_fraction": -0.005722490097891835,
+        "score_delta_linf": -0.00682528860161602,
+        "scorer_loop_evaluations": 10,
+        "search_mode": "nes_pair_robust",
+        "section_value_rows": [],
+        "selection_policy": "score_primary_lagrangian_geometry",
+        "wavelet": "db2"
+      },
+      "planner_action": "scale_snerv_scorer_loop_qat_to_full600_receiver_proof",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 8,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promote the local SNeRV scorer-loop/QAT wrapper from pair smoke evidence to full600 receiver-proven section-value evidence before exact spend",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_scorer_loop_qat:snerv_scorer_loop_qat_local_20260602T170918Z_score_primary_4pair_nes4",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "probe_disambiguator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "scale_snerv_snerv_scorer_loop_qat_snerv_scorer_loop_qat_local_20260602T170918Z_score_primary_4pair_nes4_scorer_loop_qat_to_full600",
+      "work_order_type": "snerv_scorer_loop_qat_full600_followup"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "receiver_proof_not_satisfied",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_decoder_weight_saliency_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 398034,
+        "archive_ladder_replay_command_argv": [
+          ".venv/bin/python",
+          "tools/build_hinerv_archive_size_ladder.py",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_base",
+          "--output-json",
+          ".omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_base_false_authority.json",
+          "--output-md",
+          ".omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_base_false_authority.md",
+          "--num-pairs",
+          "600",
+          "--row-id",
+          "hi_nerv_local_base",
+          "--decoder-codec",
+          "int8_mixed",
+          "--emit-receiver-proof",
+          "--emit-decoder-weight-waterfill-plan",
+          "--decoder-weight-saliency-json",
+          ".omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json",
+          "--decoder-weight-waterfill-action-bits",
+          "0,2,4,8,16,32"
+        ],
+        "archive_ladder_replay_command_axis_tag": "[planning/control:false-authority]",
+        "archive_ladder_replay_command_hint": ".venv/bin/python tools/build_hinerv_archive_size_ladder.py --output-dir /Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_base --output-json .omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_base_false_authority.json --output-md .omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_base_false_authority.md --num-pairs 600 --row-id hi_nerv_local_base --decoder-codec int8_mixed --emit-receiver-proof --emit-decoder-weight-waterfill-plan --decoder-weight-saliency-json .omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json --decoder-weight-waterfill-action-bits 0,2,4,8,16,32",
+        "archive_ladder_replay_output_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_base",
+        "archive_sha256": "50d7e03b25856eafede322f5293554177380519ff86aee0e013ebdc3d5b50eb8",
+        "family": "hi_nerv",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_waterfill_20260602T150906Z_ssd_replay_command_false_authority.json",
+        "row_id": "hi_nerv_local_base",
+        "state_npz_artifact_sha256": "965ef5875d093e3bd24716cdf6eed04bffef8a1839d94e3d23e634d18b4b5149",
+        "waterfill_summary": {
+          "group_count": 24,
+          "total_baseline_fp32_bytes": 1219208,
+          "total_selected_byte_delta": 0,
+          "total_selected_estimated_bytes": 1219208
+        }
+      },
+      "planner_action": "execute_decoder_weight_waterfill_archive_ladder_replay",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 9,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "turn measured decoder-weight waterfill rows into receiver replay commands before long-run training or exact dispatch can consume them",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_hi_nerv_local_base_decoder_weight_waterfill",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "replay_hi_nerv_hi_nerv_local_base_decoder_weight_waterfill",
+      "work_order_type": "decoder_weight_waterfill_archive_replay"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "receiver_proof_not_satisfied",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_decoder_weight_saliency_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 247566,
+        "archive_ladder_replay_command_argv": [
+          ".venv/bin/python",
+          "tools/build_hinerv_archive_size_ladder.py",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_small",
+          "--output-json",
+          ".omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_small_false_authority.json",
+          "--output-md",
+          ".omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_small_false_authority.md",
+          "--num-pairs",
+          "600",
+          "--row-id",
+          "hi_nerv_local_small",
+          "--decoder-codec",
+          "int8_mixed",
+          "--emit-receiver-proof",
+          "--emit-decoder-weight-waterfill-plan",
+          "--decoder-weight-saliency-json",
+          ".omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json",
+          "--decoder-weight-waterfill-action-bits",
+          "0,2,4,8,16,32"
+        ],
+        "archive_ladder_replay_command_axis_tag": "[planning/control:false-authority]",
+        "archive_ladder_replay_command_hint": ".venv/bin/python tools/build_hinerv_archive_size_ladder.py --output-dir /Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_small --output-json .omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_small_false_authority.json --output-md .omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_small_false_authority.md --num-pairs 600 --row-id hi_nerv_local_small --decoder-codec int8_mixed --emit-receiver-proof --emit-decoder-weight-waterfill-plan --decoder-weight-saliency-json .omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json --decoder-weight-waterfill-action-bits 0,2,4,8,16,32",
+        "archive_ladder_replay_output_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_small",
+        "archive_sha256": "63367fd65eef51b592e8049ad522475f0e4c28e8a80f6757b57ed2ecc2808671",
+        "family": "hi_nerv",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_waterfill_20260602T150906Z_ssd_replay_command_false_authority.json",
+        "row_id": "hi_nerv_local_small",
+        "state_npz_artifact_sha256": "a24a2642ce50f275bdd00cc7a01bae8c8dffbeaf42d3fa5759a835a914abe04a",
+        "waterfill_summary": {
+          "group_count": 24,
+          "total_baseline_fp32_bytes": 687492,
+          "total_selected_byte_delta": 0,
+          "total_selected_estimated_bytes": 687492
+        }
+      },
+      "planner_action": "execute_decoder_weight_waterfill_archive_ladder_replay",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 9,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "turn measured decoder-weight waterfill rows into receiver replay commands before long-run training or exact dispatch can consume them",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_hi_nerv_local_small_decoder_weight_waterfill",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "replay_hi_nerv_hi_nerv_local_small_decoder_weight_waterfill",
+      "work_order_type": "decoder_weight_waterfill_archive_replay"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "receiver_proof_not_satisfied",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_decoder_weight_saliency_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 134938,
+        "archive_ladder_replay_command_argv": [
+          ".venv/bin/python",
+          "tools/build_hinerv_archive_size_ladder.py",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_tiny",
+          "--output-json",
+          ".omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_tiny_false_authority.json",
+          "--output-md",
+          ".omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_tiny_false_authority.md",
+          "--num-pairs",
+          "600",
+          "--row-id",
+          "hi_nerv_local_tiny",
+          "--decoder-codec",
+          "int8_mixed",
+          "--emit-receiver-proof",
+          "--emit-decoder-weight-waterfill-plan",
+          "--decoder-weight-saliency-json",
+          ".omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json",
+          "--decoder-weight-waterfill-action-bits",
+          "0,2,4,8,16,32"
+        ],
+        "archive_ladder_replay_command_axis_tag": "[planning/control:false-authority]",
+        "archive_ladder_replay_command_hint": ".venv/bin/python tools/build_hinerv_archive_size_ladder.py --output-dir /Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_tiny --output-json .omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_tiny_false_authority.json --output-md .omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_tiny_false_authority.md --num-pairs 600 --row-id hi_nerv_local_tiny --decoder-codec int8_mixed --emit-receiver-proof --emit-decoder-weight-waterfill-plan --decoder-weight-saliency-json .omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json --decoder-weight-waterfill-action-bits 0,2,4,8,16,32",
+        "archive_ladder_replay_output_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_tiny",
+        "archive_sha256": "a62d82294b7b37ad3b51646c7ce539fa55b9d1299a0880830747499e46a3486a",
+        "family": "hi_nerv",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_waterfill_20260602T150906Z_ssd_replay_command_false_authority.json",
+        "row_id": "hi_nerv_local_tiny",
+        "state_npz_artifact_sha256": "e3007fb891895740a00b3c9687c462209442e564f72a9dc01d6f229d18c16a5e",
+        "waterfill_summary": {
+          "group_count": 24,
+          "total_baseline_fp32_bytes": 307056,
+          "total_selected_byte_delta": -307010,
+          "total_selected_estimated_bytes": 46
+        }
+      },
+      "planner_action": "execute_decoder_weight_waterfill_archive_ladder_replay",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 9,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "turn measured decoder-weight waterfill rows into receiver replay commands before long-run training or exact dispatch can consume them",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_hi_nerv_local_tiny_decoder_weight_waterfill",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "replay_hi_nerv_hi_nerv_local_tiny_decoder_weight_waterfill",
+      "work_order_type": "decoder_weight_waterfill_archive_replay"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "receiver_proof_not_satisfied",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_decoder_weight_saliency_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 812388,
+        "archive_ladder_replay_command_argv": [
+          ".venv/bin/python",
+          "tools/build_hinerv_archive_size_ladder.py",
+          "--output-dir",
+          "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_wide",
+          "--output-json",
+          ".omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_wide_false_authority.json",
+          "--output-md",
+          ".omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_wide_false_authority.md",
+          "--num-pairs",
+          "600",
+          "--row-id",
+          "hi_nerv_local_wide",
+          "--decoder-codec",
+          "int8_mixed",
+          "--emit-receiver-proof",
+          "--emit-decoder-weight-waterfill-plan",
+          "--decoder-weight-saliency-json",
+          ".omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json",
+          "--decoder-weight-waterfill-action-bits",
+          "0,2,4,8,16,32"
+        ],
+        "archive_ladder_replay_command_axis_tag": "[planning/control:false-authority]",
+        "archive_ladder_replay_command_hint": ".venv/bin/python tools/build_hinerv_archive_size_ladder.py --output-dir /Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_wide --output-json .omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_wide_false_authority.json --output-md .omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_wide_false_authority.md --num-pairs 600 --row-id hi_nerv_local_wide --decoder-codec int8_mixed --emit-receiver-proof --emit-decoder-weight-waterfill-plan --decoder-weight-saliency-json .omx/research/hinerv_decoder_weight_saliency_replay_20260602T143900Z_tiny_1pair_false_authority.json --decoder-weight-waterfill-action-bits 0,2,4,8,16,32",
+        "archive_ladder_replay_output_dir": "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/hi_nerv_local_wide",
+        "archive_sha256": "b804aee729cece6dbfc818623ac7c652589464d71670475f771eb732fb2037a3",
+        "family": "hi_nerv",
+        "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_ladder_waterfill_20260602T150906Z_ssd_replay_command_false_authority.json",
+        "row_id": "hi_nerv_local_wide",
+        "state_npz_artifact_sha256": "a607de59e05835bbb5cfec9c490fd88ad79cc96638c883ee0060444dfc10fb6a",
+        "waterfill_summary": {
+          "group_count": 24,
+          "total_baseline_fp32_bytes": 2736480,
+          "total_selected_byte_delta": 0,
+          "total_selected_estimated_bytes": 2736480
+        }
+      },
+      "planner_action": "execute_decoder_weight_waterfill_archive_ladder_replay",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 9,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "turn measured decoder-weight waterfill rows into receiver replay commands before long-run training or exact dispatch can consume them",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_hi_nerv_local_wide_decoder_weight_waterfill",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "replay_hi_nerv_hi_nerv_local_wide_decoder_weight_waterfill",
+      "work_order_type": "decoder_weight_waterfill_archive_replay"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "sample_pair_count_below_full600",
+        "required_emission_field_missing:official_controls.--modelsize",
+        "required_emission_field_missing:official_controls.mfu_enabled",
+        "required_emission_field_missing:official_controls.hfr_enabled",
+        "required_emission_field_missing:official_controls.snerv_t_enabled",
+        "required_emission_field_missing:qat_bits",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_coverage_missing",
+        "receiver_proof_not_satisfied",
+        "full_video_decoder_weight_saliency_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "archive_bytes": 1188221,
+        "archive_ladder_replay_command_argv": [],
+        "archive_ladder_replay_command_axis_tag": null,
+        "archive_ladder_replay_command_hint": null,
+        "archive_ladder_replay_output_dir": null,
+        "archive_sha256": "b69d7b23f000cdf05827a38060af3baed78da6c438379f842517c3138b6317cc",
+        "family": "snerv",
+        "report_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-snerv-stratified-smoke-20260602T112911Z/.omx/research/snerv_trained_ladder_waterfill_20260602T174500Z_real_archive_false_authority.json",
+        "row_id": "snerv_trained_ladder_row_archive",
+        "state_npz_artifact_sha256": null,
+        "waterfill_summary": {
+          "group_count": 3,
+          "total_baseline_fp32_bytes": 108,
+          "total_selected_byte_delta": 0,
+          "total_selected_estimated_bytes": 108
+        }
+      },
+      "planner_action": "execute_decoder_weight_waterfill_archive_ladder_replay",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 9,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "turn measured decoder-weight waterfill rows into receiver replay commands before long-run training or exact dispatch can consume them",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill",
+      "work_order_type": "decoder_weight_waterfill_archive_replay"
+    },
+    {
+      "blockers": [
+        "hinerv_proof_missing:full600_byte_closed_receiver_proof",
+        "hinerv_proof_missing:paired_contest_CPU_CUDA_pass"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "stack_id": "hinerv"
+      },
+      "planner_action": "close_receiver_byte_and_paired_axis_gates",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promotion remains blocked until the carrier has a source-faithful receiver, byte accounting, and paired axes",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hinerv_implementation_design_gate",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "close_hinerv_receiver_rate_promotion_gates",
+      "work_order_type": "receiver_rate_promotion_gate"
+    },
+    {
+      "blockers": [
+        "snerv_proof_missing:source_faithful_contest_adapter",
+        "snerv_proof_missing:mixed_precision_receiver_byte_accounting",
+        "snerv_proof_missing:full600_byte_closed_receiver_proof",
+        "snerv_proof_missing:paired_contest_CPU_CUDA_pass"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "stack_id": "snerv"
+      },
+      "planner_action": "close_receiver_byte_and_paired_axis_gates",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promotion remains blocked until the carrier has a source-faithful receiver, byte accounting, and paired axes",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_implementation_design_gate",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "close_snerv_receiver_rate_promotion_gates",
+      "work_order_type": "receiver_rate_promotion_gate"
+    },
+    {
+      "blockers": [
+        "hi_nerv_snerv_grouped_intN_zero_run_packet_layout"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_needs_family_specific_packet_layout",
+        "control_id": "bitmask_and_zero_packing",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "zero",
+        "rle_only",
+        "int2",
+        "int4"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "bitmask_and_zero_packing_master_consumer_route",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "route_bitmask_and_zero_packing_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "hi_nerv_decoder_codec_sweep_full600_replay"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "hi_nerv",
+        "binding_status": "partially_wired_needs_hi_nerv_codec_sweep_replay",
+        "control_id": "hi_nerv_bitstream_quantization",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_bitstream_quantization_master_consumer_route",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "route_hi_nerv_bitstream_quantization_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": null,
+        "binding_status": null,
+        "control_id": "receiver_and_exact_custody",
+        "path_count": 4,
+        "paths": [
+          "src/tac/substrates/hprc/archive_candidate.py",
+          "src/tac/submission_packet/archive_grammar.py",
+          "src/tac/submission_packet/paired_auth_eval.py",
+          "tools/run_contest_oracle_batch.py"
+        ]
+      },
+      "planner_action": "reuse_binding_surface_before_new_code",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "receiver_and_exact_custody_binding_surface",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_receiver_and_exact_custody_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "all_compact_carrier_emitters_on_shared_archive_bound_contract",
+        "bounded_runner_refuses_non_contract_candidate_paths"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_must_remain_hard_gate",
+        "control_id": "receiver_exact_custody_gate",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "receiver_exact_custody_gate_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_receiver_exact_custody_gate_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "design_knob_needs_receiver_closed_training",
+        "control_id": "sr_nerv_lowres_receiver_axis",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "zero",
+        "rle_only",
+        "int2"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "sr_nerv_lowres_receiver_axis_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_sr_nerv_lowres_receiver_axis_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "macos_cpu_advisory_only",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip",
+        "stratified_pair_pose_guard_replay_missing",
+        "full600_byte_closed_receiver_proof_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "best_plan_label": "explicit_fp163",
+        "best_plan_score_linf_advisory": 3.6133971405465926,
+        "candidate_count": 1,
+        "family": "snerv",
+        "receiver_archive_packet_bytes": null,
+        "receiver_archive_packet_is_contest_archive_zip": false,
+        "receiver_archive_packet_path": null,
+        "receiver_archive_packet_sha256": null,
+        "receiver_archive_replay_verified": true
+      },
+      "planner_action": "rerun_best_decoder_mode_plan_with_stratified_pairs_pose_guard",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 12,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "local advisory mode-probe wins must survive pair-robust PoseNet-guarded replay before driving training or export",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int2",
+        "int4",
+        "int8_protected",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_explicit_fp163_decoder_mode_probe",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "probe_disambiguator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust",
+      "work_order_type": "decoder_mode_pair_robust_probe_followup"
+    },
+    {
+      "blockers": [
+        "full_video_coverage_missing",
+        "receiver_replay_is_scorer_loss_saliency_not_archive_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "full_video_decoder_weight_saliency_replay_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hi_nerv",
+        "full_video_coverage": false,
+        "row_count": 1,
+        "saliency_group_count": 24
+      },
+      "planner_action": "route_decoder_weight_saliency_to_waterfill",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 15,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "feed measured decoder-weight saliency into waterfill before assigning protected or low-bit atoms",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_decoder_weight_saliency_replay",
+      "target_consumers": [
+        "bit_allocator",
+        "sensitivity_map",
+        "final_rate_attack"
+      ],
+      "work_order_id": "bind_hi_nerv_decoder_weight_saliency_to_waterfill",
+      "work_order_type": "decoder_weight_saliency_allocator_binding"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 120000,
+        "modelsize_mparams": 0.12460799999998654,
+        "target_archive_byte_cap": 120000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_120000_byte_cap_2",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_120000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 150000,
+        "modelsize_mparams": 0.15460799999999164,
+        "target_archive_byte_cap": 150000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_150000_byte_cap_3",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_150000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 178417,
+        "modelsize_mparams": 0.18302499999999106,
+        "target_archive_byte_cap": 178417
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_178417_byte_cap_4",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_178417_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 36000,
+        "modelsize_mparams": 0.04060799999999787,
+        "target_archive_byte_cap": 36000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_36000_byte_cap_0",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_36000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 72000,
+        "modelsize_mparams": 0.07660799999998694,
+        "target_archive_byte_cap": 72000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_72000_byte_cap_1",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_72000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 120000,
+        "modelsize_mparams": 0.12269999999999406,
+        "target_archive_byte_cap": 120000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_120000_byte_cap_7",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_120000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 150000,
+        "modelsize_mparams": 0.15269999999999911,
+        "target_archive_byte_cap": 150000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_150000_byte_cap_8",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_150000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 178417,
+        "modelsize_mparams": 0.18111699999999853,
+        "target_archive_byte_cap": 178417
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_178417_byte_cap_9",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_178417_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 36000,
+        "modelsize_mparams": 0.03869999999999116,
+        "target_archive_byte_cap": 36000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_36000_byte_cap_5",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_36000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 72000,
+        "modelsize_mparams": 0.07469999999999441,
+        "target_archive_byte_cap": 72000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_72000_byte_cap_6",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_72000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "full_video_vjp_bundle_as_budget_spend_prerequisite",
+        "gradient_bundle_to_modelsize_and_section_allocator",
+        "hard_archive_projection_line_search_for_compact_carriers"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_needs_exact_reduced_bundle_consumer",
+        "control_id": "full_video_vjp_master_gradient_authority",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "full_video_vjp_master_gradient_authority_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "probe_disambiguator",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_full_video_vjp_master_gradient_authority_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "feed_pr95_hnerv_measured_ladder_into_all_carrier_plans"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "control_baseline_available",
+        "control_id": "hnerv_modelsize_control",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hnerv_modelsize_control_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_hnerv_modelsize_control_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_needs_carrier_domain_binding",
+        "control_id": "inverse_steganalysis_saliency_stack",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "inverse_steganalysis_saliency_stack_master_consumer_route",
+      "target_consumers": [
+        "probe_disambiguator",
+        "sensitivity_map",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_inverse_steganalysis_saliency_stack_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "nerv_control_inventory_consumer_for_master_gradient_rows"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_needs_nerv_control_consumer",
+        "control_id": "master_gradient_xray_stack",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "master_gradient_xray_stack_master_consumer_route",
+      "target_consumers": [
+        "sensitivity_map",
+        "cathedral_autopilot",
+        "probe_disambiguator",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_master_gradient_xray_stack_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": null,
+        "binding_status": null,
+        "control_id": "scorer_and_saliency",
+        "path_count": 5,
+        "paths": [
+          "src/tac/analysis/score_exact_saliency.py",
+          "src/tac/analysis/hprc_saliency_rd_allocation.py",
+          "src/tac/analysis/segnet_boundary_marginals.py",
+          "src/tac/optimization/joint_p18_p19_waterfill.py",
+          "src/tac/analysis/inverse_steganalysis_linf_vs_l2_gate.py"
+        ]
+      },
+      "planner_action": "reuse_binding_surface_before_new_code",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "scorer_and_saliency_binding_surface",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_scorer_and_saliency_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "snerv_measured_modelsize_ladder",
+        "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
+        "learned_lf_generator_byte_collapse"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "snerv",
+        "binding_status": "needs_representation_change",
+        "control_id": "snerv_lf_modelsize_and_stepmap",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "fp16_protected"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_lf_modelsize_and_stepmap_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_snerv_lf_modelsize_and_stepmap_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": null,
+        "binding_status": null,
+        "control_id": "xray_and_master_gradient",
+        "path_count": 6,
+        "paths": [
+          "src/tac/master_gradient.py",
+          "src/tac/master_gradient_consumers.py",
+          "src/tac/master_gradient_mlx_pipeline.py",
+          "tools/build_pair_frame_scorer_geometry_lattice.py",
+          "tools/cpu_cuda_xray_loader_drift.py",
+          "tools/xray_hardpair_hitlist.py"
+        ]
+      },
+      "planner_action": "reuse_binding_surface_before_new_code",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "xray_and_master_gradient_binding_surface",
+      "target_consumers": [
+        "sensitivity_map",
+        "cathedral_autopilot",
+        "probe_disambiguator",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_xray_and_master_gradient_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "trained_scorer_preserving_sr_receiver_for_hi_nerv"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "hi_nerv",
+        "binding_status": "design_knob_needs_trained_sr_receiver",
+        "control_id": "hi_nerv_sr_resolution_axis",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 30,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "zero",
+        "rle_only",
+        "int2"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_sr_resolution_axis_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_hi_nerv_sr_resolution_axis_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "snerv_mlx_native_full_video_scoreaware_train_export_proof",
+        "snerv_real_segnet_posenet_teacher_loop_for_mlx_native_export"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "snerv",
+        "binding_status": "receiver_hfr_mfu_t_ready_mlx_export_surfaces_unproven",
+        "control_id": "snerv_frequency_split",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 30,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_frequency_split_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_snerv_frequency_split_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
+        "decoder_weight_waterfill_plan_for_hi_nerv_full_main"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "hi_nerv",
+        "binding_status": "not_wired_into_real_trainer",
+        "control_id": "hi_nerv_inverse_steg_decoder_weight_fit",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 60,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_inverse_steg_decoder_weight_fit_master_consumer_route",
+      "target_consumers": [
+        "probe_disambiguator",
+        "sensitivity_map",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_hi_nerv_inverse_steg_decoder_weight_fit_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_precision_mode_policy": [
+    {
+      "intended_atoms": "PoseNet/SegNet critical decoder weights or scales",
+      "mode": "fp16_protected",
+      "requires": [
+        "measured_atom_sensitivity",
+        "receiver_fp16_grammar"
+      ]
+    },
+    {
+      "intended_atoms": "high-leverage but brotli-friendly decoder groups",
+      "mode": "int8_protected",
+      "requires": [
+        "measured_atom_sensitivity",
+        "receiver_int8_grammar"
+      ]
+    },
+    {
+      "intended_atoms": "ordinary decoder groups after QAT",
+      "mode": "int4",
+      "requires": [
+        "qat_roundtrip",
+        "receiver_int4_grammar"
+      ]
+    },
+    {
+      "intended_atoms": "low-sensitivity decoder groups",
+      "mode": "int2",
+      "requires": [
+        "qat_roundtrip",
+        "receiver_int2_grammar"
+      ]
+    },
+    {
+      "intended_atoms": "measured dead or prunable decoder groups",
+      "mode": "zero",
+      "requires": [
+        "zero_mask_receiver_grammar",
+        "post_prune_scorer_replay"
+      ]
+    },
+    {
+      "intended_atoms": "long zero/constant masks and sparse selectors",
+      "mode": "rle_only",
+      "requires": [
+        "run_length_receiver_grammar",
+        "charged_header_accounting"
+      ]
+    }
+  ],
+  "schema": "nerv_rate_allocator_bridge.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_candidate_id": "nerv_snerv_hinerv_top_priority_stack",
+  "source_faithful_stack_claim": false,
+  "source_schema": "nerv_master_consumer_bridge.v1",
+  "top_priority_carriers": [
+    "snerv",
+    "hinerv"
+  ],
+  "verdict": "GO_RATE_ALLOCATOR_ROUTING__NO_GO_SCORE_PROMOTION_OR_EXACT_DISPATCH",
+  "work_order_count": 46
+}
