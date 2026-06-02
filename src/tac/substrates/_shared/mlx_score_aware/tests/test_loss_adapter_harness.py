@@ -194,6 +194,46 @@ def test_adapter_trains_pose_head_jointly() -> None:
 
 
 @mlx_only
+def test_adapter_train_step_emits_active_score_loss_parts() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        RealPoseNetTeacherCache,
+        build_learnable_pose_student_head,
+    )
+
+    base = _tiny_dreamer_bundle(num_pairs=4, distill=0.5)
+    pose_teacher = RealPoseNetTeacherCache(
+        teacher_pose_np=mx.ones((4, 6)),
+        num_pairs=4,
+        pose_dims=6,
+    )
+    pose_head = build_learnable_pose_student_head(seed=23)
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        distillation_weight=0.5,
+        allow_mock_scorer_teacher=True,
+        pose_distillation_weight=0.5,
+        pose_scorer_teacher=pose_teacher,
+        learnable_pose_student_head=pose_head,
+    )
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
+    batch = mx.array([0, 1, 2, 3], dtype=mx.int32)
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    assert metrics["score_aware_loss_parts_active"] == 1.0
+    assert "loss_part_distill" in metrics
+    assert "loss_part_weighted_distill" in metrics
+    assert "loss_part_pose_distill" in metrics
+    assert "loss_part_weighted_pose_distill" in metrics
+
+
+@mlx_only
 def test_adapter_satisfies_protocol() -> None:
     from tac.training.long_training_canonical import validate_substrate_adapter
 

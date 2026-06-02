@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import struct
 import sys
@@ -21,6 +22,7 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
     _parse_args,
     _require_scorer_upstream_dir_for_distillation,
+    _resolve_source_video_path,
     adapt_pr95_mlx_report_to_spine,
     adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
@@ -295,6 +297,48 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         rows[("pact_nerv_selector_v4", 178_000)]["ready_for_exact_eval_dispatch"]
         is False
     )
+
+
+def test_pact_vq_runner_forwards_pr95_curriculum_kwargs() -> None:
+    source = Path(runner_mod.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    target_fn = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_run_pact_nerv_vq_mlx_smoke"
+    )
+    calls = [
+        node
+        for node in ast.walk(target_fn)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+    assert len(calls) == 1
+    kw_names = {kw.arg for kw in calls[0].keywords if kw.arg is not None}
+    assert "pr95_faithful_curriculum_enabled" in kw_names
+    assert "pr95_curriculum_total_epochs" in kw_names
+    assert "grad_clip_max_norm" in kw_names
+
+
+def test_default_source_video_resolves_from_external_upstream(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "clean_worktree"
+    upstream = tmp_path / "canonical_upstream"
+    video = upstream / "videos" / "0.mkv"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"video")
+    repo_root.mkdir()
+
+    resolved = _resolve_source_video_path(
+        runner_mod.DEFAULT_SOURCE_VIDEO_PATH,
+        base=repo_root,
+        upstream_dir=upstream,
+    )
+
+    assert resolved == video.resolve(strict=False)
 
 
 def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
