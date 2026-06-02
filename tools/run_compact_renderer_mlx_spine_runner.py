@@ -5681,9 +5681,7 @@ def main(argv: list[str] | None = None) -> int:
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
-            cleanup_failed_local_replay_scratch=(
-                args.cleanup_failed_local_replay_scratch
-            ),
+            cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps

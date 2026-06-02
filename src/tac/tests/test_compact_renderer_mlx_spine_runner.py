@@ -747,6 +747,76 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.post_export_materializer_max_experiments == 1
 
 
+def test_main_from_snerv_advisory_forwards_cleanup_scratch_flag(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    report_path = tmp_path / "snerv_advisory.json"
+    report_path.write_text(json.dumps({"schema": "unit.snerv"}), encoding="utf-8")
+    source_video = tmp_path / "0.mkv"
+    source_video.write_bytes(b"video")
+    calls: list[dict[str, object]] = []
+
+    def fake_adapt_snerv_advisory_report_to_spine(**kwargs):
+        calls.append(dict(kwargs))
+        out = Path(kwargs["output_dir"])
+        runner_report = out / "compact_renderer_mlx_spine_runner_report.json"
+        runner_report.parent.mkdir(parents=True, exist_ok=True)
+        runner_report.write_text("{}", encoding="utf-8")
+        return {
+            "mode": "adapted_snerv_advisory_report_to_spine",
+            "report_path": runner_report.as_posix(),
+            "blockers": ["unit_not_exact_ready"],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(runner_mod, "_acquire_active_campaign_lock", lambda **_: None)
+    monkeypatch.setattr(
+        runner_mod,
+        "adapt_snerv_advisory_report_to_spine",
+        fake_adapt_snerv_advisory_report_to_spine,
+    )
+
+    base_argv = [
+        "--from-snerv-advisory-report",
+        report_path.as_posix(),
+        "--source-video-path",
+        source_video.as_posix(),
+        "--upstream-dir",
+        (tmp_path / "upstream").as_posix(),
+        "--repo-root",
+        tmp_path.as_posix(),
+    ]
+
+    assert (
+        runner_mod.main(
+            [
+                *base_argv,
+                "--output-dir",
+                (tmp_path / "default_cleanup").as_posix(),
+            ]
+        )
+        == 0
+    )
+    assert calls[-1]["cleanup_failed_local_replay_scratch"] is True
+    assert json.loads(capsys.readouterr().out)["ready_for_exact_eval_dispatch"] is False
+
+    assert (
+        runner_mod.main(
+            [
+                *base_argv,
+                "--output-dir",
+                (tmp_path / "retain_cleanup").as_posix(),
+                "--retain-failed-local-replay-scratch",
+            ]
+        )
+        == 0
+    )
+    assert calls[-1]["cleanup_failed_local_replay_scratch"] is False
+
+
 def test_post_export_materializer_executor_runs_output_scoped_queue(
     tmp_path: Path,
 ) -> None:
