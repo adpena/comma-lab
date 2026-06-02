@@ -1973,6 +1973,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             }
 
         return SimpleNamespace(
+            n_pairs=2,
             receiver_archive_packet=packet,
             as_jsonable=as_jsonable,
             levels=3,
@@ -1982,6 +1983,10 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             d_seg_mean_linf=0.1,
             d_pose_mean_linf=0.01,
             archive_bytes_total=len(packet),
+            snerv_fc_dim=9,
+            snerv_emb_size=0,
+            snerv_patch_radius=1,
+            decoder_feature_count=9,
             beats_frontier_rate=True,
             receiver_archive_replay_verified=True,
         )
@@ -2068,6 +2073,19 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert Path(out["receiver_archive_packet_path"]).read_bytes() == packet
     assert Path(out["advisory_report_path"]).is_file()
     assert Path(out["runtime_package_path"]).is_file()
+    assert Path(out["trained_ladder_row_payload_path"]).is_file()
+    assert out["trained_ladder_row_payload"]["schema"] == (
+        "nerv_trained_ladder_row_payload.v1"
+    )
+    assert out["trained_ladder_row_payload"]["status"] == (
+        "trained_ladder_row_blocked"
+    )
+    assert out["trained_ladder_row_payload"]["archive_path_kind"] == (
+        "contest_archive_zip"
+    )
+    assert "sample_pair_count_below_full600" in out["trained_ladder_row_payload"][
+        "blockers"
+    ]
     assert out["receiver_proof_report_paths"]
     planner = out["score_aware_carrier_training_plan"]
     assert planner["score_aware_training_ready"] is False

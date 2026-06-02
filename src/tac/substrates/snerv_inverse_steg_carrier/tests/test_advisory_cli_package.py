@@ -63,9 +63,12 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
             "fp16,int4,int4",
             "--package-timeout-seconds",
             "120",
+            "--trained-ladder-row-out",
+            str(tmp_path / "trained_ladder_row.json"),
         ]
     )
     payload = json.loads(report_path.read_text())
+    trained_row = payload["trained_ladder_row_payload"]
 
     assert rc == 0
     assert packet_path.read_bytes() == archive.packet
@@ -85,6 +88,17 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     assert payload["runtime_package"]["receiver_proof"][
         "runtime_consumption_proof_passed"
     ] is True
+    assert trained_row["schema"] == "nerv_trained_ladder_row_payload.v1"
+    assert trained_row["status"] == "trained_ladder_row_blocked"
+    assert trained_row["archive_path_kind"] == "contest_archive_zip"
+    assert trained_row["archive_custody"]["archive_path"].endswith(
+        "package/archive.zip"
+    )
+    assert trained_row["rows"][0]["archive_bytes"] == (
+        package_dir / "archive.zip"
+    ).stat().st_size
+    assert "sample_pair_count_below_full600" in trained_row["blockers"]
+    assert Path(payload["trained_ladder_row_payload_path"]).is_file()
     assert captured_kwargs["decoder_payload_codec"] == "mixed_magnitude_symmetric"
     assert captured_kwargs["decoder_payload_mixed_modes"] == ("fp16", "int4", "int4")
 

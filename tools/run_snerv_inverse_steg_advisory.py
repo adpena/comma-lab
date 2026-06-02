@@ -36,6 +36,9 @@ from tac.substrates.snerv_inverse_steg_carrier.advisory import (  # noqa: E402  
 from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (  # noqa: E402
     export_snerv_archive_bound_candidate_package,
 )
+from tac.substrates.snerv_inverse_steg_carrier.trained_ladder_bridge import (  # noqa: E402
+    build_snerv_trained_ladder_row_from_advisory,
+)
 
 
 def _default_out() -> str:
@@ -164,6 +167,21 @@ def main(argv: list[str] | None = None) -> int:
         help="Keep generated raw proof output instead of certify-and-delete.",
     )
     ap.add_argument("--package-timeout-seconds", type=int, default=1800)
+    ap.add_argument(
+        "--trained-ladder-row-out",
+        type=str,
+        default=None,
+        help=(
+            "Optional path to write the false-authority trained ladder row "
+            "payload emitted from the real receiver archive path."
+        ),
+    )
+    ap.add_argument(
+        "--qat-bits",
+        type=int,
+        default=None,
+        help="Optional QAT bit count, only when this advisory was produced by a QAT run.",
+    )
     args = ap.parse_args(argv)
 
     res = run_snerv_advisory(
@@ -195,10 +213,14 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     payload = res.as_jsonable()
+    payload.setdefault("schema", "snerv_inverse_steg_advisory.v1")
     out_path = Path(args.out or _default_out())
     if not out_path.is_absolute():
         out_path = REPO_ROOT / out_path
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    packet_path: Path | None = None
+    package_dir: Path | None = None
+    package: dict[str, object] | None = None
     if args.packet_out:
         packet_path = Path(args.packet_out)
         if not packet_path.is_absolute():
@@ -226,6 +248,44 @@ def main(argv: list[str] | None = None) -> int:
         )
         payload["runtime_package_dir"] = str(package_dir)
         payload["runtime_package"] = package
+    trained_row_archive_path: Path | None = None
+    trained_row_archive_kind: str | None = None
+    trained_row_receiver_proof: dict[str, object] | None = None
+    if package_dir is not None:
+        trained_row_archive_path = package_dir / "archive.zip"
+        trained_row_archive_kind = "contest_archive_zip"
+        if package is not None and isinstance(package.get("receiver_proof"), dict):
+            trained_row_receiver_proof = dict(package["receiver_proof"])
+    elif packet_path is not None:
+        trained_row_archive_path = packet_path
+        trained_row_archive_kind = "receiver_snar_packet"
+    if trained_row_archive_path is not None and trained_row_archive_kind is not None:
+        trained_ladder_row_payload = build_snerv_trained_ladder_row_from_advisory(
+            advisory_result=res,
+            archive_path=trained_row_archive_path,
+            archive_path_kind=trained_row_archive_kind,
+            receiver_proof=trained_row_receiver_proof,
+            target_bits_per_coeff=args.bits_per_coeff,
+            qat_bits=args.qat_bits,
+            repo_root=REPO_ROOT,
+        )
+        payload["trained_ladder_row_payload"] = trained_ladder_row_payload
+        payload["trained_ladder_row_archive_path"] = str(trained_row_archive_path)
+        payload["trained_ladder_row_archive_path_kind"] = trained_row_archive_kind
+        if args.trained_ladder_row_out:
+            trained_row_out = Path(args.trained_ladder_row_out)
+            if not trained_row_out.is_absolute():
+                trained_row_out = REPO_ROOT / trained_row_out
+            trained_row_out.parent.mkdir(parents=True, exist_ok=True)
+            trained_row_out.write_text(
+                json.dumps(trained_ladder_row_payload, indent=2),
+                encoding="utf-8",
+            )
+            payload["trained_ladder_row_payload_path"] = str(trained_row_out)
+    elif args.trained_ladder_row_out:
+        raise SystemExit(
+            "--trained-ladder-row-out requires --packet-out or --package-dir"
+        )
     out_path.write_text(json.dumps(payload, indent=2))
 
     print(f"[SNeRV advisory] {res.axis_tag} NON-PROMOTABLE (Catalog #341/#192/#127/#323)")
@@ -280,6 +340,16 @@ def main(argv: list[str] | None = None) -> int:
             "  package blockers = "
             f"{', '.join(payload['archive_byte_closure_blockers'])}"
         )
+    if payload.get("trained_ladder_row_payload"):
+        ladder_payload = payload["trained_ladder_row_payload"]
+        print(
+            "  trained ladder row = "
+            f"{ladder_payload['status']} blockers={len(ladder_payload['blockers'])}"
+        )
+        if payload.get("trained_ladder_row_payload_path"):
+            print(
+                f"  wrote trained ladder row {payload['trained_ladder_row_payload_path']}"
+            )
     print(f"  wrote {out_path}")
     return 0
 

@@ -1,0 +1,101 @@
+{
+  "schema": "nerv_trained_ladder_row_payload.v1",
+  "axis_tag": "[planning/control:false-authority]",
+  "family": "snerv",
+  "status": "trained_ladder_row_blocked",
+  "verdict": "NO_GO_HARVEST_INPUT__TRAINED_ROW_PROOF_INCOMPLETE",
+  "full_pair_count": 600,
+  "archive_custody": {
+    "archive_path": "/Volumes/VertigoDataTier/pact/artifacts/snerv_trained_ladder_bridge_20260602T171500Z/package/archive.zip",
+    "archive_bytes": 1188221,
+    "archive_sha256": "b69d7b23f000cdf05827a38060af3baed78da6c438379f842517c3138b6317cc",
+    "computed_from_file": true
+  },
+  "source_schemas": {
+    "trainer_metadata_schema": "snerv_advisory_receiver_export_trainer_metadata.v1",
+    "receiver_proof_schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+    "scorer_eval_schema": "snerv_advisory_component_eval.v1"
+  },
+  "rows": [
+    {
+      "row_id": "snerv_trained_ladder_row_archive",
+      "family": "snerv",
+      "carrier_id": "snerv",
+      "sample_pair_count": 1,
+      "n_pairs": 1,
+      "archive_path": "/Volumes/VertigoDataTier/pact/artifacts/snerv_trained_ladder_bridge_20260602T171500Z/package/archive.zip",
+      "archive_bytes": 1188221,
+      "archive_sha256": "b69d7b23f000cdf05827a38060af3baed78da6c438379f842517c3138b6317cc",
+      "modelsize_mparams": null,
+      "fc_dim": 9,
+      "official_controls": {
+        "wavelet": "haar",
+        "levels": 1,
+        "fc_dim": 9,
+        "emb_size": 0,
+        "patch_radius": 1,
+        "decoder_feature_count": 9
+      },
+      "d_seg": 0.01990763284265995,
+      "d_pose": 0.1673143357038498,
+      "avg_segnet_dist": 0.01990763284265995,
+      "avg_posenet_dist": 0.1673143357038498,
+      "nonrate_score": 3.2842637121895804,
+      "receiver_archive_replay_verified": true,
+      "receiver_contract_satisfied": true,
+      "byte_closed_receiver_proof": true,
+      "receiver_proof_passed": false,
+      "receiver_closed": false,
+      "source_axis_tag": "[macOS-CPU advisory]",
+      "receiver_codec_mode": "contest_archive_zip",
+      "lf_payload_codec": "snerv_lf_quant_payload.v1",
+      "decoder_precision_mode": "mixed_magnitude_symmetric",
+      "step_map_codec": "snerv_step_map_coder.v1",
+      "target_bits_per_coeff": 2.5,
+      "qat_bits": null,
+      "latent_precision_mode": null,
+      "hierarchical_grid_precision_modes": null,
+      "bitstream_codec": null,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "frontier_score_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "production_hardened_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "accepted": false,
+      "emission_blockers": [
+        "sample_pair_count_below_full600",
+        "required_emission_field_missing:official_controls.--modelsize",
+        "required_emission_field_missing:official_controls.mfu_enabled",
+        "required_emission_field_missing:official_controls.hfr_enabled",
+        "required_emission_field_missing:official_controls.snerv_t_enabled",
+        "required_emission_field_missing:qat_bits"
+      ]
+    }
+  ],
+  "ready_for_receiver_closed_ladder_harvest": false,
+  "ready_for_receiver_closed_modelsize_ladder": false,
+  "blockers": [
+    "sample_pair_count_below_full600",
+    "required_emission_field_missing:official_controls.--modelsize",
+    "required_emission_field_missing:official_controls.mfu_enabled",
+    "required_emission_field_missing:official_controls.hfr_enabled",
+    "required_emission_field_missing:official_controls.snerv_t_enabled",
+    "required_emission_field_missing:qat_bits"
+  ],
+  "next_actions": [
+    "snerv: emit full600 pair_count/n_pairs metadata",
+    "snerv: emit official source controls and receiver codec controls"
+  ],
+  "score_claim": false,
+  "score_claim_valid": false,
+  "frontier_score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "production_hardened_claim": false,
+  "ready_for_exact_eval_dispatch": false,
+  "bridge_schema": "snerv_advisory_trained_ladder_bridge.v1",
+  "archive_path_kind": "contest_archive_zip",
+  "bridge_notes": "SNeRV advisory/export row: byte custody and local receiver replay are real, but score/exact/frontier authority remains false until full600 paired contest CPU/CUDA and source-faithful SNeRV controls close."
+}

@@ -1667,6 +1667,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (
         export_snerv_archive_bound_candidate_package,
     )
+    from tac.substrates.snerv_inverse_steg_carrier.trained_ladder_bridge import (
+        build_snerv_trained_ladder_row_from_advisory,
+    )
 
     root = Path(repo_root).expanduser().resolve(strict=False)
     out = Path(output_dir).expanduser().resolve(strict=False)
@@ -1694,6 +1697,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     packet_path = out / "snerv_inverse_steg_advisory.snar"
     packet_path.write_bytes(advisory.receiver_archive_packet)
     advisory_payload = advisory.as_jsonable()
+    advisory_payload.setdefault("schema", "snerv_inverse_steg_advisory.v1")
     advisory_payload["receiver_archive_packet_path"] = packet_path.as_posix()
     advisory_path = out / "snerv_inverse_steg_advisory.json"
     _write_json(advisory_path, advisory_payload)
@@ -1723,6 +1727,21 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     archive_path = row.get("candidate_archive_path")
     receiver_proof = dict(package.get("receiver_proof") or {})
     receiver_proof_path = receiver_proof.get("proof_path")
+    trained_ladder_row_payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=advisory,
+        archive_path=_resolve(archive_path, base=root) if archive_path else packet_path,
+        archive_path_kind="contest_archive_zip" if archive_path else "receiver_snar_packet",
+        receiver_proof=receiver_proof if archive_path else None,
+        target_bits_per_coeff=2.5,
+        repo_root=root,
+    )
+    trained_ladder_row_path = out / "snerv_trained_ladder_row_payload.json"
+    _write_json(trained_ladder_row_path, trained_ladder_row_payload)
+    advisory_payload["trained_ladder_row_payload"] = trained_ladder_row_payload
+    advisory_payload["trained_ladder_row_payload_path"] = (
+        trained_ladder_row_path.as_posix()
+    )
+    _write_json(advisory_path, advisory_payload)
 
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
         mlx_profile_paths,
@@ -1806,6 +1825,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "archive_sha256": row.get("candidate_archive_sha256"),
             "advisory_report_path": advisory_path.as_posix(),
             "receiver_archive_packet_path": packet_path.as_posix(),
+            "trained_ladder_row_payload_path": trained_ladder_row_path.as_posix(),
+            "trained_ladder_row_payload": trained_ladder_row_payload,
             "runtime_package_dir": package_dir.as_posix(),
             "runtime_package_path": (
                 package_path.as_posix() if package_path.is_file() else None
@@ -1968,6 +1989,10 @@ def adapt_snerv_advisory_report_to_spine(
         else {}
     )
     receiver_proof_path = receiver_proof.get("proof_path")
+    trained_ladder_row_payload = advisory_payload.get("trained_ladder_row_payload")
+    trained_ladder_row_payload_path = advisory_payload.get(
+        "trained_ladder_row_payload_path"
+    )
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
         mlx_profile_paths,
@@ -2072,6 +2097,12 @@ def adapt_snerv_advisory_report_to_spine(
             "archive_sha256": row.get("candidate_archive_sha256"),
             "receiver_proof_report_paths": (
                 [str(receiver_proof_path)] if receiver_proof_path else []
+            ),
+            "trained_ladder_row_payload_path": trained_ladder_row_payload_path,
+            "trained_ladder_row_payload": (
+                trained_ladder_row_payload
+                if isinstance(trained_ladder_row_payload, Mapping)
+                else None
             ),
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
