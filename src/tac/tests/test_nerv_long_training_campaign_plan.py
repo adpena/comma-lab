@@ -250,6 +250,92 @@ def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> 
     assert snerv_row["source_bound_capacity_control_blockers"]
 
 
+def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None:
+    snerv_budget = _snerv_budget()
+    huge_over = dict(snerv_budget["selected_candidates"][0])
+    huge_over.update(
+        {
+            "candidate_id": (
+                "snerv_np600_haar_lv2_lfb1p5_stepb0p5_"
+                "fc9e0_int2_symmetric_ceil36000"
+            ),
+            "hard_byte_ceiling": 36_000,
+            "nominal_total_payload_bytes": 11_074_662,
+            "nominal_under_ceiling": False,
+            "byte_headroom": 36_000 - 11_074_662,
+        }
+    )
+    plausible = dict(snerv_budget["selected_candidates"][0])
+    plausible.update(
+        {
+            "candidate_id": (
+                "snerv_np600_haar_lv5_lfb2_stepb0p5_"
+                "fc11e2_int2_symmetric_ceil285000"
+            ),
+            "hard_byte_ceiling": 285_000,
+            "nominal_total_payload_bytes": 231_518,
+            "nominal_under_ceiling": True,
+            "byte_headroom": 285_000 - 231_518,
+            "fc_dim": 11,
+            "emb_size": 2,
+        }
+    )
+    snerv_budget["selected_candidates"] = [huge_over, plausible]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv_row["candidate_id"] == plausible["candidate_id"]
+    assert snerv_row["local_mlx_launch_command_ready"] is True
+    assert "snerv_nominal_payload_far_over_ceiling_refuse_long_training" not in snerv_row[
+        "blockers"
+    ]
+
+
+def test_long_training_campaign_plan_refuses_far_over_ceiling_snerv_long_run() -> None:
+    snerv_budget = _snerv_budget()
+    huge_over = dict(snerv_budget["selected_candidates"][0])
+    huge_over.update(
+        {
+            "candidate_id": (
+                "snerv_np600_haar_lv2_lfb1p5_stepb0p5_"
+                "fc9e0_int2_symmetric_ceil36000"
+            ),
+            "hard_byte_ceiling": 36_000,
+            "nominal_total_payload_bytes": 11_074_662,
+            "nominal_under_ceiling": False,
+            "byte_headroom": 36_000 - 11_074_662,
+        }
+    )
+    snerv_budget["selected_candidates"] = [huge_over]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["implementation_status"] == (
+        "native_rate_aware_long_training_rate_blocked"
+    )
+    assert "snerv_nominal_payload_far_over_ceiling_refuse_long_training" in snerv_row[
+        "blockers"
+    ]
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+
+
 def test_long_training_campaign_plan_accepts_unique_experiment_queue_id() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
