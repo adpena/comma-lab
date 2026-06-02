@@ -629,7 +629,11 @@ def quantize_decoder_for_qat(
             errors.append(np.abs(deq - arr).reshape(-1))
             total_weights += int(arr.size)
             zero_weights += int(np.count_nonzero(q == 0))
-    quantized = HfGenerationDecoder(kernels=kernels, levels=int(decoder.levels))
+    quantized = HfGenerationDecoder(
+        kernels=kernels,
+        levels=int(decoder.levels),
+        model_size=decoder.model_size,
+    )
     payload = encode_decoder_payload(quantized)
     err = np.concatenate(errors) if errors else np.zeros(1, dtype=np.float64)
     return quantized, QuantizedDecoderStats(
@@ -1196,7 +1200,7 @@ def _pack_receiver_archive(
 
 def _decoder_to_vector(
     decoder: HfGenerationDecoder,
-) -> tuple[np.ndarray, tuple[tuple[int, str, tuple[int, ...]], ...]]:
+) -> tuple[np.ndarray, dict[str, Any]]:
     values = []
     layout = []
     for lvl in range(int(decoder.levels)):
@@ -1205,16 +1209,25 @@ def _decoder_to_vector(
             values.append(arr.reshape(-1))
             layout.append((lvl, subband, tuple(arr.shape)))
     vec = np.concatenate(values) if values else np.zeros(0, dtype=np.float64)
-    return vec, tuple(layout)
+    return vec, {
+        "model_size": decoder.model_size,
+        "rows": tuple(layout),
+    }
 
 
 def _vector_to_decoder(
     vector: np.ndarray,
-    layout: tuple[tuple[int, str, tuple[int, ...]], ...],
+    layout: dict[str, Any] | tuple[tuple[int, str, tuple[int, ...]], ...],
 ) -> HfGenerationDecoder:
+    if isinstance(layout, dict):
+        model_size = layout.get("model_size")
+        layout_rows = tuple(layout.get("rows") or ())
+    else:
+        model_size = None
+        layout_rows = tuple(layout)
     cursor = 0
     kernels: dict[int, dict[str, np.ndarray]] = {}
-    for lvl, subband, shape in layout:
+    for lvl, subband, shape in layout_rows:
         count = int(np.prod(shape))
         kernels.setdefault(lvl, {})[subband] = np.asarray(
             vector[cursor : cursor + count],
@@ -1223,7 +1236,8 @@ def _vector_to_decoder(
         cursor += count
     if cursor != int(vector.size):
         raise SnervScorerLoopDecoderQatError("decoder vector/layout size mismatch")
-    return HfGenerationDecoder(kernels=kernels, levels=len(kernels))
+    kwargs = {"model_size": model_size} if model_size is not None else {}
+    return HfGenerationDecoder(kernels=kernels, levels=len(kernels), **kwargs)
 
 
 def _replace_eval_acceptance(

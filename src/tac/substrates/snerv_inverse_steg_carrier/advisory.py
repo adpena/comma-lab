@@ -78,6 +78,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SnervFrameCode,
+    SnervModelSizeConfig,
     decode_frame,
     encode_frame_lf,
     fit_hf_decoder_least_squares,
@@ -125,6 +126,10 @@ class SnervAdvisoryResult:
     decoder_bytes: int
     decoder_payload_codec: str
     decoder_payload_header: dict[str, Any]
+    snerv_fc_dim: int
+    snerv_emb_size: int
+    snerv_patch_radius: int
+    decoder_feature_count: int
     hf_decoder_fit_mode: str
     hf_decoder_saliency_gain: float
     hf_decoder_saliency_component: str
@@ -361,6 +366,9 @@ def run_snerv_advisory(
     hf_decoder_saliency_component: str = "combined",
     decoder_payload_codec: str = "float32_lzma",
     decoder_payload_mixed_modes: tuple[str, ...] | None = None,
+    snerv_fc_dim: int = 9,
+    snerv_emb_size: int = 0,
+    snerv_patch_radius: int = 1,
 ) -> SnervAdvisoryResult:
     """Run the complete byte-closed SNeRV advisory on ``n_pairs`` real pairs.
 
@@ -382,6 +390,11 @@ def run_snerv_advisory(
         video_path, n_pairs, pair_stride=pair_stride, start_pair=start_pair, device=device
     )  # (n_pairs, 2, 3, H, W)
     H, W = int(pairs.shape[-2]), int(pairs.shape[-1])
+    model_size = SnervModelSizeConfig(
+        fc_dim=snerv_fc_dim,
+        emb_size=snerv_emb_size,
+        patch_radius=snerv_patch_radius,
+    )
 
     # ---- 1. Analyze every frame channel; collect pyramids for decoder fit ----
     # The carrier reconstructs BOTH frames of each pair (d_seg = last frame,
@@ -414,13 +427,18 @@ def run_snerv_advisory(
                     )
                     weight_pyrs.append(coeff_saliency)
     if hf_decoder_fit_mode == "least_squares":
-        decoder = fit_hf_decoder_least_squares(train_pyrs, levels=levels)
+        decoder = fit_hf_decoder_least_squares(
+            train_pyrs,
+            levels=levels,
+            model_size=model_size,
+        )
     elif hf_decoder_fit_mode == "score_weighted":
         decoder = fit_hf_decoder_weighted_least_squares(
             train_pyrs,
             levels=levels,
             detail_weight_pyramids=weight_pyrs,
             saliency_gain=hf_decoder_saliency_gain,
+            model_size=model_size,
         )
     else:
         raise RuntimeError(f"unknown HF decoder fit mode: {hf_decoder_fit_mode!r}")
@@ -595,6 +613,11 @@ def run_snerv_advisory(
         "lf_zero_dtype": "float32_le",
         "lf_scale_mode": "implicit_per_element_steps_scale_1",
         "step_map_coder_bins": step_map_coder_bins,
+        "snerv_fc_dim": int(model_size.fc_dim),
+        "snerv_emb_size": int(model_size.emb_size),
+        "snerv_patch_radius": int(model_size.patch_radius),
+        "decoder_feature_count": int(model_size.feature_count),
+        "snerv_model_size_adapter": model_size.adapter,
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
         "hf_decoder_saliency_component": hf_decoder_saliency_component,
@@ -771,6 +794,10 @@ def run_snerv_advisory(
         decoder_bytes=len(decoder_bytes),
         decoder_payload_codec=decoder_payload_codec,
         decoder_payload_header=decoder_payload_header,
+        snerv_fc_dim=int(model_size.fc_dim),
+        snerv_emb_size=int(model_size.emb_size),
+        snerv_patch_radius=int(model_size.patch_radius),
+        decoder_feature_count=int(model_size.feature_count),
         hf_decoder_fit_mode=hf_decoder_fit_mode,
         hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),
         hf_decoder_saliency_component=hf_decoder_saliency_component,

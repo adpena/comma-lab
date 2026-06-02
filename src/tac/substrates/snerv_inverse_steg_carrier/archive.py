@@ -27,8 +27,10 @@ from tac.substrates._shared.int_stream_codec import (
     unpack_fixed_width_uints,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    DEFAULT_SNERV_MODEL_SIZE,
     HfGenerationDecoder,
     SnervFrameCode,
+    SnervModelSizeConfig,
     decode_frame,
 )
 from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
@@ -471,7 +473,7 @@ def encode_decoder_payload(
 ) -> bytes:
     """Encode the shared HF decoder as deterministic scorer-free receiver bytes."""
 
-    levels, values = _decoder_to_flat_values(decoder)
+    levels, values, model_size = _decoder_to_flat_values(decoder)
     raw = values.astype("<f4").tobytes()
     if not raw:
         raise SnervArchiveError("decoder payload must be non-empty")
@@ -484,13 +486,18 @@ def encode_decoder_payload(
     }:
         if mixed_modes is not None:
             raise SnervArchiveError("mixed decoder modes require mixed codec")
-        return _encode_decoder_payload_v1(levels=levels, raw=raw)
+        return _encode_decoder_payload_v1(
+            levels=levels,
+            raw=raw,
+            model_size=model_size,
+        )
     if normalized in DECODER_PAYLOAD_QUANTIZED_CODECS:
         if mixed_modes is not None:
             raise SnervArchiveError("mixed decoder modes require mixed codec")
         return _encode_decoder_payload_quantized(
             levels=levels,
             values=values,
+            model_size=model_size,
             bits=DECODER_PAYLOAD_QUANTIZED_CODECS[normalized],
             codec=normalized,
             raw_reference=raw,
@@ -503,19 +510,27 @@ def encode_decoder_payload(
         return _encode_decoder_payload_mixed(
             levels=levels,
             values=values,
+            model_size=model_size,
             raw_reference=raw,
             explicit_modes=mixed_modes,
         )
     raise SnervArchiveError(f"unsupported decoder payload codec: {codec!r}")
 
 
-def _encode_decoder_payload_v1(*, levels: int, raw: bytes) -> bytes:
+def _encode_decoder_payload_v1(
+    *,
+    levels: int,
+    raw: bytes,
+    model_size: SnervModelSizeConfig,
+) -> bytes:
     compressed = lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
     header = {
         "schema": DECODER_PAYLOAD_V1_SCHEMA,
         "levels": levels,
         "subbands": list(DECODER_SUBBANDS),
-        "kernel_shape": [3, 3],
+        "kernel_shape": _decoder_kernel_shape_header(model_size),
+        "feature_count": int(model_size.feature_count),
+        "model_size_config": model_size.as_jsonable(),
         "dtype": "float32_le",
         "raw_sha256": _sha256(raw),
         "raw_bytes": len(raw),
@@ -528,6 +543,7 @@ def _encode_decoder_payload_quantized(
     *,
     levels: int,
     values: np.ndarray,
+    model_size: SnervModelSizeConfig,
     bits: int,
     codec: str,
     raw_reference: bytes,
@@ -535,7 +551,8 @@ def _encode_decoder_payload_quantized(
     qmax = (1 << (int(bits) - 1)) - 1
     if qmax < 1:
         raise SnervArchiveError(f"invalid decoder quantizer bits: {bits}")
-    value_groups = values.reshape(levels * len(DECODER_SUBBANDS), 9)
+    feature_count = int(model_size.feature_count)
+    value_groups = values.reshape(levels * len(DECODER_SUBBANDS), feature_count)
     scales = []
     unsigned_parts = []
     max_abs_error = 0.0
@@ -558,7 +575,9 @@ def _encode_decoder_payload_quantized(
         "schema": DECODER_PAYLOAD_V2_SCHEMA,
         "levels": levels,
         "subbands": list(DECODER_SUBBANDS),
-        "kernel_shape": [3, 3],
+        "kernel_shape": _decoder_kernel_shape_header(model_size),
+        "feature_count": feature_count,
+        "model_size_config": model_size.as_jsonable(),
         "codec": codec,
         "bits_per_weight": int(bits),
         "quantizer": "symmetric_per_kernel_fp16_scale",
@@ -582,10 +601,12 @@ def _encode_decoder_payload_mixed(
     *,
     levels: int,
     values: np.ndarray,
+    model_size: SnervModelSizeConfig,
     raw_reference: bytes,
     explicit_modes: Sequence[str] | None = None,
 ) -> bytes:
-    value_groups = values.reshape(levels * len(DECODER_SUBBANDS), 9)
+    feature_count = int(model_size.feature_count)
+    value_groups = values.reshape(levels * len(DECODER_SUBBANDS), feature_count)
     mode_plan: tuple[str, ...] | None = None
     if explicit_modes is not None:
         mode_plan = tuple(_normalize_mixed_decoder_kernel_mode(v) for v in explicit_modes)
@@ -636,7 +657,9 @@ def _encode_decoder_payload_mixed(
         "schema": DECODER_PAYLOAD_V3_SCHEMA,
         "levels": levels,
         "subbands": list(DECODER_SUBBANDS),
-        "kernel_shape": [3, 3],
+        "kernel_shape": _decoder_kernel_shape_header(model_size),
+        "feature_count": feature_count,
+        "model_size_config": model_size.as_jsonable(),
         "codec": DECODER_PAYLOAD_MIXED_CODEC,
         "quantizer": "mixed_per_kernel_zero_int2_int4_int8_fp16",
         "mode_assignment_source": (
@@ -686,7 +709,11 @@ def decode_decoder_payload(payload: bytes) -> HfGenerationDecoder:
     if _sha256(raw) != str(header["raw_sha256"]):
         raise SnervArchiveError("decoder payload raw sha256 mismatch")
     values = np.frombuffer(raw, dtype="<f4").astype(np.float64)
-    return _decoder_from_flat_values(levels=levels, values=values)
+    return _decoder_from_flat_values(
+        levels=levels,
+        values=values,
+        model_size=_model_size_from_decoder_header(header),
+    )
 
 
 def inspect_decoder_payload_header(payload: bytes) -> dict[str, Any]:
@@ -711,6 +738,8 @@ def _decode_decoder_payload_mixed(
     if _sha256(payload) != str(header["payload_sha256"]):
         raise SnervArchiveError("decoder mixed payload sha256 mismatch")
     levels = int(header["levels"])
+    model_size = _model_size_from_decoder_header(header)
+    feature_count = int(model_size.feature_count)
     group_count = levels * len(DECODER_SUBBANDS)
     if int(header["mode_count"]) != group_count:
         raise SnervArchiveError("decoder mixed mode count mismatch")
@@ -740,12 +769,12 @@ def _decode_decoder_payload_mixed(
         mode = DECODER_PAYLOAD_MIXED_CODE_TO_MODE.get(int(raw_code))
         if mode is None:
             raise SnervArchiveError(f"unknown decoder mixed mode code: {raw_code}")
-        start = group_idx * 9
-        stop = start + 9
+        start = group_idx * feature_count
+        stop = start + feature_count
         if mode == "zero":
             continue
         if mode == "fp16":
-            nbytes = 9 * np.dtype("<f2").itemsize
+            nbytes = feature_count * np.dtype("<f2").itemsize
             segment = fp16_payload[fp16_cursor : fp16_cursor + nbytes]
             if len(segment) != nbytes:
                 raise SnervArchiveError("decoder mixed fp16 payload truncated")
@@ -754,13 +783,17 @@ def _decode_decoder_payload_mixed(
             continue
         bits = int(mode.removeprefix("int"))
         qmax = (1 << (bits - 1)) - 1
-        nbytes = (9 * bits + 7) // 8
+        nbytes = (feature_count * bits + 7) // 8
         segment = q_payload[q_cursor : q_cursor + nbytes]
         if len(segment) != nbytes:
             raise SnervArchiveError("decoder mixed q payload truncated")
         if scale_cursor >= scales.size:
             raise SnervArchiveError("decoder mixed scale payload truncated")
-        q_unsigned = unpack_fixed_width_uints(segment, bits=bits, count=9)
+        q_unsigned = unpack_fixed_width_uints(
+            segment,
+            bits=bits,
+            count=feature_count,
+        )
         q_signed = q_unsigned.astype(np.int64) - qmax
         values[start:stop] = q_signed.astype(np.float64) * float(scales[scale_cursor])
         scale_cursor += 1
@@ -771,7 +804,11 @@ def _decode_decoder_payload_mixed(
         raise SnervArchiveError("decoder mixed payload has unused q bytes")
     if fp16_cursor != len(fp16_payload):
         raise SnervArchiveError("decoder mixed payload has unused fp16 bytes")
-    return _decoder_from_flat_values(levels=levels, values=values)
+    return _decoder_from_flat_values(
+        levels=levels,
+        values=values,
+        model_size=model_size,
+    )
 
 
 def _select_mixed_decoder_kernel_mode(group: np.ndarray) -> str:
@@ -819,6 +856,8 @@ def _decode_decoder_payload_quantized(
     if _sha256(payload) != str(header["payload_sha256"]):
         raise SnervArchiveError("decoder quantized payload sha256 mismatch")
     levels = int(header["levels"])
+    model_size = _model_size_from_decoder_header(header)
+    feature_count = int(model_size.feature_count)
     bits = int(header["bits_per_weight"])
     offset = int(header["q_offset"])
     scale_bytes = int(header["scale_bytes"])
@@ -839,14 +878,22 @@ def _decode_decoder_payload_quantized(
     q_signed = q_unsigned.astype(np.int64) - offset
     values = q_signed.astype(np.float64)
     for idx, scale in enumerate(scales):
-        start = idx * 9
-        stop = start + 9
+        start = idx * feature_count
+        stop = start + feature_count
         values[start:stop] *= float(scale)
-    return _decoder_from_flat_values(levels=levels, values=values)
+    return _decoder_from_flat_values(
+        levels=levels,
+        values=values,
+        model_size=model_size,
+    )
 
 
-def _decoder_to_flat_values(decoder: HfGenerationDecoder) -> tuple[int, np.ndarray]:
+def _decoder_to_flat_values(
+    decoder: HfGenerationDecoder,
+) -> tuple[int, np.ndarray, SnervModelSizeConfig]:
     levels = int(decoder.levels)
+    model_size = decoder.model_size
+    feature_count = int(model_size.feature_count)
     arrays = []
     for lvl in range(levels):
         level = decoder.kernels.get(lvl)
@@ -854,23 +901,27 @@ def _decoder_to_flat_values(decoder: HfGenerationDecoder) -> tuple[int, np.ndarr
             raise SnervArchiveError(f"decoder missing level {lvl}")
         for subband in DECODER_SUBBANDS:
             kernel = np.asarray(level.get(subband), dtype=np.float64)
-            if kernel.shape != (3, 3):
+            if kernel.size != feature_count:
                 raise SnervArchiveError(
-                    f"decoder kernel {lvl}/{subband} shape {kernel.shape} != (3, 3)"
+                    f"decoder kernel {lvl}/{subband} has {kernel.size} values, "
+                    f"expected {feature_count}"
                 )
             if not np.all(np.isfinite(kernel)):
                 raise SnervArchiveError(f"decoder kernel {lvl}/{subband} is non-finite")
             arrays.append(kernel.reshape(-1))
     values = np.concatenate(arrays).astype(np.float64) if arrays else np.zeros(0)
-    return levels, values
+    return levels, values, model_size
 
 
 def _decoder_from_flat_values(
     *,
     levels: int,
     values: np.ndarray,
+    model_size: SnervModelSizeConfig | None = None,
 ) -> HfGenerationDecoder:
-    expected = levels * len(DECODER_SUBBANDS) * 9
+    model_size = model_size or DEFAULT_SNERV_MODEL_SIZE
+    feature_count = int(model_size.feature_count)
+    expected = levels * len(DECODER_SUBBANDS) * feature_count
     if values.size != expected:
         raise SnervArchiveError(
             f"decoder payload has {values.size} values, expected {expected}"
@@ -880,9 +931,46 @@ def _decoder_from_flat_values(
     for lvl in range(levels):
         kernels[lvl] = {}
         for subband in DECODER_SUBBANDS:
-            kernels[lvl][subband] = values[cursor : cursor + 9].reshape(3, 3)
-            cursor += 9
-    return HfGenerationDecoder(kernels=kernels, levels=levels)
+            kernels[lvl][subband] = values[
+                cursor : cursor + feature_count
+            ].reshape(_decoder_kernel_storage_shape(model_size))
+            cursor += feature_count
+    return HfGenerationDecoder(
+        kernels=kernels,
+        levels=levels,
+        model_size=model_size,
+    )
+
+
+def _decoder_kernel_shape_header(model_size: SnervModelSizeConfig) -> list[int]:
+    if model_size == DEFAULT_SNERV_MODEL_SIZE:
+        return [3, 3]
+    return [int(model_size.feature_count)]
+
+
+def _decoder_kernel_storage_shape(model_size: SnervModelSizeConfig) -> tuple[int, ...]:
+    if model_size == DEFAULT_SNERV_MODEL_SIZE:
+        return (3, 3)
+    return (int(model_size.feature_count),)
+
+
+def _model_size_from_decoder_header(header: dict[str, Any]) -> SnervModelSizeConfig:
+    raw = header.get("model_size_config")
+    if isinstance(raw, dict):
+        return SnervModelSizeConfig(
+            fc_dim=int(raw.get("fc_dim", raw.get("feature_count", 9))),
+            emb_size=int(raw.get("emb_size", 0)),
+            patch_radius=int(raw.get("patch_radius", 1)),
+            adapter=str(raw.get("adapter", "snerv_fc_dim_emb_size_adapter_v1")),
+        )
+    feature_count = int(header.get("feature_count", 9))
+    if feature_count != 9:
+        return SnervModelSizeConfig(
+            fc_dim=feature_count,
+            emb_size=0,
+            patch_radius=1,
+        )
+    return DEFAULT_SNERV_MODEL_SIZE
 
 
 def decode_lf_metadata_payload(

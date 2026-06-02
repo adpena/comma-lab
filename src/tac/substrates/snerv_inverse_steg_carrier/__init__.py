@@ -30,9 +30,11 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
     push_pixel_saliency_to_lf,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    DEFAULT_SNERV_MODEL_SIZE,
     HfGenerationDecoder,
     SnervCarrierError,
     SnervFrameCode,
+    SnervModelSizeConfig,
     decode_frame,
     dequantize_lf,
     encode_frame_lf,
@@ -54,6 +56,7 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
 )
 
 __all__ = [
+    "DEFAULT_SNERV_MODEL_SIZE",
     "DEFAULT_WAVELET",
     "DWT_MODE",
     "HfGenerationDecoder",
@@ -62,6 +65,7 @@ __all__ = [
     "SnervCarrierError",
     "SnervDwtError",
     "SnervFrameCode",
+    "SnervModelSizeConfig",
     "WaveletPyramid",
     "allocate_lf_linf",
     "decode_frame",

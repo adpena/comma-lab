@@ -16,6 +16,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     HfGenerationDecoder,
     SnervCarrierError,
     SnervFrameCode,
+    SnervModelSizeConfig,
     decode_frame,
     dequantize_lf,
     encode_frame_lf,
@@ -127,6 +128,39 @@ def test_decoder_byte_cost_is_tiny_and_real():
         [encode_frame_lf(_smooth_frame(rng), levels=4) for _ in range(4)], levels=4
     )
     assert dec4.byte_cost() > dec.byte_cost()  # more levels = more kernels
+
+
+def test_model_size_controls_change_decoder_capacity_and_reconstruction():
+    """NO-FAKE: fc_dim/emb_size alter fitted weights, bytes, and decoded frames."""
+
+    rng = np.random.default_rng(23)
+    frames = [_smooth_frame(rng) for _ in range(5)]
+    pyrs = [encode_frame_lf(f, levels=2, wavelet="haar") for f in frames]
+    base = fit_hf_decoder_least_squares(pyrs, levels=2)
+    wider = fit_hf_decoder_least_squares(
+        pyrs,
+        levels=2,
+        model_size=SnervModelSizeConfig(fc_dim=12, emb_size=4, patch_radius=1),
+    )
+
+    assert base.byte_cost() == 2 * 3 * 9 * 4
+    assert wider.model_size.fc_dim == 12
+    assert wider.model_size.emb_size == 4
+    assert wider.byte_cost() == 2 * 3 * 16 * 4
+    assert wider.kernels[0]["LH"].shape == (16,)
+
+    p0 = pyrs[0]
+    q, sc, zr = quantize_lf(p0.lf, n_levels=64)
+    code = SnervFrameCode(
+        lf_quant=q,
+        lf_scale=sc,
+        lf_zero=zr,
+        lf_shape=p0.lf.shape,
+        levels=2,
+        wavelet=p0.wavelet,
+        orig_hw=frames[0].shape,
+    )
+    assert not np.allclose(decode_frame(code, base), decode_frame(code, wider))
 
 
 def test_generate_hf_produces_correct_shapes():

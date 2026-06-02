@@ -30,6 +30,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     HfGenerationDecoder,
     SnervFrameCode,
+    SnervModelSizeConfig,
     decode_frame,
     encode_frame_lf,
     fit_hf_decoder_least_squares,
@@ -188,6 +189,39 @@ def test_quantized_decoder_payload_codecs_roundtrip_receiver_values() -> None:
     assert payload_sizes["int2_symmetric"] <= payload_sizes["int4_symmetric"]
     assert payload_sizes["int4_symmetric"] <= payload_sizes["int8_symmetric"]
     assert decode_decoder_payload(legacy_payload).levels == decoder.levels
+
+
+def test_decoder_payload_roundtrips_nondefault_model_size_controls() -> None:
+    model_size = SnervModelSizeConfig(fc_dim=10, emb_size=2, patch_radius=1)
+    decoder = HfGenerationDecoder.zeros(levels=1, model_size=model_size)
+    pattern = np.linspace(-0.06, 0.06, model_size.feature_count, dtype=np.float64)
+    decoder.kernels[0]["LH"] = pattern
+    decoder.kernels[0]["HL"] = pattern * 0.5
+    decoder.kernels[0]["HH"] = -pattern * 0.25
+
+    for codec, schema, tolerance in (
+        ("float32_lzma", "snerv_decoder_payload.v1", 2.0e-9),
+        ("int8_symmetric", "snerv_decoder_payload.v2", 6e-4),
+        ("int4_symmetric", "snerv_decoder_payload.v2", 1.0e-2),
+        ("int2_symmetric", "snerv_decoder_payload.v2", 4.5e-2),
+        ("mixed_magnitude_symmetric", "snerv_decoder_payload.v3", 1.0e-2),
+    ):
+        payload = encode_decoder_payload(decoder, codec=codec)
+        header = _read_subpacket_header(payload)
+        decoded = decode_decoder_payload(payload)
+
+        assert header["schema"] == schema
+        assert header["feature_count"] == 12
+        assert header["kernel_shape"] == [12]
+        assert header["model_size_config"] == model_size.as_jsonable()
+        assert decoded.model_size == model_size
+        assert decoded.kernels[0]["LH"].shape == (12,)
+        np.testing.assert_allclose(
+            decoded.kernels[0]["LH"],
+            decoder.kernels[0]["LH"],
+            atol=tolerance,
+            rtol=0.0,
+        )
 
 
 def test_mixed_decoder_payload_uses_per_kernel_modes_and_roundtrip_values() -> None:

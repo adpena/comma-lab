@@ -102,6 +102,27 @@ def main(argv: list[str] | None = None) -> int:
         help="Detector component used to weight score_weighted HF decoder fitting.",
     )
     ap.add_argument(
+        "--snerv-fc-dim",
+        type=int,
+        default=9,
+        help="Receiver-visible LF-context feature count for the SNeRV HF decoder.",
+    )
+    ap.add_argument(
+        "--snerv-emb-size",
+        type=int,
+        default=0,
+        help=(
+            "Receiver-generated coordinate embedding feature count for the "
+            "SNeRV HF decoder."
+        ),
+    )
+    ap.add_argument(
+        "--snerv-patch-radius",
+        type=int,
+        default=1,
+        help="Receiver-visible LF context radius used to build fc_dim features.",
+    )
+    ap.add_argument(
         "--decoder-payload-codec",
         choices=(
             "float32_lzma",
@@ -165,6 +186,9 @@ def main(argv: list[str] | None = None) -> int:
         hf_decoder_fit_mode=args.hf_decoder_fit_mode,
         hf_decoder_saliency_gain=args.hf_decoder_saliency_gain,
         hf_decoder_saliency_component=args.hf_decoder_saliency_component,
+        snerv_fc_dim=args.snerv_fc_dim,
+        snerv_emb_size=args.snerv_emb_size,
+        snerv_patch_radius=args.snerv_patch_radius,
         decoder_payload_codec=args.decoder_payload_codec,
         decoder_payload_mixed_modes=_parse_optional_modes(
             args.decoder_payload_mixed_modes
@@ -229,6 +253,9 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "  decoder = "
         f"{res.decoder_bytes} B  codec={res.decoder_payload_codec} "
+        f"fc_dim={res.snerv_fc_dim} "
+        f"emb_size={res.snerv_emb_size} "
+        f"features={res.decoder_feature_count} "
         f"fit={res.hf_decoder_fit_mode} "
         f"gain={res.hf_decoder_saliency_gain:g} "
         f"component={res.hf_decoder_saliency_component}  "
