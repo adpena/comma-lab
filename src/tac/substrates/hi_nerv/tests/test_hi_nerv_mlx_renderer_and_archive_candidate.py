@@ -42,6 +42,18 @@ def test_mlx_renderer_uses_canonical_generic_resize_helper() -> None:
     assert "NotImplementedError" not in resize_body
 
 
+def test_mlx_renderer_contains_official_grid_convnext_port() -> None:
+    source = (
+        REPO_ROOT / "src" / "tac" / "substrates" / "hi_nerv" / "mlx_renderer.py"
+    ).read_text(encoding="utf-8")
+
+    assert "class HierarchicalFeatureGridMLX" in source
+    assert "class ConvNeXtBlockMLX" in source
+    assert "trilinear_upsample_mlx" in source
+    assert "feature_grids.{i}.grids.{level}" in source
+    assert "convnext_blocks.{i}.dwconv.weight" in source
+
+
 def _smoke_cfg():
     from tac.substrates.hi_nerv.architecture import HinervConfig
 
@@ -60,6 +72,33 @@ def _smoke_cfg():
         num_pairs=3,
         output_height=24,
         output_width=32,
+    )
+
+
+def _official_smoke_cfg():
+    from tac.substrates.hi_nerv.architecture import HinervConfig
+
+    return HinervConfig(
+        latent_dim_coarse=3,
+        latent_dim_mid=4,
+        latent_dim_fine=5,
+        embed_dim=8,
+        initial_grid_h=2,
+        initial_grid_w=3,
+        decoder_channels=(7, 6),
+        sin_frequency=10.0,
+        num_upsample_blocks=2,
+        mid_injection_block_index=0,
+        fine_injection_block_index=1,
+        num_pairs=3,
+        output_height=8,
+        output_width=12,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=3,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
     )
 
 
@@ -104,6 +143,18 @@ def test_mlx_renderer_parameter_parity_with_pytorch() -> None:
     cfg = _smoke_cfg()
     torch_model = HinervSubstrate(cfg)
     mlx_model = HinervSubstrateMLX(cfg)
+    assert torch_model.num_parameters() == mlx_model.num_parameters()
+
+
+@skip_no_mlx
+def test_mlx_renderer_official_grid_convnext_parameter_parity_with_pytorch() -> None:
+    from tac.substrates.hi_nerv.architecture import HinervSubstrate
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    cfg = _official_smoke_cfg()
+    torch_model = HinervSubstrate(cfg)
+    mlx_model = HinervSubstrateMLX(cfg)
+
     assert torch_model.num_parameters() == mlx_model.num_parameters()
 
 
@@ -263,6 +314,46 @@ def test_mlx_exported_state_dict_matches_pytorch_forward() -> None:
     drift = np.abs(torch_out - mlx_out)
     assert float(drift.max()) < 0.001
     assert float(drift.mean()) < 1e-4
+
+
+@skip_no_mlx
+def test_mlx_official_grid_convnext_export_matches_pytorch_forward() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.architecture import HinervSubstrate
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    cfg = _official_smoke_cfg()
+    mlx_model = HinervSubstrateMLX(cfg)
+    mx.eval(mlx_model.parameters())
+    torch_model = HinervSubstrate(cfg).eval()
+    state = {
+        name: torch.from_numpy(arr.copy())
+        for name, arr in mlx_model.export_state_dict().items()
+    }
+    load_result = torch_model.load_state_dict(state, strict=True)
+    assert not load_result.missing_keys
+    assert not load_result.unexpected_keys
+
+    pair_indices = [0, 1, 2]
+    with torch.no_grad():
+        rgb_0, rgb_1 = torch_model(torch.tensor(pair_indices, dtype=torch.long))
+    torch_out = torch.stack([rgb_0, rgb_1], dim=1).numpy().astype("float32")
+    mlx_out = (
+        np.asarray(
+            mlx_model(mx.array(np.asarray(pair_indices, dtype=np.int32))),
+            dtype=np.float32,
+        )
+        / 255.0
+    )
+    drift = np.abs(torch_out - mlx_out)
+    assert float(drift.max()) < 0.001
+    assert float(drift.mean()) < 1e-4
+    exported = mlx_model.export_state_dict()
+    assert "feature_grids.0.grids.0" in exported
+    assert "convnext_blocks.0.dwconv.weight" in exported
+    assert "convnext_blocks.0.gamma" in exported
 
 
 def test_archive_candidate_int8_decoder_packet_roundtrip() -> None:

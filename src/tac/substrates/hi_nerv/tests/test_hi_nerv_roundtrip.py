@@ -10,7 +10,14 @@ from __future__ import annotations
 
 import torch
 
-from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
+from tac.substrates.hi_nerv.architecture import (
+    HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF,
+    ConvNeXtBlock,
+    HierarchicalFeatureGrid,
+    HinervConfig,
+    HinervSubstrate,
+    trilinear_upsample,
+)
 from tac.substrates.hi_nerv.archive import (
     HIV1_HEADER_SIZE,
     HIV1_MAGIC,
@@ -52,6 +59,12 @@ def _smoke_meta(cfg: HinervConfig) -> dict[str, object]:
         "fine_injection_block_index": cfg.fine_injection_block_index,
         "output_height": cfg.output_height,
         "output_width": cfg.output_width,
+        "use_hierarchical_feature_grid": cfg.use_hierarchical_feature_grid,
+        "use_convnext_blocks": cfg.use_convnext_blocks,
+        "local_grid_levels": cfg.local_grid_levels,
+        "local_grid_channels": cfg.local_grid_channels,
+        "convnext_mlp_ratio": cfg.convnext_mlp_ratio,
+        "convnext_kernel_size": cfg.convnext_kernel_size,
     }
 
 
@@ -319,3 +332,109 @@ def test_three_scale_latent_pyramid_is_distinct():
     assert n_latent_params == cfg.num_pairs * (
         cfg.latent_dim_coarse + cfg.latent_dim_mid + cfg.latent_dim_fine
     )
+
+
+def test_trilinear_upsample_interpolates_temporal_local_grid() -> None:
+    grid = torch.arange(3 * 2 * 2 * 1, dtype=torch.float32).view(3, 2, 2, 1)
+    sampled = trilinear_upsample(
+        grid,
+        torch.tensor([0, 1, 2], dtype=torch.long),
+        num_pairs=3,
+        target_h=3,
+        target_w=4,
+        local_scale=2,
+    )
+
+    assert sampled.shape == (3, 3, 4, 1)
+    assert torch.equal(sampled[0, :, :, 0], torch.tensor([[0, 1, 0, 1], [2, 3, 2, 3], [0, 1, 0, 1]], dtype=torch.float32))
+    assert torch.equal(sampled[2, :, :, 0], torch.tensor([[8, 9, 8, 9], [10, 11, 10, 11], [8, 9, 8, 9]], dtype=torch.float32))
+
+
+def test_official_feature_grid_convnext_mode_is_receiver_visible() -> None:
+    cfg = HinervConfig(
+        latent_dim_coarse=3,
+        latent_dim_mid=4,
+        latent_dim_fine=5,
+        embed_dim=8,
+        initial_grid_h=2,
+        initial_grid_w=3,
+        decoder_channels=(7, 6),
+        sin_frequency=10.0,
+        num_upsample_blocks=2,
+        mid_injection_block_index=0,
+        fine_injection_block_index=1,
+        num_pairs=4,
+        output_height=8,
+        output_width=12,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=3,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+    )
+    model = HinervSubstrate(cfg).eval()
+
+    assert HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF
+    assert any(isinstance(module, HierarchicalFeatureGrid) for module in model.modules())
+    assert any(isinstance(module, ConvNeXtBlock) for module in model.modules())
+    assert "feature_grids.0.grids.0" in model.state_dict()
+    assert "convnext_blocks.0.dwconv.weight" in model.state_dict()
+
+    with torch.no_grad():
+        rgb_0, rgb_1 = model(torch.tensor([0, 1], dtype=torch.long))
+    assert rgb_0.shape == (2, 3, cfg.output_height, cfg.output_width)
+    assert rgb_1.shape == (2, 3, cfg.output_height, cfg.output_width)
+    assert float(rgb_0.min()) >= 0.0 and float(rgb_0.max()) <= 1.0
+
+
+def test_official_feature_grid_convnext_archive_roundtrip_preserves_forward() -> None:
+    cfg = HinervConfig(
+        latent_dim_coarse=3,
+        latent_dim_mid=4,
+        latent_dim_fine=5,
+        embed_dim=8,
+        initial_grid_h=2,
+        initial_grid_w=3,
+        decoder_channels=(7, 6),
+        sin_frequency=10.0,
+        num_upsample_blocks=2,
+        mid_injection_block_index=0,
+        fine_injection_block_index=1,
+        num_pairs=3,
+        output_height=8,
+        output_width=12,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=3,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+    )
+    torch.manual_seed(41)
+    model = HinervSubstrate(cfg).eval()
+    idx = torch.tensor([0, 1, 2], dtype=torch.long)
+    with torch.no_grad():
+        rgb_0_a, rgb_1_a = model(idx)
+
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v
+        for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        _smoke_meta(cfg),
+    )
+    _, rebuilt_cfg, rebuilt = build_model_from_archive(blob)
+    assert rebuilt_cfg.use_hierarchical_feature_grid is True
+    assert rebuilt_cfg.use_convnext_blocks is True
+    with torch.no_grad():
+        rgb_0_b, rgb_1_b = rebuilt(idx)
+
+    assert torch.allclose(rgb_0_a, rgb_0_b, atol=5e-2)
+    assert torch.allclose(rgb_1_a, rgb_1_b, atol=5e-2)

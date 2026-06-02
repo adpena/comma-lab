@@ -209,6 +209,37 @@ def test_spectra_preserving_mfu_adapter_changes_features_and_reconstruction():
     assert not np.allclose(decode_frame(code, base), decode_frame(code, mfu))
 
 
+def test_mfu_rejects_fc_dim_that_cannot_consume_requested_scales():
+    rng = np.random.default_rng(240)
+    lf = encode_frame_lf(_smooth_frame(rng), levels=2, wavelet="haar").lf
+
+    with pytest.raises(SnervCarrierError, match="fc_dim is too small"):
+        MultiResolutionFusionUnit(scales=(1, 2, 4)).features(
+            lf,
+            feature_count=5,
+            patch_radius=1,
+        )
+
+
+def test_each_requested_mfu_scale_changes_feature_basis():
+    rng = np.random.default_rng(241)
+    lf = encode_frame_lf(_smooth_frame(rng), levels=2, wavelet="haar").lf
+
+    scale_12 = MultiResolutionFusionUnit(scales=(1, 2)).features(
+        lf,
+        feature_count=12,
+        patch_radius=1,
+    )
+    scale_124 = MultiResolutionFusionUnit(scales=(1, 2, 4)).features(
+        lf,
+        feature_count=12,
+        patch_radius=1,
+    )
+
+    assert scale_12.shape == scale_124.shape
+    assert not np.allclose(scale_12, scale_124)
+
+
 def test_hfr_gain_is_compensated_during_fit_and_changes_decode():
     """NO-FAKE: HFR is an executable residual path, not a marker constant."""
 

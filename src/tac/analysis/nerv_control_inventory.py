@@ -1384,7 +1384,12 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
             (
                 "official_hierarchical_feature_grid_encoding",
                 "partial_local_three_scale_latent_pyramid_not_official_feature_grid",
-                (),
+                (
+                    "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
+                    "HierarchicalFeatureGrid",
+                    "ConvNeXtBlock",
+                    "trilinear_upsample",
+                ),
             ),
             (
                 "official_patch_mode_frame_mode_equivalence",
@@ -1430,17 +1435,17 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
             (
                 "official_multi_resolution_fusion_blocks",
                 "missing_mfu_blocks",
-                ("MultiResolutionFusionUnit",),
+                ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",),
             ),
             (
                 "official_high_frequency_restoration_heads",
                 "missing_official_hfr_heads",
-                ("HighFrequencyRestorer",),
+                ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",),
             ),
             (
                 "official_temporal_extension_snerv_t",
                 "missing_snerv_t_temporal_path_or_no_go",
-                ("SnervTemporalExtension",),
+                ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",),
             ),
             (
                 "official_modelsize_fc_dim_budget_binding",
@@ -1489,8 +1494,8 @@ def _missing_official_feature_markers(
     if not markers:
         return list(markers)
     source_dirs = {
-        "hi_nerv": ("src/tac/substrates/hi_nerv", "src/tac/analysis"),
-        "snerv": ("src/tac/substrates/snerv_inverse_steg_carrier", "src/tac/analysis"),
+        "hi_nerv": ("src/tac/substrates/hi_nerv",),
+        "snerv": ("src/tac/substrates/snerv_inverse_steg_carrier",),
     }
     text = "\n".join(_read_source_text(root / rel) for rel in source_dirs.get(family, ()))
     return [marker for marker in markers if marker not in text]

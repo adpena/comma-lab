@@ -241,10 +241,11 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 "official hierarchical feature grids, ConvNeXt blocks, and "
                 "trilinear multi-scale upsampling are bound or explicitly forked"
             ),
-            required_source_markers=(
-                "HierarchicalFeatureGrid",
-                "ConvNeXtBlock",
-                "trilinear_upsample",
+            required_symbols=(
+                RequiredSymbol("hi_nerv", "hi_nerv_official_feature_grid_convnext_trilinear", "tac.substrates.hi_nerv.architecture", "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF", "receiver-visible proof constant"),
+                RequiredSymbol("hi_nerv", "hi_nerv_official_feature_grid_convnext_trilinear", "tac.substrates.hi_nerv.architecture", "HierarchicalFeatureGrid", "temporal-local feature grid"),
+                RequiredSymbol("hi_nerv", "hi_nerv_official_feature_grid_convnext_trilinear", "tac.substrates.hi_nerv.architecture", "ConvNeXtBlock", "ConvNeXt refinement block"),
+                RequiredSymbol("hi_nerv", "hi_nerv_official_feature_grid_convnext_trilinear", "tac.substrates.hi_nerv.architecture", "trilinear_upsample", "temporal-local grid sampler"),
             ),
             blocker_if_missing=(
                 "hi_nerv_official_feature_grid_convnext_trilinear_missing"
@@ -317,16 +318,17 @@ def _source_features() -> tuple[SourceFeature, ...]:
             feature_id="snerv_official_mfu_hfr_stride_stack",
             official_source_id="snerv_spectra_preserving_paper",
             implementation_target=(
-                "receiver-safe spectra-preserving MFU/HFR/SNeRV_T adapter "
-                "or exact official parity proof"
+                "official spectra-preserving MFU/HFR/SNeRV_T behavior is "
+                "proven by source-forward parity or an explicit receiver-closed fork proof"
             ),
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "MultiResolutionFusionUnit", "official MFU block"),
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "HighFrequencyRestorer", "official HFR block"),
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SnervTemporalExtension", "official SNeRV_T temporal path"),
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF", "receiver-safe adapter proof constant"),
+                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "MultiResolutionFusionUnit", "local receiver-safe MFU adapter"),
+                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "HighFrequencyRestorer", "local receiver-safe HFR adapter"),
+                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SnervTemporalExtension", "local SNeRV_T analysis utility"),
+                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF", "local receiver-safe adapter proof constant"),
+                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF", "official MFU/HFR/TUB parity proof"),
             ),
-            blocker_if_missing="snerv_mfu_hfr_stride_stack_missing",
+            blocker_if_missing="snerv_official_mfu_hfr_tub_parity_missing",
         ),
         SourceFeature(
             family="snerv",

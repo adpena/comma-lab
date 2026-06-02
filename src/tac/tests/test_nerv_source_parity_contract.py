@@ -32,7 +32,7 @@ def test_hinerv_generic_resize_path_is_no_longer_a_source_parity_blocker() -> No
     assert "hi_nerv_generic_resolution_path_missing" not in report["blockers"]
 
 
-def test_hinerv_official_source_parity_gaps_block_long_training() -> None:
+def test_hinerv_grid_convnext_is_bound_but_bitstream_pipeline_still_blocks() -> None:
     report = build_nerv_source_parity_contract(
         repo_root=REPO_ROOT,
         families=("hi_nerv",),
@@ -40,23 +40,23 @@ def test_hinerv_official_source_parity_gaps_block_long_training() -> None:
     rows = {row["feature_id"]: row for row in report["feature_rows"]}
 
     assert report["required_for_long_training_ready"] is False
-    assert "hi_nerv_official_feature_grid_convnext_trilinear_missing" in report[
+    assert "hi_nerv_official_feature_grid_convnext_trilinear_missing" not in report[
         "blockers"
     ]
     assert "hi_nerv_prune_quantnoise_torchac_pipeline_missing" in report["blockers"]
     assert rows["hi_nerv_official_feature_grid_convnext_trilinear"]["status"] == (
-        "missing_or_partial"
+        "implemented_or_bound"
     )
     assert rows["hi_nerv_official_prune_quantnoise_torchac_pipeline"]["status"] == (
         "missing_or_partial"
     )
 
 
-def test_snerv_spectra_preserving_mfu_hfr_adapter_unblocks_source_stack() -> None:
+def test_snerv_spectra_preserving_adapter_is_local_not_official_parity() -> None:
     report = build_nerv_source_parity_contract(repo_root=REPO_ROOT, families=("snerv",))
 
-    assert report["required_for_long_training_ready"] is True
-    assert "snerv_mfu_hfr_stride_stack_missing" not in report["blockers"]
+    assert report["required_for_long_training_ready"] is False
+    assert "snerv_official_mfu_hfr_tub_parity_missing" in report["blockers"]
     assert "snerv_fc_dim_modelsize_control_missing" not in report["blockers"]
     assert "snerv_scorer_loop_decoder_qat_missing" not in report["blockers"]
     assert "snerv_lf_quant_intn_codec_missing" not in report["blockers"]
@@ -79,6 +79,10 @@ def test_snerv_spectra_preserving_mfu_hfr_adapter_unblocks_source_stack() -> Non
         "SnervTemporalExtension",
         "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
     }.issubset(present_symbols)
+    assert "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF" not in present_symbols
+    assert rows["snerv_official_mfu_hfr_stride_stack"]["status"] == (
+        "missing_or_partial"
+    )
     controls = {row["control_id"]: row for row in report["control_rows"]}
     assert controls["snerv_fc_dim_modelsize_control"]["status"] == (
         "implemented_or_declared"

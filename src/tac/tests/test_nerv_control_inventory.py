@@ -178,29 +178,33 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "hi_nerv_missing_integer_bitstream_q_roundtrip",
         "hi_nerv_full_video_decoder_weight_saliency_replay_missing",
     }.issubset(set(stack_rows["hi_nerv"]["blocking_gaps"]))
+    snerv_blocking_gaps = set(stack_rows["snerv"]["blocking_gaps"])
     assert {
         "snerv_official_symbol_parity_map_missing",
         "snerv_scorer_loop_decoder_qat_full_video_missing",
         "snerv_missing_measured_fc_dim_modelsize_ladder",
-    }.issubset(set(stack_rows["snerv"]["blocking_gaps"]))
-    assert "snerv_missing_mfu_blocks" not in stack_rows["snerv"]["blocking_gaps"]
-    assert "snerv_missing_official_hfr_heads" not in stack_rows["snerv"]["blocking_gaps"]
-    assert (
-        "snerv_missing_snerv_t_temporal_path_or_no_go"
-        not in stack_rows["snerv"]["blocking_gaps"]
-    )
+        "snerv_missing_official_stride_stack_parity",
+        "snerv_mlx_native_train_export_missing",
+        "snerv_missing_quant_payload_receiver_replay",
+        "snerv_missing_mfu_blocks",
+        "snerv_missing_official_hfr_heads",
+        "snerv_missing_snerv_t_temporal_path_or_no_go",
+    }.issubset(snerv_blocking_gaps)
     snerv_features = {
         row["feature_id"]: row for row in stack_rows["snerv"]["official_feature_rows"]
     }
     assert snerv_features["official_multi_resolution_fusion_blocks"][
         "local_binding_status"
-    ] == "implemented_or_receiver_proven"
+    ] == "missing_or_partial"
     assert snerv_features["official_high_frequency_restoration_heads"][
         "local_binding_status"
-    ] == "implemented_or_receiver_proven"
+    ] == "missing_or_partial"
     assert snerv_features["official_temporal_extension_snerv_t"][
         "local_binding_status"
-    ] == "implemented_or_receiver_proven"
+    ] == "missing_or_partial"
+    assert snerv_features["official_multi_resolution_fusion_blocks"][
+        "missing_markers"
+    ] == ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",)
     assert sweep["design_memo_index"]["hi_nerv"]["memo_count"] > 0
     assert sweep["design_memo_index"]["snerv"]["memo_count"] > 0
     assert sweep["design_memo_index"]["hi_nerv"]["memo_paths_are_complete"] is True

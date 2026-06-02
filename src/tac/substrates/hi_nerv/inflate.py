@@ -59,6 +59,14 @@ def build_model_from_archive(
         num_pairs=int(arc.latents_coarse.shape[0]),
         output_height=int(meta["output_height"]),
         output_width=int(meta["output_width"]),
+        use_hierarchical_feature_grid=bool(
+            meta.get("use_hierarchical_feature_grid", False)
+        ),
+        use_convnext_blocks=bool(meta.get("use_convnext_blocks", False)),
+        local_grid_levels=int(meta.get("local_grid_levels", 2)),
+        local_grid_channels=int(meta.get("local_grid_channels", 4)),
+        convnext_mlp_ratio=int(meta.get("convnext_mlp_ratio", 2)),
+        convnext_kernel_size=int(meta.get("convnext_kernel_size", 7)),
     )
 
     model = HinervSubstrate(cfg).to(device).eval()

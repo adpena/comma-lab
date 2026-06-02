@@ -101,6 +101,12 @@ def hi_nerv_meta_from_config(cfg: HinervConfig) -> dict[str, object]:
         "fine_injection_block_index": int(cfg.fine_injection_block_index),
         "output_height": int(cfg.output_height),
         "output_width": int(cfg.output_width),
+        "use_hierarchical_feature_grid": bool(cfg.use_hierarchical_feature_grid),
+        "use_convnext_blocks": bool(cfg.use_convnext_blocks),
+        "local_grid_levels": int(cfg.local_grid_levels),
+        "local_grid_channels": int(cfg.local_grid_channels),
+        "convnext_mlp_ratio": int(cfg.convnext_mlp_ratio),
+        "convnext_kernel_size": int(cfg.convnext_kernel_size),
     }
 
 

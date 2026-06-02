@@ -138,7 +138,170 @@ def _conv2d_with_params(layer: Any, x: Any, *, fake_quant_bits: int | None) -> A
     padding = getattr(layer, "padding", 0)
     stride = getattr(layer, "stride", 1)
     dilation = getattr(layer, "dilation", 1)
-    return mx.conv2d(x, weight, stride=stride, padding=padding, dilation=dilation) + bias  # type: ignore[union-attr]
+    groups = getattr(layer, "groups", 1)
+    return mx.conv2d(
+        x,
+        weight,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+        groups=groups,
+    ) + bias  # type: ignore[union-attr]
+
+
+def trilinear_upsample_mlx(
+    grid: Any,
+    pair_indices: Any,
+    *,
+    num_pairs: int,
+    target_h: int,
+    target_w: int,
+    local_scale: int,
+) -> Any:
+    """MLX mirror of the receiver-visible HiNeRV temporal-local grid sampler."""
+
+    _require_mlx()
+    if len(grid.shape) != 4:
+        raise ValueError(f"grid must be (T,S,S,C), got {tuple(grid.shape)}")
+    time_bins, scale_h, scale_w, channels = (int(v) for v in grid.shape)
+    if scale_h != int(local_scale) or scale_w != int(local_scale):
+        raise ValueError(
+            f"grid local scale {(scale_h, scale_w)} != {int(local_scale)}"
+        )
+    if time_bins <= 0 or channels <= 0:
+        raise ValueError("grid must have positive temporal bins and channels")
+
+    denom = max(int(num_pairs) - 1, 1)
+    t = pair_indices.astype(mx.float32) * (float(time_bins - 1) / float(denom))  # type: ignore[union-attr]
+    t0 = mx.floor(t).astype(mx.int32)  # type: ignore[union-attr]
+    t0 = mx.clip(t0, 0, time_bins - 1)  # type: ignore[union-attr]
+    t1 = mx.clip(t0 + 1, 0, time_bins - 1)  # type: ignore[union-attr]
+    alpha = (t - t0.astype(mx.float32)).reshape((-1, 1, 1, 1))  # type: ignore[union-attr]
+    temporal = mx.take(grid, t0, axis=0) * (1.0 - alpha) + mx.take(grid, t1, axis=0) * alpha  # type: ignore[union-attr]
+
+    ys = mx.arange(int(target_h), dtype=mx.int32) % int(local_scale)  # type: ignore[union-attr]
+    xs = mx.arange(int(target_w), dtype=mx.int32) % int(local_scale)  # type: ignore[union-attr]
+    flat_local = (ys[:, None] * int(local_scale) + xs[None, :]).reshape((-1,))
+    flat = temporal.reshape((int(pair_indices.shape[0]), int(local_scale) ** 2, channels))
+    sampled = flat[:, flat_local, :]
+    return sampled.reshape((int(pair_indices.shape[0]), int(target_h), int(target_w), channels))
+
+
+class HierarchicalFeatureGridMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """MLX temporal-local feature grid, exported as PyTorch receiver tensors."""
+
+    def __init__(
+        self,
+        *,
+        num_pairs: int,
+        local_scale: int,
+        base_channels: int,
+        levels: int,
+        out_channels: int,
+        reduction: int,
+    ) -> None:
+        _require_mlx()
+        super().__init__()
+        if levels <= 0:
+            raise ValueError("local_grid_levels must be positive")
+        if local_scale <= 0:
+            raise ValueError("local_scale must be positive")
+        self.num_pairs = int(num_pairs)
+        self.local_scale = int(local_scale)
+        self.levels = int(levels)
+        self.base_channels = int(base_channels)
+        self.level_channels: list[int] = []
+        grids: list[Any] = []
+        for level in range(self.levels):
+            time_bins = max(2, math.ceil(self.num_pairs / float(2**level)))
+            channels = max(1, (self.base_channels * (2**level)) // max(1, reduction))
+            self.level_channels.append(int(channels))
+            grids.append(
+                mx.random.normal(  # type: ignore[union-attr]
+                    shape=(time_bins, self.local_scale, self.local_scale, channels)
+                )
+                * 0.02
+            )
+        self.grids = grids
+        self.proj: Any = nn.Conv2d(  # type: ignore[union-attr]
+            in_channels=sum(self.level_channels),
+            out_channels=int(out_channels),
+            kernel_size=1,
+        )
+
+    def __call__(
+        self,
+        pair_indices: Any,
+        *,
+        spatial_shape: tuple[int, int],
+        fake_quant_bits: int | None = None,
+    ) -> Any:
+        h, w = int(spatial_shape[0]), int(spatial_shape[1])
+        sampled = [
+            trilinear_upsample_mlx(
+                grid,
+                pair_indices,
+                num_pairs=self.num_pairs,
+                target_h=h,
+                target_w=w,
+                local_scale=self.local_scale,
+            )
+            for grid in self.grids
+        ]
+        enc = mx.concatenate(sampled, axis=-1)  # type: ignore[union-attr]
+        return _conv2d_with_params(
+            self.proj,
+            enc,
+            fake_quant_bits=fake_quant_bits,
+        )
+
+
+class ConvNeXtBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """MLX ConvNeXt-style depthwise block matching PyTorch receiver layout."""
+
+    def __init__(self, channels: int, *, mlp_ratio: int, kernel_size: int) -> None:
+        _require_mlx()
+        super().__init__()
+        channels = int(channels)
+        kernel_size = int(kernel_size)
+        if kernel_size <= 0 or kernel_size % 2 == 0:
+            raise ValueError("convnext_kernel_size must be positive and odd")
+        hidden = max(channels, channels * max(1, int(mlp_ratio)))
+        self.channels = channels
+        self.dwconv: Any = nn.Conv2d(  # type: ignore[union-attr]
+            in_channels=channels,
+            out_channels=channels,
+            kernel_size=kernel_size,
+            padding=kernel_size // 2,
+            groups=channels,
+        )
+        self.norm: Any = nn.LayerNorm(channels)  # type: ignore[union-attr]
+        self.pwconv1: Any = nn.Conv2d(  # type: ignore[union-attr]
+            in_channels=channels,
+            out_channels=hidden,
+            kernel_size=1,
+        )
+        self.pwconv2: Any = nn.Conv2d(  # type: ignore[union-attr]
+            in_channels=hidden,
+            out_channels=channels,
+            kernel_size=1,
+        )
+        self.gamma = mx.full((channels, 1, 1), 1.0e-3)  # type: ignore[union-attr]
+        self.act: Any = nn.GELU()  # type: ignore[union-attr]
+
+    def __call__(self, x: Any, *, fake_quant_bits: int | None = None) -> Any:
+        residual = x
+        y = _conv2d_with_params(self.dwconv, x, fake_quant_bits=fake_quant_bits)
+        y = self.norm(y)
+        y = self.act(
+            _conv2d_with_params(self.pwconv1, y, fake_quant_bits=fake_quant_bits)
+        )
+        y = _conv2d_with_params(self.pwconv2, y, fake_quant_bits=fake_quant_bits)
+        gamma = self.gamma
+        if fake_quant_bits is not None:
+            gamma = _fake_quant_symmetric_ste(gamma, bits=int(fake_quant_bits))
+        gamma_nhwc = mx.transpose(gamma, (1, 2, 0)).reshape((1, 1, 1, self.channels))  # type: ignore[union-attr]
+        return residual + gamma_nhwc * y
 
 
 class _UpBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
@@ -229,6 +392,33 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             _UpBlockMLX(channels[i], channels[i + 1], float(cfg.sin_frequency))
             for i in range(int(cfg.num_upsample_blocks))
         ]
+        self.feature_grids: list[Any] = []
+        self.convnext_blocks: list[Any] = []
+        for i in range(int(cfg.num_upsample_blocks)):
+            out_ch = channels[i + 1]
+            if bool(cfg.use_hierarchical_feature_grid):
+                self.feature_grids.append(
+                    HierarchicalFeatureGridMLX(
+                        num_pairs=int(cfg.num_pairs),
+                        local_scale=2,
+                        base_channels=int(cfg.local_grid_channels),
+                        levels=int(cfg.local_grid_levels),
+                        out_channels=out_ch,
+                        reduction=max(1, i + 1),
+                    )
+                )
+            else:
+                self.feature_grids.append(None)
+            if bool(cfg.use_convnext_blocks):
+                self.convnext_blocks.append(
+                    ConvNeXtBlockMLX(
+                        out_ch,
+                        mlp_ratio=int(cfg.convnext_mlp_ratio),
+                        kernel_size=int(cfg.convnext_kernel_size),
+                    )
+                )
+            else:
+                self.convnext_blocks.append(None)
         self.mid_injector = _LatentInjectorMLX(
             int(cfg.latent_dim_mid),
             channels[int(cfg.mid_injection_block_index) + 1],
@@ -343,6 +533,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         h = mx.transpose(h, (0, 2, 3, 1))  # type: ignore[union-attr]
         for i, block in enumerate(self.blocks):
             h = block(h, fake_quant_bits=fake_quant_bits)
+            if bool(self.cfg.use_hierarchical_feature_grid):
+                h = h + self.feature_grids[i](
+                    pair_indices,
+                    spatial_shape=(int(h.shape[1]), int(h.shape[2])),
+                    fake_quant_bits=fake_quant_bits,
+                )
+            if bool(self.cfg.use_convnext_blocks):
+                h = self.convnext_blocks[i](h, fake_quant_bits=fake_quant_bits)
             if i == int(self.cfg.mid_injection_block_index):
                 h = h + self.mid_injector(
                     z_m,
@@ -414,6 +612,60 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             out[f"blocks.{i}.conv.bias"] = np.asarray(
                 conv.bias, dtype=np.float32
             ).copy()
+        if bool(self.cfg.use_hierarchical_feature_grid):
+            for i, grid_module in enumerate(self.feature_grids):
+                for level, grid in enumerate(grid_module.grids):
+                    out[f"feature_grids.{i}.grids.{level}"] = np.asarray(
+                        grid,
+                        dtype=np.float32,
+                    ).copy()
+                proj = grid_module.proj
+                out[f"feature_grids.{i}.proj.weight"] = np.transpose(
+                    np.asarray(proj.weight, dtype=np.float32),
+                    (0, 3, 1, 2),
+                ).copy()
+                out[f"feature_grids.{i}.proj.bias"] = np.asarray(
+                    proj.bias,
+                    dtype=np.float32,
+                ).copy()
+        if bool(self.cfg.use_convnext_blocks):
+            for i, block in enumerate(self.convnext_blocks):
+                out[f"convnext_blocks.{i}.dwconv.weight"] = np.transpose(
+                    np.asarray(block.dwconv.weight, dtype=np.float32),
+                    (0, 3, 1, 2),
+                ).copy()
+                out[f"convnext_blocks.{i}.dwconv.bias"] = np.asarray(
+                    block.dwconv.bias,
+                    dtype=np.float32,
+                ).copy()
+                out[f"convnext_blocks.{i}.norm.weight"] = np.asarray(
+                    block.norm.weight,
+                    dtype=np.float32,
+                ).copy()
+                out[f"convnext_blocks.{i}.norm.bias"] = np.asarray(
+                    block.norm.bias,
+                    dtype=np.float32,
+                ).copy()
+                out[f"convnext_blocks.{i}.pwconv1.weight"] = np.transpose(
+                    np.asarray(block.pwconv1.weight, dtype=np.float32),
+                    (0, 3, 1, 2),
+                ).copy()
+                out[f"convnext_blocks.{i}.pwconv1.bias"] = np.asarray(
+                    block.pwconv1.bias,
+                    dtype=np.float32,
+                ).copy()
+                out[f"convnext_blocks.{i}.pwconv2.weight"] = np.transpose(
+                    np.asarray(block.pwconv2.weight, dtype=np.float32),
+                    (0, 3, 1, 2),
+                ).copy()
+                out[f"convnext_blocks.{i}.pwconv2.bias"] = np.asarray(
+                    block.pwconv2.bias,
+                    dtype=np.float32,
+                ).copy()
+                out[f"convnext_blocks.{i}.gamma"] = np.asarray(
+                    block.gamma,
+                    dtype=np.float32,
+                ).copy()
         for name, injector in (
             ("mid_injector.proj", self.mid_injector),
             ("fine_injector.proj", self.fine_injector),
@@ -438,5 +690,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
 __all__ = [
     "MLX_EVIDENCE_GRADE",
     "SCHEMA_VERSION",
+    "ConvNeXtBlockMLX",
+    "HierarchicalFeatureGridMLX",
     "HinervSubstrateMLX",
+    "trilinear_upsample_mlx",
 ]

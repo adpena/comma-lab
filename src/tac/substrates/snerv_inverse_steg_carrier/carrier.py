@@ -184,12 +184,6 @@ class MultiResolutionFusionUnit:
         if feature_count < 1:
             raise SnervCarrierError("MFU feature_count must be >= 1")
         bank: list[np.ndarray] = []
-        local = _patch_features(
-            field,
-            patch_radius=patch_radius,
-            feature_count=(2 * patch_radius + 1) ** 2,
-        )
-        bank.extend(local[:, :, i] for i in range(local.shape[-1]))
         for scale in self.scales:
             pooled = _box_pool_upsample(field, int(scale))
             bank.append(pooled)
@@ -198,6 +192,17 @@ class MultiResolutionFusionUnit:
         if self.include_gradients:
             gy, gx = _central_gradients(field)
             bank.extend((gy, gx, np.hypot(gy, gx)))
+        if feature_count < len(bank):
+            raise SnervCarrierError(
+                "fc_dim is too small to consume requested MFU scales and "
+                f"gradients: need >= {len(bank)}, got {feature_count}"
+            )
+        local = _patch_features(
+            field,
+            patch_radius=patch_radius,
+            feature_count=(2 * patch_radius + 1) ** 2,
+        )
+        bank.extend(local[:, :, i] for i in range(local.shape[-1]))
         return _select_feature_bank(bank, feature_count)
 
 

@@ -63,6 +63,9 @@ LATENT_STATE_KEYS: tuple[str, str, str] = (
     "latents_mid",
     "latents_fine",
 )
+HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF: str = (
+    "receiver_visible_hierarchical_feature_grid_convnext_trilinear_v1"
+)
 
 
 @dataclass(frozen=True)
@@ -99,6 +102,178 @@ class HinervConfig:
 
     output_height: int = _CONTEST_H
     output_width: int = _CONTEST_W
+
+    use_hierarchical_feature_grid: bool = False
+    """Enable receiver-visible HiNeRV temporal-local feature grids."""
+
+    use_convnext_blocks: bool = False
+    """Enable ConvNeXt-style refinement after each upsample/encoding step."""
+
+    local_grid_levels: int = 2
+    """Number of temporal-local feature-grid levels per upsample block."""
+
+    local_grid_channels: int = 4
+    """Base channels per feature-grid level before the 1x1 projection."""
+
+    convnext_mlp_ratio: int = 2
+    """Expansion ratio for the ConvNeXt-style pointwise MLP."""
+
+    convnext_kernel_size: int = 7
+    """Depthwise kernel size for the ConvNeXt-style block."""
+
+
+def trilinear_upsample(
+    grid: torch.Tensor,
+    pair_indices: torch.Tensor,
+    *,
+    num_pairs: int,
+    target_h: int,
+    target_w: int,
+    local_scale: int,
+) -> torch.Tensor:
+    """Sample a temporal-local grid into ``(B,H,W,C)`` features.
+
+    HiNeRV's local encoding is indexed by video time and by local coordinates
+    inside the current upsample cell.  The spatial local coordinates are exact
+    modulo indices; the temporal axis is linearly interpolated so pair indices
+    can address coarser temporal grids without hidden side channels.
+    """
+
+    if grid.dim() != 4:
+        raise ValueError(f"grid must be (T,S,S,C), got {tuple(grid.shape)}")
+    time_bins, scale_h, scale_w, channels = (int(v) for v in grid.shape)
+    if scale_h != int(local_scale) or scale_w != int(local_scale):
+        raise ValueError(
+            f"grid local scale {(scale_h, scale_w)} != {int(local_scale)}"
+        )
+    if time_bins <= 0 or channels <= 0:
+        raise ValueError("grid must have positive temporal bins and channels")
+    if pair_indices.dtype != torch.long:
+        raise ValueError("pair_indices must be torch.long")
+    if pair_indices.dim() != 1:
+        raise ValueError("pair_indices must be 1-D")
+
+    device = grid.device
+    dtype = grid.dtype
+    denom = max(int(num_pairs) - 1, 1)
+    t = pair_indices.to(device=device, dtype=torch.float32) * (
+        float(time_bins - 1) / float(denom)
+    )
+    t0 = torch.floor(t).to(dtype=torch.long).clamp(0, time_bins - 1)
+    t1 = torch.clamp(t0 + 1, max=time_bins - 1)
+    alpha = (t - t0.to(dtype=torch.float32)).to(dtype=dtype).view(-1, 1, 1, 1)
+    temporal = grid[t0] * (1.0 - alpha) + grid[t1] * alpha
+
+    ys = torch.arange(int(target_h), device=device, dtype=torch.long) % int(local_scale)
+    xs = torch.arange(int(target_w), device=device, dtype=torch.long) % int(local_scale)
+    flat_local = (ys[:, None] * int(local_scale) + xs[None, :]).reshape(-1)
+    flat = temporal.reshape(int(pair_indices.numel()), int(local_scale) ** 2, channels)
+    sampled = flat[:, flat_local, :]
+    return sampled.reshape(int(pair_indices.numel()), int(target_h), int(target_w), channels)
+
+
+class HierarchicalFeatureGrid(nn.Module):
+    """Receiver-visible temporal-local feature grid from official HiNeRV."""
+
+    def __init__(
+        self,
+        *,
+        num_pairs: int,
+        local_scale: int,
+        base_channels: int,
+        levels: int,
+        out_channels: int,
+        reduction: int,
+    ) -> None:
+        super().__init__()
+        if levels <= 0:
+            raise ValueError("local_grid_levels must be positive")
+        if local_scale <= 0:
+            raise ValueError("local_scale must be positive")
+        self.num_pairs = int(num_pairs)
+        self.local_scale = int(local_scale)
+        self.levels = int(levels)
+        self.base_channels = int(base_channels)
+        self.level_channels: list[int] = []
+        grids: list[nn.Parameter] = []
+        for level in range(self.levels):
+            time_bins = max(2, math.ceil(self.num_pairs / float(2**level)))
+            channels = max(1, (self.base_channels * (2**level)) // max(1, reduction))
+            self.level_channels.append(int(channels))
+            grid = torch.empty(
+                time_bins,
+                self.local_scale,
+                self.local_scale,
+                channels,
+            )
+            grids.append(nn.Parameter(grid.normal_(std=0.02)))
+        self.grids = nn.ParameterList(grids)
+        self.proj = nn.Conv2d(sum(self.level_channels), int(out_channels), kernel_size=1)
+
+    def forward(
+        self,
+        pair_indices: torch.Tensor,
+        *,
+        spatial_shape: tuple[int, int],
+        dtype: torch.dtype,
+    ) -> torch.Tensor:
+        h, w = int(spatial_shape[0]), int(spatial_shape[1])
+        sampled = [
+            trilinear_upsample(
+                grid,
+                pair_indices,
+                num_pairs=self.num_pairs,
+                target_h=h,
+                target_w=w,
+                local_scale=self.local_scale,
+            )
+            for grid in self.grids
+        ]
+        enc = torch.cat(sampled, dim=-1).permute(0, 3, 1, 2).to(dtype=dtype)
+        return self.proj(enc)
+
+
+class _LayerNorm2d(nn.Module):
+    def __init__(self, channels: int) -> None:
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(int(channels)))
+        self.bias = nn.Parameter(torch.zeros(int(channels)))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x_nhwc = x.permute(0, 2, 3, 1)
+        y = F.layer_norm(x_nhwc, (int(x.shape[1]),), self.weight, self.bias)
+        return y.permute(0, 3, 1, 2)
+
+
+class ConvNeXtBlock(nn.Module):
+    """Small ConvNeXt-style depthwise block used after HiNeRV local encoding."""
+
+    def __init__(self, channels: int, *, mlp_ratio: int, kernel_size: int) -> None:
+        super().__init__()
+        channels = int(channels)
+        kernel_size = int(kernel_size)
+        if kernel_size <= 0 or kernel_size % 2 == 0:
+            raise ValueError("convnext_kernel_size must be positive and odd")
+        hidden = max(channels, channels * max(1, int(mlp_ratio)))
+        self.dwconv = nn.Conv2d(
+            channels,
+            channels,
+            kernel_size=kernel_size,
+            padding=kernel_size // 2,
+            groups=channels,
+        )
+        self.norm = _LayerNorm2d(channels)
+        self.pwconv1 = nn.Conv2d(channels, hidden, kernel_size=1)
+        self.pwconv2 = nn.Conv2d(hidden, channels, kernel_size=1)
+        self.gamma = nn.Parameter(torch.full((channels, 1, 1), 1.0e-3))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        residual = x
+        x = self.dwconv(x)
+        x = self.norm(x)
+        x = F.gelu(self.pwconv1(x))
+        x = self.pwconv2(x)
+        return residual + self.gamma * x
 
 
 class _SinAct(nn.Module):
@@ -138,7 +313,13 @@ class _LatentInjector(nn.Module):
 
 
 class HinervSubstrate(nn.Module):
-    """Hierarchical NeRV with 3-scale latent pyramid (L0 SKETCH)."""
+    """Hierarchical NeRV with 3-scale latent pyramid.
+
+    Default mode preserves the historical local HIV1 archive grammar.  Enabling
+    ``use_hierarchical_feature_grid`` and ``use_convnext_blocks`` adds the
+    official HiNeRV-style temporal-local grid encoding and lightweight
+    ConvNeXt-style refinement as receiver-visible decoder parameters.
+    """
 
     def __init__(self, cfg: HinervConfig) -> None:
         super().__init__()
@@ -158,6 +339,16 @@ class HinervSubstrate(nn.Module):
             raise ValueError(
                 "fine_injection_block_index must be > mid_injection_block_index"
             )
+        if cfg.use_hierarchical_feature_grid and cfg.local_grid_levels <= 0:
+            raise ValueError("local_grid_levels must be positive")
+        if cfg.use_hierarchical_feature_grid and cfg.local_grid_channels <= 0:
+            raise ValueError("local_grid_channels must be positive")
+        if cfg.use_convnext_blocks and cfg.convnext_mlp_ratio <= 0:
+            raise ValueError("convnext_mlp_ratio must be positive")
+        if cfg.use_convnext_blocks and (
+            cfg.convnext_kernel_size <= 0 or cfg.convnext_kernel_size % 2 == 0
+        ):
+            raise ValueError("convnext_kernel_size must be positive and odd")
 
         # Per-pair learned latents at 3 scales
         self.latents_coarse = nn.Parameter(
@@ -186,6 +377,35 @@ class HinervSubstrate(nn.Module):
         for i in range(cfg.num_upsample_blocks):
             blocks.append(_UpBlock(channels[i], channels[i + 1], cfg.sin_frequency))
         self.blocks = nn.ModuleList(blocks)
+        feature_grids: list[nn.Module] = []
+        convnext_blocks: list[nn.Module] = []
+        for i in range(cfg.num_upsample_blocks):
+            out_ch = channels[i + 1]
+            if cfg.use_hierarchical_feature_grid:
+                feature_grids.append(
+                    HierarchicalFeatureGrid(
+                        num_pairs=cfg.num_pairs,
+                        local_scale=2,
+                        base_channels=cfg.local_grid_channels,
+                        levels=cfg.local_grid_levels,
+                        out_channels=out_ch,
+                        reduction=max(1, i + 1),
+                    )
+                )
+            else:
+                feature_grids.append(nn.Identity())
+            if cfg.use_convnext_blocks:
+                convnext_blocks.append(
+                    ConvNeXtBlock(
+                        out_ch,
+                        mlp_ratio=cfg.convnext_mlp_ratio,
+                        kernel_size=cfg.convnext_kernel_size,
+                    )
+                )
+            else:
+                convnext_blocks.append(nn.Identity())
+        self.feature_grids = nn.ModuleList(feature_grids)
+        self.convnext_blocks = nn.ModuleList(convnext_blocks)
 
         # Latent injectors: project to the channel count at the injection point
         mid_inject_channels = channels[cfg.mid_injection_block_index + 1]
@@ -239,6 +459,14 @@ class HinervSubstrate(nn.Module):
 
         for i, block in enumerate(self.blocks):
             h = block(h)
+            if self.cfg.use_hierarchical_feature_grid:
+                h = h + self.feature_grids[i](
+                    pair_indices,
+                    spatial_shape=(h.shape[-2], h.shape[-1]),
+                    dtype=h.dtype,
+                )
+            if self.cfg.use_convnext_blocks:
+                h = self.convnext_blocks[i](h)
             if i == self.cfg.mid_injection_block_index:
                 h = h + self.mid_injector(z_m, (h.shape[-2], h.shape[-1]))
             if i == self.cfg.fine_injection_block_index:
