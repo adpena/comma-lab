@@ -1,0 +1,75 @@
+{
+  "schema_version": "modal_auth_eval_recovery_poll_adjudication_v1",
+  "created_at_utc": "2026-06-02T11:13:24Z",
+  "axis": "[contest-CPU] recovery-pending custody check only",
+  "lane_id": "lane_pr101_storage_order_len24_exact_cpu_20260601",
+  "instance_job_id": "pr101_storage_order_len24_exact_cpu_20260601",
+  "call_id": "fc-01KT2BZT54G6CXPMD94SY43MMH",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval_cpu/pr101_storage_order_len24_cpu_20260601T1955Z",
+  "canonical_recovery_command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "tools/recover_modal_auth_eval.py",
+    "--output-dir",
+    "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval_cpu/pr101_storage_order_len24_cpu_20260601T1955Z",
+    "--call-id",
+    "fc-01KT2BZT54G6CXPMD94SY43MMH",
+    "--timeout-s",
+    "0"
+  ],
+  "canonical_recovery_rc": 4,
+  "canonical_recovery_status": "pending",
+  "canonical_recovery_summary": {
+    "call_id": "fc-01KT2BZT54G6CXPMD94SY43MMH",
+    "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval_cpu/pr101_storage_order_len24_cpu_20260601T1955Z",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recovered_at_utc": "2026-06-02T11:13:24Z",
+    "schema_version": "modal_auth_eval_recover_summary_v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "status": "pending"
+  },
+  "claim_row_refreshed": true,
+  "refreshed_claim": {
+    "timestamp_utc": "2026-06-02T11:13:46Z",
+    "agent": "codex:modal_recovery_poll",
+    "status": "active_modal_cpu_auth_eval_pending_recovery_poll",
+    "predicted_eta_utc": "2026-06-02T14:13:24Z"
+  },
+  "authority_boundary": {
+    "score_claim": false,
+    "score_claim_valid": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false
+  },
+  "go_no_go": {
+    "pr101_cpu_terminal_artifact": "NO_GO_PENDING",
+    "new_exact_full_video_or_cuda_launch": "NO_GO_WHILE_PR101_Z5_OR_CURRENT_FULL600_FULL_VIDEO_BLOCKERS_NONTERMINAL",
+    "local_non_exact_snerv_hinerv_stack_work": "GO_IF_CLAIM_FREE_SSD_BACKED_AND_FALSE_AUTHORITY_LABELED"
+  },
+  "blockers": [
+    "pr101_cpu_auth_eval_nonterminal",
+    "z5_paired_modal_claims_nonterminal_in_active_claim_ledger",
+    "no_contest_cpu_or_cuda_terminal_payload_for_pr101"
+  ],
+  "claim_summary_observation": {
+    "checked_at_utc": "2026-06-02T11:22:00Z",
+    "fresh_active_latest_rows": [
+      "lane_pr101_storage_order_len24_exact_cpu_20260601"
+    ],
+    "stale_nonterminal_relevant_rows": [
+      "lane_z5_rao_ballard_paired_cuda_ratification_wave2a_20260531_contest_cpu",
+      "lane_z5_rao_ballard_paired_cuda_ratification_wave2a_20260531_contest_cuda"
+    ],
+    "current_full600_full_video_latest_rows": "no fresh active latest-row blocker observed after terminal-row closure semantics"
+  },
+  "next_poll": {
+    "use_canonical_tool_only": true,
+    "command": "tools/recover_modal_auth_eval.py --output-dir /Users/adpena/Projects/pact/experiments/results/modal_auth_eval_cpu/pr101_storage_order_len24_cpu_20260601T1955Z --call-id fc-01KT2BZT54G6CXPMD94SY43MMH --timeout-s 0",
+    "suggested_after_utc": "2026-06-02T14:13:24Z"
+  }
+}

@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 from tac.analysis.nerv_top_priority_stack_seam import (
+    FULL_STACK_COMPONENTS,
     SCHEMA,
     build_nerv_top_priority_stack_seam,
     discover_dispatch_blockers,
@@ -45,6 +46,11 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
         "GO_LOCAL_STACK_OPTIMIZATION__NO_GO_EXACT_PROMOTION_OR_SCORE_CLAIM"
     )
     assert payload["top_priority_carriers"] == ["snerv", "hinerv"]
+    assert payload["priority_policy"]["individually_fractally_optimized_full_stacks"]
+    assert payload["priority_policy"][
+        "shared_synergy_surfaces_do_not_collapse_carrier_specific_work"
+    ]
+    assert payload["full_stack_priority"]["components"] == list(FULL_STACK_COMPONENTS)
     assert payload["baseline_to_beat"] == "pr95_hnerv_muon"
     assert payload["baseline"]["archive"]["bytes"] > 0
     assert payload["baseline"]["submission"] == "hnerv_muon"
@@ -63,6 +69,27 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
         enhancer["not_a_standalone_carrier_stack"]
         for enhancer in payload["synergy_enhancers"]
     )
+    work_orders = {
+        order["stack_id"]: order["work_order"]
+        for order in payload["fractal_work_orders"]
+    }
+    assert set(work_orders) == {"snerv", "hinerv"}
+    assert [item["component"] for item in work_orders["snerv"]] == list(
+        FULL_STACK_COMPONENTS
+    )
+    assert [item["component"] for item in work_orders["hinerv"]] == list(
+        FULL_STACK_COMPONENTS
+    )
+    snerv_archive = next(
+        item for item in work_orders["snerv"] if item["component"] == "archive_grammar"
+    )
+    assert snerv_archive["requires_receiver_byte_accounting"] is True
+    assert snerv_archive["promotion_authority"] is False
+    assert "mixed decoder modes" in snerv_archive["next_action"]
+    hinerv_allocator = next(
+        item for item in work_orders["hinerv"] if item["component"] == "allocator"
+    )
+    assert "joint P18/P19" in hinerv_allocator["next_action"]
     assert (
         "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video"
         in payload["dispatch_blockers"]
@@ -127,6 +154,10 @@ def test_dispatch_blocker_parser_finds_named_and_generic_claims(tmp_path: Path) 
         "modal | job | 2026-05-31T17:31:04Z | active_modal_auth_eval_spawned | |\n"
         "| 2026-06-02T04:00:00Z | codex | lane_other_exact_eval | lightning | "
         "job | 2026-06-02T05:00:00Z | active_dispatching | exact eval |\n"
+        "| 2026-06-02T04:20:00Z | codex | lane_closed_exact_eval | lightning | "
+        "job | | completed_score_0_2 | exact eval terminal |\n"
+        "| 2026-06-02T04:05:00Z | codex | lane_closed_exact_eval | lightning | "
+        "job | 2026-06-02T05:00:00Z | active_dispatching | exact eval older |\n"
         "| 2026-06-02T04:01:00Z | codex | lane_old_exact_eval | lightning | "
         "job | | completed_score_0_2 | exact eval terminal |\n"
         "| 2026-05-20T04:00:00Z | codex | lane_stale_exact_eval | lightning | "
@@ -142,6 +173,7 @@ def test_dispatch_blocker_parser_finds_named_and_generic_claims(tmp_path: Path) 
     assert "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video" in blockers
     assert "z5_rao_ballard_modal_claims_still_need_terminal_adjudication" in blockers
     assert "active_exact_or_full_video_claim:lane_other_exact_eval" in blockers
+    assert "active_exact_or_full_video_claim:lane_closed_exact_eval" not in blockers
     assert "active_exact_or_full_video_claim:lane_old_exact_eval" not in blockers
     assert "active_exact_or_full_video_claim:lane_stale_exact_eval" not in blockers
 

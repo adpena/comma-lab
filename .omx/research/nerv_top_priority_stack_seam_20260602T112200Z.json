@@ -1,0 +1,375 @@
+{
+  "axis_tag": "[planning/control]",
+  "baseline": {
+    "archive": null,
+    "blockers": [
+      "pr95_public_intake_root_missing",
+      "upstream_repo_dir_missing"
+    ],
+    "existing_proof_tools": [
+      "tools/prove_pr95_public_archive_runtime_consumption.py",
+      "tools/prove_pr95_public_archive_full_frame_parity.py",
+      "tools/run_pr95_stage8_from_public_archive.py",
+      "tools/run_pr95_hnerv_linf_carrier.py"
+    ],
+    "head_ref": "hnerv_muon",
+    "head_sha": "9bdce26",
+    "intake_root": {
+      "is_dir": false,
+      "path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-pr101-recovery-poll-20260602T111249Z/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto",
+      "present": false
+    },
+    "role": "baseline_control_to_beat",
+    "runtime_files": [],
+    "same_axis_requirement": "SNeRV/HiNeRV winner must be compared against PR95 on the same archive, runtime, inflate, and eval hardware axis before any beat claim",
+    "schema": "pr95_hnerv_baseline_control_pointer.v1",
+    "source_pr": 95,
+    "source_url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+    "state": "MERGED",
+    "submission": "hnerv_muon",
+    "title": "hnerv_muon submission (0.20)",
+    "upstream_repo_dir": {
+      "is_dir": false,
+      "path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-pr101-recovery-poll-20260602T111249Z/upstream",
+      "present": false
+    }
+  },
+  "baseline_to_beat": "pr95_hnerv_muon",
+  "blocked_dispatch": true,
+  "blockers": [
+    "pr95_public_intake_root_missing",
+    "upstream_repo_dir_missing",
+    "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video",
+    "z5_rao_ballard_modal_claims_still_need_terminal_adjudication",
+    "full_600_byte_closed_receiver_proof_missing_for_snerv_and_hinerv",
+    "paired_contest_cpu_cuda_pass_missing_for_winner",
+    "pr95_same_axis_control_replay_required_before_beat_claim"
+  ],
+  "carrier_stacks": [
+    {
+      "current_read": "linear/closed-form coordinate and scalar HF sweeps are not promotion evidence; explicit mixed decoder modes and scorer-loop QAT are the next useful local surfaces",
+      "existing_surfaces": [
+        "src/tac/analysis/snerv_scorer_loop_decoder_qat_contract.py",
+        "src/tac/analysis/snerv_decoder_mode_assignment_probe.py",
+        "src/tac/analysis/snerv_pose_guarded_decoder_gate.py",
+        "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
+        "tools/probe_snerv_decoder_mode_assignments.py",
+        "tools/prove_snerv_receiver_archive.py"
+      ],
+      "next_gate": "pair-robust scorer-loop or NES decoder-QAT continuation with PoseNet as hard guard and receiver-decoded mixed precision bytes preserved",
+      "optimization_scope": "carrier-specific full stack; not a shared HNeRV clone",
+      "required_components": [
+        "architecture",
+        "learned_or_nonlinear_decoder_qat",
+        "pose_guarded_scorer_loop_fit",
+        "linf_oracle_allocator_inside_decoder_weight_training",
+        "mixed_precision_decoder_grammar",
+        "byte_closed_receiver_proof",
+        "paired_pr95_same_axis_control"
+      ],
+      "role": "top_priority_carrier",
+      "stack_id": "snerv",
+      "status": "local_stack_optimization_active"
+    },
+    {
+      "current_read": "recent full-600 MLX prefilter was byte-closed but distortion-bad; rate plumbing is real enough, fit must move upstream into longer score-aware/coder-aware decoder-weight training",
+      "existing_surfaces": [
+        "src/tac/analysis/hinerv_latent_linf_allocation.py",
+        "src/tac/substrates/hi_nerv/score_aware_loss.py",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        ".omx/research/codex_findings_hinerv_coder_aware_qat_wired_20260601T224653Z_codex.md",
+        ".omx/research/codex_findings_hinerv_600pair_joint_p18_p19_full_prefilter_20260602T021050Z_codex.md"
+      ],
+      "next_gate": "longer staged real-teacher SegNet/PoseNet training with coder-aware QAT and local MLX prefilter; no exact spend until prefilter enters a plausible replay band",
+      "optimization_scope": "carrier-specific full stack; not a SNeRV codec wrapper",
+      "required_components": [
+        "hierarchical_architecture",
+        "coder_aware_qat",
+        "joint_p18_p19_oracle_weighting",
+        "dense_decoder_vjp_linf_allocator",
+        "pr95_faithful_curriculum_control",
+        "byte_closed_receiver_proof",
+        "full_video_mlx_prefilter_then_paired_cpu_cuda"
+      ],
+      "role": "top_priority_carrier",
+      "stack_id": "hinerv",
+      "status": "local_stack_optimization_active"
+    }
+  ],
+  "dispatch_blockers": [
+    "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video",
+    "z5_rao_ballard_modal_claims_still_need_terminal_adjudication"
+  ],
+  "exact_or_full_video_launched": false,
+  "forbidden_actions": [
+    "claim_pr95_beat_without_same_axis_pr95_control",
+    "promote_local_mlx_or_macos_cpu_advisory_score",
+    "dispatch_exact_or_full_video_while_pr101_cpu_pending",
+    "rerun_closed_form_snerv_scalar_hf_sweeps_as_promotion_evidence",
+    "treat_sr_nerv_zero_parameter_interpolation_as_promotable"
+  ],
+  "fractal_work_orders": [
+    {
+      "priority": "top_carrier",
+      "stack_id": "snerv",
+      "work_order": [
+        {
+          "component": "architecture",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "learn nonlinear decoder/HF restoration against real SegNet/PoseNet response, not scalar coordinate sweeps",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "optimizer_qat",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "run pair-robust scorer-loop or NES decoder-QAT with PoseNet hard guard and per-pair deltas",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "allocator",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "move L-infinity allocation into decoder-weight fit; latents are diagnostic only until leverage reappears",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "archive_grammar",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "replace fp32/fake-quant receiver payload with explicit mixed decoder modes, int planes, or decoder-delta packing",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        },
+        {
+          "component": "receiver_proof",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "prove receiver-decoded byte accounting before any full-600 authority",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        },
+        {
+          "component": "eval_control",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "compare against PR95 only after same-axis archive/runtime control replay",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        }
+      ]
+    },
+    {
+      "priority": "top_carrier",
+      "stack_id": "hinerv",
+      "work_order": [
+        {
+          "component": "architecture",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "continue hierarchical NeRV carrier training; fit is the active blocker, not proof that the rate knob is fake",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "optimizer_qat",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "stage real-teacher SegNet/PoseNet loss, coder-aware QAT, and PR95/Muon curriculum controls",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "allocator",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "use dense decoder VJP L-infinity allocator with joint P18/P19 weighting inside decoder-weight optimization",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "archive_grammar",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "keep byte budget parameterized and close the quantized receiver grammar before exact replay",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        },
+        {
+          "component": "receiver_proof",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "prove full-600 archive/runtime consumption with no MLX or advisory shortcut",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        },
+        {
+          "component": "eval_control",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "prefilter locally on MLX, then replay paired CPU/CUDA only after blocker claims terminalize",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        }
+      ]
+    }
+  ],
+  "frontier_score_claim": false,
+  "full_stack_priority": {
+    "components": [
+      "architecture",
+      "optimizer_qat",
+      "allocator",
+      "archive_grammar",
+      "receiver_proof",
+      "eval_control"
+    ],
+    "do_not_average_stacks": true,
+    "do_not_promote_shared_enhancer_as_carrier": true,
+    "fractality_rule": "Each stack component needs its own hypothesis, local command, byte accounting surface, guard, and promotion blocker; a global stack memo alone is not implementation authority.",
+    "policy": "Optimize SNeRV and HiNeRV as separate end-to-end stacks at every component boundary, then compose shared enhancers only through explicit byte/eval gates.",
+    "pr95_control_required_for_any_beat_claim": true,
+    "schema": "nerv_individual_fractal_full_stack_priority.v1",
+    "top_priority_carriers": [
+      "snerv",
+      "hinerv"
+    ]
+  },
+  "generated_utc": "2026-06-02T11:17:49.671692+00:00",
+  "go_no_go_verdict": "GO_LOCAL_STACK_OPTIMIZATION__NO_GO_EXACT_PROMOTION_OR_SCORE_CLAIM",
+  "lane_id": "lane_nerv_top_priority_stack_seam_20260602",
+  "next_local_actions": [
+    {
+      "allowed_now": true,
+      "authority_after_pass": "terminalize claim only; no score shortcut",
+      "axis": "[contest-CPU recovery]",
+      "command": ".venv/bin/python tools/recover_modal_auth_eval.py --call-id fc-01KT2BZT54G6CXPMD94SY43MMH --output-dir experiments/results/modal_auth_eval_cpu/pr101_storage_order_len24_cpu_20260601T1955Z",
+      "id": "poll_pr101_cpu_recovery"
+    },
+    {
+      "allowed_now": true,
+      "authority_after_pass": "local triage only",
+      "axis": "[macOS-CPU advisory]",
+      "command": ".venv/bin/python tools/run_snerv_scorer_loop_decoder_qat_smoke.py --n-pairs 4 --pair-stride 8 --pose-hard-guard --out .omx/research/snerv_scorer_loop_decoder_qat_next_<UTC>.json",
+      "id": "snerv_pair_robust_decoder_qat_continuation"
+    },
+    {
+      "allowed_now": true,
+      "authority_after_pass": "local receiver-decoded rate/fit triage only",
+      "axis": "[macOS-CPU advisory]",
+      "command": ".venv/bin/python tools/probe_snerv_decoder_mode_assignments.py --n-pairs 2 --levels 1 --mode-plan magnitude_heuristic --mode-plan fp16,int4,int4 --upstream-dir /Volumes/VertigoDataTier/pact/worktrees/pact-main-pr101-recovery-poll-20260602T111249Z/upstream",
+      "id": "snerv_explicit_decoder_mode_triage"
+    },
+    {
+      "allowed_now": true,
+      "authority_after_pass": "local MLX prefilter only",
+      "axis": "[macOS-MLX research-signal]",
+      "command": ".venv/bin/python tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv --coder-aware-qat --real-teacher-segnet-posenet --num-pairs 32 --epochs 8",
+      "id": "hinerv_real_teacher_qat_continuation"
+    },
+    {
+      "allowed_now": false,
+      "axis": "[contest-CPU]/[contest-CUDA]",
+      "blocked_reason": "blocked while active exact/full-video claims remain nonterminal",
+      "command": "deferred",
+      "id": "paired_exact_eval_or_full_video"
+    }
+  ],
+  "operator_truth": {
+    "dirty_shared_worktree_is_not_absorbed": true,
+    "large_artifacts_policy": "this artifact is metadata-only; future training/eval outputs must spill to SSD and preserve deterministic custody before cleanup",
+    "main_is_source_of_truth": true,
+    "upstream_pr95_is_forensic_baseline_source": true
+  },
+  "priority_policy": {
+    "baseline_control": "pr95_hnerv_muon",
+    "carrier_stacks": [
+      "snerv",
+      "hinerv"
+    ],
+    "compare_under_same_archive_runtime_eval_axis": true,
+    "do_not_launch_new_full_video_or_exact_while_dispatch_blockers_active": true,
+    "enhancers_are_not_standalone_carrier_stacks": true,
+    "individually_fractally_optimized_full_stacks": true,
+    "shared_synergy_surfaces_do_not_collapse_carrier_specific_work": true
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "nerv_top_priority_stack_seam.v1",
+  "score_claim": false,
+  "shared_promotion_gates": [
+    {
+      "authority_after_pass": "may consider exact/full-video queue again",
+      "gate": "pr101_cpu_recovery_terminal",
+      "required": true
+    },
+    {
+      "authority_after_pass": "candidate may enter paired auth-eval planning only",
+      "gate": "byte_closed_full_600_receiver_proof",
+      "required": true
+    },
+    {
+      "authority_after_pass": "beat/no-beat statement may be made only on that axis",
+      "gate": "pr95_same_axis_control",
+      "required": true
+    },
+    {
+      "authority_after_pass": "promotion discussion may begin",
+      "gate": "paired_contest_cpu_cuda_auth_eval",
+      "required": true
+    }
+  ],
+  "synergy_enhancers": [
+    {
+      "enhancer_id": "sr_nerv_trained_scorer_aware",
+      "not_a_standalone_carrier_stack": true,
+      "policy": "low-internal-resolution carrier plus trained/scorer-aware SR; zero-parameter interpolation remains no-go",
+      "priority": "highest_enhancer"
+    },
+    {
+      "enhancer_id": "rnerv_per_video_config_optimizer",
+      "not_a_standalone_carrier_stack": true,
+      "policy": "optimize the winning SNeRV/HiNeRV carrier configuration per video",
+      "priority": "winner_optimizer"
+    },
+    {
+      "enhancer_id": "ffnerv_flow_pose_channel",
+      "not_a_standalone_carrier_stack": true,
+      "policy": "flow-conditioning is a pose-channel bolt-on after carrier winner emerges",
+      "priority": "pose_channel_enhancer"
+    },
+    {
+      "enhancer_id": "boostnerv_decoder_temporal_affine",
+      "not_a_standalone_carrier_stack": true,
+      "policy": "conditional decoder/temporal-affine bolt-on for the winner",
+      "priority": "cheap_synergy_multiplier"
+    }
+  ],
+  "top_priority_carriers": [
+    "snerv",
+    "hinerv"
+  ]
+}

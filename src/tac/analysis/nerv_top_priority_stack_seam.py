@@ -34,6 +34,14 @@ FALSE_AUTHORITY = {
 }
 
 TOP_PRIORITY_CARRIERS = ("snerv", "hinerv")
+FULL_STACK_COMPONENTS = (
+    "architecture",
+    "optimizer_qat",
+    "allocator",
+    "archive_grammar",
+    "receiver_proof",
+    "eval_control",
+)
 TERMINAL_STATUS_PREFIXES = (
     "completed_",
     "failed_",
@@ -135,12 +143,16 @@ def build_nerv_top_priority_stack_seam(
         "priority_policy": {
             "carrier_stacks": list(TOP_PRIORITY_CARRIERS),
             "baseline_control": "pr95_hnerv_muon",
+            "individually_fractally_optimized_full_stacks": True,
+            "shared_synergy_surfaces_do_not_collapse_carrier_specific_work": True,
             "enhancers_are_not_standalone_carrier_stacks": True,
             "compare_under_same_archive_runtime_eval_axis": True,
             "do_not_launch_new_full_video_or_exact_while_dispatch_blockers_active": True,
         },
+        "full_stack_priority": _full_stack_priority(),
         "baseline": baseline,
         "carrier_stacks": [_snerv_stack(), _hinerv_stack()],
+        "fractal_work_orders": _fractal_work_orders(),
         "synergy_enhancers": _synergy_enhancers(),
         "shared_promotion_gates": _shared_promotion_gates(),
         "blocked_dispatch": exact_blocked,
@@ -268,7 +280,8 @@ def discover_dispatch_blockers(
     now = _parse_utc(now_utc) or datetime.now(UTC)
 
     blockers: list[str] = []
-    for claim in _parse_claim_rows(path.read_text(encoding="utf-8")):
+    rows = _latest_claim_rows_by_job(_parse_claim_rows(path.read_text(encoding="utf-8")))
+    for claim in rows:
         status = str(claim.get("status", ""))
         if _status_is_terminal(status):
             continue
@@ -321,6 +334,7 @@ def _snerv_stack() -> dict[str, Any]:
             "pair-robust scorer-loop or NES decoder-QAT continuation with PoseNet "
             "as hard guard and receiver-decoded mixed precision bytes preserved"
         ),
+        "optimization_scope": "carrier-specific full stack; not a shared HNeRV clone",
     }
 
 
@@ -355,7 +369,123 @@ def _hinerv_stack() -> dict[str, Any]:
             "QAT and local MLX prefilter; no exact spend until prefilter enters a "
             "plausible replay band"
         ),
+        "optimization_scope": "carrier-specific full stack; not a SNeRV codec wrapper",
     }
+
+
+def _full_stack_priority() -> dict[str, Any]:
+    return {
+        "schema": "nerv_individual_fractal_full_stack_priority.v1",
+        "top_priority_carriers": list(TOP_PRIORITY_CARRIERS),
+        "components": list(FULL_STACK_COMPONENTS),
+        "policy": (
+            "Optimize SNeRV and HiNeRV as separate end-to-end stacks at every "
+            "component boundary, then compose shared enhancers only through "
+            "explicit byte/eval gates."
+        ),
+        "do_not_average_stacks": True,
+        "do_not_promote_shared_enhancer_as_carrier": True,
+        "pr95_control_required_for_any_beat_claim": True,
+        "fractality_rule": (
+            "Each stack component needs its own hypothesis, local command, byte "
+            "accounting surface, guard, and promotion blocker; a global stack "
+            "memo alone is not implementation authority."
+        ),
+    }
+
+
+def _fractal_work_orders() -> list[dict[str, Any]]:
+    return [
+        {
+            "stack_id": "snerv",
+            "priority": "top_carrier",
+            "work_order": _component_work_orders(
+                {
+                    "architecture": (
+                        "learn nonlinear decoder/HF restoration against real "
+                        "SegNet/PoseNet response, not scalar coordinate sweeps"
+                    ),
+                    "optimizer_qat": (
+                        "run pair-robust scorer-loop or NES decoder-QAT with "
+                        "PoseNet hard guard and per-pair deltas"
+                    ),
+                    "allocator": (
+                        "move L-infinity allocation into decoder-weight fit; "
+                        "latents are diagnostic only until leverage reappears"
+                    ),
+                    "archive_grammar": (
+                        "replace fp32/fake-quant receiver payload with explicit "
+                        "mixed decoder modes, int planes, or decoder-delta packing"
+                    ),
+                    "receiver_proof": (
+                        "prove receiver-decoded byte accounting before any "
+                        "full-600 authority"
+                    ),
+                    "eval_control": (
+                        "compare against PR95 only after same-axis archive/runtime "
+                        "control replay"
+                    ),
+                },
+                local_command_ids=(
+                    "snerv_pair_robust_decoder_qat_continuation",
+                    "snerv_explicit_decoder_mode_triage",
+                ),
+            ),
+        },
+        {
+            "stack_id": "hinerv",
+            "priority": "top_carrier",
+            "work_order": _component_work_orders(
+                {
+                    "architecture": (
+                        "continue hierarchical NeRV carrier training; fit is the "
+                        "active blocker, not proof that the rate knob is fake"
+                    ),
+                    "optimizer_qat": (
+                        "stage real-teacher SegNet/PoseNet loss, coder-aware QAT, "
+                        "and PR95/Muon curriculum controls"
+                    ),
+                    "allocator": (
+                        "use dense decoder VJP L-infinity allocator with joint "
+                        "P18/P19 weighting inside decoder-weight optimization"
+                    ),
+                    "archive_grammar": (
+                        "keep byte budget parameterized and close the quantized "
+                        "receiver grammar before exact replay"
+                    ),
+                    "receiver_proof": (
+                        "prove full-600 archive/runtime consumption with no MLX "
+                        "or advisory shortcut"
+                    ),
+                    "eval_control": (
+                        "prefilter locally on MLX, then replay paired CPU/CUDA "
+                        "only after blocker claims terminalize"
+                    ),
+                },
+                local_command_ids=("hinerv_real_teacher_qat_continuation",),
+            ),
+        },
+    ]
+
+
+def _component_work_orders(
+    descriptions: Mapping[str, str],
+    *,
+    local_command_ids: Sequence[str],
+) -> list[dict[str, Any]]:
+    orders: list[dict[str, Any]] = []
+    for component in FULL_STACK_COMPONENTS:
+        orders.append(
+            {
+                "component": component,
+                "next_action": descriptions[component],
+                "local_command_ids": list(local_command_ids),
+                "requires_receiver_byte_accounting": component
+                in {"archive_grammar", "receiver_proof", "eval_control"},
+                "promotion_authority": False,
+            }
+        )
+    return orders
 
 
 def _synergy_enhancers() -> list[dict[str, Any]]:
@@ -574,6 +704,33 @@ def _parse_claim_rows(text: str) -> list[dict[str, str]]:
     return rows
 
 
+def _latest_claim_rows_by_job(rows: Sequence[Mapping[str, str]]) -> list[dict[str, str]]:
+    latest: dict[tuple[str, str], dict[str, str]] = {}
+    for row in rows:
+        claim = dict(row)
+        key = (
+            str(claim.get("lane_id", "")),
+            str(claim.get("instance_job_id", "")),
+        )
+        previous = latest.get(key)
+        if previous is None or _claim_row_is_newer(claim, previous):
+            latest[key] = claim
+    return list(latest.values())
+
+
+def _claim_row_is_newer(
+    candidate: Mapping[str, str],
+    previous: Mapping[str, str],
+) -> bool:
+    candidate_ts = _parse_utc(candidate.get("timestamp_utc", ""))
+    previous_ts = _parse_utc(previous.get("timestamp_utc", ""))
+    if previous_ts is None:
+        return candidate_ts is not None
+    if candidate_ts is None:
+        return False
+    return candidate_ts > previous_ts
+
+
 def _status_is_terminal(status: str) -> bool:
     lowered = status.lower()
     return any(lowered.startswith(prefix) for prefix in TERMINAL_STATUS_PREFIXES)
@@ -633,6 +790,7 @@ __all__ = [
     "AXIS_TAG",
     "DEFAULT_LANE_ID",
     "FALSE_AUTHORITY",
+    "FULL_STACK_COMPONENTS",
     "PR95_PR_NUMBER",
     "PR95_PR_URL",
     "PR101_LANE_ID",
