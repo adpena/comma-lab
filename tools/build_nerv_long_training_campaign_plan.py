@@ -211,6 +211,14 @@ def _load_feedback_sources(paths: list[Path]) -> list[dict]:
             if not isinstance(row, dict):
                 raise TypeError(f"{path}: ledger wrapper missing feedback row")
             out.append(_feedback_payload_with_path(row, path))
+        elif payload.get("schema") == "nerv_queue_training_feedback_refresh.v1":
+            rows = payload.get("rows")
+            if not isinstance(rows, list):
+                raise TypeError(f"{path}: refresh wrapper missing rows list")
+            for index, item in enumerate(rows):
+                if not isinstance(item, dict) or not isinstance(item.get("row"), dict):
+                    raise TypeError(f"{path}: rows[{index}] missing feedback row")
+                out.append(_feedback_payload_with_path(item["row"], path))
         else:
             out.append(_feedback_payload_with_path(payload, path))
     return out

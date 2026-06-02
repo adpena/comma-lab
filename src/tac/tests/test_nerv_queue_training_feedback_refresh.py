@@ -11,6 +11,7 @@ from tac.analysis.nerv_queue_training_feedback_refresh import (
     render_refresh_markdown,
     write_nerv_queue_training_feedback_refresh,
 )
+from tools.build_nerv_long_training_campaign_plan import _load_feedback_sources
 
 
 def test_refresh_queue_training_feedback_harvests_running_hinerv_row(
@@ -113,3 +114,9 @@ def test_refresh_queue_training_feedback_harvests_running_hinerv_row(
     assert Path(write_result["jsonl_path"]).read_text(encoding="utf-8").count("\n") == 1
     markdown = render_refresh_markdown(report)
     assert "recommended_segnet_weight: `8.0`" in markdown
+
+    loaded = _load_feedback_sources([tmp_path / "refresh.json"])
+    assert len(loaded) == 1
+    assert loaded[0]["schema"] == "nerv_candidate_feedback_row.v1"
+    assert loaded[0]["candidate_id"] == "hinerv_np600_test"
+    assert loaded[0]["recommended_segnet_distillation_weight"] == 8.0
