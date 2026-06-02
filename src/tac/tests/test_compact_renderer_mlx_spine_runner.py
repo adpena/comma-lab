@@ -15,6 +15,15 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from tac.analysis.snerv_step_map_coder import encode_step_maps
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    encode_decoder_payload,
+    encode_lf_metadata_payload,
+    encode_lf_quant_payload,
+    pack_snerv_archive,
+)
+from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -51,6 +60,37 @@ def _write_synthetic_pr95_archive(path: Path, *, pairs: int = 600) -> Path:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("0.bin", b"".join(chunks))
     return path
+
+
+def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
+    plane_count = int(pairs) * 2 * 3
+    lf_planes = [
+        (np.arange(48, dtype=np.int64).reshape(6, 8) + idx) % 17
+        for idx in range(plane_count)
+    ]
+    step_maps = [
+        np.full((6, 8), 1.0 + idx * 0.01, dtype=np.float32)
+        for idx in range(plane_count)
+    ]
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(
+            lf_zero_points=np.zeros(plane_count, dtype=np.float32),
+        ),
+        lf_payload=encode_lf_quant_payload(lf_planes),
+        decoder_payload=encode_decoder_payload(HfGenerationDecoder.zeros(levels=2)),
+        step_map_packet=encode_step_maps(step_maps, bins=4).packet,
+        metadata={
+            "n_pairs": int(pairs),
+            "frames_per_pair": 2,
+            "channels": 3,
+            "height": 12,
+            "width": 16,
+            "lf_plane_count": plane_count,
+            "levels": 2,
+            "wavelet": "db2",
+        },
+    )
+    return archive.packet
 
 
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
@@ -2078,7 +2118,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    packet = b"SNERVPACKET"
+    packet = _synthetic_snerv_packet(pairs=2)
     captured_advisory_kwargs: dict[str, object] = {}
 
     def fake_run_snerv_advisory(**kwargs):
@@ -2122,7 +2162,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
         package_dir.mkdir(parents=True, exist_ok=True)
         archive = package_dir / "archive.zip"
         with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
-            zf.writestr("0.bin", b"snerv-archive")
+            zf.writestr("0.bin", bytes(kwargs["packet"]))
         submission = package_dir / "submission"
         submission.mkdir()
         (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
@@ -2268,6 +2308,12 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert candidate_feedback["row"]["measured_num_pairs"] == 2
     assert candidate_feedback["row"]["feedback_ready"] is False
     assert candidate_feedback["score_claim"] is False
+    binary_profile = out["snerv_binary_profile"]
+    assert binary_profile["profile_written"] is True
+    assert Path(binary_profile["profile_path"]).is_file()
+    assert binary_profile["snar1_packet_bytes"] == len(packet)
+    assert binary_profile["lf_payload_bytes"] > 0
+    assert binary_profile["score_claim"] is False
     assert out["score_aware_training"]["beats_frontier_rate"] is True
     assert out["reusable_optimization_followups"][
         "applies_after_byte_closed_export"

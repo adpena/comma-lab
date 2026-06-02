@@ -44,6 +44,17 @@ def _runner_report(tmp_path: Path) -> dict[str, object]:
         "archive_path": archive.as_posix(),
         "archive_bytes": archive.stat().st_size,
         "archive_sha256": "archive-sha",
+        "snerv_binary_profile": {
+            "profile_written": True,
+            "profile_path": (tmp_path / "snerv_binary_profile.json").as_posix(),
+            "verdict": "current_snerv_artifact_rate_blocked_by_explicit_lf_payload",
+            "charged_archive_bytes": 10_057_021,
+            "snar1_packet_bytes": 10_030_524,
+            "lf_payload_bytes": 9_996_235,
+            "lf_payload_fraction_of_packet": 0.9965,
+            "lf_payload_bytes_per_coeff": 0.1729,
+            "blockers": ["snerv_lf_payload_dominates_packet"],
+        },
         "receiver_proof_report_paths": [proof.as_posix()],
         "blockers": ["partial_pair_byte_feedback_only"],
     }
@@ -70,6 +81,16 @@ def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
     assert row["feedback_ready"] is False
     assert row["measured_archive_bytes"] == 42_000
     assert row["archive_sha256"] == "archive-sha"
+    assert row["snerv_binary_profile_written"] is True
+    assert (
+        row["snerv_binary_profile_verdict"]
+        == "current_snerv_artifact_rate_blocked_by_explicit_lf_payload"
+    )
+    assert row["snerv_binary_profile_lf_payload_bytes"] == 9_996_235
+    assert row["snerv_binary_profile_lf_payload_fraction_of_packet"] == 0.9965
+    assert row["snerv_binary_profile_blockers"] == [
+        "snerv_lf_payload_dominates_packet"
+    ]
     assert row["source_report_sha256"] is not None
     assert row["blockers"] == ["partial_pair_byte_feedback_only"]
     assert row["score_claim"] is False

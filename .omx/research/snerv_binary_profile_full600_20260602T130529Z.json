@@ -1,0 +1,382 @@
+{
+  "axis_tag": "[local-rate-profile false-authority]",
+  "blockers": [
+    "snerv_binary_profile_is_rate_only_not_score_authority",
+    "full_video_scorer_component_profile_missing",
+    "paired_contest_cpu_cuda_auth_eval_missing",
+    "snerv_archive_rate_exceeds_frontier",
+    "snerv_lf_payload_dominates_packet"
+  ],
+  "bytes_above_frontier": 9878528,
+  "charged_archive_bytes": 10057021,
+  "charged_rate_score": 6.696557474587693,
+  "contest_rate_denominator_bytes": 37545489,
+  "created_utc": "2026-06-02T13:05:35.182445+00:00",
+  "decoder_payload_header": {
+    "compressed_bytes": 392,
+    "dtype": "float32_le",
+    "kernel_shape": [
+      3,
+      3
+    ],
+    "levels": 3,
+    "output_affine": {
+      "bias": 0.2524755001068115,
+      "count": 1,
+      "dtype": "float32_le",
+      "mode": "scalar",
+      "scale": 0.9877095818519592
+    },
+    "raw_bytes": 332,
+    "raw_sha256": "fdb40647b4fe152c10848d2c839818de0b27d37e23f5a1daae2e60eda0ae88b7",
+    "schema": "snerv_decoder_payload.v1",
+    "subbands": [
+      "LH",
+      "HL",
+      "HH"
+    ]
+  },
+  "frontier_bytes": 178493,
+  "frontier_score_claim": false,
+  "input_kind": "contest_archive_zip",
+  "input_path": "/Volumes/VertigoDataTier/pact/snerv_lf_delta_sharedshape_bits2p0_l2_affine_lastframe_package_full600_metadataonly_20260602T032545Z/archive.zip",
+  "input_sha256": "13db5e6e659bc4b0aa6a6925119673749e2b72a8cf1a2e6e943603d4821608ca",
+  "lf_payload_header": {
+    "canonical_int64_raw_bytes": 462528000,
+    "canonical_int64_raw_sha256": "ec498820883b7b6ac5eb2b6f11f907c689ae379a4eca9310bd85e73a4d94b9c7",
+    "codec": "spatial_delta_zigzag_leb128_lzma",
+    "compressed_bytes": 9995880,
+    "dtype": "spatial_delta_zigzag_uleb128",
+    "payload_bytes": 9995880,
+    "raw_bytes": 57816000,
+    "schema": "snerv_lf_quant_payload.v2",
+    "section_bytes": 9996235,
+    "shape_count": 3600,
+    "shared_shape": [
+      110,
+      146
+    ]
+  },
+  "lf_quant_profile": {
+    "bytes_per_coeff": 0.1728973813477238,
+    "coeff_count": 57816000,
+    "decode_status": "decoded",
+    "max": 36,
+    "min": 0,
+    "nonzero_fraction": 0.9374139857478898,
+    "order0_entropy_bits_per_coeff": 2.8726533018716833,
+    "order0_entropy_floor_bytes": 20760666,
+    "plane_count": 3600,
+    "plane_shapes": [
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ]
+    ],
+    "plane_shapes_truncated": true,
+    "raw_int64_bytes": 462528000,
+    "section_bytes": 9996235,
+    "section_bytes_over_order0_floor": 0.481498763093631,
+    "section_bytes_over_structured_floor": 0.481498763093631,
+    "section_fraction_of_packet": 0.9965815345240189,
+    "structured_zero_nonzero_bits_per_coeff": 2.872653301871682,
+    "structured_zero_nonzero_floor_bytes": 20760666,
+    "top_values": [
+      {
+        "count": 17752923,
+        "value": 1
+      },
+      {
+        "count": 14704000,
+        "value": 2
+      },
+      {
+        "count": 7209689,
+        "value": 3
+      },
+      {
+        "count": 3618473,
+        "value": 0
+      },
+      {
+        "count": 3606945,
+        "value": 4
+      },
+      {
+        "count": 2619955,
+        "value": 5
+      },
+      {
+        "count": 2516463,
+        "value": 6
+      },
+      {
+        "count": 2339951,
+        "value": 7
+      },
+      {
+        "count": 1662462,
+        "value": 8
+      },
+      {
+        "count": 844052,
+        "value": 9
+      },
+      {
+        "count": 320586,
+        "value": 10
+      },
+      {
+        "count": 157172,
+        "value": 11
+      }
+    ],
+    "unique_value_count": 37,
+    "zero_fraction": 0.06258601425211015
+  },
+  "lf_zero_point_profile": {
+    "count": 3600,
+    "dtype": "float32",
+    "max": 42.11205291748047,
+    "mean": -7.959439754486084,
+    "min": -159.66275024414062
+  },
+  "next_actions": [
+    "native_mlx_snerv_train_export_archive_adapter",
+    "full_video_mlx_prefilter_then_local_cpu_replay",
+    "learned_or_symbolic_lf_hf_generator_to_reduce_explicit_lf_payload",
+    "sr_low_resolution_carrier_with_posenet_protected_pathway",
+    "pose_hard_score_primary_decoder_fit_with_explicit_segnet_slack",
+    "wavelet_group_p18_p19_saliency_binding"
+  ],
+  "package_profile": {
+    "archive_bytes": 10057021,
+    "input_kind": "contest_archive_zip",
+    "zip_0bin_compress_size": 10023339,
+    "zip_0bin_file_size": 10030524,
+    "zip_member_count": 14,
+    "zip_members": [
+      {
+        "compress_size": 10023339,
+        "compress_type": 8,
+        "crc": "63d622bd",
+        "file_size": 10030524,
+        "name": "0.bin"
+      },
+      {
+        "compress_size": 326,
+        "compress_type": 8,
+        "crc": "0f13334b",
+        "file_size": 453,
+        "name": "inflate.sh"
+      },
+      {
+        "compress_size": 650,
+        "compress_type": 8,
+        "crc": "ca77e334",
+        "file_size": 1288,
+        "name": "inflate.py"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "name": "src/tac/__init__.py"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "name": "src/tac/analysis/__init__.py"
+      },
+      {
+        "compress_size": 7925,
+        "compress_type": 8,
+        "crc": "cf458828",
+        "file_size": 38546,
+        "name": "src/tac/analysis/snerv_step_map_coder.py"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "name": "src/tac/codec/__init__.py"
+      },
+      {
+        "compress_size": 2412,
+        "compress_type": 8,
+        "crc": "ffb28001",
+        "file_size": 8411,
+        "name": "src/tac/codec/receiver_integer_plane_codec.py"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "name": "src/tac/substrates/__init__.py"
+      },
+      {
+        "compress_size": 2,
+        "compress_type": 8,
+        "crc": "00000000",
+        "file_size": 0,
+        "name": "src/tac/substrates/snerv_inverse_steg_carrier/__init__.py"
+      },
+      {
+        "compress_size": 6825,
+        "compress_type": 8,
+        "crc": "08cc5290",
+        "file_size": 30534,
+        "name": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py"
+      },
+      {
+        "compress_size": 6042,
+        "compress_type": 8,
+        "crc": "fbac942a",
+        "file_size": 18034,
+        "name": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+      },
+      {
+        "compress_size": 5349,
+        "compress_type": 8,
+        "crc": "7f845be8",
+        "file_size": 17185,
+        "name": "src/tac/substrates/snerv_inverse_steg_carrier/dwt.py"
+      },
+      {
+        "compress_size": 2079,
+        "compress_type": 8,
+        "crc": "e931d139",
+        "file_size": 5326,
+        "name": "src/tac/substrates/snerv_inverse_steg_carrier/inflate.py"
+      }
+    ],
+    "zip_overhead_bytes": 2064
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_score_per_byte": 6.658589531221714e-07,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_binary_profile.v1",
+  "score_claim": false,
+  "section_rows": [
+    {
+      "bytes": 14400,
+      "fraction_of_packet": 0.001435617919861415,
+      "section": "metadata_payload",
+      "sha256": "d1e68826764e984bd855f441d1a98c22230133c5f063eb76c1a4840e351bed54"
+    },
+    {
+      "bytes": 9996235,
+      "fraction_of_packet": 0.9965815345240189,
+      "section": "lf_payload",
+      "sha256": "a28c0e86fd74e9873a0f4302ccf11ce6844890c75f37d7f42fb8de8f29a172dc"
+    },
+    {
+      "bytes": 756,
+      "fraction_of_packet": 7.536994079272429e-05,
+      "section": "decoder_payload",
+      "sha256": "b757fe28f84cd5316e73bce7a575b772076bb7308c404dc03f317c18488ded20"
+    },
+    {
+      "bytes": 17246,
+      "fraction_of_packet": 0.001719351850411803,
+      "section": "step_map_packet",
+      "sha256": "6dc63faea23b11c520f591f47f260081db0a8f21db8f44d1c25428f9798aafea"
+    }
+  ],
+  "section_summary": {
+    "largest_section": "lf_payload",
+    "largest_section_bytes": 9996235,
+    "largest_section_fraction_of_payload": 0.9967690524644576,
+    "section_payload_bytes": 10028637
+  },
+  "snar1_header_bytes": 1887,
+  "snar1_metadata": {
+    "channels": 3,
+    "frames_per_pair": 2,
+    "levels": 3,
+    "lf_plane_count": 3600,
+    "n_pairs": 600,
+    "wavelet": "db2"
+  },
+  "snar1_packet_bytes": 10030524,
+  "snar1_packet_sha256": "fb2eb9fb45c95b7e0c670aef718a1cd0a30396e679f678e6d8e7a828f69a111c",
+  "step_map_profile": {
+    "bytes_per_value": 0.0002982911304829113,
+    "map_count": 3600,
+    "map_shapes": [
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ],
+      [
+        110,
+        146
+      ]
+    ],
+    "map_shapes_truncated": true,
+    "max": 64.0,
+    "min": 64.0,
+    "section_bytes": 17246,
+    "section_fraction_of_packet": 0.001719351850411803,
+    "value_count": 57816000
+  },
+  "verdict": "current_snerv_artifact_rate_blocked_by_explicit_lf_payload"
+}

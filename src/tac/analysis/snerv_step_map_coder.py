@@ -496,6 +496,16 @@ def _decode_adaptive_step_maps(packet: bytes) -> list[np.ndarray]:
             if idx in seen_indices:
                 raise SnervStepMapCoderError(f"duplicate adaptive map index {idx}")
             seen_indices.add(idx)
+        if group.get("kind") == "constant_log2_shared_shape":
+            if int(group.get("payload_bytes", 0)) != 0:
+                raise SnervStepMapCoderError(
+                    "adaptive shared-shape constant group must not carry payload bytes"
+                )
+            shape = tuple(int(v) for v in group["shape"])
+            log2_value = float(group["log2_value"])
+            for idx in indices:
+                out[idx] = np.full(shape, np.exp2(log2_value), dtype=np.float32)
+            continue
         if group.get("kind") == "constant_log2_fill":
             if int(group.get("payload_bytes", 0)) != 0:
                 raise SnervStepMapCoderError(

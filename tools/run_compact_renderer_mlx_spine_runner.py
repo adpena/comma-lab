@@ -54,6 +54,10 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
 from tac.analysis.nerv_stack_synergy_audit import (  # noqa: E402
     build_nerv_stack_synergy_audit,
 )
+from tac.analysis.snerv_binary_profile import (  # noqa: E402
+    SnervBinaryProfileError,
+    write_snerv_binary_profile,
+)
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
 )
@@ -80,6 +84,9 @@ from tac.substrates.hprc.spine_acquisition import (  # noqa: E402
 from tac.substrates.hprc.spine_bounded_runner import (  # noqa: E402
     build_spine_bounded_runner_plan,
     write_spine_bounded_runner_plan,
+)
+from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
+    SnervArchiveError,
 )
 from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
     emit_compact_renderer_spine_adapter,
@@ -1725,6 +1732,65 @@ def _resolve_execute_modelsize_candidate(
     )
 
 
+def _write_snerv_binary_profile_attachment(
+    *,
+    archive_path: str | Path | None,
+    output_dir: str | Path,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Write a SNeRV binary profile, fail-closed if unavailable."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    if archive_path is None or str(archive_path).strip() == "":
+        return {
+            "schema": "compact_runner_snerv_binary_profile_attachment.v1",
+            "profile_written": False,
+            "blockers": ["snerv_binary_profile_archive_path_missing"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    profile_path = out / "snerv_binary_profile.json"
+    try:
+        resolved_archive = _resolve(archive_path, base=Path(repo_root))
+        profile = write_snerv_binary_profile(
+            input_path=resolved_archive,
+            output_path=profile_path,
+        )
+    except (
+        OSError,
+        SnervArchiveError,
+        SnervBinaryProfileError,
+        ValueError,
+        zipfile.BadZipFile,
+    ) as exc:
+        return {
+            "schema": "compact_runner_snerv_binary_profile_attachment.v1",
+            "profile_written": False,
+            "profile_path": profile_path.as_posix(),
+            "blockers": [f"snerv_binary_profile_failed:{exc}"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    lf_profile = dict(profile.get("lf_quant_profile") or {})
+    return {
+        "schema": "compact_runner_snerv_binary_profile_attachment.v1",
+        "profile_written": True,
+        "profile_path": profile_path.as_posix(),
+        "verdict": profile.get("verdict"),
+        "charged_archive_bytes": profile.get("charged_archive_bytes"),
+        "snar1_packet_bytes": profile.get("snar1_packet_bytes"),
+        "lf_payload_bytes": lf_profile.get("section_bytes"),
+        "lf_payload_fraction_of_packet": lf_profile.get("section_fraction_of_packet"),
+        "lf_payload_bytes_per_coeff": lf_profile.get("bytes_per_coeff"),
+        "blockers": list(profile.get("blockers") or []),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def execute_snerv_inverse_steg_advisory_and_adapt(
     *,
     output_dir: str | Path,
@@ -1902,6 +1968,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             repo_root=root,
         )
     )
+    snerv_binary_profile = _write_snerv_binary_profile_attachment(
+        archive_path=archive_path,
+        output_dir=out,
+        repo_root=root,
+    )
     candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
@@ -1924,6 +1995,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             *local_cpu_replay_blockers,
             *list(post_export_materializer_plan.get("blockers") or []),
             *list(post_export_materializer_execution.get("blockers") or []),
+            *(
+                []
+                if snerv_binary_profile.get("profile_written")
+                else list(snerv_binary_profile.get("blockers") or [])
+            ),
             *list(row.get("blockers") or []),
             *list(mlx_prefilter_coverage.get("blockers") or []),
         ]
@@ -2032,6 +2108,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             },
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
+            "snerv_binary_profile": snerv_binary_profile,
             "local_cpu_replay_summary_paths": [
                 path.as_posix() for path in local_cpu_replay_paths
             ],
@@ -2209,6 +2286,11 @@ def adapt_snerv_advisory_report_to_spine(
             repo_root=root,
         )
     )
+    snerv_binary_profile = _write_snerv_binary_profile_attachment(
+        archive_path=archive_path,
+        output_dir=out,
+        repo_root=root,
+    )
     blockers = _dedupe(
         [
             "contest_cpu_cuda_exact_eval_not_executed",
@@ -2228,6 +2310,11 @@ def adapt_snerv_advisory_report_to_spine(
             *local_cpu_replay_blockers,
             *list(post_export_materializer_plan.get("blockers") or []),
             *list(post_export_materializer_execution.get("blockers") or []),
+            *(
+                []
+                if snerv_binary_profile.get("profile_written")
+                else list(snerv_binary_profile.get("blockers") or [])
+            ),
         ]
     )
     final = _base_report(
@@ -2256,6 +2343,7 @@ def adapt_snerv_advisory_report_to_spine(
             ),
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
+            "snerv_binary_profile": snerv_binary_profile,
             "local_cpu_replay_summary_paths": [
                 path.as_posix() for path in local_cpu_replay_paths
             ],

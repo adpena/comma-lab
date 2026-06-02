@@ -55,6 +55,7 @@ def build_nerv_candidate_feedback_row(
         else None
     )
     local_replay = runner_report.get("local_cpu_replay_summary")
+    snerv_profile = dict(runner_report.get("snerv_binary_profile") or {})
     return {
         "schema": SCHEMA,
         "created_utc": datetime.now(UTC).isoformat(),
@@ -79,6 +80,25 @@ def build_nerv_candidate_feedback_row(
         "archive_path": runner_report.get("archive_path"),
         "archive_bytes": runner_report.get("archive_bytes"),
         "archive_sha256": runner_report.get("archive_sha256"),
+        "snerv_binary_profile_path": snerv_profile.get("profile_path"),
+        "snerv_binary_profile_written": bool(snerv_profile.get("profile_written")),
+        "snerv_binary_profile_verdict": snerv_profile.get("verdict"),
+        "snerv_binary_profile_charged_archive_bytes": snerv_profile.get(
+            "charged_archive_bytes"
+        ),
+        "snerv_binary_profile_snar1_packet_bytes": snerv_profile.get(
+            "snar1_packet_bytes"
+        ),
+        "snerv_binary_profile_lf_payload_bytes": snerv_profile.get(
+            "lf_payload_bytes"
+        ),
+        "snerv_binary_profile_lf_payload_fraction_of_packet": snerv_profile.get(
+            "lf_payload_fraction_of_packet"
+        ),
+        "snerv_binary_profile_lf_payload_bytes_per_coeff": snerv_profile.get(
+            "lf_payload_bytes_per_coeff"
+        ),
+        "snerv_binary_profile_blockers": list(snerv_profile.get("blockers") or []),
         "receiver_proof_report_paths": list(
             runner_report.get("receiver_proof_report_paths") or []
         ),

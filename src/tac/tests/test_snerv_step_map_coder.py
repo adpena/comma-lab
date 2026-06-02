@@ -216,6 +216,47 @@ def test_waterfill_zero_budget_is_all_constant_fill() -> None:
         assert np.unique(got).size == 1
 
 
+def test_adaptive_decode_accepts_shared_shape_constant_group() -> None:
+    maps = _smooth_step_maps()[:4]
+    packet = encode_step_maps_waterfill(
+        maps,
+        map_importance=np.linspace(1.0, 4.0, len(maps)),
+        target_bits_per_coeff=0.0,
+    )
+
+    def mutate(header: dict[str, object]) -> None:
+        groups = header["groups"]
+        assert isinstance(groups, list)
+        group = groups[0]
+        shape = group["shapes"][0]
+        log2_value = group["log2_values"][0]
+        group.clear()
+        group.update(
+            {
+                "kind": "constant_log2_shared_shape",
+                "precision_label": "constant",
+                "bins": 0,
+                "bits_per_code": 0,
+                "code_storage": "run_length_constant_log2_shared_shape",
+                "map_indices": [0, 1, 2, 3],
+                "payload_offset": 0,
+                "payload_bytes": 0,
+                "packed_code_bytes": 0,
+                "log2_value": log2_value,
+                "shape": shape,
+                "code_count": 0,
+            }
+        )
+
+    decoded = decode_step_maps(_rewrite_adaptive_header(packet.packet, mutate))
+
+    assert len(decoded) == len(maps)
+    for got in decoded:
+        assert got.shape == maps[0].shape
+        assert np.unique(got).size == 1
+        assert np.all(got > 0)
+
+
 def test_waterfill_rejects_negative_target_bits() -> None:
     with pytest.raises(SnervStepMapCoderError, match="target_bits_per_coeff"):
         encode_step_maps_waterfill(

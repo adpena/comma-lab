@@ -22,6 +22,13 @@ from typing import Any
 import numpy as np
 
 from tac.analysis.snerv_step_map_coder import decode_step_maps
+from tac.codec.receiver_integer_plane_codec import (
+    SPATIAL_DELTA_ZIGZAG_LEB128_CODEC,
+    ReceiverIntegerPlaneCodecError,
+    canonical_int64_raw,
+    decode_spatial_delta_zigzag_leb128_planes,
+    encode_spatial_delta_zigzag_leb128_planes,
+)
 from tac.substrates._shared.int_stream_codec import (
     pack_fixed_width_uints,
     unpack_fixed_width_uints,
@@ -36,12 +43,6 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
 from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
     SNERV_LF_PAYLOAD_INTN_CODEC_PROOF as _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF,
 )
-from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
-    SnervLfPayloadCodecError,
-    decode_lf_quant_payload_v2,
-    encode_lf_quant_payload_v2,
-    is_lf_quant_payload_v2,
-)
 
 SNERV_ARCHIVE_SCHEMA = "snerv_inverse_steg_archive.v1"
 SNERV_ARCHIVE_MAGIC = b"SNAR1"
@@ -51,6 +52,10 @@ SNERV_LF_PAYLOAD_INTN_CODEC_PROOF = _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF
 HEADER_LEN_FMT = "<I"
 SECTION_ORDER = ("metadata_payload", "lf_payload", "decoder_payload", "step_map_packet")
 DECODER_SUBBANDS = ("LH", "HL", "HH")
+LF_QUANT_PAYLOAD_SCHEMA_V1 = "snerv_lf_quant_payload.v1"
+LF_QUANT_PAYLOAD_SCHEMA_V2 = "snerv_lf_quant_payload.v2"
+LF_QUANT_CODEC_INT64_LZMA = "int64_lzma"
+LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA = SPATIAL_DELTA_ZIGZAG_LEB128_CODEC
 DECODER_PAYLOAD_V1_SCHEMA = "snerv_decoder_payload.v1"
 DECODER_PAYLOAD_V2_SCHEMA = "snerv_decoder_payload.v2"
 DECODER_PAYLOAD_V3_SCHEMA = "snerv_decoder_payload.v3"
@@ -405,7 +410,7 @@ def encode_lf_metadata_payload(
 def encode_lf_quant_payload(
     lf_quant_planes: list[np.ndarray],
     *,
-    codec: str = "int64_lzma",
+    codec: str = LF_QUANT_CODEC_INT64_LZMA,
 ) -> bytes:
     """Encode quantized LF planes as deterministic scorer-free receiver bytes."""
 
@@ -413,15 +418,30 @@ def encode_lf_quant_payload(
     if not arrays:
         raise SnervArchiveError("lf_quant_planes must be non-empty")
     normalized = str(codec).strip().lower()
-    if normalized not in {"int64_lzma", "legacy", "raw_int64_lzma"}:
-        try:
-            return encode_lf_quant_payload_v2(arrays, mode=normalized)
-        except SnervLfPayloadCodecError as exc:
-            raise SnervArchiveError(str(exc)) from exc
-    raw = b"".join(np.asarray(a, dtype="<i8").reshape(-1).tobytes() for a in arrays)
+    if normalized in {"v1", "legacy", "int64", "int64_lzma"}:
+        return _encode_lf_quant_payload_int64_lzma(arrays)
+    if normalized in {
+        "v2",
+        "spatial_delta",
+        "spatial_delta_zigzag_leb128",
+        LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
+    }:
+        return _encode_lf_quant_payload_spatial_delta_leb128_lzma(arrays)
+    if normalized == "auto":
+        candidates = (
+            _encode_lf_quant_payload_int64_lzma(arrays),
+            _encode_lf_quant_payload_spatial_delta_leb128_lzma(arrays),
+        )
+        return min(candidates, key=len)
+    raise SnervArchiveError(f"unsupported LF quant payload codec: {codec!r}")
+
+
+def _encode_lf_quant_payload_int64_lzma(arrays: list[np.ndarray]) -> bytes:
+    raw = canonical_int64_raw(arrays)
     compressed = lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
     header = {
-        "schema": "snerv_lf_quant_payload.v1",
+        "schema": LF_QUANT_PAYLOAD_SCHEMA_V1,
+        "codec": LF_QUANT_CODEC_INT64_LZMA,
         "dtype": "int64_le",
         "shapes": [list(a.shape) for a in arrays],
         "raw_sha256": _sha256(raw),
@@ -431,19 +451,37 @@ def encode_lf_quant_payload(
     return _pack_subpacket(SNERV_LF_QUANT_MAGIC, header, compressed)
 
 
+def _encode_lf_quant_payload_spatial_delta_leb128_lzma(
+    arrays: list[np.ndarray],
+) -> bytes:
+    payload = encode_spatial_delta_zigzag_leb128_planes(arrays)
+    compressed = lzma.compress(
+        payload.raw,
+        format=lzma.FORMAT_XZ,
+        preset=9 | lzma.PRESET_EXTREME,
+    )
+    header = {
+        "schema": LF_QUANT_PAYLOAD_SCHEMA_V2,
+        **payload.header,
+        "compressed_bytes": len(compressed),
+    }
+    return _pack_subpacket(SNERV_LF_QUANT_MAGIC, header, compressed)
+
+
 def decode_lf_quant_payload(payload: bytes) -> list[np.ndarray]:
     """Decode LF quantized coefficient planes from receiver payload bytes."""
 
-    if is_lf_quant_payload_v2(payload):
-        try:
-            return decode_lf_quant_payload_v2(payload)
-        except SnervLfPayloadCodecError as exc:
-            raise SnervArchiveError(str(exc)) from exc
-    header, compressed = _unpack_subpacket(
-        payload,
-        magic=SNERV_LF_QUANT_MAGIC,
-        schema="snerv_lf_quant_payload.v1",
-    )
+    header, compressed = _unpack_lf_quant_subpacket(payload)
+    schema = str(header.get("schema"))
+    codec = str(header.get("codec", LF_QUANT_CODEC_INT64_LZMA))
+    if schema == LF_QUANT_PAYLOAD_SCHEMA_V2:
+        if codec != LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA:
+            raise SnervArchiveError(f"unsupported LF quant payload codec: {codec!r}")
+        return _decode_lf_quant_payload_spatial_delta_leb128_lzma(header, compressed)
+    if schema != LF_QUANT_PAYLOAD_SCHEMA_V1:
+        raise SnervArchiveError(f"unsupported subpacket schema: {schema!r}")
+    if codec != LF_QUANT_CODEC_INT64_LZMA:
+        raise SnervArchiveError(f"unsupported LF quant payload codec: {codec!r}")
     raw = lzma.decompress(compressed)
     if len(raw) != int(header["raw_bytes"]):
         raise SnervArchiveError("LF quant payload raw byte count mismatch")
@@ -463,6 +501,32 @@ def decode_lf_quant_payload(payload: bytes) -> list[np.ndarray]:
     if cursor != len(raw):
         raise SnervArchiveError("LF quant payload has unused raw bytes")
     return out
+
+
+def inspect_lf_quant_payload_header(payload: bytes) -> dict[str, Any]:
+    """Return validated LF payload header metadata without decoding planes."""
+
+    header, body = _unpack_lf_quant_subpacket(payload)
+    out = dict(header)
+    out["payload_bytes"] = len(body)
+    out["section_bytes"] = len(payload)
+    return out
+
+
+def _decode_lf_quant_payload_spatial_delta_leb128_lzma(
+    header: dict[str, Any],
+    compressed: bytes,
+) -> list[np.ndarray]:
+    try:
+        raw = lzma.decompress(compressed)
+    except lzma.LZMAError as exc:
+        raise SnervArchiveError("LF quant payload decompression failed") from exc
+    if len(raw) != int(header["raw_bytes"]):
+        raise SnervArchiveError("LF quant payload raw byte count mismatch")
+    try:
+        return decode_spatial_delta_zigzag_leb128_planes(raw, header=header)
+    except ReceiverIntegerPlaneCodecError as exc:
+        raise SnervArchiveError(str(exc)) from exc
 
 
 def encode_decoder_payload(
@@ -1106,6 +1170,14 @@ def _unpack_subpacket(
     if header.get("schema") not in allowed:
         raise SnervArchiveError(f"unsupported subpacket schema: {header.get('schema')!r}")
     return dict(header), packet[header_end:]
+
+
+def _unpack_lf_quant_subpacket(packet: bytes) -> tuple[dict[str, Any], bytes]:
+    return _unpack_subpacket(
+        packet,
+        magic=SNERV_LF_QUANT_MAGIC,
+        schema=(LF_QUANT_PAYLOAD_SCHEMA_V1, LF_QUANT_PAYLOAD_SCHEMA_V2),
+    )
 
 
 def _jsonable_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
