@@ -446,6 +446,7 @@ def test_long_training_campaign_plan_blocks_repeated_low_lr_pose_instability(
     assert adjustment["pose_protected_pathway_applied"] is True
     assert adjustment["repeated_low_lr_pose_instability"] is True
     assert adjustment["learning_rate"] == 2.7e-5
+    assert adjustment["low_learning_rate_floor"] == 1.0e-4
     assert adjustment["reason"] == (
         "repeated_pose_instability_at_low_lr_pose_protected_pathway"
     )
