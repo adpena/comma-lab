@@ -8,8 +8,13 @@ import pytest
 import torch
 
 from tac.analysis.snerv_step_map_coder import encode_step_maps
-from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+    HfGenerationDecoder,
+    SnervModelSizeConfig,
+)
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
+    COMPONENT_GUARD_MODES,
     CONTEST_BYTE_PRICE,
     SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF,
     QuantizedDecoderStats,
@@ -18,6 +23,7 @@ from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     SnervScorerLoopDecoderQatError,
     _evaluate_decoder,
     _nes_pair_robust_objective,
+    _pack_receiver_archive,
     _PreparedState,
     decoder_eval_pair_deltas,
     decoder_search_direction_labels,
@@ -83,6 +89,7 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
         step_maps=step_maps,
         step_map_packet=step_packet,
         baseline_decoder=_decoder(),
+        model_size=_decoder().model_size,
         levels=1,
         wavelet="haar",
         orig_hw=(4, 4),
@@ -108,7 +115,55 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
     )
 
 
-def test_decoder_trial_pose_guard_refuses_score_gain_with_pose_damage() -> None:
+def test_pack_receiver_archive_records_scorer_loop_adapter_config() -> None:
+    cfg = SnervModelSizeConfig(
+        fc_dim=12,
+        emb_size=2,
+        patch_radius=1,
+        mfu_scales=(1, 3),
+        hfr_gain=0.25,
+        temporal_context=1,
+        adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+    )
+    step_maps = tuple(np.ones((2, 2), dtype=np.float32) for _ in range(6))
+    prepared = _PreparedState(
+        pairs=torch.zeros((1, 2, 3, 4, 4), dtype=torch.float32),
+        codes=(),
+        lf_quant_planes=tuple(np.zeros((2, 2), dtype=np.int64) for _ in range(6)),
+        lf_zero_points=tuple(0.0 for _ in range(6)),
+        step_maps=step_maps,
+        step_map_packet=encode_step_maps(list(step_maps), bins=4).packet,
+        baseline_decoder=HfGenerationDecoder.zeros(1, model_size=cfg),
+        model_size=cfg,
+        levels=1,
+        wavelet="haar",
+        orig_hw=(4, 4),
+    )
+
+    archive = _pack_receiver_archive(prepared, HfGenerationDecoder.zeros(1, model_size=cfg))
+
+    assert archive.metadata["snerv_model_size_adapter"] == SNERV_SPECTRA_PRESERVING_ADAPTER
+    assert archive.metadata["snerv_spectra_preserving_adapter_enabled"] is True
+    assert archive.metadata["snerv_mfu_scales"] == [1, 3]
+    assert archive.metadata["snerv_hfr_gain"] == pytest.approx(0.25)
+    assert archive.metadata["snerv_temporal_context"] == 1
+    assert archive.metadata["decoder_feature_count"] == cfg.feature_count
+
+
+def test_component_guard_modes_are_validated() -> None:
+    current = _eval(label="baseline", score=7.0, d_pose=2.0, d_seg=0.02, replay=True)
+    candidate = _eval(label="candidate", score=6.8, d_pose=1.9, d_seg=0.01, replay=True)
+
+    assert COMPONENT_GUARD_MODES == ("score_primary", "pose_hard", "pose_seg_hard")
+    with pytest.raises(SnervScorerLoopDecoderQatError, match="component_guard_mode"):
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            component_guard_mode="not_a_mode",
+        )
+
+
+def test_decoder_trial_score_primary_allows_score_gain_with_pose_tradeoff() -> None:
     current = _eval(label="baseline", score=7.0, d_pose=2.0, d_seg=0.02, replay=True)
     candidate = _eval(
         label="lower_score_pose_damage",
@@ -118,11 +173,28 @@ def test_decoder_trial_pose_guard_refuses_score_gain_with_pose_damage() -> None:
         replay=True,
     )
 
-    assert decoder_trial_passes_pose_guard(candidate, current, pose_slack=0.0) is False
-    assert decoder_trial_passes_pose_guard(candidate, current, pose_slack=0.2) is True
+    assert decoder_trial_passes_pose_guard(candidate, current, pose_slack=0.0) is True
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            pose_slack=0.0,
+            component_guard_mode="pose_hard",
+        )
+        is False
+    )
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            pose_slack=0.2,
+            component_guard_mode="pose_hard",
+        )
+        is True
+    )
 
 
-def test_decoder_trial_pose_guard_refuses_score_gain_with_seg_damage() -> None:
+def test_decoder_trial_score_primary_allows_score_gain_with_seg_tradeoff() -> None:
     current = _eval(label="baseline", score=7.0, d_pose=2.0, d_seg=0.01, replay=True)
     candidate = _eval(
         label="lower_score_seg_damage",
@@ -132,7 +204,16 @@ def test_decoder_trial_pose_guard_refuses_score_gain_with_seg_damage() -> None:
         replay=True,
     )
 
-    assert decoder_trial_passes_pose_guard(candidate, current, pose_slack=0.0) is False
+    assert decoder_trial_passes_pose_guard(candidate, current, pose_slack=0.0) is True
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            pose_slack=0.0,
+            component_guard_mode="pose_seg_hard",
+        )
+        is False
+    )
 
 
 def test_decoder_trial_pose_guard_can_allow_explicit_seg_slack() -> None:
@@ -145,12 +226,20 @@ def test_decoder_trial_pose_guard_can_allow_explicit_seg_slack() -> None:
         replay=True,
     )
 
-    assert decoder_trial_passes_pose_guard(candidate, current) is False
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            component_guard_mode="pose_seg_hard",
+        )
+        is False
+    )
     assert (
         decoder_trial_passes_pose_guard(
             candidate,
             current,
             seg_slack=0.001,
+            component_guard_mode="pose_seg_hard",
         )
         is True
     )

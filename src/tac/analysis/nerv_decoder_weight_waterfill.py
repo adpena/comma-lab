@@ -33,6 +33,7 @@ PLANNING_AXIS = "[planning/control]"
 DEFAULT_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "latent_embed",
     "blocks",
+    "feature_grids",
     "head",
     "decoder",
     "injector",

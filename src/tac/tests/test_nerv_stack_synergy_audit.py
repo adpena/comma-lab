@@ -38,7 +38,7 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "mlx_train_export_adapter_present_but_not_full_upstream_control_surface"
     )
     assert stacks["snerv"]["local_status"] == (
-        "receiver_bound_advisory_export_present_mlx_native_train_missing"
+        "receiver_bound_advisory_export_present_mlx_native_surfaces_unproven"
     )
     assert stacks["hi_nerv"]["source_faithfulness"][
         "source_faithful_upstream_hinerv"
@@ -46,7 +46,12 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     assert stacks["snerv"]["source_faithfulness"][
         "source_faithful_official_snerv"
     ] is False
-    assert "snerv_mlx_native_train_export_adapter_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in stacks[
+        "snerv"
+    ]["blockers"]
+    assert stacks["snerv"]["snerv_mlx_native_adapter_contract"][
+        "surfaces_ready"
+    ] is True
     assert (
         "hinerv_local_architecture_not_source_faithful_upstream_hinerv_feature_grid"
         in stacks["hi_nerv"]["blockers"]

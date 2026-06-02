@@ -8,6 +8,9 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+)
 from tac.substrates.snerv_inverse_steg_carrier.receiver_proof import (
     build_snerv_receiver_archive_proof,
 )
@@ -61,6 +64,11 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
             "mixed_magnitude_symmetric",
             "--decoder-payload-mixed-modes",
             "fp16,int4,int4",
+            "--snerv-spectra-preserving-adapter",
+            "--snerv-mfu-scales",
+            "1,3",
+            "--snerv-hfr-gain",
+            "0.25",
             "--package-timeout-seconds",
             "120",
             "--trained-ladder-row-out",
@@ -101,6 +109,11 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     assert Path(payload["trained_ladder_row_payload_path"]).is_file()
     assert captured_kwargs["decoder_payload_codec"] == "mixed_magnitude_symmetric"
     assert captured_kwargs["decoder_payload_mixed_modes"] == ("fp16", "int4", "int4")
+    assert captured_kwargs["snerv_model_size_adapter"] == (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
+    assert captured_kwargs["snerv_mfu_scales"] == (1, 3)
+    assert captured_kwargs["snerv_hfr_gain"] == 0.25
 
 
 def _fake_advisory_result(packet: bytes):
@@ -145,6 +158,10 @@ def _fake_advisory_result(packet: bytes):
         snerv_fc_dim=9,
         snerv_emb_size=0,
         snerv_patch_radius=1,
+        snerv_model_size_adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+        snerv_mfu_scales=(1, 3),
+        snerv_hfr_gain=0.25,
+        snerv_temporal_context=0,
         decoder_feature_count=9,
         hf_decoder_fit_mode="least_squares",
         hf_decoder_saliency_gain=1.0,

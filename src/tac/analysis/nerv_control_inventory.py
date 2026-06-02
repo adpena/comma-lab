@@ -971,8 +971,11 @@ def _control_rows() -> list[dict[str, Any]]:
             scorer="score_exact_saliency + hprc_saliency_rd_allocation",
             allocator="G3 adjoint pushes pixel saliency into wavelet/LF/HF domains",
             archive="SNAR packet + compact LF residual grammar",
-            status="receiver_hfr_mfu_t_ready_mlx_export_missing",
-            missing=["mlx_native_snerv_train_export"],
+            status="receiver_hfr_mfu_t_ready_mlx_export_surfaces_unproven",
+            missing=[
+                "snerv_mlx_native_full_video_scoreaware_train_export_proof",
+                "snerv_real_segnet_posenet_teacher_loop_for_mlx_native_export",
+            ],
         ),
         _row(
             "snerv_lf_modelsize_and_stepmap",
@@ -1334,6 +1337,8 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
                 "category": "score_aware_training",
                 "required_files": [
                     "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+                    "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
+                    "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_adapter_contract.py",
                     "src/tac/analysis/snerv_scorer_loop_decoder_qat_contract.py",
                     "src/tac/analysis/snerv_pose_guarded_decoder_gate.py",
                     "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
@@ -1345,7 +1350,7 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
                 "reference": "SNeRV HFR/MFU plus scorer-loop QAT and P18/P19 pose guard",
                 "intrinsic_gaps": [
                     "snerv_scorer_loop_decoder_qat_full_video_missing",
-                    "snerv_mlx_native_train_export_missing",
+                    "snerv_mlx_native_train_export_surfaces_unproven",
                 ],
                 "next_action": (
                     "replace bounded smoke-only QAT with full-video MLX-native "
@@ -1767,7 +1772,8 @@ def _recommended_work_orders(gaps: list[dict[str, Any]]) -> list[dict[str, Any]]
         "full_video_decoder_weight_saliency_replay_for_hi_nerv_archive_rows",
         "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
         "decoder_weight_waterfill_plan_for_hi_nerv_full_main",
-        "mlx_native_snerv_train_export",
+        "snerv_mlx_native_full_video_scoreaware_train_export_proof",
+        "snerv_real_segnet_posenet_teacher_loop_for_mlx_native_export",
         "snerv_measured_modelsize_ladder",
         "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
         "full_video_section_value_for_vq_codebook_indices",
@@ -1812,6 +1818,8 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "experiments/train_substrate_hi_nerv_mlx_local.py",
             "experiments/train_substrate_snerv_scorer_loop_local.py",
             "tools/run_compact_renderer_mlx_spine_runner.py",
+            "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
+            "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_adapter_contract.py",
             "src/tac/substrates/hi_nerv",
             "src/tac/analysis/snerv_step_map_coder.py",
             "src/tac/analysis/sr_nerv_resolution_axis_mirror.py",

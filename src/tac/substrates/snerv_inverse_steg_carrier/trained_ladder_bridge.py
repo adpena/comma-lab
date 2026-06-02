@@ -78,13 +78,25 @@ def build_snerv_trained_ladder_row_from_advisory(
 
 
 def _actual_controls(advisory_result: Any) -> dict[str, Any]:
+    adapter = str(
+        _attr(advisory_result, "snerv_model_size_adapter")
+        or "snerv_inverse_steg_principled_fork"
+    )
+    hfr_gain = float(_attr(advisory_result, "snerv_hfr_gain") or 0.0)
+    temporal_context = int(_attr(advisory_result, "snerv_temporal_context") or 0)
+    mfu_enabled = "mfu_hfr_temporal" in adapter
     controls: dict[str, Any] = {
         "source_faithful_stack": False,
-        "official_parity_status": "blocked_official_mfu_hfr_not_implemented",
-        "adapter": "snerv_inverse_steg_principled_fork",
-        "mfu_enabled": False,
-        "hfr_enabled": False,
-        "snerv_t_enabled": False,
+        "official_parity_status": (
+            "receiver_safe_mfu_hfr_temporal_adapter_present__official_oss_"
+            "parity_still_required"
+            if mfu_enabled
+            else "blocked_official_mfu_hfr_not_implemented"
+        ),
+        "adapter": adapter,
+        "mfu_enabled": bool(mfu_enabled),
+        "hfr_enabled": bool(hfr_gain > 0.0),
+        "snerv_t_enabled": bool(temporal_context > 0),
     }
     wavelet = _attr(advisory_result, "wavelet")
     levels = _attr(advisory_result, "levels")
@@ -92,6 +104,7 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
     emb_size = _int_attr(advisory_result, "snerv_emb_size")
     patch_radius = _int_attr(advisory_result, "snerv_patch_radius")
     feature_count = _int_attr(advisory_result, "decoder_feature_count")
+    mfu_scales = _attr(advisory_result, "snerv_mfu_scales") or ()
     if wavelet is not None:
         controls["wavelet"] = wavelet
     if levels is not None:
@@ -104,18 +117,25 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
         controls["patch_radius"] = patch_radius
     if feature_count is not None:
         controls["decoder_feature_count"] = feature_count
+    controls["mfu_scales"] = [int(v) for v in mfu_scales]
+    controls["hfr_gain"] = hfr_gain
+    controls["temporal_context"] = temporal_context
     if fc_dim is not None or emb_size is not None or feature_count is not None:
         controls["local_modelsize_analogue"] = {
             "schema": "snerv_local_modelsize_analogue.v1",
             "fc_dim": fc_dim,
             "emb_size": emb_size,
             "patch_radius": patch_radius,
+            "mfu_scales": [int(v) for v in mfu_scales],
+            "hfr_gain": hfr_gain,
+            "temporal_context": temporal_context,
+            "adapter": adapter,
             "decoder_feature_count": feature_count,
             "official_modelsize_authority": False,
             "authority_note": (
-                "local fc_dim/emb_size controls alter receiver decoder features "
-                "and bytes, but are not official SNeRV --modelsize authority "
-                "until MFU/HFR/source parity closes"
+                "local fc_dim/emb_size/MFU/HFR controls alter receiver decoder "
+                "features and bytes, but are not official SNeRV --modelsize "
+                "authority until upstream OSS parity closes"
             ),
         }
     return controls
@@ -136,6 +156,16 @@ def _trainer_metadata(
         "fc_dim": _int_attr(advisory_result, "snerv_fc_dim"),
         "snerv_emb_size": _int_attr(advisory_result, "snerv_emb_size"),
         "snerv_patch_radius": _int_attr(advisory_result, "snerv_patch_radius"),
+        "snerv_model_size_adapter": _attr(
+            advisory_result,
+            "snerv_model_size_adapter",
+        ),
+        "snerv_mfu_scales": list(_attr(advisory_result, "snerv_mfu_scales") or ()),
+        "snerv_hfr_gain": _attr(advisory_result, "snerv_hfr_gain"),
+        "snerv_temporal_context": _attr(
+            advisory_result,
+            "snerv_temporal_context",
+        ),
         "decoder_feature_count": _int_attr(advisory_result, "decoder_feature_count"),
         "receiver_codec_mode": archive_path_kind,
         "lf_payload_codec": "snerv_lf_quant_payload.v1",

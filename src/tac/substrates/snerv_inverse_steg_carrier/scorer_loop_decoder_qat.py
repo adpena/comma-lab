@@ -40,8 +40,10 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     pack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
     SnervFrameCode,
+    SnervModelSizeConfig,
     encode_frame_lf,
     fit_hf_decoder_least_squares,
     quantize_lf,
@@ -51,6 +53,11 @@ SCHEMA = "snerv_scorer_loop_decoder_qat_smoke.v1"
 AXIS_TAG = "[macOS-CPU advisory]"
 SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF = (
     "snerv_scorer_loop_decoder_qat_packs_receiver_archive_and_prices_total_bytes"
+)
+COMPONENT_GUARD_MODES: tuple[str, ...] = (
+    "score_primary",
+    "pose_hard",
+    "pose_seg_hard",
 )
 
 
@@ -138,6 +145,11 @@ class SnervScorerLoopDecoderQatSmokeResult:
     levels: int
     wavelet: str
     target_bits_per_coeff: float
+    snerv_model_size_adapter: str
+    snerv_mfu_scales: tuple[int, ...]
+    snerv_hfr_gain: float
+    snerv_temporal_context: int
+    decoder_feature_count: int
     qat_bits: int
     max_trials: int
     search_mode: str
@@ -148,6 +160,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     seg_slack: float
     pair_guard_min_score_improved_fraction: float
     pair_guard_max_pose_worsened_fraction: float
+    component_guard_mode: str
     baseline: SnervDecoderEval
     best: SnervDecoderEval
     evaluations: tuple[SnervDecoderEval, ...]
@@ -197,6 +210,7 @@ class _PreparedState:
     step_maps: tuple[np.ndarray, ...]
     step_map_packet: bytes
     baseline_decoder: HfGenerationDecoder
+    model_size: SnervModelSizeConfig
     levels: int
     wavelet: str
     orig_hw: tuple[int, int]
@@ -214,6 +228,14 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     video_path: str = "upstream/videos/0.mkv",
     device: str = "cpu",
     step_map_bins: int = 16,
+    snerv_spectra_preserving_adapter: bool = False,
+    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    snerv_fc_dim: int = 9,
+    snerv_emb_size: int = 0,
+    snerv_patch_radius: int = 1,
+    snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
+    snerv_hfr_gain: float = 0.0,
+    snerv_temporal_context: int = 0,
     qat_bits: int = 8,
     max_trials: int = 2,
     search_mode: str = "random_signed",
@@ -224,6 +246,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     seg_slack: float = 0.0,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
+    component_guard_mode: str = "score_primary",
     seed: int = 1337,
 ) -> SnervScorerLoopDecoderQatSmokeResult:
     """Run a tiny real-frame scorer-loop decoder/QAT smoke.
@@ -236,10 +259,11 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     smooth random affine subspace directions. ``nes_pair_robust`` evaluates
     symmetric probes, estimates a pair-robust objective gradient, and tests one
     synthesized update. A candidate is accepted only if it improves advisory
-    score, keeps PoseNet within the hard continuation guard, and keeps SegNet
-    inside the explicitly configured slack. The default SegNet slack is zero,
-    preserving strict no-worse behavior unless a smoke opts into score-primary
-    pose-hard exploration.
+    score, satisfies the explicitly selected component guard mode, and passes
+    receiver replay. ``score_primary`` is the scorer-faithful default: the
+    contest Lagrangian decides aggregate SegNet/PoseNet/rate tradeoffs while
+    pair guards can still prevent brittle local cancellation. ``pose_hard`` and
+    ``pose_seg_hard`` are retained as stricter probe modes.
     """
 
     if n_pairs < 1:
@@ -278,6 +302,22 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         raise SnervScorerLoopDecoderQatError(
             "pair_guard_max_pose_worsened_fraction must be in [0, 1]"
         )
+    component_mode = _validate_component_guard_mode(component_guard_mode)
+
+    adapter = (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+        if snerv_spectra_preserving_adapter
+        else str(snerv_model_size_adapter)
+    )
+    model_size = SnervModelSizeConfig(
+        fc_dim=int(snerv_fc_dim),
+        emb_size=int(snerv_emb_size),
+        patch_radius=int(snerv_patch_radius),
+        mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
+        hfr_gain=float(snerv_hfr_gain),
+        temporal_context=int(snerv_temporal_context),
+        adapter=adapter,
+    )
 
     t0 = time.perf_counter()
     posenet, segnet = load_score_exact_scorers(upstream_dir=upstream_dir, device=device)
@@ -293,6 +333,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         video_path=video_path,
         device=device,
         step_map_bins=step_map_bins,
+        model_size=model_size,
     )
 
     baseline = _evaluate_decoder(
@@ -402,6 +443,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                                         pair_guard_max_pose_worsened_fraction=(
                                             pair_guard_max_pose_worsened_fraction
                                         ),
+                                        component_guard_mode=component_mode,
                                     ),
                                 )
                             )
@@ -436,6 +478,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 pair_guard_max_pose_worsened_fraction=(
                     pair_guard_max_pose_worsened_fraction
                 ),
+                component_guard_mode=component_mode,
             )
             if accepted:
                 row = _replace_eval_acceptance(row, accepted=True, blockers=())
@@ -458,6 +501,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                         pair_guard_max_pose_worsened_fraction=(
                             pair_guard_max_pose_worsened_fraction
                         ),
+                        component_guard_mode=component_mode,
                     ),
                 )
             rows.append(row)
@@ -492,6 +536,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     pair_guard_max_pose_worsened_fraction=(
                         pair_guard_max_pose_worsened_fraction
                     ),
+                    component_guard_mode=component_mode,
                 )
                 if accepted:
                     row = _replace_eval_acceptance(row, accepted=True, blockers=())
@@ -514,6 +559,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                             pair_guard_max_pose_worsened_fraction=(
                                 pair_guard_max_pose_worsened_fraction
                             ),
+                            component_guard_mode=component_mode,
                         ),
                     )
                 rows.append(row)
@@ -521,7 +567,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     accepted_improvement = best_eval.label != baseline.label
     blockers = []
     if not accepted_improvement:
-        blockers.append("no_quantized_decoder_trial_improved_score_under_pose_guard")
+        blockers.append("no_quantized_decoder_trial_improved_score_under_component_guard")
     if not all(row.receiver_archive_replay_verified for row in rows):
         blockers.append("receiver_archive_replay_failed_for_some_trials")
     blockers.extend(
@@ -539,6 +585,11 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         levels=int(levels),
         wavelet=wavelet,
         target_bits_per_coeff=float(target_bits_per_coeff),
+        snerv_model_size_adapter=model_size.adapter,
+        snerv_mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
+        snerv_hfr_gain=float(model_size.hfr_gain),
+        snerv_temporal_context=int(model_size.temporal_context),
+        decoder_feature_count=int(model_size.feature_count),
         qat_bits=int(qat_bits),
         max_trials=int(max_trials),
         search_mode=search_mode,
@@ -557,6 +608,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         pair_guard_max_pose_worsened_fraction=float(
             pair_guard_max_pose_worsened_fraction
         ),
+        component_guard_mode=component_mode,
         baseline=baseline,
         best=best_eval,
         evaluations=tuple(rows),
@@ -659,9 +711,11 @@ def decoder_trial_passes_pose_guard(
     max_archive_byte_growth: int | None = None,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
+    component_guard_mode: str = "score_primary",
 ) -> bool:
     """Return whether a local decoder trial may replace the current best."""
 
+    component_mode = _validate_component_guard_mode(component_guard_mode)
     if pose_slack < 0:
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
     if seg_slack < 0:
@@ -681,10 +735,18 @@ def decoder_trial_passes_pose_guard(
         min_score_improved_fraction=pair_guard_min_score_improved_fraction,
         max_pose_worsened_fraction=pair_guard_max_pose_worsened_fraction,
     )
+    pose_component_ok = (
+        component_mode == "score_primary"
+        or candidate.d_pose_linf <= current_best.d_pose_linf + float(pose_slack)
+    )
+    seg_component_ok = (
+        component_mode != "pose_seg_hard"
+        or candidate.d_seg_linf <= current_best.d_seg_linf + float(seg_slack)
+    )
     return bool(
         candidate.receiver_archive_replay_verified
-        and candidate.d_pose_linf <= current_best.d_pose_linf + float(pose_slack)
-        and candidate.d_seg_linf <= current_best.d_seg_linf + float(seg_slack)
+        and pose_component_ok
+        and seg_component_ok
         and candidate.score_linf < current_best.score_linf
         and _rate_aware_eval_objective(
             candidate,
@@ -761,13 +823,21 @@ def _trial_blockers(
     max_archive_byte_growth: int | None = None,
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
+    component_guard_mode: str = "score_primary",
 ) -> tuple[str, ...]:
+    component_mode = _validate_component_guard_mode(component_guard_mode)
     blockers = list(candidate.blockers)
     if not candidate.receiver_archive_replay_verified:
         blockers.append("receiver_archive_replay_failed")
-    if candidate.d_pose_linf > current_best.d_pose_linf + float(pose_slack):
+    if (
+        component_mode in {"pose_hard", "pose_seg_hard"}
+        and candidate.d_pose_linf > current_best.d_pose_linf + float(pose_slack)
+    ):
         blockers.append("pose_guard_failed")
-    if candidate.d_seg_linf > current_best.d_seg_linf + float(seg_slack):
+    if (
+        component_mode == "pose_seg_hard"
+        and candidate.d_seg_linf > current_best.d_seg_linf + float(seg_slack)
+    ):
         blockers.append("seg_gate_failed")
     if candidate.score_linf >= current_best.score_linf:
         blockers.append("score_gate_failed")
@@ -795,6 +865,15 @@ def _trial_blockers(
         )
     )
     return tuple(dict.fromkeys(blockers))
+
+
+def _validate_component_guard_mode(mode: str) -> str:
+    parsed = str(mode)
+    if parsed not in COMPONENT_GUARD_MODES:
+        raise SnervScorerLoopDecoderQatError(
+            f"component_guard_mode must be one of {COMPONENT_GUARD_MODES}"
+        )
+    return parsed
 
 
 def _pair_guard_blockers(
@@ -1009,6 +1088,7 @@ def _prepare_state(
     video_path: str,
     device: str,
     step_map_bins: int,
+    model_size: SnervModelSizeConfig,
 ) -> _PreparedState:
     pairs = decode_real_pairs(
         video_path,
@@ -1031,7 +1111,11 @@ def _prepare_state(
                 )
                 train_pyrs.append(pyr)
                 records.append((pair_idx, frame_idx, channel_idx, pyr))
-    decoder = fit_hf_decoder_least_squares(train_pyrs, levels=levels)
+    decoder = fit_hf_decoder_least_squares(
+        train_pyrs,
+        levels=levels,
+        model_size=model_size,
+    )
 
     raw_step_maps: list[np.ndarray] = []
     for pair_idx in range(n_pairs):
@@ -1095,6 +1179,7 @@ def _prepare_state(
         step_maps=tuple(receiver_step_maps),
         step_map_packet=step_packet.packet,
         baseline_decoder=decoder,
+        model_size=model_size,
         levels=int(levels),
         wavelet=wavelet,
         orig_hw=(h, w),
@@ -1194,6 +1279,14 @@ def _pack_receiver_archive(
             "orig_hw": list(prepared.orig_hw),
             "lf_plane_count": len(prepared.lf_quant_planes),
             "hf_decoder_fit_mode": "scorer_loop_decoder_qat_smoke",
+            "snerv_model_size_adapter": prepared.model_size.adapter,
+            "snerv_spectra_preserving_adapter_enabled": (
+                prepared.model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
+            ),
+            "snerv_mfu_scales": [int(v) for v in prepared.model_size.mfu_scales],
+            "snerv_hfr_gain": float(prepared.model_size.hfr_gain),
+            "snerv_temporal_context": int(prepared.model_size.temporal_context),
+            "decoder_feature_count": int(prepared.model_size.feature_count),
         },
     )
 
@@ -1303,6 +1396,7 @@ def _sha256(blob: bytes) -> str:
 
 __all__ = [
     "AXIS_TAG",
+    "COMPONENT_GUARD_MODES",
     "SCHEMA",
     "SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF",
     "QuantizedDecoderStats",

@@ -158,9 +158,9 @@ from typing import Any
 
 __all__ = [
     "CANONICAL_PR95_TOTAL_EPOCHS",
+    "PR95FaithfulCurriculumError",
     "PR95FaithfulCurriculumFactory",
     "PR95FaithfulCurriculumStageVerdict",
-    "PR95FaithfulCurriculumError",
 ]
 
 

@@ -24,6 +24,7 @@ from typing import Any
 import numpy as np
 
 from tac.analysis.snerv_step_map_coder import encode_step_maps
+from tac.contest_eval_contract import build_upstream_eval_contract
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
     run_generated_inflate_receiver_proof,
 )
@@ -93,6 +94,7 @@ class SnervMlxNativeArtifact:
     lf_payload_codec: str
     model_size: dict[str, Any]
     bridge_drift: dict[str, Any]
+    scorer_custody: dict[str, Any]
     storage_preflight: dict[str, Any]
     archive_package: dict[str, Any] | None
     archive_path: str | None
@@ -136,9 +138,12 @@ def train_export_snerv_mlx_native(
     full score-aware long training.
     """
 
-    del scorer_upstream_dir  # scorer custody is recorded by the caller; not loaded here.
     started = time.monotonic()
     root = _repo_root(repo_root)
+    scorer_custody = build_upstream_eval_contract(
+        repo_root=root,
+        upstream_dir=Path(scorer_upstream_dir).expanduser(),
+    )
     out = Path(output_dir).expanduser().resolve(strict=False)
     out.mkdir(parents=True, exist_ok=True)
     candidate = dict(modelsize_candidate or {})
@@ -223,6 +228,8 @@ def train_export_snerv_mlx_native(
         "snerv_real_segnet_posenet_teacher_loop_not_attached",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    if scorer_custody.get("contract_valid") is not True:
+        blockers.append("snerv_mlx_native_scorer_custody_contract_invalid")
     if run_archive_export:
         if storage_preflight["preflight_passed"] is not True:
             blockers.append("snerv_mlx_native_receiver_proof_storage_preflight_failed")
@@ -253,6 +260,7 @@ def train_export_snerv_mlx_native(
         lf_payload_codec=lf_payload_codec,
         model_size=model_size.as_jsonable(),
         bridge_drift=bridge,
+        scorer_custody=scorer_custody,
         storage_preflight=storage_preflight,
         archive_package=package,
         archive_path=(
@@ -396,13 +404,30 @@ def write_snerv_mlx_prefilter_profile(
 
     art = _artifact_mapping(artifact)
     component = dict(component_profile or {})
-    blockers = [
-        "snerv_mlx_prefilter_component_scorers_not_attached"
-        if not component
-        else ""
-    ]
+    blockers = []
+    artifact_blockers = [str(item) for item in art.get("blockers") or [] if item]
+    if not component:
+        blockers.append("snerv_mlx_prefilter_component_scorers_not_attached")
     if int(art.get("num_pairs") or 0) != 600:
         blockers.append("snerv_mlx_prefilter_not_full_video")
+    if artifact_blockers:
+        blockers.append("snerv_mlx_prefilter_artifact_has_blockers")
+    bridge = art.get("bridge_drift") if isinstance(art.get("bridge_drift"), Mapping) else {}
+    if bridge.get("allclose") is not True:
+        blockers.append("snerv_mlx_prefilter_bridge_drift_unproven")
+    if not art.get("archive_path") or not art.get("archive_sha256"):
+        blockers.append("snerv_mlx_prefilter_archive_package_missing")
+    elif str(art.get("archive_sha256")) != str(archive_sha256):
+        blockers.append("snerv_mlx_prefilter_archive_sha_mismatch")
+    if int(art.get("archive_bytes") or 0) and int(art.get("archive_bytes") or 0) != int(
+        archive_bytes
+    ):
+        blockers.append("snerv_mlx_prefilter_archive_bytes_mismatch")
+    if art.get("receiver_proof_passed") is not True:
+        blockers.append("snerv_mlx_prefilter_receiver_proof_missing")
+    if art.get("receiver_contract_satisfied") is not True:
+        blockers.append("snerv_mlx_prefilter_receiver_contract_unsatisfied")
+    ready_for_cpu_replay = bool(component) and not blockers
     payload = {
         "schema": SNERV_MLX_NATIVE_PREFILTER_PROFILE_SCHEMA,
         "artifact_schema": art.get("schema"),
@@ -413,9 +438,8 @@ def write_snerv_mlx_prefilter_profile(
         "archive_sha256": str(archive_sha256),
         "upstream_dir": Path(upstream_dir).as_posix(),
         "component_profile": component or None,
-        "prefilter_ready_for_cpu_replay": bool(
-            component and int(art.get("num_pairs") or 0) == 600
-        ),
+        "prefilter_ready_for_cpu_replay": ready_for_cpu_replay,
+        "artifact_blockers": artifact_blockers,
         "blockers": [b for b in dict.fromkeys(blockers) if b],
         **FALSE_AUTHORITY,
     }

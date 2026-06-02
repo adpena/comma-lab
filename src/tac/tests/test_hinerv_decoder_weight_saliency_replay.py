@@ -48,6 +48,127 @@ def test_hinerv_decoder_weight_saliency_replay_emits_real_gradient_rows(
     assert all("decoder_weight_saliency" in row for row in report["saliency_rows"])
     assert any(value > 0.0 for value in report["saliency_by_name"].values())
     assert "latents_coarse" not in report["saliency_by_name"]
+    assert report["eval_roundtrip_applied_to_predictions"] is True
+    assert report["rows"][0]["eval_roundtrip_applied_to_predictions"] is True
+
+
+def test_hinerv_decoder_weight_saliency_replay_applies_eval_roundtrip(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac import differentiable_eval_roundtrip
+
+    calls: list[tuple[int, ...]] = []
+
+    def fake_roundtrip(x: torch.Tensor, *args: object, **kwargs: object) -> torch.Tensor:
+        del args, kwargs
+        calls.append(tuple(int(dim) for dim in x.shape))
+        return x
+
+    monkeypatch.setattr(
+        differentiable_eval_roundtrip,
+        "apply_eval_roundtrip_during_training",
+        fake_roundtrip,
+    )
+    ladder = _fixture_ladder(tmp_path)
+
+    build_hinerv_decoder_weight_saliency_replay(
+        archive_ladder_report=ladder,
+        row_ids=("fixture_tiny",),
+        video_path=tmp_path / "fixture_not_used.mkv",
+        upstream_dir=tmp_path / "fixture_upstream_not_used",
+        device="cpu",
+        max_pairs=1,
+        scorer_loader=_fixture_scorer_loader,
+        pair_loader=_fixture_pair_loader,
+        scorer_source="fixture_not_score_authority",
+    )
+
+    assert calls == [(1, 3, 4, 4), (1, 3, 4, 4)]
+
+
+def test_hinerv_decoder_weight_saliency_replay_blocks_unfit_allocator_basin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac import differentiable_eval_roundtrip
+
+    monkeypatch.setattr(
+        differentiable_eval_roundtrip,
+        "apply_eval_roundtrip_during_training",
+        lambda x, *args, **kwargs: x,
+    )
+    ladder = _fixture_ladder(tmp_path)
+
+    report = build_hinerv_decoder_weight_saliency_replay(
+        archive_ladder_report=ladder,
+        row_ids=("fixture_tiny",),
+        video_path=tmp_path / "fixture_not_used.mkv",
+        upstream_dir=tmp_path / "fixture_upstream_not_used",
+        device="cpu",
+        max_pairs=1,
+        scorer_loader=_fixture_scorer_loader,
+        pair_loader=_fixture_pair_loader,
+        scorer_source="fixture_not_score_authority",
+        max_mean_score_loss_proxy_for_allocator=1.0e-12,
+    )
+
+    row = report["rows"][0]
+    assert row["loss_summary"]["allocator_linearization_basin_passed"] is False
+    assert "score_loss_proxy_outside_allocator_linearization_basin" in row["blockers"]
+    assert "score_loss_proxy_outside_allocator_linearization_basin" in report["blockers"]
+
+
+def test_hinerv_decoder_weight_saliency_replay_preserves_official_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac import differentiable_eval_roundtrip
+
+    monkeypatch.setattr(
+        differentiable_eval_roundtrip,
+        "apply_eval_roundtrip_during_training",
+        lambda x, *args, **kwargs: x,
+    )
+    cfg = HinervConfig(
+        latent_dim_coarse=2,
+        latent_dim_mid=2,
+        latent_dim_fine=2,
+        embed_dim=4,
+        initial_grid_h=1,
+        initial_grid_w=1,
+        decoder_channels=(4, 3),
+        sin_frequency=3.0,
+        num_upsample_blocks=2,
+        mid_injection_block_index=0,
+        fine_injection_block_index=1,
+        num_pairs=2,
+        output_height=4,
+        output_width=4,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=2,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+    )
+    ladder = _fixture_ladder(tmp_path, cfg=cfg)
+
+    report = build_hinerv_decoder_weight_saliency_replay(
+        archive_ladder_report=ladder,
+        row_ids=("fixture_tiny",),
+        video_path=tmp_path / "fixture_not_used.mkv",
+        upstream_dir=tmp_path / "fixture_upstream_not_used",
+        device="cpu",
+        max_pairs=1,
+        scorer_loader=_fixture_scorer_loader,
+        pair_loader=_fixture_pair_loader,
+        scorer_source="fixture_not_score_authority",
+    )
+
+    assert report["rows"][0]["saliency_by_name"]
+    assert any("feature_grids.0.grids.0" in key for key in report["saliency_by_name"])
+    assert any("convnext_blocks.0.dwconv.weight" in key for key in report["saliency_by_name"])
 
 
 def test_hinerv_decoder_weight_saliency_replay_fails_closed_on_archive_sha(
@@ -158,23 +279,24 @@ def _fixture_pair_loader(
     return [pair.clone() for _ in range(max_pairs)]
 
 
-def _fixture_ladder(tmp_path: Path) -> dict:
-    cfg = HinervConfig(
-        latent_dim_coarse=2,
-        latent_dim_mid=2,
-        latent_dim_fine=2,
-        embed_dim=4,
-        initial_grid_h=1,
-        initial_grid_w=1,
-        decoder_channels=(4, 3),
-        sin_frequency=3.0,
-        num_upsample_blocks=2,
-        mid_injection_block_index=0,
-        fine_injection_block_index=1,
-        num_pairs=2,
-        output_height=4,
-        output_width=4,
-    )
+def _fixture_ladder(tmp_path: Path, *, cfg: HinervConfig | None = None) -> dict:
+    if cfg is None:
+        cfg = HinervConfig(
+            latent_dim_coarse=2,
+            latent_dim_mid=2,
+            latent_dim_fine=2,
+            embed_dim=4,
+            initial_grid_h=1,
+            initial_grid_w=1,
+            decoder_channels=(4, 3),
+            sin_frequency=3.0,
+            num_upsample_blocks=2,
+            mid_injection_block_index=0,
+            fine_injection_block_index=1,
+            num_pairs=2,
+            output_height=4,
+            output_width=4,
+        )
     torch.manual_seed(7)
     model = HinervSubstrate(cfg)
     state = {
@@ -208,6 +330,12 @@ def _fixture_ladder(tmp_path: Path) -> dict:
         "fine_injection_block_index": cfg.fine_injection_block_index,
         "output_height": cfg.output_height,
         "output_width": cfg.output_width,
+        "use_hierarchical_feature_grid": cfg.use_hierarchical_feature_grid,
+        "use_convnext_blocks": cfg.use_convnext_blocks,
+        "local_grid_levels": cfg.local_grid_levels,
+        "local_grid_channels": cfg.local_grid_channels,
+        "convnext_mlp_ratio": cfg.convnext_mlp_ratio,
+        "convnext_kernel_size": cfg.convnext_kernel_size,
     }
     blob = pack_archive(
         decoder_sd,

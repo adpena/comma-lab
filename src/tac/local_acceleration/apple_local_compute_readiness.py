@@ -99,7 +99,7 @@ def build_apple_local_compute_readiness(
                 "MLX-first NumPy-portable kernels before more LF-byte sweeps"
             ),
             "blockers": [
-                "snerv_mlx_native_train_export_missing",
+                "snerv_mlx_native_train_export_surfaces_unproven",
                 "snerv_source_faithful_mfu_hfr_tub_missing",
             ],
         },

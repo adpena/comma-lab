@@ -77,6 +77,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
     SnervFrameCode,
     SnervModelSizeConfig,
     decode_frame,
@@ -129,6 +130,10 @@ class SnervAdvisoryResult:
     snerv_fc_dim: int
     snerv_emb_size: int
     snerv_patch_radius: int
+    snerv_model_size_adapter: str
+    snerv_mfu_scales: tuple[int, ...]
+    snerv_hfr_gain: float
+    snerv_temporal_context: int
     decoder_feature_count: int
     hf_decoder_fit_mode: str
     hf_decoder_saliency_gain: float
@@ -369,6 +374,10 @@ def run_snerv_advisory(
     snerv_fc_dim: int = 9,
     snerv_emb_size: int = 0,
     snerv_patch_radius: int = 1,
+    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
+    snerv_hfr_gain: float = 0.0,
+    snerv_temporal_context: int = 0,
 ) -> SnervAdvisoryResult:
     """Run the complete byte-closed SNeRV advisory on ``n_pairs`` real pairs.
 
@@ -394,6 +403,10 @@ def run_snerv_advisory(
         fc_dim=snerv_fc_dim,
         emb_size=snerv_emb_size,
         patch_radius=snerv_patch_radius,
+        mfu_scales=tuple(snerv_mfu_scales),
+        hfr_gain=float(snerv_hfr_gain),
+        temporal_context=int(snerv_temporal_context),
+        adapter=str(snerv_model_size_adapter),
     )
 
     # ---- 1. Analyze every frame channel; collect pyramids for decoder fit ----
@@ -616,8 +629,14 @@ def run_snerv_advisory(
         "snerv_fc_dim": int(model_size.fc_dim),
         "snerv_emb_size": int(model_size.emb_size),
         "snerv_patch_radius": int(model_size.patch_radius),
-        "decoder_feature_count": int(model_size.feature_count),
         "snerv_model_size_adapter": model_size.adapter,
+        "snerv_spectra_preserving_adapter_enabled": (
+            model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
+        ),
+        "snerv_mfu_scales": [int(v) for v in model_size.mfu_scales],
+        "snerv_hfr_gain": float(model_size.hfr_gain),
+        "snerv_temporal_context": int(model_size.temporal_context),
+        "decoder_feature_count": int(model_size.feature_count),
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
         "hf_decoder_saliency_component": hf_decoder_saliency_component,
@@ -797,6 +816,10 @@ def run_snerv_advisory(
         snerv_fc_dim=int(model_size.fc_dim),
         snerv_emb_size=int(model_size.emb_size),
         snerv_patch_radius=int(model_size.patch_radius),
+        snerv_model_size_adapter=model_size.adapter,
+        snerv_mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
+        snerv_hfr_gain=float(model_size.hfr_gain),
+        snerv_temporal_context=int(model_size.temporal_context),
         decoder_feature_count=int(model_size.feature_count),
         hf_decoder_fit_mode=hf_decoder_fit_mode,
         hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),

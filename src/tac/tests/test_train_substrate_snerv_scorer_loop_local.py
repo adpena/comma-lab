@@ -9,6 +9,9 @@ import pytest
 
 from comma_lab.storage_tiers import StorageTierError
 from experiments import train_substrate_snerv_scorer_loop_local as trainer
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+)
 
 
 def test_snerv_scorer_loop_trainer_parser_requires_mode() -> None:
@@ -40,6 +43,19 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
             "0.01",
             "--seg-slack",
             "0.02",
+            "--component-guard-mode",
+            "pose_seg_hard",
+            "--snerv-spectra-preserving-adapter",
+            "--snerv-fc-dim",
+            "12",
+            "--snerv-emb-size",
+            "2",
+            "--snerv-mfu-scales",
+            "1,3",
+            "--snerv-hfr-gain",
+            "0.25",
+            "--snerv-temporal-context",
+            "1",
         ]
     )
 
@@ -54,6 +70,13 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
     assert kwargs["max_archive_byte_growth"] == 128
     assert kwargs["pose_slack"] == pytest.approx(0.01)
     assert kwargs["seg_slack"] == pytest.approx(0.02)
+    assert kwargs["component_guard_mode"] == "pose_seg_hard"
+    assert kwargs["snerv_spectra_preserving_adapter"] is True
+    assert kwargs["snerv_fc_dim"] == 12
+    assert kwargs["snerv_emb_size"] == 2
+    assert kwargs["snerv_mfu_scales"] == (1, 3)
+    assert kwargs["snerv_hfr_gain"] == pytest.approx(0.25)
+    assert kwargs["snerv_temporal_context"] == 1
 
 
 def test_snerv_scorer_loop_trainer_rejects_local_output_without_opt_in(
@@ -107,6 +130,11 @@ def test_snerv_scorer_loop_trainer_builds_false_authority_report(
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["baseline_archive_bytes"] == 1000
     assert report["best_archive_bytes"] == 980
+    assert report["snerv_model_size_adapter"] == SNERV_SPECTRA_PRESERVING_ADAPTER
+    assert report["snerv_mfu_scales"] == [1, 3]
+    assert report["snerv_hfr_gain"] == pytest.approx(0.25)
+    assert report["decoder_feature_count"] == 14
+    assert report["component_guard_mode"] == "score_primary"
     assert report["accepted_improvement"] is True
     assert "paired_contest_cpu_cuda_pass_missing" in report["blockers"]
     assert "official_snerv_mfu_hfr_tub_parity_not_proven" in report["blockers"]
@@ -145,6 +173,11 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
             "haar",
             "--max-trials",
             "0",
+            "--snerv-spectra-preserving-adapter",
+            "--snerv-mfu-scales",
+            "1,3",
+            "--snerv-hfr-gain",
+            "0.25",
         ]
     )
 
@@ -152,6 +185,10 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     assert calls["n_pairs"] == 2
     assert calls["wavelet"] == "haar"
     assert calls["max_trials"] == 0
+    assert calls["snerv_spectra_preserving_adapter"] is True
+    assert calls["snerv_mfu_scales"] == (1, 3)
+    assert calls["snerv_hfr_gain"] == pytest.approx(0.25)
+    assert calls["component_guard_mode"] == "score_primary"
     payload = json.loads(research_json.read_text(encoding="utf-8"))
     assert payload["schema"] == trainer.TRAINER_SCHEMA
     assert payload["score_claim"] is False
@@ -172,8 +209,14 @@ class _FakeResult:
             "n_pairs": 2,
             "levels": 1,
             "wavelet": "haar",
+            "snerv_model_size_adapter": SNERV_SPECTRA_PRESERVING_ADAPTER,
+            "snerv_mfu_scales": [1, 3],
+            "snerv_hfr_gain": 0.25,
+            "snerv_temporal_context": 0,
+            "decoder_feature_count": 14,
             "qat_bits": 8,
             "search_mode": "random_signed",
+            "component_guard_mode": "score_primary",
             "scorer_loop_evaluations": 1,
             "baseline": {
                 "archive_bytes": 1000,

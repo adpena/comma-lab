@@ -36,6 +36,8 @@ def build_hinerv_archive_ladder_waterfill(
     *,
     saliency_by_row_id: Mapping[str, Mapping[str, float]] | None = None,
     global_saliency_by_name: Mapping[str, float] | None = None,
+    saliency_report_blockers: Sequence[str] = (),
+    saliency_row_blockers_by_id: Mapping[str, Sequence[str]] | None = None,
     decoder_weight_saliency_json_path: str | Path | None = None,
     action_bits: Sequence[int] = DEFAULT_ACTION_BITS,
     candidate_id: str | None = None,
@@ -53,6 +55,8 @@ def build_hinerv_archive_ladder_waterfill(
         )
     row_saliency = saliency_by_row_id or {}
     global_saliency = global_saliency_by_name or {}
+    report_saliency_blockers = tuple(str(v) for v in saliency_report_blockers if str(v))
+    row_saliency_blockers = saliency_row_blockers_by_id or {}
     num_pairs = int(archive_ladder_report.get("num_pairs") or 0)
     full_video_coverage = num_pairs == 600
     rows = []
@@ -61,6 +65,9 @@ def build_hinerv_archive_ladder_waterfill(
         "contest_cpu_cuda_exact_eval_not_executed",
         "decoder_weight_saliency_replay_required_for_authority",
     ]
+    if report_saliency_blockers:
+        blockers.append("decoder_weight_saliency_replay_has_blockers")
+        blockers.extend(report_saliency_blockers)
     for archive_row in archive_ladder_report.get("archive_rows") or ():
         if not isinstance(archive_row, Mapping):
             continue
@@ -72,6 +79,10 @@ def build_hinerv_archive_ladder_waterfill(
                 **global_saliency,
                 **dict(row_saliency.get(row_id) or {}),
             },
+            saliency_blockers=(
+                *report_saliency_blockers,
+                *tuple(str(v) for v in row_saliency_blockers.get(row_id, ()) if str(v)),
+            ),
             action_bits=action_bits,
             full_video_coverage=full_video_coverage,
             candidate_id=candidate_id or str(archive_ladder_report.get("candidate_id") or ""),
@@ -110,6 +121,7 @@ def build_hinerv_archive_ladder_waterfill(
             if decoder_weight_saliency_json_path is None
             else Path(decoder_weight_saliency_json_path).expanduser().as_posix()
         ),
+        "saliency_report_blockers": list(report_saliency_blockers),
         "row_count": len(rows),
         "rows": rows,
         "section_value_rows": section_value_rows,
@@ -156,6 +168,7 @@ def _waterfill_for_archive_row(
     *,
     row_id: str,
     saliency_by_name: Mapping[str, float],
+    saliency_blockers: Sequence[str],
     action_bits: Sequence[int],
     full_video_coverage: bool,
     candidate_id: str,
@@ -226,6 +239,15 @@ def _waterfill_for_archive_row(
         command_blockers.append(
             "decoder_weight_saliency_json_path_missing_for_replay_command"
         )
+    saliency_blocker_list = _ordered_unique(
+        str(blocker) for blocker in saliency_blockers if str(blocker)
+    )
+    if saliency_blocker_list:
+        command_blockers.append("decoder_weight_saliency_replay_has_blockers")
+    if "score_loss_proxy_outside_allocator_linearization_basin" in saliency_blocker_list:
+        command_blockers.append(
+            "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+        )
     return {
         "row_id": row_id,
         "archive_bytes": int(archive_row.get("archive_bytes") or 0),
@@ -248,7 +270,10 @@ def _waterfill_for_archive_row(
             " ".join(replay_command_argv) if replay_command_argv else None
         ),
         "archive_ladder_replay_output_dir": _replay_output_dir(row_id),
-        "blockers": _ordered_unique([*plan["blockers"], *command_blockers]),
+        "saliency_replay_blockers": saliency_blocker_list,
+        "blockers": _ordered_unique(
+            [*plan["blockers"], *saliency_blocker_list, *command_blockers]
+        ),
         **FALSE_AUTHORITY,
     }
 

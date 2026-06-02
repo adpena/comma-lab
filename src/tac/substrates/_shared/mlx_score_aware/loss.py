@@ -31,6 +31,51 @@ if TYPE_CHECKING:
     from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
 
 
+_CORE_LOSS_WEIGHT_ALIASES: dict[str, tuple[str, ...]] = {
+    "recon": ("recon", "reconstruction"),
+    "distill": ("distill", "segnet_distill", "segnet"),
+    "pose_distill": ("pose_distill", "posenet_distill", "pose"),
+}
+_CORE_LOSS_WEIGHT_KEYS = frozenset(
+    key for aliases in _CORE_LOSS_WEIGHT_ALIASES.values() for key in aliases
+)
+
+
+def component_loss_weight(
+    loss_weights: Mapping[str, float] | None,
+    component: str,
+    *,
+    default: float = 1.0,
+) -> float:
+    """Return the stage weight for a core scorer-loss component.
+
+    ``CurriculumStage.loss_weights`` is the canonical staging surface in the
+    long-training harness. Core components use stable component names, with a
+    few aliases for older NeRV planning surfaces. Missing keys preserve legacy
+    behavior by returning ``default``.
+    """
+
+    if not loss_weights:
+        return float(default)
+    aliases = _CORE_LOSS_WEIGHT_ALIASES.get(component, (component,))
+    for key in aliases:
+        if key in loss_weights:
+            return float(loss_weights[key])
+    return float(default)
+
+
+def _extra_loss_weight_overrides(
+    loss_weights: Mapping[str, float] | None,
+) -> dict[str, float]:
+    if not loss_weights:
+        return {}
+    return {
+        str(key): float(value)
+        for key, value in loss_weights.items()
+        if str(key) not in _CORE_LOSS_WEIGHT_KEYS
+    }
+
+
 def decode_frames_nhwc01(bundle: RendererBundle, idx: Any) -> tuple[Any, Any]:
     """Decode ``(rgb_0, rgb_1)`` as NHWC ``[0, 1]`` regardless of model convention.
 
@@ -247,8 +292,10 @@ def score_aware_loss(
     """
     mx = require_mlx_for_harness()
     weights = dict(bundle.extra_loss_weights)
-    if loss_weights:
-        weights.update({k: float(v) for k, v in loss_weights.items()})
+    weights.update(_extra_loss_weight_overrides(loss_weights))
+    recon_stage_weight = component_loss_weight(loss_weights, "recon")
+    segnet_stage_weight = component_loss_weight(loss_weights, "distill")
+    pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
 
     rgb_0, rgb_1 = decode_frames_nhwc01(bundle, idx)
     rgb_0 = _apply_eval_roundtrip_ste_nhwc01(bundle, rgb_0)
@@ -284,10 +331,10 @@ def score_aware_loss(
         mse_0 = _weighted_recon(bundle, rgb_0, gt_0, weight_0)
         mse_1 = _weighted_recon(bundle, rgb_1, gt_1, weight_1)
         recon = mse_0 + mse_1
-    total = recon_weight * recon
+    total = recon_weight * recon_stage_weight * recon
     parts: dict[str, Any] = {"recon": recon}
 
-    if bundle.distillation_weight > 0.0:
+    if bundle.distillation_weight > 0.0 and segnet_stage_weight != 0.0:
         from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
             HintonMlxCustomLossFnConfig,
             score_teacher_distillation_loss,
@@ -350,10 +397,10 @@ def score_aware_loss(
                 teacher_logits=teacher_logits,
                 config=loss_cfg,
             )
-        total = total + bundle.distillation_weight * distill
+        total = total + bundle.distillation_weight * segnet_stage_weight * distill
         parts["distill"] = distill
 
-    if bundle.pose_distillation_weight > 0.0:
+    if bundle.pose_distillation_weight > 0.0 and pose_stage_weight != 0.0:
         # PRODUCTION pose path (Catalog #164 + the C6 IBPS / DreamerV3 lesson,
         # POSE axis): the pose term BINDS THE REAL POSENET. The student is the
         # learnable pose head on the DECODED frame PAIR (gradient-bearing:
@@ -387,7 +434,7 @@ def score_aware_loss(
             teacher_pose=teacher_pose,
             per_dim_scale=per_dim_scale,
         )
-        total = total + bundle.pose_distillation_weight * pose_distill
+        total = total + bundle.pose_distillation_weight * pose_stage_weight * pose_distill
         parts["pose_distill"] = pose_distill
 
     if bundle.extra_loss_terms is not None:
@@ -616,6 +663,7 @@ def build_mlx_posenet_pair_teacher(
 __all__ = [
     "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",
+    "component_loss_weight",
     "decode_frames_nhwc01",
     "pose_student_inputs_nhwc",
     "score_aware_loss",

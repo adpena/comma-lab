@@ -94,6 +94,12 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert packet_path.is_file()
     assert Path(report["report_path"]).name == SNERV_MLX_NATIVE_REPORT_FILENAME
     assert report["bridge_drift"]["allclose"] is True
+    assert report["scorer_custody"]["schema"] == "upstream_contest_eval_contract.v1"
+    assert report["scorer_custody"]["contract_valid"] is True
+    assert any(
+        row["relative_path"] == "evaluate.py" and row["sha256"]
+        for row in report["scorer_custody"]["source_custody"]
+    )
     assert report["archive_package"] is None
     assert report["archive_path"] is None
     assert report["receiver_proof_passed"] is False
@@ -121,4 +127,64 @@ def test_prefilter_profile_is_false_authority_until_component_scores_exist(
     assert profile["prefilter_ready_for_cpu_replay"] is False
     assert "snerv_mlx_prefilter_component_scorers_not_attached" in profile["blockers"]
     assert "snerv_mlx_prefilter_not_full_video" in profile["blockers"]
+    assert profile["score_claim"] is False
+
+
+def test_prefilter_profile_rejects_blocked_full_video_artifact(
+    tmp_path: Path,
+) -> None:
+    profile = write_snerv_mlx_prefilter_profile(
+        artifact={
+            "schema": "snerv_mlx_native_train_export.v1",
+            "report_path": "/tmp/report.json",
+            "packet_path": "/tmp/packet.snar",
+            "num_pairs": 600,
+            "archive_path": "/tmp/archive.zip",
+            "archive_bytes": 456,
+            "archive_sha256": "b" * 64,
+            "bridge_drift": {"allclose": True},
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "blockers": ["snerv_mlx_score_aware_long_training_not_executed"],
+        },
+        archive_bytes=456,
+        archive_sha256="b" * 64,
+        output_path=tmp_path / "profile_blocked.json",
+        upstream_dir="upstream",
+        component_profile={"segnet_delta": 0.0, "posenet_delta": 0.0},
+    )
+
+    assert profile["prefilter_ready_for_cpu_replay"] is False
+    assert "snerv_mlx_prefilter_artifact_has_blockers" in profile["blockers"]
+    assert profile["artifact_blockers"] == [
+        "snerv_mlx_score_aware_long_training_not_executed"
+    ]
+
+
+def test_prefilter_profile_accepts_receiver_proven_full_video_artifact(
+    tmp_path: Path,
+) -> None:
+    profile = write_snerv_mlx_prefilter_profile(
+        artifact={
+            "schema": "snerv_mlx_native_train_export.v1",
+            "report_path": "/tmp/report.json",
+            "packet_path": "/tmp/packet.snar",
+            "num_pairs": 600,
+            "archive_path": "/tmp/archive.zip",
+            "archive_bytes": 456,
+            "archive_sha256": "c" * 64,
+            "bridge_drift": {"allclose": True},
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "blockers": [],
+        },
+        archive_bytes=456,
+        archive_sha256="c" * 64,
+        output_path=tmp_path / "profile_ready.json",
+        upstream_dir="upstream",
+        component_profile={"segnet_delta": -0.001, "posenet_delta": 0.0},
+    )
+
+    assert profile["prefilter_ready_for_cpu_replay"] is True
+    assert profile["blockers"] == []
     assert profile["score_claim"] is False

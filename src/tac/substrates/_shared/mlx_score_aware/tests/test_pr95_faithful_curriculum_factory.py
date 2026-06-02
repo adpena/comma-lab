@@ -339,7 +339,7 @@ def _make_minimal_bundle() -> object:
             # 1D bias named "decoder_bias" → AdamW-only per canonical partition.
             self.decoder_bias = mx.zeros((4,))
 
-        def reconstruct_pair(self, indices):  # noqa: D401
+        def reconstruct_pair(self, indices):
             """Return (rgb_0, rgb_1) each (B, 3, 2, 2) in [0, 1] — tiny canonical pair."""
             bs = int(indices.shape[0])
             # Use parameters so MLX value_and_grad sees gradient through them.
@@ -545,6 +545,114 @@ def test_train_step_stage_8_signals_muon_active_in_metrics() -> None:
     )
 
 
+@requires_mlx
+def test_pr95_curriculum_path_trains_student_heads_when_stage_weight_active() -> None:
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        RealPoseNetTeacherCache,
+        build_learnable_pose_student_head,
+    )
+
+    base = _make_minimal_bundle()
+    pose_teacher = RealPoseNetTeacherCache(
+        teacher_pose_np=mx.ones((base.num_pairs, 6)),
+        num_pairs=base.num_pairs,
+        pose_dims=6,
+    )
+    pose_head = build_learnable_pose_student_head(
+        seed=17,
+        input_channels=6,
+        pool_grid=1,
+    )
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        pose_distillation_weight=0.5,
+        pose_scorer_teacher=pose_teacher,
+        learnable_pose_student_head=pose_head,
+        pose_student_input_preprocess="pr95_yuv6",
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+    w0 = mx.array(pose_head.weight)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "pose_distill": 1.0},
+    )
+
+    moved = float(mx.max(mx.abs(pose_head.weight - w0)).item())
+    assert moved > 0.0
+    assert metrics["loss_part_stage_weight_pose_distill"] == pytest.approx(1.0)
+
+
+@requires_mlx
+def test_pr95_curriculum_path_respects_zero_student_head_stage_weight() -> None:
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        RealPoseNetTeacherCache,
+        build_learnable_pose_student_head,
+    )
+
+    base = _make_minimal_bundle()
+    pose_teacher = RealPoseNetTeacherCache(
+        teacher_pose_np=mx.ones((base.num_pairs, 6)),
+        num_pairs=base.num_pairs,
+        pose_dims=6,
+    )
+    pose_head = build_learnable_pose_student_head(
+        seed=19,
+        input_channels=6,
+        pool_grid=1,
+    )
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        pose_distillation_weight=0.5,
+        pose_scorer_teacher=pose_teacher,
+        learnable_pose_student_head=pose_head,
+        pose_student_input_preprocess="pr95_yuv6",
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+    w0 = mx.array(pose_head.weight)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "pose_distill": 0.0},
+    )
+
+    moved = float(mx.max(mx.abs(pose_head.weight - w0)).item())
+    assert moved == pytest.approx(0.0)
+    assert "loss_part_pose_distill" not in metrics
+
+
 # ---------- Section 5: NO FAKE end-to-end verification (param mutation) ----------
 
 
@@ -561,7 +669,6 @@ def test_train_step_actually_mutates_parameters_per_stage_NO_FAKE() -> None:
     bundle.model.decoder_bias = mx.ones((4,)) * 0.1
     mx.eval(bundle.model.parameters())
     initial_weight = float(bundle.model.decoder_weight.sum().item())
-    initial_bias = float(bundle.model.decoder_bias.sum().item())
     adapter = MlxScoreAwareAdapter(
         bundle,
         substrate_id="test_substrate",
@@ -579,7 +686,6 @@ def test_train_step_actually_mutates_parameters_per_stage_NO_FAKE() -> None:
         )
     mx.eval(bundle.model.parameters())
     final_weight = float(bundle.model.decoder_weight.sum().item())
-    final_bias = float(bundle.model.decoder_bias.sum().item())
     # The target is zeros, so MSE loss gradient should pull weights toward zero.
     # NO FAKE: parameters MUST have moved from their initial values.
     assert final_weight != initial_weight, (
@@ -591,7 +697,6 @@ def test_train_step_actually_mutates_parameters_per_stage_NO_FAKE() -> None:
     # primary NO FAKE assertion. We additionally validate the bias path doesn't
     # error out by simply checking it remains a real MLX array.
     assert bundle.model.decoder_bias is not None
-    _ = final_bias  # silence unused; the assertion above is the NO FAKE guard.
 
 
 @requires_mlx

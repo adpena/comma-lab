@@ -24,6 +24,7 @@ from typing import Any
 import numpy as np
 import torch
 
+from tac import differentiable_eval_roundtrip
 from tac.analysis.nerv_decoder_weight_waterfill import (
     DEFAULT_EXCLUDE_SUBSTRINGS,
     DEFAULT_INCLUDE_SUBSTRINGS,
@@ -49,6 +50,7 @@ from tac.substrates.score_aware_common import (
 SCHEMA = "hinerv_decoder_weight_saliency_replay.v1"
 AUTHORITY = "false_authority_decoder_weight_saliency_replay_no_score_claim"
 AXIS_TAG = "[macOS-CPU/GPU scorer-loss saliency replay]"
+DEFAULT_MAX_MEAN_SCORE_LOSS_PROXY_FOR_ALLOCATOR = 5.0
 
 
 class HinervDecoderWeightSaliencyReplayError(ValueError):
@@ -73,6 +75,9 @@ def build_hinerv_decoder_weight_saliency_replay(
     exclude_substrings: Sequence[str] = DEFAULT_EXCLUDE_SUBSTRINGS,
     segmentation_surrogate: str = "soft_cosine",
     segmentation_temperature: float = 1.0,
+    max_mean_score_loss_proxy_for_allocator: float | None = (
+        DEFAULT_MAX_MEAN_SCORE_LOSS_PROXY_FOR_ALLOCATOR
+    ),
     scorer_loader: ScorerLoader | None = None,
     pair_loader: PairLoader | None = None,
     scorer_source: str = "real_upstream_differentiable_scorers",
@@ -106,6 +111,13 @@ def build_hinerv_decoder_weight_saliency_replay(
         raise HinervDecoderWeightSaliencyReplayError("start_pair must be >= 0")
     if int(pair_stride) <= 0:
         raise HinervDecoderWeightSaliencyReplayError("pair_stride must be positive")
+    if (
+        max_mean_score_loss_proxy_for_allocator is not None
+        and float(max_mean_score_loss_proxy_for_allocator) <= 0.0
+    ):
+        raise HinervDecoderWeightSaliencyReplayError(
+            "max_mean_score_loss_proxy_for_allocator must be positive or None"
+        )
 
     rows = _selected_ladder_rows(archive_ladder_report, row_ids=row_ids)
     if not rows:
@@ -147,6 +159,11 @@ def build_hinerv_decoder_weight_saliency_replay(
             exclude_substrings=exclude_substrings,
             segmentation_surrogate=str(segmentation_surrogate),
             segmentation_temperature=float(segmentation_temperature),
+            max_mean_score_loss_proxy_for_allocator=(
+                None
+                if max_mean_score_loss_proxy_for_allocator is None
+                else float(max_mean_score_loss_proxy_for_allocator)
+            ),
             max_pairs=int(max_pairs),
             start_pair=int(start_pair),
             pair_stride=int(pair_stride),
@@ -186,6 +203,12 @@ def build_hinerv_decoder_weight_saliency_replay(
         },
         "segmentation_surrogate": str(segmentation_surrogate),
         "segmentation_temperature": float(segmentation_temperature),
+        "max_mean_score_loss_proxy_for_allocator": (
+            None
+            if max_mean_score_loss_proxy_for_allocator is None
+            else float(max_mean_score_loss_proxy_for_allocator)
+        ),
+        "eval_roundtrip_applied_to_predictions": True,
         "full_video_coverage": bool(full_video_coverage),
         "row_count": len(replay_rows),
         "rows": replay_rows,
@@ -355,6 +378,14 @@ def _cfg_from_row_archive(row: Mapping[str, Any]) -> HinervConfig:
         num_pairs=int(arc.latents_coarse.shape[0]),
         output_height=int(meta["output_height"]),
         output_width=int(meta["output_width"]),
+        use_hierarchical_feature_grid=bool(
+            meta.get("use_hierarchical_feature_grid", False)
+        ),
+        use_convnext_blocks=bool(meta.get("use_convnext_blocks", False)),
+        local_grid_levels=int(meta.get("local_grid_levels", 2)),
+        local_grid_channels=int(meta.get("local_grid_channels", 4)),
+        convnext_mlp_ratio=int(meta.get("convnext_mlp_ratio", 2)),
+        convnext_kernel_size=int(meta.get("convnext_kernel_size", 7)),
     )
 
 
@@ -408,6 +439,7 @@ def _replay_row(
     exclude_substrings: Sequence[str],
     segmentation_surrogate: str,
     segmentation_temperature: float,
+    max_mean_score_loss_proxy_for_allocator: float | None,
     max_pairs: int,
     start_pair: int,
     pair_stride: int,
@@ -436,8 +468,12 @@ def _replay_row(
         gt = pair.to(device=device, dtype=torch.float32)
         model.zero_grad(set_to_none=True)
         rgb_0_unit, rgb_1_unit = model(idx)
-        rgb_0 = rgb_0_unit * 255.0
-        rgb_1 = rgb_1_unit * 255.0
+        rgb_0 = differentiable_eval_roundtrip.apply_eval_roundtrip_during_training(
+            rgb_0_unit * 255.0
+        )
+        rgb_1 = differentiable_eval_roundtrip.apply_eval_roundtrip_during_training(
+            rgb_1_unit * 255.0
+        )
         seg_term, pose_term = score_pair_components_dispatch(
             seg_scorer=seg_scorer,
             pose_scorer=pose_scorer,
@@ -492,7 +528,16 @@ def _replay_row(
         and int(start_pair) == 0
         and int(pair_stride) == 1
     )
+    mean_loss = _mean(loss_values)
+    mean_seg = _mean(seg_values)
+    mean_pose = _mean(pose_values)
     blockers = []
+    allocator_linearization_basin_passed = (
+        max_mean_score_loss_proxy_for_allocator is None
+        or mean_loss <= float(max_mean_score_loss_proxy_for_allocator)
+    )
+    if not allocator_linearization_basin_passed:
+        blockers.append("score_loss_proxy_outside_allocator_linearization_basin")
     if missing_grad_names:
         blockers.append("decoder_parameter_gradient_missing")
     if not full_video:
@@ -516,11 +561,20 @@ def _replay_row(
             "start_pair": int(start_pair),
             "pair_stride": int(pair_stride),
         },
+        "eval_roundtrip_applied_to_predictions": True,
         "full_video_coverage": bool(full_video),
         "loss_summary": {
-            "mean_score_loss_proxy": _mean(loss_values),
-            "mean_seg_surrogate": _mean(seg_values),
-            "mean_pose_dist": _mean(pose_values),
+            "mean_score_loss_proxy": mean_loss,
+            "mean_seg_surrogate": mean_seg,
+            "mean_pose_dist": mean_pose,
+            "max_mean_score_loss_proxy_for_allocator": (
+                None
+                if max_mean_score_loss_proxy_for_allocator is None
+                else float(max_mean_score_loss_proxy_for_allocator)
+            ),
+            "allocator_linearization_basin_passed": bool(
+                allocator_linearization_basin_passed
+            ),
         },
         "saliency_by_name": saliency_by_name,
         "saliency_rows": tensor_rows,
@@ -609,6 +663,7 @@ def _ordered_unique(values: Iterable[str]) -> list[str]:
 
 __all__ = [
     "AUTHORITY",
+    "DEFAULT_MAX_MEAN_SCORE_LOSS_PROXY_FOR_ALLOCATOR",
     "SCHEMA",
     "HinervDecoderWeightSaliencyReplayError",
     "build_hinerv_decoder_weight_saliency_replay",

@@ -18,6 +18,8 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 )
 from tools.build_hinerv_archive_ladder_waterfill import (
     _global_saliency,
+    _report_blockers,
+    _row_blockers,
 )
 from tools.build_hinerv_archive_ladder_waterfill import (
     main as tool_main,
@@ -68,6 +70,33 @@ def test_hinerv_archive_ladder_waterfill_fails_closed_on_bad_manifest_sha(
     assert "state_npz_artifact_sha256_mismatch" in report["rows"][0]["blockers"]
     assert "state_npz_artifact_sha256_mismatch" in report["blockers"]
     assert report["section_value_rows"] == []
+
+
+def test_hinerv_archive_ladder_waterfill_carries_saliency_replay_blockers(
+    tmp_path: Path,
+) -> None:
+    ladder = _ladder(tmp_path, row_id="tiny", saliency_ready=True)
+
+    report = build_hinerv_archive_ladder_waterfill(
+        ladder,
+        global_saliency_by_name={"blocks.0.weight": 0.0},
+        saliency_report_blockers=("full_video_coverage_missing",),
+        saliency_row_blockers_by_id={
+            "tiny": ("score_loss_proxy_outside_allocator_linearization_basin",),
+        },
+        action_bits=(0, 2, 32),
+        candidate_id="candidate_a",
+    )
+
+    row_blockers = report["rows"][0]["blockers"]
+    assert "decoder_weight_saliency_replay_has_blockers" in report["blockers"]
+    assert "full_video_coverage_missing" in report["blockers"]
+    assert "full_video_coverage_missing" in row_blockers
+    assert "score_loss_proxy_outside_allocator_linearization_basin" in row_blockers
+    assert (
+        "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+        in row_blockers
+    )
 
 
 def test_hinerv_archive_ladder_waterfill_rejects_wrong_source_schema(
@@ -160,6 +189,27 @@ def test_hinerv_archive_ladder_waterfill_keeps_row_saliency_row_scoped() -> None
     }
 
     assert _global_saliency(payload) == {}
+
+
+def test_hinerv_archive_ladder_waterfill_cli_extracts_saliency_blockers() -> None:
+    payload = {
+        "blockers": ["full_video_coverage_missing"],
+        "rows": [
+            {
+                "row_id": "hi_nerv_local_tiny",
+                "blockers": [
+                    "score_loss_proxy_outside_allocator_linearization_basin"
+                ],
+            }
+        ],
+    }
+
+    assert _report_blockers(payload) == ("full_video_coverage_missing",)
+    assert _row_blockers(payload) == {
+        "hi_nerv_local_tiny": (
+            "score_loss_proxy_outside_allocator_linearization_basin",
+        )
+    }
 
 
 def _ladder(tmp_path: Path, *, row_id: str, saliency_ready: bool) -> dict:

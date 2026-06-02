@@ -42,10 +42,11 @@ from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     FALSE_AUTHORITY,
 )
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
-    SCHEMA as SNERV_QAT_RESULT_SCHEMA,
+    COMPONENT_GUARD_MODES,
+    run_snerv_scorer_loop_decoder_qat_smoke,
 )
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
-    run_snerv_scorer_loop_decoder_qat_smoke,
+    SCHEMA as SNERV_QAT_RESULT_SCHEMA,
 )
 
 TRAINER_SCHEMA = "snerv_scorer_loop_qat_local_trainer.v1"
@@ -136,6 +137,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--video-path", default="upstream/videos/0.mkv")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--step-map-bins", type=int, default=16)
+    parser.add_argument("--snerv-spectra-preserving-adapter", action="store_true")
+    parser.add_argument("--snerv-fc-dim", type=int, default=9)
+    parser.add_argument("--snerv-emb-size", type=int, default=0)
+    parser.add_argument("--snerv-patch-radius", type=int, default=1)
+    parser.add_argument("--snerv-mfu-scales", default="1,2,4")
+    parser.add_argument("--snerv-hfr-gain", type=float, default=0.0)
+    parser.add_argument("--snerv-temporal-context", type=int, default=0)
     parser.add_argument("--qat-bits", type=int, default=8)
     parser.add_argument("--max-trials", type=int, default=2)
     parser.add_argument(
@@ -153,6 +161,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-archive-byte-growth", type=int, default=None)
     parser.add_argument("--pose-slack", type=float, default=0.0)
     parser.add_argument("--seg-slack", type=float, default=0.0)
+    parser.add_argument(
+        "--component-guard-mode",
+        choices=COMPONENT_GUARD_MODES,
+        default="score_primary",
+    )
     parser.add_argument(
         "--pair-guard-min-score-improved-fraction",
         type=float,
@@ -179,6 +192,15 @@ def _score_loop_kwargs_from_args(args: argparse.Namespace) -> dict[str, Any]:
         "video_path": str(args.video_path),
         "device": str(args.device),
         "step_map_bins": int(args.step_map_bins),
+        "snerv_spectra_preserving_adapter": bool(
+            args.snerv_spectra_preserving_adapter
+        ),
+        "snerv_fc_dim": int(args.snerv_fc_dim),
+        "snerv_emb_size": int(args.snerv_emb_size),
+        "snerv_patch_radius": int(args.snerv_patch_radius),
+        "snerv_mfu_scales": _parse_positive_int_csv(args.snerv_mfu_scales),
+        "snerv_hfr_gain": float(args.snerv_hfr_gain),
+        "snerv_temporal_context": int(args.snerv_temporal_context),
         "qat_bits": int(args.qat_bits),
         "max_trials": int(args.max_trials),
         "search_mode": str(args.search_mode),
@@ -191,6 +213,7 @@ def _score_loop_kwargs_from_args(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "pose_slack": float(args.pose_slack),
         "seg_slack": float(args.seg_slack),
+        "component_guard_mode": str(args.component_guard_mode),
         "pair_guard_min_score_improved_fraction": float(
             args.pair_guard_min_score_improved_fraction
         ),
@@ -230,8 +253,14 @@ def _build_report(
         "n_pairs": payload.get("n_pairs"),
         "levels": payload.get("levels"),
         "wavelet": payload.get("wavelet"),
+        "snerv_model_size_adapter": payload.get("snerv_model_size_adapter"),
+        "snerv_mfu_scales": payload.get("snerv_mfu_scales"),
+        "snerv_hfr_gain": payload.get("snerv_hfr_gain"),
+        "snerv_temporal_context": payload.get("snerv_temporal_context"),
+        "decoder_feature_count": payload.get("decoder_feature_count"),
         "qat_bits": payload.get("qat_bits"),
         "search_mode": payload.get("search_mode"),
+        "component_guard_mode": payload.get("component_guard_mode"),
         "scorer_loop_evaluations": payload.get("scorer_loop_evaluations"),
         "baseline_archive_bytes": _nested(payload, "baseline", "archive_bytes"),
         "best_archive_bytes": _nested(payload, "best", "archive_bytes"),
@@ -260,6 +289,11 @@ def render_snerv_scorer_loop_local_markdown(report: dict[str, Any]) -> str:
         f"Axis: `{report.get('axis_tag')}`",
         f"Pairs: `{report.get('n_pairs')}`",
         f"Search mode: `{report.get('search_mode')}`",
+        f"Component guard: `{report.get('component_guard_mode')}`",
+        f"Adapter: `{report.get('snerv_model_size_adapter')}`",
+        f"MFU scales: `{report.get('snerv_mfu_scales')}`",
+        f"HFR gain: `{report.get('snerv_hfr_gain')}`",
+        f"Decoder features: `{report.get('decoder_feature_count')}`",
         f"Evaluations: `{report.get('scorer_loop_evaluations')}`",
         f"Baseline score: `{report.get('baseline_score_linf')}`",
         f"Best score: `{report.get('best_score_linf')}`",
@@ -356,12 +390,31 @@ def _looks_local(path: Path) -> bool:
     return not path.resolve(strict=False).as_posix().startswith("/Volumes/")
 
 
+def _parse_positive_int_csv(raw: str) -> tuple[int, ...]:
+    values = []
+    for chunk in str(raw).split(","):
+        text = chunk.strip()
+        if not text:
+            continue
+        value = int(text)
+        if value < 1:
+            raise ValueError("positive integer list values must be >= 1")
+        values.append(value)
+    if not values:
+        raise ValueError("at least one positive integer is required")
+    return tuple(values)
+
+
 def _summary(report: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema": TRAINER_SCHEMA,
         "research_json_path": report.get("research_json_path"),
         "output_dir": report.get("output_dir"),
         "n_pairs": report.get("n_pairs"),
+        "snerv_model_size_adapter": report.get("snerv_model_size_adapter"),
+        "snerv_mfu_scales": report.get("snerv_mfu_scales"),
+        "snerv_hfr_gain": report.get("snerv_hfr_gain"),
+        "decoder_feature_count": report.get("decoder_feature_count"),
         "scorer_loop_evaluations": report.get("scorer_loop_evaluations"),
         "baseline_score_linf": report.get("baseline_score_linf"),
         "best_score_linf": report.get("best_score_linf"),

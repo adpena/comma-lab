@@ -29,6 +29,9 @@ from tac.analysis.pr95_stack_binding_requirements import (
     build_pr95_stack_binding_evidence,
     build_pr95_stack_binding_requirements,
 )
+from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (
+    build_snerv_mlx_native_adapter_contract,
+)
 
 SCHEMA = "nerv_stack_synergy_audit.v1"
 FALSE_AUTHORITY = {
@@ -70,6 +73,8 @@ SNERV_SURFACES = (
     "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
     "src/tac/substrates/snerv_inverse_steg_carrier/archive_candidate.py",
     "src/tac/substrates/snerv_inverse_steg_carrier/inflate.py",
+    "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_adapter_contract.py",
+    "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
     "src/tac/substrates/snerv_inverse_steg_carrier/receiver_proof.py",
     "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
     "src/tac/analysis/snerv_rate_adjudication.py",
@@ -305,8 +310,15 @@ def _snerv_stack_audit(
         family="snerv",
         evidence=build_pr95_stack_binding_evidence(),
     )
+    native_contract = build_snerv_mlx_native_adapter_contract()
+    native_adapter_blockers = list(native_contract.get("blockers") or [])
+    native_adapter_blockers.append(
+        "snerv_mlx_native_adapter_surfaces_present_but_unproven"
+        if native_contract.get("surfaces_ready")
+        else "snerv_mlx_native_train_export_adapter_missing"
+    )
     blockers = [
-        "snerv_mlx_native_train_export_adapter_missing",
+        *native_adapter_blockers,
         "snerv_execute_family_uses_cpu_advisory_not_mlx_native_training",
         "snerv_modelsize_candidate_consumption_requires_real_snar1_archive_byte_oracle",
         "snerv_local_carrier_not_source_faithful_official_snerv_multilayer_stack",
@@ -330,7 +342,8 @@ def _snerv_stack_audit(
         "schema": "nerv_stack_synergy_stack_row.v1",
         "stack_id": "snerv",
         "priority": "top_priority_carrier",
-        "local_status": "receiver_bound_advisory_export_present_mlx_native_train_missing",
+        "local_status": "receiver_bound_advisory_export_present_mlx_native_surfaces_unproven",
+        "snerv_mlx_native_adapter_contract": native_contract,
         "source_faithfulness": {
             "source_faithful_official_snerv": False,
             "local_role": "contest_adapter_store_lf_generate_hf_snar1_packet",

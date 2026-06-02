@@ -46,6 +46,8 @@ def main(argv: list[str] | None = None) -> int:
         ladder,
         saliency_by_row_id=_row_saliency(saliency_payload),
         global_saliency_by_name=_global_saliency(saliency_payload),
+        saliency_report_blockers=_report_blockers(saliency_payload),
+        saliency_row_blockers_by_id=_row_blockers(saliency_payload),
         decoder_weight_saliency_json_path=args.saliency_json,
         action_bits=_parse_action_bits(args.action_bits),
         candidate_id=args.candidate_id,
@@ -104,6 +106,31 @@ def _global_saliency(payload: Any) -> dict[str, float]:
         for key, value in mapping.items()
         if _float_or_none(value) is not None
     }
+
+
+def _report_blockers(payload: Any) -> tuple[str, ...]:
+    if not isinstance(payload, Mapping):
+        return ()
+    return tuple(str(value) for value in payload.get("blockers") or () if str(value))
+
+
+def _row_blockers(payload: Any) -> dict[str, tuple[str, ...]]:
+    if not isinstance(payload, Mapping):
+        return {}
+    out: dict[str, tuple[str, ...]] = {}
+    rows = payload.get("rows") or ()
+    if not isinstance(rows, list):
+        return out
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        row_id = row.get("row_id")
+        if row_id is None:
+            continue
+        blockers = tuple(str(value) for value in row.get("blockers") or () if str(value))
+        if blockers:
+            out[str(row_id)] = blockers
+    return out
 
 
 def _float_or_none(value: Any) -> float | None:

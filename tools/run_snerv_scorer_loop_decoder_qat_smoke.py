@@ -15,6 +15,7 @@ if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (  # noqa: E402
+    COMPONENT_GUARD_MODES,
     run_snerv_scorer_loop_decoder_qat_smoke,
 )
 
@@ -37,6 +38,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video-path", default="upstream/videos/0.mkv")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--step-map-bins", type=int, default=16)
+    parser.add_argument("--snerv-spectra-preserving-adapter", action="store_true")
+    parser.add_argument("--snerv-fc-dim", type=int, default=9)
+    parser.add_argument("--snerv-emb-size", type=int, default=0)
+    parser.add_argument("--snerv-patch-radius", type=int, default=1)
+    parser.add_argument("--snerv-mfu-scales", default="1,2,4")
+    parser.add_argument("--snerv-hfr-gain", type=float, default=0.0)
+    parser.add_argument("--snerv-temporal-context", type=int, default=0)
     parser.add_argument("--qat-bits", type=int, default=8)
     parser.add_argument("--max-trials", type=int, default=2)
     parser.add_argument(
@@ -54,6 +62,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-archive-byte-growth", type=int, default=None)
     parser.add_argument("--pose-slack", type=float, default=0.0)
     parser.add_argument("--seg-slack", type=float, default=0.0)
+    parser.add_argument(
+        "--component-guard-mode",
+        choices=COMPONENT_GUARD_MODES,
+        default="score_primary",
+    )
     parser.add_argument("--pair-guard-min-score-improved-fraction", type=float, default=0.0)
     parser.add_argument("--pair-guard-max-pose-worsened-fraction", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=1337)
@@ -70,6 +83,13 @@ def main(argv: list[str] | None = None) -> int:
         video_path=args.video_path,
         device=args.device,
         step_map_bins=args.step_map_bins,
+        snerv_spectra_preserving_adapter=args.snerv_spectra_preserving_adapter,
+        snerv_fc_dim=args.snerv_fc_dim,
+        snerv_emb_size=args.snerv_emb_size,
+        snerv_patch_radius=args.snerv_patch_radius,
+        snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
+        snerv_hfr_gain=args.snerv_hfr_gain,
+        snerv_temporal_context=args.snerv_temporal_context,
         qat_bits=args.qat_bits,
         max_trials=args.max_trials,
         search_mode=args.search_mode,
@@ -78,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
         max_archive_byte_growth=args.max_archive_byte_growth,
         pose_slack=args.pose_slack,
         seg_slack=args.seg_slack,
+        component_guard_mode=args.component_guard_mode,
         pair_guard_min_score_improved_fraction=(
             args.pair_guard_min_score_improved_fraction
         ),
@@ -99,8 +120,13 @@ def main(argv: list[str] | None = None) -> int:
     print("[SNeRV scorer-loop decoder/QAT smoke] false-authority")
     print(f"  n_pairs: {result.n_pairs}")
     print(f"  evaluations: {result.scorer_loop_evaluations}")
+    print(f"  adapter: {result.snerv_model_size_adapter}")
+    print(f"  mfu_scales: {list(result.snerv_mfu_scales)}")
+    print(f"  hfr_gain: {result.snerv_hfr_gain:g}")
+    print(f"  decoder_feature_count: {result.decoder_feature_count}")
     print(f"  baseline_score_linf: {result.baseline.score_linf}")
     print(f"  best_score_linf: {result.best.score_linf}")
+    print(f"  component_guard_mode: {result.component_guard_mode}")
     print(f"  byte_pressure_multiplier: {result.byte_pressure_multiplier}")
     print(f"  max_archive_byte_growth: {result.max_archive_byte_growth}")
     print(
@@ -114,6 +140,21 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  blockers: {list(result.blockers)}")
     print(f"  wrote {out_path}")
     return 0
+
+
+def _parse_positive_int_csv(raw: str) -> tuple[int, ...]:
+    values = []
+    for chunk in str(raw).split(","):
+        text = chunk.strip()
+        if not text:
+            continue
+        value = int(text)
+        if value < 1:
+            raise ValueError("positive integer list values must be >= 1")
+        values.append(value)
+    if not values:
+        raise ValueError("at least one positive integer is required")
+    return tuple(values)
 
 
 if __name__ == "__main__":

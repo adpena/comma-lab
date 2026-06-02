@@ -29,7 +29,10 @@ from typing import TYPE_CHECKING, Any
 from tac.substrates._shared.mlx_score_aware.device_gate import (
     require_mlx_for_harness,
 )
-from tac.substrates._shared.mlx_score_aware.loss import score_aware_loss
+from tac.substrates._shared.mlx_score_aware.loss import (
+    component_loss_weight,
+    score_aware_loss,
+)
 
 if TYPE_CHECKING:
     from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
@@ -239,6 +242,7 @@ class MlxScoreAwareAdapter:
         # the SAME pose-MSE distill loss via a sibling mx.value_and_grad step.
         self._pose_head_optimizer: Any = None
         self._pose_head_optimizer_lr: float | None = None
+        self._active_loss_weights: Mapping[str, float] = {}
 
     def _post_train_step_update(self, batch: Any) -> tuple[list[Any], dict[str, float]]:
         """Run substrate-local non-gradient updates after an accepted step."""
@@ -268,7 +272,12 @@ class MlxScoreAwareAdapter:
                     continue
         return eval_targets, metrics
 
-    def _score_aware_loss_part_metrics(self, batch: Any) -> dict[str, float]:
+    def _score_aware_loss_part_metrics(
+        self,
+        batch: Any,
+        *,
+        loss_weights: Mapping[str, float] | None = None,
+    ) -> dict[str, float]:
         """Return machine-checkable telemetry for active score-aware terms.
 
         The canonical loss already owns the math. This helper only exposes its
@@ -278,32 +287,216 @@ class MlxScoreAwareAdapter:
 
         mx = self._mx
         try:
-            _total, parts = score_aware_loss(self.bundle, batch)
+            _total, parts = score_aware_loss(
+                self.bundle,
+                batch,
+                loss_weights=loss_weights,
+            )
         except Exception:
             return {"score_aware_loss_part_probe_failed": 1.0}
 
         out: dict[str, float] = {}
         weights = dict(self.bundle.extra_loss_weights)
+        if loss_weights:
+            weights.update(
+                {
+                    str(key): float(value)
+                    for key, value in loss_weights.items()
+                    if str(key)
+                    not in {
+                        "recon",
+                        "reconstruction",
+                        "distill",
+                        "segnet_distill",
+                        "segnet",
+                        "pose_distill",
+                        "posenet_distill",
+                        "pose",
+                    }
+                }
+            )
+        recon_stage_weight = component_loss_weight(loss_weights, "recon")
+        segnet_stage_weight = component_loss_weight(loss_weights, "distill")
+        pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
         for name, value in parts.items():
             mx.eval(value)
             scalar = float(value.item())
             out[f"loss_part_{name}"] = scalar
             if name == "distill":
                 out["loss_part_weighted_distill"] = (
-                    float(self.bundle.distillation_weight) * scalar
+                    float(self.bundle.distillation_weight)
+                    * segnet_stage_weight
+                    * scalar
                 )
+                out["loss_part_stage_weight_distill"] = segnet_stage_weight
             elif name == "pose_distill":
                 out["loss_part_weighted_pose_distill"] = (
-                    float(self.bundle.pose_distillation_weight) * scalar
+                    float(self.bundle.pose_distillation_weight)
+                    * pose_stage_weight
+                    * scalar
                 )
+                out["loss_part_stage_weight_pose_distill"] = pose_stage_weight
             elif name == "recon":
-                out["loss_part_weighted_recon"] = scalar
+                out["loss_part_weighted_recon"] = recon_stage_weight * scalar
+                out["loss_part_stage_weight_recon"] = recon_stage_weight
             elif name in weights:
                 out[f"loss_part_weighted_{name}"] = float(weights[name]) * scalar
         out["score_aware_loss_parts_active"] = float(
             ("distill" in parts) or ("pose_distill" in parts)
         )
         return out
+
+    def _train_student_heads(
+        self,
+        *,
+        batch: Any,
+        learning_rate: float,
+        loss_weights: Mapping[str, float],
+    ) -> list[Any]:
+        """Train real-scorer student heads under the active stage weights."""
+
+        mx = self._mx
+        mlx_optim = self._mlx_optim
+        eval_targets: list[Any] = []
+
+        segnet_stage_weight = component_loss_weight(loss_weights, "distill")
+        head = self.bundle.learnable_student_head
+        if (
+            self.bundle.distillation_weight > 0.0
+            and segnet_stage_weight != 0.0
+            and self.bundle.scorer_teacher is not None
+            and head is not None
+        ):
+            if (
+                self._head_optimizer is None
+                or self._head_optimizer_lr != learning_rate
+            ):
+                self._head_optimizer = mlx_optim.AdamW(learning_rate=learning_rate)
+                self._head_optimizer_lr = learning_rate
+                self._head_opt_state = {}
+
+            def _head_loss_fn(head_params: Mapping[str, Any]) -> Any:
+                from tac.substrates._shared.mlx_score_aware.loss import (
+                    _apply_eval_roundtrip_ste_nhwc01,
+                    decode_frames_nhwc01,
+                )
+                from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+                    HintonMlxCustomLossFnConfig,
+                    score_teacher_distillation_loss,
+                )
+
+                rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
+                rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
+                rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
+                seg_rgb = (
+                    rgb_1
+                    if self.bundle.segnet_teacher_frame_index == 1
+                    else rgb_0
+                )
+                seg_rgb = mx.stop_gradient(seg_rgb)
+                student = (
+                    mx.einsum("bhwc,ck->bhwk", seg_rgb, head_params["weight"])
+                    + head_params["bias"]
+                )
+                teacher = mx.stop_gradient(
+                    self.bundle.scorer_teacher.teacher_logits_for_indices(batch)
+                )
+                loss_cfg = HintonMlxCustomLossFnConfig(
+                    temperature=self.bundle.distillation_temperature,
+                    distillation_objective=self.bundle.segnet_distillation_objective,
+                    tau_boundary=self.bundle.segnet_tau_boundary,
+                    hinge_margin=self.bundle.segnet_hinge_margin,
+                    student_head_out_channels=self.bundle.distillation_num_classes,
+                )
+                distill = score_teacher_distillation_loss(
+                    student_logits=student,
+                    teacher_logits=teacher,
+                    config=loss_cfg,
+                )
+                return (
+                    float(self.bundle.distillation_weight)
+                    * segnet_stage_weight
+                    * distill
+                )
+
+            head_params = {"weight": head.weight, "bias": head.bias}
+            _hloss, hgrads = mx.value_and_grad(_head_loss_fn)(head_params)
+            self._head_optimizer.update(head_params, hgrads)
+            head.weight = head_params["weight"]
+            head.bias = head_params["bias"]
+            eval_targets.extend(
+                [head.weight, head.bias, self._head_optimizer.state]
+            )
+
+        pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
+        pose_head = self.bundle.learnable_pose_student_head
+        if (
+            self.bundle.pose_distillation_weight > 0.0
+            and pose_stage_weight != 0.0
+            and self.bundle.pose_scorer_teacher is not None
+            and pose_head is not None
+        ):
+            if (
+                self._pose_head_optimizer is None
+                or self._pose_head_optimizer_lr != learning_rate
+            ):
+                self._pose_head_optimizer = mlx_optim.AdamW(
+                    learning_rate=learning_rate
+                )
+                self._pose_head_optimizer_lr = learning_rate
+
+            def _pose_head_loss_fn(pose_params: Mapping[str, Any]) -> Any:
+                from tac.substrates._shared.mlx_score_aware.loss import (
+                    _apply_eval_roundtrip_ste_nhwc01,
+                    decode_frames_nhwc01,
+                    pose_student_inputs_nhwc,
+                )
+                from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+                    pose_distillation_mse_loss,
+                )
+
+                rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
+                rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
+                rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
+                pose_rgb_0, pose_rgb_1 = pose_student_inputs_nhwc(
+                    self.bundle, rgb_0, rgb_1
+                )
+                student_pose = pose_head.forward_with_params(
+                    mx.stop_gradient(pose_rgb_0),
+                    mx.stop_gradient(pose_rgb_1),
+                    {
+                        "weight": pose_params["weight"],
+                        "bias": pose_params["bias"],
+                    },
+                )
+                teacher_pose = mx.stop_gradient(
+                    self.bundle.pose_scorer_teacher.teacher_pose_for_indices(batch)
+                )
+                pose_distill = pose_distillation_mse_loss(
+                    student_pose=student_pose,
+                    teacher_pose=teacher_pose,
+                    per_dim_scale=getattr(
+                        self.bundle.pose_scorer_teacher,
+                        "per_dim_scale",
+                        None,
+                    ),
+                )
+                return (
+                    float(self.bundle.pose_distillation_weight)
+                    * pose_stage_weight
+                    * pose_distill
+                )
+
+            pose_params = {"weight": pose_head.weight, "bias": pose_head.bias}
+            _ploss, pgrads = mx.value_and_grad(_pose_head_loss_fn)(pose_params)
+            self._pose_head_optimizer.update(pose_params, pgrads)
+            pose_head.weight = pose_params["weight"]
+            pose_head.bias = pose_params["bias"]
+            eval_targets.extend(
+                [pose_head.weight, pose_head.bias, self._pose_head_optimizer.state]
+            )
+
+        return eval_targets
 
     def artifact_metadata(self) -> Mapping[str, Any]:
         """Return non-authority substrate metadata for TrainingArtifact JSON.
@@ -532,6 +725,7 @@ class MlxScoreAwareAdapter:
         mx = self._mx
         mlx_nn = self._mlx_nn
         mlx_optim = self._mlx_optim
+        self._active_loss_weights = dict(loss_weights)
 
         # PR95-faithful 8-stage Muon+AdamW canonical curriculum opt-in path
         # per CLAUDE.md L14 + L15 + the optimizer stack research memo Option A.
@@ -586,7 +780,12 @@ class MlxScoreAwareAdapter:
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
             batch
         )
-        post_update_metrics.update(self._score_aware_loss_part_metrics(batch))
+        post_update_metrics.update(
+            self._score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+            )
+        )
 
         # Accumulate the MLX arrays the single trailing mx.eval must realize.
         eval_targets: list[Any] = [
@@ -595,140 +794,13 @@ class MlxScoreAwareAdapter:
             *post_update_eval_targets,
         ]
 
-        # Sibling SegNet student-head step (real-scorer-bound distillation only).
-        head = self.bundle.learnable_student_head
-        if (
-            self.bundle.distillation_weight > 0.0
-            and self.bundle.scorer_teacher is not None
-            and head is not None
-        ):
-            if (
-                self._head_optimizer is None
-                or self._head_optimizer_lr != learning_rate
-            ):
-                self._head_optimizer = mlx_optim.AdamW(learning_rate=learning_rate)
-                self._head_optimizer_lr = learning_rate
-                self._head_opt_state = {}
-
-            def _head_loss_fn(head_params: Mapping[str, Any]) -> Any:
-                # Re-derive the distill term as a pure function of the head
-                # params so MLX differentiates the head ONLY (renderer is held
-                # via stop_gradient on the decoded frames + the teacher is
-                # already gradient-blocked).
-                from tac.substrates._shared.mlx_score_aware.loss import (
-                    _apply_eval_roundtrip_ste_nhwc01,
-                    decode_frames_nhwc01,
-                )
-                from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-                    HintonMlxCustomLossFnConfig,
-                    score_teacher_distillation_loss,
-                )
-
-                rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
-                rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
-                rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
-                seg_rgb = (
-                    rgb_1
-                    if self.bundle.segnet_teacher_frame_index == 1
-                    else rgb_0
-                )
-                seg_rgb = mx.stop_gradient(seg_rgb)
-                student = (
-                    mx.einsum("bhwc,ck->bhwk", seg_rgb, head_params["weight"])
-                    + head_params["bias"]
-                )
-                teacher = mx.stop_gradient(
-                    self.bundle.scorer_teacher.teacher_logits_for_indices(batch)
-                )
-                loss_cfg = HintonMlxCustomLossFnConfig(
-                    temperature=self.bundle.distillation_temperature,
-                    distillation_objective=self.bundle.segnet_distillation_objective,
-                    tau_boundary=self.bundle.segnet_tau_boundary,
-                    hinge_margin=self.bundle.segnet_hinge_margin,
-                    student_head_out_channels=self.bundle.distillation_num_classes,
-                )
-                return self.bundle.distillation_weight * score_teacher_distillation_loss(
-                    student_logits=student,
-                    teacher_logits=teacher,
-                    config=loss_cfg,
-                )
-
-            head_params = {"weight": head.weight, "bias": head.bias}
-            _hloss, hgrads = mx.value_and_grad(_head_loss_fn)(head_params)
-            self._head_optimizer.update(head_params, hgrads)
-            # AdamW.update mutates head_params in place via tree semantics; the
-            # updated arrays are the optimizer's view, so write them back.
-            head.weight = head_params["weight"]
-            head.bias = head_params["bias"]
-            eval_targets.extend(
-                [head.weight, head.bias, self._head_optimizer.state]
+        eval_targets.extend(
+            self._train_student_heads(
+                batch=batch,
+                learning_rate=learning_rate,
+                loss_weights=loss_weights,
             )
-
-        # Sibling POSE student-head step (real-PoseNet-bound distillation only).
-        pose_head = self.bundle.learnable_pose_student_head
-        if (
-            self.bundle.pose_distillation_weight > 0.0
-            and self.bundle.pose_scorer_teacher is not None
-            and pose_head is not None
-        ):
-            if (
-                self._pose_head_optimizer is None
-                or self._pose_head_optimizer_lr != learning_rate
-            ):
-                self._pose_head_optimizer = mlx_optim.AdamW(
-                    learning_rate=learning_rate
-                )
-                self._pose_head_optimizer_lr = learning_rate
-
-            def _pose_head_loss_fn(pose_params: Mapping[str, Any]) -> Any:
-                # Re-derive the pose-MSE distill term as a pure function of the
-                # pose head params so MLX differentiates the pose head ONLY
-                # (renderer held via stop_gradient on the decoded pair; teacher
-                # already gradient-blocked).
-                from tac.substrates._shared.mlx_score_aware.loss import (
-                    _apply_eval_roundtrip_ste_nhwc01,
-                    decode_frames_nhwc01,
-                    pose_student_inputs_nhwc,
-                )
-                from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-                    pose_distillation_mse_loss,
-                )
-
-                rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
-                rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
-                rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
-                pose_rgb_0, pose_rgb_1 = pose_student_inputs_nhwc(
-                    self.bundle, rgb_0, rgb_1
-                )
-                student_pose = pose_head.forward_with_params(
-                    mx.stop_gradient(pose_rgb_0),
-                    mx.stop_gradient(pose_rgb_1),
-                    {
-                        "weight": pose_params["weight"],
-                        "bias": pose_params["bias"],
-                    },
-                )
-                teacher_pose = mx.stop_gradient(
-                    self.bundle.pose_scorer_teacher.teacher_pose_for_indices(batch)
-                )
-                return self.bundle.pose_distillation_weight * pose_distillation_mse_loss(
-                    student_pose=student_pose,
-                    teacher_pose=teacher_pose,
-                    per_dim_scale=getattr(
-                        self.bundle.pose_scorer_teacher,
-                        "per_dim_scale",
-                        None,
-                    ),
-                )
-
-            pose_params = {"weight": pose_head.weight, "bias": pose_head.bias}
-            _ploss, pgrads = mx.value_and_grad(_pose_head_loss_fn)(pose_params)
-            self._pose_head_optimizer.update(pose_params, pgrads)
-            pose_head.weight = pose_params["weight"]
-            pose_head.bias = pose_params["bias"]
-            eval_targets.extend(
-                [pose_head.weight, pose_head.bias, self._pose_head_optimizer.state]
-            )
+        )
 
         mx.eval(*eval_targets)
         return {"total": float(loss_value.item()), **post_update_metrics}
@@ -769,6 +841,7 @@ class MlxScoreAwareAdapter:
         """
         mx = self._mx
         mlx_nn = self._mlx_nn
+        self._active_loss_weights = dict(loss_weights)
         from tac.local_acceleration.pr95_hnerv_mlx import (
             apply_pr95_mlx_optimizer_step,
         )
@@ -838,7 +911,17 @@ class MlxScoreAwareAdapter:
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
             batch
         )
-        post_update_metrics.update(self._score_aware_loss_part_metrics(batch))
+        post_update_metrics.update(
+            self._score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+            )
+        )
+        student_head_eval_targets = self._train_student_heads(
+            batch=batch,
+            learning_rate=learning_rate,
+            loss_weights=loss_weights,
+        )
         if float(stage_verdict.cat_lambda) > 0.0:
             from tac.substrates._shared.mlx_score_aware.coder_qat import (
                 CoderAwareQATConfig,
@@ -857,7 +940,12 @@ class MlxScoreAwareAdapter:
                 float(stage_verdict.cat_lambda) * c1a_value
             )
 
-        mx.eval(self.model.parameters(), loss_value, *post_update_eval_targets)
+        mx.eval(
+            self.model.parameters(),
+            loss_value,
+            *post_update_eval_targets,
+            *student_head_eval_targets,
+        )
         return {
             "total": float(loss_value.item()),
             "pr95_stage_index": float(stage_verdict.stage_index),
@@ -1039,7 +1127,11 @@ class MlxScoreAwareAdapter:
         mx = self._mx
         # Reuse the canonical loss decomposition — single source of truth
         # for per-axis attribution per Catalog #290 ADOPT_CANONICAL.
-        _total, parts = score_aware_loss(self.bundle, batch)
+        _total, parts = score_aware_loss(
+            self.bundle,
+            batch,
+            loss_weights=self._active_loss_weights,
+        )
         out: dict[str, float] = {}
         # seg axis: only emit when the SegNet teacher is wired (parts may
         # legitimately omit "distill" when distillation_weight=0).

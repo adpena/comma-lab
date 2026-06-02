@@ -54,11 +54,14 @@ def _real_video_targets(num_pairs: int):
 
 
 def _dreamer_model(num_pairs: int):
+    import mlx.core as mx
+
     from tac.substrates.dreamer_v3_rssm.module import (
         DreamerV3RSSMConfig,
         DreamerV3RSSMSubstrateMLX,
     )
 
+    mx.random.seed(0)
     cfg = DreamerV3RSSMConfig(
         num_pairs=num_pairs,
         num_groups=2,

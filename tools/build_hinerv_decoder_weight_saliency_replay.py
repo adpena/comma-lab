@@ -18,6 +18,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.hinerv_decoder_weight_saliency_replay import (  # noqa: E402
+    DEFAULT_MAX_MEAN_SCORE_LOSS_PROXY_FOR_ALLOCATOR,
     write_hinerv_decoder_weight_saliency_replay,
 )
 
@@ -50,8 +51,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--segmentation-surrogate", default="soft_cosine")
     parser.add_argument("--segmentation-temperature", type=float, default=1.0)
     parser.add_argument(
+        "--max-mean-score-loss-proxy-for-allocator",
+        type=float,
+        default=DEFAULT_MAX_MEAN_SCORE_LOSS_PROXY_FOR_ALLOCATOR,
+        help=(
+            "Fail-closed allocator-basin gate. Saliency replay still writes, but "
+            "rows above this mean score-loss proxy carry a blocker."
+        ),
+    )
+    parser.add_argument(
         "--include-substrings",
-        default="latent_embed,blocks,head,decoder,injector",
+        default="latent_embed,blocks,feature_grids,head,decoder,injector",
     )
     parser.add_argument(
         "--exclude-substrings",
@@ -83,6 +93,9 @@ def main(argv: list[str] | None = None) -> int:
         exclude_substrings=_csv_tokens(args.exclude_substrings),
         segmentation_surrogate=str(args.segmentation_surrogate),
         segmentation_temperature=float(args.segmentation_temperature),
+        max_mean_score_loss_proxy_for_allocator=(
+            float(args.max_mean_score_loss_proxy_for_allocator)
+        ),
         output_json=output_json,
         output_md=output_md,
     )

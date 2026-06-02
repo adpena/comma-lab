@@ -9,9 +9,12 @@ from comma_lab.storage_tiers import StorageTierError
 from experiments.train_substrate_hi_nerv_mlx_local import (
     TRAINER_SCHEMA,
     _build_parser,
+    _build_staged_scorer_curriculum,
     _coder_qat_config_from_args,
     _config_from_args,
+    _curriculum_stages_from_args,
     _metadata_safe,
+    _pose_student_input_channels,
     _receiver_cache_quality_manifest_summary,
     _resolve_output_dir,
 )
@@ -73,6 +76,86 @@ def test_hinerv_mlx_trainer_coder_qat_config_is_real_and_validated() -> None:
     assert cfg.delta_weight == pytest.approx(0.0625)
 
 
+def test_hinerv_mlx_trainer_pose_student_channels_match_preprocess() -> None:
+    assert _pose_student_input_channels("rgb") == 3
+    assert _pose_student_input_channels("pr95_yuv6") == 6
+
+    with pytest.raises(ValueError, match="pose_student_input_preprocess"):
+        _pose_student_input_channels("not_real")
+
+
+def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
+    stages = _build_staged_scorer_curriculum(
+        epochs=100,
+        recon_fraction=0.75,
+        segnet_fraction=0.15,
+        final_recon_weight=0.25,
+        segnet_lr_scale=0.3,
+        final_lr_scale=0.1,
+    )
+
+    assert [stage.name for stage in stages] == [
+        "hi_nerv_receiver_fit_recon_scaffold",
+        "hi_nerv_segnet_last_frame_admission",
+        "hi_nerv_joint_scorer_waterfill_finetune",
+    ]
+    assert [(stage.start_epoch, stage.end_epoch) for stage in stages] == [
+        (0, 75),
+        (75, 90),
+        (90, 100),
+    ]
+    assert stages[0].loss_weights == {
+        "recon": 1.0,
+        "distill": 0.0,
+        "pose_distill": 0.0,
+    }
+    assert stages[1].loss_weights == {
+        "recon": 1.0,
+        "distill": 1.0,
+        "pose_distill": 0.0,
+    }
+    assert stages[2].loss_weights == {
+        "recon": 0.25,
+        "distill": 1.0,
+        "pose_distill": 1.0,
+    }
+    assert stages[1].lr_scale == pytest.approx(0.3)
+    assert stages[2].lr_scale == pytest.approx(0.1)
+
+
+def test_hinerv_mlx_trainer_staged_curriculum_from_args_and_validation() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--epochs",
+            "80",
+            "--staged-scorer-curriculum",
+            "--staged-scorer-recon-fraction",
+            "0.5",
+            "--staged-scorer-segnet-fraction",
+            "0.25",
+        ]
+    )
+
+    stages = _curriculum_stages_from_args(args)
+
+    assert stages is not None
+    assert [(stage.start_epoch, stage.end_epoch) for stage in stages] == [
+        (0, 40),
+        (40, 60),
+        (60, 80),
+    ]
+    with pytest.raises(ValueError, match="epochs >= 3"):
+        _build_staged_scorer_curriculum(
+            epochs=2,
+            recon_fraction=0.5,
+            segnet_fraction=0.25,
+            final_recon_weight=0.25,
+            segnet_lr_scale=0.3,
+            final_lr_scale=0.1,
+        )
+
+
 def test_hinerv_mlx_trainer_rejects_local_output_without_opt_in(
     tmp_path: Path,
 ) -> None:
@@ -110,6 +193,16 @@ def test_hinerv_mlx_trainer_parser_requires_mode() -> None:
         _build_parser().parse_args([])
 
     assert TRAINER_SCHEMA == "hi_nerv_mlx_score_aware_trainer.v1"
+
+
+def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
+    args = _build_parser().parse_args(
+        ["--full", "--optimizer-kind", "rmsprop"]
+    )
+
+    assert args.optimizer_kind == "rmsprop"
+    with pytest.raises(SystemExit):
+        _build_parser().parse_args(["--full", "--optimizer-kind", "muon"])
 
 
 def test_hinerv_mlx_trainer_metadata_safe_drops_nested_authority_keys() -> None:

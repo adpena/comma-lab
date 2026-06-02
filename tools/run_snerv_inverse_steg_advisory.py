@@ -36,6 +36,9 @@ from tac.substrates.snerv_inverse_steg_carrier.advisory import (  # noqa: E402  
 from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (  # noqa: E402
     export_snerv_archive_bound_candidate_package,
 )
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+)
 from tac.substrates.snerv_inverse_steg_carrier.trained_ladder_bridge import (  # noqa: E402
     build_snerv_trained_ladder_row_from_advisory,
 )
@@ -126,6 +129,25 @@ def main(argv: list[str] | None = None) -> int:
         help="Receiver-visible LF context radius used to build fc_dim features.",
     )
     ap.add_argument(
+        "--snerv-spectra-preserving-adapter",
+        action="store_true",
+        help=(
+            "Use the receiver-visible spectra-preserving MFU/HFR feature "
+            "adapter instead of the historical 3x3 LF-patch adapter."
+        ),
+    )
+    ap.add_argument(
+        "--snerv-mfu-scales",
+        default="1,2,4",
+        help="Comma-separated deterministic MFU scales for the SNeRV adapter.",
+    )
+    ap.add_argument(
+        "--snerv-hfr-gain",
+        type=float,
+        default=0.0,
+        help="Deterministic HFR residual gain for the SNeRV adapter.",
+    )
+    ap.add_argument(
         "--decoder-payload-codec",
         choices=(
             "float32_lzma",
@@ -207,6 +229,13 @@ def main(argv: list[str] | None = None) -> int:
         snerv_fc_dim=args.snerv_fc_dim,
         snerv_emb_size=args.snerv_emb_size,
         snerv_patch_radius=args.snerv_patch_radius,
+        snerv_model_size_adapter=(
+            SNERV_SPECTRA_PRESERVING_ADAPTER
+            if args.snerv_spectra_preserving_adapter
+            else "snerv_fc_dim_emb_size_adapter_v1"
+        ),
+        snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
+        snerv_hfr_gain=args.snerv_hfr_gain,
         decoder_payload_codec=args.decoder_payload_codec,
         decoder_payload_mixed_modes=_parse_optional_modes(
             args.decoder_payload_mixed_modes
@@ -315,6 +344,9 @@ def main(argv: list[str] | None = None) -> int:
         f"{res.decoder_bytes} B  codec={res.decoder_payload_codec} "
         f"fc_dim={res.snerv_fc_dim} "
         f"emb_size={res.snerv_emb_size} "
+        f"adapter={res.snerv_model_size_adapter} "
+        f"mfu_scales={list(res.snerv_mfu_scales)} "
+        f"hfr_gain={res.snerv_hfr_gain:g} "
         f"features={res.decoder_feature_count} "
         f"fit={res.hf_decoder_fit_mode} "
         f"gain={res.hf_decoder_saliency_gain:g} "
@@ -363,6 +395,21 @@ def _parse_bins(raw: str) -> tuple[int, ...]:
         out.append(value)
     if not out:
         raise ValueError("at least one adaptive bin choice is required")
+    return tuple(out)
+
+
+def _parse_positive_int_csv(raw: str) -> tuple[int, ...]:
+    out = []
+    for chunk in raw.split(","):
+        text = chunk.strip()
+        if not text:
+            continue
+        value = int(text)
+        if value < 1:
+            raise ValueError("positive integer list values must be >= 1")
+        out.append(value)
+    if not out:
+        raise ValueError("at least one positive integer is required")
     return tuple(out)
 
 

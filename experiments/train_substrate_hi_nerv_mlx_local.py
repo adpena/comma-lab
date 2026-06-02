@@ -133,6 +133,9 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
             pose_dims=DEFAULT_POSE_DIMS,
+            input_channels=_pose_student_input_channels(
+                str(args.pose_student_input_preprocess)
+            ),
             seed=int(args.seed),
         )
         pose_distillation_weight = float(args.pose_distillation_weight)
@@ -175,6 +178,10 @@ def _full_main(args: argparse.Namespace) -> int:
             },
             "coder_qat": coder_qat_metadata(coder_qat_cfg),
             "eval_roundtrip_ste_enabled": bool(args.eval_roundtrip_ste),
+            "pose_student_input_preprocess": str(args.pose_student_input_preprocess),
+            "pose_student_input_channels": _pose_student_input_channels(
+                str(args.pose_student_input_preprocess)
+            ),
             "storage_preflight": _metadata_safe(storage_payload),
             "blockers": [
                 "contest_cpu_cuda_exact_eval_not_executed",
@@ -205,6 +212,7 @@ def _full_main(args: argparse.Namespace) -> int:
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
         checkpoint_interval_epochs=int(args.checkpoint_interval_epochs),
+        curriculum_stages=_curriculum_stages_from_args(args),
         pr95_faithful_curriculum_enabled=bool(args.pr95_faithful_curriculum),
         pr95_curriculum_total_epochs=args.pr95_curriculum_total_epochs,
         grad_clip_max_norm=args.grad_clip_max_norm,
@@ -380,10 +388,20 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pose-student-input-preprocess", choices=("rgb", "pr95_yuv6"), default="pr95_yuv6")
     parser.add_argument("--pr95-faithful-curriculum", action="store_true")
     parser.add_argument("--pr95-curriculum-total-epochs", type=int, default=None)
+    parser.add_argument("--staged-scorer-curriculum", action="store_true")
+    parser.add_argument("--staged-scorer-recon-fraction", type=float, default=0.75)
+    parser.add_argument("--staged-scorer-segnet-fraction", type=float, default=0.15)
+    parser.add_argument(
+        "--staged-scorer-final-recon-weight",
+        type=float,
+        default=0.25,
+    )
+    parser.add_argument("--staged-scorer-segnet-lr-scale", type=float, default=0.3)
+    parser.add_argument("--staged-scorer-final-lr-scale", type=float, default=0.1)
     parser.add_argument("--grad-clip-max-norm", type=float, default=None)
     parser.add_argument("--warmup-epochs", type=int, default=0)
     parser.add_argument("--weight-decay", type=float, default=None)
-    parser.add_argument("--optimizer-kind", choices=("adamw", "muon"), default="adamw")
+    parser.add_argument("--optimizer-kind", choices=("adamw", "rmsprop"), default="adamw")
     parser.add_argument("--cosine-decay", action="store_true")
     parser.add_argument("--cosine-decay-total-epochs", type=int, default=None)
     parser.add_argument("--cosine-decay-min-lr-ratio", type=float, default=1.0e-2)
@@ -449,6 +467,120 @@ def _coder_qat_config_from_args(args: argparse.Namespace) -> Any:
         magnitude_weight=float(args.coder_qat_magnitude_weight),
         delta_weight=float(args.coder_qat_delta_weight),
     ).validated()
+
+
+def _pose_student_input_channels(preprocess: str) -> int:
+    if preprocess == "rgb":
+        return 3
+    if preprocess == "pr95_yuv6":
+        return 6
+    raise ValueError(
+        "unsupported pose_student_input_preprocess "
+        f"{preprocess!r}; expected 'rgb' or 'pr95_yuv6'"
+    )
+
+
+def _curriculum_stages_from_args(args: argparse.Namespace) -> tuple[Any, ...] | None:
+    if not bool(args.staged_scorer_curriculum):
+        return None
+    return _build_staged_scorer_curriculum(
+        epochs=int(args.epochs),
+        recon_fraction=float(args.staged_scorer_recon_fraction),
+        segnet_fraction=float(args.staged_scorer_segnet_fraction),
+        final_recon_weight=float(args.staged_scorer_final_recon_weight),
+        segnet_lr_scale=float(args.staged_scorer_segnet_lr_scale),
+        final_lr_scale=float(args.staged_scorer_final_lr_scale),
+    )
+
+
+def _build_staged_scorer_curriculum(
+    *,
+    epochs: int,
+    recon_fraction: float,
+    segnet_fraction: float,
+    final_recon_weight: float,
+    segnet_lr_scale: float,
+    final_lr_scale: float,
+) -> tuple[Any, ...]:
+    from tac.training.long_training_canonical import CurriculumStage
+
+    if epochs < 3:
+        raise ValueError(
+            "staged scorer curriculum requires epochs >= 3 so recon, SegNet, "
+            f"and joint scorer stages are all non-empty; got {epochs}"
+        )
+    if not (0.0 < recon_fraction < 1.0):
+        raise ValueError(
+            "staged_scorer_recon_fraction must be in (0, 1); "
+            f"got {recon_fraction}"
+        )
+    if not (0.0 < segnet_fraction < 1.0):
+        raise ValueError(
+            "staged_scorer_segnet_fraction must be in (0, 1); "
+            f"got {segnet_fraction}"
+        )
+    if recon_fraction + segnet_fraction >= 1.0:
+        raise ValueError(
+            "staged scorer recon + SegNet fractions must leave a non-empty "
+            "joint scorer stage; got "
+            f"recon={recon_fraction} segnet={segnet_fraction}"
+        )
+    if final_recon_weight < 0.0:
+        raise ValueError(
+            "staged_scorer_final_recon_weight must be non-negative; "
+            f"got {final_recon_weight}"
+        )
+    if segnet_lr_scale <= 0.0 or final_lr_scale <= 0.0:
+        raise ValueError(
+            "staged scorer lr scales must be positive; got "
+            f"segnet={segnet_lr_scale} final={final_lr_scale}"
+        )
+
+    recon_end = max(1, min(epochs - 2, round(epochs * recon_fraction)))
+    segnet_epochs = max(1, round(epochs * segnet_fraction))
+    segnet_end = max(recon_end + 1, min(epochs - 1, recon_end + segnet_epochs))
+    if segnet_end >= epochs:
+        segnet_end = epochs - 1
+    return (
+        CurriculumStage(
+            name="hi_nerv_receiver_fit_recon_scaffold",
+            start_epoch=0,
+            end_epoch=recon_end,
+            loss_weights={"recon": 1.0, "distill": 0.0, "pose_distill": 0.0},
+            lr_scale=1.0,
+            notes=(
+                "Contest-scorer input stabilization stage: fit receiver outputs "
+                "without admitting unstable SegNet/PoseNet surrogate gradients."
+            ),
+        ),
+        CurriculumStage(
+            name="hi_nerv_segnet_last_frame_admission",
+            start_epoch=recon_end,
+            end_epoch=segnet_end,
+            loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 0.0},
+            lr_scale=float(segnet_lr_scale),
+            notes=(
+                "Admit SegNet last-frame scorer surrogate after receiver "
+                "inputs are nondegenerate; PoseNet remains held out."
+            ),
+        ),
+        CurriculumStage(
+            name="hi_nerv_joint_scorer_waterfill_finetune",
+            start_epoch=segnet_end,
+            end_epoch=epochs,
+            loss_weights={
+                "recon": float(final_recon_weight),
+                "distill": 1.0,
+                "pose_distill": 1.0,
+            },
+            lr_scale=float(final_lr_scale),
+            notes=(
+                "Final contest-scorer finetune: keep only enough reconstruction "
+                "anchor to preserve scorer inputs while SegNet/PoseNet terms "
+                "drive the renderer."
+            ),
+        ),
+    )
 
 
 def _resolve_output_dir(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:

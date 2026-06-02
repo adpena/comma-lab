@@ -12,6 +12,7 @@ import pytest
 from tac.substrates._shared.mlx_score_aware import (
     MlxScoreAwareAdapter,
     RendererBundle,
+    component_loss_weight,
     decode_frames_nhwc01,
     pose_student_inputs_nhwc,
     run_mlx_score_aware_full_main,
@@ -91,6 +92,32 @@ def test_score_aware_loss_is_finite_and_decomposed() -> None:
     mx.eval(total)
     assert float(total.item()) == float(total.item())  # not NaN
     assert {"recon", "distill", "total"} <= set(parts)
+
+
+@mlx_only
+def test_score_aware_loss_applies_core_stage_weights() -> None:
+    import mlx.core as mx
+
+    assert component_loss_weight({"segnet": 0.25}, "distill") == 0.25
+    assert component_loss_weight({"posenet_distill": 0.0}, "pose_distill") == 0.0
+    assert component_loss_weight({}, "recon") == 1.0
+
+    bundle = _tiny_dreamer_bundle(distill=0.5)
+    idx = mx.array([0, 1], dtype=mx.int32)
+    total_default, parts_default = score_aware_loss(bundle, idx)
+    total_zero_seg, parts_zero_seg = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={"distill": 0.0},
+    )
+    mx.eval(total_default, total_zero_seg, parts_default["recon"])
+
+    assert "distill" in parts_default
+    assert "distill" not in parts_zero_seg
+    assert float(total_zero_seg.item()) == pytest.approx(
+        float(parts_default["recon"].item())
+    )
+    assert float(total_default.item()) >= float(total_zero_seg.item())
 
 
 @mlx_only
@@ -174,6 +201,40 @@ def test_score_aware_loss_extra_term_weighted() -> None:
     assert "commit" in parts
     mx.eval(parts["commit"])
     assert abs(float(parts["commit"].item()) - 2.0) < 1e-5
+
+
+def test_component_loss_weight_supports_core_aliases() -> None:
+    weights = {
+        "reconstruction": 0.25,
+        "segnet": 0.5,
+        "posenet_distill": 0.125,
+    }
+
+    assert component_loss_weight(weights, "recon") == pytest.approx(0.25)
+    assert component_loss_weight(weights, "distill") == pytest.approx(0.5)
+    assert component_loss_weight(weights, "pose_distill") == pytest.approx(0.125)
+    assert component_loss_weight(weights, "other", default=2.0) == pytest.approx(2.0)
+
+
+@mlx_only
+def test_score_aware_loss_core_stage_weights_gate_terms() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_dreamer_bundle(distill=0.5)
+    idx = mx.array([0, 1], dtype=mx.int32)
+    total_default, parts_default = score_aware_loss(bundle, idx)
+    total_gated, parts_gated = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={"recon": 0.25, "distill": 0.0},
+    )
+    mx.eval(total_default, total_gated, parts_default["recon"], parts_default["distill"])
+
+    expected_gated = 0.25 * float(parts_default["recon"].item())
+    assert "distill" in parts_default
+    assert "distill" not in parts_gated
+    assert float(total_gated.item()) == pytest.approx(expected_gated, abs=1e-6)
+    assert float(total_default.item()) > float(total_gated.item())
 
 
 # --------------------------------------------------------------------------- #
@@ -292,6 +353,52 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
     assert "loss_part_weighted_distill" in metrics
     assert "loss_part_pose_distill" in metrics
     assert "loss_part_weighted_pose_distill" in metrics
+
+
+@mlx_only
+def test_adapter_stage_weights_skip_student_head_updates_when_gated() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        RealPoseNetTeacherCache,
+        build_learnable_pose_student_head,
+    )
+
+    base = _tiny_dreamer_bundle(num_pairs=4, distill=0.5)
+    pose_teacher = RealPoseNetTeacherCache(
+        teacher_pose_np=mx.ones((4, 6)),
+        num_pairs=4,
+        pose_dims=6,
+    )
+    pose_head = build_learnable_pose_student_head(seed=31, input_channels=6)
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        distillation_weight=0.5,
+        allow_mock_scorer_teacher=True,
+        pose_distillation_weight=0.5,
+        pose_scorer_teacher=pose_teacher,
+        learnable_pose_student_head=pose_head,
+        pose_student_input_preprocess="pr95_yuv6",
+    )
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
+    batch = mx.array([0, 1, 2, 3], dtype=mx.int32)
+    w0 = mx.array(pose_head.weight)
+
+    metrics = adapter.train_step(
+        batch,
+        learning_rate=1e-2,
+        loss_weights={"recon": 1.0, "distill": 0.0, "pose_distill": 0.0},
+    )
+
+    moved = float(mx.max(mx.abs(pose_head.weight - w0)).item())
+    assert moved == pytest.approx(0.0)
+    assert "loss_part_distill" not in metrics
+    assert "loss_part_pose_distill" not in metrics
+    assert metrics["loss_part_stage_weight_recon"] == pytest.approx(1.0)
 
 
 @mlx_only

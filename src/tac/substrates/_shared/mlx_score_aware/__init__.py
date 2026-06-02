@@ -41,6 +41,12 @@ authority" + Catalog #127/#192/#317/#341: ``score_claim=False``,
 from __future__ import annotations
 
 from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+from tac.substrates._shared.mlx_score_aware.bridge_drift import (
+    MLX_NUMPY_BRIDGE_DRIFT_BUNDLE_SCHEMA,
+    MLX_NUMPY_BRIDGE_DRIFT_SCHEMA,
+    build_mlx_numpy_bridge_drift_bundle,
+    mlx_numpy_bridge_drift_report,
+)
 from tac.substrates._shared.mlx_score_aware.bundle import (
     FORWARD_CONVENTIONS,
     MlxRenderer,
@@ -74,6 +80,7 @@ from tac.substrates._shared.mlx_score_aware.harness import (
 from tac.substrates._shared.mlx_score_aware.loss import (
     build_mlx_posenet_pair_teacher,
     build_mlx_segnet_pair_teacher,
+    component_loss_weight,
     decode_frames_nhwc01,
     pose_student_inputs_nhwc,
     score_aware_loss,
@@ -102,6 +109,8 @@ __all__ = [
     "FORBIDDEN_INFLATE_IMPORT_ROOTS",
     "FORWARD_CONVENTIONS",
     "MLX_EVIDENCE_GRADE",
+    "MLX_NUMPY_BRIDGE_DRIFT_BUNDLE_SCHEMA",
+    "MLX_NUMPY_BRIDGE_DRIFT_SCHEMA",
     "MODEL_SIZE_BUDGET_PLAN_SCHEMA",
     "N_PAIRS_FULL",
     "CarrierTrainingPlanError",
@@ -116,6 +125,7 @@ __all__ = [
     "ScorerTeacherProvider",
     "assert_numpy_portable_inflate",
     "build_decoder_coder_qat_terms",
+    "build_mlx_numpy_bridge_drift_bundle",
     "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",
     "build_modelsize_budget_plan",
@@ -123,9 +133,11 @@ __all__ = [
     "build_score_aware_carrier_training_plan",
     "coder_qat_loss_weights",
     "coder_qat_metadata",
+    "component_loss_weight",
     "decode_frames_nhwc01",
     "decode_mlx_targets",
     "is_mlx_available",
+    "mlx_numpy_bridge_drift_report",
     "pose_student_inputs_nhwc",
     "require_mlx_for_harness",
     "run_mlx_score_aware_full_main",

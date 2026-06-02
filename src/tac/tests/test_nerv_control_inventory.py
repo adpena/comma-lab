@@ -55,7 +55,8 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert {
         "measured_hi_nerv_modelsize_budget_ladder",
         "full_video_decoder_weight_saliency_replay_for_hi_nerv_archive_rows",
-        "mlx_native_snerv_train_export",
+        "snerv_mlx_native_full_video_scoreaware_train_export_proof",
+        "snerv_real_segnet_posenet_teacher_loop_for_mlx_native_export",
         "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
         "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
         "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls",
@@ -184,7 +185,7 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "snerv_scorer_loop_decoder_qat_full_video_missing",
         "snerv_missing_measured_fc_dim_modelsize_ladder",
         "snerv_missing_official_stride_stack_parity",
-        "snerv_mlx_native_train_export_missing",
+        "snerv_mlx_native_train_export_surfaces_unproven",
         "snerv_missing_quant_payload_receiver_replay",
         "snerv_missing_mfu_blocks",
         "snerv_missing_official_hfr_heads",
