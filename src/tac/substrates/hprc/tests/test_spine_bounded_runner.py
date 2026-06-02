@@ -6,6 +6,9 @@ import json
 import sys
 from pathlib import Path
 
+from tac.analysis.compact_vq_pivot_audit import (
+    COMPACT_VQ_MISMATCH_STATUS,
+)
 from tac.archive_byte_profile import contest_rate_term
 from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
 from tac.substrates.hprc.representation_spine import (
@@ -763,6 +766,107 @@ def test_pact_vq_core_negative_sections_open_projection_gap_repair(
         "blockers"
     ]
     assert order["score_claim"] is False
+
+
+def test_compact_vq_pivot_audit_demotes_pact_vq_runner_rows(
+    tmp_path: Path,
+) -> None:
+    pact_archive = tmp_path / "pact_vq_archive.zip"
+    pact_archive.write_bytes(b"pact-vq")
+    pact_manifest = _projection(
+        tmp_path / "pact_vq",
+        family=HprcRepresentationFamily.PACT_NERV_VQ,
+        decoder=b"d" * 20,
+        codebooks=b"c" * 12,
+        selectors=b"s" * 4,
+        source={
+            "archive_zip_path": pact_archive.as_posix(),
+            "archive_zip_sha256": "f" * 64,
+            "archive_zip_bytes": pact_archive.stat().st_size,
+        },
+        manifest_extra={
+            "num_pairs": 600,
+            "source_payload_kind": "pact_nerv_vq_pvq",
+        },
+    )
+    rnerv_archive = tmp_path / "rnerv_archive.zip"
+    rnerv_archive.write_bytes(b"rnerv")
+    rnerv_manifest = _projection(
+        tmp_path / "rnerv",
+        family=HprcRepresentationFamily.RNERV,
+        decoder=b"d" * 20,
+        latents=b"l" * 8,
+        source={
+            "archive_zip_path": rnerv_archive.as_posix(),
+            "archive_zip_sha256": "1" * 64,
+            "archive_zip_bytes": rnerv_archive.stat().st_size,
+        },
+        manifest_extra={"num_pairs": 600},
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[pact_manifest, rnerv_manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    audit_path = tmp_path / "compact_vq_pivot.json"
+    audit_path.write_text(
+        json.dumps(
+            {
+                "schema": "compact_vq_pivot_audit.v1",
+                "family": "pact_nerv_vq",
+                "verdict": COMPACT_VQ_MISMATCH_STATUS,
+                "spend_recommendation": (
+                    "route_compact_training_budget_to_pr95_hinerv_snerv_"
+                    "stage8_or_rebuild_vq_as_rt_residual_token_bolton"
+                ),
+                "profile_signal": {
+                    "best_full_video_mlx_score": 90.0,
+                    "local_replay_threshold_passed": False,
+                },
+                "implementation_contract": {
+                    "per_pair_single_vector_vq_present": True,
+                    "residual_tokenization_present": False,
+                    "shallow_interframe_feature_path_present": False,
+                    "codebook_utilization_repair_present": False,
+                },
+                "blockers": [
+                    "compact_vq_is_per_pair_latent_not_residual_tokenization",
+                    "full_video_mlx_score_above_local_replay_threshold",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        compact_vq_pivot_audit_paths=[audit_path],
+    )
+
+    rows = {row["family"]: row for row in plan["compact_base_sweep_rows"]}
+    assert rows["pact_nerv_vq"]["route_status"] == (
+        "demoted_by_compact_vq_pivot_audit"
+    )
+    assert rows["pact_nerv_vq"]["compact_vq_pivot_audit_observed"] is True
+    assert rows["pact_nerv_vq"]["requires_architecture_redesign_before_replay"] is True
+    assert "compact_vq_pivot_audit_demoted_family" in rows["pact_nerv_vq"][
+        "blockers"
+    ]
+    assert plan["compact_vq_pivot_signal_rows"][0]["verdict"] == (
+        COMPACT_VQ_MISMATCH_STATUS
+    )
+    assert "compact_vq_pivot_audit_demoted_family" in plan["blockers"]
+    assert all(row["family"] != "pact_nerv_vq" for row in plan["selected_runner_rows"])
+    assert any(
+        hook["status"] == "demote_from_upstream_eval_and_rt_vq_mismatch"
+        for hook in plan["posterior_update_hooks"]
+    )
 
 
 def test_spine_bounded_runner_cli_writes_plan(tmp_path: Path) -> None:

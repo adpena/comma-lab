@@ -9,6 +9,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.compact_vq_pivot_audit import (
+    COMPACT_VQ_MISMATCH_STATUS,
+    COMPACT_VQ_PIVOT_AUDIT_SCHEMA,
+)
 from tac.archive_byte_profile import contest_rate_term
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
@@ -87,6 +91,7 @@ def build_spine_bounded_runner_plan(
     receiver_proof_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
     exact_gate_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
     hprc_queue_followup_report_paths: list[str | Path] | tuple[str | Path, ...] = (),
+    compact_vq_pivot_audit_paths: list[str | Path] | tuple[str | Path, ...] = (),
 ) -> dict[str, Any]:
     """Build the one-contract runner plan for compact-base and residual work.
 
@@ -114,10 +119,15 @@ def build_spine_bounded_runner_plan(
         _load_hprc_queue_followup(path, root=root)
         for path in hprc_queue_followup_report_paths
     ]
+    compact_vq_pivot_audits = [
+        _load_compact_vq_pivot_audit(path, root=root)
+        for path in compact_vq_pivot_audit_paths
+    ]
     section_evidence = _index_section_evidence(mlx_profiles)
     receiver_proof_index = _index_receiver_proofs(receiver_proofs)
     exact_index = _index_exact_reports(exact_reports)
     hprc_queue_followup_index = _index_hprc_queue_followups(hprc_queue_followups)
+    compact_vq_pivot_index = _index_compact_vq_pivot_audits(compact_vq_pivot_audits)
     compact_base_rows = [
         _compact_base_sweep_row(
             acquisition_row=row,
@@ -125,6 +135,7 @@ def build_spine_bounded_runner_plan(
             receiver_proof_index=receiver_proof_index,
             exact_index=exact_index,
             hprc_queue_followup_index=hprc_queue_followup_index,
+            compact_vq_pivot_index=compact_vq_pivot_index,
         )
         for row in _rows(acquisition_report, "rows")
         for ceiling_result in _rows(row, "ceiling_results")
@@ -184,8 +195,14 @@ def build_spine_bounded_runner_plan(
         "hprc_queue_followup_report_paths": [
             item["path"] for item in hprc_queue_followups
         ],
+        "compact_vq_pivot_audit_paths": [
+            item["path"] for item in compact_vq_pivot_audits
+        ],
         "hprc_queue_followup_signal_rows": _hprc_queue_followup_signal_rows(
             hprc_queue_followups
+        ),
+        "compact_vq_pivot_signal_rows": _compact_vq_pivot_signal_rows(
+            compact_vq_pivot_audits
         ),
         "compact_base_sweep_rows": compact_base_rows,
         "section_value_rows": section_value_rows,
@@ -221,6 +238,11 @@ def build_spine_bounded_runner_plan(
             "authority": (
                 "MLX rows are advisory; receiver proof and exact CPU/CUDA "
                 "authority are mandatory before score or dispatch promotion"
+            ),
+            "compact_vq_pivot_rule": (
+                "per-pair latent VQ rows with terrible full-video scorer evidence "
+                "or missing RT/VQ residual-token structure are demoted before "
+                "additional replay/training spend"
             ),
             "stop_conditions": [
                 "better_receiver_proven_archive_bound_candidate",
@@ -260,6 +282,7 @@ def _compact_base_sweep_row(
     receiver_proof_index: dict[str, dict[str, Any]],
     exact_index: dict[str, dict[str, Any]],
     hprc_queue_followup_index: dict[str, dict[str, Any]],
+    compact_vq_pivot_index: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     family = str(acquisition_row.get("family") or "unknown")
     ceiling = int(ceiling_result.get("ceiling_bytes") or 0)
@@ -287,6 +310,11 @@ def _compact_base_sweep_row(
         hprc_queue_followup_index=hprc_queue_followup_index,
     )
     hprc_followup_blockers = _hprc_queue_followup_demoting_blockers(hprc_followup)
+    compact_vq_pivot = _lookup_compact_vq_pivot_audit(
+        acquisition_row=acquisition_row,
+        compact_vq_pivot_index=compact_vq_pivot_index,
+    )
+    compact_vq_pivot_blockers = _compact_vq_pivot_demoting_blockers(compact_vq_pivot)
     if not coverage_valid:
         action = "train_or_scale_to_full_coverage_emit_spine_then_receiver_proof"
         route_status = "blocked_until_full_video_coverage"
@@ -304,6 +332,11 @@ def _compact_base_sweep_row(
             "before_cpu_replay"
         )
         route_status = "demoted_by_hprc_queue_followup"
+    if compact_vq_pivot_blockers:
+        action = (
+            "pivot_to_pr95_hinerv_snerv_or_rebuild_vq_as_residual_token_bolton"
+        )
+        route_status = "demoted_by_compact_vq_pivot_audit"
     return {
         "schema": HPRC_SPINE_COMPACT_BASE_SWEEP_ROW_SCHEMA,
         "runner_row_id": f"{family}:{ceiling}",
@@ -331,12 +364,17 @@ def _compact_base_sweep_row(
         "exact_gate_summary": None if exact_report is None else exact_report.get("exact_axis_gate"),
         "hprc_queue_followup_observed": hprc_followup is not None,
         "hprc_queue_followup_summary": _hprc_queue_followup_summary(hprc_followup),
-        "requires_architecture_redesign_before_replay": bool(hprc_followup_blockers),
+        "compact_vq_pivot_audit_observed": compact_vq_pivot is not None,
+        "compact_vq_pivot_summary": _compact_vq_pivot_summary(compact_vq_pivot),
+        "requires_architecture_redesign_before_replay": bool(
+            hprc_followup_blockers or compact_vq_pivot_blockers
+        ),
         "blockers": _dedupe(
             [
                 *([] if coverage_valid else ["declared_pair_coverage_below_full_video"]),
                 *([] if fits_ceiling else ["candidate_exceeds_hard_byte_ceiling"]),
                 *hprc_followup_blockers,
+                *compact_vq_pivot_blockers,
                 *(
                     []
                     if receiver_proof_passed
@@ -1348,7 +1386,11 @@ def _choose_runner_rows(*, compact_base_rows: list[dict[str, Any]]) -> list[dict
     non_demoted_rows = [
         row
         for row in compact_base_rows
-        if row.get("route_status") != "demoted_by_hprc_queue_followup"
+        if row.get("route_status")
+        not in {
+            "demoted_by_hprc_queue_followup",
+            "demoted_by_compact_vq_pivot_audit",
+        }
     ]
     candidate_rows = non_demoted_rows or compact_base_rows
     readyish = [
@@ -1640,6 +1682,22 @@ def _index_hprc_queue_followups(
     return index
 
 
+def _index_compact_vq_pivot_audits(
+    reports: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for item in reports:
+        payload = item["payload"]
+        for key in (
+            payload.get("family"),
+            payload.get("repo_root"),
+            item.get("path"),
+        ):
+            if isinstance(key, str) and key:
+                index[key] = payload
+    return index
+
+
 def _index_receiver_proofs(reports: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     index: dict[str, dict[str, Any]] = {}
     for item in reports:
@@ -1677,6 +1735,24 @@ def _lookup_hprc_queue_followup(
     return None
 
 
+def _lookup_compact_vq_pivot_audit(
+    *,
+    acquisition_row: dict[str, Any],
+    compact_vq_pivot_index: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    family = str(acquisition_row.get("family") or "")
+    payload_kind = str(
+        acquisition_row.get("representation_source_payload_kind")
+        or acquisition_row.get("source_payload_kind")
+        or ""
+    )
+    keys = (family, payload_kind, acquisition_row.get("projection_manifest_path"))
+    for key in keys:
+        if isinstance(key, str) and key in compact_vq_pivot_index:
+            return compact_vq_pivot_index[key]
+    return None
+
+
 def _lookup_receiver_proof(
     *,
     acquisition_row: dict[str, Any],
@@ -1695,6 +1771,95 @@ def _lookup_receiver_proof(
         if isinstance(key, str) and key in receiver_proof_index:
             return receiver_proof_index[key]
     return None
+
+
+def _compact_vq_pivot_summary(audit: dict[str, Any] | None) -> dict[str, Any] | None:
+    if audit is None:
+        return None
+    signal = (
+        audit.get("profile_signal")
+        if isinstance(audit.get("profile_signal"), dict)
+        else {}
+    )
+    impl = (
+        audit.get("implementation_contract")
+        if isinstance(audit.get("implementation_contract"), dict)
+        else {}
+    )
+    return {
+        "schema": "compact_vq_pivot_summary.v1",
+        "family": audit.get("family"),
+        "verdict": audit.get("verdict"),
+        "spend_recommendation": audit.get("spend_recommendation"),
+        "best_full_video_mlx_score": signal.get("best_full_video_mlx_score"),
+        "local_replay_threshold_passed": signal.get("local_replay_threshold_passed"),
+        "per_pair_single_vector_vq_present": impl.get(
+            "per_pair_single_vector_vq_present"
+        ),
+        "residual_tokenization_present": impl.get("residual_tokenization_present"),
+        "shallow_interframe_feature_path_present": impl.get(
+            "shallow_interframe_feature_path_present"
+        ),
+        "codebook_utilization_repair_present": impl.get(
+            "codebook_utilization_repair_present"
+        ),
+        "blockers": audit.get("blockers"),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _compact_vq_pivot_demoting_blockers(audit: dict[str, Any] | None) -> list[str]:
+    if audit is None:
+        return []
+    if audit.get("verdict") != COMPACT_VQ_MISMATCH_STATUS:
+        return []
+    return _dedupe(
+        [
+            "compact_vq_pivot_audit_demoted_family",
+            *[
+                blocker
+                for blocker in audit.get("blockers", [])
+                if isinstance(blocker, str) and blocker
+            ],
+        ]
+    )
+
+
+def _compact_vq_pivot_signal_rows(
+    reports: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in reports:
+        payload = item["payload"]
+        signal = (
+            payload.get("profile_signal")
+            if isinstance(payload.get("profile_signal"), dict)
+            else {}
+        )
+        rows.append(
+            {
+                "schema": "compact_vq_pivot_signal_row.v1",
+                "report_path": item["path"],
+                "report_sha256": item["sha256"],
+                "family": payload.get("family"),
+                "verdict": payload.get("verdict"),
+                "spend_recommendation": payload.get("spend_recommendation"),
+                "best_full_video_mlx_score": signal.get("best_full_video_mlx_score"),
+                "local_replay_threshold_passed": signal.get(
+                    "local_replay_threshold_passed"
+                ),
+                "blockers": payload.get("blockers"),
+                **FALSE_AUTHORITY,
+            }
+        )
+    rows.sort(
+        key=lambda row: (
+            str(row.get("family") or ""),
+            str(row.get("verdict") or ""),
+            str(row.get("report_path") or ""),
+        )
+    )
+    return rows
 
 
 def _hprc_queue_followup_summary(followup: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -1873,6 +2038,26 @@ def _posterior_update_hooks(
                     "record_negative_now": True,
                 }
             )
+        if row.get("route_status") == "demoted_by_compact_vq_pivot_audit":
+            summary = row.get("compact_vq_pivot_summary")
+            hooks.append(
+                {
+                    "schema": "hprc_spine_posterior_update_hook.v1",
+                    "family": row["family"],
+                    "stage": "compact_vq_pivot_audit",
+                    "scope": "compact_base_full_video_candidate",
+                    "status": "demote_from_upstream_eval_and_rt_vq_mismatch",
+                    "verdict": (
+                        summary.get("verdict") if isinstance(summary, dict) else None
+                    ),
+                    "best_full_video_mlx_score": (
+                        summary.get("best_full_video_mlx_score")
+                        if isinstance(summary, dict)
+                        else None
+                    ),
+                    "record_negative_now": True,
+                }
+            )
     for row in section_value_rows:
         if row["admission_status"].startswith("demote"):
             hooks.append(
@@ -1923,6 +2108,11 @@ def _plan_blockers(
         for row in compact_base_rows
     ):
         blockers.append("hprc_queue_followup_demoted_candidate_before_replay")
+    if any(
+        row.get("route_status") == "demoted_by_compact_vq_pivot_audit"
+        for row in compact_base_rows
+    ):
+        blockers.append("compact_vq_pivot_audit_demoted_family")
     if projection_gap_repair_work_orders:
         blockers.append("archive_projection_gap_requires_training_or_export_repair")
     return _dedupe(blockers)
@@ -1965,6 +2155,14 @@ def _load_hprc_queue_followup(path: str | Path, *, root: Path) -> dict[str, Any]
     payload = _load_json_object(resolved)
     if payload.get("schema") != HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA:
         raise ValueError(f"HPRC queue followup has unexpected schema: {resolved}")
+    return {"path": resolved.as_posix(), "sha256": _sha256_file(resolved), "payload": payload}
+
+
+def _load_compact_vq_pivot_audit(path: str | Path, *, root: Path) -> dict[str, Any]:
+    resolved = _resolve(path, base=root)
+    payload = _load_json_object(resolved)
+    if payload.get("schema") != COMPACT_VQ_PIVOT_AUDIT_SCHEMA:
+        raise ValueError(f"compact VQ pivot audit has unexpected schema: {resolved}")
     return {"path": resolved.as_posix(), "sha256": _sha256_file(resolved), "payload": payload}
 
 

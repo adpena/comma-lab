@@ -55,6 +55,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="HPRC queue followup report JSON. Repeatable.",
     )
+    parser.add_argument(
+        "--compact-vq-pivot-audit",
+        action="append",
+        default=[],
+        type=Path,
+        help="compact_vq_pivot_audit.v1 JSON. Repeatable.",
+    )
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
     parser.add_argument(
@@ -80,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
         receiver_proof_report_paths=args.receiver_proof,
         exact_gate_report_paths=args.exact_gate_report,
         hprc_queue_followup_report_paths=args.queue_followup_report,
+        compact_vq_pivot_audit_paths=args.compact_vq_pivot_audit,
     )
     out = _resolve(args.output, base=args.repo_root)
     write_spine_bounded_runner_plan(
@@ -97,6 +105,9 @@ def main(argv: list[str] | None = None) -> int:
                 "selected_runner_rows": len(plan["selected_runner_rows"]),
                 "hprc_queue_followup_signal_rows": len(
                     plan["hprc_queue_followup_signal_rows"]
+                ),
+                "compact_vq_pivot_signal_rows": len(
+                    plan["compact_vq_pivot_signal_rows"]
                 ),
                 "blockers": plan["blockers"],
                 "score_claim": False,
