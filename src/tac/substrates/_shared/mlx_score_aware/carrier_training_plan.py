@@ -17,13 +17,16 @@ training or replay work, but it cannot promote scores or exact-auth dispatch.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     require_no_truthy_authority_fields,
+)
+from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
+    build_modelsize_budget_plan,
 )
 
 __all__ = [
@@ -206,6 +209,12 @@ def build_score_aware_carrier_training_plan(
         if _truthy(evidence.get("modelsize_knob_present"))
         else "rate_knob_unproven"
     )
+    modelsize_budget_rows = evidence.get("modelsize_budget_rows")
+    modelsize_budget_plan = _modelsize_budget_plan(
+        modelsize_budget_rows,
+        carrier_id=carrier,
+        baseline_id=baseline_id,
+    )
     g3_status = (
         "verified_exact"
         if _truthy(evidence.get("g3_adjoint_exact"))
@@ -242,6 +251,8 @@ def build_score_aware_carrier_training_plan(
         "planner_action": route,
         "carrier_fit_status": fit_status,
         "rate_knob_status": modelsize_status,
+        "modelsize_budget_plan_status": modelsize_budget_plan["status"],
+        "modelsize_budget_plan": modelsize_budget_plan,
         "g3_adjoint_status": g3_status,
         "latent_leverage_status": latent_status,
         "allocator_target_surface": allocator_surface,
@@ -266,6 +277,9 @@ def build_score_aware_carrier_training_plan(
         "evidence_summary": {
             "archive_bytes": evidence.get("archive_bytes"),
             "projected_archive_bytes_600pair": evidence.get("projected_archive_bytes_600pair"),
+            "selected_modelsize_archive_bytes": modelsize_budget_plan.get(
+                "selected_archive_bytes"
+            ),
             "d_seg": evidence.get("d_seg"),
             "advisory_score": evidence.get("advisory_score"),
             "latent_jvp_norm_max": evidence.get("latent_jvp_norm_max"),
@@ -274,3 +288,34 @@ def build_score_aware_carrier_training_plan(
     }
     return apply_proxy_evidence_boundary(row, dispatch_blockers=blockers)
 
+
+def _modelsize_budget_plan(
+    rows: Any,
+    *,
+    carrier_id: str,
+    baseline_id: str,
+) -> dict[str, Any]:
+    if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes, bytearray)):
+        return build_modelsize_budget_plan(
+            rows,
+            carrier_id=carrier_id,
+            baseline_id=baseline_id,
+        )
+    return {
+        "schema": "compact_carrier_modelsize_budget_plan.v1",
+        "carrier_id": carrier_id,
+        "baseline_id": baseline_id,
+        "status": "modelsize_budget_ladder_not_measured",
+        "selected_archive_bytes": None,
+        "measured_points": [],
+        "marginal_steps": [],
+        "recommended_next_actions": [
+            "run_measured_modelsize_ladder_before_long_budget_spend",
+            "sweep_latent_dim_embed_dim_decoder_channel_and_codec_under_byte_ceiling",
+        ],
+        "blockers": ["modelsize_budget_ladder_not_measured"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }

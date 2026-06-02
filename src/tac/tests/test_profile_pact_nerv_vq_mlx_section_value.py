@@ -6,6 +6,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 import torch
 
@@ -198,18 +199,21 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
         '{"schema":"cache_manifest.v1"}\n',
         encoding="utf-8",
     )
+    _write_quality_cache(reference_cache_root / "baseline", offset=24.0)
 
     def fake_materialize_caches(**kwargs):
         assert Path(kwargs["upstream_dir"]) == upstream_dir
         assert Path(kwargs["video_names_file"]) == video_names_file
         output_dir = Path(kwargs["output_dir"])
         rows = {}
-        for variant in kwargs["variants"]:
+        for index, variant in enumerate(kwargs["variants"]):
             report = output_dir / "fake_cache_reports" / f"{variant.variant_id}.json"
             report.parent.mkdir(parents=True, exist_ok=True)
             report.write_text('{"schema":"fake_cache.v1"}\n', encoding="utf-8")
+            cache_dir = output_dir / "mlx_caches" / variant.variant_id
+            _write_quality_cache(cache_dir, offset=25.0 + index)
             rows[variant.variant_id] = {
-                "cache_dir": (output_dir / "fake_cache" / variant.variant_id).as_posix(),
+                "cache_dir": cache_dir.as_posix(),
                 "work_dir": (output_dir / "fake_work" / variant.variant_id).as_posix(),
                 "report_output": report.as_posix(),
                 "argv": ["fake-cache"],
@@ -305,6 +309,10 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     assert profile["projection_gap_analysis"][
         "requires_direct_model_vs_archive_replay"
     ] is False
+    assert profile["baseline_cache_quality_gate"]["verdict"] == (
+        "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+    )
+    assert profile["baseline_cache_quality_gate"]["score_claim"] is False
     rows = {row["variant_id"]: row for row in profile["section_value_rows"]}
     assert set(rows) == {
         "baseline",
@@ -321,6 +329,73 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     assert "contest_cpu_cuda_exact_eval_not_executed" in profile["blockers"]
     assert profile["score_claim"] is False
     assert profile["ready_for_exact_eval_dispatch"] is False
+
+
+def test_shared_section_report_blocks_flat_baseline_cache_quality(tmp_path: Path) -> None:
+    output_dir = tmp_path / "profile"
+    candidate_cache = output_dir / "mlx_caches" / "baseline"
+    reference_cache = tmp_path / "reference_cache"
+    _write_quality_cache(candidate_cache, offset=127.0, constant=True)
+    _write_quality_cache(reference_cache, offset=24.0)
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive-bytes")
+    bin_path = tmp_path / "0.bin"
+    bin_path.write_bytes(b"bin-bytes")
+    variant = shared_profiler.VariantSpec(
+        variant_id="baseline",
+        neutralized_section=None,
+        archive_zip_path=archive,
+        submission_dir=tmp_path / "submission",
+        bin_path=bin_path,
+        archive_bytes=archive.stat().st_size,
+        archive_sha256=shared_profiler._sha256_file(archive),
+        bin_sha256=shared_profiler._sha256_file(bin_path),
+        variant_dir=tmp_path / "variant",
+    )
+    payload = {
+        "avg_segnet_dist": 0.5,
+        "avg_posenet_dist": 10.0,
+        "score_rate_contribution": contest_rate_term(variant.archive_bytes),
+        "canonical_score": contest_formula_score(
+            seg_dist=0.5,
+            pose_dist=10.0,
+            archive_bytes=variant.archive_bytes,
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = shared_profiler._build_report(
+        raw_argv=[],
+        variants=[variant],
+        absent_sections=[],
+        cache_rows={
+            "baseline": {
+                "report_output": (tmp_path / "cache_report.json").as_posix(),
+            }
+        },
+        payloads={"baseline": payload},
+        layout={},
+        output_dir=output_dir,
+        repo_root=REPO,
+        upstream_dir=tmp_path / "upstream",
+        video_names_file=None,
+        archive=archive,
+        projection_manifest=None,
+        reference_cache_dir=reference_cache,
+        max_pairs=2,
+        window_pairs=1,
+        scorer_batch_pairs=1,
+        started=0.0,
+    )
+
+    gate = report["baseline_cache_quality_gate"]
+    assert gate["verdict"] == "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+    assert gate["candidate_cache_nondegenerate"] is False
+    assert "candidate_segnet_last_rgb_degenerate_constant_or_flat" in report["blockers"]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_bounded_runner_opens_pvq_full_video_section_value_work_order(
@@ -528,6 +603,23 @@ def _archive(path: Path, *, num_pairs: int = 2) -> Path:
         write_deterministic_zip_member(zf, "0.bin", blob)
         write_deterministic_zip_member(zf, "inflate.sh", b"#!/bin/sh\n")
     return path
+
+
+def _write_quality_cache(
+    root: Path,
+    *,
+    offset: float,
+    constant: bool = False,
+) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    if constant:
+        seg = np.full((2, 3, 8, 8), offset, dtype=np.float32)
+    else:
+        base = np.arange(2 * 3 * 8 * 8, dtype=np.float32).reshape(2, 3, 8, 8)
+        seg = (base % 96.0) + offset
+    pose = np.concatenate([seg[:, :, ::2, ::2], seg[:, :, ::2, ::2]], axis=1)
+    np.save(root / "segnet_last_rgb.npy", seg)
+    np.save(root / "posenet_yuv6_pair.npy", pose)
 
 
 def _projection(tmp_path: Path, archive: Path) -> Path:

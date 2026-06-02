@@ -133,3 +133,27 @@ def test_required_stack_mentions_optimizer_qat_rate_levers() -> None:
         "nvrc_learned_quantization",
     }.issubset(set(row["q_at_rate_levers"]))
 
+
+def test_training_plan_consumes_measured_modelsize_budget_ladder() -> None:
+    row = build_score_aware_carrier_training_plan(
+        {
+            "d_seg": 0.025,
+            "advisory_score": 0.19,
+            "g3_adjoint_exact": True,
+            "latent_jvp_norm_max": 2.0e-3,
+            "modelsize_knob_present": True,
+            "modelsize_budget_rows": [
+                {"row_id": "tiny", "archive_bytes": 20_000, "nonrate_score": 0.240},
+                {"row_id": "small", "archive_bytes": 40_000, "nonrate_score": 0.205},
+                {"row_id": "medium", "archive_bytes": 80_000, "nonrate_score": 0.200},
+            ],
+            **_all_stack_ready(),
+        },
+        carrier_id="hi_nerv",
+    )
+
+    assert row["modelsize_budget_plan_status"] == "measured_modelsize_budget_selected"
+    assert row["modelsize_budget_plan"]["selected_point"]["row_id"] == "small"
+    assert row["evidence_summary"]["selected_modelsize_archive_bytes"] == 40_000
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False

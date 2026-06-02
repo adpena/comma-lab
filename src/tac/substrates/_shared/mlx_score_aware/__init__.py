@@ -77,6 +77,13 @@ from tac.substrates._shared.mlx_score_aware.loss import (
     decode_frames_nhwc01,
     score_aware_loss,
 )
+from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
+    CONTEST_BYTE_PRICE_SCORE,
+    MODEL_SIZE_BUDGET_PLAN_SCHEMA,
+    ModelSizeBudgetPlanError,
+    build_modelsize_budget_plan,
+    build_modelsize_budget_plan_from_iterable,
+)
 from tac.substrates._shared.mlx_score_aware.portability import (
     FORBIDDEN_INFLATE_IMPORT_ROOTS,
     assert_numpy_portable_inflate,
@@ -89,10 +96,12 @@ from tac.substrates._shared.mlx_score_aware.targets import (
 __all__ = [
     "CANONICAL_SCORE_AWARE_DECODER_TRAINING_STACK",
     "CODER_QAT_AUTHORITY",
+    "CONTEST_BYTE_PRICE_SCORE",
     "CONTEST_NORMALIZER",
     "FORBIDDEN_INFLATE_IMPORT_ROOTS",
     "FORWARD_CONVENTIONS",
     "MLX_EVIDENCE_GRADE",
+    "MODEL_SIZE_BUDGET_PLAN_SCHEMA",
     "N_PAIRS_FULL",
     "CarrierTrainingPlanError",
     "CarrierTrainingThresholds",
@@ -100,6 +109,7 @@ __all__ = [
     "MlxRenderer",
     "MlxScoreAwareAdapter",
     "MlxScoreAwareHarnessError",
+    "ModelSizeBudgetPlanError",
     "PoseScorerTeacherProvider",
     "RendererBundle",
     "ScorerTeacherProvider",
@@ -107,6 +117,8 @@ __all__ = [
     "build_decoder_coder_qat_terms",
     "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",
+    "build_modelsize_budget_plan",
+    "build_modelsize_budget_plan_from_iterable",
     "build_score_aware_carrier_training_plan",
     "coder_qat_loss_weights",
     "coder_qat_metadata",

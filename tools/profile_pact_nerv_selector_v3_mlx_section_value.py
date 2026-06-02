@@ -26,6 +26,10 @@ ensure_repo_imports(REPO_ROOT)
 
 import numpy as np  # noqa: E402
 
+from tac.analysis.mlx_cache_quality_gate import (  # noqa: E402
+    MLXCacheQualityGateError,
+    build_mlx_cache_quality_gate,
+)
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score  # noqa: E402
 from tac.local_acceleration.mlx_response_windows import (  # noqa: E402
     split_mlx_scorer_response_windows,
@@ -553,6 +557,16 @@ def _build_report(
 ) -> dict[str, Any]:
     baseline = payloads["baseline"]
     baseline_variant = variants[0]
+    baseline_cache_quality_gate = _baseline_cache_quality_gate(
+        output_dir=output_dir,
+        reference_cache_dir=(
+            reference_cache_dir
+            if resolved_reference_cache_dir is None
+            else resolved_reference_cache_dir
+        ),
+        max_pairs=max_pairs,
+    )
+    cache_quality_blockers = list(baseline_cache_quality_gate.get("blockers") or [])
     section_rows = [
         _section_value_row(
             baseline=baseline,
@@ -613,6 +627,7 @@ def _build_report(
         ).as_posix(),
         layout_key: layout,
         "cache_materialization_rows": cache_rows,
+        "baseline_cache_quality_gate": baseline_cache_quality_gate,
         "max_pairs": int(max_pairs),
         "window_pairs": int(window_pairs),
         "scorer_batch_pairs": int(scorer_batch_pairs),
@@ -655,6 +670,7 @@ def _build_report(
         },
         "blockers": [
             "mlx_local_response_is_advisory_not_score_authority",
+            *cache_quality_blockers,
             *([] if int(max_pairs) >= 600 else ["full_video_mlx_response_not_executed"]),
             *(
                 ["batch_shape_research_signal_requires_singleton_rerun_before_promotion"]
@@ -666,6 +682,42 @@ def _build_report(
         ],
         **FALSE_AUTHORITY,
     }
+
+
+def _baseline_cache_quality_gate(
+    *,
+    output_dir: Path,
+    reference_cache_dir: Path,
+    max_pairs: int,
+) -> dict[str, Any]:
+    candidate_cache_dir = output_dir / "mlx_caches" / "baseline"
+    try:
+        return build_mlx_cache_quality_gate(
+            candidate_cache_dir=candidate_cache_dir,
+            reference_cache_dir=reference_cache_dir,
+            sample_pairs=min(16, max(1, int(max_pairs))),
+        )
+    except (MLXCacheQualityGateError, OSError, ValueError) as exc:
+        return {
+            "schema": "mlx_cache_quality_gate.v1",
+            "candidate_cache_dir": candidate_cache_dir.as_posix(),
+            "reference_cache_dir": reference_cache_dir.as_posix(),
+            "sample_pairs": min(16, max(1, int(max_pairs))),
+            "verdict": "CACHE_QUALITY_GATE_BLOCKED",
+            "candidate_cache_nondegenerate": False,
+            "fit_gate_passed": False,
+            "error": str(exc),
+            "blockers": [
+                "mlx_cache_quality_gate_is_false_authority",
+                "baseline_cache_quality_gate_failed_to_execute",
+            ],
+            "recommended_next_actions": [
+                "block_exact_eval_and_score_claims",
+                "repair_cache_materialization_or_preserve_baseline_cache_arrays",
+                "rerun_section_value_profile_with_cache_quality_gate",
+            ],
+            **FALSE_AUTHORITY,
+        }
 
 
 def _section_value_row(
