@@ -52,6 +52,12 @@ HI_NERV_SUPPORTED_DECODER_CODECS: tuple[str, ...] = (
     "int2_scale_bundled",
     "fp16_enveloped",
 )
+HI_NERV_DECODER_WATERFILL_ACTUATION_BLOCKERS: frozenset[str] = frozenset(
+    {
+        "score_loss_proxy_outside_allocator_linearization_basin",
+        "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin",
+    }
+)
 
 
 class HiNervBitstreamError(ValueError):
@@ -272,7 +278,8 @@ def apply_decoder_waterfill_actions(
     blockers: list[str] = [
         *[str(blocker) for blocker in decoder_weight_waterfill_plan.get("blockers") or ()],
     ]
-    if blockers:
+    plan_actuation_blockers = _waterfill_actuation_blockers(blockers)
+    if plan_actuation_blockers:
         return state, {
             "method": "decoder_weight_waterfill_blocked",
             "plan_attached": True,
@@ -294,11 +301,13 @@ def apply_decoder_waterfill_actions(
                     else "",
                     "reason": "decoder_weight_waterfill_plan_has_blockers",
                     "plan_blockers": blockers,
+                    "plan_actuation_blockers": plan_actuation_blockers,
                     **FALSE_AUTHORITY,
                 }
                 for row in rows
             ],
             "blockers": _ordered_unique(blockers),
+            "actuation_blockers": plan_actuation_blockers,
             **FALSE_AUTHORITY,
         }
     changed = 0
@@ -311,13 +320,19 @@ def apply_decoder_waterfill_actions(
         if not name:
             blockers.append("decoder_weight_waterfill_row_missing_group_name")
             continue
-        if row_blockers:
+        bits = _waterfill_selected_bits(row)
+        row_actuation_blockers = _waterfill_row_actuation_blockers(
+            row_blockers,
+            selected_bits=bits,
+        )
+        if row_actuation_blockers:
             blockers.extend(row_blockers)
             skipped_rows.append(
                 {
                     "group_name": name,
                     "reason": "decoder_weight_waterfill_row_has_blockers",
                     "row_blockers": row_blockers,
+                    "row_actuation_blockers": row_actuation_blockers,
                     **FALSE_AUTHORITY,
                 }
             )
@@ -325,7 +340,6 @@ def apply_decoder_waterfill_actions(
         if name not in state:
             blockers.append(f"decoder_weight_waterfill_group_missing:{name}")
             continue
-        bits = _waterfill_selected_bits(row)
         before = state[name]
         before_sha = _tensor_sha256(before)
         after = _apply_waterfill_bits(before, bits=bits)
@@ -344,6 +358,7 @@ def apply_decoder_waterfill_actions(
                 "sha256_after": after_sha,
                 "changed": before_sha != after_sha,
                 "row_blockers": [str(blocker) for blocker in row.get("blockers") or ()],
+                "row_actuation_blockers": row_actuation_blockers,
                 **FALSE_AUTHORITY,
             }
         )
@@ -361,8 +376,31 @@ def apply_decoder_waterfill_actions(
         "applied_rows": applied_rows,
         "skipped_rows": skipped_rows,
         "blockers": _ordered_unique(blockers),
+        "actuation_blockers": _ordered_unique(
+            blocker
+            for row in skipped_rows
+            for blocker in row.get("row_actuation_blockers", [])
+        ),
         **FALSE_AUTHORITY,
     }
+
+
+def _waterfill_actuation_blockers(blockers: Iterable[str]) -> list[str]:
+    return _ordered_unique(
+        blocker
+        for blocker in blockers
+        if blocker in HI_NERV_DECODER_WATERFILL_ACTUATION_BLOCKERS
+    )
+
+
+def _waterfill_row_actuation_blockers(
+    blockers: Iterable[str],
+    *,
+    selected_bits: int,
+) -> list[str]:
+    if int(selected_bits) >= 32:
+        return []
+    return _waterfill_actuation_blockers(blockers)
 
 
 def measure_hi_nerv_decoder_bitstream_roundtrip(
