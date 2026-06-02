@@ -50,7 +50,9 @@ DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaign
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
 DEFAULT_LEARNING_RATE = 1.0e-3
-HINERV_POSE_INSTABILITY_LOW_LR_FLOOR = 3.0e-5
+HINERV_POSE_INSTABILITY_LOW_LR_FLOOR = 1.0e-4
+HINERV_POSE_PROTECTED_LOSS = "huber"
+HINERV_POSE_PROTECTED_HUBER_DELTA = 1.0
 DEFAULT_OPTIMIZER_KINDS = (
     "adamw",
     "lion",
@@ -379,6 +381,17 @@ def _hinerv_campaign_row(
                 str(decoder_weight_waterfill["path"]),
             ]
         )
+    if launch_feedback_adjustment.get("pose_protected_pathway_applied") is True:
+        command.extend(
+            [
+                "--pose-distillation-loss",
+                str(launch_feedback_adjustment["pose_distillation_loss"]),
+                "--pose-distillation-huber-delta",
+                _float_token(
+                    float(launch_feedback_adjustment["pose_distillation_huber_delta"])
+                ),
+            ]
+        )
     blockers = [
         (
             ""
@@ -394,12 +407,15 @@ def _hinerv_campaign_row(
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *list(curriculum.get("blockers") or []),
     ]
-    if (
-        feedback.get("pose_instability_detected") is True
-        and not launch_feedback_adjustment.get("applied")
+    if feedback.get("pose_instability_detected") is True and not (
+        launch_feedback_adjustment.get("applied")
+        or launch_feedback_adjustment.get("pose_protected_pathway_applied")
     ):
         blockers.append("hinerv_pose_instability_feedback_unapplied")
-    if launch_feedback_adjustment.get("repeated_low_lr_pose_instability") is True:
+    if (
+        launch_feedback_adjustment.get("repeated_low_lr_pose_instability") is True
+        and not launch_feedback_adjustment.get("pose_protected_pathway_applied")
+    ):
         blockers.append(
             "hinerv_repeated_low_lr_pose_instability_requires_pose_protected_pathway"
         )
@@ -1137,22 +1153,33 @@ def _hinerv_feedback_launch_adjustment(
     repeated_low_lr_instability = bool(
         pose_instability and observed is not None and observed <= lr_floor
     )
-    applied = bool(
+    lower_learning_rate_applied = bool(
         pose_instability
         and not repeated_low_lr_instability
         and recommended is not None
         and recommended > 0.0
         and recommended < float(learning_rate)
     )
+    pose_protected_pathway_applied = bool(repeated_low_lr_instability)
+    applied = bool(lower_learning_rate_applied or pose_protected_pathway_applied)
+    launch_mutations: list[str] = []
+    if lower_learning_rate_applied:
+        launch_mutations.extend(list(feedback.get("recommended_launch_mutations") or []))
+    if pose_protected_pathway_applied:
+        launch_mutations.append(
+            "enable_pose_distillation_huber_from_repeated_low_lr_instability"
+        )
     return {
         "schema": "hinerv_feedback_launch_adjustment.v1",
         "applied": applied,
+        "lower_learning_rate_applied": lower_learning_rate_applied,
+        "pose_protected_pathway_applied": pose_protected_pathway_applied,
         "reason": (
             "pose_instability_recommended_lower_learning_rate"
-            if applied
+            if lower_learning_rate_applied
             else (
-                "repeated_pose_instability_at_low_lr_requires_pose_protected_pathway"
-                if repeated_low_lr_instability
+                "repeated_pose_instability_at_low_lr_pose_protected_pathway"
+                if pose_protected_pathway_applied
                 else (
                     "pose_instability_feedback_without_lower_lr"
                     if pose_instability
@@ -1168,10 +1195,18 @@ def _hinerv_feedback_launch_adjustment(
         "repeated_low_lr_pose_instability": repeated_low_lr_instability,
         "requested_learning_rate": float(learning_rate),
         "recommended_learning_rate": recommended,
-        "learning_rate": float(recommended if applied else learning_rate),
-        "launch_mutations": (
-            list(feedback.get("recommended_launch_mutations") or []) if applied else []
+        "learning_rate": float(
+            recommended if lower_learning_rate_applied else learning_rate
         ),
+        "pose_distillation_loss": (
+            HINERV_POSE_PROTECTED_LOSS if pose_protected_pathway_applied else "mse"
+        ),
+        "pose_distillation_huber_delta": (
+            HINERV_POSE_PROTECTED_HUBER_DELTA
+            if pose_protected_pathway_applied
+            else None
+        ),
+        "launch_mutations": launch_mutations,
         **FALSE_AUTHORITY,
     }
 

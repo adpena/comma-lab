@@ -350,7 +350,7 @@ def test_long_training_campaign_plan_applies_hinerv_pose_instability_feedback(
     assert hi["score_claim"] is False
 
 
-def test_long_training_campaign_plan_applies_hinerv_lr9e5_recovery_feedback(
+def test_long_training_campaign_plan_blocks_hinerv_lr9e5_recovery_feedback(
 ) -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -383,12 +383,16 @@ def test_long_training_campaign_plan_applies_hinerv_lr9e5_recovery_feedback(
 
     hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
     adjustment = hi["feedback_launch_adjustment"]
-    assert adjustment["applied"] is True
-    assert adjustment["repeated_low_lr_pose_instability"] is False
-    assert adjustment["learning_rate"] == 2.7e-5
-    assert "hinerv_pose_instability_feedback_unapplied" not in hi["blockers"]
+    assert adjustment["applied"] is False
+    assert adjustment["repeated_low_lr_pose_instability"] is True
+    assert adjustment["learning_rate"] == 9.0e-5
+    assert "hinerv_pose_instability_feedback_unapplied" in hi["blockers"]
+    assert (
+        "hinerv_repeated_low_lr_pose_instability_requires_pose_protected_pathway"
+        in hi["blockers"]
+    )
     assert hi["command_argv"][hi["command_argv"].index("--learning-rate") + 1] == (
-        "2.7e-05"
+        "9e-05"
     )
 
 
