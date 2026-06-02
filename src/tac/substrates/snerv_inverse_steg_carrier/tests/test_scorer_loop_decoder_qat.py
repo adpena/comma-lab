@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import inspect
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -76,6 +77,83 @@ def test_prepare_state_disables_score_exact_saliency_diagnostics_hot_loop() -> N
 
     assert "compute_s_seg_flip_risk(segnet, pairs[pair_idx], diagnostics=False)" in src
     assert "compute_s_pose_fisher(posenet, pairs[pair_idx], diagnostics=False)" in src
+
+
+def test_prepare_state_projects_pair_saliency_once_per_pair(monkeypatch) -> None:
+    calls: list[tuple[tuple[int, int], int]] = []
+    pairs = torch.zeros((2, 2, 3, 4, 4), dtype=torch.float32)
+
+    monkeypatch.setattr(qat_mod, "decode_real_pairs", lambda *_args, **_kwargs: pairs)
+    monkeypatch.setattr(
+        qat_mod,
+        "encode_frame_lf",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            lf=np.ones((2, 2), dtype=np.float32)
+        ),
+    )
+    monkeypatch.setattr(
+        qat_mod,
+        "fit_hf_decoder_least_squares",
+        lambda *_args, **_kwargs: _decoder(),
+    )
+    monkeypatch.setattr(
+        qat_mod,
+        "compute_s_seg_flip_risk",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            flip_risk=torch.ones((4, 4), dtype=torch.float32)
+        ),
+    )
+    monkeypatch.setattr(
+        qat_mod,
+        "compute_s_pose_fisher",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            s_pose=torch.full((4, 4), 2.0, dtype=torch.float32)
+        ),
+    )
+
+    def fake_push_pixel_saliency_to_lf(*_args, carrier_hw, levels, **_kwargs):
+        calls.append((tuple(carrier_hw), int(levels)))
+        return np.ones((2, 2), dtype=np.float32)
+
+    monkeypatch.setattr(
+        qat_mod,
+        "push_pixel_saliency_to_lf",
+        fake_push_pixel_saliency_to_lf,
+    )
+    monkeypatch.setattr(
+        qat_mod,
+        "allocate_lf_linf",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            steps=np.ones((2, 2), dtype=np.float32)
+        ),
+    )
+    monkeypatch.setattr(
+        qat_mod,
+        "quantize_lf",
+        lambda lf, **_kwargs: (
+            np.zeros_like(lf, dtype=np.int64),
+            1.0,
+            0.0,
+        ),
+    )
+
+    state = qat_mod._prepare_state(
+        posenet=object(),
+        segnet=object(),
+        n_pairs=2,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=1.0,
+        pair_stride=1,
+        start_pair=0,
+        video_path="unused.mkv",
+        device="cpu",
+        step_map_bins=4,
+        model_size=_decoder().model_size,
+    )
+
+    assert calls == [((4, 4), 1), ((4, 4), 1)]
+    assert len(state.step_maps) == 12
 
 
 def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(

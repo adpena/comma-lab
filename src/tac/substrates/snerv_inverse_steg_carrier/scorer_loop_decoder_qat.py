@@ -1249,17 +1249,17 @@ def _prepare_state(
         pose = compute_s_pose_fisher(posenet, pairs[pair_idx], diagnostics=False)
         seg_hw = seg.flip_risk.detach().cpu().numpy()
         pose_hw = pose.s_pose.detach().cpu().numpy()
+        lf_saliency = push_pixel_saliency_to_lf(
+            seg_hw,
+            pose_hw,
+            carrier_hw=(h, w),
+            levels=levels,
+            wavelet=wavelet,
+        )
         for rec_pair, _frame_idx, _channel_idx, pyr in records:
             if rec_pair != pair_idx:
                 continue
             target_bits = float(pyr.lf.size) * float(target_bits_per_coeff)
-            lf_saliency = push_pixel_saliency_to_lf(
-                seg_hw,
-                pose_hw,
-                carrier_hw=(h, w),
-                levels=levels,
-                wavelet=wavelet,
-            )
             alloc = allocate_lf_linf(lf_saliency, target_bits=target_bits, min_step=0.5)
             raw_step_maps.append(alloc.steps.reshape(pyr.lf.shape))
 

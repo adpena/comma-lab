@@ -9,6 +9,16 @@ Ready for exact dispatch: `False`
 
 ## Rows
 
+- `hi_nerv::hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `True`
+  optimizer: `adamw`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000::lion`
+  family: `hi_nerv`
+  launchable_mlx: `True`
+  optimizer: `lion`
+  blockers: `10`
 - `hi_nerv::hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000::adamw`
   family: `hi_nerv`
   launchable_mlx: `True`
@@ -19,25 +29,25 @@ Ready for exact dispatch: `False`
   launchable_mlx: `True`
   optimizer: `lion`
   blockers: `10`
-- `hi_nerv::hinerv_np600_ld4_ed16_dc8_hfg_cnx_int2_mixed_ceil36000::adamw`
+- `hi_nerv::hinerv_np600_ld8_ed8_dc32_hfg_cnx_portfolio_auto_ceil360000::adamw`
   family: `hi_nerv`
   launchable_mlx: `True`
   optimizer: `adamw`
   blockers: `10`
-- `hi_nerv::hinerv_np600_ld4_ed16_dc8_hfg_cnx_int2_mixed_ceil36000::lion`
+- `hi_nerv::hinerv_np600_ld8_ed8_dc32_hfg_cnx_portfolio_auto_ceil360000::lion`
   family: `hi_nerv`
   launchable_mlx: `True`
   optimizer: `lion`
   blockers: `10`
-- `hi_nerv::hinerv_np600_ld4_ed24_dc8_hfg_cnx_int2_mixed_ceil36000::adamw`
+- `hi_nerv::hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000::adafactor`
   family: `hi_nerv`
   launchable_mlx: `True`
-  optimizer: `adamw`
+  optimizer: `adafactor`
   blockers: `10`
-- `hi_nerv::hinerv_np600_ld4_ed24_dc8_hfg_cnx_int2_mixed_ceil36000::lion`
+- `hi_nerv::hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000::rmsprop`
   family: `hi_nerv`
   launchable_mlx: `True`
-  optimizer: `lion`
+  optimizer: `rmsprop`
   blockers: `10`
 - `hi_nerv::hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000::adafactor`
   family: `hi_nerv`
@@ -49,37 +59,27 @@ Ready for exact dispatch: `False`
   launchable_mlx: `True`
   optimizer: `rmsprop`
   blockers: `10`
-- `hi_nerv::hinerv_np600_ld4_ed16_dc8_hfg_cnx_int2_mixed_ceil36000::adafactor`
+- `hi_nerv::hinerv_np600_ld8_ed8_dc32_hfg_cnx_portfolio_auto_ceil360000::adafactor`
   family: `hi_nerv`
   launchable_mlx: `True`
   optimizer: `adafactor`
   blockers: `10`
-- `hi_nerv::hinerv_np600_ld4_ed16_dc8_hfg_cnx_int2_mixed_ceil36000::rmsprop`
+- `hi_nerv::hinerv_np600_ld8_ed8_dc32_hfg_cnx_portfolio_auto_ceil360000::rmsprop`
   family: `hi_nerv`
   launchable_mlx: `True`
   optimizer: `rmsprop`
   blockers: `10`
-- `hi_nerv::hinerv_np600_ld4_ed24_dc8_hfg_cnx_int2_mixed_ceil36000::adafactor`
-  family: `hi_nerv`
-  launchable_mlx: `True`
-  optimizer: `adafactor`
-  blockers: `10`
-- `hi_nerv::hinerv_np600_ld4_ed24_dc8_hfg_cnx_int2_mixed_ceil36000::rmsprop`
-  family: `hi_nerv`
-  launchable_mlx: `True`
-  optimizer: `rmsprop`
-  blockers: `10`
-- `snerv::snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_int8_symmetric_ceil216000::native_rate_aware_training`
+- `snerv::snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t0_adbase_int8_symmetric_ceil216000::native_rate_aware_training`
   family: `snerv`
   launchable_mlx: `True`
   optimizer: `None`
   blockers: `19`
-- `snerv::snerv_np600_haar_lv5_lfb2_stepb1_fc9e0_int8_symmetric_ceil285000::native_rate_aware_training`
+- `snerv::snerv_np600_haar_lv5_lfb2_stepb1_fc9e0_p1_mfu1-2-4_hfr0_t0_adbase_int8_symmetric_ceil285000::native_rate_aware_training`
   family: `snerv`
   launchable_mlx: `True`
   optimizer: `None`
   blockers: `19`
-- `snerv::snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc9e0_int8_symmetric_ceil285000::native_rate_aware_training`
+- `snerv::snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t0_adbase_int8_symmetric_ceil285000::native_rate_aware_training`
   family: `snerv`
   launchable_mlx: `True`
   optimizer: `None`
