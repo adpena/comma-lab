@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.archive_byte_profile import CONTEST_ORIGINAL_BYTES, contest_rate_term
+from tac.local_acceleration.mlx_numpy_portability_contract import (
+    build_mlx_numpy_portability_contract,
+)
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
     emit_archive_bound_candidate_runtime_package,
 )
@@ -69,6 +72,28 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "dispatch_attempted": False,
     "gpu_launched": False,
 }
+
+
+def hprc_mlx_numpy_portability_contract() -> dict[str, Any]:
+    """Return the current HPRC MLX-train to NumPy-inflate contract."""
+
+    return build_mlx_numpy_portability_contract(
+        substrate_id="hprc",
+        training_backend="mlx",
+        exported_state_kind="hprc_packet_sections_numpy_decodable",
+        archive_payload_kind="hprc_monolithic_packet_0_bin",
+        receiver_runtime_kind="numpy_decode_receiver",
+        receiver_dependencies=("numpy", "python_stdlib"),
+        numpy_array_export=True,
+        canonical_npz_bridge_required=False,
+        canonical_npz_bridge_used=False,
+        pure_numpy_inflate=True,
+        notes=(
+            "HPRC uses its own packet grammar instead of NPZ, but the receiver "
+            "runtime is NumPy/stdlib decode-only and therefore satisfies the "
+            "pure NumPy inflate portability axis."
+        ),
+    )
 
 
 def _repo_root_from_here() -> Path:
@@ -512,6 +537,9 @@ def export_hprc_archive_bytes(
                         "exact_axis_required_for_resolution_authority": True,
                     },
                 },
+                "mlx_numpy_portability_contract": (
+                    hprc_mlx_numpy_portability_contract()
+                ),
             },
             candidate_row_schema="hprc_archive_bound_candidate_row.v1",
             wrapper_schema=HPRC_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
@@ -545,4 +573,5 @@ __all__ = [
     "build_hprc_section_mutation_proof",
     "build_minimal_hprc_v0_packet",
     "export_hprc_archive_bytes",
+    "hprc_mlx_numpy_portability_contract",
 ]

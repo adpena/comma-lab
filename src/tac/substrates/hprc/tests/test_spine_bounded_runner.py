@@ -15,6 +15,7 @@ from tac.substrates.hprc.representation_spine import (
 )
 from tac.substrates.hprc.spine_acquisition import build_spine_acquisition_report
 from tac.substrates.hprc.spine_bounded_runner import (
+    HPRC_SPINE_PROJECTION_GAP_REPAIR_WORK_ORDER_SCHEMA,
     HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA,
     HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA,
     build_spine_bounded_runner_plan,
@@ -630,6 +631,101 @@ def test_full_video_section_value_profile_marks_cut_candidates(
     assert order["archive_zip_path"] == archive.as_posix()
     assert order["full_video_profile_path"] == profile_path.as_posix()
     assert "--run-receiver-proof" in order["argv"]
+    assert order["score_claim"] is False
+
+
+def test_pact_vq_core_negative_sections_open_projection_gap_repair(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "pact_vq_archive.zip"
+    archive.write_bytes(b"archive")
+    manifest = _projection(
+        tmp_path / "pact_vq_gap",
+        family=HprcRepresentationFamily.PACT_NERV_VQ,
+        decoder=b"d" * 20,
+        codebooks=b"c" * 12,
+        selectors=b"s" * 4,
+        source={
+            "archive_zip_path": archive.as_posix(),
+            "archive_zip_sha256": "e" * 64,
+            "archive_zip_bytes": archive.stat().st_size,
+        },
+        manifest_extra={
+            "num_pairs": 600,
+            "source_payload_kind": "pact_nerv_vq_pvq",
+        },
+    )
+    acquisition = build_spine_acquisition_report(
+        projection_manifest_paths=[manifest],
+        hard_byte_ceilings=[178_000],
+    )
+    acquisition_path = tmp_path / "acquisition.json"
+    acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    profile_path = tmp_path / "pact_vq_full_profile_gap.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "family": "pact_nerv_vq",
+                "max_pairs": 600,
+                "scorer_batch_pairs": 1,
+                "projection_manifest_path": manifest.as_posix(),
+                "scope_status": {"full_video": "executed"},
+                "projection_gap_analysis": {
+                    "schema": "hprc_archive_projection_gap_analysis.v1",
+                    "status": "archive_projection_gap_suspected",
+                    "negative_structural_sections": ["decoder_qw", "codebooks_q"],
+                    "requires_direct_model_vs_archive_replay": True,
+                    "requires_capacity_or_export_projection_repair": True,
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "section_value_rows": [
+                    {
+                        "variant_id": "neutralize_decoder_qw",
+                        "neutralized_section": "decoder_qw",
+                        "family": "pact_nerv_vq",
+                        "projection_manifest_path": manifest.as_posix(),
+                        "archive_bytes_removed_vs_baseline": 20,
+                        "delta_nonrate_score": -0.5,
+                        "delta_total_mlx_score_advisory": -0.5,
+                        "marginal_status": "cut_candidate_distortion_nonworse",
+                    },
+                    {
+                        "variant_id": "neutralize_codebooks_q",
+                        "neutralized_section": "codebooks_q",
+                        "family": "pact_nerv_vq",
+                        "projection_manifest_path": manifest.as_posix(),
+                        "archive_bytes_removed_vs_baseline": 12,
+                        "delta_nonrate_score": -0.25,
+                        "delta_total_mlx_score_advisory": -0.25,
+                        "marginal_status": "cut_candidate_distortion_nonworse",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_spine_bounded_runner_plan(
+        acquisition_report_path=acquisition_path,
+        repo_root=REPO,
+        mlx_profile_paths=[profile_path],
+    )
+
+    orders = plan["projection_gap_repair_work_orders"]
+    assert len(orders) == 1
+    order = orders[0]
+    assert order["schema"] == HPRC_SPINE_PROJECTION_GAP_REPAIR_WORK_ORDER_SCHEMA
+    assert order["status"] == "queued_for_pact_vq_projection_gap_repair"
+    assert order["negative_structural_sections"] == ["codebooks_q", "decoder_qw"]
+    assert order["evidence_profile_paths"] == [profile_path.as_posix()]
+    assert len(order["repair_grid"]) == 3
+    assert all("--execute-family" in argv for argv in order["argv_rows"])
+    assert any("pact_nerv_vq" in argv for argv in order["argv_rows"])
+    assert "archive_projection_gap_requires_training_or_export_repair" in plan[
+        "blockers"
+    ]
     assert order["score_claim"] is False
 
 

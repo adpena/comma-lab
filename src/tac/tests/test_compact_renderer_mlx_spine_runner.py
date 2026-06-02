@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import struct
 import sys
@@ -21,6 +22,7 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
     _parse_args,
     _require_scorer_upstream_dir_for_distillation,
+    _resolve_source_video_path,
     adapt_pr95_mlx_report_to_spine,
     adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
@@ -297,6 +299,48 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     )
 
 
+def test_pact_vq_runner_forwards_pr95_curriculum_kwargs() -> None:
+    source = Path(runner_mod.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    target_fn = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_run_pact_nerv_vq_mlx_smoke"
+    )
+    calls = [
+        node
+        for node in ast.walk(target_fn)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+    assert len(calls) == 1
+    kw_names = {kw.arg for kw in calls[0].keywords if kw.arg is not None}
+    assert "pr95_faithful_curriculum_enabled" in kw_names
+    assert "pr95_curriculum_total_epochs" in kw_names
+    assert "grad_clip_max_norm" in kw_names
+
+
+def test_default_source_video_resolves_from_external_upstream(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "clean_worktree"
+    upstream = tmp_path / "canonical_upstream"
+    video = upstream / "videos" / "0.mkv"
+    video.parent.mkdir(parents=True)
+    video.write_bytes(b"video")
+    repo_root.mkdir()
+
+    resolved = _resolve_source_video_path(
+        runner_mod.DEFAULT_SOURCE_VIDEO_PATH,
+        base=repo_root,
+        upstream_dir=upstream,
+    )
+
+    assert resolved == video.resolve(strict=False)
+
+
 def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     args = _parse_args(
         [
@@ -490,6 +534,10 @@ def test_recon_pixel_weight_loader_records_file_custody(
     }
     assert metadata["stats"]["shape"] == [384, 512, 1]
     assert metadata["stats"]["nonzero_fraction"] == 1.0
+    assert metadata["producer_manifest"]["status"] == (
+        "not_found_unverified_manual_or_legacy_weight"
+    )
+    assert metadata["producer_manifest"]["consumption_certified"] is False
     assert metadata["authority"] == "false_macos_mlx_research_signal"
 
 
@@ -515,6 +563,91 @@ def test_recon_pixel_weight_loader_accepts_pair_frame_map(
     assert metadata["expected_pairs"] == 3
     assert metadata["stats"]["shape"] == [3, 2, 384, 512, 1]
     assert metadata["sha256"] == runner_mod._sha256_file(weight_path)
+
+
+def test_recon_pixel_weight_loader_carries_verified_gradient_manifest(
+    tmp_path: Path,
+) -> None:
+    weight_path = tmp_path / "joint_p18_p19_recon_pixel_weight.npz"
+    np.savez_compressed(
+        weight_path,
+        weight=np.ones((2, 2, 384, 512, 1), dtype=np.float32),
+    )
+    health = {
+        "schema": "joint_recon_pixel_weight_gradient_health.v1",
+        "surface_generation_backend": "torch_exact_cpu_scorer_vjp.v1",
+        "component_count": 14,
+        "components_with_nonfinite": 0,
+        "total_nonfinite_values": 0,
+        "sanitized_components": [],
+        "status": "pass_finite",
+        "consumption_recommended": True,
+    }
+    (tmp_path / "joint_p18_p19_recon_pixel_weight_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "joint_p18_p19_recon_pixel_weight_manifest.v1",
+                "weight_path": weight_path.as_posix(),
+                "weight_sha256": runner_mod._sha256_file(weight_path),
+                "metadata": {
+                    "schema": "joint_p18_p19_recon_pixel_weight.v1",
+                    "surface_generation_backend": "torch_exact_cpu_scorer_vjp.v1",
+                    "gradient_health": health,
+                    "blockers": [],
+                    "training_consumption_recommended": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _, metadata = runner_mod._load_recon_pixel_weight(
+        weight_path,
+        base=tmp_path,
+        expected_pairs=2,
+        normalize="mean",
+    )
+
+    producer = metadata["producer_manifest"]
+    assert producer["status"] == "verified_finite_gradient_manifest"
+    assert producer["consumption_certified"] is True
+    assert producer["weight_sha256"] == runner_mod._sha256_file(weight_path)
+    assert producer["gradient_health"] == health
+
+
+def test_recon_pixel_weight_loader_refuses_stale_manifest_without_gradient_health(
+    tmp_path: Path,
+) -> None:
+    weight_path = tmp_path / "joint_p18_p19_recon_pixel_weight.npz"
+    np.savez_compressed(
+        weight_path,
+        weight=np.ones((2, 2, 384, 512, 1), dtype=np.float32),
+    )
+    (tmp_path / "joint_p18_p19_recon_pixel_weight_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "joint_p18_p19_recon_pixel_weight_manifest.v1",
+                "weight_path": weight_path.as_posix(),
+                "weight_sha256": runner_mod._sha256_file(weight_path),
+                "metadata": {
+                    "schema": "joint_p18_p19_recon_pixel_weight.v1",
+                    "blockers": [],
+                    "training_consumption_recommended": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(runner_mod.CompactRendererMlxSpineRunnerError) as exc:
+        runner_mod._load_recon_pixel_weight(
+            weight_path,
+            base=tmp_path,
+            expected_pairs=2,
+            normalize="mean",
+        )
+
+    assert "missing gradient_health" in str(exc.value)
 
 
 def test_recon_pixel_weight_loader_rejects_pair_count_mismatch(

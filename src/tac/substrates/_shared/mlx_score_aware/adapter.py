@@ -268,6 +268,38 @@ class MlxScoreAwareAdapter:
                     continue
         return eval_targets, metrics
 
+    def _score_aware_loss_part_metrics(self, batch: Any) -> dict[str, float]:
+        """Expose active score-aware loss terms in training telemetry."""
+
+        mx = self._mx
+        try:
+            _total, parts = score_aware_loss(self.bundle, batch)
+        except Exception:
+            return {"score_aware_loss_part_probe_failed": 1.0}
+
+        out: dict[str, float] = {}
+        weights = dict(self.bundle.extra_loss_weights)
+        for name, value in parts.items():
+            mx.eval(value)
+            scalar = float(value.item())
+            out[f"loss_part_{name}"] = scalar
+            if name == "distill":
+                out["loss_part_weighted_distill"] = (
+                    float(self.bundle.distillation_weight) * scalar
+                )
+            elif name == "pose_distill":
+                out["loss_part_weighted_pose_distill"] = (
+                    float(self.bundle.pose_distillation_weight) * scalar
+                )
+            elif name == "recon":
+                out["loss_part_weighted_recon"] = scalar
+            elif name in weights:
+                out[f"loss_part_weighted_{name}"] = float(weights[name]) * scalar
+        out["score_aware_loss_parts_active"] = float(
+            ("distill" in parts) or ("pose_distill" in parts)
+        )
+        return out
+
     def artifact_metadata(self) -> Mapping[str, Any]:
         """Return non-authority substrate metadata for TrainingArtifact JSON.
 
@@ -294,6 +326,11 @@ class MlxScoreAwareAdapter:
             "has_real_posenet_teacher": self.bundle.pose_scorer_teacher is not None,
             "allow_mock_scorer_teacher": bool(self.bundle.allow_mock_scorer_teacher),
             "allow_segnet_only_research": bool(self.bundle.allow_segnet_only_research),
+            "loss_part_telemetry": {
+                "schema": "mlx_score_aware_loss_part_telemetry.v1",
+                "emitted_by_train_step": True,
+                "required_when_score_terms_enabled": True,
+            },
         }
         return metadata
 
@@ -519,6 +556,7 @@ class MlxScoreAwareAdapter:
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
             batch
         )
+        post_update_metrics.update(self._score_aware_loss_part_metrics(batch))
 
         # Accumulate the MLX arrays the single trailing mx.eval must realize.
         eval_targets: list[Any] = [
@@ -752,6 +790,7 @@ class MlxScoreAwareAdapter:
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
             batch
         )
+        post_update_metrics.update(self._score_aware_loss_part_metrics(batch))
 
         mx.eval(self.model.parameters(), loss_value, *post_update_eval_targets)
         return {

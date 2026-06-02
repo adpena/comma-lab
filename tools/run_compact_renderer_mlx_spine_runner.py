@@ -77,7 +77,8 @@ DEFAULT_PR95_RECEIVER_RUNTIME_DIR = (
     / "experiments/results/public_pr_archive_release_view"
     / "public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
 )
-DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
+DEFAULT_UPSTREAM_DIR = Path(os.environ.get("TAC_UPSTREAM_DIR", REPO_ROOT / "upstream"))
+DEFAULT_SOURCE_VIDEO_PATH = Path("upstream/videos/0.mkv")
 TARGET_FAMILIES = (
     "pr95_hnerv",
     "hi_nerv",
@@ -2741,17 +2742,22 @@ def _load_recon_pixel_weight(
             weight = np.asarray(data[key], dtype=np.float32)
     else:
         weight = np.asarray(np.load(resolved), dtype=np.float32)
+    source_sha256 = _sha256_file(resolved)
     weight = _validate_recon_pixel_weight_array(
         weight,
         expected_hw=expected_hw,
         expected_pairs=expected_pairs,
+    )
+    producer_manifest = _recon_pixel_weight_producer_manifest(
+        resolved,
+        expected_weight_sha256=source_sha256,
     )
     metadata = {
         "schema": "compact_recon_pixel_weight.v1",
         "enabled": True,
         "source_kind": "file",
         "path": resolved.as_posix(),
-        "sha256": _sha256_file(resolved),
+        "sha256": source_sha256,
         "npz_key": key,
         "normalize": normalize,
         "scorer_terms": {
@@ -2759,11 +2765,98 @@ def _load_recon_pixel_weight(
             "p19_posenet": "caller_supplied",
         },
         "stats": _weight_stats(weight),
+        "producer_manifest": producer_manifest,
         "authority": "false_macos_mlx_research_signal",
     }
     if expected_pairs is not None:
         metadata["expected_pairs"] = int(expected_pairs)
     return weight, metadata
+
+
+def _recon_pixel_weight_producer_manifest(
+    weight_path: Path,
+    *,
+    expected_weight_sha256: str,
+) -> dict[str, Any]:
+    """Return fail-closed producer-manifest custody for a recon weight file."""
+
+    manifest_path = weight_path.with_name(
+        "joint_p18_p19_recon_pixel_weight_manifest.json"
+    )
+    if not manifest_path.is_file():
+        return {
+            "schema": "compact_recon_pixel_weight_producer_manifest.v1",
+            "status": "not_found_unverified_manual_or_legacy_weight",
+            "path": manifest_path.as_posix(),
+            "consumption_certified": False,
+        }
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise CompactRendererMlxSpineRunnerError(
+            f"recon pixel weight producer manifest is not valid JSON: {manifest_path}"
+        ) from exc
+    if not isinstance(manifest, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            f"recon pixel weight producer manifest must be an object: {manifest_path}"
+        )
+
+    manifest_weight_path = manifest.get("weight_path")
+    if manifest_weight_path is not None:
+        manifest_resolved = _resolve_existing(manifest_weight_path, base=weight_path.parent)
+        if manifest_resolved != weight_path:
+            raise CompactRendererMlxSpineRunnerError(
+                "recon pixel weight producer manifest points at a different "
+                f"weight file: {manifest_resolved} != {weight_path}"
+            )
+    manifest_weight_sha = manifest.get("weight_sha256")
+    if manifest_weight_sha is not None and str(manifest_weight_sha) != expected_weight_sha256:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest SHA does not match loaded "
+            f"weight file: {manifest_weight_sha} != {expected_weight_sha256}"
+        )
+
+    producer_metadata = manifest.get("metadata")
+    if not isinstance(producer_metadata, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest is missing metadata object"
+        )
+    gradient_health = producer_metadata.get("gradient_health")
+    if not isinstance(gradient_health, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest is missing gradient_health; "
+            "regenerate the surface with the finite-gradient producer"
+        )
+    blockers = list(producer_metadata.get("blockers") or [])
+    consumption_recommended = bool(
+        producer_metadata.get("training_consumption_recommended", False)
+    )
+    if gradient_health.get("status") != "pass_finite":
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest did not pass finite-gradient "
+            f"health: {gradient_health.get('status')}"
+        )
+    if not consumption_recommended or blockers:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest is not recommended for "
+            f"training consumption; blockers={blockers}"
+        )
+
+    return {
+        "schema": "compact_recon_pixel_weight_producer_manifest.v1",
+        "status": "verified_finite_gradient_manifest",
+        "path": manifest_path.as_posix(),
+        "sha256": _sha256_file(manifest_path),
+        "producer_schema": manifest.get("schema"),
+        "producer_metadata_schema": producer_metadata.get("schema"),
+        "weight_path": Path(str(manifest.get("weight_path", weight_path))).as_posix(),
+        "weight_sha256": expected_weight_sha256,
+        "gradient_health": gradient_health,
+        "blockers": blockers,
+        "training_consumption_recommended": consumption_recommended,
+        "consumption_certified": True,
+    }
 
 
 def _segnet_boundary_recon_pixel_weight(
@@ -3381,6 +3474,7 @@ def _run_pact_nerv_vq_mlx_smoke(
         output_width=int(cfg.output_width),
     )
     model = PactNervVqSubstrateMLX(cfg)
+    pr95_curriculum_enabled = int(epochs) >= 8
     coder_qat_cfg = CoderAwareQATConfig(
         enabled=bool(coder_aware_qat),
         quant_bits=int(coder_qat_quant_bits),
@@ -3428,6 +3522,7 @@ def _run_pact_nerv_vq_mlx_smoke(
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
@@ -3505,6 +3600,11 @@ def _run_pact_nerv_vq_mlx_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=max(1, int(epochs)),
+        pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
+        pr95_curriculum_total_epochs=max(8, int(epochs)),
+        grad_clip_max_norm=1.0,
+        weight_decay=1e-4,
+        optimizer_kind="adamw",
         notes=(
             "Compact renderer MLX spine runner PACT-NeRV-VQ smoke using real "
             "contest video targets, byte-closed archive export, receiver proof, "
@@ -3910,10 +4010,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Pinned contest upstream snapshot for real scorer teachers "
             "(modules.py plus scorer safetensors). Separate from --repo-root "
-            "so clean SSD code worktrees can reuse the canonical upstream bytes."
+            "so clean SSD code worktrees can reuse the canonical upstream bytes; "
+            "defaults to $TAC_UPSTREAM_DIR when set."
         ),
     )
-    parser.add_argument("--source-video-path", default=Path("upstream/videos/0.mkv"), type=Path)
+    parser.add_argument(
+        "--source-video-path",
+        default=DEFAULT_SOURCE_VIDEO_PATH,
+        type=Path,
+        help=(
+            "Contest video path. The default upstream/videos/0.mkv resolves "
+            "through --upstream-dir when the repo-local upstream tree is absent."
+        ),
+    )
     parser.add_argument("--max-frames", default=4, type=int)
     parser.add_argument("--num-pairs", default=2, type=int)
     parser.add_argument("--epochs", default=1, type=int)
@@ -4140,13 +4249,22 @@ def main(argv: list[str] | None = None) -> int:
         )
     ceilings = tuple(args.hard_byte_ceiling or DEFAULT_BASE_RENDERER_BYTE_CEILINGS)
     output_dir = args.output_dir or _default_output_dir()
+    scorer_upstream_dir = _resolve_scorer_upstream_dir(
+        args.repo_root,
+        args.upstream_dir,
+    )
+    source_video_path = _resolve_source_video_path(
+        args.source_video_path,
+        base=Path(args.repo_root).expanduser().resolve(strict=False),
+        upstream_dir=scorer_upstream_dir,
+    )
     if args.execute_pr95_mlx_smoke:
         report = execute_pr95_mlx_smoke_and_adapt(
             output_dir=output_dir,
             max_frames=args.max_frames,
             smoke_epochs_per_stage=args.smoke_epochs_per_stage,
             training_loss_surface=args.training_loss_surface,
-            source_video_path=args.source_video_path,
+            source_video_path=source_video_path,
             hard_byte_ceilings=ceilings,
             mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
@@ -4165,7 +4283,7 @@ def main(argv: list[str] | None = None) -> int:
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
-            upstream_dir=args.upstream_dir,
+            upstream_dir=scorer_upstream_dir,
         )
     elif args.from_pr95_stage8_report is not None:
         report = adapt_pr95_stage8_report_to_spine(
@@ -4180,13 +4298,13 @@ def main(argv: list[str] | None = None) -> int:
             receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
-            upstream_dir=args.upstream_dir,
+            upstream_dir=scorer_upstream_dir,
         )
     elif args.execute_pr95_stage8_source:
         report = execute_pr95_stage8_source_and_adapt(
             output_dir=output_dir,
             source_archive_zip=args.pr95_source_archive,
-            source_video_path=args.source_video_path,
+            source_video_path=source_video_path,
             hard_byte_ceilings=ceilings,
             mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
@@ -4203,7 +4321,7 @@ def main(argv: list[str] | None = None) -> int:
             receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
-            upstream_dir=args.upstream_dir,
+            upstream_dir=scorer_upstream_dir,
         )
     elif args.execute_family == "pr95_hnerv":
         report = execute_pr95_hnerv_mlx_scoreaware_and_adapt(
@@ -4212,7 +4330,7 @@ def main(argv: list[str] | None = None) -> int:
             epochs=args.epochs,
             batch_pair_indices_per_step=args.batch_pairs,
             learning_rate=args.learning_rate,
-            source_video_path=args.source_video_path,
+            source_video_path=source_video_path,
             source_archive_zip=args.pr95_source_archive,
             hard_byte_ceilings=ceilings,
             mlx_profile_paths=tuple(args.mlx_profile),
@@ -4228,7 +4346,7 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
-            scorer_upstream_dir=args.upstream_dir,
+            scorer_upstream_dir=scorer_upstream_dir,
             run_receiver_proof=args.run_receiver_proof,
             receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
             keep_receiver_proof_output=args.keep_receiver_proof_output,
@@ -4244,7 +4362,7 @@ def main(argv: list[str] | None = None) -> int:
             epochs=args.epochs,
             batch_pair_indices_per_step=args.batch_pairs,
             learning_rate=args.learning_rate,
-            source_video_path=args.source_video_path,
+            source_video_path=source_video_path,
             hard_byte_ceilings=ceilings,
             mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
@@ -4262,7 +4380,7 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
-            scorer_upstream_dir=args.upstream_dir,
+            scorer_upstream_dir=scorer_upstream_dir,
             coder_aware_qat=args.coder_aware_qat,
             coder_qat_quant_bits=args.coder_qat_quant_bits,
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
@@ -4279,7 +4397,7 @@ def main(argv: list[str] | None = None) -> int:
             epochs=args.epochs,
             batch_pair_indices_per_step=args.batch_pairs,
             learning_rate=args.learning_rate,
-            source_video_path=args.source_video_path,
+            source_video_path=source_video_path,
             hard_byte_ceilings=ceilings,
             mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
@@ -4297,7 +4415,7 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
-            scorer_upstream_dir=args.upstream_dir,
+            scorer_upstream_dir=scorer_upstream_dir,
             coder_aware_qat=args.coder_aware_qat,
             coder_qat_quant_bits=args.coder_qat_quant_bits,
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
@@ -4314,7 +4432,7 @@ def main(argv: list[str] | None = None) -> int:
             epochs=args.epochs,
             batch_pair_indices_per_step=args.batch_pairs,
             learning_rate=args.learning_rate,
-            source_video_path=args.source_video_path,
+            source_video_path=source_video_path,
             hard_byte_ceilings=ceilings,
             mlx_profile_paths=tuple(args.mlx_profile),
             hprc_queue_followup_report_paths=tuple(args.hprc_queue_followup_report),
@@ -4345,7 +4463,7 @@ def main(argv: list[str] | None = None) -> int:
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
-            upstream_dir=args.upstream_dir,
+            upstream_dir=scorer_upstream_dir,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -4397,7 +4515,12 @@ def _resolve_existing(path: str | Path, *, base: Path) -> Path:
     return resolved
 
 
-def _resolve_source_video_path(path: str | Path, *, base: Path) -> Path:
+def _resolve_source_video_path(
+    path: str | Path,
+    *,
+    base: Path,
+    upstream_dir: str | Path | None = None,
+) -> Path:
     """Resolve bulky source video paths across clean SSD source worktrees."""
 
     env_override = os.environ.get("PACT_SOURCE_VIDEO_PATH")
@@ -4406,6 +4529,14 @@ def _resolve_source_video_path(path: str | Path, *, base: Path) -> Path:
         candidates.append(Path(env_override).expanduser())
     raw = Path(path).expanduser()
     candidates.append(raw if raw.is_absolute() else (base / raw))
+    if (
+        upstream_dir is not None
+        and not raw.is_absolute()
+        and raw.parts
+        and raw.parts[0] == "upstream"
+    ):
+        upstream = Path(upstream_dir).expanduser().resolve(strict=False)
+        candidates.append(upstream / Path(*raw.parts[1:]))
     if not raw.is_absolute():
         candidates.append(Path("/Users/adpena/Projects/pact") / raw)
     elif raw.name == "0.mkv" and "upstream" in raw.parts and "videos" in raw.parts:

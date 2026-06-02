@@ -17,6 +17,9 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import torch
 
+from tac.local_acceleration.mlx_numpy_portability_contract import (
+    build_mlx_numpy_portability_contract,
+)
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
     emit_archive_bound_candidate_runtime_package,
 )
@@ -44,6 +47,27 @@ HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY = "hi_nerv_mlx"
 HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND = "hi_nerv_mlx_archive"
 
 _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
+
+
+def hi_nerv_mlx_numpy_portability_contract() -> dict[str, Any]:
+    """Return the honest portability contract for the current HiNeRV receiver."""
+
+    return build_mlx_numpy_portability_contract(
+        substrate_id="hi_nerv",
+        training_backend="mlx",
+        exported_state_kind="pytorch_layout_numpy_arrays_from_mlx_model",
+        archive_payload_kind="hiv1_monolithic_0_bin",
+        receiver_runtime_kind="torch_decode_receiver",
+        receiver_dependencies=("torch", "brotli", "python_stdlib"),
+        numpy_array_export=True,
+        canonical_npz_bridge_used=False,
+        pure_numpy_inflate=False,
+        notes=(
+            "HiNeRV MLX export is NumPy-array backed, but the contest receiver "
+            "currently decodes with PyTorch. This is contest-compliant when "
+            "dependency closure passes, but not pure NumPy inflate."
+        ),
+    )
 
 
 def _expected_receiver_output_bytes(cfg: HinervConfig) -> int:
@@ -212,6 +236,9 @@ def export_hi_nerv_mlx_archive(
                 "latent_pyramid": ["coarse", "mid", "fine"],
                 "decoder_codec": decoder_codec,
                 "num_pairs": int(cfg.num_pairs),
+                "mlx_numpy_portability_contract": (
+                    hi_nerv_mlx_numpy_portability_contract()
+                ),
             },
             candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
@@ -270,6 +297,9 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
             "latent_pyramid": ["coarse", "mid", "fine"],
             "decoder_codec": decoder_codec,
             "num_pairs": int(cfg.num_pairs),
+            "mlx_numpy_portability_contract": (
+                hi_nerv_mlx_numpy_portability_contract()
+            ),
         },
         candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
@@ -284,6 +314,7 @@ __all__ = [
     "HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND",
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
+    "hi_nerv_mlx_numpy_portability_contract",
     "hi_nerv_meta_from_config",
     "pack_archive_from_exported_state_dict",
 ]

@@ -167,6 +167,15 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
     assert profile["upstream_dir"] == upstream_dir.as_posix()
     assert profile["video_names_file"] == video_names_file.as_posix()
     assert "pvq_section_layout" in profile
+    assert profile["projection_gap_analysis"]["schema"] == (
+        "hprc_archive_projection_gap_analysis.v1"
+    )
+    assert profile["projection_gap_analysis"]["status"] == (
+        "no_archive_projection_gap_detected_by_section_neutralization"
+    )
+    assert profile["projection_gap_analysis"][
+        "requires_direct_model_vs_archive_replay"
+    ] is False
     rows = {row["variant_id"]: row for row in profile["section_value_rows"]}
     assert set(rows) == {
         "baseline",

@@ -119,6 +119,13 @@ def test_hprc_export_emits_archive_bound_package(tmp_path: Path, monkeypatch) ->
     assert "hprc_v0_receiver_scaffold_not_trained_renderer" in row["blockers"]
     contract = row["archive_bound_candidate_contract"]
     runtime_payload = contract["runtime_payload_consumption"]
+    portability = row["runtime_adapter_manifest"][
+        "mlx_numpy_portability_contract"
+    ]
+    assert portability["portability_status"] == "pure_numpy_inflate_ready"
+    assert portability["pure_numpy_inflate"] is True
+    assert portability["canonical_npz_bridge_required"] is False
+    assert portability["portability_blockers"] == []
     assert runtime_payload["declared"] is True
     assert runtime_payload["predictive_stack"] is True
     assert runtime_payload["full_stack_pixel_consumption_proven"] is False
