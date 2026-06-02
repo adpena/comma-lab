@@ -158,6 +158,7 @@ def _queue_row(index: int, work_order: Mapping[str, Any]) -> dict[str, Any]:
     target_consumers = _string_list(work_order.get("target_consumers"))
     precision_modes = _string_list(work_order.get("receiver_precision_modes"))
     blocked = bool(blockers)
+    planner_ingest = _planner_ingest(work_order)
     return {
         "queue_row_id": f"nerv_rate_allocator_row_{index:04d}_{work_order_id}",
         "work_order_id": work_order_id,
@@ -173,12 +174,61 @@ def _queue_row(index: int, work_order: Mapping[str, Any]) -> dict[str, Any]:
         "blockers": blockers,
         "target_consumers": target_consumers,
         "planner_action": str(work_order.get("planner_action") or ""),
-        "planner_ingest": _planner_ingest(work_order),
+        "planner_ingest": planner_ingest,
+        "pipeline_custody": _pipeline_custody(planner_ingest),
         "receiver_precision_modes": precision_modes,
         "payload": dict(work_order.get("payload") or {}),
         "rationale": str(work_order.get("rationale") or ""),
         "predicted_delta_adjustment": 0.0,
         **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _pipeline_custody(planner_ingest: Mapping[str, Any]) -> dict[str, Any]:
+    """Describe how a queue row enters canonical pipelines.
+
+    This is intentionally attached to the queue row rather than hidden in a
+    runbook: consumers can reject a row before it creates an orphan artifact.
+    """
+
+    producer_tool = str(planner_ingest.get("producer_tool") or "")
+    existing_tool_ingress = str(planner_ingest.get("existing_tool_ingress") or "")
+    planning_context_tool = str(planner_ingest.get("planning_context_tool") or "")
+    section_value_profile_tool = str(
+        planner_ingest.get("section_value_profile_tool") or ""
+    )
+    canonical_paths = _dedupe_strings(
+        [
+            producer_tool,
+            existing_tool_ingress,
+            planning_context_tool,
+            section_value_profile_tool,
+        ]
+    )
+    has_ingress = bool(canonical_paths or planner_ingest.get("existing_surface_paths"))
+    return {
+        "schema": "nerv_rate_allocator_pipeline_custody.v1",
+        "custody_mode": (
+            "canonical_pipeline_ingest"
+            if has_ingress
+            else "blocked_until_canonical_ingest_path_exists"
+        ),
+        "canonical_ingress_paths": canonical_paths,
+        "existing_surface_paths": _string_list(
+            planner_ingest.get("existing_surface_paths")
+        ),
+        "direct_ad_hoc_execution_allowed": False,
+        "orphan_output_allowed": False,
+        "output_must_reenter": (
+            "archive_bound_contract_or_receiver_closed_ladder_or_section_value_profile"
+        ),
+        "promotion_authority_allowed": False,
+        "runnable_now_is_authority": False,
+        "blockers": (
+            []
+            if has_ingress
+            else ["canonical_pipeline_ingest_path_missing_for_work_order"]
+        ),
     }
 
 

@@ -691,6 +691,20 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         assert row["ready_for_exact_eval_dispatch"] is False
         assert row["dispatch_allowed"] is False
         assert row["exact_or_full_video_cuda_allowed"] is False
+        custody = row["pipeline_custody"]
+        assert custody["schema"] == "nerv_rate_allocator_pipeline_custody.v1"
+        assert custody["direct_ad_hoc_execution_allowed"] is False
+        assert custody["orphan_output_allowed"] is False
+        assert custody["promotion_authority_allowed"] is False
+        assert custody["runnable_now_is_authority"] is False
+        assert custody["output_must_reenter"] == (
+            "archive_bound_contract_or_receiver_closed_ladder_or_section_value_profile"
+        )
+        if row["planner_ingest"].get("producer_tool") or row["planner_ingest"].get(
+            "existing_tool_ingress"
+        ):
+            assert custody["custody_mode"] == "canonical_pipeline_ingest"
+            assert custody["canonical_ingress_paths"]
     admission_rows = {
         row["row_id"]: row for row in queue["section_admission_queue_rows"]
     }
