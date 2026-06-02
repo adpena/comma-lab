@@ -15,6 +15,7 @@ import argparse
 import atexit
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -4963,7 +4964,9 @@ def _load_compact_modelsize_budget_rows(
         record: dict[str, Any] = {
             "path": resolved.as_posix(),
             "exists": resolved.is_file(),
+            "rows_seen": 0,
             "rows_added": 0,
+            "rows_rejected": 0,
             "blockers": [],
         }
         if not resolved.is_file():
@@ -4981,9 +4984,28 @@ def _load_compact_modelsize_budget_rows(
             payload,
             source_path=resolved,
         )
-        rows.extend(extracted)
-        record["rows_added"] = len(extracted)
-        if not extracted:
+        record["rows_seen"] = len(extracted)
+        accepted_rows: list[dict[str, Any]] = []
+        rejected_rows: list[dict[str, Any]] = []
+        for index, row in enumerate(extracted):
+            row_blockers = _compact_modelsize_budget_row_blockers(row)
+            if row_blockers:
+                rejected_rows.append(
+                    {
+                        "row_index": index,
+                        "row_id": row.get("row_id"),
+                        "blockers": row_blockers,
+                    }
+                )
+                continue
+            accepted_rows.append(row)
+        rows.extend(accepted_rows)
+        record["rows_added"] = len(accepted_rows)
+        record["rows_rejected"] = len(rejected_rows)
+        if rejected_rows:
+            record["rejected_rows"] = rejected_rows
+            record["blockers"].append("modelsize_budget_json_rows_rejected")
+        if not accepted_rows:
             record["blockers"].append("modelsize_budget_json_rows_missing")
         sources.append(record)
     return rows, sources
@@ -5017,6 +5039,69 @@ def _modelsize_budget_rows_from_payload(
         normalized.setdefault("source_modelsize_budget_row_index", index)
         rows.append(normalized)
     return rows
+
+
+def _compact_modelsize_budget_row_blockers(row: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    archive_bytes = _compact_positive_int_from_keys(
+        row,
+        (
+            "archive_bytes",
+            "archive_zip_bytes",
+            "archive_bytes_total",
+            "measured_archive_bytes",
+            "archive_size_bytes",
+            "projected_archive_bytes",
+            "nominal_total_payload_bytes",
+        ),
+    )
+    if archive_bytes is None:
+        blockers.append("modelsize_budget_row_missing_positive_archive_bytes")
+    if not _compact_modelsize_row_has_nonrate_signal(row):
+        blockers.append("modelsize_budget_row_missing_nonrate_score")
+    return blockers
+
+
+def _compact_modelsize_row_has_nonrate_signal(row: Mapping[str, Any]) -> bool:
+    if _compact_finite_float_from_keys(
+        row,
+        ("nonrate_score", "nonrate_score_value", "nonrate_score_advisory"),
+    ) is not None:
+        return True
+    if _compact_finite_float_from_keys(row, ("avg_segnet_dist", "d_seg")) is not None:
+        return _compact_finite_float_from_keys(
+            row,
+            ("avg_posenet_dist", "d_pose"),
+        ) is not None
+    return False
+
+
+def _compact_positive_int_from_keys(
+    row: Mapping[str, Any],
+    keys: tuple[str, ...],
+) -> int | None:
+    for key in keys:
+        try:
+            value = int(row.get(key))
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            return value
+    return None
+
+
+def _compact_finite_float_from_keys(
+    row: Mapping[str, Any],
+    keys: tuple[str, ...],
+) -> float | None:
+    for key in keys:
+        try:
+            value = float(row.get(key))
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value):
+            return value
+    return None
 
 
 def _modelsize_budget_rows_from_plan(plan: Any) -> list[dict[str, Any]]:

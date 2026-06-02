@@ -1734,6 +1734,130 @@ def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
     assert Path(out["report_path"]).is_file()
 
 
+def test_hinerv_refusal_filters_modelsize_rows_without_nonrate_score(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fail_train(**_kwargs):
+        raise AssertionError("invalid modelsize evidence must refuse before training")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+    bad_ladder = tmp_path / "hinerv_waterfill_without_nonrate.json"
+    bad_ladder.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_ladder_waterfill.v1",
+                "rows": [
+                    {
+                        "row_id": "hi_nerv_local_tiny",
+                        "archive_bytes": 134_938,
+                        "archive_sha256": "a" * 64,
+                        "waterfill_summary": {"group_count": 24},
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_bad_modelsize_refusal",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        modelsize_budget_json_paths=(bad_ladder,),
+        repo_root=REPO_ROOT,
+    )
+
+    source = out["modelsize_budget_evidence"]["sources"][0]
+    assert out["mode"] == "hi_nerv_mlx_scoreaware_launch_refused"
+    assert out["training_executed"] is False
+    assert out["modelsize_budget_evidence"]["row_count"] == 0
+    assert source["rows_seen"] == 1
+    assert source["rows_added"] == 0
+    assert source["rows_rejected"] == 1
+    assert "modelsize_budget_json_rows_rejected" in source["blockers"]
+    assert source["rejected_rows"][0]["blockers"] == [
+        "modelsize_budget_row_missing_nonrate_score"
+    ]
+    assert "hi_nerv_real_segnet_teacher_missing" in out["blockers"]
+    assert "hi_nerv_real_posenet_teacher_missing" in out["blockers"]
+    assert out["score_claim"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_refusal_rejects_canonical_score_only_modelsize_rows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fail_train(**_kwargs):
+        raise AssertionError("score-only modelsize evidence must refuse before training")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+    score_only_ladder = tmp_path / "hinerv_score_only_ladder.json"
+    score_only_ladder.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_modelsize_budget_plan.v2",
+                "modelsize_budget_rows": [
+                    {
+                        "row_id": "score_only",
+                        "archive_bytes": 120_000,
+                        "canonical_score": 0.5,
+                        "receiver_closed": True,
+                        "receiver_proof_passed": True,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_score_only_refusal",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        modelsize_budget_json_paths=(score_only_ladder,),
+        repo_root=REPO_ROOT,
+    )
+
+    source = out["modelsize_budget_evidence"]["sources"][0]
+    assert out["mode"] == "hi_nerv_mlx_scoreaware_launch_refused"
+    assert out["modelsize_budget_evidence"]["row_count"] == 0
+    assert source["rows_seen"] == 1
+    assert source["rows_rejected"] == 1
+    assert source["rejected_rows"][0]["blockers"] == [
+        "modelsize_budget_row_missing_nonrate_score"
+    ]
+
+
 def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
     tmp_path: Path,
     monkeypatch,
