@@ -66543,6 +66543,47 @@
         }
       },
       "notes": "2026-06-02 Codex: fail-closed planning/control seam landed for SNeRV + HiNeRV top-priority stacks against PR95/HNeRV baseline; GO local stack optimization only; NO-GO exact/promotion/score while PR101/Z5 claims and full-600 receiver/paired CPU-CUDA gates remain open."
+    },
+    {
+      "id": "lane_hinerv_60kb_mps_fit_probe_20260602",
+      "name": "HiNeRV 60KB MPS fit probe",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -66552,5 +66593,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-02T03:42:16Z"
+  "updated_at": "2026-06-02T11:19:22Z"
 }

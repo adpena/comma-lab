@@ -1,0 +1,75 @@
+{
+  "schema": "codex_snerv_full600_lf_predictor_profile.v1",
+  "created_utc": "2026-06-02T11:19:06Z",
+  "axis_tag": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "source_packet": "/Volumes/VertigoDataTier/pact/snerv_lf_delta_sharedshape_bits2p0_l2_affine_lastframe_package_full600_metadataonly_20260602T032545Z/candidate.snar",
+  "source_packet_sha256": "fb2eb9fb45c95b7e0c670aef718a1cd0a30396e679f678e6d8e7a828f69a111c",
+  "source_adjudication": "/Users/adpena/Projects/pact/.omx/research/snerv_l2_affine_full600_package_adjudication_20260602T043226Z.json",
+  "n_pairs": 600,
+  "plane_count": 3600,
+  "plane_shape": [110, 146],
+  "global_min": 0,
+  "global_max": 36,
+  "current_lf_payload_bytes": 9996235,
+  "candidate_raw_bytes": 57816000,
+  "candidates": [
+    {
+      "name": "raster_delta",
+      "raw_bytes": 57816000,
+      "compressed_bytes": 9995880,
+      "delta_vs_current_lf_payload_bytes": -355
+    },
+    {
+      "name": "gradient2d",
+      "raw_bytes": 57816000,
+      "compressed_bytes": 12235500,
+      "delta_vs_current_lf_payload_bytes": 2235265
+    },
+    {
+      "name": "prev_frame_same_channel",
+      "raw_bytes": 57816000,
+      "compressed_bytes": 11148564,
+      "delta_vs_current_lf_payload_bytes": 1158329
+    },
+    {
+      "name": "prev_pair_same_slot",
+      "raw_bytes": 57816000,
+      "compressed_bytes": 11917216,
+      "delta_vs_current_lf_payload_bytes": 1926981
+    },
+    {
+      "name": "linear_prev_frame_same_channel",
+      "raw_bytes": 57816000,
+      "compressed_bytes": 16385868,
+      "delta_vs_current_lf_payload_bytes": 6386233
+    },
+    {
+      "name": "prev_frame_plus_raster_delta",
+      "raw_bytes": 57816000,
+      "compressed_bytes": 11701208,
+      "delta_vs_current_lf_payload_bytes": 1700973
+    },
+    {
+      "name": "prev_pair_slot_plus_raster_delta",
+      "raw_bytes": 57816000,
+      "compressed_bytes": 12456576,
+      "delta_vs_current_lf_payload_bytes": 2456341
+    }
+  ],
+  "best_candidate": {
+    "name": "raster_delta",
+    "compressed_bytes": 9995880,
+    "delta_vs_current_lf_payload_bytes": -355
+  },
+  "verdict": "simple_lossless_lf_predictors_do_not_collapse_full600_lf_payload",
+  "next_score_lowering_work": [
+    "learned/scorer-preserving LF generator or carrier change",
+    "low-resolution/SR NeRV-family carrier that stores fewer LF coefficients",
+    "score-aware decoder-weight fit that changes LF residual distribution before coding",
+    "PACT-VQ full-video scorer replay as a conditional chance gate because its rate is tiny but distortion is unproven"
+  ]
+}
