@@ -103,6 +103,63 @@ def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
     return archive.packet
 
 
+def test_write_decoder_weight_saliency_artifact_for_waterfill(tmp_path: Path) -> None:
+    artifact = {
+        "substrate_artifact_metadata": {
+            "decoder_weight_gradient_saliency": {
+                "schema": "mlx_decoder_weight_gradient_saliency.v1",
+                "row_count": 1,
+                "rows": [
+                    {
+                        "group_name": "decoder.blocks.0.weight",
+                        "saliency": 3.25,
+                        "sample_count": 2,
+                        "numel": 16,
+                    }
+                ],
+                "saliency_by_name": {"decoder.blocks.0.weight": 3.25},
+                "blockers": [],
+                "authority": "macos_mlx_research_signal_false_authority",
+            }
+        }
+    }
+
+    out = runner_mod._write_decoder_weight_saliency_artifact(
+        artifact_dict=artifact,
+        output_dir=tmp_path / "hi_nerv_mlx_training",
+        family="hi_nerv",
+    )
+
+    path = Path(out["path"])
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert out["written"] is True
+    assert out["row_count"] == 1
+    assert out["sha256"] == runner_mod._sha256_file(path)
+    assert payload["artifact_schema"] == (
+        "compact_runner_decoder_weight_saliency_artifact.v1"
+    )
+    assert payload["schema"] == "mlx_decoder_weight_gradient_saliency.v1"
+    assert payload["family"] == "hi_nerv"
+    assert payload["rows"][0]["group_name"] == "decoder.blocks.0.weight"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_write_decoder_weight_saliency_artifact_missing_fails_closed(
+    tmp_path: Path,
+) -> None:
+    out = runner_mod._write_decoder_weight_saliency_artifact(
+        artifact_dict={},
+        output_dir=tmp_path / "hi_nerv_mlx_training",
+        family="hi_nerv",
+    )
+
+    assert out["written"] is False
+    assert out["reason"] == "decoder_weight_gradient_saliency_missing"
+    assert out["authority"] == "macos_mlx_research_signal_false_authority"
+
+
 def _write_mlx_prefilter_profile(
     path: Path,
     *,

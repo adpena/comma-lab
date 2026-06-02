@@ -1,0 +1,33 @@
+{
+  "schema": "nerv_hinerv_decoder_weight_saliency_smoke_observation.v1",
+  "created_utc": "2026-06-02T21:39:00Z",
+  "agent": "codex:gpt-5",
+  "lane_id": "lane_hinerv_decoder_weight_saliency_waterfill_20260602",
+  "family": "hi_nerv",
+  "candidate_scope": "bounded_local_mlx_saliency_smoke_false_authority",
+  "report_path": "/Volumes/VertigoDataTier/pact/hinerv_decoder_weight_saliency_smoke_20260602T213900Z/compact_renderer_mlx_spine_runner_report.json",
+  "report_bytes": 1608561,
+  "report_sha256": "cb0379ae23a9cc63c9a563431591adca6fcb283868f28224720d271539f5bdb1",
+  "decoder_weight_gradient_saliency_path": "/Volumes/VertigoDataTier/pact/hinerv_decoder_weight_saliency_smoke_20260602T213900Z/hi_nerv_mlx_training/decoder_weight_gradient_saliency.json",
+  "decoder_weight_gradient_saliency_bytes": 10926,
+  "decoder_weight_gradient_saliency_sha256": "c986a996d9c2f3937bd2eb8d8832a81ba0c24bcbcd19c6ec925e0812047477c6",
+  "decoder_weight_gradient_saliency_schema": "mlx_decoder_weight_gradient_saliency.v1",
+  "decoder_weight_gradient_saliency_row_count": 24,
+  "archive_bytes": 44907,
+  "authority": "macos_mlx_research_signal_false_authority",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "blockers": [
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "bounded_saliency_smoke_not_full600",
+    "hi_nerv_local_cpu_replay_gate_missing",
+    "full_video_mlx_scorer_replay_not_attached"
+  ],
+  "result_signal": {
+    "decoder_gradient_saliency_collection": "real_mlx_value_and_grad_groups_materialized",
+    "planner_use": "decoder_weight_waterfill_saliency_json_candidate_signal",
+    "next_required_step": "feed_full600_scoreaware_training_saliency_into_decoder_weight_waterfill_and_archive_byte_oracle"
+  }
+}

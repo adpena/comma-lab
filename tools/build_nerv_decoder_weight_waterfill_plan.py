@@ -22,6 +22,7 @@ from tac.analysis.nerv_decoder_weight_waterfill import (  # noqa: E402
     DEFAULT_INCLUDE_SUBSTRINGS,
     NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
     build_nerv_decoder_weight_waterfill_plan,
+    calibrate_saliency_by_name,
     load_saliency_json,
     load_state_npz,
     load_state_npz_from_manifest,
@@ -38,6 +39,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-json", required=True, type=Path)
     parser.add_argument("--output-md", default=None, type=Path)
     parser.add_argument("--saliency-json", default=None, type=Path)
+    parser.add_argument(
+        "--saliency-normalize",
+        choices=("none", "max", "mean", "median", "rank"),
+        default="none",
+        help=(
+            "Normalize saliency values before planning. Use for MLX train-time "
+            "proxy gradients whose units are not exact score units."
+        ),
+    )
+    parser.add_argument("--saliency-scale", default=1.0, type=float)
+    parser.add_argument("--saliency-floor", default=0.0, type=float)
     parser.add_argument("--family", default="hi_nerv")
     parser.add_argument("--candidate-id", default=None)
     parser.add_argument("--include", action="append", default=None)
@@ -57,9 +69,18 @@ def main(argv: list[str] | None = None) -> int:
     saliency = (
         None if args.saliency_json is None else load_saliency_json(args.saliency_json)
     )
+    saliency_calibration = None
+    if saliency is not None:
+        saliency, saliency_calibration = calibrate_saliency_by_name(
+            saliency,
+            mode=str(args.saliency_normalize),
+            scale=float(args.saliency_scale),
+            floor=float(args.saliency_floor),
+        )
     report = build_nerv_decoder_weight_waterfill_plan(
         state,
         saliency_by_name=saliency,
+        saliency_calibration=saliency_calibration,
         family=str(args.family),
         candidate_id=args.candidate_id,
         include_substrings=tuple(args.include) if args.include else DEFAULT_INCLUDE_SUBSTRINGS,

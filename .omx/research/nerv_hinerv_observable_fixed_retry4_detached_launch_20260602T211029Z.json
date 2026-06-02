@@ -1,0 +1,33 @@
+{
+  "cmd": [
+    ".venv/bin/python",
+    "tools/experiment_queue.py",
+    "--queue",
+    ".omx/research/nerv_long_training_campaign_admitted_queue_20260602T211029Z_hinerv_observable_fixed_retry4_codex.json",
+    "run-worker",
+    "--execute",
+    "--max-steps",
+    "1",
+    "--max-parallel",
+    "1",
+    "--poll-interval-seconds",
+    "10",
+    "--idle-sleep-seconds",
+    "2",
+    "--max-idle-cycles",
+    "1",
+    "--log-root",
+    "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_observable_fixed_retry4_29650ep_worker_20260602T211029Z",
+    "--output",
+    ".omx/research/nerv_hinerv_observable_fixed_retry4_worker_result_20260602T211029Z.json"
+  ],
+  "cwd": "/Users/adpena/Projects/pact",
+  "pid": 66205,
+  "promotion_eligible": false,
+  "queue": ".omx/research/nerv_long_training_campaign_admitted_queue_20260602T211029Z_hinerv_observable_fixed_retry4_codex.json",
+  "ready_for_exact_eval_dispatch": false,
+  "result_path": ".omx/research/nerv_hinerv_observable_fixed_retry4_worker_result_20260602T211029Z.json",
+  "schema": "nerv_retry4_detached_worker_launch.v1",
+  "score_claim": false,
+  "stdout_path": "/Volumes/VertigoDataTier/pact/queue_logs/nerv_hinerv_observable_fixed_retry4_29650ep_worker_20260602T211029Z/worker.detached.log"
+}

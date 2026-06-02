@@ -447,6 +447,70 @@ def _pr95_scoreaware_training_metadata(
     return dict(scoreaware)
 
 
+def _decoder_weight_saliency_metadata(
+    artifact_dict: Mapping[str, Any],
+) -> dict[str, Any]:
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if not isinstance(metadata, Mapping):
+        return {}
+    saliency = metadata.get("decoder_weight_gradient_saliency")
+    if not isinstance(saliency, Mapping):
+        return {}
+    return dict(saliency)
+
+
+def _write_decoder_weight_saliency_artifact(
+    *,
+    artifact_dict: Mapping[str, Any],
+    output_dir: Path,
+    family: str,
+) -> dict[str, Any]:
+    """Write train-time decoder-gradient saliency for waterfill planning."""
+
+    saliency = _decoder_weight_saliency_metadata(artifact_dict)
+    if not saliency:
+        return {
+            "schema": "compact_runner_decoder_weight_saliency_artifact.v1",
+            "family": str(family),
+            "written": False,
+            "reason": "decoder_weight_gradient_saliency_missing",
+            "authority": "macos_mlx_research_signal_false_authority",
+        }
+    path = output_dir / "decoder_weight_gradient_saliency.json"
+    payload = {
+        **saliency,
+        "schema": saliency.get("schema")
+        or "mlx_decoder_weight_gradient_saliency.v1",
+        "artifact_schema": "compact_runner_decoder_weight_saliency_artifact.v1",
+        "family": str(family),
+        "source": "MlxScoreAwareAdapter.artifact_metadata",
+        "source_training_artifact_path": (
+            output_dir / "training_artifact.json"
+        ).as_posix(),
+        "artifact_path": path.as_posix(),
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    _write_json(path, payload)
+    return {
+        "schema": "compact_runner_decoder_weight_saliency_artifact.v1",
+        "family": str(family),
+        "written": True,
+        "path": path.as_posix(),
+        "sha256": _sha256_file(path),
+        "row_count": int(payload.get("row_count") or 0),
+        "source_schema": payload.get("schema"),
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _pr95_has_joint_real_scorer_binding(
     *,
     artifact_dict: Mapping[str, Any],
@@ -4635,6 +4699,18 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     archive_path = artifact_dict.get("archive_path")
     training_dir = out / "hi_nerv_mlx_training"
+    decoder_weight_saliency_artifact = _write_decoder_weight_saliency_artifact(
+        artifact_dict=artifact_dict,
+        output_dir=training_dir,
+        family="hi_nerv",
+    )
+    substrate_metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(substrate_metadata, dict):
+        scoreaware_metadata = substrate_metadata.get("score_aware_training")
+        if isinstance(scoreaware_metadata, dict):
+            scoreaware_metadata["decoder_weight_gradient_saliency_artifact"] = (
+                decoder_weight_saliency_artifact
+            )
     archive_file_path = Path(archive_path) if archive_path else None
     archive_artifact_dir = (
         archive_file_path.parent
@@ -4726,6 +4802,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers.extend(score_aware_training_plan.get("blockers") or [])
     blockers.extend(candidate_curriculum_plan.get("blockers") or [])
     blockers.extend(local_cpu_replay_blockers)
+    if not decoder_weight_saliency_artifact.get("written"):
+        blockers.append(
+            decoder_weight_saliency_artifact.get("reason")
+            or "hi_nerv_decoder_weight_saliency_artifact_missing"
+        )
+    elif int(decoder_weight_saliency_artifact.get("row_count") or 0) <= 0:
+        blockers.append("hi_nerv_decoder_weight_saliency_no_decoder_rows")
     pr95_curriculum_enabled = int(epochs) >= 8
     if not pr95_curriculum_enabled:
         blockers.append("hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs")
@@ -4889,6 +4972,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 },
                 "pose_instability_monitor": (
                     _pose_instability_monitor_report_metadata(artifact_dict)
+                ),
+                "decoder_weight_gradient_saliency_artifact": (
+                    decoder_weight_saliency_artifact
                 ),
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream

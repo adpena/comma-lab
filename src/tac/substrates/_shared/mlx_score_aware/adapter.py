@@ -44,6 +44,42 @@ SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS: tuple[str, ...] = (
     "adafactor",
 )
 
+DECODER_GRADIENT_SALIENCY_SCHEMA = "mlx_decoder_weight_gradient_saliency.v1"
+_DECODER_SALIENCY_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
+    "latent_embed",
+    "blocks",
+    "feature_grids",
+    "convnext_blocks",
+    "head",
+    "decoder",
+    "injector",
+)
+_DECODER_SALIENCY_EXCLUDE_SUBSTRINGS: tuple[str, ...] = (
+    "latents",
+    "codebook",
+    "selector",
+    "ema",
+    "teacher",
+    "student",
+)
+
+
+def _tree_name_to_saliency_group(raw_name: Any) -> str:
+    """Normalize MLX tree paths into stable saliency group names."""
+
+    if isinstance(raw_name, (tuple, list)):
+        return ".".join(str(part) for part in raw_name if str(part))
+    return str(raw_name)
+
+
+def _is_decoder_weight_saliency_group(name: str) -> bool:
+    """Return whether a gradient tree leaf belongs to decoder-weight saliency."""
+
+    lowered = str(name).lower()
+    if any(token in lowered for token in _DECODER_SALIENCY_EXCLUDE_SUBSTRINGS):
+        return False
+    return any(token in lowered for token in _DECODER_SALIENCY_INCLUDE_SUBSTRINGS)
+
 
 class MlxScoreAwareAdapter:
     """Generic Style-B MLX adapter satisfying ``SubstrateLongTrainingAdapter``.
@@ -209,6 +245,10 @@ class MlxScoreAwareAdapter:
         self._wave_n11_grad_norm_history: list[float] = []
         self._wave_n11_clipped_count: int = 0
         self._wave_n11_step_count: int = 0
+        self._decoder_grad_sq_sum_by_name: dict[str, float] = {}
+        self._decoder_grad_sample_count_by_name: dict[str, int] = {}
+        self._decoder_grad_numel_by_name: dict[str, int] = {}
+        self._decoder_grad_absmax_by_name: dict[str, float] = {}
 
         # PR95-faithful 8-stage Muon+AdamW canonical curriculum state per
         # CLAUDE.md L14 + L15 (Option A). Default-off preserves legacy adapter
@@ -570,6 +610,9 @@ class MlxScoreAwareAdapter:
                 "required_when_score_terms_enabled": True,
             },
         }
+        metadata["decoder_weight_gradient_saliency"] = (
+            self.decoder_weight_gradient_saliency_summary()
+        )
         return metadata
 
     def sample_batch(self, batch_size: int, seed: int) -> Any:
@@ -705,6 +748,92 @@ class MlxScoreAwareAdapter:
             ),
         }
 
+    def decoder_weight_gradient_saliency_summary(self) -> Mapping[str, Any]:
+        """Return train-time decoder-weight saliency from real MLX gradients.
+
+        The rows are the diagonal-Fisher group proxy used by the NeRV
+        waterfill planner: for each decoder tensor, accumulate
+        ``sum(grad ** 2)`` across score-aware train steps and expose
+        ``mean_grad_sq`` as the scalar group saliency. This is MLX-local
+        research evidence only; exact CPU/CUDA replay remains the authority.
+        """
+
+        rows: list[dict[str, Any]] = []
+        for name in sorted(self._decoder_grad_sq_sum_by_name):
+            samples = int(self._decoder_grad_sample_count_by_name.get(name) or 0)
+            numel = int(self._decoder_grad_numel_by_name.get(name) or 0)
+            grad_sq_sum = float(self._decoder_grad_sq_sum_by_name[name])
+            denom = max(1, samples * max(1, numel))
+            saliency = grad_sq_sum / float(denom)
+            rows.append(
+                {
+                    "schema": "mlx_decoder_weight_gradient_saliency_row.v1",
+                    "group_name": name,
+                    "name": name,
+                    "saliency": saliency,
+                    "decoder_weight_saliency": saliency,
+                    "sum_grad_sq": grad_sq_sum,
+                    "sample_count": samples,
+                    "numel": numel,
+                    "max_abs_grad": float(
+                        self._decoder_grad_absmax_by_name.get(name, 0.0)
+                    ),
+                }
+            )
+        blockers: list[str] = []
+        if not rows:
+            blockers.append("decoder_weight_gradient_saliency_no_decoder_rows")
+        return {
+            "schema": DECODER_GRADIENT_SALIENCY_SCHEMA,
+            "collector": (
+                "MlxScoreAwareAdapter.train_step value_and_grad "
+                "decoder tensor grad_sq accumulator"
+            ),
+            "authority": "macos_mlx_research_signal_false_authority",
+            "selection_target": "decoder_weight_waterfill_saliency_json",
+            "row_count": len(rows),
+            "rows": rows,
+            "saliency_by_name": {
+                str(row["group_name"]): float(row["saliency"]) for row in rows
+            },
+            "blockers": blockers,
+        }
+
+    def _accumulate_decoder_weight_gradient_saliency(self, grads: Any) -> None:
+        """Accumulate squared MLX gradients for decoder-weight waterfilling."""
+
+        from mlx.utils import tree_flatten
+
+        mx = self._mx
+        for raw_name, grad in tree_flatten(grads):
+            name = _tree_name_to_saliency_group(raw_name)
+            if not _is_decoder_weight_saliency_group(name):
+                continue
+            shape = getattr(grad, "shape", None)
+            if shape is None:
+                continue
+            numel = 1
+            for dim in shape:
+                numel *= int(dim)
+            if numel <= 0:
+                continue
+            grad_f32 = grad.astype(mx.float32)
+            grad_sq_sum = mx.sum(grad_f32 * grad_f32)
+            grad_absmax = mx.max(mx.abs(grad_f32))
+            mx.eval(grad_sq_sum, grad_absmax)
+            self._decoder_grad_sq_sum_by_name[name] = (
+                self._decoder_grad_sq_sum_by_name.get(name, 0.0)
+                + float(grad_sq_sum.item())
+            )
+            self._decoder_grad_sample_count_by_name[name] = (
+                self._decoder_grad_sample_count_by_name.get(name, 0) + 1
+            )
+            self._decoder_grad_numel_by_name[name] = int(numel)
+            self._decoder_grad_absmax_by_name[name] = max(
+                float(self._decoder_grad_absmax_by_name.get(name, 0.0)),
+                float(grad_absmax.item()),
+            )
+
     def loss_fn(
         self,
         model: Any,
@@ -799,6 +928,7 @@ class MlxScoreAwareAdapter:
 
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
         loss_value, grads = loss_and_grad_fn(self.model)
+        self._accumulate_decoder_weight_gradient_saliency(grads)
         # Wave N+11 stabilizer: apply mlx.optimizers.clip_grad_norm BEFORE
         # optimizer.update so the NaN-at-ep-16-18 gradient-explosion signature
         # cannot propagate into the AdamW second-moment buffers (which then
@@ -932,6 +1062,7 @@ class MlxScoreAwareAdapter:
 
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
         loss_value, grads = loss_and_grad_fn(self.model)
+        self._accumulate_decoder_weight_gradient_saliency(grads)
 
         # Apply ONE canonical Muon+AdamW (or AdamW-only) step. The canonical
         # helper handles Muon NS iteration + Muon/AdamW partition + per-name

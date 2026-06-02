@@ -76,6 +76,15 @@ def test_nerv_long_training_campaign_admission_builds_storage_gated_queue(
     assert (
         output_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl"
     ).as_posix() in artifact_paths
+    json_postcondition_paths = {
+        condition["path"]
+        for condition in selected["steps"][0]["postconditions"]
+        if condition["type"].startswith("json_")
+    }
+    assert json_postcondition_paths == {
+        (output_dir / "compact_renderer_mlx_spine_runner_report.json").as_posix()
+    }
+    assert output_dir.as_posix() not in json_postcondition_paths
     assert selected["metadata"]["human_visual_fidelity_relevance"] == (
         "irrelevant_unless_scorer_causal"
     )

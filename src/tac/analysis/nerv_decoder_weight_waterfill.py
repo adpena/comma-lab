@@ -47,6 +47,13 @@ DEFAULT_EXCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "student",
 )
 DEFAULT_ACTION_BITS: tuple[int, ...] = (0, 2, 4, 8, 16, 32)
+SALIENCY_CALIBRATION_MODES: tuple[str, ...] = (
+    "none",
+    "max",
+    "mean",
+    "median",
+    "rank",
+)
 
 
 class NervDecoderWeightWaterfillError(ValueError):
@@ -66,6 +73,7 @@ def build_nerv_decoder_weight_waterfill_plan(
     state_dict: Mapping[str, Any],
     *,
     saliency_by_name: Mapping[str, float] | None = None,
+    saliency_calibration: Mapping[str, Any] | None = None,
     family: str = "hi_nerv",
     candidate_id: str | None = None,
     include_substrings: Sequence[str] = DEFAULT_INCLUDE_SUBSTRINGS,
@@ -165,6 +173,7 @@ def build_nerv_decoder_weight_waterfill_plan(
         "exclude_substrings": list(excludes),
         "action_bits": list(bits),
         "zero_run_overhead_bytes": int(zero_run_overhead_bytes),
+        "saliency_calibration": dict(saliency_calibration or {}),
         "group_count": len(rows),
         "total_baseline_fp32_bytes": int(sum(row["baseline_fp32_bytes"] for row in rows)),
         "total_selected_estimated_bytes": int(
@@ -256,6 +265,96 @@ def load_saliency_json(path: str | Path) -> dict[str, float]:
     if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes)):
         return _saliency_from_rows(payload)
     raise NervDecoderWeightWaterfillError("unsupported saliency JSON shape")
+
+
+def calibrate_saliency_by_name(
+    saliency_by_name: Mapping[str, float],
+    *,
+    mode: str = "none",
+    scale: float = 1.0,
+    floor: float = 0.0,
+) -> tuple[dict[str, float], dict[str, Any]]:
+    """Normalize raw saliency proxies while preserving false-authority labels.
+
+    Train-time gradient saliency and scorer-loss replay saliency can have
+    different units. This helper makes that calibration explicit instead of
+    hiding it in ad hoc JSON edits. ``mode="none"`` preserves values exactly;
+    other modes keep only relative ordering/magnitude, then apply ``scale``.
+    """
+
+    mode = str(mode)
+    if mode not in SALIENCY_CALIBRATION_MODES:
+        raise NervDecoderWeightWaterfillError(
+            "unsupported saliency calibration mode: "
+            f"{mode!r}; expected one of {SALIENCY_CALIBRATION_MODES}"
+        )
+    if float(scale) <= 0.0:
+        raise NervDecoderWeightWaterfillError("saliency scale must be positive")
+    if float(floor) < 0.0:
+        raise NervDecoderWeightWaterfillError("saliency floor must be >= 0")
+    parsed = {
+        str(name): max(0.0, float(value))
+        for name, value in saliency_by_name.items()
+        if _finite_float_or_none(value) is not None
+    }
+    if not parsed:
+        return (
+            {},
+            {
+                "schema": "nerv_decoder_weight_saliency_calibration.v1",
+                "mode": mode,
+                "scale": float(scale),
+                "floor": float(floor),
+                "input_count": 0,
+                "output_count": 0,
+                "blockers": ["saliency_calibration_no_finite_inputs"],
+            },
+        )
+    if mode == "none":
+        calibrated = {name: _apply_saliency_floor(value, floor) for name, value in parsed.items()}
+        divisor = 1.0
+    elif mode == "rank":
+        ordered = sorted(parsed.items(), key=lambda item: (item[1], item[0]))
+        denom = float(max(1, len(ordered)))
+        calibrated = {
+            name: _apply_saliency_floor(float(index + 1) / denom * float(scale), floor)
+            for index, (name, _value) in enumerate(ordered)
+        }
+        divisor = None
+    else:
+        values = np.asarray(list(parsed.values()), dtype=np.float64)
+        if mode == "max":
+            divisor = float(np.max(values))
+        elif mode == "mean":
+            divisor = float(np.mean(values))
+        else:
+            divisor = float(np.median(values))
+        if divisor <= 0.0:
+            calibrated = {
+                name: _apply_saliency_floor(0.0, floor) for name in parsed
+            }
+        else:
+            calibrated = {
+                name: _apply_saliency_floor(value / divisor * float(scale), floor)
+                for name, value in parsed.items()
+            }
+    values_out = list(calibrated.values())
+    return (
+        calibrated,
+        {
+            "schema": "nerv_decoder_weight_saliency_calibration.v1",
+            "mode": mode,
+            "scale": float(scale),
+            "floor": float(floor),
+            "divisor": divisor,
+            "input_count": len(parsed),
+            "output_count": len(calibrated),
+            "output_min": min(values_out) if values_out else None,
+            "output_max": max(values_out) if values_out else None,
+            "authority": "false_authority_saliency_proxy_calibration_no_score_claim",
+            "blockers": [],
+        },
+    )
 
 
 def render_nerv_decoder_weight_waterfill_markdown(report: Mapping[str, Any]) -> str:
@@ -511,6 +610,10 @@ def _first_present(row: Mapping[str, Any], keys: Sequence[str]) -> Any:
     return None
 
 
+def _apply_saliency_floor(value: float, floor: float) -> float:
+    return max(float(floor), float(value))
+
+
 def _validated_action_bits(bits: Sequence[int]) -> tuple[int, ...]:
     parsed = tuple(sorted({int(bit) for bit in bits}))
     if not parsed:
@@ -576,6 +679,7 @@ __all__ = [
     "NervDecoderWeightWaterfillError",
     "TensorGroup",
     "build_nerv_decoder_weight_waterfill_plan",
+    "calibrate_saliency_by_name",
     "load_saliency_json",
     "load_state_npz",
     "load_state_npz_from_manifest",

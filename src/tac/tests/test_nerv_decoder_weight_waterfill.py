@@ -12,6 +12,7 @@ from tac.analysis.nerv_decoder_weight_waterfill import (
     NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
     NervDecoderWeightWaterfillError,
     build_nerv_decoder_weight_waterfill_plan,
+    calibrate_saliency_by_name,
     load_saliency_json,
     load_state_npz_from_manifest,
 )
@@ -87,6 +88,22 @@ def test_decoder_weight_waterfill_loads_zero_saliency_rows(tmp_path: Path) -> No
     )
 
     assert load_saliency_json(saliency_path) == {"blocks.0.weight": 0.0}
+
+
+def test_decoder_weight_waterfill_calibrates_raw_proxy_saliency() -> None:
+    calibrated, metadata = calibrate_saliency_by_name(
+        {"blocks.0.weight": 1_000_000.0, "blocks.1.weight": 500_000.0},
+        mode="max",
+        scale=1.0e-7,
+    )
+
+    assert calibrated["blocks.0.weight"] == pytest.approx(1.0e-7)
+    assert calibrated["blocks.1.weight"] == pytest.approx(0.5e-7)
+    assert metadata["schema"] == "nerv_decoder_weight_saliency_calibration.v1"
+    assert metadata["mode"] == "max"
+    assert metadata["authority"] == (
+        "false_authority_saliency_proxy_calibration_no_score_claim"
+    )
 
 
 def test_decoder_weight_waterfill_loads_state_from_verified_npz_manifest(
@@ -183,6 +200,51 @@ def test_build_nerv_decoder_weight_waterfill_plan_cli_smoke(tmp_path: Path) -> N
     assert payload["rows"][0]["selected_byte_delta"] < 0
     assert payload["rows"][0]["selected_delta_total_score_proxy"] < 0.0
     assert "latents.0" not in output_md.read_text(encoding="utf-8")
+
+
+def test_build_nerv_decoder_weight_waterfill_plan_cli_normalizes_saliency(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "state.npz"
+    saliency_path = tmp_path / "saliency.json"
+    output_json = tmp_path / "waterfill.json"
+    np.savez(
+        state_path,
+        **{"blocks.0.weight": np.asarray([0.125, -0.75, 1.0], dtype=np.float32)},
+    )
+    saliency_path.write_text(
+        json.dumps({"blocks.0.weight": 1_000_000_000.0}),
+        encoding="utf-8",
+    )
+
+    rc = tool_main(
+        [
+            "--state-npz",
+            str(state_path),
+            "--saliency-json",
+            str(saliency_path),
+            "--saliency-normalize",
+            "max",
+            "--saliency-scale",
+            "1e-7",
+            "--output-json",
+            str(output_json),
+            "--action-bits",
+            "0,2,32",
+            "--full-video-coverage",
+            "--receiver-proof-status",
+            "runtime_consumption_proof_ready",
+            "--archive-sha256",
+            "e" * 64,
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["saliency_calibration"]["mode"] == "max"
+    assert payload["saliency_calibration"]["scale"] == pytest.approx(1.0e-7)
+    assert payload["rows"][0]["saliency"] == pytest.approx(1.0e-7)
+    assert payload["rows"][0]["selected_byte_delta"] < 0
 
 
 def test_build_nerv_decoder_weight_waterfill_plan_cli_accepts_npz_manifest(

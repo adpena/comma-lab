@@ -333,7 +333,11 @@ def _admitted_experiment(
         command,
         family=str(row.get("family") or "unknown"),
     )
-    postconditions = [dict(item) for item in _mapping_list(row.get("postconditions"))]
+    postconditions = _normalize_report_postconditions(
+        _mapping_list(row.get("postconditions")),
+        report_path=report_path,
+        command=command,
+    )
     if not postconditions and report_path:
         postconditions = [
             {
@@ -464,6 +468,32 @@ def _row_record(
         **PROXY_FALSE_AUTHORITY_FIELDS,
         "frontier_score_claim": False,
     }
+
+
+def _normalize_report_postconditions(
+    postconditions: Sequence[Mapping[str, Any]],
+    *,
+    report_path: str,
+    command: Sequence[str],
+) -> list[dict[str, Any]]:
+    """Point copied row postconditions at the terminal runner report.
+
+    Older generated campaign rows used the output directory itself as a JSON
+    postcondition path. The queue worker then ran real training, saw only a
+    directory at the checked path, and classified the row as failed even though
+    telemetry was being produced. Admission is the authority boundary for live
+    execution, so it normalizes that stale shape before queueing.
+    """
+
+    out_dir = _output_dir(command)
+    out_dir_text = "" if out_dir is None else out_dir.as_posix()
+    normalized: list[dict[str, Any]] = []
+    for item in postconditions:
+        entry = dict(item)
+        if report_path and str(entry.get("path") or "") in {"", out_dir_text}:
+            entry["path"] = report_path
+        normalized.append(entry)
+    return normalized
 
 
 def _require_no_authority(payload: Mapping[str, Any], *, label: str) -> None:

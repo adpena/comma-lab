@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -276,6 +277,9 @@ def build_nerv_training_telemetry_feedback_row(
         ),
         "training_telemetry": health,
         "pose_instability_detected": bool(health["pose_instability_detected"]),
+        "pose_instability_partial_window_detected": bool(
+            health.get("pose_instability_partial_window_detected")
+        ),
         "pose_instability_first_epoch": health.get("pose_instability_first_epoch"),
         "pose_instability_last_window_bad_fraction": health.get(
             "pose_instability_last_window_bad_fraction"
@@ -585,6 +589,10 @@ def _summarize_training_telemetry_health(
     bad_epochs: list[int] = []
     window_size = max(1, int(instability_window_epochs))
     bad_fraction_threshold = min(max(float(instability_bad_fraction), 0.0), 1.0)
+    partial_window_min_epochs = max(
+        1,
+        math.ceil(float(window_size) * float(bad_fraction_threshold)),
+    )
     first_bad_window_epoch: int | None = None
     rolling_flags: list[bool] = []
     for row in rows:
@@ -635,8 +643,16 @@ def _summarize_training_telemetry_health(
         if last_window
         else 0.0
     )
+    partial_window_instability = bool(
+        first_bad_window_epoch is None
+        and len(rolling_flags) < window_size
+        and len(rolling_flags) >= partial_window_min_epochs
+        and last_bad_fraction >= bad_fraction_threshold
+    )
+    if partial_window_instability:
+        first_bad_window_epoch = epochs[-1] if epochs else None
     observed_lr = learning_rates[-1] if learning_rates else None
-    instability = bool(first_bad_window_epoch is not None)
+    instability = bool(first_bad_window_epoch is not None or partial_window_instability)
     recommended_lr = (
         max(float(observed_lr) * float(learning_rate_multiplier), 1.0e-6)
         if instability and observed_lr is not None
@@ -662,6 +678,8 @@ def _summarize_training_telemetry_health(
         "pose_axis_instability_threshold": float(pose_axis_instability_threshold),
         "instability_window_epochs": int(window_size),
         "instability_bad_fraction_threshold": float(bad_fraction_threshold),
+        "partial_window_instability_min_epochs": int(partial_window_min_epochs),
+        "pose_instability_partial_window_detected": partial_window_instability,
         "pose_bad_epoch_count": len(bad_epochs),
         "pose_bad_epoch_fraction": (
             len(bad_epochs) / float(len(rows)) if rows else 0.0

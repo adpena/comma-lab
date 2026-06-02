@@ -5,6 +5,7 @@ MLX-bound tests skip cleanly on non-Apple-Silicon CI.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -434,6 +435,51 @@ def test_adapter_artifact_metadata_records_score_aware_objective() -> None:
     assert objective["eval_roundtrip_ste"]["enabled"] is True
     assert objective["eval_roundtrip_ste"]["camera_hw"] == [874, 1164]
     assert objective["pose_student_input_preprocess"]["mode"] == "rgb"
+    assert metadata["decoder_weight_gradient_saliency"]["row_count"] == 0
+    assert "score_claim" not in json.dumps(
+        metadata["decoder_weight_gradient_saliency"], sort_keys=True
+    )
+
+
+@mlx_only
+def test_adapter_accumulates_real_decoder_weight_gradient_saliency() -> None:
+    import mlx.core as mx
+
+    adapter = MlxScoreAwareAdapter(
+        _tiny_dreamer_bundle(distill=0.0), substrate_id="dreamer_v3_rssm"
+    )
+    adapter._accumulate_decoder_weight_gradient_saliency(
+        {
+            "decoder": {
+                "weight": mx.ones((2, 3), dtype=mx.float32),
+                "bias": mx.array([2.0], dtype=mx.float32),
+            },
+            "latents": {"weight": mx.ones((1,), dtype=mx.float32)},
+            "student": {"head": mx.ones((1,), dtype=mx.float32)},
+            "codebook": {"values": mx.ones((1,), dtype=mx.float32)},
+        }
+    )
+    adapter._accumulate_decoder_weight_gradient_saliency(
+        {"decoder": {"weight": mx.full((2, 3), 2.0, dtype=mx.float32)}}
+    )
+
+    summary = adapter.decoder_weight_gradient_saliency_summary()
+    rows = {row["group_name"]: row for row in summary["rows"]}
+    assert summary["schema"] == "mlx_decoder_weight_gradient_saliency.v1"
+    assert summary["row_count"] == 2
+    assert set(rows) == {"decoder.bias", "decoder.weight"}
+    assert rows["decoder.weight"]["sum_grad_sq"] == pytest.approx(30.0)
+    assert rows["decoder.weight"]["sample_count"] == 2
+    assert rows["decoder.weight"]["numel"] == 6
+    assert rows["decoder.weight"]["saliency"] == pytest.approx(2.5)
+    assert rows["decoder.weight"]["max_abs_grad"] == pytest.approx(2.0)
+    assert rows["decoder.bias"]["sum_grad_sq"] == pytest.approx(4.0)
+    assert rows["decoder.bias"]["saliency"] == pytest.approx(4.0)
+
+    metadata = adapter.artifact_metadata()
+    saliency = metadata["decoder_weight_gradient_saliency"]
+    assert saliency["row_count"] == 2
+    assert saliency["saliency_by_name"]["decoder.weight"] == pytest.approx(2.5)
 
 
 @mlx_only

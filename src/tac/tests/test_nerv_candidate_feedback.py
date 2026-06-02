@@ -249,6 +249,40 @@ def test_training_telemetry_feedback_detects_pose_instability_and_lr_replan(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_training_telemetry_feedback_detects_partial_window_pose_instability(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "partial_window_telemetry.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {"loss_part_pose_distill": 1_200_000.0},
+            "per_axis_decomposition": {"pose": 900_000.0, "seg": 6.0},
+        }
+        for epoch in range(27)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000",
+        candidate_num_pairs=600,
+    )
+
+    assert row["pose_instability_detected"] is True
+    assert row["pose_instability_partial_window_detected"] is True
+    assert row["pose_instability_last_window_bad_fraction"] == 1.0
+    assert abs(float(row["recommended_learning_rate"]) - 8.1e-6) < 1.0e-12
+    assert "lower_learning_rate_from_pose_instability_telemetry" in row[
+        "recommended_launch_mutations"
+    ]
+
+
 def test_write_training_telemetry_feedback_files_writes_manifest_and_ledger(
     tmp_path: Path,
 ) -> None:

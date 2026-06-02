@@ -1152,9 +1152,7 @@ def _family_level_candidate_feedback_applicable(
         return False
     target_num_pairs = int(candidate.get("num_pairs") or 0)
     measured_num_pairs = int(row.get("measured_num_pairs") or 0)
-    if target_num_pairs <= 0 or measured_num_pairs != target_num_pairs:
-        return False
-    return True
+    return target_num_pairs > 0 and measured_num_pairs == target_num_pairs
 
 
 def _sanitize_family_level_candidate_feedback(
