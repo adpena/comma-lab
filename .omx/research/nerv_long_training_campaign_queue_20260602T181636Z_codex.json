@@ -1982,9 +1982,9 @@
       ]
     },
     {
-      "blocked": true,
+      "blocked": false,
       "blockers": [
-        "snerv_shared_mlx_scoreaware_long_training_harness_not_bound",
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
         "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
         "snerv_mlx_native_adapter_surfaces_present_but_unproven",
@@ -2024,7 +2024,7 @@
         "full_video_prefilter_required": true,
         "gpu_launched": false,
         "local_cpu_replay_required": true,
-        "local_mlx_executable": false,
+        "local_mlx_executable": true,
         "missing_requirement_ids": [
           "pr95_staged_curriculum",
           "differentiable_pose_preprocess",
@@ -2062,7 +2062,7 @@
         ],
         "promotable": false,
         "promotion_blockers": [
-          "snerv_shared_mlx_scoreaware_long_training_harness_not_bound",
+          "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
           "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
           "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
           "snerv_mlx_native_adapter_surfaces_present_but_unproven",
@@ -2093,7 +2093,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "disabled",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -2112,7 +2112,7 @@
             "--num-pairs",
             "600",
             "--epochs",
-            "29650",
+            "3",
             "--modelsize-candidate-id",
             "snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000",
             "--coder-aware-qat",
@@ -2162,7 +2162,7 @@
               "contains": "snerv_score_aware_curriculum_not_native_mlx_yet",
               "key": "blockers",
               "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000_native_rate_aware_training/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_path_contains"
+              "type": "json_array_contains"
             }
           ],
           "promotion_eligible": false,
@@ -2176,9 +2176,9 @@
       ]
     },
     {
-      "blocked": true,
+      "blocked": false,
       "blockers": [
-        "snerv_shared_mlx_scoreaware_long_training_harness_not_bound",
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
         "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
         "snerv_mlx_native_adapter_surfaces_present_but_unproven",
@@ -2218,7 +2218,7 @@
         "full_video_prefilter_required": true,
         "gpu_launched": false,
         "local_cpu_replay_required": true,
-        "local_mlx_executable": false,
+        "local_mlx_executable": true,
         "missing_requirement_ids": [
           "pr95_staged_curriculum",
           "differentiable_pose_preprocess",
@@ -2256,7 +2256,7 @@
         ],
         "promotable": false,
         "promotion_blockers": [
-          "snerv_shared_mlx_scoreaware_long_training_harness_not_bound",
+          "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
           "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
           "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
           "snerv_mlx_native_adapter_surfaces_present_but_unproven",
@@ -2287,7 +2287,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "disabled",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -2306,7 +2306,7 @@
             "--num-pairs",
             "600",
             "--epochs",
-            "29650",
+            "3",
             "--modelsize-candidate-id",
             "snerv_np600_lv3_lfb1p5_stepb0p5_int2_symmetric_ceil36000",
             "--coder-aware-qat",
@@ -2356,7 +2356,7 @@
               "contains": "snerv_score_aware_curriculum_not_native_mlx_yet",
               "key": "blockers",
               "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_snerv_np600_lv3_lfb1p5_stepb0p5_int2_symmetric_ceil36000_native_rate_aware_training/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_path_contains"
+              "type": "json_array_contains"
             }
           ],
           "promotion_eligible": false,
@@ -2370,9 +2370,9 @@
       ]
     },
     {
-      "blocked": true,
+      "blocked": false,
       "blockers": [
-        "snerv_shared_mlx_scoreaware_long_training_harness_not_bound",
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
         "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
         "snerv_mlx_native_adapter_surfaces_present_but_unproven",
@@ -2412,7 +2412,7 @@
         "full_video_prefilter_required": true,
         "gpu_launched": false,
         "local_cpu_replay_required": true,
-        "local_mlx_executable": false,
+        "local_mlx_executable": true,
         "missing_requirement_ids": [
           "pr95_staged_curriculum",
           "differentiable_pose_preprocess",
@@ -2450,7 +2450,7 @@
         ],
         "promotable": false,
         "promotion_blockers": [
-          "snerv_shared_mlx_scoreaware_long_training_harness_not_bound",
+          "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
           "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
           "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
           "snerv_mlx_native_adapter_surfaces_present_but_unproven",
@@ -2481,7 +2481,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "disabled",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -2500,7 +2500,7 @@
             "--num-pairs",
             "600",
             "--epochs",
-            "29650",
+            "3",
             "--modelsize-candidate-id",
             "snerv_np600_lv4_lfb1p5_stepb0p5_int2_symmetric_ceil36000",
             "--coder-aware-qat",
@@ -2550,7 +2550,7 @@
               "contains": "snerv_score_aware_curriculum_not_native_mlx_yet",
               "key": "blockers",
               "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_snerv_np600_lv4_lfb1p5_stepb0p5_int2_symmetric_ceil36000_native_rate_aware_training/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_path_contains"
+              "type": "json_array_contains"
             }
           ],
           "promotion_eligible": false,

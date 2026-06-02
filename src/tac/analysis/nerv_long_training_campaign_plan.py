@@ -305,13 +305,14 @@ def _snerv_campaign_row(
     output_root: Path,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
+    execution_epochs = min(int(epochs), 3)
     quant_bits = min(
         8,
         snerv_decoder_codec_nominal_bits(str(candidate.get("decoder_payload_codec"))),
     )
     curriculum = build_snerv_candidate_curriculum_plan(
         candidate=candidate,
-        requested_epochs=int(epochs),
+        requested_epochs=int(execution_epochs),
         num_pairs=int(candidate.get("num_pairs") or 600),
         step_map_coder_mode="waterfill",
         native_mlx_train_export_attached=True,
@@ -336,7 +337,7 @@ def _snerv_campaign_row(
         "--num-pairs",
         str(int(candidate.get("num_pairs") or 600)),
         "--epochs",
-        str(int(epochs)),
+        str(int(execution_epochs)),
         "--modelsize-candidate-id",
         candidate_id,
         "--coder-aware-qat",
@@ -351,7 +352,7 @@ def _snerv_campaign_row(
     ]
     blockers = _dedupe(
         [
-            "snerv_shared_mlx_scoreaware_long_training_harness_not_bound",
+            "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
             "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
             "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes"
             if candidate.get("nominal_under_ceiling") is not True
@@ -366,12 +367,14 @@ def _snerv_campaign_row(
         candidate=candidate,
         curriculum_plan=curriculum,
         command_argv=command,
-        local_mlx_launch_command_ready=False,
-        implementation_status="native_shared_mlx_long_training_gap",
+        local_mlx_launch_command_ready=True,
+        implementation_status="bounded_native_export_scorer_loop_stage_ready",
         blockers=blockers,
         extra={
             "optimizer_kind": None,
             "quant_bits": int(quant_bits),
+            "planned_long_training_epochs": int(epochs),
+            "execution_epochs": int(execution_epochs),
             "current_command_is_bounded_proof_not_long_training": True,
         },
     )
@@ -516,7 +519,7 @@ def _experiment_for_row(
                     "equals": "snerv",
                 },
                 {
-                    "type": "json_path_contains",
+                    "type": "json_array_contains",
                     "path": output_json,
                     "key": "blockers",
                     "contains": "snerv_score_aware_curriculum_not_native_mlx_yet",
@@ -695,7 +698,7 @@ def _family_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
 
 def _plan_level_blocker(blocker: str) -> bool:
     return str(blocker) in {
-        "snerv_shared_mlx_scoreaware_long_training_harness_not_bound",
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only",
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
         "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
     }

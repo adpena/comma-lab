@@ -34,7 +34,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["campaign_row_count"] == 3
     assert report["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
-    assert report["launchable_local_row_count"] == 2
+    assert report["launchable_local_row_count"] == 3
     assert report["family_counts"] == {"hi_nerv": 2, "snerv": 1}
 
     hi_rows = [row for row in report["campaign_rows"] if row["family"] == "hi_nerv"]
@@ -93,20 +93,20 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     }
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
-    assert snerv_row["local_mlx_launch_command_ready"] is False
-    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
+    assert snerv_row["local_mlx_launch_command_ready"] is True
+    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is True
     assert snerv_row["cpu_replay_ready"] is False
     assert snerv_row["exact_gate_ready"] is False
-    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
-    assert snerv_row["experiment_queue_entry"]["blocked"] is True
-    assert "snerv_shared_mlx_scoreaware_long_training_harness_not_bound" in snerv_row[
+    assert snerv_row["experiment_queue_entry"]["status"] == "queued"
+    assert snerv_row["experiment_queue_entry"]["blocked"] is False
+    assert "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" in snerv_row[
         "blockers"
     ]
     assert "--snerv-scorer-loop-qat" in snerv_row["command_argv"]
     snerv_step = snerv_row["experiment_queue_entry"]["steps"][0]
     assert {
         condition["type"] for condition in snerv_step["postconditions"]
-    } >= {"json_equals", "json_path_contains"}
+    } >= {"json_equals", "json_array_contains"}
 
     markdown = render_nerv_long_training_campaign_plan_markdown(report)
     assert "NeRV Long-Training Campaign Plan" in markdown
