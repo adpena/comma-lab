@@ -314,6 +314,7 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         repo_root=REPO_ROOT,
         decoder_codec="int8_mixed",
         retain_receiver_proof_output=False,
+        source_backend="pytorch_test_export",
     )
 
     assert archive_path.is_file()
@@ -371,10 +372,12 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert portability["portability_status"] == (
         "numpy_export_bridge_ready_receiver_not_numpy"
     )
+    assert portability["training_backend"] == "pytorch_test_export"
     assert portability["numpy_array_export"] is True
     assert portability["canonical_npz_bridge_used"] is True
     assert portability["pure_numpy_inflate"] is False
     assert "torch" in portability["non_numpy_receiver_dependencies"]
+    assert "training_backend_not_mlx" in portability["portability_blockers"]
     assert "inflate_runtime_not_pure_numpy" in portability["portability_blockers"]
     assert "canonical_npz_bridge_not_used_or_not_applicable" not in portability[
         "portability_blockers"

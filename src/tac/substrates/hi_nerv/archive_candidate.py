@@ -60,13 +60,15 @@ _STATE_NPZ_MANIFEST_NAME = "hi_nerv_mlx_exported_state_npz_manifest.json"
 def hi_nerv_mlx_numpy_portability_contract(
     *,
     canonical_npz_bridge_used: bool = True,
+    training_backend: str = "mlx",
 ) -> dict[str, Any]:
     """Return the honest portability contract for the current HiNeRV receiver."""
 
+    backend = str(training_backend)
     return build_mlx_numpy_portability_contract(
         substrate_id="hi_nerv",
-        training_backend="mlx",
-        exported_state_kind="pytorch_layout_numpy_arrays_from_mlx_model",
+        training_backend=backend,
+        exported_state_kind=f"pytorch_layout_numpy_arrays_from_{backend}_model",
         archive_payload_kind="hiv1_monolithic_0_bin",
         receiver_runtime_kind="torch_decode_receiver",
         receiver_dependencies=("torch", "brotli", "python_stdlib"),
@@ -110,6 +112,7 @@ def _write_and_reload_exported_state_via_numpy_bridge(
     *,
     exported_state_dict: dict[str, np.ndarray],
     output_dir: Path,
+    source_backend: str = "mlx",
 ) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
     """Persist and reload the exact NumPy bridge consumed by the packer."""
 
@@ -117,8 +120,8 @@ def _write_and_reload_exported_state_via_numpy_bridge(
     manifest = write_npz_bridge_artifact(
         exported_state_dict,
         npz_path,
-        source_backend="mlx",
-        bridge_kind="hi_nerv_mlx_export_state_dict_to_npz",
+        source_backend=str(source_backend),
+        bridge_kind=f"hi_nerv_{source_backend}_export_state_dict_to_npz",
         manifest_path=manifest_path,
         require_finite=True,
     )
@@ -199,6 +202,7 @@ def export_hi_nerv_mlx_archive(
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
     decoder_codec: str = "int8_mixed",
+    source_backend: str = "mlx",
 ) -> tuple[Path, str, int]:
     """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``."""
 
@@ -217,6 +221,7 @@ def export_hi_nerv_mlx_archive(
         _write_and_reload_exported_state_via_numpy_bridge(
             exported_state_dict=model.export_state_dict(),
             output_dir=out_dir,
+            source_backend=source_backend,
         )
     )
     bin_bytes = pack_archive_from_exported_state_dict(
@@ -264,6 +269,7 @@ def export_hi_nerv_mlx_archive(
                     "manifest_path": npz_bridge_manifest["manifest_path"],
                     "tensor_count": npz_bridge_manifest["tensor_count"],
                 },
+                "export_source_backend": str(source_backend),
             },
         ),
         basename="hprc_representation_spine_hi_nerv",
@@ -294,7 +300,9 @@ def export_hi_nerv_mlx_archive(
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge_manifest": npz_bridge_manifest,
                 "mlx_numpy_portability_contract": (
-                    hi_nerv_mlx_numpy_portability_contract()
+                    hi_nerv_mlx_numpy_portability_contract(
+                        training_backend=source_backend
+                    )
                 ),
             },
             candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",
@@ -312,6 +320,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     retain_receiver_proof_output: bool = False,
     mlx_triage_argv: Sequence[str] | None = None,
     decoder_codec: str = "int8_mixed",
+    source_backend: str = "mlx",
 ) -> dict[str, Any]:
     """Export HiNeRV MLX bytes and emit the shared candidate package."""
 
@@ -321,6 +330,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         repo_root=repo_root,
         emit_archive_bound_candidate_package=False,
         decoder_codec=decoder_codec,
+        source_backend=source_backend,
     )
     root = (
         Path(repo_root)
@@ -360,7 +370,9 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
             "num_pairs": int(cfg.num_pairs),
             "state_npz_bridge_manifest": npz_bridge_manifest,
             "mlx_numpy_portability_contract": (
-                hi_nerv_mlx_numpy_portability_contract()
+                hi_nerv_mlx_numpy_portability_contract(
+                    training_backend=source_backend
+                )
             ),
         },
         candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",

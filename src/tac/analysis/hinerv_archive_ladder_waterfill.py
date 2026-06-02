@@ -22,6 +22,9 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
 HINERV_ARCHIVE_LADDER_WATERFILL_SCHEMA = "hinerv_archive_ladder_waterfill.v1"
+DEFAULT_HINERV_WATERFILL_REPLAY_ROOT = (
+    "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay"
+)
 
 
 class HinervArchiveLadderWaterfillError(ValueError):
@@ -33,6 +36,7 @@ def build_hinerv_archive_ladder_waterfill(
     *,
     saliency_by_row_id: Mapping[str, Mapping[str, float]] | None = None,
     global_saliency_by_name: Mapping[str, float] | None = None,
+    decoder_weight_saliency_json_path: str | Path | None = None,
     action_bits: Sequence[int] = DEFAULT_ACTION_BITS,
     candidate_id: str | None = None,
 ) -> dict[str, Any]:
@@ -71,6 +75,11 @@ def build_hinerv_archive_ladder_waterfill(
             action_bits=action_bits,
             full_video_coverage=full_video_coverage,
             candidate_id=candidate_id or str(archive_ladder_report.get("candidate_id") or ""),
+            archive_ladder_report_path=str(
+                archive_ladder_report.get("report_path") or ""
+            ),
+            decoder_weight_saliency_json_path=decoder_weight_saliency_json_path,
+            num_pairs=num_pairs,
         )
         rows.append(row_result)
         blockers.extend(row_result["blockers"])
@@ -96,6 +105,11 @@ def build_hinerv_archive_ladder_waterfill(
         "num_pairs": num_pairs,
         "full_video_coverage": full_video_coverage,
         "archive_ladder_report_path": archive_ladder_report.get("report_path"),
+        "decoder_weight_saliency_json_path": (
+            None
+            if decoder_weight_saliency_json_path is None
+            else Path(decoder_weight_saliency_json_path).expanduser().as_posix()
+        ),
         "row_count": len(rows),
         "rows": rows,
         "section_value_rows": section_value_rows,
@@ -145,6 +159,9 @@ def _waterfill_for_archive_row(
     action_bits: Sequence[int],
     full_video_coverage: bool,
     candidate_id: str,
+    archive_ladder_report_path: str,
+    decoder_weight_saliency_json_path: str | Path | None,
+    num_pairs: int,
 ) -> dict[str, Any]:
     blockers = []
     manifest_path = Path(str(archive_row.get("state_npz_manifest_path") or ""))
@@ -196,6 +213,19 @@ def _waterfill_for_archive_row(
         ),
         archive_sha256=str(archive_row.get("archive_sha256") or ""),
     )
+    replay_command_argv = _archive_ladder_replay_command_argv(
+        row_id=row_id,
+        archive_ladder_report_path=archive_ladder_report_path,
+        decoder_weight_saliency_json_path=decoder_weight_saliency_json_path,
+        action_bits=action_bits,
+        decoder_codec=str(archive_row.get("decoder_codec") or "int8_mixed"),
+        num_pairs=int(num_pairs),
+    )
+    command_blockers = []
+    if replay_command_argv is None:
+        command_blockers.append(
+            "decoder_weight_saliency_json_path_missing_for_replay_command"
+        )
     return {
         "row_id": row_id,
         "archive_bytes": int(archive_row.get("archive_bytes") or 0),
@@ -212,7 +242,13 @@ def _waterfill_for_archive_row(
             "total_selected_byte_delta": plan["total_selected_byte_delta"],
         },
         "waterfill_plan": plan,
-        "blockers": _ordered_unique([*plan["blockers"]]),
+        "archive_ladder_replay_command_axis_tag": "[planning/control:false-authority]",
+        "archive_ladder_replay_command_argv": replay_command_argv,
+        "archive_ladder_replay_command_hint": (
+            " ".join(replay_command_argv) if replay_command_argv else None
+        ),
+        "archive_ladder_replay_output_dir": _replay_output_dir(row_id),
+        "blockers": _ordered_unique([*plan["blockers"], *command_blockers]),
         **FALSE_AUTHORITY,
     }
 
@@ -240,6 +276,60 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
             seen.add(text)
             out.append(text)
     return out
+
+
+def _archive_ladder_replay_command_argv(
+    *,
+    row_id: str,
+    archive_ladder_report_path: str,
+    decoder_weight_saliency_json_path: str | Path | None,
+    action_bits: Sequence[int],
+    decoder_codec: str,
+    num_pairs: int,
+) -> list[str] | None:
+    if decoder_weight_saliency_json_path is None:
+        return None
+    saliency_path = Path(decoder_weight_saliency_json_path).expanduser().as_posix()
+    if not saliency_path:
+        return None
+    source_path = str(archive_ladder_report_path or "")
+    if not source_path:
+        return None
+    slug = _slug(row_id)
+    return [
+        ".venv/bin/python",
+        "tools/build_hinerv_archive_size_ladder.py",
+        "--output-dir",
+        _replay_output_dir(row_id),
+        "--output-json",
+        f".omx/research/hinerv_archive_size_ladder_replay_{slug}_false_authority.json",
+        "--output-md",
+        f".omx/research/hinerv_archive_size_ladder_replay_{slug}_false_authority.md",
+        "--num-pairs",
+        str(int(num_pairs)),
+        "--row-id",
+        str(row_id),
+        "--decoder-codec",
+        str(decoder_codec),
+        "--emit-receiver-proof",
+        "--emit-decoder-weight-waterfill-plan",
+        "--decoder-weight-saliency-json",
+        saliency_path,
+        "--decoder-weight-waterfill-action-bits",
+        ",".join(str(int(value)) for value in action_bits),
+    ]
+
+
+def _replay_output_dir(row_id: str) -> str:
+    return f"{DEFAULT_HINERV_WATERFILL_REPLAY_ROOT}/{_slug(row_id)}"
+
+
+def _slug(value: str) -> str:
+    text = "".join(
+        ch if ch.isalnum() or ch in {"-", "_"} else "_"
+        for ch in str(value)
+    ).strip("_")
+    return text or "row"
 
 
 __all__ = [

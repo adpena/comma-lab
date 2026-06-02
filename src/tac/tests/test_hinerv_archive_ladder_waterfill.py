@@ -46,6 +46,11 @@ def test_hinerv_archive_ladder_waterfill_consumes_state_npz_manifest(
     assert report["section_value_rows"][0]["archive_ladder_row_id"] == "tiny"
     assert report["byte_price_plan"]["schema"] == NERV_BYTE_PRICE_CONTROLLER_SCHEMA
     assert "contest_cpu_cuda_exact_eval_not_executed" in report["blockers"]
+    assert (
+        "decoder_weight_saliency_json_path_missing_for_replay_command"
+        in report["rows"][0]["blockers"]
+    )
+    assert report["rows"][0]["archive_ladder_replay_command_argv"] is None
 
 
 def test_hinerv_archive_ladder_waterfill_fails_closed_on_bad_manifest_sha(
@@ -109,6 +114,38 @@ def test_build_hinerv_archive_ladder_waterfill_cli_smoke(tmp_path: Path) -> None
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["row_count"] == 1
     assert payload["section_value_rows"][0]["archive_ladder_row_id"] == "tiny"
+    row = payload["rows"][0]
+    assert row["archive_ladder_replay_command_axis_tag"] == (
+        "[planning/control:false-authority]"
+    )
+    assert row["archive_ladder_replay_output_dir"] == (
+        "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/tiny"
+    )
+    assert row["archive_ladder_replay_command_argv"] == [
+        ".venv/bin/python",
+        "tools/build_hinerv_archive_size_ladder.py",
+        "--output-dir",
+        "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay/tiny",
+        "--output-json",
+        ".omx/research/hinerv_archive_size_ladder_replay_tiny_false_authority.json",
+        "--output-md",
+        ".omx/research/hinerv_archive_size_ladder_replay_tiny_false_authority.md",
+        "--num-pairs",
+        "600",
+        "--row-id",
+        "tiny",
+        "--decoder-codec",
+        "int8_mixed",
+        "--emit-receiver-proof",
+        "--emit-decoder-weight-waterfill-plan",
+        "--decoder-weight-saliency-json",
+        str(saliency_path),
+        "--decoder-weight-waterfill-action-bits",
+        "0,2,32",
+    ]
+    assert row["archive_ladder_replay_command_hint"] == " ".join(
+        row["archive_ladder_replay_command_argv"]
+    )
     assert "HiNeRV archive ladder decoder waterfill" in output_md.read_text(
         encoding="utf-8"
     )
@@ -161,6 +198,7 @@ def _ladder(tmp_path: Path, *, row_id: str, saliency_ready: bool) -> dict:
                 "archive_sha256": "a" * 64,
                 "state_npz_manifest_path": str(manifest_path),
                 "runtime_consumption_proof_ready": True,
+                "decoder_codec": "int8_mixed",
             }
         ],
         "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],

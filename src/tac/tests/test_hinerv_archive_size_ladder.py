@@ -31,7 +31,6 @@ except ImportError:
     _MLX_AVAILABLE = False
 
 
-@pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for archive export")
 def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None:
     output_dir = tmp_path / "archive_ladder"
     report = build_hinerv_archive_size_ladder(
@@ -58,6 +57,8 @@ def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None
         output_dir.resolve(strict=False)
     )
     assert report["storage_preflight"]["score_claim"] is False
+    expected_backend = "mlx" if _MLX_AVAILABLE else "pytorch_portable_fallback"
+    assert report["archive_export_backend_counts"] == {expected_backend: 1}
     assert "durable_evidence_on_selected_storage" in report[
         "artifact_retention_policy"
     ]
@@ -67,6 +68,13 @@ def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None
     assert "receiver_proof_not_executed_for_archive_size_ladder" in report["blockers"]
     row = report["archive_rows"][0]
     assert row["row_id"] == "hi_nerv_local_tiny"
+    assert row["archive_export_backend"] == expected_backend
+    if _MLX_AVAILABLE:
+        assert row["backend_claim_blockers"] == []
+    else:
+        assert row["backend_claim_blockers"] == ["archive_export_backend_not_mlx"]
+        assert "archive_export_backend_not_mlx" in row["blockers"]
+        assert "archive_export_backend_not_mlx" in report["blockers"]
     assert row["archive_bytes"] == Path(row["archive_path"]).stat().st_size
     assert len(row["archive_sha256"]) == 64
     assert row["archive_rate_score_at_contest_price"] > 0.0
@@ -96,8 +104,6 @@ def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None
 
 
 def test_hinerv_archive_size_ladder_reports_missing_requested_row(tmp_path: Path) -> None:
-    if not _MLX_AVAILABLE:
-        pytest.skip("MLX required for archive export")
     report = build_hinerv_archive_size_ladder(
         output_dir=tmp_path / "archive_ladder",
         repo_root=REPO_ROOT,

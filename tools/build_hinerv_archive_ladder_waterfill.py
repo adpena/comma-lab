@@ -46,6 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         ladder,
         saliency_by_row_id=_row_saliency(saliency_payload),
         global_saliency_by_name=_global_saliency(saliency_payload),
+        decoder_weight_saliency_json_path=args.saliency_json,
         action_bits=_parse_action_bits(args.action_bits),
         candidate_id=args.candidate_id,
     )

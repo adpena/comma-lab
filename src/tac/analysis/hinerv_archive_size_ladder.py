@@ -9,6 +9,7 @@ keeps non-rate scorer authority closed until a scorer replay is attached.
 from __future__ import annotations
 
 import json
+import zlib
 from collections.abc import Iterable, Mapping, Sequence
 from itertools import pairwise
 from pathlib import Path
@@ -79,7 +80,6 @@ def build_hinerv_archive_size_ladder(
         storage_reserve_free_gb=float(storage_reserve_free_gb),
     )
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
-    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
 
     decoder_weight_saliency = (
         None
@@ -102,7 +102,10 @@ def build_hinerv_archive_size_ladder(
         cfg = spec["config"]
         row_dir = out / row_id
         row_dir.mkdir(parents=True, exist_ok=True)
-        model = HinervSubstrateMLX(cfg)
+        model, archive_export_backend, backend_claim_blockers = _make_export_model(
+            cfg,
+            row_id=row_id,
+        )
         archive_path, archive_sha256, archive_bytes = export_hi_nerv_mlx_archive(
             model,
             row_dir,
@@ -110,6 +113,7 @@ def build_hinerv_archive_size_ladder(
             emit_archive_bound_candidate_package=bool(emit_receiver_proof),
             retain_receiver_proof_output=bool(retain_receiver_proof_output),
             decoder_codec=str(decoder_codec),
+            source_backend=archive_export_backend,
         )
         proof_path = row_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
         proof = _read_json_if_exists(proof_path)
@@ -138,6 +142,7 @@ def build_hinerv_archive_size_ladder(
         row_blockers = [
             "hinerv_archive_size_row_has_no_nonrate_score",
             "contest_cpu_cuda_exact_eval_not_executed",
+            *backend_claim_blockers,
         ]
         if not emit_receiver_proof:
             row_blockers.append("receiver_proof_not_executed_for_archive_size_ladder")
@@ -150,6 +155,8 @@ def build_hinerv_archive_size_ladder(
                 "modelsize_scale": float(spec["modelsize_scale"]),
                 "config": _config_snapshot(cfg),
                 "decoder_codec": str(decoder_codec),
+                "archive_export_backend": archive_export_backend,
+                "backend_claim_blockers": backend_claim_blockers,
                 "num_parameters": int(model.num_parameters()),
                 "archive_path": archive_path.as_posix(),
                 "archive_sha256": archive_sha256,
@@ -185,6 +192,11 @@ def build_hinerv_archive_size_ladder(
     )
     if not emit_receiver_proof:
         blockers.append("receiver_proof_not_executed_for_archive_size_ladder")
+    blockers.extend(
+        blocker
+        for row in rows
+        for blocker in row.get("backend_claim_blockers", ())
+    )
     marginal_gates = _marginal_archive_gates(rows)
     section_value_rows = hinerv_modelsize_increment_section_value_rows(marginal_gates)
     report = {
@@ -205,6 +217,7 @@ def build_hinerv_archive_size_ladder(
         ),
         "num_pairs": int(num_pairs),
         "decoder_codec": str(decoder_codec),
+        "archive_export_backend_counts": _archive_export_backend_counts(rows),
         "emit_receiver_proof": bool(emit_receiver_proof),
         "emit_decoder_weight_waterfill_plan": bool(emit_decoder_weight_waterfill_plan),
         "decoder_weight_waterfill_schema": NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
@@ -250,6 +263,62 @@ def _decoder_weight_waterfill_summary(report: Mapping[str, Any]) -> dict[str, An
         "blockers": list(report.get("blockers") or ()),
         **FALSE_AUTHORITY,
     }
+
+
+class _TorchExportableHinervModel:
+    """PyTorch HiNeRV model exposing the MLX exporter state-dict protocol."""
+
+    def __init__(self, cfg: Any, *, seed: int) -> None:
+        import torch
+
+        from tac.substrates.hi_nerv.architecture import HinervSubstrate
+
+        self.cfg = cfg
+        with torch.random.fork_rng(devices=[]):
+            torch.manual_seed(int(seed))
+            self._model = HinervSubstrate(cfg).eval()
+
+    def export_state_dict(self) -> dict[str, Any]:
+        return {
+            name: tensor.detach().cpu().numpy().copy()
+            for name, tensor in self._model.state_dict().items()
+        }
+
+    def num_parameters(self) -> int:
+        return sum(int(param.numel()) for param in self._model.parameters())
+
+
+def _make_export_model(cfg: Any, *, row_id: str) -> tuple[Any, str, list[str]]:
+    try:
+        from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+        return HinervSubstrateMLX(cfg), "mlx", []
+    except RuntimeError as exc:
+        if "MLX is not available" not in str(exc):
+            raise
+    except ImportError:
+        pass
+
+    return (
+        _TorchExportableHinervModel(
+            cfg,
+            seed=_stable_hinerv_seed(row_id),
+        ),
+        "pytorch_portable_fallback",
+        ["archive_export_backend_not_mlx"],
+    )
+
+
+def _stable_hinerv_seed(row_id: str) -> int:
+    return 2_026_060_2 + int(zlib.crc32(str(row_id).encode("utf-8")) % 1_000_000)
+
+
+def _archive_export_backend_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        backend = str(row.get("archive_export_backend") or "unknown")
+        counts[backend] = counts.get(backend, 0) + 1
+    return counts
 
 
 def _resolve_output_dir(
