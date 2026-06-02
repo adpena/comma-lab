@@ -1747,8 +1747,18 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--snerv-spectra-preserving-adapter",
             "--snerv-mfu-scales",
             "1,3",
+            "--snerv-model-size-adapter",
+            "snerv_manual_unit_adapter",
+            "--snerv-fc-dim",
+            "13",
+            "--snerv-emb-size",
+            "5",
+            "--snerv-patch-radius",
+            "2",
             "--snerv-hfr-gain",
             "0.25",
+            "--snerv-temporal-context",
+            "4",
             "--planner-row-id",
             "snerv::manual::native_rate_aware_training",
             "--skip-snerv-native-mlx-export",
@@ -1792,7 +1802,12 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_scorer_loop_start_pair == 7
     assert sn.snerv_spectra_preserving_adapter is True
     assert sn.snerv_mfu_scales == "1,3"
+    assert sn.snerv_model_size_adapter == "snerv_manual_unit_adapter"
+    assert sn.snerv_fc_dim == 13
+    assert sn.snerv_emb_size == 5
+    assert sn.snerv_patch_radius == 2
     assert sn.snerv_hfr_gain == 0.25
+    assert sn.snerv_temporal_context == 4
     assert sn.planner_row_id == "snerv::manual::native_rate_aware_training"
     assert sn.skip_snerv_native_mlx_export is True
     assert sn.snerv_native_mlx_receiver_proof_timeout == 123

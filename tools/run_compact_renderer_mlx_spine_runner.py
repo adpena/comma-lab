@@ -8747,10 +8747,37 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Comma-separated deterministic MFU scales for the SNeRV adapter.",
     )
     parser.add_argument(
+        "--snerv-model-size-adapter",
+        help=(
+            "Manual SNeRV model-size adapter override. Planner candidate rows "
+            "take precedence when selected."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-fc-dim",
+        type=int,
+        help="Manual SNeRV fc_dim override for no-candidate probes.",
+    )
+    parser.add_argument(
+        "--snerv-emb-size",
+        type=int,
+        help="Manual SNeRV embedding-size override for no-candidate probes.",
+    )
+    parser.add_argument(
+        "--snerv-patch-radius",
+        type=int,
+        help="Manual SNeRV LF patch-radius override for no-candidate probes.",
+    )
+    parser.add_argument(
         "--snerv-hfr-gain",
         default=0.0,
         type=float,
         help="Deterministic HFR residual gain for the SNeRV adapter.",
+    )
+    parser.add_argument(
+        "--snerv-temporal-context",
+        type=int,
+        help="Manual SNeRV temporal context override for no-candidate probes.",
     )
     parser.add_argument(
         "--skip-snerv-native-mlx-export",
@@ -9281,8 +9308,13 @@ def main(argv: list[str] | None = None) -> int:
             distillation_device=args.distillation_device,
             modelsize_candidate=modelsize_candidate,
             snerv_spectra_preserving_adapter=args.snerv_spectra_preserving_adapter,
+            snerv_model_size_adapter_override=args.snerv_model_size_adapter,
+            snerv_fc_dim_override=args.snerv_fc_dim,
+            snerv_emb_size_override=args.snerv_emb_size,
+            snerv_patch_radius_override=args.snerv_patch_radius,
             snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
             snerv_hfr_gain=args.snerv_hfr_gain,
+            snerv_temporal_context_override=args.snerv_temporal_context,
             run_native_mlx_export=not args.skip_snerv_native_mlx_export,
             snerv_native_mlx_receiver_proof_timeout_seconds=(
                 args.snerv_native_mlx_receiver_proof_timeout
