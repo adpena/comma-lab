@@ -28,6 +28,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecode
 
 SNERV_SNAR1_SECTION_VALUE_SCHEMA = "snerv_snar1_section_value_neutralization.v1"
 NEUTRALIZABLE_SNERV_SECTIONS = ("decoder_payload", "step_map_packet")
+RECEIVER_DECODE_ONLY_STATUS = "receiver_decode_only"
 
 
 class SnervSectionValueError(ValueError):
@@ -178,6 +179,16 @@ def _section_value_row(
     method: str,
     receiver_status: str,
 ) -> dict[str, Any]:
+    receiver_decode_passed = receiver_status == "receiver_decode_succeeded"
+    blockers = [
+        "snerv_snar1_neutralization_false_authority_no_scorer_replay",
+        "delta_nonrate_score_missing",
+        "full_video_coverage_missing",
+        "runtime_consumption_proof_not_executed_for_neutralized_packet",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    if not receiver_decode_passed:
+        blockers.append("neutralized_packet_receiver_decode_not_proven")
     return {
         "row_id": f"snerv_snar1_neutralize_{section}",
         "section_id": f"snerv_{section}",
@@ -189,15 +200,13 @@ def _section_value_row(
         "section_bytes": int(baseline_bytes),
         "delta_nonrate_score": None,
         "axis_tag": "[planning/control:false-authority]",
-        "receiver_proof_status": receiver_status,
+        "receiver_decode_status": receiver_status,
+        "receiver_decode_passed": receiver_decode_passed,
+        "receiver_proof_status": RECEIVER_DECODE_ONLY_STATUS,
+        "runtime_consumption_proof_passed": False,
         "full_video_coverage": False,
         "archive_sha256": packet_sha256,
-        "blockers": [
-            "snerv_snar1_neutralization_false_authority_no_scorer_replay",
-            "delta_nonrate_score_missing",
-            "full_video_coverage_missing",
-            "contest_cpu_cuda_exact_eval_not_executed",
-        ],
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 
@@ -208,6 +217,7 @@ def _sha256(data: bytes) -> str:
 
 __all__ = [
     "NEUTRALIZABLE_SNERV_SECTIONS",
+    "RECEIVER_DECODE_ONLY_STATUS",
     "SNERV_SNAR1_SECTION_VALUE_SCHEMA",
     "SnervSectionValueError",
     "neutralize_snerv_section",

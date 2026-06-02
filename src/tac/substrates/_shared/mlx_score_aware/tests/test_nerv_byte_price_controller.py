@@ -210,6 +210,29 @@ def test_artifact_level_runtime_ready_and_full_video_scope_are_custody_context()
     assert "full_video_coverage_missing" not in row["blockers"]
 
 
+def test_receiver_decode_only_does_not_satisfy_runtime_custody() -> None:
+    plan = build_nerv_byte_price_plan(
+        [
+            _custody(
+                row_id="snerv_decode_only_selector",
+                section_id="snerv_step_map_packet",
+                bytes=100,
+                delta_nonrate_score=0.050,
+                receiver_proof_status="receiver_decode_only",
+                receiver_decode_passed=True,
+                full_video_coverage=True,
+            )
+        ],
+        byte_price=_price(),
+    )
+
+    row = plan["decision_rows"][0]
+    assert row["economic_decision"] == CUT
+    assert row["decision"] == DEMOTE
+    assert row["receiver_proof_status"] == "receiver_decode_only"
+    assert "receiver_proof_not_satisfied" in row["blockers"]
+
+
 def test_legacy_mlx_section_profile_gets_explicit_advisory_axis_without_authority() -> None:
     plan = build_nerv_byte_price_plan(
         {

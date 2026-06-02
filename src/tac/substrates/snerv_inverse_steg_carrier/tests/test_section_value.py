@@ -17,6 +17,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
 from tac.substrates.snerv_inverse_steg_carrier.section_value import (
+    RECEIVER_DECODE_ONLY_STATUS,
     SNERV_SNAR1_SECTION_VALUE_SCHEMA,
     SnervSectionValueError,
     neutralize_snerv_section,
@@ -76,7 +77,14 @@ def test_snerv_section_value_neutralizes_decoder_with_receiver_decode() -> None:
     assert decode_snerv_archive_frames(report["packet"]).shape == (1, 2, 3, 6, 6)
     row = report["section_value_row"]
     assert row["byte_delta"] == -report["baseline_section_bytes"]
+    assert row["receiver_decode_status"] == "receiver_decode_succeeded"
+    assert row["receiver_decode_passed"] is True
+    assert row["receiver_proof_status"] == RECEIVER_DECODE_ONLY_STATUS
+    assert row["runtime_consumption_proof_passed"] is False
     assert "delta_nonrate_score_missing" in row["blockers"]
+    assert "runtime_consumption_proof_not_executed_for_neutralized_packet" in row[
+        "blockers"
+    ]
 
 
 def test_snerv_section_value_neutralizes_step_maps_and_rejects_required_lf() -> None:
