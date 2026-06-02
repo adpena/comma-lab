@@ -66502,6 +66502,47 @@
         }
       },
       "notes": "2026-06-02 Codex: receiver-decoded mixed decoder mode assignment probe landed; 1-pair advisory artifact selected explicit fp16,int4,int4 over magnitude heuristic (score_linf 2.98245 vs 3.61635) but remains false-authority and blocked on full-600 receiver proof plus paired contest CPU/CUDA."
+    },
+    {
+      "id": "lane_nerv_top_priority_stack_seam_20260602",
+      "name": "NeRV top-priority stack seam",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/nerv_top_priority_stack_seam.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "2026-06-02 Codex: fail-closed planning/control seam landed for SNeRV + HiNeRV top-priority stacks against PR95/HNeRV baseline; GO local stack optimization only; NO-GO exact/promotion/score while PR101/Z5 claims and full-600 receiver/paired CPU-CUDA gates remain open."
     }
   ],
   "level_rules": {
@@ -66511,5 +66552,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-02T03:16:17Z"
+  "updated_at": "2026-06-02T03:42:16Z"
 }
