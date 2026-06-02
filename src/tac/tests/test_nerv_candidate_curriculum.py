@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from pathlib import Path
+
 from tac.analysis.nerv_candidate_curriculum import (
     build_hinerv_candidate_curriculum_plan,
     build_snerv_candidate_curriculum_plan,
@@ -12,6 +16,42 @@ from tac.analysis.nerv_modelsize_budget import (
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
 )
+
+
+def _snerv_native_artifact(tmp_path: Path, *, num_pairs: int = 600) -> dict[str, object]:
+    report = tmp_path / "snerv_native_report.json"
+    packet = tmp_path / "snerv_native_packet.snar"
+    archive = tmp_path / "snerv_native_archive.zip"
+    proof = tmp_path / "snerv_native_receiver_proof.json"
+    report.write_text(
+        '{"schema":"snerv_mlx_native_train_export.v1"}\n',
+        encoding="utf-8",
+    )
+    packet.write_bytes(b"snerv packet")
+    archive.write_bytes(b"snerv archive")
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_receiver_proof.v1",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "num_pairs": int(num_pairs),
+        "executed": True,
+        "artifact_report_path": report.as_posix(),
+        "packet_path": packet.as_posix(),
+        "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+        "archive_path": archive.as_posix(),
+        "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "receiver_proof_path": proof.as_posix(),
+        "receiver_proof_passed": True,
+        "receiver_contract_satisfied": True,
+    }
 
 
 def test_hinerv_candidate_curriculum_enables_lowbit_qat_and_blocks_missing_scorers() -> None:
@@ -350,7 +390,9 @@ def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
     )
 
 
-def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence() -> None:
+def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence(
+    tmp_path: Path,
+) -> None:
     candidate = analyze_snerv_modelsize_candidate(
         hard_byte_ceiling=216_000,
         num_pairs=600,
@@ -359,6 +401,23 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence() -> Non
         step_map_bits_per_coeff=0.5,
         decoder_payload_codec="int8_symmetric",
     ).as_dict()
+
+    report = tmp_path / "report.json"
+    packet = tmp_path / "candidate.snar"
+    archive = tmp_path / "archive.zip"
+    proof = tmp_path / "receiver_proof.json"
+    report.write_text('{"schema":"unit_report"}\n', encoding="utf-8")
+    packet.write_bytes(b"packet")
+    archive.write_bytes(b"archive")
+    proof.write_text(
+        json.dumps(
+            {
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
 
     plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate,
@@ -370,11 +429,21 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence() -> Non
         native_mlx_train_export_attached=True,
         native_mlx_receiver_proof_passed=True,
         native_mlx_full600_campaign_ready=True,
+        native_mlx_artifact_evidence={
+            "num_pairs": 600,
+            "artifact_report_path": report.as_posix(),
+            "packet_path": packet.as_posix(),
+            "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+            "archive_path": archive.as_posix(),
+            "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            "receiver_proof_path": proof.as_posix(),
+        },
     )
 
     training_plan = plan["training_plan"]
     assert training_plan["native_mlx_train_export_attached"] is True
     assert training_plan["native_mlx_receiver_proof_passed"] is True
+    assert training_plan["native_mlx_file_backed_export_proof_passed"] is True
     assert training_plan["native_mlx_export_verified"] is True
     assert training_plan["native_mlx_export_full600_campaign_ready"] is True
     assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" not in plan[

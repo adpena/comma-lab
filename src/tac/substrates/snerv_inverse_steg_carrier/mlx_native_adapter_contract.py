@@ -10,10 +10,13 @@ until the required symbols and signatures exist.
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import inspect
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 SNERV_MLX_NATIVE_ADAPTER_CONTRACT_SCHEMA = "snerv_mlx_native_adapter_contract.v1"
@@ -28,6 +31,8 @@ FALSE_AUTHORITY = {
     "promotion_eligible": False,
     "ready_for_exact_eval_dispatch": False,
 }
+
+DEFAULT_REQUIRED_NATIVE_EXPORT_PAIRS = 600
 
 
 @dataclass(frozen=True)
@@ -103,6 +108,214 @@ def _signature_accepts_required_parameters(
     return not missing, missing, None
 
 
+def _resolve_evidence_path(
+    value: Any,
+    *,
+    base_dir: str | Path | None,
+) -> Path | None:
+    if not value:
+        return None
+    path = Path(str(value)).expanduser()
+    if not path.is_absolute() and base_dir is not None:
+        path = Path(base_dir).expanduser() / path
+    return path.resolve(strict=False)
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _file_evidence_row(
+    *,
+    field_id: str,
+    path_value: Any,
+    expected_sha256: Any = None,
+    base_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    path = _resolve_evidence_path(path_value, base_dir=base_dir)
+    exists = bool(path is not None and path.is_file())
+    actual_sha256 = _sha256_file(path) if exists and path is not None else None
+    expected = str(expected_sha256) if expected_sha256 else None
+    sha256_matches = bool(actual_sha256 and (expected is None or actual_sha256 == expected))
+    return {
+        "schema": "snerv_mlx_native_file_evidence_row.v1",
+        "field_id": str(field_id),
+        "path": path.as_posix() if path is not None else None,
+        "exists": exists,
+        "bytes": int(path.stat().st_size) if exists and path is not None else None,
+        "expected_sha256": expected,
+        "sha256": actual_sha256,
+        "sha256_matches": sha256_matches,
+    }
+
+
+def _load_json_file(path: Path | None) -> dict[str, Any]:
+    if path is None or not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return dict(payload) if isinstance(payload, Mapping) else {}
+
+
+def _merged_artifact_mapping(artifact: Mapping[str, Any] | None) -> dict[str, Any]:
+    art = dict(artifact or {})
+    if art.get("schema") == "snerv_mlx_native_file_backed_evidence.v1":
+        report = art.get("report_file") if isinstance(art.get("report_file"), Mapping) else {}
+        packet = art.get("packet_file") if isinstance(art.get("packet_file"), Mapping) else {}
+        archive = art.get("archive_file") if isinstance(art.get("archive_file"), Mapping) else {}
+        proof = (
+            art.get("receiver_proof_file")
+            if isinstance(art.get("receiver_proof_file"), Mapping)
+            else {}
+        )
+        return {
+            "schema": art.get("schema"),
+            "num_pairs": art.get("num_pairs"),
+            "artifact_report_path": report.get("path"),
+            "packet_path": packet.get("path"),
+            "packet_sha256": packet.get("sha256"),
+            "archive_path": archive.get("path"),
+            "archive_sha256": archive.get("sha256"),
+            "receiver_proof_path": proof.get("path"),
+            "receiver_proof_passed": art.get("receiver_proof_passed"),
+            "receiver_contract_satisfied": art.get("receiver_contract_satisfied"),
+        }
+    nested = art.get("artifact")
+    if isinstance(nested, Mapping):
+        merged = dict(nested)
+        merged.update(art)
+        return merged
+    return art
+
+
+def build_snerv_mlx_native_file_backed_evidence(
+    artifact: Mapping[str, Any] | None,
+    *,
+    required_num_pairs: int = DEFAULT_REQUIRED_NATIVE_EXPORT_PAIRS,
+    base_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    """Validate SNeRV native export evidence against files, not booleans.
+
+    The runner and planner both use this helper so a hand-written
+    ``receiver_proof_passed=True`` cannot clear the native SNeRV blocker unless
+    the referenced packet/archive/proof files exist and their hashes agree.
+    """
+
+    art = _merged_artifact_mapping(artifact)
+    rows = {
+        "report": _file_evidence_row(
+            field_id="report",
+            path_value=art.get("artifact_report_path") or art.get("report_path"),
+            base_dir=base_dir,
+        ),
+        "packet": _file_evidence_row(
+            field_id="packet",
+            path_value=art.get("packet_path"),
+            expected_sha256=art.get("packet_sha256"),
+            base_dir=base_dir,
+        ),
+        "archive": _file_evidence_row(
+            field_id="archive",
+            path_value=art.get("archive_path"),
+            expected_sha256=art.get("archive_sha256"),
+            base_dir=base_dir,
+        ),
+        "receiver_proof": _file_evidence_row(
+            field_id="receiver_proof",
+            path_value=art.get("receiver_proof_path"),
+            base_dir=base_dir,
+        ),
+    }
+    proof_path = (
+        Path(rows["receiver_proof"]["path"])
+        if rows["receiver_proof"]["path"]
+        else None
+    )
+    proof_payload = _load_json_file(proof_path)
+    proof_contract_satisfied = proof_payload.get("receiver_contract_satisfied") is True
+    proof_runtime_passed = (
+        proof_payload.get("runtime_consumption_proof_passed") is True
+        or proof_payload.get("runtime_consumption_proof_ready") is True
+        or proof_payload.get("receiver_proof_valid") is True
+    )
+    receiver_contract_satisfied = bool(proof_contract_satisfied or proof_runtime_passed)
+    receiver_proof_passed = bool(proof_runtime_passed or proof_contract_satisfied)
+    num_pairs = _int_or_none(art.get("num_pairs"))
+    required_pair_coverage_passed = bool(
+        num_pairs is not None and int(num_pairs) >= int(required_num_pairs)
+    )
+    blockers: list[str] = []
+    for field_id, row in rows.items():
+        if not row["exists"]:
+            blockers.append(f"snerv_mlx_native_{field_id}_file_missing")
+        elif row["expected_sha256"] and not row["sha256_matches"]:
+            blockers.append(f"snerv_mlx_native_{field_id}_sha256_mismatch")
+    if not receiver_proof_passed:
+        blockers.append("snerv_mlx_native_receiver_proof_file_not_passing")
+    if not receiver_contract_satisfied:
+        blockers.append("snerv_mlx_native_receiver_contract_file_not_satisfied")
+    if not required_pair_coverage_passed:
+        blockers.append("snerv_mlx_native_file_backed_export_not_full600")
+    file_backed_export_proof_passed = bool(
+        rows["report"]["exists"]
+        and rows["packet"]["sha256_matches"]
+        and rows["archive"]["sha256_matches"]
+        and rows["receiver_proof"]["exists"]
+        and receiver_proof_passed
+        and receiver_contract_satisfied
+    )
+    scorer_loop = art.get("scorer_loop_qat")
+    scorer_loop = dict(scorer_loop) if isinstance(scorer_loop, Mapping) else {}
+    return {
+        "schema": "snerv_mlx_native_file_backed_evidence.v1",
+        "required_num_pairs": int(required_num_pairs),
+        "num_pairs": num_pairs,
+        "executed": bool(art.get("executed") is True or art.get("schema")),
+        "packet_source": art.get("packet_source"),
+        "report_file": rows["report"],
+        "packet_file": rows["packet"],
+        "archive_file": rows["archive"],
+        "receiver_proof_file": rows["receiver_proof"],
+        "receiver_proof_passed": receiver_proof_passed,
+        "receiver_contract_satisfied": receiver_contract_satisfied,
+        "reported_receiver_proof_passed": bool(art.get("receiver_proof_passed")),
+        "reported_receiver_contract_satisfied": bool(
+            art.get("receiver_contract_satisfied")
+        ),
+        "required_pair_coverage_passed": required_pair_coverage_passed,
+        "file_backed_export_proof_passed": file_backed_export_proof_passed,
+        "required_pair_file_backed_export_proof_passed": bool(
+            file_backed_export_proof_passed and required_pair_coverage_passed
+        ),
+        "scorer_loop_qat_attached": bool(
+            scorer_loop.get("executed") or art.get("scorer_loop_qat_attached")
+        ),
+        "scorer_loop_qat_accepted_improvement": bool(
+            scorer_loop.get("accepted_improvement")
+            or art.get("scorer_loop_qat_accepted_improvement")
+        ),
+        "scorer_loop_qat_best_materialized": bool(
+            scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
+            or art.get("scorer_loop_qat_best_materialized")
+        ),
+        "blockers": list(dict.fromkeys(blockers)),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def build_snerv_mlx_native_adapter_contract(
     *,
     module_name: str = DEFAULT_SNERV_MLX_NATIVE_ADAPTER_MODULE,
@@ -165,7 +378,24 @@ def build_snerv_mlx_native_adapter_contract(
 
     surfaces_ready = module_loaded and not blockers
     evidence = dict(extra_evidence or {})
-    if surfaces_ready and not bool(evidence.get("two_pair_smoke_passed")):
+    file_artifact = (
+        evidence.get("file_backed_export_artifact")
+        if isinstance(evidence.get("file_backed_export_artifact"), Mapping)
+        else evidence.get("native_mlx_export_artifact")
+    )
+    file_backed_evidence = build_snerv_mlx_native_file_backed_evidence(
+        file_artifact if isinstance(file_artifact, Mapping) else None,
+        required_num_pairs=int(
+            evidence.get("required_num_pairs")
+            or DEFAULT_REQUIRED_NATIVE_EXPORT_PAIRS
+        ),
+        base_dir=evidence.get("base_dir"),
+    )
+    smoke_or_file_proven = bool(
+        evidence.get("two_pair_smoke_passed")
+        or file_backed_evidence.get("file_backed_export_proof_passed")
+    )
+    if surfaces_ready and not smoke_or_file_proven:
         blockers.append("snerv_mlx_native_adapter_surfaces_present_but_unproven")
 
     return {
@@ -181,8 +411,21 @@ def build_snerv_mlx_native_adapter_contract(
         ),
         "surfaces_ready": bool(surfaces_ready),
         "two_pair_smoke_passed": bool(evidence.get("two_pair_smoke_passed")),
+        "file_backed_export_proof_passed": bool(
+            file_backed_evidence.get("file_backed_export_proof_passed")
+        ),
+        "required_pair_file_backed_export_proof_passed": bool(
+            file_backed_evidence.get("required_pair_file_backed_export_proof_passed")
+        ),
+        "file_backed_export_evidence": file_backed_evidence,
         "full600_campaign_ready": bool(
-            surfaces_ready and evidence.get("two_pair_smoke_passed")
+            surfaces_ready
+            and (
+                evidence.get("two_pair_smoke_passed")
+                or file_backed_evidence.get(
+                    "required_pair_file_backed_export_proof_passed"
+                )
+            )
         ),
         "surface_rows": surface_rows,
         "blockers": list(dict.fromkeys(blockers)),
@@ -191,9 +434,11 @@ def build_snerv_mlx_native_adapter_contract(
 
 
 __all__ = [
+    "DEFAULT_REQUIRED_NATIVE_EXPORT_PAIRS",
     "DEFAULT_SNERV_MLX_NATIVE_ADAPTER_MODULE",
     "REQUIRED_SURFACES",
     "SNERV_MLX_NATIVE_ADAPTER_CONTRACT_SCHEMA",
     "RequiredSurface",
     "build_snerv_mlx_native_adapter_contract",
+    "build_snerv_mlx_native_file_backed_evidence",
 ]

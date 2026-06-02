@@ -22,8 +22,10 @@ from tac.analysis.pr95_stack_binding_requirements import (
 from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
     CANONICAL_PR95_TOTAL_EPOCHS,
 )
+from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (
     build_snerv_mlx_native_adapter_contract,
+    build_snerv_mlx_native_file_backed_evidence,
 )
 
 SCHEMA = "nerv_candidate_curriculum_plan.v1"
@@ -313,14 +315,29 @@ def build_snerv_candidate_curriculum_plan(
     native_mlx_scorer_loop_qat_ready_for_pose_guard_gate: bool = False,
     native_mlx_scorer_loop_qat_accepted_improvement: bool = False,
     native_mlx_scorer_loop_qat_best_materialized: bool = False,
+    native_mlx_artifact_evidence: Mapping[str, Any] | None = None,
     measured_num_pairs: int | None = None,
 ) -> dict[str, Any]:
     """Bind a SNeRV receiver-grammar candidate to byte feedback and blockers."""
 
     candidate_row = dict(candidate or {})
-    native_contract = build_snerv_mlx_native_adapter_contract()
+    native_file_evidence = build_snerv_mlx_native_file_backed_evidence(
+        native_mlx_artifact_evidence,
+        required_num_pairs=CONTEST_PAIR_COUNT,
+    )
+    native_file_proof_passed = bool(
+        native_file_evidence.get("required_pair_file_backed_export_proof_passed")
+    )
+    native_contract = build_snerv_mlx_native_adapter_contract(
+        extra_evidence={
+            "file_backed_export_artifact": native_mlx_artifact_evidence or {},
+            "required_num_pairs": CONTEST_PAIR_COUNT,
+        }
+    )
     native_export_verified = bool(
-        native_mlx_train_export_attached and native_mlx_receiver_proof_passed
+        native_mlx_train_export_attached
+        and native_mlx_receiver_proof_passed
+        and native_file_proof_passed
     )
     standalone_scorer_loop_attached = bool(scorer_loop_qat_attached)
     native_scorer_loop_attached = bool(native_mlx_scorer_loop_qat_attached)
@@ -355,7 +372,7 @@ def build_snerv_candidate_curriculum_plan(
         )
     )
     candidate_selected = bool(candidate_row)
-    full_video = int(num_pairs) >= 600
+    full_video = int(num_pairs) >= CONTEST_PAIR_COUNT
     levels = _int(candidate_row.get("levels"), 3)
     lf_bits = _num(candidate_row.get("bits_per_coeff"), 2.5)
     step_bits = _num(candidate_row.get("step_map_bits_per_coeff"), 4.0)
@@ -394,6 +411,13 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("snerv_mlx_native_adapter_surfaces_present_but_unproven")
     if native_mlx_train_export_attached and not native_mlx_receiver_proof_passed:
         blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
+    if (
+        native_mlx_train_export_attached
+        and native_mlx_receiver_proof_passed
+        and not native_file_proof_passed
+    ):
+        blockers.append("snerv_mlx_native_file_backed_export_proof_missing_or_failed")
+        blockers.extend(native_file_evidence.get("blockers") or [])
     if not effective_scorer_loop_attached:
         blockers.append("snerv_scorer_loop_qat_not_attached")
     if not native_mlx_long_training_bound:
@@ -478,6 +502,8 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_receiver_proof_passed": bool(
                 native_mlx_receiver_proof_passed
             ),
+            "native_mlx_file_backed_export_proof_passed": native_file_proof_passed,
+            "native_mlx_file_backed_export_evidence": native_file_evidence,
             "native_mlx_export_verified": native_export_verified,
             "native_mlx_export_full600_campaign_ready": bool(
                 native_mlx_full600_campaign_ready

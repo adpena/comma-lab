@@ -1,0 +1,26 @@
+{
+  "candidate_id": "hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000",
+  "first_epoch": 0,
+  "first_pose_axis": 1184479.75,
+  "first_seg_axis": 6.33951473236084,
+  "last_epoch": 127,
+  "last_loss": 19.170085906982422,
+  "last_pose_axis": 5.514998435974121,
+  "last_recon_aux": 0.11209945380687714,
+  "last_seg_axis": 6.21317195892334,
+  "learning_rate": 2.7e-05,
+  "pose_recovered_from_initial_spike": true,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_mutations": [
+    "continue_official_controls_long_run",
+    "preserve_pose_guard",
+    "raise_or_rebalance_segnet_boundary_pressure_if_stagnation_persists"
+  ],
+  "row_count": 128,
+  "schema": "hinerv_training_telemetry_feedback.v1",
+  "score_claim": false,
+  "segnet_still_binding": true,
+  "source_kind": "foreground_official_controls_proof",
+  "telemetry_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_official_controls_feedback_20260602T224900Z/hi_nerv_hinerv_np600_ld24_ed32_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw2_increase_segnet_distillation_weight_from_stagnat_preserve_pose_guard/hi_nerv_mlx_training/telemetry.jsonl"
+}

@@ -4067,10 +4067,23 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["scorer_loop_qat_best_materialized"] is False
     assert Path(native["artifact_report_path"]).is_file()
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
-    assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is True
+    assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is False
+    assert (
+        out["score_aware_training"]["mlx_native_file_backed_export_evidence"][
+            "file_backed_export_proof_passed"
+        ]
+        is True
+    )
+    assert (
+        out["score_aware_training"]["mlx_native_file_backed_export_evidence"][
+            "required_pair_file_backed_export_proof_passed"
+        ]
+        is False
+    )
     plan = out["candidate_curriculum_plan"]
     assert plan["training_plan"]["native_mlx_train_export_attached"] is True
-    assert plan["training_plan"]["native_mlx_receiver_proof_passed"] is True
+    assert plan["training_plan"]["native_mlx_receiver_proof_passed"] is False
+    assert plan["training_plan"]["native_mlx_file_backed_export_proof_passed"] is False
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
@@ -4079,10 +4092,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
         "blockers"
     ]
-    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" not in plan[
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in plan[
         "blockers"
     ]
-    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" not in out[
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out[
         "blockers"
     ]
     assert "snerv_mlx_native_export_partial_pair_coverage" in out["blockers"]
@@ -4641,12 +4654,37 @@ def test_snerv_native_export_bypasses_pr95_prelaunch_only_for_local_proof(
         }
 
     def fake_native_export(**_kwargs):
+        report = tmp_path / "native_report.json"
+        packet = tmp_path / "native_packet.snar"
+        archive = tmp_path / "native_archive.zip"
+        proof = tmp_path / "native_receiver_proof.json"
+        report.write_text(
+            '{"schema":"snerv_mlx_native_train_export.v1"}\n',
+            encoding="utf-8",
+        )
+        packet.write_bytes(b"native packet")
+        archive.write_bytes(b"native archive")
+        proof.write_text(
+            json.dumps(
+                {
+                    "receiver_contract_satisfied": True,
+                    "runtime_consumption_proof_passed": True,
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
         return {
             "schema": "snerv_mlx_native_train_export.v1",
-            "packet_bytes": 10,
-            "packet_sha256": "b" * 64,
-            "archive_bytes": 3,
-            "archive_sha256": "a" * 64,
+            "num_pairs": 600,
+            "artifact_report_path": report.as_posix(),
+            "packet_path": packet.as_posix(),
+            "packet_bytes": packet.stat().st_size,
+            "packet_sha256": runner_mod._sha256_file(packet),
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
             "native_mlx_full600_campaign_ready": True,

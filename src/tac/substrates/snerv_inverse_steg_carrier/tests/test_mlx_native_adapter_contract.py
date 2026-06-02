@@ -3,13 +3,17 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 import types
+from pathlib import Path
 
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (
     REQUIRED_SURFACES,
     SNERV_MLX_NATIVE_ADAPTER_CONTRACT_SCHEMA,
     build_snerv_mlx_native_adapter_contract,
+    build_snerv_mlx_native_file_backed_evidence,
 )
 
 
@@ -84,6 +88,86 @@ def test_present_surfaces_with_smoke_evidence_unlock_contract(monkeypatch) -> No
     assert contract["two_pair_smoke_passed"] is True
     assert contract["full600_campaign_ready"] is True
     assert contract["blockers"] == []
+
+
+def test_full600_file_backed_export_unlocks_native_contract(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module_name = "unit_fake_snerv_mlx_adapter_file_backed"
+    module = types.ModuleType(module_name)
+
+    def fn(**_kwargs):
+        return None
+
+    for surface in REQUIRED_SURFACES:
+        setattr(module, surface.symbol, fn)
+    monkeypatch.setitem(sys.modules, module_name, module)
+
+    report = tmp_path / "report.json"
+    packet = tmp_path / "candidate.snar"
+    archive = tmp_path / "archive.zip"
+    proof = tmp_path / "receiver_proof.json"
+    report.write_text('{"schema":"unit_report"}\n', encoding="utf-8")
+    packet.write_bytes(b"packet")
+    archive.write_bytes(b"archive")
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_receiver_proof.v1",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact = {
+        "num_pairs": 600,
+        "artifact_report_path": report.as_posix(),
+        "packet_path": packet.as_posix(),
+        "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+        "archive_path": archive.as_posix(),
+        "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "receiver_proof_path": proof.as_posix(),
+    }
+
+    contract = build_snerv_mlx_native_adapter_contract(
+        module_name=module_name,
+        extra_evidence={"native_mlx_export_artifact": artifact},
+    )
+
+    assert contract["surfaces_ready"] is True
+    assert contract["two_pair_smoke_passed"] is False
+    assert contract["file_backed_export_proof_passed"] is True
+    assert contract["required_pair_file_backed_export_proof_passed"] is True
+    assert contract["full600_campaign_ready"] is True
+    assert contract["blockers"] == []
+
+
+def test_file_backed_export_rejects_spoofed_receiver_booleans(tmp_path: Path) -> None:
+    packet = tmp_path / "candidate.snar"
+    archive = tmp_path / "archive.zip"
+    packet.write_bytes(b"packet")
+    archive.write_bytes(b"archive")
+
+    evidence = build_snerv_mlx_native_file_backed_evidence(
+        {
+            "num_pairs": 600,
+            "executed": True,
+            "packet_path": packet.as_posix(),
+            "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+            "archive_path": archive.as_posix(),
+            "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+        }
+    )
+
+    assert evidence["reported_receiver_proof_passed"] is True
+    assert evidence["reported_receiver_contract_satisfied"] is True
+    assert evidence["file_backed_export_proof_passed"] is False
+    assert "snerv_mlx_native_receiver_proof_file_missing" in evidence["blockers"]
+    assert "snerv_mlx_native_receiver_proof_file_not_passing" in evidence["blockers"]
 
 
 def test_surface_signature_mismatch_blocks(monkeypatch) -> None:

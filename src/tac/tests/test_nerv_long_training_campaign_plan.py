@@ -1010,6 +1010,56 @@ def test_long_training_campaign_plan_prefers_official_hinerv_controls_after_stag
     assert hi["score_claim"] is False
 
 
+def test_long_training_campaign_plan_consumes_hinerv_foreground_feedback_schema(
+) -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "hinerv_training_telemetry_feedback.v1",
+                "source_kind": "foreground_official_controls_proof",
+                "candidate_id": "hinerv_previous_official",
+                "telemetry_path": (
+                    "/Volumes/VertigoDataTier/pact/test/telemetry.jsonl"
+                ),
+                "row_count": 128,
+                "last_epoch": 127,
+                "first_pose_axis": 62_414.0,
+                "last_pose_axis": 5.51,
+                "first_seg_axis": 6.36,
+                "last_seg_axis": 6.21,
+                "learning_rate": 2.7e-5,
+                "pose_recovered_from_initial_spike": True,
+                "segnet_still_binding": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    feedback = hi["candidate_feedback"]
+    assert feedback["schema"] == "nerv_candidate_feedback_row.v1"
+    assert feedback["telemetry_feedback_schema"] == (
+        "hinerv_training_telemetry_feedback.v1"
+    )
+    assert feedback["feedback_match_scope"] == "family_training_telemetry"
+    assert feedback["segnet_still_binding"] is True
+    assert feedback["recommended_segnet_distillation_weight"] == 2.0
+    assert hi["command_argv"][
+        hi["command_argv"].index("--segnet-distillation-weight") + 1
+    ] == "2"
+    assert hi["feedback_launch_adjustment"]["segnet_weight_applied"] is True
+    assert hi["score_claim"] is False
+
+
 def test_long_training_campaign_plan_blocks_repeated_low_lr_pose_instability(
 ) -> None:
     report = build_nerv_long_training_campaign_plan(

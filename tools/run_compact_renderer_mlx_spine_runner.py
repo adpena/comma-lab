@@ -103,6 +103,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (  # noqa: E402
     build_snerv_mlx_native_adapter_contract,
+    build_snerv_mlx_native_file_backed_evidence,
 )
 from tac.training.long_training_canonical import LongTrainingStopRequested  # noqa: E402
 from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
@@ -2542,7 +2543,6 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv",
         COMPACT_FAMILY_BACKENDS["snerv"],
     )
-    snerv_mlx_native_adapter_contract = build_snerv_mlx_native_adapter_contract()
     candidate = dict(modelsize_candidate or {})
     levels = int(candidate.get("levels", 3))
     wavelet = str(candidate.get("wavelet", "haar"))
@@ -2830,10 +2830,27 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         scorer_loop_qat_device=str(distillation_device),
     )
+    snerv_mlx_native_file_backed_evidence = (
+        build_snerv_mlx_native_file_backed_evidence(
+            snerv_mlx_native_export,
+            required_num_pairs=CONTEST_PAIR_COUNT,
+        )
+    )
+    snerv_mlx_native_adapter_contract_after_export = (
+        build_snerv_mlx_native_adapter_contract(
+            extra_evidence={
+                "file_backed_export_artifact": snerv_mlx_native_export,
+                "required_num_pairs": CONTEST_PAIR_COUNT,
+            }
+        )
+    )
     snerv_mlx_native_export_verified = bool(
         snerv_mlx_native_export.get("executed")
         and snerv_mlx_native_export.get("receiver_proof_passed") is True
         and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
+        and snerv_mlx_native_file_backed_evidence.get(
+            "required_pair_file_backed_export_proof_passed"
+        )
     )
     candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
@@ -2888,6 +2905,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         native_mlx_scorer_loop_qat_best_materialized=bool(
             snerv_mlx_native_export.get("scorer_loop_qat_best_materialized")
         ),
+        native_mlx_artifact_evidence=snerv_mlx_native_export,
     )
 
     blockers = _dedupe(
@@ -2896,7 +2914,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             *(
                 []
                 if snerv_mlx_native_export_verified
-                else list(snerv_mlx_native_adapter_contract.get("blockers") or [])
+                else list(
+                    snerv_mlx_native_adapter_contract_after_export.get("blockers")
+                    or []
+                )
             ),
             *local_proof_prelaunch_blockers,
             (
@@ -2970,7 +2991,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "archive_bound_candidate_rows": candidate_rows,
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_carrier_training_plan": planner,
-            "snerv_mlx_native_adapter_contract": snerv_mlx_native_adapter_contract,
+            "snerv_mlx_native_adapter_contract": (
+                snerv_mlx_native_adapter_contract_after_export
+            ),
             "score_aware_training": {
                 "schema": "compact_snerv_archive_bound_advisory.v1",
                 "status": (
@@ -2999,6 +3022,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 ),
                 "scorer_loop_qat": snerv_scorer_loop_qat,
                 "mlx_native_export": snerv_mlx_native_export,
+                "mlx_native_file_backed_export_evidence": (
+                    snerv_mlx_native_file_backed_evidence
+                ),
                 "mlx_native_train_export_attached": bool(
                     snerv_mlx_native_export.get("executed")
                 ),
@@ -3040,6 +3066,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "snerv_binary_profile": snerv_binary_profile,
             "snerv_scorer_loop_qat": snerv_scorer_loop_qat,
             "snerv_mlx_native_export": snerv_mlx_native_export,
+            "snerv_mlx_native_file_backed_export_evidence": (
+                snerv_mlx_native_file_backed_evidence
+            ),
             "local_cpu_replay_summary_paths": [
                 path.as_posix() for path in local_cpu_replay_paths
             ],

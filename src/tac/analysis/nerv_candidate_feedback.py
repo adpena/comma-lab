@@ -58,6 +58,10 @@ _SEG_STAGNATION_MIN_RELATIVE_IMPROVEMENT = 0.05
 _SEG_STAGNATION_WEIGHT_MULTIPLIER = 2.0
 
 
+def _mapping_or_empty(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
 def _sha256_file(path: Path) -> str | None:
     import hashlib
 
@@ -105,6 +109,21 @@ def build_nerv_candidate_feedback_row(
     local_replay_gate = dict(runner_report.get("local_cpu_replay_gate") or {})
     mlx_prefilter = dict(runner_report.get("mlx_prefilter_coverage") or {})
     snerv_profile = dict(runner_report.get("snerv_binary_profile") or {})
+    score_aware_training = dict(runner_report.get("score_aware_training") or {})
+    snerv_native_export = _mapping_or_empty(
+        runner_report.get("snerv_mlx_native_export")
+        or score_aware_training.get("mlx_native_export")
+    )
+    snerv_native_evidence = _mapping_or_empty(
+        runner_report.get("snerv_mlx_native_file_backed_export_evidence")
+        or score_aware_training.get("mlx_native_file_backed_export_evidence")
+        or _mapping_or_empty(curriculum.get("training_plan")).get(
+            "native_mlx_file_backed_export_evidence"
+        )
+    )
+    snerv_native_scorer_loop = _mapping_or_empty(
+        snerv_native_export.get("scorer_loop_qat")
+    )
     return {
         "schema": SCHEMA,
         "created_utc": datetime.now(UTC).isoformat(),
@@ -129,6 +148,65 @@ def build_nerv_candidate_feedback_row(
         "archive_path": runner_report.get("archive_path"),
         "archive_bytes": runner_report.get("archive_bytes"),
         "archive_sha256": runner_report.get("archive_sha256"),
+        "snerv_mlx_native_export_executed": snerv_native_export.get("executed"),
+        "snerv_mlx_native_export_artifact_report_path": (
+            snerv_native_export.get("artifact_report_path")
+            or snerv_native_export.get("report_path")
+        ),
+        "snerv_mlx_native_export_packet_path": snerv_native_export.get("packet_path"),
+        "snerv_mlx_native_export_packet_bytes": snerv_native_export.get("packet_bytes"),
+        "snerv_mlx_native_export_packet_sha256": snerv_native_export.get(
+            "packet_sha256"
+        ),
+        "snerv_mlx_native_export_archive_path": snerv_native_export.get("archive_path"),
+        "snerv_mlx_native_export_archive_bytes": snerv_native_export.get(
+            "archive_bytes"
+        ),
+        "snerv_mlx_native_export_archive_sha256": snerv_native_export.get(
+            "archive_sha256"
+        ),
+        "snerv_mlx_native_export_receiver_proof_path": snerv_native_export.get(
+            "receiver_proof_path"
+        ),
+        "snerv_mlx_native_export_receiver_proof_passed": snerv_native_export.get(
+            "receiver_proof_passed"
+        ),
+        "snerv_mlx_native_export_receiver_contract_satisfied": (
+            snerv_native_export.get("receiver_contract_satisfied")
+        ),
+        "snerv_mlx_native_export_packet_source": snerv_native_export.get(
+            "packet_source"
+        ),
+        "snerv_mlx_native_export_blockers": list(
+            snerv_native_export.get("blockers") or []
+        ),
+        "snerv_mlx_native_file_backed_export_proof_passed": (
+            snerv_native_evidence.get("file_backed_export_proof_passed")
+        ),
+        "snerv_mlx_native_required_pair_file_backed_export_proof_passed": (
+            snerv_native_evidence.get("required_pair_file_backed_export_proof_passed")
+        ),
+        "snerv_mlx_native_file_backed_export_blockers": list(
+            snerv_native_evidence.get("blockers") or []
+        ),
+        "snerv_mlx_native_file_backed_export_evidence": snerv_native_evidence or None,
+        "snerv_mlx_native_scorer_loop_qat_attached": (
+            snerv_native_export.get("scorer_loop_qat_attached")
+            if "scorer_loop_qat_attached" in snerv_native_export
+            else snerv_native_scorer_loop.get("executed")
+        ),
+        "snerv_mlx_native_scorer_loop_qat_accepted_improvement": (
+            snerv_native_export.get("scorer_loop_qat_accepted_improvement")
+            if "scorer_loop_qat_accepted_improvement" in snerv_native_export
+            else snerv_native_scorer_loop.get("accepted_improvement")
+        ),
+        "snerv_mlx_native_scorer_loop_qat_best_materialized": (
+            snerv_native_export.get("scorer_loop_qat_best_materialized")
+            if "scorer_loop_qat_best_materialized" in snerv_native_export
+            else snerv_native_scorer_loop.get(
+                "emitted_packet_uses_scorer_loop_best_decoder"
+            )
+        ),
         "snerv_binary_profile_path": snerv_profile.get("profile_path"),
         "snerv_binary_profile_written": bool(snerv_profile.get("profile_written")),
         "snerv_binary_profile_verdict": snerv_profile.get("verdict"),

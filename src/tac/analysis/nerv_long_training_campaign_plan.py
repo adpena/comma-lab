@@ -560,6 +560,9 @@ def _snerv_campaign_row(
         native_mlx_scorer_loop_qat_best_materialized=bool(
             feedback.get("native_mlx_scorer_loop_qat_best_materialized")
         ),
+        native_mlx_artifact_evidence=_snerv_native_artifact_evidence_from_feedback(
+            feedback
+        ),
         receiver_proof_attached=bool(feedback.get("receiver_proof_attached")),
         full_video_local_prefilter_attached=bool(
             feedback.get("full_video_local_prefilter_attached")
@@ -1175,6 +1178,8 @@ def _candidate_feedback_sort_key(
 def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str, Any]:
     if source.get("schema") == NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA:
         row = dict(source)
+    elif source.get("schema") == "hinerv_training_telemetry_feedback.v1":
+        row = _normalize_hinerv_training_telemetry_feedback(source)
     elif source.get("schema") == "compact_renderer_mlx_spine_runner.v1":
         row = build_nerv_candidate_feedback_row(
             runner_report=source,
@@ -1185,12 +1190,94 @@ def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str,
     return _augment_feedback_row(row, source)
 
 
+def _normalize_hinerv_training_telemetry_feedback(
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Convert compact foreground/harvest telemetry into planner feedback.
+
+    Foreground proof rows are not runner reports and intentionally carry no
+    archive/replay authority. They are still high-value launch-pressure signal
+    when they come from a full600 candidate and show a real optimization
+    dynamic, such as PoseNet recovering while SegNet remains binding. Convert
+    only that steering signal into the same false-authority feedback shape the
+    campaign planner already consumes.
+    """
+
+    candidate_id = str(source.get("candidate_id") or "").strip()
+    last_epoch = int(source.get("last_epoch") or 0)
+    seg_still_binding = bool(source.get("segnet_still_binding") is True)
+    pose_recovered = bool(source.get("pose_recovered_from_initial_spike") is True)
+    recommended_mutations = list(source.get("recommended_next_mutations") or [])
+    if seg_still_binding and (
+        "increase_segnet_distillation_weight_from_stagnation_telemetry"
+        not in recommended_mutations
+    ):
+        recommended_mutations.append(
+            "increase_segnet_distillation_weight_from_stagnation_telemetry"
+        )
+    return {
+        "schema": NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA,
+        "telemetry_feedback_schema": str(source.get("schema")),
+        "feedback_kind": "training_telemetry",
+        "feedback_scope": "full600_training_telemetry",
+        "feedback_ready": False,
+        "family": "hi_nerv",
+        "candidate_id": candidate_id,
+        "candidate_num_pairs": 600,
+        "measured_num_pairs": 600,
+        "scope_matches_candidate": True,
+        "training_stopped": False,
+        "source_report_path": source.get("telemetry_path"),
+        "observed_learning_rate": source.get("learning_rate"),
+        "pose_instability_detected": False,
+        "pose_recovered_from_initial_spike": pose_recovered,
+        "seg_stagnation_detected": seg_still_binding,
+        "segnet_still_binding": seg_still_binding,
+        "recommended_segnet_distillation_weight": 2.0 if seg_still_binding else None,
+        "recommended_segnet_distillation_weight_multiplier": (
+            2.0 if seg_still_binding else None
+        ),
+        "recommended_launch_mutations": recommended_mutations,
+        "training_telemetry": {
+            "schema": str(source.get("schema")),
+            "last_epoch": last_epoch,
+            "row_count": int(source.get("row_count") or 0),
+            "first_pose_axis": source.get("first_pose_axis"),
+            "last_pose_axis": source.get("last_pose_axis"),
+            "first_seg_axis": source.get("first_seg_axis"),
+            "last_seg_axis": source.get("last_seg_axis"),
+            "last_recon_aux": source.get("last_recon_aux"),
+            "last_loss": source.get("last_loss"),
+            "pose_recovered_from_initial_spike": pose_recovered,
+            "segnet_still_binding": seg_still_binding,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _augment_feedback_row(
     row: Mapping[str, Any],
     source: Mapping[str, Any],
 ) -> dict[str, Any]:
     out = dict(row)
     native = source.get("snerv_mlx_native_export")
+    native_file_evidence = source.get("snerv_mlx_native_file_backed_export_evidence")
+    if isinstance(native_file_evidence, Mapping):
+        out.setdefault(
+            "snerv_mlx_native_file_backed_export_evidence",
+            dict(native_file_evidence),
+        )
+        out.setdefault(
+            "native_mlx_file_backed_export_proof_passed",
+            bool(
+                native_file_evidence.get(
+                    "required_pair_file_backed_export_proof_passed"
+                )
+            ),
+        )
     if isinstance(native, Mapping):
         out.setdefault(
             "native_mlx_receiver_proof_passed",
@@ -1219,6 +1306,25 @@ def _augment_feedback_row(
             "native_mlx_scorer_loop_qat_best_materialized",
             bool(native.get("scorer_loop_qat_best_materialized")),
         )
+        out.setdefault("snerv_mlx_native_export_executed", native.get("executed"))
+        out.setdefault(
+            "snerv_mlx_native_export_artifact_report_path",
+            native.get("artifact_report_path") or native.get("report_path"),
+        )
+        out.setdefault("snerv_mlx_native_export_packet_path", native.get("packet_path"))
+        out.setdefault(
+            "snerv_mlx_native_export_packet_sha256", native.get("packet_sha256")
+        )
+        out.setdefault(
+            "snerv_mlx_native_export_archive_path", native.get("archive_path")
+        )
+        out.setdefault(
+            "snerv_mlx_native_export_archive_sha256", native.get("archive_sha256")
+        )
+        out.setdefault(
+            "snerv_mlx_native_export_receiver_proof_path",
+            native.get("receiver_proof_path"),
+        )
     if "receiver_proof_attached" not in out:
         receiver_paths = out.get("receiver_proof_report_paths")
         out["receiver_proof_attached"] = bool(
@@ -1238,6 +1344,53 @@ def _augment_feedback_row(
             or out.get("local_cpu_replay_summary_present")
         )
     return out
+
+
+def _snerv_native_artifact_evidence_from_feedback(
+    feedback: Mapping[str, Any],
+) -> dict[str, Any]:
+    embedded = feedback.get("snerv_mlx_native_file_backed_export_evidence")
+    if isinstance(embedded, Mapping):
+        return dict(embedded)
+    artifact = {
+        "num_pairs": feedback.get("candidate_num_pairs")
+        if feedback.get("scope_matches_candidate")
+        else feedback.get("measured_num_pairs"),
+        "executed": feedback.get("snerv_mlx_native_export_executed"),
+        "artifact_report_path": feedback.get(
+            "snerv_mlx_native_export_artifact_report_path"
+        ),
+        "packet_path": feedback.get("snerv_mlx_native_export_packet_path"),
+        "packet_sha256": feedback.get("snerv_mlx_native_export_packet_sha256"),
+        "archive_path": feedback.get("snerv_mlx_native_export_archive_path"),
+        "archive_sha256": feedback.get("snerv_mlx_native_export_archive_sha256"),
+        "receiver_proof_path": feedback.get(
+            "snerv_mlx_native_export_receiver_proof_path"
+        ),
+        "receiver_proof_passed": feedback.get(
+            "snerv_mlx_native_export_receiver_proof_passed"
+        )
+        or feedback.get("native_mlx_receiver_proof_passed"),
+        "receiver_contract_satisfied": feedback.get(
+            "snerv_mlx_native_export_receiver_contract_satisfied"
+        ),
+        "scorer_loop_qat": {
+            "executed": feedback.get("native_mlx_scorer_loop_qat_attached"),
+            "receiver_contract_satisfied": feedback.get(
+                "native_mlx_scorer_loop_qat_receiver_contract_satisfied"
+            ),
+            "ready_for_pose_guard_gate": feedback.get(
+                "native_mlx_scorer_loop_qat_ready_for_pose_guard_gate"
+            ),
+            "accepted_improvement": feedback.get(
+                "native_mlx_scorer_loop_qat_accepted_improvement"
+            ),
+            "emitted_packet_uses_scorer_loop_best_decoder": feedback.get(
+                "native_mlx_scorer_loop_qat_best_materialized"
+            ),
+        },
+    }
+    return {key: value for key, value in artifact.items() if value is not None}
 
 
 def _candidate_feedback_for(
