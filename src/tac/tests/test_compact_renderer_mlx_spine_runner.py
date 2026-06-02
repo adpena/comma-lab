@@ -184,6 +184,8 @@ def test_compact_family_interrupted_report_preserves_false_authority_evidence(
     payload = json.loads(report_path.read_text())
     assert payload["mode"] == "interrupted_compact_family_run"
     assert payload["signal_name"] == "SIGTERM"
+    assert payload["training_executed"] is False
+    assert payload["training_started"] is True
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

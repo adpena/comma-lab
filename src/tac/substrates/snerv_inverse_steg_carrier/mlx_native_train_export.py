@@ -255,12 +255,12 @@ def train_export_snerv_mlx_native(
         scorer_loop_qat_public["emitted_packet_sha256"] = _sha256_bytes(
             selected_packet
         )
-        scorer_loop_qat_public["blockers"] = [
+        scorer_loop_qat_public["blockers"] = _ordered_unique(
             str(blocker)
             for blocker in scorer_loop_qat_public.get("blockers") or []
             if str(blocker)
             != "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
-        ]
+        )
         report = scorer_loop_qat_public.get("report_path")
         if report:
             _payload_for_disk = {

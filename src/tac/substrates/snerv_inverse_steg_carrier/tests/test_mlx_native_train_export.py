@@ -201,7 +201,11 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
                 },
                 "best_packet_bytes": len(best_packet),
                 "best_packet_sha256": best_packet_sha256,
-                "blockers": [],
+                "blockers": [
+                    "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export",
+                    "snerv_scorer_loop_qat_auxiliary_warning",
+                    "snerv_scorer_loop_qat_auxiliary_warning",
+                ],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -256,6 +260,7 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert Path(scorer_loop["best_packet_path"]).read_bytes() == best_packet
     assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is True
     assert scorer_loop["emitted_packet_sha256"] == best_packet_sha256
+    assert scorer_loop["blockers"] == ["snerv_scorer_loop_qat_auxiliary_warning"]
     assert report["packet_source"] == "scorer_loop_qat_best_receiver_packet"
     assert report["packet_sha256"] == best_packet_sha256
     assert Path(report["packet_path"]).read_bytes() == best_packet

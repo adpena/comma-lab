@@ -8214,6 +8214,8 @@ def _write_compact_family_interrupted_report(
         "hard_byte_ceilings": list(hard_byte_ceilings),
         "command_args": _jsonable_lock_value(vars(args)),
         "evidence_files": _compact_family_interruption_evidence_files(output_dir),
+        "training_executed": False,
+        "training_started": True,
         "score_authority": "false_macos_mlx_research_signal",
         "score_claim": False,
         "frontier_score_claim": False,
