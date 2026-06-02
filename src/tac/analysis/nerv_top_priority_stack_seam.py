@@ -576,6 +576,7 @@ def _next_local_actions(
                 ".venv/bin/python tools/run_snerv_scorer_loop_decoder_qat_smoke.py "
                 "--n-pairs 4 --levels 3 --target-bits-per-coeff 2.0 "
                 "--pair-stride 8 --search-mode nes_pair_robust --max-trials 2 "
+                "--byte-pressure-multiplier 8.0 --max-archive-byte-growth 0 "
                 "--pose-slack 0.0 --seg-slack 0.00005 "
                 "--pair-guard-min-score-improved-fraction 0.75 "
                 "--pair-guard-max-pose-worsened-fraction 0.0 "

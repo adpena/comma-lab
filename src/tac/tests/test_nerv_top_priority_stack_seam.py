@@ -96,6 +96,8 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
         if action["id"] == "snerv_pair_robust_decoder_qat_continuation"
     )
     assert "--search-mode nes_pair_robust" in snerv_qat["command"]
+    assert "--byte-pressure-multiplier 8.0" in snerv_qat["command"]
+    assert "--max-archive-byte-growth 0" in snerv_qat["command"]
     assert "--seg-slack 0.00005" in snerv_qat["command"]
     assert "--pose-hard-guard" not in snerv_qat["command"]
     assert (

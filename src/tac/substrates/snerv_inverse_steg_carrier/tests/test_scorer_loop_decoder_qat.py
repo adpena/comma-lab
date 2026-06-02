@@ -90,6 +90,98 @@ def test_decoder_trial_pose_guard_requires_receiver_replay() -> None:
     assert decoder_trial_passes_pose_guard(candidate, current) is False
 
 
+def test_decoder_trial_pose_guard_can_hard_block_archive_byte_growth() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.2,
+        d_seg=0.01,
+        replay=True,
+        archive_bytes=1000,
+        rate_term=0.010,
+    )
+    candidate = _eval(
+        label="lower_score_bigger_archive",
+        score=6.9,
+        d_pose=0.19,
+        d_seg=0.009,
+        replay=True,
+        archive_bytes=1001,
+        rate_term=0.011,
+    )
+
+    assert decoder_trial_passes_pose_guard(candidate, current) is True
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            max_archive_byte_growth=0,
+        )
+        is False
+    )
+
+
+def test_decoder_trial_pose_guard_uses_byte_pressure_objective() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.2,
+        d_seg=0.01,
+        replay=True,
+        archive_bytes=1000,
+        rate_term=0.010,
+    )
+    candidate = _eval(
+        label="tiny_score_gain_large_rate_growth",
+        score=6.99,
+        d_pose=0.19,
+        d_seg=0.009,
+        replay=True,
+        archive_bytes=5000,
+        rate_term=1.000,
+    )
+
+    assert decoder_trial_passes_pose_guard(candidate, current) is True
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            byte_pressure_multiplier=8.0,
+        )
+        is False
+    )
+
+
+def test_decoder_trial_pose_guard_never_accepts_raw_score_regression() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.2,
+        d_seg=0.01,
+        replay=True,
+        archive_bytes=1000,
+        rate_term=0.100,
+    )
+    candidate = _eval(
+        label="lower_rate_but_raw_score_regresses",
+        score=7.1,
+        d_pose=0.19,
+        d_seg=0.009,
+        replay=True,
+        archive_bytes=100,
+        rate_term=0.001,
+    )
+
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            byte_pressure_multiplier=8.0,
+        )
+        is False
+    )
+
+
 def test_decoder_trial_pose_guard_can_require_pair_robust_score_improvement() -> None:
     current = _eval(
         label="baseline",
@@ -225,6 +317,7 @@ def test_decoder_eval_json_preserves_pair_local_detector_response() -> None:
 
     payload = row.as_jsonable()
 
+    assert payload["rate_aware_objective_linf"] == pytest.approx(6.0)
     assert payload["per_pair"] == [
         {
             "pair_index": 0,
@@ -448,6 +541,56 @@ def test_nes_pair_robust_objective_penalizes_pair_pose_damage() -> None:
     )
 
 
+def test_nes_pair_robust_objective_penalizes_archive_byte_growth() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.20,
+        d_seg=0.010,
+        replay=True,
+        archive_bytes=1000,
+        rate_term=0.010,
+    )
+    rate_safe = _eval(
+        label="rate_safe",
+        score=6.9,
+        d_pose=0.19,
+        d_seg=0.009,
+        replay=True,
+        archive_bytes=1000,
+        rate_term=0.010,
+    )
+    byte_growing = _eval(
+        label="byte_growing",
+        score=6.8,
+        d_pose=0.19,
+        d_seg=0.009,
+        replay=True,
+        archive_bytes=1005,
+        rate_term=0.015,
+    )
+
+    assert _nes_pair_robust_objective(
+        rate_safe,
+        current,
+        pose_slack=0.0,
+        seg_slack=0.0,
+        byte_pressure_multiplier=8.0,
+        max_archive_byte_growth=0,
+        pair_guard_min_score_improved_fraction=0.0,
+        pair_guard_max_pose_worsened_fraction=1.0,
+    ) < _nes_pair_robust_objective(
+        byte_growing,
+        current,
+        pose_slack=0.0,
+        seg_slack=0.0,
+        byte_pressure_multiplier=8.0,
+        max_archive_byte_growth=0,
+        pair_guard_min_score_improved_fraction=0.0,
+        pair_guard_max_pose_worsened_fraction=1.0,
+    )
+
+
 def test_decoder_search_direction_labels_rejects_unknown_mode() -> None:
     with pytest.raises(SnervScorerLoopDecoderQatError, match="search_mode"):
         decoder_search_direction_labels(
@@ -485,6 +628,8 @@ def _eval(
     d_pose: float,
     replay: bool,
     d_seg: float = 0.01,
+    archive_bytes: int = 1234,
+    rate_term: float = 0.001,
     per_pair: tuple[SnervPairEval, ...] | None = None,
 ) -> SnervDecoderEval:
     if per_pair is None:
@@ -500,12 +645,13 @@ def _eval(
     return SnervDecoderEval(
         label=label,
         iteration=0,
-        archive_bytes=1234,
+        archive_bytes=int(archive_bytes),
         archive_sha256="0" * 64,
         d_seg_linf=d_seg,
         d_pose_linf=d_pose,
         score_linf=score,
-        rate_term=0.001,
+        rate_aware_objective_linf=float(score),
+        rate_term=float(rate_term),
         receiver_archive_replay_verified=replay,
         accepted=False,
         blockers=() if replay else ("receiver_archive_replay_failed",),
