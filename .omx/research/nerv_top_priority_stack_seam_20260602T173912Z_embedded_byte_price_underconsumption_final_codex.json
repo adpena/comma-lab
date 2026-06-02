@@ -1,0 +1,718 @@
+{
+  "axis_tag": "[planning/control]",
+  "baseline": {
+    "archive": {
+      "bytes": 178417,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/archive.zip",
+      "sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a"
+    },
+    "blockers": [
+      "pr95_pr_metadata_missing",
+      "pr95_pr_url_missing",
+      "pr95_pr_state_missing",
+      "pr95_pr_head_sha_missing",
+      "pr95_pr_head_ref_missing"
+    ],
+    "existing_proof_tools": [
+      "tools/prove_pr95_public_archive_runtime_consumption.py",
+      "tools/prove_pr95_public_archive_full_frame_parity.py",
+      "tools/run_pr95_stage8_from_public_archive.py",
+      "tools/run_pr95_hnerv_linf_carrier.py"
+    ],
+    "head_ref": null,
+    "head_sha": null,
+    "intake_root": {
+      "is_dir": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto",
+      "present": true
+    },
+    "role": "baseline_control_to_beat",
+    "runtime_files": [
+      {
+        "bytes": 811,
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+        "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+      },
+      {
+        "bytes": 2158,
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.py",
+        "sha256": "fdc1e9af70a8f6b47f84c3978a29cb872dbc3dbdc6c123bda72ea494221a0e26"
+      },
+      {
+        "bytes": 2197,
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 7455,
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/codec.py",
+        "sha256": "63d3ffd03c514fa5841fbf75a3eac87cc76ed40f68e0d68db50cd7cda517266f"
+      },
+      {
+        "bytes": 3785,
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/optim.py",
+        "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6"
+      },
+      {
+        "bytes": 1866,
+        "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage8_muon_finetune.py",
+        "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f"
+      }
+    ],
+    "same_axis_requirement": "SNeRV/HiNeRV winner must be compared against PR95 on the same archive, runtime, inflate, and eval hardware axis before any beat claim",
+    "schema": "pr95_hnerv_baseline_control_pointer.v1",
+    "source_pr": 95,
+    "source_url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+    "state": null,
+    "submission": "hnerv_muon",
+    "title": "hnerv_muon submission (0.20)",
+    "upstream_repo_dir": {
+      "git": {
+        "branch": "master",
+        "head": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+        "remote_origin": "https://github.com/commaai/comma_video_compression_challenge.git"
+      },
+      "is_dir": true,
+      "path": "/Users/adpena/Projects/pact/upstream",
+      "present": true
+    }
+  },
+  "baseline_to_beat": "pr95_hnerv_muon",
+  "blocked_dispatch": true,
+  "blockers": [
+    "pr95_pr_metadata_missing",
+    "pr95_pr_url_missing",
+    "pr95_pr_state_missing",
+    "pr95_pr_head_sha_missing",
+    "pr95_pr_head_ref_missing",
+    "snerv_official_oss_snapshot_missing",
+    "hinerv_official_oss_snapshot_missing",
+    "hnerv_pr95_control_official_oss_snapshot_missing",
+    "snerv_simplified_contest_adapter_not_source_faithful",
+    "hinerv_l0_sketch_not_source_faithful",
+    "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video",
+    "z5_rao_ballard_modal_claims_still_need_terminal_adjudication",
+    "full_600_byte_closed_receiver_proof_missing_for_snerv_and_hinerv",
+    "paired_contest_cpu_cuda_pass_missing_for_winner",
+    "pr95_same_axis_control_replay_required_before_beat_claim"
+  ],
+  "carrier_stacks": [
+    {
+      "current_read": "linear/closed-form coordinate and scalar HF sweeps are not promotion evidence; explicit mixed decoder modes and scorer-loop QAT are the next useful local surfaces",
+      "existing_surfaces": [
+        "src/tac/analysis/snerv_scorer_loop_decoder_qat_contract.py",
+        "src/tac/analysis/snerv_decoder_mode_assignment_probe.py",
+        "src/tac/analysis/snerv_pose_guarded_decoder_gate.py",
+        "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
+        "tools/probe_snerv_decoder_mode_assignments.py",
+        "tools/prove_snerv_receiver_archive.py"
+      ],
+      "next_gate": "pair-robust scorer-loop or NES decoder-QAT continuation with PoseNet as hard guard and receiver-decoded mixed precision bytes preserved",
+      "optimization_scope": "carrier-specific full stack; not a shared HNeRV clone",
+      "required_components": [
+        "architecture",
+        "learned_or_nonlinear_decoder_qat",
+        "pose_guarded_scorer_loop_fit",
+        "linf_oracle_allocator_inside_decoder_weight_training",
+        "mixed_precision_decoder_grammar",
+        "byte_closed_receiver_proof",
+        "paired_pr95_same_axis_control"
+      ],
+      "role": "top_priority_carrier",
+      "stack_id": "snerv",
+      "status": "local_stack_optimization_active"
+    },
+    {
+      "current_read": "recent full-600 MLX prefilter was byte-closed but distortion-bad; rate plumbing is real enough, fit must move upstream into longer score-aware/coder-aware decoder-weight training",
+      "existing_surfaces": [
+        "src/tac/analysis/hinerv_latent_linf_allocation.py",
+        "src/tac/substrates/hi_nerv/score_aware_loss.py",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        ".omx/research/codex_findings_hinerv_coder_aware_qat_wired_20260601T224653Z_codex.md",
+        ".omx/research/codex_findings_hinerv_600pair_joint_p18_p19_full_prefilter_20260602T021050Z_codex.md"
+      ],
+      "next_gate": "longer staged real-teacher SegNet/PoseNet training with coder-aware QAT and local MLX prefilter; no exact spend until prefilter enters a plausible replay band",
+      "optimization_scope": "carrier-specific full stack; not a SNeRV codec wrapper",
+      "required_components": [
+        "hierarchical_architecture",
+        "coder_aware_qat",
+        "joint_p18_p19_oracle_weighting",
+        "dense_decoder_vjp_linf_allocator",
+        "pr95_faithful_curriculum_control",
+        "byte_closed_receiver_proof",
+        "full_video_mlx_prefilter_then_paired_cpu_cuda"
+      ],
+      "role": "top_priority_carrier",
+      "stack_id": "hinerv",
+      "status": "local_stack_optimization_active"
+    }
+  ],
+  "dispatch_blockers": [
+    "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video",
+    "z5_rao_ballard_modal_claims_still_need_terminal_adjudication"
+  ],
+  "exact_or_full_video_launched": false,
+  "forbidden_actions": [
+    "claim_pr95_beat_without_same_axis_pr95_control",
+    "promote_local_mlx_or_macos_cpu_advisory_score",
+    "dispatch_exact_or_full_video_while_pr101_cpu_pending",
+    "rerun_closed_form_snerv_scalar_hf_sweeps_as_promotion_evidence",
+    "treat_sr_nerv_zero_parameter_interpolation_as_promotable",
+    "call_simplified_snerv_adapter_source_faithful",
+    "call_l0_hinerv_sketch_source_faithful",
+    "retire_snerv_or_hinerv_from_current_bad_advisory_scores"
+  ],
+  "fractal_work_orders": [
+    {
+      "priority": "top_carrier",
+      "stack_id": "snerv",
+      "work_order": [
+        {
+          "component": "architecture",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "learn nonlinear decoder/HF restoration against real SegNet/PoseNet response, not scalar coordinate sweeps",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "optimizer_qat",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "run pair-robust scorer-loop or NES decoder-QAT with PoseNet hard guard and per-pair deltas",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "allocator",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "move L-infinity allocation into decoder-weight fit; latents are diagnostic only until leverage reappears",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "archive_grammar",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "replace fp32/fake-quant receiver payload with explicit mixed decoder modes, int planes, or decoder-delta packing",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        },
+        {
+          "component": "receiver_proof",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "prove receiver-decoded byte accounting before any full-600 authority",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        },
+        {
+          "component": "eval_control",
+          "local_command_ids": [
+            "snerv_pair_robust_decoder_qat_continuation",
+            "snerv_explicit_decoder_mode_triage"
+          ],
+          "next_action": "compare against PR95 only after same-axis archive/runtime control replay",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        }
+      ]
+    },
+    {
+      "priority": "top_carrier",
+      "stack_id": "hinerv",
+      "work_order": [
+        {
+          "component": "architecture",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "continue hierarchical NeRV carrier training; fit is the active blocker, not proof that the rate knob is fake",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "optimizer_qat",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "stage real-teacher SegNet/PoseNet loss, coder-aware QAT, and PR95/Muon curriculum controls",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "allocator",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "use dense decoder VJP L-infinity allocator with joint P18/P19 weighting inside decoder-weight optimization",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": false
+        },
+        {
+          "component": "archive_grammar",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "keep byte budget parameterized and close the quantized receiver grammar before exact replay",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        },
+        {
+          "component": "receiver_proof",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "prove full-600 archive/runtime consumption with no MLX or advisory shortcut",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        },
+        {
+          "component": "eval_control",
+          "local_command_ids": [
+            "hinerv_real_teacher_qat_continuation"
+          ],
+          "next_action": "prefilter locally on MLX, then replay paired CPU/CUDA only after blocker claims terminalize",
+          "promotion_authority": false,
+          "requires_receiver_byte_accounting": true
+        }
+      ]
+    }
+  ],
+  "frontier_score_claim": false,
+  "full_stack_priority": {
+    "components": [
+      "architecture",
+      "optimizer_qat",
+      "allocator",
+      "archive_grammar",
+      "receiver_proof",
+      "eval_control"
+    ],
+    "do_not_average_stacks": true,
+    "do_not_promote_shared_enhancer_as_carrier": true,
+    "fractality_rule": "Each stack component needs its own hypothesis, local command, byte accounting surface, guard, and promotion blocker; a global stack memo alone is not implementation authority.",
+    "policy": "Optimize SNeRV and HiNeRV as separate end-to-end stacks at every component boundary, then compose shared enhancers only through explicit byte/eval gates.",
+    "pr95_control_required_for_any_beat_claim": true,
+    "schema": "nerv_individual_fractal_full_stack_priority.v1",
+    "top_priority_carriers": [
+      "snerv",
+      "hinerv"
+    ]
+  },
+  "generated_utc": "2026-06-02T17:39:15.753223+00:00",
+  "go_no_go_verdict": "GO_LOCAL_STACK_OPTIMIZATION__NO_GO_PRODUCTION_HARDENED_OR_EXACT_CLAIM",
+  "lane_id": "lane_nerv_top_priority_stack_seam_20260602",
+  "modelsize_archive_budget_policy": {
+    "contest_inversion_target": {
+      "byte_caps_to_sweep": [
+        36000,
+        72000,
+        120000,
+        150000,
+        178417
+      ],
+      "control_baseline_bytes": 178417,
+      "objective": "choose architecture widths, embedding dimensions, quant bits, and entropy grammar to minimize SegNet/PoseNet distortion plus 25*archive_bytes/raw_bytes under explicit byte caps",
+      "rate_formula": "contest_rate_term = 25 * archive_zip_bytes / raw_video_bytes",
+      "requires_measured_curve": true
+    },
+    "current_gap": {
+      "hi_nerv": "local compact runner exposes latent_dim/embed_dim/decoder_channel, but not the official modelsize solver over ks/reduce/lower_width/enc_dim/strides/quant bits",
+      "snerv": "local adapter exposes LF levels, target bits, and decoder payload modes, but not official SNeRV modelsize/fc_dim/MFU/HFR/SNeRV_T budget binding"
+    },
+    "official_controls_to_bind": [
+      "--modelsize",
+      "--ks",
+      "--reduce",
+      "--lower_width",
+      "--enc_dim",
+      "--fc_hw",
+      "--enc_strds",
+      "--dec_strds",
+      "--quant_model_bit",
+      "--quant_embed_bit",
+      "--quant_axis",
+      "HiNeRV config family xs/s/m/l/xl/xxl",
+      "HiNeRV prune-ratio/prune-weight",
+      "HiNeRV quant-level/quant-noise/quant-ste"
+    ],
+    "production_blockers": [
+      "nerv_modelsize_to_archive_bytes_curve_missing",
+      "official_modelsize_flag_not_bound_to_contest_byte_caps",
+      "quant_bits_not_jointly_optimized_with_score_sensitivity",
+      "modelsize_sweep_not_replayed_through_receiver_archive_bytes"
+    ],
+    "production_hardened_claim": false,
+    "required_measurements": [
+      "official_config_tiny_forward_parity",
+      "params_split_encoder_decoder_embedding",
+      "quantized_tensor_payload_bytes",
+      "entropy_coded_payload_bytes",
+      "metadata_and_receiver_runtime_bytes",
+      "brotli_or_zip_member_bytes",
+      "receiver_inflate_parity",
+      "macos_or_mlx_prefilter_component_deltas",
+      "same_axis_pr95_control_replay_before_beat_claim"
+    ],
+    "schema": "nerv_modelsize_archive_budget_policy.v1",
+    "verdict": "NO_GO_FULL_LEVERAGE_UNTIL_MODEL_SIZE_TO_ARCHIVE_BYTES_CURVE_EXISTS",
+    "why_it_matters": "Official HNeRV/SNeRV expose a parameter-budget knob that can be inverted into an archive-byte budget once quantization, entropy coding, and metadata overhead are measured. Current local stacks have width/latent knobs, but not the official modelsize-to-bytes solver or a measured score/byte Pareto curve."
+  },
+  "next_local_actions": [
+    {
+      "allowed_now": true,
+      "authority_after_pass": "terminalize claim only; no score shortcut",
+      "axis": "[contest-CPU recovery]",
+      "command": ".venv/bin/python tools/recover_modal_auth_eval.py --call-id fc-01KT2BZT54G6CXPMD94SY43MMH --output-dir experiments/results/modal_auth_eval_cpu/pr101_storage_order_len24_cpu_20260601T1955Z",
+      "id": "poll_pr101_cpu_recovery"
+    },
+    {
+      "allowed_now": true,
+      "authority_after_pass": "local triage only",
+      "axis": "[macOS-CPU advisory]",
+      "command": ".venv/bin/python tools/run_snerv_scorer_loop_decoder_qat_smoke.py --n-pairs 4 --levels 3 --target-bits-per-coeff 2.0 --pair-stride 8 --search-mode nes_pair_robust --max-trials 2 --byte-pressure-multiplier 8.0 --max-archive-byte-growth 0 --pose-slack 0.0 --seg-slack 0.00005 --pair-guard-min-score-improved-fraction 0.75 --pair-guard-max-pose-worsened-fraction 0.0 --out .omx/research/snerv_scorer_loop_decoder_qat_next_<UTC>.json",
+      "id": "snerv_pair_robust_decoder_qat_continuation"
+    },
+    {
+      "allowed_now": true,
+      "authority_after_pass": "local receiver-decoded rate/fit triage only",
+      "axis": "[macOS-CPU advisory]",
+      "command": ".venv/bin/python tools/probe_snerv_decoder_mode_assignments.py --n-pairs 2 --levels 1 --mode-plan magnitude_heuristic --mode-plan fp16,int4,int4 --upstream-dir /Users/adpena/Projects/pact/upstream",
+      "id": "snerv_explicit_decoder_mode_triage"
+    },
+    {
+      "allowed_now": true,
+      "authority_after_pass": "local MLX prefilter only",
+      "axis": "[macOS-MLX research-signal]",
+      "command": ".venv/bin/python tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv --coder-aware-qat --real-teacher-segnet-posenet --num-pairs 32 --epochs 8",
+      "id": "hinerv_real_teacher_qat_continuation"
+    },
+    {
+      "allowed_now": false,
+      "axis": "[contest-CPU]/[contest-CUDA]",
+      "blocked_reason": "blocked while active exact/full-video claims remain nonterminal",
+      "command": "deferred",
+      "id": "paired_exact_eval_or_full_video"
+    }
+  ],
+  "operator_truth": {
+    "dirty_shared_worktree_is_not_absorbed": true,
+    "large_artifacts_policy": "this artifact is metadata-only; future training/eval outputs must spill to SSD and preserve deterministic custody before cleanup",
+    "main_is_source_of_truth": true,
+    "upstream_pr95_is_forensic_baseline_source": true
+  },
+  "priority_policy": {
+    "bad_current_scores_are_config_or_wiring_bug_signals_until_parity": true,
+    "baseline_control": "pr95_hnerv_muon",
+    "carrier_stacks": [
+      "snerv",
+      "hinerv"
+    ],
+    "compare_under_same_archive_runtime_eval_axis": true,
+    "do_not_launch_new_full_video_or_exact_while_dispatch_blockers_active": true,
+    "enhancers_are_not_standalone_carrier_stacks": true,
+    "individually_fractally_optimized_full_stacks": true,
+    "no_fake_implementations_allowed": true,
+    "paper_and_oss_parity_required_before_production_claim": true,
+    "shared_synergy_surfaces_do_not_collapse_carrier_specific_work": true
+  },
+  "production_hardened_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "nerv_top_priority_stack_seam.v1",
+  "score_claim": false,
+  "shared_promotion_gates": [
+    {
+      "authority_after_pass": "may consider exact/full-video queue again",
+      "gate": "pr101_cpu_recovery_terminal",
+      "required": true
+    },
+    {
+      "authority_after_pass": "candidate may enter paired auth-eval planning only",
+      "gate": "byte_closed_full_600_receiver_proof",
+      "required": true
+    },
+    {
+      "authority_after_pass": "beat/no-beat statement may be made only on that axis",
+      "gate": "pr95_same_axis_control",
+      "required": true
+    },
+    {
+      "authority_after_pass": "promotion discussion may begin",
+      "gate": "paired_contest_cpu_cuda_auth_eval",
+      "required": true
+    }
+  ],
+  "source_faithful_stack_claim": false,
+  "source_faithfulness": {
+    "blockers": [
+      "snerv_official_oss_snapshot_missing",
+      "hinerv_official_oss_snapshot_missing",
+      "hnerv_pr95_control_official_oss_snapshot_missing",
+      "snerv_simplified_contest_adapter_not_source_faithful",
+      "hinerv_l0_sketch_not_source_faithful"
+    ],
+    "local_implementation_audit": [
+      {
+        "implemented_features": [
+          "haar_like_multilevel_dwt_idwt",
+          "lf_storage_with_generated_hf_detail",
+          "linear_3x3_hf_predictor",
+          "local_scorer_loop_decoder_qat_smoke",
+          "receiver_archive_proof_surface"
+        ],
+        "local_surfaces": [
+          "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+          "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+          "tools/run_snerv_scorer_loop_decoder_qat_smoke.py"
+        ],
+        "method_verdict_authority": false,
+        "missing_source_features": [
+          "official_SNeRV_encoder_decoder_stride_stack",
+          "official_MFU_multi_resolution_fusion_blocks",
+          "official_HFR_high_frequency_restoration_heads",
+          "official_SNeRV_T_temporal_neighbor_path",
+          "official_modelsize_fc_dim_parameter_budget_solver",
+          "official_quantized_checkpoint_payload_replay"
+        ],
+        "production_authority": false,
+        "stack_id": "snerv",
+        "status": "simplified_contest_adapter_not_source_faithful"
+      },
+      {
+        "implemented_features": [
+          "three_scale_latent_pyramid_sketch",
+          "local_archive_and_receiver_smoke",
+          "score_aware_loss_bridge",
+          "mlx_prefilter_path"
+        ],
+        "local_surfaces": [
+          "src/tac/substrates/hi_nerv/architecture.py",
+          "src/tac/substrates/hi_nerv/archive.py",
+          "src/tac/substrates/hi_nerv/score_aware_loss.py",
+          "tools/run_compact_renderer_mlx_spine_runner.py"
+        ],
+        "method_verdict_authority": false,
+        "missing_source_features": [
+          "official_hierarchical_feature_grid_encoding",
+          "official_patch_mode_frame_mode_equivalence",
+          "official_fast_3d_hierarchical_upsampling",
+          "official_config_family_size_sweep_parity",
+          "official_prune_quant_noise_quant_ste_compression_stack",
+          "official_bitstream_compress_decompress_roundtrip"
+        ],
+        "production_authority": false,
+        "stack_id": "hinerv",
+        "status": "l0_sketch_not_source_faithful"
+      }
+    ],
+    "official_sources": [
+      {
+        "blockers": [
+          "snerv_contest_config_parity_missing",
+          "snerv_architecture_symbol_parity_missing",
+          "snerv_tiny_forward_parity_missing",
+          "snerv_contest_receiver_byte_grammar_missing",
+          "snerv_same_axis_pr95_control_missing"
+        ],
+        "observed_source": {
+          "audit_root": null,
+          "head_sha": null,
+          "repo_url": "https://github.com/qwertja/SNeRV.git",
+          "source_snapshot_claim": false
+        },
+        "official": {
+          "paper": "SNeRV: Spectra-preserving Neural Representation for Video",
+          "paper_url": "https://arxiv.org/abs/2501.01681",
+          "repo_url": "https://github.com/qwertja/SNeRV.git",
+          "required_features": [
+            "official_encoder_decoder_stride_stack",
+            "haar_dwt_idwt_low_high_frequency_reconstruction",
+            "multi_resolution_fusion_blocks",
+            "high_frequency_restoration_heads",
+            "temporal_extension_snerv_t_or_documented_no_go",
+            "modelsize_or_fc_dim_budget_binding",
+            "quant_model_and_embedding_payload_accounting"
+          ],
+          "required_files": [
+            "train_snerv.py",
+            "train_snerv_t.py",
+            "model/snerv.py",
+            "model/snerv_t.py",
+            "model/layers.py"
+          ]
+        },
+        "parity_status": "oss_snapshot_missing",
+        "production_authority": false,
+        "role": "top_priority_carrier",
+        "stack_id": "snerv"
+      },
+      {
+        "blockers": [
+          "hinerv_contest_config_parity_missing",
+          "hinerv_architecture_symbol_parity_missing",
+          "hinerv_tiny_forward_parity_missing",
+          "hinerv_contest_receiver_byte_grammar_missing",
+          "hinerv_same_axis_pr95_control_missing"
+        ],
+        "observed_source": {
+          "audit_root": null,
+          "head_sha": null,
+          "repo_url": "https://github.com/hmkx/HiNeRV.git",
+          "source_snapshot_claim": false
+        },
+        "official": {
+          "paper": "HiNeRV: Video Compression with Hierarchical Encoding-based Neural Representation",
+          "paper_url": "https://arxiv.org/abs/2306.09818",
+          "repo_url": "https://github.com/hmkx/HiNeRV.git",
+          "required_features": [
+            "hierarchical_feature_grid_encoding",
+            "patch_mode_and_frame_mode_equivalence",
+            "3d_trilinear_or_nearest_hierarchical_upsampling",
+            "official_config_family_size_sweeps",
+            "pruning_parametrization",
+            "quant_noise_and_quant_ste_training_controls",
+            "torchac_or_equivalent_integer_bitstream_codec"
+          ],
+          "required_files": [
+            "hinerv_main.py",
+            "hinerv_compress.py",
+            "models/hinerv.py",
+            "models/encoding.py",
+            "models/patch_utils.py",
+            "compression/quant_utils.py",
+            "compression/prune_utils.py",
+            "compression/codec_utils.py"
+          ]
+        },
+        "parity_status": "oss_snapshot_missing",
+        "production_authority": false,
+        "role": "top_priority_carrier",
+        "stack_id": "hinerv"
+      },
+      {
+        "blockers": [
+          "hnerv_pr95_control_contest_config_parity_missing",
+          "hnerv_pr95_control_architecture_symbol_parity_missing",
+          "hnerv_pr95_control_tiny_forward_parity_missing",
+          "hnerv_pr95_control_contest_receiver_byte_grammar_missing",
+          "hnerv_pr95_control_same_axis_pr95_control_missing"
+        ],
+        "observed_source": {
+          "audit_root": null,
+          "head_sha": null,
+          "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+          "source_snapshot_claim": false
+        },
+        "official": {
+          "paper": "HNeRV: A Hybrid Neural Representation for Videos",
+          "paper_url": "https://arxiv.org/abs/2304.02633",
+          "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+          "required_features": [
+            "modelsize_flag_controls_decoder_and_embedding_budget",
+            "ks_reduce_lower_width_parameter_balance",
+            "convnext_encoder_pshuffel_decoder_path",
+            "quant_model_bit_and_quant_embed_bit_export",
+            "source_runtime_replay_for_pr95_control"
+          ],
+          "required_files": [
+            "train_nerv_all.py",
+            "model_all.py",
+            "hnerv_utils.py",
+            "efficient_nvloader.py"
+          ]
+        },
+        "parity_status": "oss_snapshot_missing",
+        "production_authority": false,
+        "role": "baseline_control",
+        "stack_id": "hnerv_pr95_control"
+      }
+    ],
+    "policy": {
+      "bad_scores_from_non_source_faithful_stacks_are_bug_signals": true,
+      "journal_grade_requires_source_snapshot_and_replayable_commands": true,
+      "minimal_or_sketch_adapters_are_local_only": true,
+      "no_fake_implementations_allowed": true,
+      "production_hardened_requires_official_feature_parity": true
+    },
+    "production_hardened_claim": false,
+    "required_gates": [
+      {
+        "evidence": "repo_url, head_sha, audit_root, required file manifest",
+        "gate": "official_oss_snapshot_custody",
+        "required": true
+      },
+      {
+        "evidence": "architecture symbol map from official feature to local module",
+        "gate": "paper_feature_parity",
+        "required": true
+      },
+      {
+        "evidence": "tiny deterministic official config and local adapted config",
+        "gate": "official_config_parity_smoke",
+        "required": true
+      },
+      {
+        "evidence": "1164x874 output, scorer downsample path, 600-pair filelist",
+        "gate": "contest_adaptation_binding",
+        "required": true
+      },
+      {
+        "evidence": "archive bytes, member hashes, receiver-only inflate proof",
+        "gate": "byte_closed_receiver_grammar",
+        "required": true
+      },
+      {
+        "evidence": "PR95 source runtime replay on matching CPU/CUDA axis",
+        "gate": "same_axis_pr95_control",
+        "required": true
+      }
+    ],
+    "schema": "nerv_source_faithfulness_matrix.v1",
+    "source_faithful_stack_claim": false,
+    "verdict": "NO_GO_PRODUCTION_HARDENED_CLAIM_UNTIL_PAPER_OSS_PARITY_AND_CONTEST_RECEIVER_PROOFS_PASS"
+  },
+  "synergy_enhancers": [
+    {
+      "enhancer_id": "sr_nerv_trained_scorer_aware",
+      "not_a_standalone_carrier_stack": true,
+      "policy": "low-internal-resolution carrier plus trained/scorer-aware SR; zero-parameter interpolation remains no-go",
+      "priority": "highest_enhancer"
+    },
+    {
+      "enhancer_id": "rnerv_per_video_config_optimizer",
+      "not_a_standalone_carrier_stack": true,
+      "policy": "optimize the winning SNeRV/HiNeRV carrier configuration per video",
+      "priority": "winner_optimizer"
+    },
+    {
+      "enhancer_id": "ffnerv_flow_pose_channel",
+      "not_a_standalone_carrier_stack": true,
+      "policy": "flow-conditioning is a pose-channel bolt-on after carrier winner emerges",
+      "priority": "pose_channel_enhancer"
+    },
+    {
+      "enhancer_id": "boostnerv_decoder_temporal_affine",
+      "not_a_standalone_carrier_stack": true,
+      "policy": "conditional decoder/temporal-affine bolt-on for the winner",
+      "priority": "cheap_synergy_multiplier"
+    }
+  ],
+  "top_priority_carriers": [
+    "snerv",
+    "hinerv"
+  ]
+}

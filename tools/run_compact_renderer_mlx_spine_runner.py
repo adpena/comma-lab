@@ -45,6 +45,9 @@ from tac.analysis.nerv_candidate_curriculum import (  # noqa: E402
 from tac.analysis.nerv_candidate_feedback import (  # noqa: E402
     write_nerv_candidate_feedback_files,
 )
+from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
+    build_nerv_long_training_campaign_plan,
+)
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
@@ -65,6 +68,9 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
 from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
     PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+)
+from tac.substrates._shared.mlx_score_aware.adapter import (  # noqa: E402
+    SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
 from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (  # noqa: E402
     build_score_aware_carrier_training_plan,
@@ -4075,6 +4081,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_scorer_device: str | None = None,
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
+    optimizer_kind: str = "adamw",
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
@@ -4322,6 +4329,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             mlx_prefilter_scorer_device=mlx_prefilter_scorer_device,
             mlx_prefilter_scorer_batch_pairs=mlx_prefilter_scorer_batch_pairs,
             mlx_prefilter_progress_every=mlx_prefilter_progress_every,
+            optimizer_kind=str(optimizer_kind),
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -4578,6 +4586,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "allow_unscored_research_smoke": bool(allow_unscored_research_smoke),
                 "config_gate": config_gate,
                 "decoder_codec": str(launch_decoder_codec),
+                "optimizer_kind": str(optimizer_kind),
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
@@ -4951,6 +4960,16 @@ def _base_report(
     hard_byte_ceilings: tuple[int, ...],
     repo_root: Path,
 ) -> dict[str, Any]:
+    hinerv_modelsize_budget = build_hinerv_modelsize_budget_report(
+        hard_byte_ceilings=hard_byte_ceilings,
+        num_pairs=CONTEST_PAIR_COUNT,
+        per_ceiling_limit=6,
+    )
+    snerv_modelsize_budget = build_snerv_modelsize_budget_report(
+        hard_byte_ceilings=hard_byte_ceilings,
+        num_pairs=CONTEST_PAIR_COUNT,
+        per_ceiling_limit=6,
+    )
     return {
         "schema": COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
         "generated_utc": datetime.now(UTC).isoformat(),
@@ -4967,15 +4986,11 @@ def _base_report(
             "promotion_surface": "archive.zip bytes plus receiver proof plus exact gate",
         },
         "nerv_oss_flag_audit": official_nerv_oss_flag_audit(),
-        "hinerv_modelsize_budget": build_hinerv_modelsize_budget_report(
-            hard_byte_ceilings=hard_byte_ceilings,
-            num_pairs=CONTEST_PAIR_COUNT,
-            per_ceiling_limit=6,
-        ),
-        "snerv_modelsize_budget": build_snerv_modelsize_budget_report(
-            hard_byte_ceilings=hard_byte_ceilings,
-            num_pairs=CONTEST_PAIR_COUNT,
-            per_ceiling_limit=6,
+        "hinerv_modelsize_budget": hinerv_modelsize_budget,
+        "snerv_modelsize_budget": snerv_modelsize_budget,
+        "nerv_long_training_campaign_plan": build_nerv_long_training_campaign_plan(
+            hinerv_modelsize_budget=hinerv_modelsize_budget,
+            snerv_modelsize_budget=snerv_modelsize_budget,
         ),
         "nerv_stack_synergy_audit": build_nerv_stack_synergy_audit(
             repo_root=repo_root,
@@ -5924,6 +5939,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     mlx_prefilter_scorer_device: str | None,
     mlx_prefilter_scorer_batch_pairs: int,
     mlx_prefilter_progress_every: int,
+    optimizer_kind: str,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -6069,22 +6085,26 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+            "optimizer_kind": str(optimizer_kind),
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
-                "decoder_fake_quant_forward": {
-                    "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
-                    "enabled": bool(coder_qat_cfg.enabled),
-                    "quant_bits": int(coder_qat_cfg.quant_bits),
+            "decoder_fake_quant_forward": {
+                "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
+                "enabled": bool(coder_qat_cfg.enabled),
+                "quant_bits": int(coder_qat_cfg.quant_bits),
                 "quantizer_geometry": (
                     "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
                     "per_tensor_fp16_scale_for_biases"
                 ),
-                "target": "decoder weights and decoder biases; latents remain priced by their archive section",
-                    "authority": "macos_mlx_research_signal_false_authority",
-                },
-                "eval_roundtrip_ste": _hi_nerv_eval_roundtrip_ste_metadata(),
-                "pose_student_input_preprocess": _hi_nerv_pose_preprocess_metadata(),
-                "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
-                "local_mlx_prefilter": {
+                "target": (
+                    "decoder weights and decoder biases; latents remain priced "
+                    "by their archive section"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            "eval_roundtrip_ste": _hi_nerv_eval_roundtrip_ste_metadata(),
+            "pose_student_input_preprocess": _hi_nerv_pose_preprocess_metadata(),
+            "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
+            "local_mlx_prefilter": {
                 "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
                 "scorer_device": effective_prefilter_scorer_device,
                 "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
@@ -6220,7 +6240,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ema_archive_selection_enabled=True,
         grad_clip_max_norm=1.0,
         weight_decay=1e-4,
-        optimizer_kind="adamw",
+        optimizer_kind=str(optimizer_kind),
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
             "contest video targets, byte-closed archive export, receiver proof, "
@@ -7265,6 +7285,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--epochs", default=1, type=int)
     parser.add_argument("--batch-pairs", default=1, type=int)
     parser.add_argument("--learning-rate", default=1e-3, type=float)
+    parser.add_argument(
+        "--optimizer-kind",
+        choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
+        default="adamw",
+        help=(
+            "Native MLX optimizer for score-aware compact training. HiNeRV "
+            "uses this directly; SNeRV consumes it once the shared long-"
+            "training harness owns the carrier."
+        ),
+    )
     parser.add_argument("--compact-latent-dim", default=8, type=int)
     parser.add_argument("--compact-embed-dim", default=8, type=int)
     parser.add_argument("--compact-codebook-size", default=16, type=int)
@@ -8032,6 +8062,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             mlx_prefilter_scorer_device=args.mlx_prefilter_scorer_device,
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
+            optimizer_kind=args.optimizer_kind,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,

@@ -295,6 +295,18 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert report["snerv_modelsize_budget"]["schema"] == "snerv_modelsize_budget.v1"
     assert report["snerv_modelsize_budget"]["selected_candidate_count"] > 0
     assert report["snerv_modelsize_budget"]["score_claim"] is False
+    campaign_plan = report["nerv_long_training_campaign_plan"]
+    assert campaign_plan["schema"] == "nerv_long_training_campaign_plan.v1"
+    assert campaign_plan["score_claim"] is False
+    assert campaign_plan["ready_for_exact_eval_dispatch"] is False
+    assert campaign_plan["family_counts"]["hi_nerv"] > 0
+    assert campaign_plan["family_counts"]["snerv"] > 0
+    assert campaign_plan["launchable_local_row_count"] > 0
+    assert {
+        row["family"]
+        for row in campaign_plan["campaign_rows"]
+        if row["local_mlx_launch_command_ready"]
+    } == {"hi_nerv"}
     assert report["nerv_stack_synergy_audit"]["schema"] == (
         "nerv_stack_synergy_audit.v1"
     )
@@ -1039,6 +1051,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "1",
             "--modelsize-candidate-id",
             "manual",
+            "--optimizer-kind",
+            "lion",
         ]
     )
     sn = _parse_args(
@@ -1093,6 +1107,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.post_export_materializer_max_parallel == 2
     assert hi.post_export_materializer_max_experiments == 1
     assert hi.modelsize_candidate_id == "manual"
+    assert hi.optimizer_kind == "lion"
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
     assert sn.coder_aware_qat is True
@@ -1111,6 +1126,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_native_mlx_receiver_proof_timeout == 123
     assert sn.modelsize_candidate_id == "auto"
     assert sn.post_export_materializer_max_experiments == 1
+    assert sn.optimizer_kind == "adamw"
 
 
 def test_main_from_snerv_advisory_forwards_cleanup_scratch_flag(
@@ -1777,6 +1793,7 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
         pose_distillation_weight=1.0,
         mlx_prefilter_scorer_batch_pairs=4,
         mlx_prefilter_progress_every=7,
+        optimizer_kind="lion",
         upstream_dir=tmp_path / "canonical_upstream",
         repo_root=REPO_ROOT,
     )
@@ -1786,6 +1803,7 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     )
     assert captured_train_kwargs["mlx_prefilter_scorer_batch_pairs"] == 4
     assert captured_train_kwargs["mlx_prefilter_progress_every"] == 7
+    assert captured_train_kwargs["optimizer_kind"] == "lion"
     assert out["score_aware_training"]["local_mlx_prefilter"] == {
         "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
         "scorer_device": "cpu",
@@ -2806,9 +2824,11 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
         pose_distillation_weight=0.0,
         coder_aware_qat=False,
         coder_qat_quant_bits=8,
+        optimizer_kind="adafactor",
         repo_root=REPO_ROOT,
     )
 
+    assert captured_train_kwargs["optimizer_kind"] == "adafactor"
     assert captured_train_kwargs["segnet_distillation_weight"] == 1.0
     assert captured_train_kwargs["pose_distillation_weight"] == 1.0
     assert captured_train_kwargs["coder_aware_qat"] is True
@@ -2830,6 +2850,7 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert out["score_aware_training"]["requested_pose_distillation_weight"] == 0.0
     assert out["score_aware_training"]["segnet_distillation_weight"] == 1.0
     assert out["score_aware_training"]["pose_distillation_weight"] == 1.0
+    assert out["score_aware_training"]["optimizer_kind"] == "adafactor"
     assert out["score_aware_training_config_gate"]["frontier_targeting"] is True
     assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out[
         "blockers"
