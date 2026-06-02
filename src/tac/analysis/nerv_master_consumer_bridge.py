@@ -380,6 +380,59 @@ def _control_inventory_evidence_units(
                 }
             )
     for family, report in _mapping_items(
+        control_inventory.get("archive_backend_drift_reports")
+    ):
+        blockers = _string_list(report.get("blockers"))
+        if report.get("local_dev_velocity_ready") is not True:
+            blockers.append("local_backend_drift_velocity_not_ready")
+        if report.get("within_byte_drift_tolerance") is not True:
+            blockers.append("local_backend_drift_byte_tolerance_missing")
+        blockers.append("paired_contest_cpu_cuda_auth_eval_missing")
+        units.append(
+            {
+                "unit_id": f"{family}_archive_backend_drift_guard",
+                "unit_type": "archive_backend_drift_guard",
+                "family": str(family),
+                "report_path": report.get("report_path"),
+                "reference_label": report.get("reference_label"),
+                "candidate_label": report.get("candidate_label"),
+                "row_count": report.get("row_count"),
+                "matched_row_count": report.get("matched_row_count"),
+                "byte_ready_row_count": report.get("byte_ready_row_count"),
+                "max_abs_byte_delta_allowed": report.get(
+                    "max_abs_byte_delta_allowed"
+                ),
+                "max_abs_byte_delta_observed": report.get(
+                    "max_abs_byte_delta_observed"
+                ),
+                "sum_byte_delta_candidate_minus_reference": report.get(
+                    "sum_byte_delta_candidate_minus_reference"
+                ),
+                "sum_rate_score_delta_candidate_minus_reference": report.get(
+                    "sum_rate_score_delta_candidate_minus_reference"
+                ),
+                "within_byte_drift_tolerance": bool(
+                    report.get("within_byte_drift_tolerance")
+                ),
+                "local_dev_velocity_ready": bool(
+                    report.get("local_dev_velocity_ready")
+                ),
+                "ready_backend_for_local_iteration": report.get(
+                    "ready_backend_for_local_iteration"
+                ),
+                "target_consumers": [
+                    "final_rate_attack",
+                    "bit_allocator",
+                    "cathedral_autopilot",
+                    "continual_learning_posterior",
+                ],
+                "planner_action": "use_backend_drift_for_local_velocity_only",
+                "blockers": _unique(blockers),
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
+    for family, report in _mapping_items(
         control_inventory.get("decoder_weight_saliency_replays")
     ):
         blockers = _string_list(report.get("blockers"))

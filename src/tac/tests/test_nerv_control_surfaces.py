@@ -240,6 +240,7 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     assert "bind_hi_nerv_decoder_weight_saliency_to_waterfill" in orders
     assert "replay_hi_nerv_hi_nerv_local_tiny_decoder_weight_waterfill" in orders
     assert "score_hi_nerv_hi_nerv_local_tiny_full_video_mlx_replay" in orders
+    assert "guard_hi_nerv_archive_backend_drift_local_velocity" in orders
     assert "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill" in orders
     assert "compile_snerv_snerv_local_tiny_decoder_modes_to_receiver" in orders
     assert "replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust" in orders
@@ -286,6 +287,11 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     assert full_video_order["payload"]["submission_dir"].endswith("/submission")
     assert full_video_order["payload"]["receiver_proof_ready"] is True
     assert "full_video_mlx_scorer_response_missing" in full_video_order["blockers"]
+    drift_order = orders["guard_hi_nerv_archive_backend_drift_local_velocity"]
+    assert drift_order["work_order_type"] == "local_backend_drift_authority_guard"
+    assert drift_order["payload"]["local_dev_velocity_ready"] is True
+    assert drift_order["payload"]["ready_backend_for_local_iteration"] == "mlx_metal"
+    assert "contest_cpu_cuda_exact_eval_not_executed" in drift_order["blockers"]
     snerv_waterfill_order = orders[
         "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill"
     ]
@@ -448,6 +454,20 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         is False
     )
     assert "full_video_mlx_scorer_response_missing" in full_video_row["blockers"]
+    drift_row = rows["guard_hi_nerv_archive_backend_drift_local_velocity"]
+    assert (
+        drift_row["planner_ingest"]["ingest_kind"]
+        == "local_backend_drift_authority_guard"
+    )
+    assert drift_row["planner_ingest"]["local_dev_velocity_ready"] is True
+    assert (
+        drift_row["planner_ingest"]["ready_backend_for_local_iteration"]
+        == "mlx_metal"
+    )
+    assert (
+        drift_row["planner_ingest"]["local_backend_output_is_promotion_authority"]
+        is False
+    )
     gate_row = rows["close_snerv_receiver_rate_promotion_gates"]
     assert gate_row["status"] == "blocked_until_prerequisite_evidence"
     assert gate_row["planner_ingest"]["runnable_now"] is False
@@ -698,6 +718,29 @@ def _synthetic_rate_bridge() -> dict:
                     }
                 ],
                 "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+            }
+        },
+        "archive_backend_drift_reports": {
+            "hi_nerv": {
+                "schema": "hinerv_archive_backend_drift.v1",
+                "status": "local_backend_drift_within_tolerance_false_authority",
+                "report_path": ".omx/research/hinerv_archive_backend_drift.json",
+                "reference_label": "pytorch_portable_fallback",
+                "candidate_label": "mlx_metal",
+                "row_count": 4,
+                "matched_row_count": 4,
+                "byte_ready_row_count": 4,
+                "max_abs_byte_delta_allowed": 1024,
+                "max_abs_byte_delta_observed": 81,
+                "sum_byte_delta_candidate_minus_reference": -194,
+                "sum_rate_score_delta_candidate_minus_reference": -0.000129185,
+                "within_byte_drift_tolerance": True,
+                "local_dev_velocity_ready": True,
+                "ready_backend_for_local_iteration": "mlx_metal",
+                "blockers": [
+                    "contest_cpu_cuda_exact_eval_not_executed",
+                    "hinerv_archive_backend_drift_local_dev_velocity_only",
+                ],
             }
         },
         "decoder_mode_assignment_reports": {

@@ -315,6 +315,43 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "receiver_proof_ready": payload.get("receiver_proof_ready") is True,
             "runnable_now": False,
         }
+    if work_order_type == "local_backend_drift_authority_guard":
+        payload = (
+            work_order.get("payload", {})
+            if isinstance(work_order.get("payload"), Mapping)
+            else {}
+        )
+        return {
+            "ingest_kind": "local_backend_drift_authority_guard",
+            "planner_action": planner_action,
+            "producer_tool": "tools/build_hinerv_archive_backend_drift.py",
+            "existing_tool_ingress": "tools/run_hinerv_archive_ladder_replay_actuator.py",
+            "allowed_use": "local_iteration_velocity_only",
+            "forbidden_use": "score_claim_rank_promotion_or_exact_dispatch",
+            "missing_tool_or_proof": "paired_contest_cpu_cuda_auth_eval",
+            "reference_label": payload.get("reference_label"),
+            "candidate_label": payload.get("candidate_label"),
+            "row_count": payload.get("row_count"),
+            "matched_row_count": payload.get("matched_row_count"),
+            "byte_ready_row_count": payload.get("byte_ready_row_count"),
+            "max_abs_byte_delta_allowed": payload.get("max_abs_byte_delta_allowed"),
+            "max_abs_byte_delta_observed": payload.get("max_abs_byte_delta_observed"),
+            "sum_byte_delta_candidate_minus_reference": payload.get(
+                "sum_byte_delta_candidate_minus_reference"
+            ),
+            "sum_rate_score_delta_candidate_minus_reference": payload.get(
+                "sum_rate_score_delta_candidate_minus_reference"
+            ),
+            "within_byte_drift_tolerance": (
+                payload.get("within_byte_drift_tolerance") is True
+            ),
+            "local_dev_velocity_ready": payload.get("local_dev_velocity_ready") is True,
+            "ready_backend_for_local_iteration": payload.get(
+                "ready_backend_for_local_iteration"
+            ),
+            "local_backend_output_is_promotion_authority": False,
+            "runnable_now": False,
+        }
     if work_order_type == "receiver_visible_decoder_mode_assignment":
         payload = (
             work_order.get("payload", {})

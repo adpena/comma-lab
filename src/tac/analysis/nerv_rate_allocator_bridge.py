@@ -445,6 +445,66 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                 )
             )
             continue
+        if unit_type == "archive_backend_drift_guard":
+            orders.append(
+                _work_order(
+                    work_order_id=f"guard_{family}_archive_backend_drift_local_velocity",
+                    work_order_type="local_backend_drift_authority_guard",
+                    target_consumers=[
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "cathedral_autopilot",
+                        "continual_learning_posterior",
+                    ],
+                    planner_action="use_backend_drift_for_local_velocity_only",
+                    source_unit_id=str(unit.get("unit_id") or ""),
+                    priority=7 if unit.get("local_dev_velocity_ready") else 16,
+                    receiver_precision_modes=[
+                        "fp16_protected",
+                        "int8_protected",
+                        "int4",
+                        "int2",
+                        "zero",
+                    ],
+                    rationale=(
+                        "permit the close-matching local backend for cheap "
+                        "archive-byte iteration while preserving exact/score "
+                        "authority blockers"
+                    ),
+                    payload={
+                        "family": family,
+                        "report_path": unit.get("report_path"),
+                        "reference_label": unit.get("reference_label"),
+                        "candidate_label": unit.get("candidate_label"),
+                        "row_count": unit.get("row_count"),
+                        "matched_row_count": unit.get("matched_row_count"),
+                        "byte_ready_row_count": unit.get("byte_ready_row_count"),
+                        "max_abs_byte_delta_allowed": unit.get(
+                            "max_abs_byte_delta_allowed"
+                        ),
+                        "max_abs_byte_delta_observed": unit.get(
+                            "max_abs_byte_delta_observed"
+                        ),
+                        "sum_byte_delta_candidate_minus_reference": unit.get(
+                            "sum_byte_delta_candidate_minus_reference"
+                        ),
+                        "sum_rate_score_delta_candidate_minus_reference": unit.get(
+                            "sum_rate_score_delta_candidate_minus_reference"
+                        ),
+                        "within_byte_drift_tolerance": unit.get(
+                            "within_byte_drift_tolerance"
+                        ),
+                        "local_dev_velocity_ready": unit.get(
+                            "local_dev_velocity_ready"
+                        ),
+                        "ready_backend_for_local_iteration": unit.get(
+                            "ready_backend_for_local_iteration"
+                        ),
+                    },
+                    blockers=blockers,
+                )
+            )
+            continue
         if unit_type == "decoder_mode_assignment_route":
             row_id = str(unit.get("row_id") or "unknown")
             modes = _receiver_precision_modes_from_unit(unit)
