@@ -10,9 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from tac.archive_byte_profile import contest_rate_term
-from tac.substrates._shared.compact_decoder_codec_sweep import (
-    SUPPORTED_COMPACT_DECODER_CODECS,
-)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
 from tac.substrates.hprc.mlx_prefilter_coverage import (
@@ -68,6 +65,16 @@ _SECTION_CUT_MATERIALIZERS: dict[str, dict[str, Any]] = {
 _SECTION_VALUE_PROFILE_STORAGE_WATERFALL = (
     "/Volumes/VertigoDataTier/pact",
     "/Volumes/APDataStore/pact",
+)
+_COMPACT_DECODER_CODEC_SWEEP_PORTFOLIO = (
+    "portfolio_auto",
+    "int8_mixed",
+    "int8_scale_bundled",
+    "int4_mixed",
+    "int4_scale_bundled",
+    "int2_mixed",
+    "int2_scale_bundled",
+    "fp16_enveloped",
 )
 
 
@@ -1213,7 +1220,7 @@ def _pact_vq_post_export_codec_sweep_row(
         "tool": "tools/sweep_compact_decoder_codecs.py",
         "source_archive_zip": source_archive.as_posix(),
         "output_dir": output_dir.as_posix(),
-        "decoder_codecs": list(SUPPORTED_COMPACT_DECODER_CODECS),
+        "decoder_codecs": list(_COMPACT_DECODER_CODEC_SWEEP_PORTFOLIO),
         "run_receiver_proof": True,
         "receiver_output_retained": False,
         "promotion_boundary": (
