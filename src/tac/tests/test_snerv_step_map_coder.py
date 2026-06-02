@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+import json
+import struct
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -130,6 +134,37 @@ def test_adaptive_packet_can_encode_low_importance_maps_as_constant_rle() -> Non
         assert np.unique(decoded[idx]).size == 1
 
 
+def test_adaptive_decode_rejects_duplicate_map_ownership() -> None:
+    packet = encode_step_maps_adaptive(
+        _smooth_step_maps(),
+        map_importance=np.linspace(0.0, 1.0, 8),
+        bin_choices=(128, 16, 4),
+    )
+
+    def mutate(header: dict[str, object]) -> None:
+        groups = header["groups"]
+        assert isinstance(groups, list)
+        first_indices = groups[0]["map_indices"]
+        assert isinstance(first_indices, list)
+        second_indices = groups[1]["map_indices"]
+        assert isinstance(second_indices, list)
+        second_indices[0] = first_indices[0]
+
+    with pytest.raises(SnervStepMapCoderError, match="duplicate adaptive map index"):
+        decode_step_maps(_rewrite_adaptive_header(packet.packet, mutate))
+
+
+def test_adaptive_decode_rejects_unconsumed_payload_bytes() -> None:
+    packet = encode_step_maps_adaptive(
+        _smooth_step_maps(),
+        map_importance=np.linspace(0.0, 1.0, 8),
+        bin_choices=(128, 16, 4),
+    )
+
+    with pytest.raises(SnervStepMapCoderError, match="unused adaptive payload bytes"):
+        decode_step_maps(packet.packet + b"x")
+
+
 def test_adaptive_packet_rejects_bad_constant_quantile() -> None:
     with pytest.raises(SnervStepMapCoderError, match="constant_importance_quantile"):
         encode_step_maps_adaptive(
@@ -200,3 +235,27 @@ def test_encode_rejects_nonpositive_steps() -> None:
     bad[0, 0] = 0.0
     with pytest.raises(SnervStepMapCoderError):
         encode_step_maps([bad])
+
+
+def _rewrite_adaptive_header(
+    packet: bytes,
+    mutate: Callable[[dict[str, object]], None],
+) -> bytes:
+    offset = len(ADAPTIVE_MAGIC)
+    header_len_size = struct.calcsize("<I")
+    (header_len,) = struct.unpack("<I", packet[offset : offset + header_len_size])
+    header_start = offset + header_len_size
+    header_end = header_start + int(header_len)
+    header = json.loads(packet[header_start:header_end].decode("utf-8"))
+    mutate(header)
+    new_header = json.dumps(
+        header,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return (
+        packet[:offset]
+        + struct.pack("<I", len(new_header))
+        + new_header
+        + packet[header_end:]
+    )

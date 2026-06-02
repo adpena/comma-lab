@@ -477,11 +477,30 @@ def _decode_adaptive_step_maps(packet: bytes) -> list[np.ndarray]:
         raise SnervStepMapCoderError(
             f"unsupported adaptive schema: {header.get('schema')!r}"
         )
-    out: list[np.ndarray | None] = [None] * int(header["map_count"])
+    map_count = int(header["map_count"])
+    if map_count <= 0:
+        raise SnervStepMapCoderError("adaptive packet map_count must be positive")
+    out: list[np.ndarray | None] = [None] * map_count
     payload = packet[header_end:]
-    for group in header["groups"]:
+    seen_indices: set[int] = set()
+    payload_ranges: list[tuple[int, int, int]] = []
+    for group_index, group in enumerate(header["groups"]):
         indices = [int(idx) for idx in group["map_indices"]]
+        if not indices:
+            raise SnervStepMapCoderError("adaptive group has no map indices")
+        for idx in indices:
+            if idx < 0 or idx >= map_count:
+                raise SnervStepMapCoderError(
+                    f"adaptive map index {idx} outside map_count {map_count}"
+                )
+            if idx in seen_indices:
+                raise SnervStepMapCoderError(f"duplicate adaptive map index {idx}")
+            seen_indices.add(idx)
         if group.get("kind") == "constant_log2_fill":
+            if int(group.get("payload_bytes", 0)) != 0:
+                raise SnervStepMapCoderError(
+                    "adaptive constant group must not carry payload bytes"
+                )
             shapes = [tuple(int(v) for v in shape) for shape in group["shapes"]]
             log2_values = [float(v) for v in group["log2_values"]]
             if len(shapes) != len(indices) or len(log2_values) != len(indices):
@@ -500,6 +519,9 @@ def _decode_adaptive_step_maps(packet: bytes) -> list[np.ndarray]:
             end = start + int(group["payload_bytes"])
             if start < 0 or end > len(payload) or end < start:
                 raise SnervStepMapCoderError("adaptive fp16 payload bounds invalid")
+            if end == start:
+                raise SnervStepMapCoderError("adaptive fp16 payload must be non-empty")
+            payload_ranges.append((start, end, group_index))
             raw = lzma.decompress(payload[start:end])
             expected = int(group["raw_bytes"])
             if len(raw) != expected:
@@ -525,6 +547,11 @@ def _decode_adaptive_step_maps(packet: bytes) -> list[np.ndarray]:
             continue
         start = int(group["payload_offset"])
         end = start + int(group["payload_bytes"])
+        if start < 0 or end > len(payload) or end < start:
+            raise SnervStepMapCoderError("adaptive code payload bounds invalid")
+        if end == start:
+            raise SnervStepMapCoderError("adaptive code payload must be non-empty")
+        payload_ranges.append((start, end, group_index))
         raw_codes = lzma.decompress(payload[start:end])
         codes = _unpack_codes(
             raw_codes,
@@ -550,9 +577,35 @@ def _decode_adaptive_step_maps(packet: bytes) -> list[np.ndarray]:
             raise SnervStepMapCoderError("adaptive group map count mismatch")
         for idx, arr in zip(indices, decoded, strict=True):
             out[idx] = arr
+    _validate_adaptive_payload_coverage(payload_ranges, payload_len=len(payload))
     if any(arr is None for arr in out):
         raise SnervStepMapCoderError("adaptive packet left maps undecoded")
     return [arr for arr in out if arr is not None]
+
+
+def _validate_adaptive_payload_coverage(
+    ranges: list[tuple[int, int, int]],
+    *,
+    payload_len: int,
+) -> None:
+    """Reject adaptive packets with unowned, overlapping, or trailing payload bytes."""
+
+    cursor = 0
+    for start, end, group_index in sorted(ranges, key=lambda row: (row[0], row[1])):
+        if start != cursor:
+            raise SnervStepMapCoderError(
+                "adaptive payload ranges are not contiguous at group "
+                f"{group_index}: offset {start} != expected {cursor}"
+            )
+        if end <= start:
+            raise SnervStepMapCoderError(
+                f"adaptive payload range for group {group_index} is empty"
+            )
+        cursor = end
+    if cursor != int(payload_len):
+        raise SnervStepMapCoderError(
+            f"unused adaptive payload bytes: consumed {cursor} of {payload_len}"
+        )
 
 
 def _precision_levels(precision_ladder: tuple[Any, ...]) -> list[dict[str, Any]]:

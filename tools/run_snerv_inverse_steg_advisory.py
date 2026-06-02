@@ -210,7 +210,11 @@ def main(argv: list[str] | None = None) -> int:
         f"archive_total = {res.archive_bytes_total} B "
         f"sha256={res.receiver_archive_sha256[:12]}"
     )
-    print(f"  rate_term = {res.rate_term:.5f}  (frontier {res.pr101_frontier_bytes} B = {res.pr101_frontier_rate:.5f})")
+    print(
+        f"  rate_term = {res.rate_term:.5f} "
+        f"(shared charged archive term; frontier {res.pr101_frontier_bytes} B = "
+        f"{res.pr101_frontier_rate:.5f})"
+    )
     print(f"  beats_frontier_rate = {res.beats_frontier_rate}")
     print(f"  d_seg(linf) = {res.d_seg_mean_linf:.5f}  d_pose(linf) = {res.d_pose_mean_linf:.5f}  score_linf = {res.score_linf:.5f}")
     print(f"  d_seg(l2)   = {res.d_seg_mean_l2:.5f}  d_pose(l2)   = {res.d_pose_mean_l2:.5f}  score_l2   = {res.score_l2:.5f}")

@@ -8,6 +8,9 @@ from tac.analysis.snerv_rate_adjudication import (
     build_snerv_rate_adjudication_payload,
 )
 
+_SHA_A = "4d00368c7ae6" + "0" * 52
+_SHA_B = "86f09bc76323" + "1" * 52
+
 
 def test_legacy_undercharged_row_is_blocked_even_when_rate_low() -> None:
     payload = [
@@ -30,6 +33,7 @@ def test_legacy_undercharged_row_is_blocked_even_when_rate_low() -> None:
     assert row["frontier_score_claim"] is False
     assert row["score_claim"] is False
     assert "linf_step_map_payload_missing_or_legacy_undercharged" in row["blockers"]
+    assert "snar1_packet_bytes_not_contest_archive_zip_bytes" in row["blockers"]
     assert report["exact_readiness_refusal"]["ready"] is False
 
 
@@ -141,7 +145,7 @@ def test_adaptive_step_map_group_metadata_survives_adjudication() -> None:
             "levels": 4,
             "archive_bytes_total": 27_540,
             "receiver_archive_packet_bytes": 27_540,
-            "receiver_archive_sha256": "86f09bc76323",
+            "receiver_archive_sha256": _SHA_B,
             "receiver_archive_replay_verified": True,
             "linf_steps_payload_bytes": 2_774,
             "linf_steps_payload_codec": "snerv_step_map_coder.adaptive.v1",
@@ -180,7 +184,7 @@ def test_receiver_archive_packet_proof_replaces_parser_blocker() -> None:
             "archive_bytes_total": 16_939,
             "receiver_archive_packet_bytes": 16_939,
             "receiver_archive_header_bytes": 1_028,
-            "receiver_archive_sha256": "4d00368c7ae6",
+            "receiver_archive_sha256": _SHA_A,
             "receiver_archive_replay_verified": True,
             "lf_payload_bytes": 13_300,
             "linf_steps_payload_bytes": 2_311,
@@ -197,7 +201,7 @@ def test_receiver_archive_packet_proof_replaces_parser_blocker() -> None:
 
     assert row["receiver_archive_packet_bytes"] == 16_939
     assert row["receiver_archive_header_bytes"] == 1_028
-    assert row["receiver_archive_sha256"] == "4d00368c7ae6"
+    assert row["receiver_archive_sha256"] == _SHA_A
     assert row["receiver_archive_replay_verified"] is True
     assert (
         "contest_receiver_archive_parser_not_yet_wired_to_compact_step_map_packet"
@@ -224,7 +228,7 @@ def test_replay_verified_distortion_promising_row_routes_to_packaging() -> None:
             "archive_bytes_total": 16_939,
             "receiver_archive_packet_bytes": 16_939,
             "receiver_archive_header_bytes": 1_028,
-            "receiver_archive_sha256": "4d00368c7ae6",
+            "receiver_archive_sha256": _SHA_A,
             "receiver_archive_replay_verified": True,
             "lf_payload_bytes": 13_300,
             "linf_steps_payload_bytes": 2_311,
@@ -245,6 +249,34 @@ def test_replay_verified_distortion_promising_row_routes_to_packaging() -> None:
     )
 
 
+def test_short_receiver_archive_sha_does_not_replace_parser_blocker() -> None:
+    payload = [
+        {
+            "levels": 4,
+            "archive_bytes_total": 16_939,
+            "receiver_archive_packet_bytes": 16_939,
+            "receiver_archive_header_bytes": 1_028,
+            "receiver_archive_sha256": "abc",
+            "receiver_archive_replay_verified": True,
+            "lf_payload_bytes": 13_300,
+            "linf_steps_payload_bytes": 2_311,
+            "linf_steps_payload_codec": "snerv_step_map_coder.v1",
+            "linf_steps_coder_bins": 16,
+            "d_seg_mean_linf": 0.02498,
+            "d_pose_mean_linf": 3.19430,
+        }
+    ]
+    row = build_snerv_rate_adjudication_payload(payload)["rows"][0]
+
+    assert row["receiver_archive_sha256"] == "abc"
+    assert "receiver_archive_sha256_invalid_or_missing" in row["blockers"]
+    assert (
+        "contest_receiver_archive_parser_not_yet_wired_to_compact_step_map_packet"
+        in row["blockers"]
+    )
+    assert "not_packaged_as_contest_archive_zip" not in row["blockers"]
+
+
 def test_archive_bytes_without_replay_do_not_replace_parser_blocker() -> None:
     payload = [
         {
@@ -252,7 +284,7 @@ def test_archive_bytes_without_replay_do_not_replace_parser_blocker() -> None:
             "archive_bytes_total": 16_939,
             "receiver_archive_packet_bytes": 16_939,
             "receiver_archive_header_bytes": 1_028,
-            "receiver_archive_sha256": "4d00368c7ae6",
+            "receiver_archive_sha256": _SHA_A,
             "lf_payload_bytes": 13_300,
             "linf_steps_payload_bytes": 2_311,
             "linf_steps_payload_codec": "snerv_step_map_coder.v1",

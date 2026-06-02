@@ -28,6 +28,7 @@ DEFAULT_PR101_FRONTIER_BYTES = 178_493
 
 FALSE_AUTHORITY_BLOCKERS = (
     "frontier_comparison_is_rate_only_not_score_authority",
+    "snar1_packet_bytes_not_contest_archive_zip_bytes",
     "score_axis_is_macos_cpu_advisory",
     "full_600_pair_receiver_replay_missing",
     "paired_contest_cpu_cuda_auth_eval_missing",
@@ -134,7 +135,7 @@ def adjudicate_snerv_row(
     receiver_archive_parser_closed = (
         receiver_archive_packet_bytes is not None
         and receiver_archive_packet_bytes == archive_bytes
-        and bool(receiver_archive_sha256)
+        and _is_sha256_hex(receiver_archive_sha256)
         and receiver_archive_replay_verified
     )
     lf_payload_bytes = _optional_int(row.get("lf_payload_bytes", row.get("lf_bytes")))
@@ -189,6 +190,10 @@ def adjudicate_snerv_row(
                 0,
                 "contest_receiver_archive_parser_not_yet_wired_to_compact_step_map_packet",
             )
+            if receiver_archive_replay_verified and not _is_sha256_hex(
+                receiver_archive_sha256
+            ):
+                blockers.insert(0, "receiver_archive_sha256_invalid_or_missing")
         else:
             blockers.insert(0, "receiver_runtime_does_not_yet_parse_linf_step_maps")
         distortion_promising = _within(d_pose, pose_preservation_ceiling) and _within(
@@ -351,6 +356,12 @@ def _optional_str(value: Any) -> str | None:
     if not isinstance(value, str) or not value:
         return None
     return value
+
+
+def _is_sha256_hex(value: str | None) -> bool:
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    return all(ch in "0123456789abcdefABCDEF" for ch in value)
 
 
 def _optional_groups(value: Any) -> tuple[dict[str, Any], ...]:
