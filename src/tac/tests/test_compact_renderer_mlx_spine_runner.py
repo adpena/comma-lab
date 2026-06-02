@@ -6,6 +6,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import signal
 import struct
 import sys
 import zipfile
@@ -141,6 +142,56 @@ def test_write_decoder_weight_saliency_artifact_for_waterfill(tmp_path: Path) ->
     assert payload["schema"] == "mlx_decoder_weight_gradient_saliency.v1"
     assert payload["family"] == "hi_nerv"
     assert payload["rows"][0]["group_name"] == "decoder.blocks.0.weight"
+
+
+def test_compact_family_interrupted_report_preserves_false_authority_evidence(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "snerv_run"
+    train_dir = out / "snerv_mlx_native_export"
+    train_dir.mkdir(parents=True)
+    startup = out / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+    telemetry = train_dir / "telemetry.jsonl"
+    startup.write_text('{"schema":"compact_carrier_startup_marker.v1"}\n')
+    telemetry.write_text('{"epoch":0,"loss":1.0}\n')
+    source_video = tmp_path / "0.mkv"
+    source_video.write_bytes(b"fake video")
+    args = _parse_args(
+        [
+            "--execute-family",
+            "snerv",
+            "--planner-row-id",
+            "snerv::candidate::optimizer",
+            "--output-dir",
+            out.as_posix(),
+            "--source-video-path",
+            source_video.as_posix(),
+            "--allow-manual-compact-family-launch",
+        ]
+    )
+
+    report = runner_mod._write_compact_family_interrupted_report(
+        output_dir=out,
+        args=args,
+        source_video_path=source_video,
+        hard_byte_ceilings=(178_000, 216_000, 285_000),
+        modelsize_candidate={"candidate_id": "snerv_test", "nominal_bytes": 123},
+        signum=signal.SIGTERM,
+        reason="unit_test",
+    )
+
+    report_path = Path(report["report_path"])
+    payload = json.loads(report_path.read_text())
+    assert payload["mode"] == "interrupted_compact_family_run"
+    assert payload["signal_name"] == "SIGTERM"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert "snerv_training_interrupted_before_export" in payload["blockers"]
+    evidence_paths = {row["path"] for row in payload["evidence_files"]}
+    assert startup.as_posix() in evidence_paths
+    assert telemetry.as_posix() in evidence_paths
+    assert all("sha256" in row for row in payload["evidence_files"])
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

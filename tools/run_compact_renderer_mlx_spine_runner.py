@@ -18,6 +18,7 @@ import json
 import math
 import os
 import re
+import signal
 import subprocess
 import sys
 import zipfile
@@ -8057,6 +8058,134 @@ def _write_compact_family_startup_marker(
     return path
 
 
+def _compact_family_interruption_blockers(family: str) -> list[str]:
+    blockers = [
+        "compact_renderer_run_interrupted_before_terminal_report",
+        "byte_closed_archive_export_missing",
+        "receiver_proof_missing",
+        "full_video_local_prefilter_missing",
+        "local_cpu_replay_gate_missing",
+        "paired_contest_cpu_cuda_pass_missing",
+    ]
+    if family == "hi_nerv":
+        blockers.extend(
+            [
+                "hi_nerv_training_interrupted_before_export",
+                "hi_nerv_receiver_proof_missing",
+                "hi_nerv_full_video_local_prefilter_missing",
+                "hi_nerv_local_cpu_replay_gate_missing",
+            ]
+        )
+    elif family == "snerv":
+        blockers.extend(
+            [
+                "snerv_training_interrupted_before_export",
+                "snerv_receiver_proof_missing",
+                "snerv_full_video_local_prefilter_missing",
+                "snerv_local_cpu_replay_gate_missing",
+            ]
+        )
+    return _dedupe(blockers)
+
+
+def _compact_family_interruption_evidence_files(output_dir: Path) -> list[dict[str, Any]]:
+    files: list[dict[str, Any]] = []
+    names = {
+        COMPACT_FAMILY_STARTUP_MARKER_FILENAME,
+        "telemetry.jsonl",
+        "training_artifact.json",
+        "decoder_weight_gradient_saliency.json",
+    }
+    if not output_dir.exists():
+        return files
+    for path in sorted(output_dir.rglob("*")):
+        if not path.is_file() or path.name not in names:
+            continue
+        try:
+            files.append(
+                {
+                    "path": path.as_posix(),
+                    "bytes": path.stat().st_size,
+                    "sha256": _sha256_file(path),
+                }
+            )
+        except OSError:
+            files.append(
+                {
+                    "path": path.as_posix(),
+                    "error": "stat_or_hash_failed",
+                }
+            )
+    return files
+
+
+def _write_compact_family_interrupted_report(
+    *,
+    output_dir: Path,
+    args: argparse.Namespace,
+    source_video_path: Path,
+    hard_byte_ceilings: tuple[int, ...],
+    modelsize_candidate: Mapping[str, Any] | None,
+    signum: int | None,
+    reason: str,
+) -> dict[str, Any]:
+    """Persist false-authority custody when a long compact run is interrupted."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "compact_renderer_mlx_spine_runner_report.json"
+    if path.is_file():
+        existing = _load_json(path)
+        return {**existing, "report_path": path.as_posix()}
+    family = str(getattr(args, "execute_family", "") or "").strip() or None
+    signal_name = None
+    if signum is not None:
+        try:
+            signal_name = signal.Signals(signum).name
+        except ValueError:
+            signal_name = f"SIG{signum}"
+    campaign_identity = _active_campaign_lock_payload(
+        args,
+        source_video_path=source_video_path,
+        hard_byte_ceilings=hard_byte_ceilings,
+    )
+    report = {
+        "schema": COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+        "mode": "interrupted_compact_family_run",
+        "created_utc": datetime.now(UTC).isoformat(),
+        "pid": os.getpid(),
+        "signal": signum,
+        "signal_name": signal_name,
+        "interruption_reason": reason,
+        "execute_family": family,
+        "planner_row_id": str(getattr(args, "planner_row_id", "") or "").strip()
+        or None,
+        "modelsize_candidate_id": str(
+            getattr(args, "modelsize_candidate_id", "") or ""
+        ).strip()
+        or None,
+        "modelsize_candidate": _jsonable_lock_value(dict(modelsize_candidate or {})),
+        "campaign_identity": campaign_identity,
+        "output_dir": output_dir.as_posix(),
+        "source_video_path": source_video_path.as_posix(),
+        "hard_byte_ceilings": list(hard_byte_ceilings),
+        "command_args": _jsonable_lock_value(vars(args)),
+        "evidence_files": _compact_family_interruption_evidence_files(output_dir),
+        "score_authority": "false_macos_mlx_research_signal",
+        "score_claim": False,
+        "frontier_score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "false_authority_flags": [
+            "interrupted_before_terminal_export_or_receiver_proof",
+            "macos_mlx_research_signal_until_archive_receiver_and_exact_eval",
+        ],
+        "blockers": _compact_family_interruption_blockers(family or ""),
+    }
+    _write_json(path, report)
+    return {**report, "report_path": path.as_posix()}
+
+
 def _write_active_family_process_refusal(
     *,
     lock_dir: Path,
@@ -8818,6 +8947,42 @@ def main(argv: list[str] | None = None) -> int:
         hard_byte_ceilings=ceilings,
         modelsize_candidate=modelsize_candidate,
     )
+    interrupted_report_written = False
+
+    def _handle_compact_family_signal(signum: int, _frame: Any) -> None:
+        nonlocal interrupted_report_written
+        if interrupted_report_written:
+            raise SystemExit(128 + int(signum))
+        interrupted_report_written = True
+        if args.execute_family in PLANNER_ROW_REQUIRED_FAMILIES:
+            report = _write_compact_family_interrupted_report(
+                output_dir=Path(output_dir).expanduser().resolve(strict=False),
+                args=args,
+                source_video_path=source_video_path,
+                hard_byte_ceilings=ceilings,
+                modelsize_candidate=modelsize_candidate,
+                signum=signum,
+                reason="process_signal",
+            )
+            print(
+                json.dumps(
+                    {
+                        "schema": COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+                        "mode": report["mode"],
+                        "report_path": report["report_path"],
+                        "blockers": report.get("blockers", []),
+                        "score_claim": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+        raise SystemExit(128 + int(signum))
+
+    if args.execute_family in PLANNER_ROW_REQUIRED_FAMILIES:
+        signal.signal(signal.SIGTERM, _handle_compact_family_signal)
+        signal.signal(signal.SIGINT, _handle_compact_family_signal)
     if args.execute_pr95_mlx_smoke:
         report = execute_pr95_mlx_smoke_and_adapt(
             output_dir=output_dir,

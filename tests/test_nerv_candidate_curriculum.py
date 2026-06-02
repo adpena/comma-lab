@@ -156,7 +156,10 @@ def test_snerv_prelaunch_stays_blocked_until_native_mlx_training_exists() -> Non
         "blockers"
     ]
     assert plan["training_plan"]["native_mlx_adapter_surfaces_ready"] is True
-    assert "snerv_score_aware_curriculum_not_native_mlx_yet" in plan["blockers"]
+    assert (
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+        in plan["blockers"]
+    )
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
     assert _requirement(plan, "real_segnet_teacher")["satisfied"] is False
     assert _requirement(plan, "real_posenet_teacher")["satisfied"] is False
