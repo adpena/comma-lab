@@ -113,6 +113,14 @@ def main(argv: list[str] | None = None) -> int:
         default="float32_lzma",
         help="Receiver-visible HF decoder payload grammar.",
     )
+    ap.add_argument(
+        "--decoder-payload-mixed-modes",
+        default="",
+        help=(
+            "Optional comma-separated explicit v3 mixed decoder mode list "
+            "(zero,int2,int4,int8,fp16), one mode per level/subband kernel."
+        ),
+    )
     ap.add_argument("--out", type=str, default=None)
     ap.add_argument(
         "--packet-out",
@@ -158,6 +166,9 @@ def main(argv: list[str] | None = None) -> int:
         hf_decoder_saliency_gain=args.hf_decoder_saliency_gain,
         hf_decoder_saliency_component=args.hf_decoder_saliency_component,
         decoder_payload_codec=args.decoder_payload_codec,
+        decoder_payload_mixed_modes=_parse_optional_modes(
+            args.decoder_payload_mixed_modes
+        ),
     )
     payload = res.as_jsonable()
     out_path = Path(args.out or _default_out())
@@ -256,6 +267,16 @@ def _parse_bins(raw: str) -> tuple[int, ...]:
     if not out:
         raise ValueError("at least one adaptive bin choice is required")
     return tuple(out)
+
+
+def _parse_optional_modes(raw: str) -> tuple[str, ...] | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    out = tuple(chunk.strip() for chunk in text.split(",") if chunk.strip())
+    if not out:
+        return None
+    return out
 
 
 if __name__ == "__main__":

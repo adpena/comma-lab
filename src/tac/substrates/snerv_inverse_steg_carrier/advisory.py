@@ -347,6 +347,7 @@ def run_snerv_advisory(
     hf_decoder_saliency_gain: float = 1.0,
     hf_decoder_saliency_component: str = "combined",
     decoder_payload_codec: str = "float32_lzma",
+    decoder_payload_mixed_modes: tuple[str, ...] | None = None,
 ) -> SnervAdvisoryResult:
     """Run the complete byte-closed SNeRV advisory on ``n_pairs`` real pairs.
 
@@ -410,7 +411,11 @@ def run_snerv_advisory(
         )
     else:
         raise RuntimeError(f"unknown HF decoder fit mode: {hf_decoder_fit_mode!r}")
-    decoder_bytes = encode_decoder_payload(decoder, codec=decoder_payload_codec)
+    decoder_bytes = encode_decoder_payload(
+        decoder,
+        codec=decoder_payload_codec,
+        mixed_modes=decoder_payload_mixed_modes,
+    )
     decoder_payload_header = inspect_decoder_payload_header(decoder_bytes)
     receiver_decoder = decode_decoder_payload(decoder_bytes)
 
@@ -566,6 +571,11 @@ def run_snerv_advisory(
             "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
             "hf_decoder_saliency_component": hf_decoder_saliency_component,
             "decoder_payload_codec": decoder_payload_codec,
+            "decoder_payload_mixed_modes": (
+                list(decoder_payload_mixed_modes)
+                if decoder_payload_mixed_modes is not None
+                else None
+            ),
         },
     )
     metadata = len(metadata_payload)

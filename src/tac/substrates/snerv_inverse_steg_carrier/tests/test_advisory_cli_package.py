@@ -58,7 +58,9 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
             "--package-dir",
             str(package_dir),
             "--decoder-payload-codec",
-            "int8_symmetric",
+            "mixed_magnitude_symmetric",
+            "--decoder-payload-mixed-modes",
+            "fp16,int4,int4",
             "--package-timeout-seconds",
             "120",
         ]
@@ -83,7 +85,8 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     assert payload["runtime_package"]["receiver_proof"][
         "runtime_consumption_proof_passed"
     ] is True
-    assert captured_kwargs["decoder_payload_codec"] == "int8_symmetric"
+    assert captured_kwargs["decoder_payload_codec"] == "mixed_magnitude_symmetric"
+    assert captured_kwargs["decoder_payload_mixed_modes"] == ("fp16", "int4", "int4")
 
 
 def _fake_advisory_result(packet: bytes):

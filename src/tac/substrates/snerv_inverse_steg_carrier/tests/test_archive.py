@@ -229,6 +229,60 @@ def test_mixed_decoder_payload_uses_per_kernel_modes_and_roundtrip_values() -> N
         )
 
 
+def test_mixed_decoder_payload_accepts_explicit_mode_assignments() -> None:
+    decoder = HfGenerationDecoder.zeros(levels=2)
+    groups = [
+        (lvl, subband)
+        for lvl in range(decoder.levels)
+        for subband in ("LH", "HL", "HH")
+    ]
+    pattern = np.linspace(-1.0, 1.0, 9, dtype=np.float64).reshape(3, 3)
+    magnitudes = [0.0, 0.008, 0.025, 0.08, 0.2, 0.0]
+    modes = ("zero", "int2", "int4", "int8", "fp16", "zero")
+    for magnitude, (lvl, subband) in zip(magnitudes, groups, strict=True):
+        decoder.kernels[lvl][subband] = pattern * magnitude
+
+    payload = encode_decoder_payload(
+        decoder,
+        codec="mixed_magnitude_symmetric",
+        mixed_modes=modes,
+    )
+    header = _read_subpacket_header(payload)
+    decoded = decode_decoder_payload(payload)
+
+    assert header["schema"] == "snerv_decoder_payload.v3"
+    assert header["mode_assignment_source"] == "explicit"
+    assert header["mode_histogram"] == {
+        "zero": 2,
+        "int2": 1,
+        "int4": 1,
+        "int8": 1,
+        "fp16": 1,
+    }
+    for (lvl, subband), mode in zip(groups, modes, strict=True):
+        expected = decoder.kernels[lvl][subband]
+        actual = decoded.kernels[lvl][subband]
+        if mode == "zero":
+            np.testing.assert_array_equal(actual, np.zeros((3, 3)))
+        else:
+            np.testing.assert_allclose(actual, expected, atol=0.01, rtol=0.0)
+
+    with pytest.raises(SnervArchiveError, match="mode count"):
+        encode_decoder_payload(
+            decoder,
+            codec="mixed_magnitude_symmetric",
+            mixed_modes=modes[:-1],
+        )
+    with pytest.raises(SnervArchiveError, match="unsupported decoder mixed mode"):
+        encode_decoder_payload(
+            decoder,
+            codec="mixed_magnitude_symmetric",
+            mixed_modes=("zero", "banana", "int4", "int8", "fp16", "zero"),
+        )
+    with pytest.raises(SnervArchiveError, match="require mixed codec"):
+        encode_decoder_payload(decoder, codec="int8_symmetric", mixed_modes=modes)
+
+
 def test_quantized_decoder_payload_rejects_corrupt_payload_bytes() -> None:
     decoder = HfGenerationDecoder.zeros(levels=1)
     payload = bytearray(encode_decoder_payload(decoder, codec="int4_symmetric"))

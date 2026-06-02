@@ -15,6 +15,7 @@ import hashlib
 import json
 import lzma
 import struct
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -441,6 +442,7 @@ def encode_decoder_payload(
     decoder: HfGenerationDecoder,
     *,
     codec: str = DECODER_PAYLOAD_LEGACY_CODEC,
+    mixed_modes: Sequence[str] | None = None,
 ) -> bytes:
     """Encode the shared HF decoder as deterministic scorer-free receiver bytes."""
 
@@ -455,8 +457,12 @@ def encode_decoder_payload(
         "float32",
         "legacy",
     }:
+        if mixed_modes is not None:
+            raise SnervArchiveError("mixed decoder modes require mixed codec")
         return _encode_decoder_payload_v1(levels=levels, raw=raw)
     if normalized in DECODER_PAYLOAD_QUANTIZED_CODECS:
+        if mixed_modes is not None:
+            raise SnervArchiveError("mixed decoder modes require mixed codec")
         return _encode_decoder_payload_quantized(
             levels=levels,
             values=values,
@@ -473,6 +479,7 @@ def encode_decoder_payload(
             levels=levels,
             values=values,
             raw_reference=raw,
+            explicit_modes=mixed_modes,
         )
     raise SnervArchiveError(f"unsupported decoder payload codec: {codec!r}")
 
@@ -551,8 +558,17 @@ def _encode_decoder_payload_mixed(
     levels: int,
     values: np.ndarray,
     raw_reference: bytes,
+    explicit_modes: Sequence[str] | None = None,
 ) -> bytes:
     value_groups = values.reshape(levels * len(DECODER_SUBBANDS), 9)
+    mode_plan: tuple[str, ...] | None = None
+    if explicit_modes is not None:
+        mode_plan = tuple(_normalize_mixed_decoder_kernel_mode(v) for v in explicit_modes)
+        if len(mode_plan) != len(value_groups):
+            raise SnervArchiveError(
+                f"decoder mixed mode count {len(mode_plan)} != expected "
+                f"{len(value_groups)}"
+            )
     mode_codes: list[int] = []
     scales = []
     q_parts: list[bytes] = []
@@ -560,8 +576,12 @@ def _encode_decoder_payload_mixed(
     max_abs_error = 0.0
     mean_abs_errors = []
     histogram = dict.fromkeys(DECODER_PAYLOAD_MIXED_MODE_TO_CODE, 0)
-    for group in value_groups:
-        mode = _select_mixed_decoder_kernel_mode(group)
+    for idx, group in enumerate(value_groups):
+        mode = (
+            mode_plan[idx]
+            if mode_plan is not None
+            else _select_mixed_decoder_kernel_mode(group)
+        )
         histogram[mode] += 1
         mode_codes.append(DECODER_PAYLOAD_MIXED_MODE_TO_CODE[mode])
         if mode == "zero":
@@ -594,6 +614,9 @@ def _encode_decoder_payload_mixed(
         "kernel_shape": [3, 3],
         "codec": DECODER_PAYLOAD_MIXED_CODEC,
         "quantizer": "mixed_per_kernel_zero_int2_int4_int8_fp16",
+        "mode_assignment_source": (
+            "explicit" if mode_plan is not None else "magnitude_heuristic"
+        ),
         "mode_code_bits": 3,
         "mode_codebook": dict(DECODER_PAYLOAD_MIXED_MODE_TO_CODE),
         "mode_histogram": histogram,
@@ -737,6 +760,31 @@ def _select_mixed_decoder_kernel_mode(group: np.ndarray) -> str:
     if max_abs >= 0.015:
         return "int4"
     return "int2"
+
+
+def _normalize_mixed_decoder_kernel_mode(raw: str) -> str:
+    mode = str(raw).strip().lower().replace("-", "_")
+    aliases = {
+        "0": "zero",
+        "none": "zero",
+        "z": "zero",
+        "i2": "int2",
+        "2": "int2",
+        "int2_symmetric": "int2",
+        "i4": "int4",
+        "4": "int4",
+        "int4_symmetric": "int4",
+        "i8": "int8",
+        "8": "int8",
+        "int8_symmetric": "int8",
+        "float16": "fp16",
+        "f16": "fp16",
+        "half": "fp16",
+    }
+    mode = aliases.get(mode, mode)
+    if mode not in DECODER_PAYLOAD_MIXED_MODE_TO_CODE:
+        raise SnervArchiveError(f"unsupported decoder mixed mode: {raw!r}")
+    return mode
 
 
 def _decode_decoder_payload_quantized(
