@@ -39298,6 +39298,31 @@ def check_subagent_landing_has_solver_wire_in(
             slug_parts = [p.strip("/") for p in root.parts if p.strip("/")]
             slug = "-" + "-".join(slug_parts)
             memory_dir = Path(os.path.expanduser("~")) / ".claude" / "projects" / slug / "memory"
+            if not memory_dir.is_dir():
+                repo_name = root.name
+                try:
+                    common_dir_proc = subprocess.run(
+                        ["git", "rev-parse", "--git-common-dir"],
+                        cwd=root,
+                        check=True,
+                        text=True,
+                        capture_output=True,
+                    )
+                    common_dir = Path(common_dir_proc.stdout.strip())
+                    if not common_dir.is_absolute():
+                        common_dir = (root / common_dir).resolve()
+                    if common_dir.name == ".git":
+                        repo_name = common_dir.parent.name
+                except (OSError, subprocess.CalledProcessError):
+                    pass
+                project_memory_root = Path(os.path.expanduser("~")) / ".claude" / "projects"
+                alternates = sorted(
+                    candidate
+                    for candidate in project_memory_root.glob(f"*-Projects-{repo_name}/memory")
+                    if candidate.is_dir()
+                )
+                if len(alternates) == 1:
+                    memory_dir = alternates[0]
             memory_dir_source = "auto"
     memory_dir = Path(memory_dir)
     if not memory_dir.is_dir():

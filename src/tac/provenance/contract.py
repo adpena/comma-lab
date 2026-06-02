@@ -507,8 +507,8 @@ class Provenance:
         # CUDA promotable requires CUDA hardware + CUDA axis
         if self.evidence_grade == ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA:
             if (
-                self.measurement_axis != "[contest-CUDA]"
-            ):  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_contract_validator_creating_promotable_grade_blockers_per_comprehensive_bug_audit_cascade_20260526
+                self.measurement_axis != "[contest-CUDA]"  # CUSTODY_VALIDATOR_OK:provenance_contract_validator_accumulates_fail_closed_axis_hardware_grade_blockers
+            ):
                 blockers.append("PROMOTABLE_EXACT_CONTEST_CUDA requires measurement_axis=[contest-CUDA]")
             cuda_hardware_prefixes = (
                 "linux_x86_64_t4",
@@ -528,8 +528,8 @@ class Provenance:
         # CPU promotable requires CPU hardware + CPU axis
         if self.evidence_grade == ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU:
             if (
-                self.measurement_axis != "[contest-CPU]"
-            ):  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_contract_validator_creating_promotable_grade_blockers_per_comprehensive_bug_audit_cascade_20260526
+                self.measurement_axis != "[contest-CPU]"  # CUSTODY_VALIDATOR_OK:provenance_contract_validator_accumulates_fail_closed_axis_hardware_grade_blockers
+            ):
                 blockers.append("PROMOTABLE_EXACT_CONTEST_CPU requires measurement_axis=[contest-CPU]")
             if self.hardware_substrate not in (
                 "linux_x86_64_cpu",

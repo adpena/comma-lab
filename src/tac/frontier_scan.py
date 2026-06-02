@@ -30,6 +30,7 @@ recognised GPU class) qualify for the frontier. macOS-CPU advisory rows
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -964,7 +965,9 @@ def refresh_frontier_citation_surfaces(
             new_text = _refresh_state_doc_text(text, before_payload)
         changed = new_text != text
         if changed:
-            path.write_text(new_text, encoding="utf-8")
+            tmp_path = path.with_suffix(path.suffix + ".tmp")
+            tmp_path.write_text(new_text, encoding="utf-8")
+            os.replace(tmp_path, path)
         changes[relative_path] = {"exists": True, "changed": changed}
     after_payload = build_frontier_scan_payload(repo_root)
     return {

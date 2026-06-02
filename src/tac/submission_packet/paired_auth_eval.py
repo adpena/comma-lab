@@ -131,7 +131,6 @@ from typing import Any
 
 from tac.submission_packet.builder import SubmissionBundleResult
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -686,7 +685,7 @@ class PairedAuthEvalVerdict:
                 f"got {self.axis_tag!r}"
             )
         # PAIRED_PASS + promotable => axis_tag canonical
-        if self.promotable and self.axis_tag != "[contest-CUDA; contest-CPU]":
+        if self.promotable and self.axis_tag != "[contest-CUDA; contest-CPU]":  # CUSTODY_VALIDATOR_OK:paired_packet_validator_requires_canonical_dual_axis_tag_before_promotion
             raise ValueError(
                 "promotable=True requires axis_tag='[contest-CUDA; contest-CPU]'"
             )
@@ -1581,9 +1580,9 @@ def reconstruct_verdict_from_disk(
 
 
 __all__ = [
+    "CANONICAL_EQUATION_ID",
     "PAIRED_AUTH_EVAL_SCHEMA_VERSION",
     "PHASE_7_LAYER_VERSION",
-    "CANONICAL_EQUATION_ID",
     "PREDICTED_AXIS_TAG",
     "PairedAuthEvalError",
     "PairedAuthEvalVerdict",

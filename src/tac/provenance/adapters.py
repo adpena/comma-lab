@@ -123,12 +123,12 @@ def _normalize_hardware_substrate(hw: str | None) -> str:
 def _grade_for_axis(axis: str) -> ProvenanceEvidenceGrade:
     """Best-effort grade inference from canonical axis."""
     if (
-        axis == "[contest-CUDA]"
-    ):  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_grade_inference_for_canonical_axis_per_comprehensive_bug_audit_cascade_20260526
+        axis == "[contest-CUDA]"  # CUSTODY_VALIDATOR_OK:provenance_grade_inference_only_contract_validator_checks_axis_hardware_grade_jointly
+    ):
         return ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CUDA
     if (
-        axis == "[contest-CPU]"
-    ):  # CUSTODY_VALIDATOR_OK:this_function_IS_provenance_grade_inference_for_canonical_axis_per_comprehensive_bug_audit_cascade_20260526
+        axis == "[contest-CPU]"  # CUSTODY_VALIDATOR_OK:provenance_grade_inference_only_contract_validator_checks_axis_hardware_grade_jointly
+    ):
         return ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU
     if axis == "[macOS-CPU advisory]":
         return ProvenanceEvidenceGrade.MACOS_CPU_ADVISORY
