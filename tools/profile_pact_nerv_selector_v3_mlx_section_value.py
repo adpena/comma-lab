@@ -535,6 +535,7 @@ def _build_report(
             for variant in variants
         ],
         "section_value_rows": section_rows,
+        "projection_gap_analysis": _projection_gap_analysis(section_rows),
         "absent_section_rows": absent_sections,
         "scope_status": {
             "section": "executed",
@@ -608,6 +609,63 @@ def _section_value_row(
         ),
         "rate_price_score_per_kib": (25.0 / ORIGINAL_VIDEO_BYTES) * 1024.0,
         "marginal_status": _marginal_status(delta_nonrate, archive_bytes_removed),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _projection_gap_analysis(section_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize archive-projection failure evidence from section neutralization."""
+
+    structural_sections = {"decoder_qw", "codebooks_q", "latents_rc"}
+    negative_rows = [
+        row
+        for row in section_rows
+        if str(row.get("neutralized_section") or "") in structural_sections
+        and row.get("delta_total_mlx_score_advisory") is not None
+        and float(row.get("delta_total_mlx_score_advisory") or 0.0) < 0.0
+    ]
+    profiled_structural_sections = sorted(
+        {
+            str(row.get("neutralized_section") or "")
+            for row in section_rows
+            if str(row.get("neutralized_section") or "") in structural_sections
+        }
+    )
+    if negative_rows:
+        status = "archive_projection_gap_suspected"
+        repair_action = "run_direct_mlx_vs_archive_projection_repair_before_exact_spend"
+    elif profiled_structural_sections:
+        status = "no_archive_projection_gap_detected_by_section_neutralization"
+        repair_action = "none"
+    else:
+        status = "not_evaluable_no_structural_section_neutralization"
+        repair_action = "run_structural_section_value_profile"
+    return {
+        "schema": "hprc_archive_projection_gap_analysis.v1",
+        "status": status,
+        "structural_sections": sorted(structural_sections),
+        "profiled_structural_sections": profiled_structural_sections,
+        "negative_structural_sections": [
+            str(row.get("neutralized_section") or "") for row in negative_rows
+        ],
+        "negative_structural_rows": [
+            {
+                "variant_id": row.get("variant_id"),
+                "neutralized_section": row.get("neutralized_section"),
+                "archive_bytes_removed_vs_baseline": row.get(
+                    "archive_bytes_removed_vs_baseline"
+                ),
+                "delta_nonrate_score": row.get("delta_nonrate_score"),
+                "delta_total_mlx_score_advisory": row.get(
+                    "delta_total_mlx_score_advisory"
+                ),
+                "marginal_status": row.get("marginal_status"),
+            }
+            for row in negative_rows
+        ],
+        "repair_action": repair_action,
+        "requires_direct_model_vs_archive_replay": bool(negative_rows),
+        "requires_capacity_or_export_projection_repair": bool(negative_rows),
         **FALSE_AUTHORITY,
     }
 

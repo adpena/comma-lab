@@ -29,6 +29,12 @@ HPRC_SPINE_SECTION_VALUE_PROFILE_WORK_ORDER_SCHEMA = (
 HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA = (
     "hprc_spine_section_cut_materializer_work_order.v1"
 )
+HPRC_SPINE_PROJECTION_GAP_REPAIR_WORK_ORDER_SCHEMA = (
+    "hprc_spine_projection_gap_repair_work_order.v1"
+)
+_PROJECTION_GAP_STRUCTURAL_SECTIONS = frozenset(
+    ("decoder_qw", "codebooks_q", "latents_rc")
+)
 _SECTION_VALUE_PROFILERS: dict[str, dict[str, Any]] = {
     "pact_nerv_vq_pvq": {
         "tool": "tools/profile_pact_nerv_vq_mlx_section_value.py",
@@ -130,6 +136,13 @@ def build_spine_bounded_runner_plan(
         section_value_rows=section_value_rows,
         repo_root=root,
     )
+    projection_gap_repair_work_orders = _projection_gap_repair_work_orders(
+        acquisition_rows=_rows(acquisition_report, "rows"),
+        section_value_rows=section_value_rows,
+        mlx_profiles=mlx_profiles,
+        repo_root=root,
+        upstream_dir=upstream_root,
+    )
     residual_rows = [
         row
         for row in section_value_rows
@@ -142,6 +155,7 @@ def build_spine_bounded_runner_plan(
         compact_base_rows=compact_base_rows,
         section_value_rows=section_value_rows,
         mlx_profiles=mlx_profiles,
+        projection_gap_repair_work_orders=projection_gap_repair_work_orders,
     )
     return {
         "schema": HPRC_SPINE_BOUNDED_RUNNER_PLAN_SCHEMA,
@@ -164,6 +178,7 @@ def build_spine_bounded_runner_plan(
         "section_value_rows": section_value_rows,
         "section_value_profile_work_orders": section_value_profile_work_orders,
         "section_cut_materializer_work_orders": section_cut_materializer_work_orders,
+        "projection_gap_repair_work_orders": projection_gap_repair_work_orders,
         "residual_token_admission_rows": [*residual_rows, *residual_candidate_rows],
         "selected_runner_rows": runner_rows,
         "runner_policy": {
@@ -179,6 +194,12 @@ def build_spine_bounded_runner_plan(
                 "delta_nonrate + charged_rate_cost < 0; missing MLX evidence "
                 "routes to replay; cut recommendations route to byte-closed "
                 "materializers, never promotion"
+            ),
+            "projection_gap_rule": (
+                "decoder/codebook/latent sections whose removal improves "
+                "full-video MLX objective indicate archive-projection or "
+                "training-capacity mismatch; route to direct-model-vs-archive "
+                "repair before exact spend"
             ),
             "residual_rule": (
                 "VQ/HPRC/Z8 residual tokens are blocked unless the measured "
@@ -882,6 +903,324 @@ def _section_cut_work_order_id(
     return f"section_cut:{_safe_path_token(payload_kind)}:{fingerprint}"
 
 
+def _projection_gap_repair_work_orders(
+    *,
+    acquisition_rows: list[dict[str, Any]],
+    section_value_rows: list[dict[str, Any]],
+    mlx_profiles: list[dict[str, Any]],
+    repo_root: Path,
+    upstream_dir: Path,
+) -> list[dict[str, Any]]:
+    rows_by_projection: dict[str, list[dict[str, Any]]] = {}
+    for row in section_value_rows:
+        if not _section_row_indicates_projection_gap(row):
+            continue
+        key = str(row.get("projection_manifest_path") or "")
+        rows_by_projection.setdefault(key, []).append(row)
+
+    profile_analyses = _projection_gap_profile_analyses(mlx_profiles)
+    work_orders: list[dict[str, Any]] = []
+    for acquisition_row in acquisition_rows:
+        projection = str(acquisition_row.get("projection_manifest_path") or "")
+        gap_rows = rows_by_projection.get(projection, [])
+        profile_analysis_rows = [
+            row
+            for row in profile_analyses
+            if row.get("projection_manifest_path") in (None, "", projection)
+        ]
+        suspected_by_profile = any(
+            row.get("status") == "archive_projection_gap_suspected"
+            for row in profile_analysis_rows
+        )
+        if not gap_rows and not suspected_by_profile:
+            continue
+        work_order = _projection_gap_repair_work_order(
+            acquisition_row=acquisition_row,
+            gap_rows=gap_rows,
+            profile_analysis_rows=profile_analysis_rows,
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+        )
+        if work_order is not None:
+            work_orders.append(work_order)
+    work_orders.sort(
+        key=lambda row: (
+            row["status"],
+            str(row.get("source_payload_kind") or ""),
+            str(row.get("projection_manifest_path") or ""),
+        )
+    )
+    return work_orders
+
+
+def _section_row_indicates_projection_gap(row: dict[str, Any]) -> bool:
+    if str(row.get("section_name") or "") not in _PROJECTION_GAP_STRUCTURAL_SECTIONS:
+        return False
+    if row.get("evidence_status") != "measured_mlx_advisory":
+        return False
+    observed_total = row.get("measured_removal_delta_total_mlx_advisory")
+    return observed_total is not None and float(observed_total) < 0.0
+
+
+def _projection_gap_profile_analyses(
+    profiles: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    analyses: list[dict[str, Any]] = []
+    for profile in profiles:
+        payload = profile["payload"]
+        analysis = payload.get("projection_gap_analysis")
+        if not isinstance(analysis, dict):
+            continue
+        analyses.append(
+            {
+                **analysis,
+                "profile_path": profile["path"],
+                "profile_sha256": profile["sha256"],
+                "projection_manifest_path": payload.get("projection_manifest_path"),
+                "family": payload.get("family"),
+            }
+        )
+    return analyses
+
+
+def _projection_gap_repair_work_order(
+    *,
+    acquisition_row: dict[str, Any],
+    gap_rows: list[dict[str, Any]],
+    profile_analysis_rows: list[dict[str, Any]],
+    repo_root: Path,
+    upstream_dir: Path,
+) -> dict[str, Any] | None:
+    payload_kind = str(acquisition_row.get("representation_source_payload_kind") or "")
+    if payload_kind != "pact_nerv_vq_pvq":
+        return None
+    source = (
+        acquisition_row.get("source_archive")
+        if isinstance(acquisition_row.get("source_archive"), dict)
+        else {}
+    )
+    archive_path = _source_archive_path(source)
+    archive_sha256 = source.get("archive_zip_sha256") or source.get("sha256")
+    projection = str(acquisition_row.get("projection_manifest_path") or "")
+    evidence_profile_paths = sorted(
+        {
+            str(evidence.get("profile_path") or "")
+            for row in gap_rows
+            for evidence in _rows(row, "evidence_rows")
+            if str(evidence.get("profile_path") or "")
+        }
+        | {
+            str(row.get("profile_path") or "")
+            for row in profile_analysis_rows
+            if str(row.get("profile_path") or "")
+        }
+    )
+    negative_sections = sorted(
+        {
+            str(row.get("section_name") or "")
+            for row in gap_rows
+            if str(row.get("section_name") or "")
+        }
+        | {
+            str(section)
+            for analysis in profile_analysis_rows
+            for section in analysis.get("negative_structural_sections", [])
+        }
+    )
+    output_dir = _projection_gap_work_order_output_dir(
+        acquisition_row=acquisition_row,
+        archive_sha256=archive_sha256,
+    )
+    blockers: list[str] = []
+    if not archive_path:
+        blockers.append("source_archive_zip_path_missing_for_projection_gap_repair")
+    if not evidence_profile_paths:
+        blockers.append("full_video_section_value_profile_missing_for_projection_gap")
+    if not negative_sections:
+        blockers.append("negative_structural_section_evidence_missing")
+    status = (
+        "blocked_projection_gap_repair_work_order"
+        if blockers
+        else "queued_for_pact_vq_projection_gap_repair"
+    )
+    repair_grid = _pact_vq_projection_gap_repair_grid()
+    argv_rows = [
+        _pact_vq_projection_gap_repair_argv(
+            row=row,
+            output_dir=Path(output_dir) / row["run_id"],
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+        )
+        for row in repair_grid
+    ]
+    return {
+        "schema": HPRC_SPINE_PROJECTION_GAP_REPAIR_WORK_ORDER_SCHEMA,
+        "work_order_id": _projection_gap_work_order_id(
+            projection_manifest_path=projection,
+            archive_sha256=archive_sha256,
+            payload_kind=payload_kind,
+        ),
+        "family": acquisition_row.get("family"),
+        "source_payload_kind": payload_kind,
+        "projection_manifest_path": projection,
+        "archive_zip_path": archive_path,
+        "archive_zip_sha256": archive_sha256,
+        "negative_structural_sections": negative_sections,
+        "evidence_profile_paths": evidence_profile_paths,
+        "profile_projection_gap_analyses": profile_analysis_rows,
+        "repair_objective": (
+            "close direct-MLX-model vs exported-archive replay gap, then "
+            "reprofile structural sections; exact spend stays blocked until "
+            "decoder/codebook/latent bytes have nonnegative measured value"
+        ),
+        "repair_grid": repair_grid,
+        "argv_rows": argv_rows,
+        "preferred_output_dir": output_dir,
+        "storage_waterfall": list(_SECTION_VALUE_PROFILE_STORAGE_WATERFALL),
+        "cleanup_contract": {
+            "schema": "ssd_first_projection_gap_repair_cleanup_contract.v1",
+            "artifact_tier": "ssd_preferred",
+            "large_artifacts_under_output_dir": True,
+            "delete_policy": (
+                "success_scratch_only; reports, archive hashes, argv, "
+                "telemetry, receiver proofs, and replay profiles retained"
+            ),
+            "no_signal_loss": True,
+        },
+        "provenance_requirements": [
+            "source_archive_bytes_sha256",
+            "full_video_profile_path_sha256",
+            "training_argv",
+            "scorer_upstream_snapshot_hashes",
+            "receiver_proof_report",
+            "followup_full_video_section_value_profile",
+        ],
+        "status": status,
+        "blockers": _dedupe(
+            [
+                *blockers,
+                "archive_projection_gap_requires_training_or_export_repair",
+                "full_video_replay_required_after_each_repair_candidate",
+                "contest_cpu_cuda_exact_eval_not_executed",
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _pact_vq_projection_gap_repair_grid() -> list[dict[str, Any]]:
+    return [
+        {
+            "run_id": "capacity_l8_e16_k32_ch32",
+            "latent_dim": 8,
+            "embed_dim": 16,
+            "codebook_size": 32,
+            "decoder_channel": 32,
+        },
+        {
+            "run_id": "capacity_l16_e32_k64_ch48",
+            "latent_dim": 16,
+            "embed_dim": 32,
+            "codebook_size": 64,
+            "decoder_channel": 48,
+        },
+        {
+            "run_id": "capacity_l16_e32_k128_ch48",
+            "latent_dim": 16,
+            "embed_dim": 32,
+            "codebook_size": 128,
+            "decoder_channel": 48,
+        },
+    ]
+
+
+def _pact_vq_projection_gap_repair_argv(
+    *,
+    row: dict[str, Any],
+    output_dir: Path,
+    repo_root: Path,
+    upstream_dir: Path,
+) -> list[str]:
+    return [
+        ".venv/bin/python",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        "--execute-family",
+        "pact_nerv_vq",
+        "--output-dir",
+        output_dir.as_posix(),
+        "--repo-root",
+        repo_root.as_posix(),
+        "--upstream-dir",
+        upstream_dir.as_posix(),
+        "--num-pairs",
+        str(CONTEST_PAIR_COUNT),
+        "--epochs",
+        "2000",
+        "--batch-pairs",
+        "4",
+        "--compact-latent-dim",
+        str(row["latent_dim"]),
+        "--compact-embed-dim",
+        str(row["embed_dim"]),
+        "--compact-codebook-size",
+        str(row["codebook_size"]),
+        "--compact-decoder-channel",
+        str(row["decoder_channel"]),
+        "--compact-decoder-codec",
+        "int2_scale_bundled",
+        "--segnet-distillation-weight",
+        "0.05",
+        "--pose-distillation-weight",
+        "0.0005",
+        "--segnet-distillation-objective",
+        "boundary_argmax_hinge",
+        "--segnet-hinge-margin",
+        "1.0",
+        "--coder-aware-qat",
+        "--coder-qat-quant-bits",
+        "4",
+        "--hard-byte-ceiling",
+        "178000",
+        "--hard-byte-ceiling",
+        "216000",
+        "--hard-byte-ceiling",
+        "285000",
+        "--skip-local-cpu-replay",
+    ]
+
+
+def _projection_gap_work_order_output_dir(
+    *,
+    acquisition_row: dict[str, Any],
+    archive_sha256: Any,
+) -> str:
+    family = str(acquisition_row.get("family") or "unknown")
+    payload_kind = str(acquisition_row.get("representation_source_payload_kind") or "unknown")
+    projection = str(acquisition_row.get("projection_manifest_path") or "")
+    fingerprint_source = f"{projection}\n{archive_sha256 or ''}\n{payload_kind}\nprojection_gap"
+    fingerprint = hashlib.sha256(fingerprint_source.encode("utf-8")).hexdigest()[:16]
+    safe_name = _safe_path_token(f"{family}_{payload_kind}_projection_gap_{fingerprint}")
+    return (
+        Path(_SECTION_VALUE_PROFILE_STORAGE_WATERFALL[0])
+        / "hprc_projection_gap_repairs"
+        / safe_name
+    ).as_posix()
+
+
+def _projection_gap_work_order_id(
+    *,
+    projection_manifest_path: str,
+    archive_sha256: Any,
+    payload_kind: str,
+) -> str:
+    fingerprint_source = (
+        f"{projection_manifest_path}\n{archive_sha256 or ''}\n{payload_kind}\n"
+        "projection_gap"
+    )
+    fingerprint = hashlib.sha256(fingerprint_source.encode("utf-8")).hexdigest()[:16]
+    return f"projection_gap:{_safe_path_token(payload_kind)}:{fingerprint}"
+
+
 def _safe_path_token(value: str) -> str:
     chars = []
     for ch in value:
@@ -1387,6 +1726,7 @@ def _plan_blockers(
     compact_base_rows: list[dict[str, Any]],
     section_value_rows: list[dict[str, Any]],
     mlx_profiles: list[dict[str, Any]],
+    projection_gap_repair_work_orders: list[dict[str, Any]],
 ) -> list[str]:
     blockers = ["contest_cpu_cuda_exact_eval_not_executed"]
     if not mlx_profiles:
@@ -1415,6 +1755,8 @@ def _plan_blockers(
         for row in compact_base_rows
     ):
         blockers.append("hprc_queue_followup_demoted_candidate_before_replay")
+    if projection_gap_repair_work_orders:
+        blockers.append("archive_projection_gap_requires_training_or_export_repair")
     return _dedupe(blockers)
 
 
