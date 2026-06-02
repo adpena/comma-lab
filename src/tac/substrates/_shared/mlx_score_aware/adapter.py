@@ -331,6 +331,31 @@ class MlxScoreAwareAdapter:
             "has_real_posenet_teacher": self.bundle.pose_scorer_teacher is not None,
             "allow_mock_scorer_teacher": bool(self.bundle.allow_mock_scorer_teacher),
             "allow_segnet_only_research": bool(self.bundle.allow_segnet_only_research),
+            "eval_roundtrip_ste": {
+                "schema": "mlx_score_aware_eval_roundtrip_ste.v1",
+                "enabled": bool(self.bundle.eval_roundtrip_ste_enabled),
+                "surface": (
+                    "pr95_bicubic_camera_bilinear_scorer_uint8_ste"
+                ),
+                "camera_hw": [int(v) for v in self.bundle.eval_roundtrip_camera_hw],
+                "applied_before": [
+                    "reconstruction_loss",
+                    "segnet_student_head_loss",
+                    "posenet_student_head_loss",
+                ],
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            "pose_student_input_preprocess": {
+                "schema": "mlx_score_aware_pose_student_input_preprocess.v1",
+                "mode": str(self.bundle.pose_student_input_preprocess),
+                "differentiable": True,
+                "source": (
+                    "tac.local_acceleration.pr95_hnerv_mlx_training.rgb_to_yuv6_mlx"
+                    if self.bundle.pose_student_input_preprocess == "pr95_yuv6"
+                    else "decoded_rgb_nhwc01"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "loss_part_telemetry": {
                 "schema": "mlx_score_aware_loss_part_telemetry.v1",
                 "emitted_by_train_step": True,
@@ -591,6 +616,7 @@ class MlxScoreAwareAdapter:
                 # via stop_gradient on the decoded frames + the teacher is
                 # already gradient-blocked).
                 from tac.substrates._shared.mlx_score_aware.loss import (
+                    _apply_eval_roundtrip_ste_nhwc01,
                     decode_frames_nhwc01,
                 )
                 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
@@ -599,6 +625,8 @@ class MlxScoreAwareAdapter:
                 )
 
                 rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
+                rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
+                rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
                 seg_rgb = (
                     rgb_1
                     if self.bundle.segnet_teacher_frame_index == 1
@@ -658,18 +686,23 @@ class MlxScoreAwareAdapter:
                 # (renderer held via stop_gradient on the decoded pair; teacher
                 # already gradient-blocked).
                 from tac.substrates._shared.mlx_score_aware.loss import (
+                    _apply_eval_roundtrip_ste_nhwc01,
                     decode_frames_nhwc01,
+                    pose_student_inputs_nhwc,
                 )
                 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
                     pose_distillation_mse_loss,
                 )
 
                 rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
-                rgb_0 = mx.stop_gradient(rgb_0)
-                rgb_1 = mx.stop_gradient(rgb_1)
+                rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
+                rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
+                pose_rgb_0, pose_rgb_1 = pose_student_inputs_nhwc(
+                    self.bundle, rgb_0, rgb_1
+                )
                 student_pose = pose_head.forward_with_params(
-                    rgb_0,
-                    rgb_1,
+                    mx.stop_gradient(pose_rgb_0),
+                    mx.stop_gradient(pose_rgb_1),
                     {
                         "weight": pose_params["weight"],
                         "bias": pose_params["bias"],

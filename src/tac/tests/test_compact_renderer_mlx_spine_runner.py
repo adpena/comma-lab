@@ -478,7 +478,10 @@ def test_active_campaign_lock_identity_excludes_output_dir(tmp_path: Path) -> No
     )
 
 
-def test_active_campaign_lock_refuses_duplicate_active_pid(tmp_path: Path) -> None:
+def test_active_campaign_lock_refuses_duplicate_active_pid(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     source = tmp_path / "0.mkv"
     source.write_bytes(b"video")
     args = _parse_args([
@@ -489,6 +492,7 @@ def test_active_campaign_lock_refuses_duplicate_active_pid(tmp_path: Path) -> No
         "--epochs",
         "8",
     ])
+    monkeypatch.setattr(runner_mod, "_active_family_campaign_processes", lambda **_: [])
 
     lock_path = runner_mod._acquire_active_campaign_lock(
         output_dir=tmp_path / "a",

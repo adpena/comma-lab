@@ -41,12 +41,17 @@ def test_hinerv_candidate_curriculum_enables_lowbit_qat_and_blocks_missing_score
     assert plan["pr95_stage_plan"]["enabled"] is False
     assert plan["coder_pressure"] == {
         "enabled": True,
+        "regularizer_enabled": True,
+        "fake_quant_forward_enabled": True,
         "quant_bits": 4,
         "candidate_decoder_codec": "int4_mixed",
         "candidate_decoder_codec_bits": 4,
         "source": "modelsize_candidate",
+        "implementation_status": (
+            "decoder_weight_fake_quant_forward_plus_quant_residual_regularizer"
+        ),
     }
-    assert "enabled_coder_aware_qat_from_modelsize_candidate" in plan[
+    assert "enabled_decoder_coder_regularizer_from_modelsize_candidate" in plan[
         "launch_mutations"
     ]
     assert "aligned_coder_qat_quant_bits_to_candidate_codec" in plan[
@@ -76,6 +81,7 @@ def test_hinerv_candidate_curriculum_enables_lowbit_qat_and_blocks_missing_score
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
     assert "hi_nerv_real_segnet_teacher_missing" in plan["blockers"]
     assert "hi_nerv_eval_roundtrip_ste_missing" in plan["blockers"]
+    assert "hi_nerv_differentiable_pose_preprocess_missing" in plan["blockers"]
     assert plan["score_claim"] is False
     assert plan["ready_for_exact_eval_dispatch"] is False
 
@@ -100,6 +106,8 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
         coder_aware_qat=True,
         coder_qat_quant_bits=4,
         recon_pixel_weight_attached=True,
+        eval_roundtrip_ste_attached=True,
+        differentiable_pose_preprocess_attached=True,
         measured_archive_bytes=measured,
     )
 
@@ -124,9 +132,16 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     assert "hi_nerv_archive_in_loop_byte_oracle_missing" not in plan["blockers"]
     assert "hi_nerv_receiver_proof_missing" in plan["blockers"]
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
-    assert "hi_nerv_eval_roundtrip_ste_missing" in plan[
+    assert "hi_nerv_eval_roundtrip_ste_missing" not in plan[
         "long_campaign_prelaunch_gate"
     ]["blockers"]
+    assert "hi_nerv_differentiable_pose_preprocess_missing" not in plan[
+        "long_campaign_prelaunch_gate"
+    ]["blockers"]
+    assert plan["scorer_pressure"]["eval_roundtrip_ste_attached"] is True
+    assert plan["scorer_pressure"][
+        "differentiable_pose_preprocess_attached"
+    ] is True
     assert "hi_nerv_receiver_proof_missing" not in plan[
         "long_campaign_prelaunch_gate"
     ]["blockers"]

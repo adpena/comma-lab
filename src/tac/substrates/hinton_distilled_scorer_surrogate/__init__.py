@@ -47,6 +47,7 @@ from __future__ import annotations
 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
     DEFAULT_DISTILLATION_TEMPERATURE,
     DEFAULT_POSE_DIMS,
+    DEFAULT_POSE_INPUT_CHANNELS,
     DEFAULT_POSE_POOL_GRID,
     DEFAULT_SEGNET_CLASSES,
     DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE,
@@ -82,6 +83,7 @@ from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
 __all__ = [
     "DEFAULT_DISTILLATION_TEMPERATURE",
     "DEFAULT_POSE_DIMS",
+    "DEFAULT_POSE_INPUT_CHANNELS",
     "DEFAULT_POSE_POOL_GRID",
     "DEFAULT_SEGNET_CLASSES",
     "DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE",

@@ -63,6 +63,43 @@ def decode_frames_nhwc01(bundle: RendererBundle, idx: Any) -> tuple[Any, Any]:
     return rgb_0, rgb_1
 
 
+def _apply_eval_roundtrip_ste_nhwc01(bundle: RendererBundle, rgb: Any) -> Any:
+    """Apply the PR95 byte-realized scorer surface to NHWC ``[0, 1]`` frames."""
+    if not bundle.eval_roundtrip_ste_enabled:
+        return rgb
+    from tac.local_acceleration.pr95_hnerv_mlx_training import (
+        apply_eval_roundtrip_nhwc,
+    )
+
+    roundtripped = apply_eval_roundtrip_nhwc(
+        rgb * 255.0,
+        camera_hw=tuple(bundle.eval_roundtrip_camera_hw),
+        output_hw=(int(rgb.shape[1]), int(rgb.shape[2])),
+        simulate_resize=True,
+        simulate_uint8=True,
+        ste_round=True,
+    )
+    return roundtripped / 255.0
+
+
+def pose_student_inputs_nhwc(bundle: RendererBundle, rgb_0: Any, rgb_1: Any) -> tuple[Any, Any]:
+    """Return pose-student inputs on the configured differentiable surface."""
+    if bundle.pose_student_input_preprocess == "rgb":
+        return rgb_0, rgb_1
+    if bundle.pose_student_input_preprocess == "pr95_yuv6":
+        from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+        return (
+            rgb_to_yuv6_mlx(rgb_0 * 255.0),
+            rgb_to_yuv6_mlx(rgb_1 * 255.0),
+        )
+    raise ValueError(
+        "unsupported pose_student_input_preprocess "
+        f"{bundle.pose_student_input_preprocess!r}; RendererBundle should have "
+        "validated this."
+    )
+
+
 def _prepare_recon_pixel_weight(
     bundle: RendererBundle,
     frame_shape: Any,
@@ -214,6 +251,8 @@ def score_aware_loss(
         weights.update({k: float(v) for k, v in loss_weights.items()})
 
     rgb_0, rgb_1 = decode_frames_nhwc01(bundle, idx)
+    rgb_0 = _apply_eval_roundtrip_ste_nhwc01(bundle, rgb_0)
+    rgb_1 = _apply_eval_roundtrip_ste_nhwc01(bundle, rgb_1)
     gt_0 = bundle.target_rgb_0[idx]
     gt_1 = bundle.target_rgb_1[idx]
     if bundle.recon_pixel_weight is None:
@@ -337,7 +376,8 @@ def score_aware_loss(
                 "learnable_pose_student_head; RendererBundle.__post_init__ "
                 "should have rejected this."
             )
-        student_pose = pose_head(rgb_0, rgb_1)
+        pose_rgb_0, pose_rgb_1 = pose_student_inputs_nhwc(bundle, rgb_0, rgb_1)
+        student_pose = pose_head(pose_rgb_0, pose_rgb_1)
         teacher_pose = mx.stop_gradient(bundle.pose_scorer_teacher.teacher_pose_for_indices(idx))
         # Standardize per-dim by the teacher's per-dim std (canonical scale-
         # stable pose objective) when the teacher cache supplies it.
@@ -577,6 +617,7 @@ __all__ = [
     "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",
     "decode_frames_nhwc01",
+    "pose_student_inputs_nhwc",
     "score_aware_loss",
 ]
 

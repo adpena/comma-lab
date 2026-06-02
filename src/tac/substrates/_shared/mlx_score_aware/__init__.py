@@ -75,6 +75,7 @@ from tac.substrates._shared.mlx_score_aware.loss import (
     build_mlx_posenet_pair_teacher,
     build_mlx_segnet_pair_teacher,
     decode_frames_nhwc01,
+    pose_student_inputs_nhwc,
     score_aware_loss,
 )
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
@@ -125,6 +126,7 @@ __all__ = [
     "decode_frames_nhwc01",
     "decode_mlx_targets",
     "is_mlx_available",
+    "pose_student_inputs_nhwc",
     "require_mlx_for_harness",
     "run_mlx_score_aware_full_main",
     "score_aware_loss",

@@ -1380,6 +1380,9 @@ DEFAULT_POSE_DIMS: int = 6
 #: per-channel means is sufficient signal for the linear pose projection while
 #: keeping the head tiny + the gradient finite.
 DEFAULT_POSE_POOL_GRID: int = 4
+#: RGB pose-student input is legacy/default; YUV6 pose preprocessing uses six
+#: channels after the canonical PR95 RGB->YUV6 transform.
+DEFAULT_POSE_INPUT_CHANNELS: int = 3
 
 
 @dataclasses.dataclass
@@ -1406,7 +1409,8 @@ class LearnablePoseStudentHead:
       * ``bias`` (mx.array, shape ``(pose_dims,)``).
 
     For the canonical ``grid=4`` + ``pose_dims=6``: ``feature_dim = 96`` and
-    total params ``= 96 * 6 + 6 = 582``.
+    total params ``= 96 * 6 + 6 = 582``. A source-faithful PoseNet-preprocess
+    caller may instead pass YUV6 features and set ``input_channels=6``.
 
     Not frozen (MLX arrays are mutable references); the harness trains the head
     jointly via a sibling ``mx.value_and_grad`` step, identical to the SegNet
@@ -1417,6 +1421,7 @@ class LearnablePoseStudentHead:
     bias: Any  # mx.array (pose_dims,)
     pose_dims: int = DEFAULT_POSE_DIMS
     pool_grid: int = DEFAULT_POSE_POOL_GRID
+    input_channels: int = DEFAULT_POSE_INPUT_CHANNELS
 
     def __post_init__(self) -> None:
         _require_mlx()
@@ -1424,6 +1429,10 @@ class LearnablePoseStudentHead:
             raise ValueError(f"pose_dims must be >= 1; got {self.pose_dims}")
         if self.pool_grid < 1:
             raise ValueError(f"pool_grid must be >= 1; got {self.pool_grid}")
+        if self.input_channels < 1:
+            raise ValueError(
+                f"input_channels must be >= 1; got {self.input_channels}"
+            )
         if self.weight.shape[-1] != self.pose_dims:
             raise ValueError(
                 f"weight last dim must equal pose_dims={self.pose_dims}; "
@@ -1434,10 +1443,11 @@ class LearnablePoseStudentHead:
                 f"bias last dim must equal pose_dims={self.pose_dims}; "
                 f"got bias.shape={self.bias.shape!r}"
             )
-        expected_feat = 2 * self.pool_grid * self.pool_grid * 3
+        expected_feat = 2 * self.pool_grid * self.pool_grid * self.input_channels
         if self.weight.shape[0] != expected_feat:
             raise ValueError(
-                f"weight first dim must equal 2*pool_grid^2*3={expected_feat} "
+                "weight first dim must equal "
+                f"2*pool_grid^2*input_channels={expected_feat} "
                 f"(both frames, coarse {self.pool_grid}x{self.pool_grid} RGB "
                 f"pool); got weight.shape={self.weight.shape!r}"
             )
@@ -1516,6 +1526,7 @@ def build_learnable_pose_student_head(
     *,
     pose_dims: int = DEFAULT_POSE_DIMS,
     pool_grid: int = DEFAULT_POSE_POOL_GRID,
+    input_channels: int = DEFAULT_POSE_INPUT_CHANNELS,
     seed: int = 0,
     init_scale: float = 0.05,
 ) -> LearnablePoseStudentHead:
@@ -1525,6 +1536,9 @@ def build_learnable_pose_student_head(
         pose_dims: Number of pose dims the head emits (default 6 — the contest
             pose distortion uses the first 6 of the 12-dim PoseNet pose head).
         pool_grid: Coarse spatial pool resolution per frame (default 4x4).
+        input_channels: Number of channels consumed per preprocessed frame.
+            Default 3 preserves the RGB head. Use 6 when the caller routes
+            decoded frames through canonical differentiable YUV6 preprocessing.
         seed: Deterministic init seed (Catalog #305 diff-able-across-runs).
         init_scale: Gaussian init stddev. Default 0.05 — small so initial pose
             predictions land near zero (the teacher pose vectors are O(0.1)
@@ -1539,9 +1553,11 @@ def build_learnable_pose_student_head(
         raise ValueError(f"pose_dims must be >= 1; got {pose_dims}")
     if pool_grid < 1:
         raise ValueError(f"pool_grid must be >= 1; got {pool_grid}")
+    if input_channels < 1:
+        raise ValueError(f"input_channels must be >= 1; got {input_channels}")
     if init_scale <= 0.0:
         raise ValueError(f"init_scale must be > 0; got {init_scale}")
-    feature_dim = 2 * pool_grid * pool_grid * 3
+    feature_dim = 2 * pool_grid * pool_grid * input_channels
     rng_key = mx.random.key(seed)
     key_w, key_b = mx.random.split(rng_key)
     weight = mx.random.normal(shape=(feature_dim, pose_dims), key=key_w) * init_scale
@@ -1551,6 +1567,7 @@ def build_learnable_pose_student_head(
         bias=bias,
         pose_dims=pose_dims,
         pool_grid=pool_grid,
+        input_channels=input_channels,
     )
 
 

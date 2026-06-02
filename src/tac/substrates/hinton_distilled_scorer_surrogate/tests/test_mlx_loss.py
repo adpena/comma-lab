@@ -25,6 +25,7 @@ from tac.local_acceleration import EVIDENCE_GRADE_MLX  # noqa: E402
 from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     DEFAULT_DISTILLATION_TEMPERATURE,
     DEFAULT_POSE_DIMS,
+    DEFAULT_POSE_INPUT_CHANNELS,
     DEFAULT_POSE_POOL_GRID,
     DEFAULT_SEGNET_CLASSES,
     DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE,
@@ -178,12 +179,29 @@ def test_real_posenet_teacher_cache_rejects_scale_shape_mismatch() -> None:
 def test_build_learnable_pose_student_head_returns_canonical_shape() -> None:
     assert DEFAULT_POSE_DIMS == 6
     assert DEFAULT_POSE_POOL_GRID == 4
+    assert DEFAULT_POSE_INPUT_CHANNELS == 3
     head = build_learnable_pose_student_head(seed=7)
     assert head.weight.shape == (2 * 4 * 4 * 3, 6)
+    assert head.input_channels == 3
     assert head.bias.shape == (6,)
     rgb_0 = mx.ones((2, 8, 8, 3))
     rgb_1 = mx.zeros((2, 8, 8, 3))
     out = head(rgb_0, rgb_1)
+    assert out.shape == (2, 6)
+
+
+def test_build_learnable_pose_student_head_supports_yuv6_channels() -> None:
+    head = build_learnable_pose_student_head(
+        pose_dims=6,
+        pool_grid=4,
+        input_channels=6,
+        seed=9,
+    )
+    assert head.weight.shape == (2 * 4 * 4 * 6, 6)
+    assert head.input_channels == 6
+    yuv0 = mx.ones((2, 8, 8, 6))
+    yuv1 = mx.zeros((2, 8, 8, 6))
+    out = head(yuv0, yuv1)
     assert out.shape == (2, 6)
 
 
@@ -209,6 +227,19 @@ def test_learnable_pose_student_head_rejects_too_small_spatial_grid() -> None:
     )
     with pytest.raises(ValueError, match="too small"):
         head(mx.ones((1, 3, 8, 3)), mx.ones((1, 3, 8, 3)))
+
+
+def test_learnable_pose_student_head_rejects_bad_input_channels() -> None:
+    with pytest.raises(ValueError, match="input_channels"):
+        build_learnable_pose_student_head(input_channels=0)
+    with pytest.raises(ValueError, match="weight first dim"):
+        LearnablePoseStudentHead(
+            weight=mx.zeros((2 * 4 * 4 * 3, 6)),
+            bias=mx.zeros((6,)),
+            pose_dims=6,
+            pool_grid=4,
+            input_channels=6,
+        )
 
 
 def test_mock_teacher_logits_shape() -> None:

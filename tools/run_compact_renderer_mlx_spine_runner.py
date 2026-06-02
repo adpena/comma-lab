@@ -3574,6 +3574,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         recon_pixel_weight_attached=bool(
             recon_pixel_weight_path is not None or auto_segnet_boundary_recon_weight
         ),
+        eval_roundtrip_ste_attached=True,
+        differentiable_pose_preprocess_attached=True,
     )
     effective_coder_aware_qat = bool(
         launch_curriculum_plan["coder_pressure"]["enabled"]
@@ -3718,6 +3720,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         recon_pixel_weight_attached=bool(
             recon_pixel_weight_path is not None or auto_segnet_boundary_recon_weight
         ),
+        eval_roundtrip_ste_attached=True,
+        differentiable_pose_preprocess_attached=True,
         measured_archive_bytes=(
             int(artifact_dict["archive_bytes"])
             if artifact_dict.get("archive_bytes") is not None
@@ -3881,6 +3885,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     quant_residual_weight=coder_qat_quant_residual_weight,
                     magnitude_weight=coder_qat_magnitude_weight,
                     delta_weight=coder_qat_delta_weight,
+                ),
+                "eval_roundtrip_ste": _eval_roundtrip_ste_report_metadata(
+                    artifact_dict
+                ),
+                "pose_student_input_preprocess": (
+                    _pose_student_input_preprocess_report_metadata(artifact_dict)
                 ),
                 "recon_pixel_weight": _recon_pixel_weight_report_metadata(
                     artifact_dict
@@ -4325,6 +4335,85 @@ def _coder_qat_report_metadata(
         "magnitude_weight": float(magnitude_weight),
         "delta_weight": float(delta_weight),
         "authority": "false_macos_mlx_research_signal",
+    }
+
+
+def _hi_nerv_eval_roundtrip_ste_metadata() -> dict[str, Any]:
+    """Return the canonical HiNeRV PR95 eval-roundtrip training metadata."""
+
+    return {
+        "schema": "mlx_score_aware_eval_roundtrip_ste.v1",
+        "enabled": True,
+        "surface": "pr95_bicubic_camera_bilinear_scorer_uint8_ste",
+        "camera_hw": [874, 1164],
+        "applied_before": [
+            "reconstruction_loss",
+            "segnet_student_head_loss",
+            "posenet_student_head_loss",
+        ],
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+
+
+def _hi_nerv_pose_preprocess_metadata() -> dict[str, Any]:
+    return {
+        "schema": "mlx_score_aware_pose_student_input_preprocess.v1",
+        "mode": "pr95_yuv6",
+        "differentiable": True,
+        "source": (
+            "tac.local_acceleration.pr95_hnerv_mlx_training.rgb_to_yuv6_mlx"
+        ),
+        "consumed_by": "learnable_pose_student_head",
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+
+
+def _eval_roundtrip_ste_report_metadata(
+    artifact_dict: Mapping[str, Any],
+) -> dict[str, Any]:
+    score_training = _substrate_score_aware_training_from_artifact(artifact_dict)
+    value = score_training.get("eval_roundtrip_ste")
+    if isinstance(value, Mapping):
+        return dict(value)
+    harness_training = (
+        artifact_dict.get("substrate_artifact_metadata", {})
+        if isinstance(artifact_dict.get("substrate_artifact_metadata"), Mapping)
+        else {}
+    )
+    value = harness_training.get("score_aware_training", {}).get(
+        "eval_roundtrip_ste"
+    ) if isinstance(harness_training.get("score_aware_training"), Mapping) else None
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {
+        "schema": "mlx_score_aware_eval_roundtrip_ste.v1",
+        "enabled": False,
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+
+
+def _pose_student_input_preprocess_report_metadata(
+    artifact_dict: Mapping[str, Any],
+) -> dict[str, Any]:
+    score_training = _substrate_score_aware_training_from_artifact(artifact_dict)
+    value = score_training.get("pose_student_input_preprocess")
+    if isinstance(value, Mapping):
+        return dict(value)
+    harness_training = (
+        artifact_dict.get("substrate_artifact_metadata", {})
+        if isinstance(artifact_dict.get("substrate_artifact_metadata"), Mapping)
+        else {}
+    )
+    value = harness_training.get("score_aware_training", {}).get(
+        "pose_student_input_preprocess"
+    ) if isinstance(harness_training.get("score_aware_training"), Mapping) else None
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {
+        "schema": "mlx_score_aware_pose_student_input_preprocess.v1",
+        "mode": "rgb",
+        "differentiable": True,
+        "authority": "macos_mlx_research_signal_false_authority",
     }
 
 
@@ -4937,19 +5026,21 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
-            "decoder_fake_quant_forward": {
-                "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
-                "enabled": bool(coder_qat_cfg.enabled),
-                "quant_bits": int(coder_qat_cfg.quant_bits),
+                "decoder_fake_quant_forward": {
+                    "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
+                    "enabled": bool(coder_qat_cfg.enabled),
+                    "quant_bits": int(coder_qat_cfg.quant_bits),
                 "quantizer_geometry": (
                     "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
                     "per_tensor_fp16_scale_for_biases"
                 ),
                 "target": "decoder weights and decoder biases; latents remain priced by their archive section",
-                "authority": "macos_mlx_research_signal_false_authority",
-            },
-            "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
-            "local_mlx_prefilter": {
+                    "authority": "macos_mlx_research_signal_false_authority",
+                },
+                "eval_roundtrip_ste": _hi_nerv_eval_roundtrip_ste_metadata(),
+                "pose_student_input_preprocess": _hi_nerv_pose_preprocess_metadata(),
+                "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
+                "local_mlx_prefilter": {
                 "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
                 "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
                 "progress_every": int(mlx_prefilter_progress_every),
@@ -4976,6 +5067,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "extra_loss_weights": coder_qat_loss_weights(coder_qat_cfg),
         "export_archive_fn": _export_archive,
         "substrate_artifact_metadata": artifact_metadata,
+        "eval_roundtrip_ste_enabled": True,
+        "eval_roundtrip_camera_hw": (874, 1164),
+        "pose_student_input_preprocess": "pr95_yuv6",
     }
     recon_pixel_weight = None
     if recon_pixel_weight_path is not None:
@@ -5026,6 +5120,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
             pose_dims=int(pose_scorer_teacher.pose_dims),
+            input_channels=6,
             seed=int(random_seed) + 1,
         )
     bundle = RendererBundle(

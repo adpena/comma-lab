@@ -13,6 +13,7 @@ from tac.substrates._shared.mlx_score_aware import (
     MlxScoreAwareAdapter,
     RendererBundle,
     decode_frames_nhwc01,
+    pose_student_inputs_nhwc,
     run_mlx_score_aware_full_main,
     score_aware_loss,
 )
@@ -104,6 +105,64 @@ def test_score_aware_loss_no_distill_when_weight_zero() -> None:
 
 
 @mlx_only
+def test_score_aware_loss_applies_pr95_eval_roundtrip_before_recon() -> None:
+    import mlx.core as mx
+
+    class _ConstantPair:
+        def __call__(self, idx):
+            batch = int(idx.shape[0])
+            return mx.full((batch, 2, 3, 4, 5), 127.4)
+
+    targets = mx.zeros((2, 4, 5, 3))
+    common = {
+        "model": _ConstantPair(),
+        "target_rgb_0": targets,
+        "target_rgb_1": targets,
+        "num_pairs": 2,
+        "forward_convention": "call_b2chw_255",
+    }
+    idx = mx.array([0, 1], dtype=mx.int32)
+    disabled = RendererBundle(**common)
+    enabled = RendererBundle(
+        **common,
+        eval_roundtrip_ste_enabled=True,
+        eval_roundtrip_camera_hw=(8, 10),
+    )
+
+    _disabled_total, disabled_parts = score_aware_loss(disabled, idx)
+    _enabled_total, enabled_parts = score_aware_loss(enabled, idx)
+    mx.eval(disabled_parts["recon"], enabled_parts["recon"])
+
+    assert float(enabled_parts["recon"].item()) < float(
+        disabled_parts["recon"].item()
+    )
+    expected = 2.0 * (127.0 / 255.0) ** 2
+    assert abs(float(enabled_parts["recon"].item()) - expected) < 1e-5
+
+
+@mlx_only
+def test_pose_student_inputs_can_use_pr95_yuv6_preprocess() -> None:
+    import mlx.core as mx
+
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=None,
+        target_rgb_1=None,
+        num_pairs=1,
+        pose_student_input_preprocess="pr95_yuv6",
+    )
+    rgb_0 = mx.ones((1, 8, 8, 3)) * 0.5
+    rgb_1 = mx.zeros((1, 8, 8, 3))
+
+    pose_0, pose_1 = pose_student_inputs_nhwc(bundle, rgb_0, rgb_1)
+    mx.eval(pose_0, pose_1)
+
+    assert pose_0.shape == (1, 4, 4, 6)
+    assert pose_1.shape == (1, 4, 4, 6)
+    assert float(mx.max(mx.abs(pose_0)).item()) > 0.0
+
+
+@mlx_only
 def test_score_aware_loss_extra_term_weighted() -> None:
     import mlx.core as mx
 
@@ -174,7 +233,7 @@ def test_adapter_trains_pose_head_jointly() -> None:
         num_pairs=4,
         pose_dims=6,
     )
-    pose_head = build_learnable_pose_student_head(seed=11)
+    pose_head = build_learnable_pose_student_head(seed=11, input_channels=6)
     bundle = RendererBundle(
         model=base.model,
         target_rgb_0=base.target_rgb_0,
@@ -184,6 +243,7 @@ def test_adapter_trains_pose_head_jointly() -> None:
         pose_distillation_weight=0.5,
         pose_scorer_teacher=pose_teacher,
         learnable_pose_student_head=pose_head,
+        pose_student_input_preprocess="pr95_yuv6",
     )
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
     batch = mx.array([0, 1, 2, 3], dtype=mx.int32)
@@ -208,7 +268,7 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
         num_pairs=4,
         pose_dims=6,
     )
-    pose_head = build_learnable_pose_student_head(seed=23)
+    pose_head = build_learnable_pose_student_head(seed=23, input_channels=6)
     bundle = RendererBundle(
         model=base.model,
         target_rgb_0=base.target_rgb_0,
@@ -220,6 +280,7 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
         pose_distillation_weight=0.5,
         pose_scorer_teacher=pose_teacher,
         learnable_pose_student_head=pose_head,
+        pose_student_input_preprocess="pr95_yuv6",
     )
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
     batch = mx.array([0, 1, 2, 3], dtype=mx.int32)
@@ -249,6 +310,8 @@ def test_adapter_artifact_metadata_records_score_aware_objective() -> None:
     bundle.segnet_distillation_objective = "boundary_argmax_hinge"
     bundle.segnet_tau_boundary = 2.0
     bundle.segnet_hinge_margin = 0.5
+    bundle.eval_roundtrip_ste_enabled = True
+    bundle.eval_roundtrip_camera_hw = (874, 1164)
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
 
     metadata = adapter.artifact_metadata()
@@ -257,6 +320,9 @@ def test_adapter_artifact_metadata_records_score_aware_objective() -> None:
     assert objective["segnet_tau_boundary"] == 2.0
     assert objective["segnet_hinge_margin"] == 0.5
     assert objective["allow_mock_scorer_teacher"] is True
+    assert objective["eval_roundtrip_ste"]["enabled"] is True
+    assert objective["eval_roundtrip_ste"]["camera_hw"] == [874, 1164]
+    assert objective["pose_student_input_preprocess"]["mode"] == "rgb"
 
 
 @mlx_only
@@ -359,7 +425,7 @@ def test_adapter_score_aware_components_both_teachers_populates_seg_and_pose() -
         num_pairs=4,
         pose_dims=6,
     )
-    pose_head = build_learnable_pose_student_head(seed=17)
+    pose_head = build_learnable_pose_student_head(seed=17, input_channels=6)
     bundle = RendererBundle(
         model=base.model,
         target_rgb_0=base.target_rgb_0,
@@ -371,6 +437,7 @@ def test_adapter_score_aware_components_both_teachers_populates_seg_and_pose() -
         pose_distillation_weight=0.5,
         pose_scorer_teacher=pose_teacher,
         learnable_pose_student_head=pose_head,
+        pose_student_input_preprocess="pr95_yuv6",
     )
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
     out = adapter.score_aware_components(

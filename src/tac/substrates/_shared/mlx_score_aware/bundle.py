@@ -38,6 +38,9 @@ FORWARD_CONVENTIONS: frozenset[str] = frozenset(
 #: ``"mean"`` preserves the loss SCALE (convex re-distribution of the same total
 #: magnitude); ``"none"`` applies the raw map (caller owns the scale).
 _RECON_PIXEL_WEIGHT_NORMALIZE_MODES: frozenset[str] = frozenset({"mean", "none"})
+_POSE_STUDENT_INPUT_PREPROCESS_MODES: frozenset[str] = frozenset(
+    {"rgb", "pr95_yuv6"}
+)
 
 _SUBSTRATE_METADATA_FORBIDDEN_AUTHORITY_KEYS: frozenset[str] = frozenset(
     {
@@ -305,6 +308,22 @@ class RendererBundle:
             loss (the recon_weight Lagrangian coefficient stays comparable
             across A/B arms). ``"none"`` applies the raw map (caller owns the
             scale). Default ``"mean"``.
+        eval_roundtrip_ste_enabled: opt-in PR95 train/eval surface simulation:
+            decoded frames pass through native-MLX bicubic camera resize,
+            bilinear return to scorer resolution, and uint8 round/clamp via
+            STE BEFORE reconstruction and score-teacher student losses. Default
+            ``False`` keeps existing substrates byte-stable; HiNeRV long
+            campaigns opt in because PR95's frontier stack trained against this
+            exact byte-realized scorer surface.
+        eval_roundtrip_camera_hw: camera-resolution ``(H, W)`` for the
+            roundtrip. Default ``(874, 1164)`` matches upstream
+            ``camera_size``; tests may use smaller positive dimensions.
+        pose_student_input_preprocess: input surface for the learnable PoseNet
+            student head. ``"rgb"`` preserves legacy behavior. ``"pr95_yuv6"``
+            feeds decoded frames through canonical differentiable PR95
+            RGB->YUV6 before the pose student, matching the source-faithful
+            PoseNet preprocessing lane while retaining finite surrogate
+            gradients.
     """
 
     model: Any
@@ -336,6 +355,9 @@ class RendererBundle:
     substrate_artifact_metadata: Mapping[str, Any] = field(default_factory=dict)
     recon_pixel_weight: Any | None = None
     recon_pixel_weight_normalize: str = "mean"
+    eval_roundtrip_ste_enabled: bool = False
+    eval_roundtrip_camera_hw: tuple[int, int] = (874, 1164)
+    pose_student_input_preprocess: str = "rgb"
 
     def __post_init__(self) -> None:
         if self.forward_convention not in FORWARD_CONVENTIONS:
@@ -406,6 +428,25 @@ class RendererBundle:
                 f"{sorted(_RECON_PIXEL_WEIGHT_NORMALIZE_MODES)}; got "
                 f"{self.recon_pixel_weight_normalize!r}"
             )
+        if self.pose_student_input_preprocess not in _POSE_STUDENT_INPUT_PREPROCESS_MODES:
+            raise MlxScoreAwareHarnessError(
+                "pose_student_input_preprocess must be one of "
+                f"{sorted(_POSE_STUDENT_INPUT_PREPROCESS_MODES)}; got "
+                f"{self.pose_student_input_preprocess!r}"
+            )
+        try:
+            cam_h, cam_w = self.eval_roundtrip_camera_hw
+        except (TypeError, ValueError) as exc:
+            raise MlxScoreAwareHarnessError(
+                "eval_roundtrip_camera_hw must be a 2-tuple (H, W); got "
+                f"{self.eval_roundtrip_camera_hw!r}"
+            ) from exc
+        if int(cam_h) <= 0 or int(cam_w) <= 0:
+            raise MlxScoreAwareHarnessError(
+                "eval_roundtrip_camera_hw entries must be positive; got "
+                f"{self.eval_roundtrip_camera_hw!r}"
+            )
+        self.eval_roundtrip_camera_hw = (int(cam_h), int(cam_w))
         # C6 IBPS / DreamerV3 scorer-blindness fail-closed (Catalog #164):
         # if a distillation term is active it MUST bind the real scorer via
         # ``scorer_teacher`` + ``learnable_student_head`` UNLESS the caller

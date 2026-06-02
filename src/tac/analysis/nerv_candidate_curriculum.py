@@ -143,6 +143,8 @@ def build_hinerv_candidate_curriculum_plan(
     coder_aware_qat: bool,
     coder_qat_quant_bits: int,
     recon_pixel_weight_attached: bool,
+    eval_roundtrip_ste_attached: bool = False,
+    differentiable_pose_preprocess_attached: bool = False,
     measured_archive_bytes: int | None = None,
 ) -> dict[str, Any]:
     """Bind a HiNeRV modelsize candidate to its required training pressure."""
@@ -204,6 +206,10 @@ def build_hinerv_candidate_curriculum_plan(
             pr95_staged_curriculum=epochs >= 8,
             real_segnet_teacher=_num(segnet_distillation_weight) > 0.0,
             real_posenet_teacher=_num(pose_distillation_weight) > 0.0,
+            differentiable_pose_preprocess=bool(
+                differentiable_pose_preprocess_attached
+            ),
+            eval_roundtrip_ste=bool(eval_roundtrip_ste_attached),
             qat_forward=effective_coder_regularizer,
             coder_aware_regularizer=effective_coder_regularizer,
             muon_adamw_partition=epochs >= 8,
@@ -234,6 +240,10 @@ def build_hinerv_candidate_curriculum_plan(
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
             "joint_p18_p19_weight_attached": bool(recon_pixel_weight_attached),
+            "eval_roundtrip_ste_attached": bool(eval_roundtrip_ste_attached),
+            "differentiable_pose_preprocess_attached": bool(
+                differentiable_pose_preprocess_attached
+            ),
             "auto_teacher_weights_are_forbidden": True,
         },
         "coder_pressure": {

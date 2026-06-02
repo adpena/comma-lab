@@ -128,6 +128,39 @@ def test_rejects_bad_pose_dims() -> None:
         )
 
 
+def test_rejects_bad_eval_roundtrip_camera_hw() -> None:
+    with pytest.raises(MlxScoreAwareHarnessError, match="eval_roundtrip_camera_hw"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            eval_roundtrip_camera_hw=(0, 1164),
+        )
+    with pytest.raises(MlxScoreAwareHarnessError, match="eval_roundtrip_camera_hw"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            eval_roundtrip_camera_hw=(874, 1164, 3),  # type: ignore[arg-type]
+        )
+
+
+def test_rejects_bad_pose_student_input_preprocess() -> None:
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="pose_student_input_preprocess",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            pose_student_input_preprocess="not_real",
+        )
+
+
 def test_rejects_pose_distill_without_pose_teacher() -> None:
     with pytest.raises(MlxScoreAwareHarnessError, match="pose_scorer_teacher"):
         RendererBundle(
@@ -210,6 +243,9 @@ def test_accepts_canonical_conventions_with_defaults() -> None:
         assert b.segnet_teacher_frame_index == 1
         assert b.pose_distillation_weight == 0.0
         assert b.pose_dims == 6
+        assert b.eval_roundtrip_ste_enabled is False
+        assert b.eval_roundtrip_camera_hw == (874, 1164)
+        assert b.pose_student_input_preprocess == "rgb"
 
 
 def test_substrate_artifact_metadata_accepts_non_authority_lineage() -> None:

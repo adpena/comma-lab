@@ -88,6 +88,30 @@ def test_hinerv_prelaunch_gate_keeps_true_unimplemented_pr95_pieces_blocking() -
     assert _requirement(plan, "muon_adamw_partition")["satisfied"] is True
 
 
+def test_hinerv_prelaunch_gate_consumes_eval_roundtrip_ste_evidence() -> None:
+    plan = build_hinerv_candidate_curriculum_plan(
+        candidate=_candidate(),
+        requested_epochs=8,
+        num_pairs=600,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        recon_pixel_weight_attached=True,
+        eval_roundtrip_ste_attached=True,
+        differentiable_pose_preprocess_attached=True,
+    )
+
+    gate = plan["long_campaign_prelaunch_gate"]
+    assert _requirement(plan, "eval_roundtrip_ste")["satisfied"] is True
+    assert _requirement(plan, "differentiable_pose_preprocess")["satisfied"] is True
+    assert "hi_nerv_eval_roundtrip_ste_missing" not in gate["blockers"]
+    assert "hi_nerv_eval_roundtrip_ste_missing" not in plan["blockers"]
+    assert "hi_nerv_differentiable_pose_preprocess_missing" not in gate["blockers"]
+    assert "hi_nerv_differentiable_pose_preprocess_missing" not in plan["blockers"]
+    assert set(gate["blocking_requirement_ids"]) >= {"ema_archive_selection"}
+
+
 def test_hinerv_partial_pair_byte_feedback_remains_advisory_only() -> None:
     plan = build_hinerv_candidate_curriculum_plan(
         candidate=_candidate(),
