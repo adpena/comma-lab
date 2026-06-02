@@ -212,8 +212,10 @@ def _stack_units(implementation_sweep: Mapping[str, Any]) -> list[dict[str, Any]
 
 
 def _control_inventory_units(control_inventory: Mapping[str, Any]) -> list[dict[str, Any]]:
-    return _control_row_units(control_inventory) + _binding_surface_units(
-        control_inventory
+    return (
+        _control_row_units(control_inventory)
+        + _binding_surface_units(control_inventory)
+        + _control_inventory_evidence_units(control_inventory)
     )
 
 
@@ -261,6 +263,107 @@ def _binding_surface_units(control_inventory: Mapping[str, Any]) -> list[dict[st
                 "paths": path_list,
                 "target_consumers": _target_consumers_for_hook(str(surface_id)),
                 "planner_action": "reuse_binding_surface_before_new_code",
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return units
+
+
+def _control_inventory_evidence_units(
+    control_inventory: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    units: list[dict[str, Any]] = []
+    for family, report in _mapping_items(
+        control_inventory.get("decoder_weight_saliency_replays")
+    ):
+        blockers = _string_list(report.get("blockers"))
+        if not bool(report.get("full_video_coverage")):
+            blockers.append("full_video_decoder_weight_saliency_replay_missing")
+        units.append(
+            {
+                "unit_id": f"{family}_decoder_weight_saliency_replay",
+                "unit_type": "decoder_weight_saliency_replay",
+                "family": family,
+                "row_count": int(report.get("row_count", 0) or 0),
+                "full_video_coverage": bool(report.get("full_video_coverage")),
+                "saliency_group_count": int(
+                    report.get("saliency_group_count", 0) or 0
+                ),
+                "target_consumers": [
+                    "bit_allocator",
+                    "sensitivity_map",
+                    "final_rate_attack",
+                    "cathedral_autopilot",
+                ],
+                "planner_action": "route_decoder_weight_saliency_to_waterfill",
+                "blockers": _unique(blockers),
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
+    for family, report in _mapping_items(
+        control_inventory.get("decoder_mode_assignment_reports")
+    ):
+        for index, row in enumerate(_mapping_list(report.get("assignment_rows"))):
+            row_id = str(row.get("row_id") or f"mode_assignment_{index:04d}")
+            modes = _mode_histogram_keys(row.get("mode_histogram"))
+            blockers = _string_list(report.get("blockers")) + _string_list(
+                row.get("blockers")
+            )
+            if not bool(row.get("ready_for_receiver_mode_export")):
+                blockers.append("receiver_visible_decoder_mode_export_missing")
+            units.append(
+                {
+                    "unit_id": f"{family}_{row_id}_decoder_mode_assignment",
+                    "unit_type": "decoder_mode_assignment_route",
+                    "family": family,
+                    "row_id": row_id,
+                    "decoder_payload_schema": row.get("decoder_payload_schema"),
+                    "mode_plan_cli_arg": row.get("mode_plan_cli_arg"),
+                    "mode_histogram": dict(row.get("mode_histogram") or {}),
+                    "receiver_precision_modes": modes,
+                    "target_consumers": [
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "probe_disambiguator",
+                    ],
+                    "planner_action": (
+                        "compile_decoder_modes_to_receiver_visible_grammar"
+                    ),
+                    "blockers": _unique(blockers),
+                    "predicted_delta_adjustment": 0.0,
+                    **FALSE_AUTHORITY,
+                }
+            )
+    for family, report in _mapping_items(
+        control_inventory.get("decoder_mode_probe_reports")
+    ):
+        blockers = _string_list(report.get("blockers"))
+        candidate_rows = _mapping_list(report.get("candidate_rows"))
+        best_label = str(report.get("best_plan_label") or "")
+        best_candidate = _first_matching_candidate(candidate_rows, best_label)
+        units.append(
+            {
+                "unit_id": f"{family}_{best_label or 'unknown'}_decoder_mode_probe",
+                "unit_type": "decoder_mode_probe_result",
+                "family": family,
+                "best_plan_label": best_label,
+                "best_plan_score_linf_advisory": report.get(
+                    "best_plan_score_linf_advisory"
+                ),
+                "candidate_count": int(report.get("candidate_count", 0) or 0),
+                "best_candidate": dict(best_candidate or {}),
+                "target_consumers": [
+                    "final_rate_attack",
+                    "bit_allocator",
+                    "probe_disambiguator",
+                    "cathedral_autopilot",
+                ],
+                "planner_action": (
+                    "rerun_best_decoder_mode_plan_with_pair_robust_pose_gate"
+                ),
+                "blockers": _unique(blockers),
                 "predicted_delta_adjustment": 0.0,
                 **FALSE_AUTHORITY,
             }
@@ -400,6 +503,32 @@ def _mapping_list(value: Any) -> list[Mapping[str, Any]]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
         return []
     return [item for item in value if isinstance(item, Mapping)]
+
+
+def _mapping_items(value: Any) -> list[tuple[str, Mapping[str, Any]]]:
+    if not isinstance(value, Mapping):
+        return []
+    return [
+        (str(key), item)
+        for key, item in sorted(value.items(), key=lambda entry: str(entry[0]))
+        if isinstance(item, Mapping)
+    ]
+
+
+def _mode_histogram_keys(value: Any) -> list[str]:
+    if not isinstance(value, Mapping):
+        return []
+    return _unique([str(key) for key in value if str(key)])
+
+
+def _first_matching_candidate(
+    candidates: Sequence[Mapping[str, Any]],
+    label: str,
+) -> Mapping[str, Any] | None:
+    for candidate in candidates:
+        if str(candidate.get("label") or "") == label:
+            return candidate
+    return candidates[0] if candidates else None
 
 
 def _string_list(value: Any) -> list[str]:

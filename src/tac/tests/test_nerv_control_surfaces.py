@@ -237,10 +237,17 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
         row["work_order_type"] == "measured_modelsize_budget_ladder"
         for row in orders.values()
     )
+    assert "bind_hi_nerv_decoder_weight_saliency_to_waterfill" in orders
+    assert "compile_snerv_snerv_local_tiny_decoder_modes_to_receiver" in orders
+    assert "replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust" in orders
     zero_order = orders["route_bitmask_and_zero_packing_to_rate_allocator"]
     assert {"zero", "rle_only", "int2", "int4"} <= set(
         zero_order["receiver_precision_modes"]
     )
+    mode_order = orders["compile_snerv_snerv_local_tiny_decoder_modes_to_receiver"]
+    assert {"fp16_protected", "int4"} <= set(mode_order["receiver_precision_modes"])
+    assert mode_order["payload"]["mode_plan_cli_arg"] == "fp16,int4,fp16"
+    assert "receiver_decoded_byte_accounting_required" in mode_order["blockers"]
     for order in orders.values():
         assert order["score_claim"] is False
         assert order["score_claim_valid"] is False
@@ -346,6 +353,24 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     gate_row = rows["close_snerv_receiver_rate_promotion_gates"]
     assert gate_row["status"] == "blocked_until_prerequisite_evidence"
     assert gate_row["planner_ingest"]["runnable_now"] is False
+    mode_row = rows["compile_snerv_snerv_local_tiny_decoder_modes_to_receiver"]
+    assert mode_row["planner_ingest"]["ingest_kind"] == (
+        "receiver_visible_decoder_mode_assignment"
+    )
+    assert mode_row["planner_ingest"]["producer_tool"] == (
+        "tools/build_snerv_waterfill_mode_assignment.py"
+    )
+    probe_row = rows["replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust"]
+    assert probe_row["planner_ingest"]["ingest_kind"] == (
+        "decoder_mode_pair_robust_probe_followup"
+    )
+    assert probe_row["planner_ingest"]["producer_tool"] == (
+        "tools/probe_snerv_decoder_mode_assignments.py"
+    )
+    saliency_row = rows["bind_hi_nerv_decoder_weight_saliency_to_waterfill"]
+    assert saliency_row["planner_ingest"]["ingest_kind"] == (
+        "decoder_weight_saliency_waterfill_binding"
+    )
     for row in queue["queue_rows"]:
         assert row["score_claim"] is False
         assert row["score_claim_valid"] is False
@@ -402,6 +427,53 @@ def _synthetic_rate_bridge() -> dict:
             {"gap_id": "decoder_atom_sensitivity_missing"},
         ],
         "local_binding_surfaces": {},
+        "decoder_weight_saliency_replays": {
+            "hi_nerv": {
+                "schema": "hinerv_decoder_weight_saliency_replay.v1",
+                "row_count": 1,
+                "full_video_coverage": False,
+                "saliency_group_count": 1,
+                "blockers": ["full_video_coverage_missing"],
+            }
+        },
+        "decoder_mode_assignment_reports": {
+            "snerv": {
+                "schema": "snerv_waterfill_mode_assignment.v1",
+                "row_count": 1,
+                "assignment_rows": [
+                    {
+                        "row_id": "snerv_local_tiny",
+                        "decoder_payload_schema": "snerv_decoder_payload.v3",
+                        "mode_plan_cli_arg": "fp16,int4,fp16",
+                        "mode_histogram": {"fp16": 2, "int4": 1},
+                        "ready_for_receiver_mode_export": False,
+                        "blockers": [
+                            "receiver_mode_export_requires_byte_accounting"
+                        ],
+                    }
+                ],
+                "blockers": [
+                    "mode_assignment_is_false_authority_until_receiver_replay"
+                ],
+            }
+        },
+        "decoder_mode_probe_reports": {
+            "snerv": {
+                "schema": "snerv_decoder_mode_assignment_probe.v1",
+                "best_plan_label": "explicit_fp163",
+                "best_plan_score_linf_advisory": 3.58,
+                "candidate_count": 1,
+                "candidate_rows": [
+                    {
+                        "label": "explicit_fp163",
+                        "modes": ["fp16", "fp16", "fp16"],
+                        "mode_histogram": {"fp16": 3},
+                        "score_linf": 3.58,
+                    }
+                ],
+                "blockers": ["macos_cpu_advisory_only"],
+            }
+        },
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

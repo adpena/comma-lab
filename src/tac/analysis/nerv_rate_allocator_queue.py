@@ -214,6 +214,39 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "missing_tool_or_proof": "byte_closed_receiver_and_paired_axis_proof",
             "runnable_now": False,
         }
+    if work_order_type == "decoder_weight_saliency_allocator_binding":
+        return {
+            "ingest_kind": "decoder_weight_saliency_waterfill_binding",
+            "planner_action": planner_action,
+            "producer_tool": "tools/build_hinerv_decoder_weight_saliency_replay.py",
+            "existing_tool_ingress": "tools/build_hinerv_archive_ladder_waterfill.py",
+            "missing_tool_or_proof": (
+                "full_video_decoder_weight_saliency_replay_and_trainer_binding"
+            ),
+            "runnable_now": False,
+        }
+    if work_order_type == "receiver_visible_decoder_mode_assignment":
+        return {
+            "ingest_kind": "receiver_visible_decoder_mode_assignment",
+            "planner_action": planner_action,
+            "producer_tool": "tools/build_snerv_waterfill_mode_assignment.py",
+            "existing_tool_ingress": "tools/probe_snerv_decoder_mode_assignments.py",
+            "missing_tool_or_proof": (
+                "receiver_visible_mixed_precision_decoder_grammar_export"
+            ),
+            "runnable_now": False,
+        }
+    if work_order_type == "decoder_mode_pair_robust_probe_followup":
+        return {
+            "ingest_kind": "decoder_mode_pair_robust_probe_followup",
+            "planner_action": planner_action,
+            "producer_tool": "tools/probe_snerv_decoder_mode_assignments.py",
+            "existing_tool_ingress": "tools/build_snerv_waterfill_mode_assignment.py",
+            "missing_tool_or_proof": (
+                "stratified_pair_pose_guard_replay_and_full600_receiver_proof"
+            ),
+            "runnable_now": False,
+        }
     return {
         "ingest_kind": "unknown_rate_allocator_work_order",
         "planner_action": planner_action,

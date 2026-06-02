@@ -86,6 +86,7 @@ def build_nerv_rate_allocator_bridge(
         [
             *_modelsize_work_orders(units),
             *_control_row_work_orders(units),
+            *_evidence_work_orders(units),
             *_implementation_gate_work_orders(units),
         ]
     )
@@ -285,6 +286,137 @@ def _implementation_gate_work_orders(
     return orders
 
 
+def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    orders: list[dict[str, Any]] = []
+    for unit in units:
+        unit_type = str(unit.get("unit_type") or "")
+        family = str(unit.get("family") or "unknown")
+        blockers = _string_list(unit.get("blockers"))
+        if unit_type == "decoder_weight_saliency_replay":
+            orders.append(
+                _work_order(
+                    work_order_id=(
+                        f"bind_{family}_decoder_weight_saliency_to_waterfill"
+                    ),
+                    work_order_type="decoder_weight_saliency_allocator_binding",
+                    target_consumers=[
+                        "bit_allocator",
+                        "sensitivity_map",
+                        "final_rate_attack",
+                    ],
+                    planner_action="route_decoder_weight_saliency_to_waterfill",
+                    source_unit_id=str(unit.get("unit_id") or ""),
+                    priority=15 if blockers else 8,
+                    receiver_precision_modes=[
+                        "fp16_protected",
+                        "int8_protected",
+                        "int4",
+                        "int2",
+                        "zero",
+                    ],
+                    rationale=(
+                        "feed measured decoder-weight saliency into waterfill "
+                        "before assigning protected or low-bit atoms"
+                    ),
+                    payload={
+                        "family": family,
+                        "row_count": unit.get("row_count"),
+                        "full_video_coverage": unit.get("full_video_coverage"),
+                        "saliency_group_count": unit.get("saliency_group_count"),
+                    },
+                    blockers=blockers,
+                )
+            )
+            continue
+        if unit_type == "decoder_mode_assignment_route":
+            row_id = str(unit.get("row_id") or "unknown")
+            modes = _receiver_precision_modes_from_unit(unit)
+            orders.append(
+                _work_order(
+                    work_order_id=(
+                        f"compile_{family}_{row_id}_decoder_modes_to_receiver"
+                    ),
+                    work_order_type="receiver_visible_decoder_mode_assignment",
+                    target_consumers=[
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "probe_disambiguator",
+                    ],
+                    planner_action=(
+                        "emit_receiver_visible_mixed_precision_decoder_grammar"
+                    ),
+                    source_unit_id=str(unit.get("unit_id") or ""),
+                    priority=8,
+                    receiver_precision_modes=modes,
+                    rationale=(
+                        "turn waterfilled decoder atom mode choices into the "
+                        "receiver-visible mixed-precision grammar before any "
+                        "rate claim"
+                    ),
+                    payload={
+                        "family": family,
+                        "row_id": row_id,
+                        "decoder_payload_schema": unit.get(
+                            "decoder_payload_schema"
+                        ),
+                        "mode_plan_cli_arg": unit.get("mode_plan_cli_arg"),
+                        "mode_histogram": unit.get("mode_histogram") or {},
+                    },
+                    blockers=[
+                        *blockers,
+                        "receiver_decoded_byte_accounting_required",
+                        "full600_byte_closed_receiver_proof_missing",
+                        "paired_contest_cpu_cuda_auth_eval_missing",
+                    ],
+                )
+            )
+            continue
+        if unit_type == "decoder_mode_probe_result":
+            label = str(unit.get("best_plan_label") or "unknown")
+            modes = _receiver_precision_modes_from_unit(
+                unit.get("best_candidate") if isinstance(unit.get("best_candidate"), Mapping) else unit
+            )
+            orders.append(
+                _work_order(
+                    work_order_id=(
+                        f"replay_{family}_{label}_decoder_mode_plan_pair_robust"
+                    ),
+                    work_order_type="decoder_mode_pair_robust_probe_followup",
+                    target_consumers=[
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "probe_disambiguator",
+                        "cathedral_autopilot",
+                    ],
+                    planner_action=(
+                        "rerun_best_decoder_mode_plan_with_stratified_pairs_pose_guard"
+                    ),
+                    source_unit_id=str(unit.get("unit_id") or ""),
+                    priority=12,
+                    receiver_precision_modes=modes,
+                    rationale=(
+                        "local advisory mode-probe wins must survive pair-robust "
+                        "PoseNet-guarded replay before driving training or export"
+                    ),
+                    payload={
+                        "family": family,
+                        "best_plan_label": label,
+                        "best_plan_score_linf_advisory": unit.get(
+                            "best_plan_score_linf_advisory"
+                        ),
+                        "candidate_count": unit.get("candidate_count"),
+                    },
+                    blockers=[
+                        *blockers,
+                        "stratified_pair_pose_guard_replay_missing",
+                        "full600_byte_closed_receiver_proof_missing",
+                        "paired_contest_cpu_cuda_auth_eval_missing",
+                    ],
+                )
+            )
+    return orders
+
+
 def _work_order(
     *,
     work_order_id: str,
@@ -333,6 +465,39 @@ def _precision_modes_for_control(control_id: str) -> list[str]:
     if any(token in lowered for token in ("sr", "resolution")):
         modes.extend(["zero", "rle_only", "int2"])
     return _dedupe_strings(modes or ["int8_protected", "int4", "int2", "zero"])
+
+
+def _receiver_precision_modes_from_unit(unit: Mapping[str, Any]) -> list[str]:
+    modes = _string_list(unit.get("receiver_precision_modes"))
+    histogram = unit.get("mode_histogram")
+    if isinstance(histogram, Mapping):
+        modes.extend(str(mode) for mode in histogram if str(mode))
+    modes.extend(_string_list(unit.get("modes")))
+    normalized = [
+        _receiver_precision_mode_from_raw(mode)
+        for mode in modes
+        if _receiver_precision_mode_from_raw(mode)
+    ]
+    return _dedupe_strings(
+        normalized or ["fp16_protected", "int8_protected", "int4", "int2", "zero"]
+    )
+
+
+def _receiver_precision_mode_from_raw(mode: str) -> str:
+    lowered = str(mode).strip().lower()
+    if lowered in {"fp16", "float16", "half", "fp16_protected"}:
+        return "fp16_protected"
+    if lowered in {"int8", "i8", "uint8", "int8_protected"}:
+        return "int8_protected"
+    if lowered in {"int4", "i4", "uint4"}:
+        return "int4"
+    if lowered in {"int2", "i2", "uint2"}:
+        return "int2"
+    if lowered in {"zero", "zeros", "pruned"}:
+        return "zero"
+    if lowered in {"rle", "rle_only", "run_length"}:
+        return "rle_only"
+    return ""
 
 
 def _priority_for_control(control_id: str) -> int:
