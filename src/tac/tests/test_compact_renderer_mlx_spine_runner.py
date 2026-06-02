@@ -1788,6 +1788,10 @@ def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(
     assert row["family"] == "pr95_hnerv"
     assert row["receiver_proof_observed"] is True
     assert row["receiver_proof_passed"] is True
+    post_export = out["post_export_materializer_plan"]
+    assert post_export["schema"] == "compact_carrier_post_export_materializer_plan.v1"
+    assert post_export["compiled"] is True
+    assert Path(post_export["experiment_queue_path"]).is_file()
     assert out["control_arm_scope"]["source_faithful_pr95_reproduction"] is False
     assert (
         "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction"
@@ -2008,6 +2012,10 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert value_rows["decoder_qw"]["admission_status"] == (
         "admit_section_bytes_for_receiver_proof"
     )
+    post_export = out["post_export_materializer_plan"]
+    assert post_export["schema"] == "compact_carrier_post_export_materializer_plan.v1"
+    assert post_export["compiled"] is True
+    assert Path(post_export["experiment_queue_path"]).is_file()
     assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
     assert "pact_nerv_selector_v4_spine_projection_manifest_missing" not in out[

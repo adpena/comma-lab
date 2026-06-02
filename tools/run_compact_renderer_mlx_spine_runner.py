@@ -1978,6 +1978,15 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     if spine_projection_error is not None:
         blockers.append("pr95_hnerv_spine_projection_failed")
     blockers.extend(runner_plan_blockers)
+    post_export_materializer_plan = _compile_carrier_post_export_materializer_plan(
+        output_dir=out,
+        archive_path=archive_path,
+        archive_sha256=artifact_dict.get("archive_sha256"),
+        archive_bytes=artifact_dict.get("archive_bytes"),
+        family="pr95_hnerv",
+        repo_root=root,
+    )
+    blockers.extend(post_export_materializer_plan.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -2011,6 +2020,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                 runner_plan_path.as_posix() if runner_plan_path.is_file() else None
             ),
             "selected_runner_rows": selected_runner_rows,
+            "post_export_materializer_plan": post_export_materializer_plan,
             "ema_decay": float(ema_decay),
             "score_aware_training": {
                 "schema": "compact_pr95_hnerv_scoreaware_training.v1",
@@ -2375,6 +2385,15 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
         blockers.append("pact_nerv_vq_spine_projection_manifest_missing")
     if archive_path is None:
         blockers.append("pact_nerv_vq_archive_export_missing")
+    post_export_materializer_plan = _compile_carrier_post_export_materializer_plan(
+        output_dir=out,
+        archive_path=archive_path,
+        archive_sha256=artifact_dict.get("archive_sha256"),
+        archive_bytes=artifact_dict.get("archive_bytes"),
+        family="pact_nerv_vq",
+        repo_root=root,
+    )
+    blockers.extend(post_export_materializer_plan.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -2434,6 +2453,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                 runner_plan_path.as_posix() if runner_plan_path.is_file() else None
             ),
             "selected_runner_rows": selected_runner_rows,
+            "post_export_materializer_plan": post_export_materializer_plan,
             "blockers": _dedupe(blockers),
         }
     )
@@ -2914,6 +2934,15 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
         blockers.append("pact_nerv_selector_v4_spine_projection_manifest_missing")
     if archive_path is None:
         blockers.append("pact_nerv_selector_v4_archive_export_missing")
+    post_export_materializer_plan = _compile_carrier_post_export_materializer_plan(
+        output_dir=out,
+        archive_path=archive_path,
+        archive_sha256=artifact_dict.get("archive_sha256"),
+        archive_bytes=artifact_dict.get("archive_bytes"),
+        family="pact_nerv_selector_v4",
+        repo_root=root,
+    )
+    blockers.extend(post_export_materializer_plan.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -2984,6 +3013,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                 runner_plan_path.as_posix() if runner_plan_path.is_file() else None
             ),
             "selected_runner_rows": selected_runner_rows,
+            "post_export_materializer_plan": post_export_materializer_plan,
             "blockers": _dedupe(blockers),
         }
     )
