@@ -1148,9 +1148,13 @@ def test_long_training_campaign_plan_consumes_partial_snerv_runner_feedback() ->
     ]
     assert "snerv_scorer_loop_qat_pose_guard_not_ready" not in snerv["blockers"]
     assert "snerv_scorer_loop_qat_no_accepted_improvement" not in snerv["blockers"]
-    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" not in snerv[
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in snerv[
         "blockers"
     ]
+    assert "snerv_mlx_native_file_backed_export_proof_missing_or_failed" in snerv[
+        "blockers"
+    ]
+    assert "snerv_mlx_native_packet_file_missing" in snerv["blockers"]
     assert "snerv_mlx_native_full600_campaign_not_ready" in snerv["blockers"]
     assert snerv["score_claim"] is False
     assert snerv["ready_for_exact_eval_dispatch"] is False
