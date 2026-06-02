@@ -178,6 +178,38 @@ def test_requested_max_pairs_does_not_fake_full_video_coverage() -> None:
     assert rows["actually_full"]["decision"] == ADMIT
 
 
+def test_artifact_level_runtime_ready_and_full_video_scope_are_custody_context() -> None:
+    plan = build_nerv_byte_price_plan(
+        {
+            "schema": "compact_receiver_section_value_profile.v1",
+            "candidate_id": "receiver_proven_candidate",
+            "axis_tag": "[contest-CUDA]",
+            "archive_sha256": "b" * 64,
+            "runtime_consumption_proof": {
+                "runtime_consumption_proof_ready": True,
+                "score_claim": False,
+            },
+            "scope_status": {"full_video": "executed"},
+            "section_value_rows": [
+                {
+                    "row_id": "cut_receiver_proven_selector",
+                    "section_id": "selectors_rc",
+                    "bytes": 100,
+                    "delta_nonrate_score": 0.050,
+                }
+            ],
+        },
+        byte_price=_price(),
+    )
+
+    row = plan["decision_rows"][0]
+    assert row["receiver_proof_status"] == "runtime_consumption_proof_ready"
+    assert row["full_video_coverage"] is True
+    assert row["decision"] == CUT
+    assert "receiver_proof_not_satisfied" not in row["blockers"]
+    assert "full_video_coverage_missing" not in row["blockers"]
+
+
 def test_missing_original_video_bytes_fallback_fails_closed() -> None:
     missing_price = ContestBytePrice(
         score_per_byte=None,

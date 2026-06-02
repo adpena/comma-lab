@@ -130,6 +130,7 @@ _RECEIVER_PROOF_GOOD = (
     "receiver_proof_satisfied",
     "receiver_proof_valid",
     "runtime_consumption_proof_passed",
+    "runtime_consumption_proof_ready",
 )
 
 
@@ -653,11 +654,35 @@ def _receiver_proof_status(
             return "receiver_proof_valid"
         if mapping.get("runtime_consumption_proof_passed") is True:
             return "runtime_consumption_proof_passed"
+        if mapping.get("runtime_consumption_proof_ready") is True:
+            return "runtime_consumption_proof_ready"
         proof = mapping.get("receiver_proof")
         if isinstance(proof, Mapping):
             if proof.get("valid") is True or proof.get("proof_valid") is True:
                 return "receiver_proof_valid"
+            if proof.get("runtime_consumption_proof_ready") is True:
+                return "runtime_consumption_proof_ready"
+            if proof.get("runtime_consumption_proof_passed") is True:
+                return "runtime_consumption_proof_passed"
             value = _first_string(proof, ("status", "receiver_proof_status"))
+            if value:
+                return value
+        proof = mapping.get("runtime_consumption_proof")
+        if isinstance(proof, Mapping):
+            if proof.get("runtime_consumption_proof_ready") is True:
+                return "runtime_consumption_proof_ready"
+            if proof.get("runtime_consumption_proof_passed") is True:
+                return "runtime_consumption_proof_passed"
+            if proof.get("ready_for_exact_eval_runtime") is True:
+                return "runtime_consumption_proof_ready"
+            value = _first_string(
+                proof,
+                (
+                    "status",
+                    "receiver_proof_status",
+                    "runtime_consumption_proof_status",
+                ),
+            )
             if value:
                 return value
     return "missing"
