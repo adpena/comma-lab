@@ -239,6 +239,29 @@ def test_strict_zero_claim_with_zero_returning_gate_passes(
     assert v == []
 
 
+def test_strict_zero_claim_in_extracted_catalog_doc_passes(tmp_path, monkeypatch):
+    _write_claude_md(tmp_path, "# CLAUDE.md\n\nSee docs/meta_bug_class_catalog.md.\n")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "meta_bug_class_catalog.md").write_text(
+        "200. `check_synthetic_clean_doc_example` — STRICT-FLIPPED. Live count: 0.\n"
+    )
+    import tac.preflight as preflight_mod
+
+    def fake_clean_gate(*, strict=False, verbose=False):
+        return []
+
+    monkeypatch.setitem(
+        preflight_mod.__dict__,
+        "check_synthetic_clean_doc_example",
+        fake_clean_gate,
+    )
+    v = check_strict_flipped_catalog_entries_have_live_count_zero(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert v == []
+
+
 def test_strict_mode_raises_on_drift(tmp_path, monkeypatch):
     text = """
 # Catalog

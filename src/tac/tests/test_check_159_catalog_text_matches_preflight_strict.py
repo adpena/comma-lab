@@ -18,9 +18,9 @@ import pytest
 
 from tac.preflight import (
     PreflightError,
-    check_claude_md_catalog_text_matches_preflight_strict_value,
-    _check_159_extract_catalog_entries,
     _check_159_extract_callsite_strict,
+    _check_159_extract_catalog_entries,
+    check_claude_md_catalog_text_matches_preflight_strict_value,
 )
 
 
@@ -47,6 +47,33 @@ if True:
     check_example(strict=True, verbose=False)
 """
     _write_files(tmp_path, claude_md, preflight_py)
+    v = check_claude_md_catalog_text_matches_preflight_strict_value(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert v == []
+
+
+def test_claim_strict_in_extracted_catalog_doc_passes(tmp_path):
+    claude_md = """
+# foo
+
+## Meta-bug class catalog (strict-mode preflight)
+
+See `docs/meta_bug_class_catalog.md`.
+"""
+    preflight_py = """
+def check_example():
+    pass
+
+if True:
+    check_example(strict=True, verbose=False)
+"""
+    _write_files(tmp_path, claude_md, preflight_py)
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "meta_bug_class_catalog.md").write_text(
+        "200. `check_example` — Some thing. STRICT-FLIPPED. Live count: 0.\n"
+    )
     v = check_claude_md_catalog_text_matches_preflight_strict_value(
         repo_root=tmp_path, strict=False, verbose=False
     )

@@ -28605,41 +28605,34 @@ def check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded(
     """
 
     root = Path(repo_root) if repo_root is not None else Path(".")
-    claude_md = root / "CLAUDE.md"
-    if not claude_md.is_file():
+    sources = _read_claude_md_catalog_sources(root)
+    if not sources:
         if verbose:
-            print("  [check-343] OK: CLAUDE.md absent")
+            print("  [check-343] OK: CLAUDE.md/catalog doc absent")
         return []
-
-    try:
-        text = claude_md.read_text(encoding="utf-8")
-    except OSError as exc:
-        if verbose:
-            print(f"  [check-343] WARN: read failure: {exc}")
-        return []
-
-    lines = text.splitlines()
     violations: list[str] = []
-    for index, line in enumerate(lines):
-        matches = list(_CHECK_343_FRONTIER_SCORE_RE.finditer(line))
-        if not matches:
-            continue
-        # Acceptance cascade: same-line waiver?
-        if _check_343_waiver_has_real_rationale(line, _CHECK_343_LINE_WAIVER_MARKER):
-            continue
-        if _check_343_waiver_has_real_rationale(line, _CHECK_343_HISTORICAL_WAIVER_MARKER):
-            continue
-        # Or: pointer reference within ±5 lines.
-        if _check_343_pointer_reference_in_window(lines, index, window=5):
-            continue
-        # Otherwise: flag every score literal on this line.
-        for match in matches:
-            score = match.group(0)
-            violations.append(
-                f"[Check 343] CLAUDE.md:{index + 1}: hardcoded frontier score "
-                f"{score!r} without canonical pointer reference or "
-                "HISTORICAL_SCORE_LITERAL_OK waiver"
-            )
+    for rel, text in sources:
+        lines = text.splitlines()
+        for index, line in enumerate(lines):
+            matches = list(_CHECK_343_FRONTIER_SCORE_RE.finditer(line))
+            if not matches:
+                continue
+            # Acceptance cascade: same-line waiver?
+            if _check_343_waiver_has_real_rationale(line, _CHECK_343_LINE_WAIVER_MARKER):
+                continue
+            if _check_343_waiver_has_real_rationale(line, _CHECK_343_HISTORICAL_WAIVER_MARKER):
+                continue
+            # Or: pointer reference within ±5 lines.
+            if _check_343_pointer_reference_in_window(lines, index, window=5):
+                continue
+            # Otherwise: flag every score literal on this line.
+            for match in matches:
+                score = match.group(0)
+                violations.append(
+                    f"[Check 343] {rel}:{index + 1}: hardcoded frontier score "
+                    f"{score!r} without canonical pointer reference or "
+                    "HISTORICAL_SCORE_LITERAL_OK waiver"
+                )
 
     if verbose:
         if violations:
@@ -37660,6 +37653,45 @@ def check_subagent_commit_serializer_uses_lock(
 
 
 _CATALOG_LINE_RE = re.compile(r"^(\d+)\.\s+`?check_")
+_META_BUG_CATALOG_RELPATH = Path("docs/meta_bug_class_catalog.md")
+
+
+def _claude_md_catalog_source_paths(repo_root: Path | None = None) -> tuple[Path, ...]:
+    """Return pointer-aware catalog source paths in precedence order."""
+
+    root = Path(repo_root or REPO_ROOT)
+    return (root / "CLAUDE.md", root / _META_BUG_CATALOG_RELPATH)
+
+
+def _read_claude_md_catalog_sources(
+    repo_root: Path | None = None,
+) -> list[tuple[str, str]]:
+    """Read CLAUDE.md plus the extracted catalog doc when present."""
+
+    sources: list[tuple[str, str]] = []
+    root = Path(repo_root or REPO_ROOT)
+    for path in _claude_md_catalog_source_paths(root):
+        if not path.is_file():
+            continue
+        try:
+            rel = str(path.relative_to(root))
+        except ValueError:
+            rel = str(path)
+        try:
+            sources.append((rel, path.read_text(encoding="utf-8", errors="replace")))
+        except OSError:
+            continue
+    return sources
+
+
+def _read_claude_md_catalog_text(repo_root: Path | None = None) -> str:
+    """Return a single text view for gates that scan catalog rows."""
+
+    chunks = [
+        f"\n<!-- catalog-source: {rel} -->\n{text}"
+        for rel, text in _read_claude_md_catalog_sources(repo_root)
+    ]
+    return "\n".join(chunks)
 
 
 def check_claude_md_catalog_no_duplicate_numbers(
@@ -37676,26 +37708,22 @@ def check_claude_md_catalog_no_duplicate_numbers(
     serializes claims via fcntl.flock, and THIS gate refuses any CLAUDE.md
     state with duplicate ``^[0-9]+\\. \\`check_*`` lines.
     """
-    repo_root = REPO_ROOT
-    claude_md = repo_root / "CLAUDE.md"
-    if not claude_md.is_file():
+    sources = _read_claude_md_catalog_sources(REPO_ROOT)
+    if not sources:
         return []
-    try:
-        text = claude_md.read_text(encoding="utf-8")
-    except OSError:
-        return []
-    seen: dict[int, list[int]] = {}
-    for lineno, raw in enumerate(text.splitlines(), start=1):
-        m = _CATALOG_LINE_RE.match(raw)
-        if not m:
-            continue
-        n = int(m.group(1))
-        seen.setdefault(n, []).append(lineno)
-    duplicates = {n: lines for n, lines in seen.items() if len(lines) > 1}
+    seen: dict[int, list[str]] = {}
+    for rel, text in sources:
+        for lineno, raw in enumerate(text.splitlines(), start=1):
+            m = _CATALOG_LINE_RE.match(raw)
+            if not m:
+                continue
+            n = int(m.group(1))
+            seen.setdefault(n, []).append(f"{rel}:{lineno}")
+    duplicates = {n: refs for n, refs in seen.items() if len(refs) > 1}
     violations: list[str] = []
-    for n, lines in sorted(duplicates.items()):
+    for n, refs in sorted(duplicates.items()):
         violations.append(
-            f"CLAUDE.md Catalog #{n} appears at lines {lines!r} (duplicate). "
+            f"Catalog #{n} appears at {refs!r} (duplicate). "
             f"Use `python tools/claim_catalog_number.py claim` to atomically "
             f"reserve a unique number; renumber the sister to next-available."
         )
@@ -48410,14 +48438,15 @@ def check_claude_md_catalog_text_matches_preflight_strict_value(
     Drift fires only when claim and code disagree.
     """
     root = (repo_root or Path.cwd()).resolve()
-    claude_md = root / "CLAUDE.md"
     preflight_py = root / "src" / "tac" / "preflight.py"
-    if not claude_md.is_file() or not preflight_py.is_file():
+    if not preflight_py.is_file():
         return []
     try:
-        claude_text = claude_md.read_text(encoding="utf-8", errors="replace")
+        claude_text = _read_claude_md_catalog_text(root)
         preflight_text = preflight_py.read_text(encoding="utf-8", errors="replace")
     except OSError:
+        return []
+    if not claude_text:
         return []
     violations: list[str] = []
     entries = _check_159_extract_catalog_entries(claude_text)
@@ -50949,14 +50978,15 @@ def check_strict_preflight_callsites_have_claude_md_catalog_row(
     rows; this gate catches the omission class structurally.
     """
     root = (repo_root or Path.cwd()).resolve()
-    claude_md = root / "CLAUDE.md"
     preflight_py = root / "src" / "tac" / "preflight.py"
-    if not claude_md.is_file() or not preflight_py.is_file():
+    if not preflight_py.is_file():
         return []
     try:
-        claude_text = claude_md.read_text(encoding="utf-8", errors="replace")
+        claude_text = _read_claude_md_catalog_text(root)
         preflight_text = preflight_py.read_text(encoding="utf-8", errors="replace")
     except OSError:
+        return []
+    if not claude_text:
         return []
     # Build the set of catalog'd check names from CLAUDE.md.
     catalog_re = re.compile(r"^([0-9]+)\.\s+`(check_[a-zA-Z0-9_]+)`")
@@ -52069,12 +52099,8 @@ def check_strict_flipped_catalog_entries_have_live_count_zero(
     (`check_claude_md_catalog_text_matches_preflight_strict_value`).
     """
     root = (repo_root or Path.cwd()).resolve()
-    claude_md = root / "CLAUDE.md"
-    if not claude_md.is_file():
-        return []
-    try:
-        claude_text = claude_md.read_text(encoding="utf-8", errors="replace")
-    except OSError:
+    claude_text = _read_claude_md_catalog_text(root)
+    if not claude_text:
         return []
     violations: list[str] = []
     matched = _check_185_extract_strict_zero_entries(claude_text)
@@ -66365,12 +66391,8 @@ def check_catalog_text_references_existing_gate_callable(
     Lane: ``lane_phase_2_land_5_gap_gates_20260515``.
     """
     root = Path(repo_root or REPO_ROOT)
-    claude_md = root / "CLAUDE.md"
-    if not claude_md.is_file():
-        return []
-    try:
-        text = claude_md.read_text(encoding="utf-8", errors="replace")
-    except OSError:
+    text = _read_claude_md_catalog_text(root)
+    if not text:
         return []
 
     # Locate catalog section span
@@ -66378,10 +66400,6 @@ def check_catalog_text_references_existing_gate_callable(
     if section_start < 0:
         return []
     section_text = text[section_start:]
-    # End at the next ## heading (or EOF)
-    next_h2 = re.search(r"^## ", section_text[len(_CHECK_286_CATALOG_SECTION_HEADER):], re.MULTILINE)
-    if next_h2:
-        section_text = section_text[: len(_CHECK_286_CATALOG_SECTION_HEADER) + next_h2.start()]
 
     violations: list[str] = []
     seen: dict[int, str] = {}
@@ -71417,23 +71435,17 @@ def check_catalog_quota_under_400(
             )
         return violations
 
-    # Parse the catalog table from CLAUDE.md to determine which catalog
-    # #s are currently registered.
+    # Parse the pointer-aware catalog to determine which catalog #s are
+    # currently registered.
     registered_nums: set[int] = set()
-    if claude_md_path.is_file():
-        try:
-            md_text = claude_md_path.read_text(
-                encoding="utf-8", errors="replace"
-            )
-        except OSError:
-            md_text = ""
-        for line in md_text.splitlines():
-            m = re.match(r"^(\d+)\.\s+`check_", line)
-            if m:
-                try:
-                    registered_nums.add(int(m.group(1)))
-                except ValueError:
-                    pass
+    md_text = _read_claude_md_catalog_text(root)
+    for line in md_text.splitlines():
+        m = re.match(r"^(\d+)\.\s+`check_", line)
+        if m:
+            try:
+                registered_nums.add(int(m.group(1)))
+            except ValueError:
+                pass
 
     over_quota = sorted(n for n in registered_nums if n > _CHECK_299_CATALOG_QUOTA)
     if not over_quota:

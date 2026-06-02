@@ -86,6 +86,26 @@ def test_check_176_accepts_cataloged_strict_callsite(tmp_path):
     assert violations == []
 
 
+def test_check_176_accepts_cataloged_strict_callsite_in_extracted_doc(tmp_path):
+    preflight_body = (
+        "def preflight_all(verbose=False):\n"
+        "    check_foo_cataloged(\n"
+        "        strict=True, verbose=verbose,\n"
+        "    )\n"
+    )
+    claude_md_body = "# CLAUDE.md\n\nSee `docs/meta_bug_class_catalog.md`.\n"
+    _write_repo(tmp_path, preflight_body=preflight_body, claude_md_body=claude_md_body)
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "meta_bug_class_catalog.md").write_text(
+        "123. `check_foo_cataloged` — entry text here.\n"
+    )
+    violations = check_strict_preflight_callsites_have_claude_md_catalog_row(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert violations == []
+
+
 def test_check_176_ignores_warn_only_callsites(tmp_path):
     preflight_body = (
         "def preflight_all(verbose=False):\n"

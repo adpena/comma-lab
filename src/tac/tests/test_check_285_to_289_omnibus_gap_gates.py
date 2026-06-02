@@ -174,6 +174,22 @@ class TestCheck286PhantomCatalogRow:
         )
         assert violations == []
 
+    def test_real_callable_in_extracted_catalog_doc_passes(self, tmp_path):
+        repo = _make_repo(tmp_path)
+        (repo / "CLAUDE.md").write_text(
+            "## Meta-bug class catalog (strict-mode preflight)\n\n"
+            "See `docs/meta_bug_class_catalog.md`.\n"
+        )
+        (repo / "docs").mkdir()
+        (repo / "docs" / "meta_bug_class_catalog.md").write_text(
+            "## Meta-bug class catalog (strict-mode preflight)\n\n"
+            "286. `check_catalog_text_references_existing_gate_callable` - this gate.\n"
+        )
+        violations = check_catalog_text_references_existing_gate_callable(
+            repo_root=repo, strict=False, verbose=False,
+        )
+        assert violations == []
+
     def test_strict_raises_on_phantom(self, tmp_path):
         repo = _make_repo(tmp_path)
         (repo / "CLAUDE.md").write_text(

@@ -17,9 +17,7 @@ import pytest
 from tac.preflight import (
     PreflightError,
     check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded,
-    preflight_all,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -49,6 +47,7 @@ def test_orchestrator_callsite_warn_only_wire_in() -> None:
     """preflight_all wires Catalog #343 as strict=False (warn-only initially)."""
 
     import inspect
+
     from tac import preflight as preflight_mod
 
     source = inspect.getsource(preflight_mod.preflight_all)
@@ -74,6 +73,25 @@ def test_synthetic_bare_hardcoded_score_flagged(tmp_path: Path) -> None:
         repo_root=tmp_path, strict=False, verbose=False
     )
     assert len(violations) == 1
+    assert "0.19205" in violations[0]
+
+
+def test_synthetic_bare_hardcoded_score_in_extracted_catalog_doc_flagged(
+    tmp_path: Path,
+) -> None:
+    """The pointer-backed catalog doc is scanned, not just CLAUDE.md."""
+
+    (tmp_path / "CLAUDE.md").write_text("See docs/meta_bug_class_catalog.md.\n")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "meta_bug_class_catalog.md").write_text(
+        "Historical-looking but unwaived score 0.19205.\n"
+    )
+    violations = check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert len(violations) == 1
+    assert "docs/meta_bug_class_catalog.md" in violations[0]
     assert "0.19205" in violations[0]
 
 
