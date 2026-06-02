@@ -262,8 +262,10 @@ def build_archive_bound_candidate_runtime_package(
     runtime_tree_sha256 = tree_sha256(submission_dir)
     runtime_manifest = {
         "schema": "archive_bound_runtime_adapter_manifest.v1",
-        "runtime_adapter_ready": True,
-        "contest_runtime_decoder_adapter_ready": True,
+        "runtime_adapter_present": True,
+        "contest_runtime_decoder_adapter_present": True,
+        "runtime_adapter_ready": proof_passed,
+        "contest_runtime_decoder_adapter_ready": proof_passed,
         "decode_only_receiver_contract": True,
         "submission_dir": _repo_relative(submission_dir, repo_root),
         "runtime_tree_sha256": runtime_tree_sha256,
@@ -288,8 +290,10 @@ def build_archive_bound_candidate_runtime_package(
         "runtime_consumption_proof_path": proof_path,
         "receiver_contract_kind": receiver_contract_kind,
         "receiver_contract_satisfied": proof_passed,
-        "runtime_adapter_ready": True,
-        "contest_runtime_decoder_adapter_ready": True,
+        "runtime_adapter_present": True,
+        "contest_runtime_decoder_adapter_present": True,
+        "runtime_adapter_ready": proof_passed,
+        "contest_runtime_decoder_adapter_ready": proof_passed,
         "runtime_adapter_manifest": runtime_manifest,
         "semantic_payload_changed": True,
         "score_affecting_payload_changed": True,
@@ -309,6 +313,7 @@ def build_archive_bound_candidate_runtime_package(
             [
                 *list(receiver_proof.get("blockers") or []),
                 *list(extra_blockers or []),
+                *([] if proof_passed else ["runtime_adapter_ready_requires_receiver_proof"]),
             ]
         ),
         "score_claim_valid": False,
