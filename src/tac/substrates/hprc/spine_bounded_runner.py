@@ -465,28 +465,28 @@ def _section_value_row(
         ]
         section_spend_recommendation = "wait_for_full_video_coverage"
     elif best_evidence is None:
-        admission_status = "blocked_until_full_video_mlx_section_value_replay"
+        admission_status = "blocked_until_section_neutralization_or_ablation_replay"
         delta_nonrate = None
         admission_delta = None
         evidence_status = "missing"
         requires_replay = True
         blockers = [
-            "full_video_mlx_section_value_replay_missing",
+            "section_neutralization_or_ablation_replay_missing",
             "contest_cpu_cuda_exact_eval_not_executed",
         ]
-        section_spend_recommendation = "run_full_video_section_value_replay"
+        section_spend_recommendation = "run_section_neutralization_or_ablation_replay"
     elif not full_video_evidence_present:
-        admission_status = "blocked_until_full_video_mlx_section_value_replay"
+        admission_status = "blocked_until_full_video_section_neutralization_or_ablation_replay"
         delta_nonrate = None
         admission_delta = None
         evidence_status = "sampled_mlx_advisory_requires_full_video_replay"
         requires_replay = True
         blockers = [
-            "full_video_mlx_section_value_replay_missing",
+            "section_neutralization_or_ablation_replay_missing",
             "sampled_mlx_section_value_replay_not_budget_authority",
             "contest_cpu_cuda_exact_eval_not_executed",
         ]
-        section_spend_recommendation = "rerun_as_full_video_section_value_replay"
+        section_spend_recommendation = "rerun_as_full_video_section_neutralization_or_ablation_replay"
     else:
         delta_nonrate = best_evidence["presence_delta_nonrate"]
         admission_delta = float(delta_nonrate) + rate_cost

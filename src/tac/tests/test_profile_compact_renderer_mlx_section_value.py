@@ -74,7 +74,7 @@ def test_build_profile_records_baseline_score_and_section_byte_blockers(
         "blocked_missing_section_neutralization_or_ablation_evidence"
     )
     assert "compact_base_long_training_required_before_family_demote" in profile["blockers"]
-    assert "full_video_mlx_section_value_replay_missing" in profile["blockers"]
+    assert "section_neutralization_or_ablation_replay_missing" in profile["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in profile["blockers"]
 
 
@@ -257,8 +257,11 @@ def _reports(
                 "avg_posenet_dist": 1.6,
                 "canonical_score": 54.0 + contest_rate_term(archive.stat().st_size),
                 "score_rate_contribution": contest_rate_term(archive.stat().st_size),
+                "batch_pairs": 1,
                 "max_pairs": 600,
                 "n_samples": 600,
+                "candidate_cache_pairs": 600,
+                "reference_cache_pairs": 600,
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
             }
