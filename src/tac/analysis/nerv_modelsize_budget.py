@@ -61,6 +61,12 @@ class HinervModelSizeCandidate:
     decoder_channel: int
     decoder_channels: tuple[int, ...]
     decoder_codec: str
+    use_hierarchical_feature_grid: bool
+    use_convnext_blocks: bool
+    local_grid_levels: int
+    local_grid_channels: int
+    convnext_mlp_ratio: int
+    convnext_kernel_size: int
     latent_dim_coarse: int
     latent_dim_mid: int
     latent_dim_fine: int
@@ -174,6 +180,12 @@ def build_hinerv_config_from_size_knobs(
     latent_dim: int,
     embed_dim: int,
     decoder_channel: int,
+    use_hierarchical_feature_grid: bool = False,
+    use_convnext_blocks: bool = False,
+    local_grid_levels: int = 2,
+    local_grid_channels: int = 4,
+    convnext_mlp_ratio: int = 2,
+    convnext_kernel_size: int = 7,
 ):
     """Build the current local HiNeRV config from compact size knobs."""
 
@@ -184,6 +196,16 @@ def build_hinerv_config_from_size_knobs(
     if latent_dim <= 0 or embed_dim <= 0 or decoder_channel <= 0:
         raise NervModelSizeBudgetError(
             "latent_dim, embed_dim, and decoder_channel must be positive"
+        )
+    if local_grid_levels <= 0 or local_grid_channels <= 0:
+        raise NervModelSizeBudgetError(
+            "local_grid_levels and local_grid_channels must be positive"
+        )
+    if convnext_mlp_ratio <= 0:
+        raise NervModelSizeBudgetError("convnext_mlp_ratio must be positive")
+    if convnext_kernel_size <= 0 or convnext_kernel_size % 2 == 0:
+        raise NervModelSizeBudgetError(
+            "convnext_kernel_size must be positive and odd"
         )
     return HinervConfig(
         latent_dim_coarse=max(1, int(latent_dim) // 2),
@@ -196,6 +218,12 @@ def build_hinerv_config_from_size_knobs(
         num_pairs=int(num_pairs),
         output_height=384,
         output_width=512,
+        use_hierarchical_feature_grid=bool(use_hierarchical_feature_grid),
+        use_convnext_blocks=bool(use_convnext_blocks),
+        local_grid_levels=int(local_grid_levels),
+        local_grid_channels=int(local_grid_channels),
+        convnext_mlp_ratio=int(convnext_mlp_ratio),
+        convnext_kernel_size=int(convnext_kernel_size),
     )
 
 
@@ -215,6 +243,27 @@ def _count_hinerv_params(cfg: Any) -> tuple[int, int, int]:
         out_ch = channels[i + 1]
         # _UpBlock Conv2d(in_ch, out_ch * 4, kernel=3, bias=True)
         decoder += (out_ch * 4) * in_ch * 3 * 3 + (out_ch * 4)
+        if bool(getattr(cfg, "use_hierarchical_feature_grid", False)):
+            level_channels: list[int] = []
+            for level in range(int(cfg.local_grid_levels)):
+                time_bins = max(2, ceil(int(cfg.num_pairs) / float(2**level)))
+                grid_ch = max(
+                    1,
+                    (int(cfg.local_grid_channels) * (2**level))
+                    // max(1, i + 1),
+                )
+                level_channels.append(int(grid_ch))
+                decoder += time_bins * 2 * 2 * grid_ch
+            decoder += int(out_ch) * sum(level_channels) + int(out_ch)
+        if bool(getattr(cfg, "use_convnext_blocks", False)):
+            kernel = int(cfg.convnext_kernel_size)
+            hidden = max(int(out_ch), int(out_ch) * max(1, int(cfg.convnext_mlp_ratio)))
+            # depthwise conv + LayerNorm2d + two pointwise convs + gamma.
+            decoder += int(out_ch) * 1 * kernel * kernel + int(out_ch)
+            decoder += 2 * int(out_ch)
+            decoder += hidden * int(out_ch) + hidden
+            decoder += int(out_ch) * hidden + int(out_ch)
+            decoder += int(out_ch)
     mid_ch = channels[int(cfg.mid_injection_block_index) + 1]
     fine_ch = channels[int(cfg.fine_injection_block_index) + 1]
     decoder += int(cfg.latent_dim_mid) * mid_ch + mid_ch
@@ -233,6 +282,12 @@ def analyze_hinerv_modelsize_candidate(
     embed_dim: int,
     decoder_channel: int,
     decoder_codec: str,
+    use_hierarchical_feature_grid: bool = False,
+    use_convnext_blocks: bool = False,
+    local_grid_levels: int = 2,
+    local_grid_channels: int = 4,
+    convnext_mlp_ratio: int = 2,
+    convnext_kernel_size: int = 7,
 ) -> HinervModelSizeCandidate:
     """Analyze one local HiNeRV size point against an archive-byte ceiling."""
 
@@ -243,6 +298,12 @@ def analyze_hinerv_modelsize_candidate(
         latent_dim=latent_dim,
         embed_dim=embed_dim,
         decoder_channel=decoder_channel,
+        use_hierarchical_feature_grid=use_hierarchical_feature_grid,
+        use_convnext_blocks=use_convnext_blocks,
+        local_grid_levels=local_grid_levels,
+        local_grid_channels=local_grid_channels,
+        convnext_mlp_ratio=convnext_mlp_ratio,
+        convnext_kernel_size=convnext_kernel_size,
     )
     total_params, decoder_params, latent_params = _count_hinerv_params(cfg)
     latent_payload = int(
@@ -258,12 +319,18 @@ def analyze_hinerv_modelsize_candidate(
     nominal_decoder_payload = int((decoder_params * bits + 7) // 8)
     nominal_total_payload = int(latent_payload + nominal_decoder_payload)
     headroom = int(hard_byte_ceiling) - nominal_total_payload
+    official_label = ""
+    if bool(use_hierarchical_feature_grid):
+        official_label += "_hfg"
+    if bool(use_convnext_blocks):
+        official_label += "_cnx"
     return HinervModelSizeCandidate(
         schema="hinerv_modelsize_candidate.v1",
         family="hi_nerv",
         candidate_id=(
             f"hinerv_np{int(num_pairs)}_ld{int(latent_dim)}_ed{int(embed_dim)}_"
-            f"dc{int(decoder_channel)}_{decoder_codec}_ceil{int(hard_byte_ceiling)}"
+            f"dc{int(decoder_channel)}{official_label}_"
+            f"{decoder_codec}_ceil{int(hard_byte_ceiling)}"
         ),
         num_pairs=int(num_pairs),
         hard_byte_ceiling=int(hard_byte_ceiling),
@@ -272,6 +339,12 @@ def analyze_hinerv_modelsize_candidate(
         decoder_channel=int(decoder_channel),
         decoder_channels=tuple(int(v) for v in cfg.decoder_channels),
         decoder_codec=str(decoder_codec),
+        use_hierarchical_feature_grid=bool(cfg.use_hierarchical_feature_grid),
+        use_convnext_blocks=bool(cfg.use_convnext_blocks),
+        local_grid_levels=int(cfg.local_grid_levels),
+        local_grid_channels=int(cfg.local_grid_channels),
+        convnext_mlp_ratio=int(cfg.convnext_mlp_ratio),
+        convnext_kernel_size=int(cfg.convnext_kernel_size),
         latent_dim_coarse=int(cfg.latent_dim_coarse),
         latent_dim_mid=int(cfg.latent_dim_mid),
         latent_dim_fine=int(cfg.latent_dim_fine),
@@ -306,6 +379,12 @@ def enumerate_hinerv_modelsize_candidates(
     embed_dims: tuple[int, ...] = DEFAULT_HINERV_EMBED_DIMS,
     decoder_channels: tuple[int, ...] = DEFAULT_HINERV_DECODER_CHANNELS,
     decoder_codecs: tuple[str, ...] = DEFAULT_HINERV_DECODER_CODECS,
+    use_hierarchical_feature_grid_options: tuple[bool, ...] = (False, True),
+    use_convnext_blocks_options: tuple[bool, ...] = (False, True),
+    local_grid_levels: int = 2,
+    local_grid_channels: int = 4,
+    convnext_mlp_ratio: int = 2,
+    convnext_kernel_size: int = 7,
 ) -> list[HinervModelSizeCandidate]:
     """Enumerate local HiNeRV capacity points for queue planning."""
 
@@ -315,16 +394,28 @@ def enumerate_hinerv_modelsize_candidates(
             for embed_dim in embed_dims:
                 for decoder_channel in decoder_channels:
                     for decoder_codec in decoder_codecs:
-                        rows.append(
-                            analyze_hinerv_modelsize_candidate(
-                                hard_byte_ceiling=ceiling,
-                                num_pairs=num_pairs,
-                                latent_dim=latent_dim,
-                                embed_dim=embed_dim,
-                                decoder_channel=decoder_channel,
-                                decoder_codec=decoder_codec,
-                            )
-                        )
+                        for use_grid in tuple(
+                            bool(v) for v in use_hierarchical_feature_grid_options
+                        ):
+                            for use_convnext in tuple(
+                                bool(v) for v in use_convnext_blocks_options
+                            ):
+                                rows.append(
+                                    analyze_hinerv_modelsize_candidate(
+                                        hard_byte_ceiling=ceiling,
+                                        num_pairs=num_pairs,
+                                        latent_dim=latent_dim,
+                                        embed_dim=embed_dim,
+                                        decoder_channel=decoder_channel,
+                                        decoder_codec=decoder_codec,
+                                        use_hierarchical_feature_grid=use_grid,
+                                        use_convnext_blocks=use_convnext,
+                                        local_grid_levels=local_grid_levels,
+                                        local_grid_channels=local_grid_channels,
+                                        convnext_mlp_ratio=convnext_mlp_ratio,
+                                        convnext_kernel_size=convnext_kernel_size,
+                                    )
+                                )
     return rows
 
 
@@ -383,12 +474,16 @@ def build_hinerv_modelsize_budget_report(
     hard_byte_ceilings: tuple[int, ...],
     num_pairs: int,
     per_ceiling_limit: int = 8,
+    use_hierarchical_feature_grid_options: tuple[bool, ...] = (False, True),
+    use_convnext_blocks_options: tuple[bool, ...] = (False, True),
 ) -> dict[str, Any]:
     """Return a planner-safe local HiNeRV model-size budget report."""
 
     candidates = enumerate_hinerv_modelsize_candidates(
         hard_byte_ceilings=hard_byte_ceilings,
         num_pairs=num_pairs,
+        use_hierarchical_feature_grid_options=use_hierarchical_feature_grid_options,
+        use_convnext_blocks_options=use_convnext_blocks_options,
     )
     selected = select_hinerv_modelsize_candidates(
         candidates,
@@ -402,6 +497,10 @@ def build_hinerv_modelsize_budget_report(
         "family": "hi_nerv",
         "num_pairs": int(num_pairs),
         "hard_byte_ceilings": sorted({int(v) for v in hard_byte_ceilings}),
+        "use_hierarchical_feature_grid_options": [
+            bool(v) for v in use_hierarchical_feature_grid_options
+        ],
+        "use_convnext_blocks_options": [bool(v) for v in use_convnext_blocks_options],
         "candidate_count": len(candidates),
         "selected_candidate_count": len(selected),
         "selected_candidates": [row.as_dict() for row in selected],

@@ -381,6 +381,57 @@ def test_compact_family_startup_marker_records_mlx_custody(
     )
 
 
+def test_hi_nerv_source_faithfulness_classifies_local_adaptation() -> None:
+    report = runner_mod._hi_nerv_source_faithfulness_report(
+        cfg=SimpleNamespace(
+            use_hierarchical_feature_grid=False,
+            use_convnext_blocks=False,
+        ),
+        decoder_codec="portfolio_auto",
+    )
+
+    assert report["schema"] == "hi_nerv_source_faithfulness.v1"
+    assert report["classification"] == "local_hiv1_adaptation_not_official_hinerv"
+    assert report["source_faithful_official_hinerv"] is False
+    assert report["local_hiv1_adaptation"] is True
+    assert "hinerv_official_hierarchical_feature_grid_not_enabled" in report[
+        "blockers"
+    ]
+    assert "hinerv_pr95_pr101_latent_delta_brotli_codec_missing" in report[
+        "blockers"
+    ]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hi_nerv_source_faithfulness_separates_official_controls_from_pr95_gaps() -> None:
+    report = runner_mod._hi_nerv_source_faithfulness_report(
+        cfg=SimpleNamespace(
+            use_hierarchical_feature_grid=True,
+            use_convnext_blocks=True,
+            local_grid_levels=2,
+            local_grid_channels=4,
+            convnext_mlp_ratio=2,
+            convnext_kernel_size=3,
+        ),
+        decoder_codec="portfolio_auto",
+    )
+
+    assert report["classification"] == (
+        "official_hinerv_control_candidate_pr95_better_gaps"
+    )
+    assert report["source_faithful_official_hinerv"] is True
+    assert report["local_hiv1_adaptation"] is False
+    assert report["official_hinerv_blockers"] == []
+    assert "hinerv_pr95_pixelshuffle_bilinear_skip_refine_path_missing" in report[
+        "pr95_better_blockers"
+    ]
+    assert report["local_grid_levels"] == 2
+    assert report["convnext_kernel_size"] == 3
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_startup_marker_only_output_dir_is_not_dirty(tmp_path: Path) -> None:
     out = tmp_path / "candidate"
     out.mkdir()
@@ -887,6 +938,11 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
         candidate_id="hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000",
         hard_byte_ceilings=(178_000,),
     )
+    hi_official = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld4_ed12_dc12_hfg_cnx_int4_mixed_ceil36000",
+        hard_byte_ceilings=(178_000,),
+    )
     sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000",
@@ -905,6 +961,14 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert hi["num_pairs"] == 600
     assert hi["hard_byte_ceiling"] == 36_000
     assert hi["decoder_codec"] == "int4_mixed"
+    assert hi["use_hierarchical_feature_grid"] is False
+    assert hi_official is not None
+    assert hi_official["candidate_id"] == (
+        "hinerv_np600_ld4_ed12_dc12_hfg_cnx_int4_mixed_ceil36000"
+    )
+    assert hi_official["use_hierarchical_feature_grid"] is True
+    assert hi_official["use_convnext_blocks"] is True
+    assert hi_official["hard_byte_ceiling"] == 36_000
     assert sn is not None
     assert sn["candidate_id"] == (
         "snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000"
@@ -4472,6 +4536,136 @@ def test_snerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
         "long_campaign_prelaunch_launch_allowed"
     ] is False
     assert Path(out["report_path"]).is_file()
+
+
+def test_snerv_native_export_bypasses_pr95_prelaunch_only_for_local_proof(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.advisory as advisory_mod
+    import tac.substrates.snerv_inverse_steg_carrier.archive_candidate as package_mod
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as native_mod
+
+    class FakeAdvisory:
+        receiver_archive_packet = b"SNAR1-unit"
+        archive_bytes_total = 10
+        levels = 2
+        wavelet = "haar"
+        score_linf = 1.0
+        score_l2 = 1.1
+        d_seg_mean_linf = 0.01
+        d_pose_mean_linf = 0.02
+        beats_frontier_rate = True
+        receiver_archive_replay_verified = True
+
+        def as_jsonable(self) -> dict:
+            return {
+                "schema": "snerv_inverse_steg_advisory.v1",
+                "n_pairs": 600,
+                "archive_bytes_total": 10,
+                "levels": 2,
+                "wavelet": "haar",
+                "score_linf": 1.0,
+                "score_l2": 1.1,
+                "d_seg_mean_linf": 0.01,
+                "d_pose_mean_linf": 0.02,
+                "beats_frontier_rate": True,
+                "receiver_archive_replay_verified": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+    def fake_run_snerv_advisory(**_kwargs):
+        return FakeAdvisory()
+
+    def fake_package(**_kwargs):
+        archive = tmp_path / "archive.zip"
+        archive.write_bytes(b"zip")
+        return {
+            "schema": "snerv_inverse_steg_archive_bound_adapter_package.v1",
+            "archive_bound_candidate_adapter_package": {
+                "candidate_rows": [
+                    {
+                        "candidate_archive_path": archive.as_posix(),
+                        "candidate_archive_bytes": archive.stat().st_size,
+                        "candidate_archive_sha256": "a" * 64,
+                    }
+                ],
+            },
+            "receiver_proof": {
+                "proof_path": (tmp_path / "proof.json").as_posix(),
+                "receiver_contract_satisfied": True,
+            },
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": "a" * 64,
+            "submission_dir": (tmp_path / "submission").as_posix(),
+            "receiver_proof_path": (tmp_path / "proof.json").as_posix(),
+            "receiver_contract_satisfied": True,
+            "blockers": ["paired_contest_cpu_cuda_auth_eval_missing"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    def fake_native_export(**_kwargs):
+        return {
+            "schema": "snerv_mlx_native_train_export.v1",
+            "packet_bytes": 10,
+            "packet_sha256": "b" * 64,
+            "archive_bytes": 3,
+            "archive_sha256": "a" * 64,
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "native_mlx_full600_campaign_ready": True,
+            "scorer_loop_qat": {
+                "requested": False,
+                "executed": False,
+                "blockers": ["snerv_scorer_loop_qat_not_requested"],
+            },
+            "blockers": ["snerv_mlx_score_aware_long_training_not_executed"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(advisory_mod, "run_snerv_advisory", fake_run_snerv_advisory)
+    monkeypatch.setattr(
+        package_mod,
+        "export_snerv_archive_bound_candidate_package",
+        fake_package,
+    )
+    monkeypatch.setattr(native_mod, "train_export_snerv_mlx_native", fake_native_export)
+
+    out = execute_snerv_inverse_steg_advisory_and_adapt(
+        output_dir=tmp_path / "snerv_native_proof",
+        num_pairs=600,
+        epochs=8,
+        hard_byte_ceilings=(178_000, 216_000),
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        modelsize_candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "snerv-long-candidate",
+            "levels": 2,
+            "bits_per_coeff": 1.5,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int2_symmetric",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
+        },
+        run_native_mlx_export=True,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "executed_snerv_archive_bound_advisory_and_exported"
+    assert out["execute_family"] == "snerv"
+    assert "pr95_long_campaign_prelaunch_gate_failed" in out["blockers"]
+    assert "snerv_pr95_staged_curriculum_missing" in out["blockers"]
+    assert out["score_claim"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
 
 
 def test_adapt_snerv_advisory_report_consumes_existing_runtime_package(

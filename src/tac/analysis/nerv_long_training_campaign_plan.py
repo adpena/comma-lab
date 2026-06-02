@@ -511,6 +511,7 @@ def _snerv_campaign_row(
     bounded_proof_epochs: int = 3,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
+    source_control_blockers = _snerv_source_bound_control_blockers(candidate)
     feedback = _candidate_feedback_for(
         candidate=candidate,
         family="snerv",
@@ -593,6 +594,10 @@ def _snerv_campaign_row(
         "--snerv-scorer-loop-search-mode",
         "learned_random_subspace",
         "--snerv-spectra-preserving-adapter",
+        "--snerv-mfu-scales",
+        _int_csv(candidate.get("mfu_scales") or (1, 2, 4)),
+        "--snerv-hfr-gain",
+        _float_token(float(candidate.get("hfr_gain") or 0.0)),
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
@@ -607,6 +612,7 @@ def _snerv_campaign_row(
             "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes"
             if candidate.get("nominal_under_ceiling") is not True
             else "",
+            *source_control_blockers,
             *list(curriculum.get("blockers") or []),
         ]
     )
@@ -633,6 +639,8 @@ def _snerv_campaign_row(
                 bounded_proof_only
             ),
             "snerv_bounded_proof_epochs": int(bounded_proof_epochs),
+            "source_bound_capacity_controls": _snerv_source_bound_controls(candidate),
+            "source_bound_capacity_control_blockers": source_control_blockers,
             "candidate_feedback": feedback or None,
         },
     )
@@ -663,6 +671,7 @@ def _row(
         "family": family,
         "priority": int(priority),
         "candidate_id": candidate.get("candidate_id"),
+        "candidate": dict(candidate),
         "hard_byte_ceiling": int(candidate.get("hard_byte_ceiling") or 0),
         "candidate_nominal_total_payload_bytes": int(
             candidate.get("nominal_total_payload_bytes") or 0
@@ -913,12 +922,12 @@ def _score_lowering_gate(
     prelaunch_blockers = [
         str(blocker) for blocker in gate.get("blockers", []) if blocker
     ]
+    local_proof_launch_allowed = bool(local_mlx_launch_command_ready)
     cpu_replay_ready = (
         bool(local_mlx_launch_command_ready)
         and "receiver_proof" not in post_run_missing
         and "full_video_local_prefilter" not in post_run_missing
         and "local_cpu_replay_gate" not in post_run_missing
-        and not prelaunch_blockers
     )
     exact_gate_ready = (
         cpu_replay_ready
@@ -929,7 +938,8 @@ def _score_lowering_gate(
         "schema": SCORE_LOWERING_GATE_SCHEMA,
         "family": str(family),
         "local_mlx_executable": bool(local_mlx_launch_command_ready),
-        "prelaunch_allowed": bool(gate.get("launch_allowed")),
+        "prelaunch_allowed": bool(local_proof_launch_allowed),
+        "promotion_prelaunch_allowed": bool(gate.get("launch_allowed")),
         "prelaunch_blockers": _dedupe(prelaunch_blockers),
         "post_run_requirements": post_run_requirements,
         "missing_requirement_ids": _dedupe(missing_requirement_ids),
@@ -966,6 +976,54 @@ def _selected_candidates(
         if isinstance(row, Mapping) and row.get("family") == family
     ]
     return rows[: max(1, int(limit))]
+
+
+def _snerv_source_bound_control_blockers(candidate: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    candidate_id = str(candidate.get("candidate_id") or "")
+    if "_fc" not in candidate_id:
+        blockers.append("snerv_candidate_id_missing_source_bound_fc_dim_emb_size")
+    for key in (
+        "wavelet",
+        "fc_dim",
+        "emb_size",
+        "patch_radius",
+        "mfu_scales",
+        "hfr_gain",
+        "temporal_context",
+    ):
+        if key not in candidate:
+            blockers.append(f"snerv_source_bound_control_missing:{key}")
+    return blockers
+
+
+def _snerv_source_bound_controls(candidate: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": "snerv_source_bound_capacity_controls.v1",
+        "candidate_id": str(candidate.get("candidate_id") or ""),
+        "wavelet": candidate.get("wavelet"),
+        "levels": candidate.get("levels"),
+        "bits_per_coeff": candidate.get("bits_per_coeff"),
+        "step_map_bits_per_coeff": candidate.get("step_map_bits_per_coeff"),
+        "decoder_payload_codec": candidate.get("decoder_payload_codec"),
+        "snerv_model_size_adapter": candidate.get("snerv_model_size_adapter"),
+        "fc_dim": candidate.get("fc_dim"),
+        "emb_size": candidate.get("emb_size"),
+        "patch_radius": candidate.get("patch_radius"),
+        "mfu_scales": list(candidate.get("mfu_scales") or ()),
+        "hfr_gain": candidate.get("hfr_gain"),
+        "temporal_context": candidate.get("temporal_context"),
+        "decoder_feature_count": candidate.get("decoder_feature_count"),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _int_csv(values: Any) -> str:
+    if isinstance(values, str):
+        return values
+    if not isinstance(values, Sequence):
+        return str(int(values))
+    return ",".join(str(int(value)) for value in values)
 
 
 def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:

@@ -1904,7 +1904,8 @@ def _resolve_execute_modelsize_candidate(
 
 _HINERV_MODEL_SIZE_ID_RE = re.compile(
     r"^hinerv_np(?P<num_pairs>\d+)_ld(?P<latent_dim>\d+)_"
-    r"ed(?P<embed_dim>\d+)_dc(?P<decoder_channel>\d+)_"
+    r"ed(?P<embed_dim>\d+)_dc(?P<decoder_channel>\d+)"
+    r"(?P<control_suffix>(?:_hfg)?(?:_cnx)?)_"
     r"(?P<decoder_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
 )
 _SNERV_MODEL_SIZE_ID_RE = re.compile(
@@ -1947,6 +1948,7 @@ def _modelsize_candidate_from_self_describing_id(
         match = _HINERV_MODEL_SIZE_ID_RE.match(token)
         if match is None:
             return None
+        control_suffix = match.group("control_suffix") or ""
         row = analyze_hinerv_modelsize_candidate(
             hard_byte_ceiling=int(match.group("hard_byte_ceiling")),
             num_pairs=int(match.group("num_pairs")),
@@ -1954,6 +1956,8 @@ def _modelsize_candidate_from_self_describing_id(
             embed_dim=int(match.group("embed_dim")),
             decoder_channel=int(match.group("decoder_channel")),
             decoder_codec=match.group("decoder_codec"),
+            use_hierarchical_feature_grid="_hfg" in control_suffix,
+            use_convnext_blocks="_cnx" in control_suffix,
         ).as_dict()
     elif family == "snerv":
         match = _SNERV_MODEL_SIZE_ID_RE.match(token)
@@ -2580,7 +2584,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         prelaunch_curriculum_plan,
         epochs=int(epochs),
     )
-    if prelaunch_blockers:
+    local_proof_bypasses_pr95_prelaunch = bool(run_native_mlx_export)
+    if prelaunch_blockers and not local_proof_bypasses_pr95_prelaunch:
         refusal = _base_report(
             output_dir=out,
             mode="snerv_pr95_binding_prelaunch_refused",
@@ -2620,6 +2625,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         path = out / "compact_renderer_mlx_spine_runner_report.json"
         _write_json(path, refusal)
         return {**refusal, "report_path": path.as_posix()}
+    local_proof_prelaunch_blockers = list(prelaunch_blockers)
     advisory = run_snerv_advisory(
         n_pairs=int(num_pairs),
         levels=levels,
@@ -2644,6 +2650,16 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     advisory_payload = advisory.as_jsonable()
     advisory_payload.setdefault("schema", "snerv_inverse_steg_advisory.v1")
     advisory_payload["receiver_archive_packet_path"] = packet_path.as_posix()
+    advisory_archive_bytes_total = int(
+        getattr(
+            advisory,
+            "archive_bytes_total",
+            advisory_payload.get(
+                "archive_bytes_total",
+                len(advisory.receiver_archive_packet),
+            ),
+        )
+    )
     advisory_path = out / "snerv_inverse_steg_advisory.json"
     _write_json(advisory_path, advisory_payload)
 
@@ -2824,7 +2840,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         requested_epochs=int(epochs),
         num_pairs=int(num_pairs),
         step_map_coder_mode=str(resolved_step_map_coder_mode),
-        measured_packet_bytes=int(advisory.archive_bytes_total),
+        measured_packet_bytes=advisory_archive_bytes_total,
         measured_archive_bytes=(
             int(row["candidate_archive_bytes"])
             if row.get("candidate_archive_bytes") is not None
@@ -2877,6 +2893,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 if snerv_mlx_native_export_verified
                 else list(snerv_mlx_native_adapter_contract.get("blockers") or [])
             ),
+            *local_proof_prelaunch_blockers,
             (
                 "snerv_mlx_native_longer_staged_training_not_executed"
                 if snerv_scorer_loop_qat.get("executed")
@@ -2970,7 +2987,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "score_l2": float(advisory.score_l2),
                 "d_seg_mean_linf": float(advisory.d_seg_mean_linf),
                 "d_pose_mean_linf": float(advisory.d_pose_mean_linf),
-                "archive_bytes_total": int(advisory.archive_bytes_total),
+                "archive_bytes_total": advisory_archive_bytes_total,
                 "beats_frontier_rate": bool(advisory.beats_frontier_rate),
                 "receiver_archive_replay_verified": bool(
                     advisory.receiver_archive_replay_verified
@@ -4588,6 +4605,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
     launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
     launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
+    launch_use_hierarchical_feature_grid = bool(
+        candidate.get("use_hierarchical_feature_grid", False)
+    )
+    launch_use_convnext_blocks = bool(candidate.get("use_convnext_blocks", False))
+    launch_local_grid_levels = int(candidate.get("local_grid_levels", 2))
+    launch_local_grid_channels = int(candidate.get("local_grid_channels", 4))
+    launch_convnext_mlp_ratio = int(candidate.get("convnext_mlp_ratio", 2))
+    launch_convnext_kernel_size = int(candidate.get("convnext_kernel_size", 7))
     effective_recon_pixel_weight_path = recon_pixel_weight_path
     recon_pixel_weight_auto_discovery: dict[str, Any] | None = None
     enabled_recon_weight_modes = sum(
@@ -4698,6 +4723,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             latent_dim=launch_latent_dim,
             embed_dim=launch_embed_dim,
             decoder_channel=launch_decoder_channel,
+            use_hierarchical_feature_grid=launch_use_hierarchical_feature_grid,
+            use_convnext_blocks=launch_use_convnext_blocks,
+            local_grid_levels=launch_local_grid_levels,
+            local_grid_channels=launch_local_grid_channels,
+            convnext_mlp_ratio=launch_convnext_mlp_ratio,
+            convnext_kernel_size=launch_convnext_kernel_size,
             decoder_codec=launch_decoder_codec,
             ema_decay=ema_decay,
             segnet_distillation_weight=effective_segnet_distillation_weight,
@@ -6483,6 +6514,53 @@ def _validate_hi_nerv_frontier_training_config(
     }
 
 
+def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict[str, Any]:
+    """Classify whether a HiNeRV launch is official-control faithful or local."""
+
+    hierarchical_grid = bool(getattr(cfg, "use_hierarchical_feature_grid", False))
+    convnext_blocks = bool(getattr(cfg, "use_convnext_blocks", False))
+    official_hinerv_blockers: list[str] = []
+    if not hierarchical_grid:
+        official_hinerv_blockers.append(
+            "hinerv_official_hierarchical_feature_grid_not_enabled"
+        )
+    if not convnext_blocks:
+        official_hinerv_blockers.append("hinerv_official_convnext_blocks_not_enabled")
+    pr95_better_blockers = [
+        "hinerv_pr95_pixelshuffle_bilinear_skip_refine_path_missing",
+        "hinerv_pr95_pr101_latent_delta_brotli_codec_missing",
+    ]
+    source_faithful = not official_hinerv_blockers
+    if source_faithful and pr95_better_blockers:
+        classification = "official_hinerv_control_candidate_pr95_better_gaps"
+    elif source_faithful:
+        classification = "official_hinerv_control_candidate"
+    else:
+        classification = "local_hiv1_adaptation_not_official_hinerv"
+    return {
+        "schema": "hi_nerv_source_faithfulness.v1",
+        "classification": classification,
+        "source_faithful_official_hinerv": source_faithful,
+        "official_hinerv_control": source_faithful,
+        "local_hiv1_adaptation": not source_faithful,
+        "use_hierarchical_feature_grid": hierarchical_grid,
+        "use_convnext_blocks": convnext_blocks,
+        "local_grid_levels": int(getattr(cfg, "local_grid_levels", 0) or 0),
+        "local_grid_channels": int(getattr(cfg, "local_grid_channels", 0) or 0),
+        "convnext_mlp_ratio": int(getattr(cfg, "convnext_mlp_ratio", 0) or 0),
+        "convnext_kernel_size": int(getattr(cfg, "convnext_kernel_size", 0) or 0),
+        "decoder_codec": str(decoder_codec),
+        "official_hinerv_blockers": official_hinerv_blockers,
+        "pr95_better_blockers": pr95_better_blockers,
+        "blockers": [*official_hinerv_blockers, *pr95_better_blockers],
+        "authority_note": (
+            "This classifies source/architecture custody only. It is not score "
+            "authority, and local HiNeRV/MLX rows remain false-authority until "
+            "byte-closed archive/runtime plus contest CPU/CUDA replay."
+        ),
+    }
+
+
 def _run_hi_nerv_mlx_scoreaware_smoke(
     *,
     output_dir: Path,
@@ -6494,6 +6572,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     latent_dim: int,
     embed_dim: int,
     decoder_channel: int,
+    use_hierarchical_feature_grid: bool,
+    use_convnext_blocks: bool,
+    local_grid_levels: int,
+    local_grid_channels: int,
+    convnext_mlp_ratio: int,
+    convnext_kernel_size: int,
     decoder_codec: str,
     ema_decay: float,
     segnet_distillation_weight: float,
@@ -6610,6 +6694,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         num_pairs=pairs,
         output_height=384,
         output_width=512,
+        use_hierarchical_feature_grid=bool(use_hierarchical_feature_grid),
+        use_convnext_blocks=bool(use_convnext_blocks),
+        local_grid_levels=int(local_grid_levels),
+        local_grid_channels=int(local_grid_channels),
+        convnext_mlp_ratio=int(convnext_mlp_ratio),
+        convnext_kernel_size=int(convnext_kernel_size),
     )
     target_rgb_0, target_rgb_1 = decode_mlx_targets(
         source_video_path,
@@ -6662,6 +6752,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "full_video_pairs_required_for_promotion": 600,
         "decoder_codec": str(decoder_codec),
         "model_num_parameters_at_init": int(model.num_parameters()),
+        "source_faithfulness": _hi_nerv_source_faithfulness_report(
+            cfg=cfg,
+            decoder_codec=str(decoder_codec),
+        ),
         "config": {
             "latent_dim_coarse": int(cfg.latent_dim_coarse),
             "latent_dim_mid": int(cfg.latent_dim_mid),
@@ -6673,6 +6767,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "fine_injection_block_index": int(cfg.fine_injection_block_index),
             "output_height": int(cfg.output_height),
             "output_width": int(cfg.output_width),
+            "use_hierarchical_feature_grid": bool(cfg.use_hierarchical_feature_grid),
+            "use_convnext_blocks": bool(cfg.use_convnext_blocks),
+            "local_grid_levels": int(cfg.local_grid_levels),
+            "local_grid_channels": int(cfg.local_grid_channels),
+            "convnext_mlp_ratio": int(cfg.convnext_mlp_ratio),
+            "convnext_kernel_size": int(cfg.convnext_kernel_size),
         },
         "score_aware_training": {
             "schema": "compact_hi_nerv_score_aware_training.v1",

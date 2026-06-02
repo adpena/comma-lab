@@ -45,6 +45,46 @@ def test_hinerv_modelsize_closed_form_matches_real_module() -> None:
     assert row.ready_for_exact_eval_dispatch is False
 
 
+def test_hinerv_modelsize_counts_official_grid_convnext_controls() -> None:
+    cfg = build_hinerv_config_from_size_knobs(
+        num_pairs=17,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=10,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+    )
+    model = HinervSubstrate(cfg)
+
+    row = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=17,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=10,
+        decoder_codec="int4_mixed",
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+    )
+
+    assert row.candidate_id == (
+        "hinerv_np17_ld12_ed16_dc10_hfg_cnx_int4_mixed_ceil178000"
+    )
+    assert row.use_hierarchical_feature_grid is True
+    assert row.use_convnext_blocks is True
+    assert row.total_trainable_params == model.num_parameters()
+    assert row.decoder_trainable_params > row.latent_trainable_params
+    assert row.score_claim is False
+
+
 def test_hinerv_modelsize_budget_report_is_false_authority_and_budgeted() -> None:
     report = build_hinerv_modelsize_budget_report(
         hard_byte_ceilings=(178_000,),
@@ -61,6 +101,10 @@ def test_hinerv_modelsize_budget_report_is_false_authority_and_budgeted() -> Non
     assert all(row["hard_byte_ceiling"] == 178_000 for row in selected)
     assert any(row["nominal_under_ceiling"] for row in selected)
     assert all(row["requires_archive_byte_oracle"] is True for row in selected)
+    assert report["use_hierarchical_feature_grid_options"] == [False, True]
+    assert report["use_convnext_blocks_options"] == [False, True]
+    assert any(row["use_hierarchical_feature_grid"] for row in selected)
+    assert any(row["use_convnext_blocks"] for row in selected)
     codecs = {row["decoder_codec"] for row in selected}
     assert {"portfolio_auto", "int8_mixed", "int4_mixed", "int2_mixed"} <= codecs
     assert "selection_strategy" in report["budget_math"]

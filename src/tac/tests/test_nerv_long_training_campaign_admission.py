@@ -183,6 +183,51 @@ def test_nerv_long_training_campaign_admission_blocks_existing_output_artifacts(
     assert row["admitted"] is False
 
 
+def test_nerv_long_training_campaign_admission_blocks_active_local_mlx_process(
+    tmp_path: Path,
+) -> None:
+    verdict = dict(consume_candidate(_campaign_plan(tmp_path / "ssd")))
+    claims = _claims_file(
+        tmp_path,
+        lane_id="lane_nerv_local_mlx",
+        instance_job_id="job_first",
+    )
+
+    admission = build_nerv_long_training_campaign_execution_admission(
+        verdict,
+        repo_root=tmp_path,
+        active_claims_path=claims,
+        lane_id="lane_nerv_local_mlx",
+        instance_job_id="job_first",
+        limit=1,
+        storage_expected_bytes_per_row=1024,
+        storage_reserve_free_gb=0.0,
+        allowed_output_roots=(tmp_path / "ssd",),
+        active_local_mlx_processes=(
+            {
+                "pid": 12345,
+                "ppid": 1,
+                "stat": "R",
+                "etime": "00:12",
+                "command": (
+                    "python tools/run_compact_renderer_mlx_spine_runner.py "
+                    "--execute-family hi_nerv --output-dir /Volumes/VertigoDataTier/pact/live"
+                ),
+            },
+        ),
+        now_utc="2026-06-02T18:40:00Z",
+    )
+
+    assert admission["experiment_queue_ready"] is False
+    assert admission["local_mlx_execution_ready"] is False
+    assert admission["admitted_experiment_count"] == 0
+    assert "active_local_mlx_training_process_present" in admission["blockers"]
+    assert admission["active_local_mlx_process_count"] == 1
+    assert admission["active_local_mlx_processes"][0]["pid"] == 12345
+    assert admission["score_claim"] is False
+    assert admission["ready_for_exact_eval_dispatch"] is False
+
+
 def test_nerv_long_training_campaign_admission_cli_writes_artifacts(
     tmp_path: Path,
 ) -> None:
@@ -226,6 +271,7 @@ def test_nerv_long_training_campaign_admission_cli_writes_artifacts(
             "777",
             "--allowed-output-root",
             str(tmp_path / "ssd"),
+            "--skip-active-local-mlx-process-scan",
         ],
         cwd=REPO_ROOT,
         text=True,

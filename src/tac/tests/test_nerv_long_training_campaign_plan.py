@@ -153,6 +153,11 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is True
     assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is True
+    assert snerv_row["score_lowering_gate"]["prelaunch_allowed"] is True
+    assert snerv_row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
+    assert "snerv_pr95_staged_curriculum_missing" in snerv_row[
+        "score_lowering_gate"
+    ]["prelaunch_blockers"]
     assert snerv_row["cpu_replay_ready"] is False
     assert snerv_row["exact_gate_ready"] is False
     assert snerv_row["experiment_queue_entry"]["status"] == "queued"
@@ -164,6 +169,24 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["execution_epochs"] == 29_650
     assert snerv_row["current_command_is_bounded_proof_not_long_training"] is False
     assert "--snerv-scorer-loop-qat" in snerv_row["command_argv"]
+    assert snerv_row["candidate"]["wavelet"] == "haar"
+    assert snerv_row["source_bound_capacity_controls"]["fc_dim"] == 11
+    assert snerv_row["source_bound_capacity_controls"]["emb_size"] == 2
+    assert not snerv_row["source_bound_capacity_control_blockers"]
+    assert "--snerv-mfu-scales" in snerv_row["command_argv"]
+    assert (
+        snerv_row["command_argv"][
+            snerv_row["command_argv"].index("--snerv-mfu-scales") + 1
+        ]
+        == "1,2,4"
+    )
+    assert "--snerv-hfr-gain" in snerv_row["command_argv"]
+    assert (
+        snerv_row["command_argv"][
+            snerv_row["command_argv"].index("--snerv-hfr-gain") + 1
+        ]
+        == "0"
+    )
     assert snerv_row["command_argv"][
         snerv_row["command_argv"].index("--distillation-device") + 1
     ] == "gpu"
@@ -191,6 +214,40 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     markdown = render_nerv_long_training_campaign_plan_markdown(report)
     assert "NeRV Long-Training Campaign Plan" in markdown
     assert "hi_nerv::hinerv_tiny::lion" in markdown
+
+
+def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> None:
+    snerv_budget = _snerv_budget()
+    legacy = dict(snerv_budget["selected_candidates"][0])
+    legacy["candidate_id"] = "snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000"
+    for key in (
+        "wavelet",
+        "fc_dim",
+        "emb_size",
+        "patch_radius",
+        "mfu_scales",
+        "hfr_gain",
+        "temporal_context",
+    ):
+        legacy.pop(key, None)
+    snerv_budget["selected_candidates"] = [legacy]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert "snerv_candidate_id_missing_source_bound_fc_dim_emb_size" in snerv_row[
+        "blockers"
+    ]
+    assert "snerv_source_bound_control_missing:wavelet" in snerv_row["blockers"]
+    assert "snerv_source_bound_control_missing:fc_dim" in snerv_row["blockers"]
+    assert snerv_row["source_bound_capacity_control_blockers"]
 
 
 def test_long_training_campaign_plan_accepts_unique_experiment_queue_id() -> None:
@@ -342,7 +399,7 @@ def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> No
             {
                 "schema": "nerv_candidate_feedback_row.v1",
                 "family": "snerv",
-                "candidate_id": "snerv_tiny",
+                "candidate_id": _snerv_candidate_id(),
                 "scope_matches_candidate": True,
                 "receiver_proof_attached": True,
                 "full_video_local_prefilter_attached": True,
@@ -822,7 +879,7 @@ def test_long_training_campaign_plan_consumes_partial_snerv_runner_feedback() ->
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     feedback = snerv["candidate_feedback"]
     assert feedback["schema"] == "nerv_candidate_feedback_row.v1"
-    assert feedback["candidate_id"] == "snerv_tiny"
+    assert feedback["candidate_id"] == _snerv_candidate_id()
     assert feedback["measured_num_pairs"] == 2
     assert feedback["scope_matches_candidate"] is False
     assert "partial_pair_byte_feedback_only" in snerv["blockers"]
@@ -933,7 +990,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     snerv_row = next(
         row for row in payload["campaign_rows"] if row["family"] == "snerv"
     )
-    assert snerv_row["candidate_feedback"]["candidate_id"] == "snerv_tiny"
+    assert snerv_row["candidate_feedback"]["candidate_id"] == _snerv_candidate_id()
     assert "partial_pair_byte_feedback_only" in snerv_row["blockers"]
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert payload["experiment_queue_id"] == (
@@ -1007,10 +1064,25 @@ def _snerv_budget() -> dict:
             {
                 "schema": "snerv_modelsize_candidate.v1",
                 "family": "snerv",
-                "candidate_id": "snerv_tiny",
+                "candidate_id": (
+                    "snerv_np600_haar_lv2_lfb1p5_stepb0p5_"
+                    "fc11e2_int4_symmetric_ceil178000"
+                ),
                 "num_pairs": 600,
                 "hard_byte_ceiling": 178_000,
+                "wavelet": "haar",
+                "levels": 2,
+                "bits_per_coeff": 1.5,
+                "step_map_bits_per_coeff": 0.5,
                 "decoder_payload_codec": "int4_symmetric",
+                "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+                "fc_dim": 11,
+                "emb_size": 2,
+                "patch_radius": 1,
+                "mfu_scales": [1, 2, 4],
+                "hfr_gain": 0.0,
+                "temporal_context": 0,
+                "decoder_feature_count": 16,
                 "nominal_total_payload_bytes": 190_000,
                 "nominal_under_ceiling": False,
             }
@@ -1019,6 +1091,10 @@ def _snerv_budget() -> dict:
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _snerv_candidate_id() -> str:
+    return str(_snerv_budget()["selected_candidates"][0]["candidate_id"])
 
 
 def _decoder_weight_waterfill_plan(*, candidate_id: str) -> dict:
@@ -1123,11 +1199,11 @@ def _snerv_partial_compact_runner_report() -> dict:
         "candidate_curriculum_plan": {
             "schema": "nerv_candidate_curriculum_plan.v1",
             "family": "snerv",
-            "candidate_id": "snerv_tiny",
+            "candidate_id": candidate["candidate_id"],
             "candidate_conditioned": True,
             "byte_oracle_logging": {
                 "schema": "nerv_candidate_byte_feedback.v1",
-                "candidate_id": "snerv_tiny",
+                "candidate_id": candidate["candidate_id"],
                 "candidate_num_pairs": 600,
                 "measured_num_pairs": 2,
                 "feedback_scope": "partial_pair_advisory",

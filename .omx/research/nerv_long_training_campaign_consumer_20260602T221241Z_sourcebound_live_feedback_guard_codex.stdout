@@ -1,0 +1,8 @@
+[NeRV long-training campaign consumer] false-authority
+  source_schema: nerv_long_training_campaign_plan.v1
+  planner_action: route_launchable_local_mlx_campaign_rows_without_exact_dispatch
+  local_mlx_ready: 25
+  exact_auth_recommended: False
+  blockers: 4
+  wrote /Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_consumer_20260602T221241Z_sourcebound_live_feedback_guard_codex.json (146213 bytes sha256=26a9f252eaf1fbf0e3f12b7f9f56e41de8e1c142326d7f74f6be1505354cb074)
+  wrote /Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_consumer_20260602T221241Z_sourcebound_live_feedback_guard_codex.md (3227 bytes sha256=85f8c7435d34f8e8553a4b8ef788772b5c48c8fd73caf977f24fef8923f6da01)

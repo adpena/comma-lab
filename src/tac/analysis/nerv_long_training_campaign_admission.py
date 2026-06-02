@@ -74,6 +74,7 @@ def build_nerv_long_training_campaign_execution_admission(
     storage_reserve_free_gb: float = 40.0,
     local_mlx_timeout_seconds: int = DEFAULT_LOCAL_MLX_LONG_TRAINING_TIMEOUT_SECONDS,
     allowed_output_roots: Sequence[str | Path] = DEFAULT_ALLOWED_OUTPUT_ROOTS,
+    active_local_mlx_processes: Sequence[Mapping[str, Any]] = (),
     now_utc: str | None = None,
 ) -> dict[str, Any]:
     """Build a fail-closed local-MLX execution-admission artifact.
@@ -109,6 +110,11 @@ def build_nerv_long_training_campaign_execution_admission(
     blockers: list[str] = []
     if consumer_verdict.get("local_mlx_route_recommended") is not True:
         blockers.append("consumer_did_not_recommend_local_mlx_route")
+    active_process_records = _active_local_mlx_process_records(
+        active_local_mlx_processes
+    )
+    if active_process_records:
+        blockers.append("active_local_mlx_training_process_present")
 
     selected_rows, selection_blockers = _select_rows(
         consumer_verdict,
@@ -191,6 +197,8 @@ def build_nerv_long_training_campaign_execution_admission(
         "storage_expected_bytes": storage_expected_bytes,
         "storage_reserve_free_gb": float(storage_reserve_free_gb),
         "local_mlx_timeout_seconds": int(local_mlx_timeout_seconds),
+        "active_local_mlx_process_count": len(active_process_records),
+        "active_local_mlx_processes": active_process_records,
         "output_parent": None if output_parent is None else output_parent.as_posix(),
         "allowed_output_roots": [root.as_posix() for root in allowed_roots],
         "experiment_queue": queue,
@@ -470,6 +478,27 @@ def _row_record(
     }
 
 
+def _active_local_mlx_process_records(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for row in rows:
+        command = str(row.get("command") or "").strip()
+        if not command:
+            continue
+        records.append(
+            {
+                "schema": "nerv_active_local_mlx_process.v1",
+                "pid": _int_or_none(row.get("pid")),
+                "ppid": _int_or_none(row.get("ppid")),
+                "stat": None if row.get("stat") is None else str(row.get("stat")),
+                "etime": None if row.get("etime") is None else str(row.get("etime")),
+                "command": command,
+            }
+        )
+    return records
+
+
 def _normalize_report_postconditions(
     postconditions: Sequence[Mapping[str, Any]],
     *,
@@ -648,6 +677,13 @@ def _safe_blocker_text(value: str) -> str:
         .replace("\\", "_")
         .replace(":", "_")
     )[:240]
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _utc_now() -> str:

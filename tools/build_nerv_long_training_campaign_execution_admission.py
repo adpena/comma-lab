@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -68,6 +70,15 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--allowed-output-root", action="append", default=[])
+    parser.add_argument(
+        "--skip-active-local-mlx-process-scan",
+        action="store_true",
+        help=(
+            "Disable the default local process guard. By default the CLI scans "
+            "for already-running HiNeRV/SNeRV local-MLX training processes and "
+            "fails closed instead of admitting another queue concurrently."
+        ),
+    )
     parser.add_argument("--expected-output-json-sha256")
     parser.add_argument("--expected-output-md-sha256")
     parser.add_argument("--expected-output-queue-sha256")
@@ -97,6 +108,9 @@ def main(argv: list[str] | None = None) -> int:
         storage_reserve_free_gb=args.storage_reserve_free_gb,
         local_mlx_timeout_seconds=args.local_mlx_timeout_seconds,
         allowed_output_roots=allowed_output_roots,
+        active_local_mlx_processes=()
+        if args.skip_active_local_mlx_process_scan
+        else tuple(_discover_active_local_mlx_processes()),
     )
     output_json = args.output_json or _default_output_json()
     if not output_json.is_absolute():
@@ -150,6 +164,58 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0
+
+
+def _discover_active_local_mlx_processes() -> list[dict[str, object]]:
+    proc = subprocess.run(
+        ["ps", "-axo", "pid=,ppid=,stat=,etime=,command="],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    own_pid = os.getpid()
+    rows: list[dict[str, object]] = []
+    for line in proc.stdout.splitlines():
+        parts = line.strip().split(None, 4)
+        if len(parts) < 5:
+            continue
+        pid_text, ppid_text, stat, etime, command = parts
+        pid = _int_or_none(pid_text)
+        if pid is None or pid == own_pid:
+            continue
+        if _is_local_mlx_training_command(command):
+            rows.append(
+                {
+                    "pid": pid,
+                    "ppid": _int_or_none(ppid_text),
+                    "stat": stat,
+                    "etime": etime,
+                    "command": command,
+                }
+            )
+    return rows
+
+
+def _is_local_mlx_training_command(command: str) -> bool:
+    text = command.lower()
+    if "run_compact_renderer_mlx_spine_runner.py" in text:
+        return "--execute-family" in text and (
+            "hi_nerv" in text or "snerv" in text
+        )
+    return bool(
+        "tools/experiment_queue.py" in text
+        and "nerv_long_training_campaign" in text
+        and "run-worker" in text
+    )
+
+
+def _int_or_none(value: object) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 if __name__ == "__main__":  # pragma: no cover
