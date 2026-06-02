@@ -1,0 +1,102 @@
+{
+  "abandon_current_artifact": false,
+  "abandon_family": false,
+  "axis_tag": "[macOS-MLX research-signal]",
+  "best_codec": {
+    "archive_bytes": 37580,
+    "avg_posenet_dist": 161.237585550944,
+    "avg_segnet_dist": 0.5048259229958058,
+    "evidence_tag": "[macOS-MLX research-signal]",
+    "max_pairs": 600,
+    "n_samples": 600,
+    "nonrate_score": 90.63699250067236,
+    "rate_score": 0.0250229794583312,
+    "response_path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/int2_mixed_full_video_baseline_replay_20260602T0318Z/mlx_responses/baseline.json",
+    "score": 90.66201548013069,
+    "score_axis": "[macOS-MLX research-signal]"
+  },
+  "best_codec_receiver_proof_passed": true,
+  "best_decoder_codec": "int2_mixed",
+  "blockers": [
+    "mlx_local_replay_is_false_authority",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "pact_vq_distortion_not_competitive_at_current_fit",
+    "best_codec_improves_rate_only_distortion_unchanged",
+    "codec_sweep_report_needs_replay_attachment"
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deltas": {
+    "archive_bytes": -2294,
+    "nonrate_score": 0.0,
+    "rate_score": -0.0015274804384622608,
+    "score": -0.0015274804384688423
+  },
+  "demote_for_full_stack_portfolio": false,
+  "dispatch_attempted": false,
+  "exact_axis_blocked": true,
+  "exact_cuda_auth_eval": false,
+  "exact_spend_candidate": false,
+  "family": "pact_nerv_vq",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "integration_gaps": {
+    "best_variant_blockers": [
+      "full_video_mlx_scorer_replay_not_attached",
+      "contest_cpu_cuda_exact_eval_not_executed"
+    ],
+    "codec_sweep_blockers": [
+      "full_video_mlx_scorer_replay_not_attached",
+      "contest_cpu_cuda_exact_eval_not_executed"
+    ],
+    "full_video_replay_attached_in_gate": true,
+    "replay_supersedes_stale_sweep_blocker": true
+  },
+  "preserve_rate_primitive": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_axis": {
+    "best_archive_bytes_from_codec_sweep": 37641,
+    "best_archive_sha256_from_codec_sweep": "8b319bfc8786346694e7d532c298187f1de4ac0f518c4c26a3ddad9c88c6ac2d",
+    "bytes_saved_vs_source_replay": 2294,
+    "distortion_to_rate_score_ratio": 3622.150297953248,
+    "rate_fraction_of_best_score": 0.00027600290293364573,
+    "rate_only_replay": true
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_actions": [
+    "preserve_best_codec_as_rate_primitive_for_full_stack_portfolio",
+    "do_not_spend_exact_eval_on_rate_only_artifact_before_fit_gate",
+    "keep_pact_vq_family_active_as_conditional_retraining_lane",
+    "optimize_order_dependent_full_stack_interaction_before_design_retirement",
+    "train_score_faithful_decoder_codebook_or_reduce_decoder_codebook_bytes",
+    "attach_full_video_mlx_replay_to_codec_sweep_adjudication",
+    "promote_only_after_receiver_proof_plus_full_video_distortion_gate"
+  ],
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/pact_vq_competitiveness_gate_20260602T112634Z.json",
+  "schema": "pact_nerv_vq_competitiveness_gate.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source": {
+    "archive_bytes": 39874,
+    "avg_posenet_dist": 161.237585550944,
+    "avg_segnet_dist": 0.5048259229958058,
+    "evidence_tag": "[macOS-MLX research-signal]",
+    "max_pairs": 600,
+    "n_samples": 600,
+    "nonrate_score": 90.63699250067236,
+    "rate_score": 0.02655045989679346,
+    "response_path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_responses/baseline.json",
+    "score": 90.66354296056916,
+    "score_axis": "[macOS-MLX research-signal]"
+  },
+  "thresholds": {
+    "exact_spend_score_threshold": 1.0,
+    "max_posenet_dist_for_exact_spend": 1.0,
+    "max_segnet_dist_for_exact_spend": 0.02
+  },
+  "verdict": "PRESERVE_RATE_PRIMITIVE_EXACT_BLOCKED_BY_DISTORTION"
+}

@@ -9,8 +9,10 @@ generated receiver proof. It grants no score authority.
 
 from __future__ import annotations
 
+import copy
+import json
 import zipfile
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +47,9 @@ from tac.substrates.pact_nerv_vq.archive import (
 
 COMPACT_DECODER_CODEC_SWEEP_SCHEMA = "compact_decoder_codec_sweep.v1"
 COMPACT_DECODER_CODEC_VARIANT_SCHEMA = "compact_decoder_codec_sweep_variant.v1"
+COMPACT_DECODER_CODEC_REPLAY_ADJUDICATION_SCHEMA = (
+    "compact_decoder_codec_replay_adjudication.v1"
+)
 SUPPORTED_COMPACT_DECODER_CODECS: tuple[str, ...] = (
     "portfolio_auto",
     "int8_mixed",
@@ -146,6 +151,139 @@ def sweep_compact_decoder_codecs(
     write_json(report_path, report)
     report["report_path"] = report_path.as_posix()
     write_json(report_path, report)
+    return report
+
+
+def adjudicate_compact_decoder_codec_sweep_with_replay(
+    *,
+    codec_sweep_report: Mapping[str, Any],
+    source_replay_profile: Mapping[str, Any],
+    best_codec_replay_profile: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Attach full-video replay adjudication to an existing codec sweep report.
+
+    This does not grant contest authority. It only supersedes the stale
+    "replay not attached" blocker when a matching local replay gate exists and
+    preserves byte-saving primitives for later full-stack composition.
+    """
+
+    family = str(codec_sweep_report.get("family") or "").strip().lower()
+    if family == "pact_nerv_vq":
+        from tac.substrates.pact_nerv_vq.competitiveness_gate import (
+            build_pact_vq_competitiveness_gate,
+        )
+
+        gate = build_pact_vq_competitiveness_gate(
+            codec_sweep_report=codec_sweep_report,
+            source_replay_profile=source_replay_profile,
+            best_codec_replay_profile=best_codec_replay_profile,
+        )
+    else:
+        raise CompactDecoderCodecSweepError(
+            f"replay adjudication unsupported for family {family!r}"
+        )
+
+    report = copy.deepcopy(dict(codec_sweep_report))
+    best_variant = dict(report.get("best_variant") or {})
+    pre_blockers = list(report.get("blockers") or [])
+    pre_best_blockers = list(best_variant.get("blockers") or [])
+    superseded = [
+        "full_video_mlx_scorer_replay_not_attached",
+        "codec_sweep_report_needs_replay_attachment",
+    ]
+    post_blockers = _dedupe(
+        [
+            *[
+                blocker
+                for blocker in pre_blockers
+                if blocker not in superseded
+            ],
+            *[
+                blocker
+                for blocker in gate.get("blockers") or []
+                if blocker not in superseded
+            ],
+        ]
+    )
+    post_best_blockers = _dedupe(
+        [
+            blocker
+            for blocker in pre_best_blockers
+            if blocker not in superseded
+        ]
+    )
+
+    best_variant.update(
+        {
+            "blockers": post_best_blockers,
+            "full_video_mlx_replay_attached": True,
+            "replay_gate_schema": gate.get("schema"),
+            "replay_gate_verdict": gate.get("verdict"),
+            "preserve_rate_primitive": bool(gate.get("preserve_rate_primitive")),
+            "exact_axis_blocked": bool(gate.get("exact_axis_blocked")),
+            "exact_spend_candidate": bool(gate.get("exact_spend_candidate")),
+            "demote_for_full_stack_portfolio": bool(
+                gate.get("demote_for_full_stack_portfolio")
+            ),
+        }
+    )
+    report.update(
+        {
+            "schema": codec_sweep_report.get(
+                "schema",
+                COMPACT_DECODER_CODEC_SWEEP_SCHEMA,
+            ),
+            "replay_adjudication": {
+                "schema": COMPACT_DECODER_CODEC_REPLAY_ADJUDICATION_SCHEMA,
+                "family": family,
+                "gate_schema": gate.get("schema"),
+                "gate_verdict": gate.get("verdict"),
+                "full_video_mlx_replay_attached": True,
+                "superseded_blockers": superseded,
+                "pre_adjudication_blockers": pre_blockers,
+                "pre_adjudication_best_variant_blockers": pre_best_blockers,
+                "preserve_rate_primitive": bool(gate.get("preserve_rate_primitive")),
+                "exact_axis_blocked": bool(gate.get("exact_axis_blocked")),
+                "exact_spend_candidate": bool(gate.get("exact_spend_candidate")),
+                "demote_for_full_stack_portfolio": bool(
+                    gate.get("demote_for_full_stack_portfolio")
+                ),
+                "deltas": gate.get("deltas"),
+                "rate_axis": gate.get("rate_axis"),
+                "recommended_next_actions": gate.get("recommended_next_actions"),
+                **FALSE_AUTHORITY,
+            },
+            "best_variant": best_variant,
+            "blockers": post_blockers,
+            "full_video_mlx_replay_attached": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    )
+    return report
+
+
+def adjudicate_compact_decoder_codec_sweep_with_replay_from_paths(
+    *,
+    codec_sweep_report_path: str | Path,
+    source_replay_profile_path: str | Path,
+    best_codec_replay_profile_path: str | Path,
+    output_report_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Load replay-adjudication inputs from JSON paths and optionally write."""
+
+    report = adjudicate_compact_decoder_codec_sweep_with_replay(
+        codec_sweep_report=_load_json_mapping(codec_sweep_report_path),
+        source_replay_profile=_load_json_mapping(source_replay_profile_path),
+        best_codec_replay_profile=_load_json_mapping(best_codec_replay_profile_path),
+    )
+    if output_report_path is not None:
+        out = Path(output_report_path).expanduser().resolve(strict=False)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        report["report_path"] = out.as_posix()
+        write_json(out, report)
     return report
 
 
@@ -379,9 +517,23 @@ def _dedupe(values: Iterable[Any]) -> list[Any]:
     return rows
 
 
+def _load_json_mapping(path: str | Path) -> dict[str, Any]:
+    p = Path(path).expanduser().resolve(strict=False)
+    if not p.is_file():
+        raise CompactDecoderCodecSweepError(f"JSON input missing: {p}")
+    with p.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise CompactDecoderCodecSweepError(f"JSON input is not object: {p}")
+    return payload
+
+
 __all__ = [
+    "COMPACT_DECODER_CODEC_REPLAY_ADJUDICATION_SCHEMA",
     "COMPACT_DECODER_CODEC_SWEEP_SCHEMA",
     "SUPPORTED_COMPACT_DECODER_CODECS",
     "CompactDecoderCodecSweepError",
+    "adjudicate_compact_decoder_codec_sweep_with_replay",
+    "adjudicate_compact_decoder_codec_sweep_with_replay_from_paths",
     "sweep_compact_decoder_codecs",
 ]
