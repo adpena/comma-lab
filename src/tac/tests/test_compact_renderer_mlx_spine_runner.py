@@ -2969,6 +2969,12 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert out["receiver_proof_report_paths"]
     planner = out["score_aware_carrier_training_plan"]
     assert planner["score_aware_training_ready"] is False
+    native_contract = out["snerv_mlx_native_adapter_contract"]
+    assert native_contract["schema"] == "snerv_mlx_native_adapter_contract.v1"
+    assert native_contract["surfaces_ready"] is False
+    assert "snerv_mlx_native_train_export_archive_adapter_missing" in (
+        native_contract["blockers"]
+    )
     assert out["score_aware_training"]["status"] == (
         "executed_cpu_advisory_mlx_native_training_missing"
     )
@@ -3044,6 +3050,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert "snerv_mlx_native_train_export_archive_adapter_missing" in out[
         "blockers"
     ]
+    assert out["snerv_mlx_native_adapter_contract"]["surfaces_ready"] is False
     assert "snerv_receiver_proof_missing" not in out["blockers"]
     assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]

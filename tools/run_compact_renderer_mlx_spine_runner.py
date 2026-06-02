@@ -92,6 +92,9 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
     SNERV_SPECTRA_PRESERVING_ADAPTER,
 )
+from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (  # noqa: E402
+    build_snerv_mlx_native_adapter_contract,
+)
 from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
     emit_compact_renderer_spine_adapter,
 )
@@ -2063,6 +2066,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv",
         COMPACT_FAMILY_BACKENDS["snerv"],
     )
+    snerv_mlx_native_adapter_contract = build_snerv_mlx_native_adapter_contract()
     candidate = dict(modelsize_candidate or {})
     levels = int(candidate.get("levels", 3))
     target_bits_per_coeff = float(candidate.get("bits_per_coeff", 2.5))
@@ -2314,7 +2318,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     blockers = _dedupe(
         [
             "contest_cpu_cuda_exact_eval_not_executed",
-            "snerv_mlx_native_train_export_archive_adapter_missing",
+            *list(snerv_mlx_native_adapter_contract.get("blockers") or []),
             (
                 "snerv_mlx_native_longer_staged_training_not_executed"
                 if snerv_scorer_loop_qat.get("executed")
@@ -2385,6 +2389,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "archive_bound_candidate_rows": candidate_rows,
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_carrier_training_plan": planner,
+            "snerv_mlx_native_adapter_contract": snerv_mlx_native_adapter_contract,
             "score_aware_training": {
                 "schema": "compact_snerv_archive_bound_advisory.v1",
                 "status": (
