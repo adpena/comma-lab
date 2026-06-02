@@ -68,8 +68,23 @@ def _summary(result: dict[str, Any]) -> dict[str, Any]:
         "candidate_id": row.get("candidate_id"),
         "measured_num_pairs": row.get("measured_num_pairs"),
         "pose_instability_detected": row.get("pose_instability_detected"),
+        "pose_instability_ever_detected": row.get(
+            "pose_instability_ever_detected"
+        ),
+        "pose_instability_recovered": row.get("pose_instability_recovered"),
+        "pose_instability_active_latest_window": row.get(
+            "pose_instability_active_latest_window"
+        ),
         "pose_instability_first_epoch": row.get("pose_instability_first_epoch"),
         "recommended_learning_rate": row.get("recommended_learning_rate"),
+        "seg_stagnation_detected": row.get("seg_stagnation_detected"),
+        "seg_stagnation_relative_improvement": row.get(
+            "seg_stagnation_relative_improvement"
+        ),
+        "recommended_segnet_distillation_weight": row.get(
+            "recommended_segnet_distillation_weight"
+        ),
+        "training_stopped": row.get("training_stopped"),
         "last_epoch": telemetry.get("last_epoch"),
         "score_claim": result.get("score_claim"),
         "ready_for_exact_eval_dispatch": result.get("ready_for_exact_eval_dispatch"),

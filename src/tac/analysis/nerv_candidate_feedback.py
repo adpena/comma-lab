@@ -46,6 +46,16 @@ _POSE_AXIS_INSTABILITY_THRESHOLD = 1_000.0
 _POSE_INSTABILITY_WINDOW_EPOCHS = 32
 _POSE_INSTABILITY_BAD_FRACTION = 0.5
 _POSE_INSTABILITY_LR_MULTIPLIER = 0.3
+_MIDRUN_STOP_REASONS = frozenset(
+    {
+        "midrun_feedback_snapshot_do_not_stop_training",
+        "training_running_midrun_feedback_snapshot",
+    }
+)
+_SEG_STAGNATION_MIN_EPOCHS = 128
+_SEG_STAGNATION_WINDOW_EPOCHS = 64
+_SEG_STAGNATION_MIN_RELATIVE_IMPROVEMENT = 0.05
+_SEG_STAGNATION_WEIGHT_MULTIPLIER = 2.0
 
 
 def _sha256_file(path: Path) -> str | None:
@@ -239,6 +249,9 @@ def build_nerv_training_telemetry_feedback_row(
     ]
     if health["pose_instability_detected"]:
         blockers.append("hi_nerv_pose_instability_telemetry_feedback")
+    if health.get("seg_stagnation_detected"):
+        blockers.append("hi_nerv_segnet_stagnation_telemetry_feedback")
+    training_stopped = not _is_midrun_feedback_snapshot(stop_reason)
     return {
         "schema": SCHEMA,
         "feedback_kind": "training_telemetry",
@@ -268,7 +281,7 @@ def build_nerv_training_telemetry_feedback_row(
         "archive_bytes": None,
         "archive_sha256": None,
         "training_completed": False,
-        "training_stopped": True,
+        "training_stopped": training_stopped,
         "training_stop_reason": stop_reason
         or (
             "pose_instability_telemetry"
@@ -277,6 +290,15 @@ def build_nerv_training_telemetry_feedback_row(
         ),
         "training_telemetry": health,
         "pose_instability_detected": bool(health["pose_instability_detected"]),
+        "pose_instability_ever_detected": bool(
+            health.get("pose_instability_ever_detected")
+        ),
+        "pose_instability_recovered": bool(
+            health.get("pose_instability_recovered")
+        ),
+        "pose_instability_active_latest_window": bool(
+            health.get("pose_instability_active_latest_window")
+        ),
         "pose_instability_partial_window_detected": bool(
             health.get("pose_instability_partial_window_detected")
         ),
@@ -288,6 +310,22 @@ def build_nerv_training_telemetry_feedback_row(
         "recommended_learning_rate": health.get("recommended_learning_rate"),
         "recommended_learning_rate_multiplier": health.get(
             "recommended_learning_rate_multiplier"
+        ),
+        "seg_stagnation_detected": bool(health.get("seg_stagnation_detected")),
+        "seg_stagnation_relative_improvement": health.get(
+            "seg_stagnation_relative_improvement"
+        ),
+        "seg_stagnation_first_window_median": health.get(
+            "seg_stagnation_first_window_median"
+        ),
+        "seg_stagnation_last_window_median": health.get(
+            "seg_stagnation_last_window_median"
+        ),
+        "recommended_segnet_distillation_weight": health.get(
+            "recommended_segnet_distillation_weight"
+        ),
+        "recommended_segnet_distillation_weight_multiplier": health.get(
+            "recommended_segnet_distillation_weight_multiplier"
         ),
         "recommended_launch_mutations": list(
             health.get("recommended_launch_mutations") or []
@@ -652,7 +690,22 @@ def _summarize_training_telemetry_health(
     if partial_window_instability:
         first_bad_window_epoch = epochs[-1] if epochs else None
     observed_lr = learning_rates[-1] if learning_rates else None
-    instability = bool(first_bad_window_epoch is not None or partial_window_instability)
+    ever_instability = bool(first_bad_window_epoch is not None or partial_window_instability)
+    active_latest_window = bool(last_bad_fraction >= bad_fraction_threshold)
+    recovered_instability = bool(
+        first_bad_window_epoch is not None
+        and not partial_window_instability
+        and len(rolling_flags) >= window_size
+        and last_bad_fraction == 0.0
+    )
+    instability = bool(
+        partial_window_instability
+        or (
+            first_bad_window_epoch is not None
+            and not recovered_instability
+            and active_latest_window
+        )
+    )
     recommended_lr = (
         max(float(observed_lr) * float(learning_rate_multiplier), 1.0e-6)
         if instability and observed_lr is not None
@@ -665,6 +718,28 @@ def _summarize_training_telemetry_health(
                 "lower_learning_rate_from_pose_instability_telemetry",
                 "preserve_pose_instability_guard_for_relaunch",
                 "treat_previous_hi_nerv_run_as_fit_failure_not_rate_negative",
+            ]
+        )
+    seg_first_window_median = _median(seg_axes[: _SEG_STAGNATION_WINDOW_EPOCHS])
+    seg_last_window_median = _median(seg_axes[-_SEG_STAGNATION_WINDOW_EPOCHS:])
+    seg_relative_improvement = _relative_improvement(
+        seg_first_window_median,
+        seg_last_window_median,
+    )
+    seg_stagnation = bool(
+        len(seg_axes) >= _SEG_STAGNATION_MIN_EPOCHS
+        and seg_relative_improvement is not None
+        and seg_relative_improvement < _SEG_STAGNATION_MIN_RELATIVE_IMPROVEMENT
+    )
+    recommended_seg_weight = (
+        _SEG_STAGNATION_WEIGHT_MULTIPLIER if seg_stagnation else None
+    )
+    if seg_stagnation:
+        mutations.extend(
+            [
+                "increase_segnet_distillation_weight_from_stagnation_telemetry",
+                "preserve_pose_guard_while_raising_segnet_pressure",
+                "treat_previous_hi_nerv_run_as_segnet_fit_failure_not_rate_negative",
             ]
         )
     return {
@@ -680,6 +755,9 @@ def _summarize_training_telemetry_health(
         "instability_bad_fraction_threshold": float(bad_fraction_threshold),
         "partial_window_instability_min_epochs": int(partial_window_min_epochs),
         "pose_instability_partial_window_detected": partial_window_instability,
+        "pose_instability_ever_detected": ever_instability,
+        "pose_instability_recovered": recovered_instability,
+        "pose_instability_active_latest_window": active_latest_window,
         "pose_bad_epoch_count": len(bad_epochs),
         "pose_bad_epoch_fraction": (
             len(bad_epochs) / float(len(rows)) if rows else 0.0
@@ -692,13 +770,30 @@ def _summarize_training_telemetry_health(
         "median_pose_distill_loss": _median(pose_losses),
         "median_pose_axis": _median(pose_axes),
         "median_seg_axis": _median(seg_axes),
+        "seg_stagnation_min_epochs": _SEG_STAGNATION_MIN_EPOCHS,
+        "seg_stagnation_window_epochs": _SEG_STAGNATION_WINDOW_EPOCHS,
+        "seg_stagnation_min_relative_improvement": (
+            _SEG_STAGNATION_MIN_RELATIVE_IMPROVEMENT
+        ),
+        "seg_stagnation_first_window_median": seg_first_window_median,
+        "seg_stagnation_last_window_median": seg_last_window_median,
+        "seg_stagnation_relative_improvement": seg_relative_improvement,
+        "seg_stagnation_detected": seg_stagnation,
         "recommended_learning_rate": recommended_lr,
         "recommended_learning_rate_multiplier": (
             float(learning_rate_multiplier) if instability else None
         ),
+        "recommended_segnet_distillation_weight": recommended_seg_weight,
+        "recommended_segnet_distillation_weight_multiplier": (
+            _SEG_STAGNATION_WEIGHT_MULTIPLIER if seg_stagnation else None
+        ),
         "recommended_launch_mutations": mutations,
         **FALSE_AUTHORITY,
     }
+
+
+def _is_midrun_feedback_snapshot(stop_reason: str | None) -> bool:
+    return str(stop_reason or "").strip() in _MIDRUN_STOP_REASONS
 
 
 def _refresh_nested_pr95_stack_binding_blockers(report: dict[str, Any]) -> list[str]:
@@ -781,6 +876,19 @@ def _median(values: Sequence[float]) -> float | None:
     if len(ordered) % 2:
         return ordered[mid]
     return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def _relative_improvement(
+    first_value: float | None,
+    last_value: float | None,
+) -> float | None:
+    if first_value is None or last_value is None:
+        return None
+    if not (math.isfinite(first_value) and math.isfinite(last_value)):
+        return None
+    if first_value <= 0.0:
+        return None
+    return (first_value - last_value) / first_value
 
 
 def _family_key(value: str) -> str:

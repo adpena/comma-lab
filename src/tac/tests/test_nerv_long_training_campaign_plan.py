@@ -567,6 +567,121 @@ def test_long_training_campaign_plan_applies_hinerv_family_pose_instability_feed
     assert "hi_nerv_receiver_proof_missing" in hi["blockers"]
 
 
+def test_long_training_campaign_plan_applies_hinerv_segnet_stagnation_feedback(
+) -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "pose_instability_detected": False,
+                "seg_stagnation_detected": True,
+                "observed_learning_rate": 2.7e-5,
+                "recommended_segnet_distillation_weight": 2.0,
+                "recommended_launch_mutations": [
+                    "increase_segnet_distillation_weight_from_stagnation_telemetry"
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    argv = hi["command_argv"]
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["applied"] is True
+    assert adjustment["segnet_weight_applied"] is True
+    assert adjustment["segnet_distillation_weight"] == 2.0
+    assert adjustment["reason"] == (
+        "segnet_stagnation_recommended_higher_segnet_weight"
+    )
+    assert argv[argv.index("--segnet-distillation-weight") + 1] == "2"
+    assert hi["curriculum_plan"]["scorer_pressure"][
+        "segnet_distillation_weight"
+    ] == 2.0
+    output_name = Path(argv[argv.index("--output-dir") + 1]).name
+    assert "seg_stagnation" in output_name
+    assert "segw2" in output_name
+    assert "increase_segnet_distillation_weight_from_stagnation_telemetry" in (
+        adjustment["launch_mutations"]
+    )
+    assert hi["output_dir_reuse_policy"] == "fresh_feedback_mutation_path"
+
+
+def test_long_training_campaign_plan_reuses_family_segnet_stagnation_feedback(
+) -> None:
+    hinerv_budget = _hinerv_budget()
+    sibling = dict(hinerv_budget["selected_candidates"][0])
+    sibling["candidate_id"] = "hinerv_sibling_seg"
+    hinerv_budget["selected_candidates"] = [sibling]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=hinerv_budget,
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_previous_full600_seg",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "receiver_proof_attached": True,
+                "full_video_local_prefilter_attached": True,
+                "local_cpu_replay_gate_attached": True,
+                "measured_archive_bytes": 111_000,
+                "feedback_ready": False,
+                "pose_instability_detected": False,
+                "seg_stagnation_detected": True,
+                "recommended_segnet_distillation_weight": 2.0,
+                "recommended_launch_mutations": [
+                    "increase_segnet_distillation_weight_from_stagnation_telemetry"
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    feedback = hi["candidate_feedback"]
+    adjustment = hi["feedback_launch_adjustment"]
+    assert feedback["feedback_match_scope"] == "family_training_telemetry"
+    assert feedback["candidate_id_match"] is False
+    assert feedback["source_candidate_id"] == "hinerv_previous_full600_seg"
+    assert feedback["target_candidate_id"] == "hinerv_sibling_seg"
+    assert feedback["receiver_proof_attached"] is False
+    assert feedback["full_video_local_prefilter_attached"] is False
+    assert feedback["local_cpu_replay_gate_attached"] is False
+    assert feedback["measured_archive_bytes"] is None
+    assert adjustment["applied"] is True
+    assert adjustment["segnet_weight_applied"] is True
+    assert adjustment["segnet_distillation_weight"] == 2.0
+    assert hi["command_argv"][
+        hi["command_argv"].index("--segnet-distillation-weight") + 1
+    ] == "2"
+    assert "hinerv_segnet_stagnation_feedback_unapplied" not in hi["blockers"]
+    assert "hi_nerv_receiver_proof_missing" in hi["blockers"]
+
+
 def test_long_training_campaign_plan_blocks_repeated_low_lr_pose_instability(
 ) -> None:
     report = build_nerv_long_training_campaign_plan(

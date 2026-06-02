@@ -60,7 +60,9 @@ HINERV_POSE_INSTABILITY_LOW_LR_FLOOR = 3.0e-5
 HINERV_POSE_INSTABILITY_POLICY_LOGIC = (
     "pose instability above low_learning_rate_floor applies the measured lower "
     "learning-rate recommendation; repeated instability at or below the floor "
-    "switches to pose_distillation_loss=huber while preserving raw MSE telemetry"
+    "switches to pose_distillation_loss=huber while preserving raw MSE telemetry; "
+    "segnet stagnation raises segnet_distillation_weight for the next run without "
+    "granting archive, replay, or score authority"
 )
 HINERV_POSE_PROTECTED_LOSS = "huber"
 HINERV_POSE_PROTECTED_HUBER_DELTA = 1.0
@@ -317,6 +319,9 @@ def _hinerv_campaign_row(
     effective_learning_rate = float(
         launch_feedback_adjustment.get("learning_rate") or learning_rate
     )
+    effective_segnet_distillation_weight = float(
+        launch_feedback_adjustment.get("segnet_distillation_weight") or 1.0
+    )
     output_dir_basename = _campaign_output_basename(
         row_id=f"hi_nerv::{candidate_id}::{optimizer_kind}",
         launch_feedback_adjustment=launch_feedback_adjustment,
@@ -325,7 +330,7 @@ def _hinerv_campaign_row(
         candidate=candidate,
         requested_epochs=int(epochs),
         num_pairs=num_pairs,
-        segnet_distillation_weight=1.0,
+        segnet_distillation_weight=effective_segnet_distillation_weight,
         pose_distillation_weight=1.0,
         coder_aware_qat=True,
         coder_qat_quant_bits=int(quant_bits),
@@ -372,7 +377,7 @@ def _hinerv_campaign_row(
         "--modelsize-candidate-id",
         candidate_id,
         "--segnet-distillation-weight",
-        "1.0",
+        _float_token(effective_segnet_distillation_weight),
         "--pose-distillation-weight",
         "1.0",
         "--coder-aware-qat",
@@ -439,6 +444,11 @@ def _hinerv_campaign_row(
         or launch_feedback_adjustment.get("pose_protected_pathway_applied")
     ):
         blockers.append("hinerv_pose_instability_feedback_unapplied")
+    if (
+        feedback.get("seg_stagnation_detected") is True
+        and not launch_feedback_adjustment.get("segnet_weight_applied")
+    ):
+        blockers.append("hinerv_segnet_stagnation_feedback_unapplied")
     if (
         launch_feedback_adjustment.get("repeated_low_lr_pose_instability") is True
         and not launch_feedback_adjustment.get("pose_protected_pathway_applied")
@@ -1145,10 +1155,20 @@ def _family_level_candidate_feedback_applicable(
         return False
     if str(row.get("feedback_scope") or "").strip() != "full600_training_telemetry":
         return False
-    if row.get("pose_instability_detected") is not True:
-        return False
+    pose_feedback = bool(row.get("pose_instability_detected") is True)
+    seg_feedback = bool(row.get("seg_stagnation_detected") is True)
     recommended = _float_or_none(row.get("recommended_learning_rate"))
-    if recommended is None or recommended <= 0.0:
+    recommended_seg_weight = _float_or_none(
+        row.get("recommended_segnet_distillation_weight")
+    )
+    if not (
+        (pose_feedback and recommended is not None and recommended > 0.0)
+        or (
+            seg_feedback
+            and recommended_seg_weight is not None
+            and recommended_seg_weight > 1.0
+        )
+    ):
         return False
     target_num_pairs = int(candidate.get("num_pairs") or 0)
     measured_num_pairs = int(row.get("measured_num_pairs") or 0)
@@ -1306,6 +1326,7 @@ def _hinerv_feedback_launch_adjustment(
             "reason": "no_candidate_feedback",
             "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
             "learning_rate": float(learning_rate),
+            "segnet_distillation_weight": 1.0,
             **FALSE_AUTHORITY,
         }
     observed = _float_or_none(feedback.get("observed_learning_rate"))
@@ -1323,7 +1344,6 @@ def _hinerv_feedback_launch_adjustment(
         and recommended < float(learning_rate)
     )
     pose_protected_pathway_applied = bool(repeated_low_lr_instability)
-    applied = bool(lower_learning_rate_applied or pose_protected_pathway_applied)
     launch_mutations: list[str] = []
     if lower_learning_rate_applied:
         launch_mutations.extend(list(feedback.get("recommended_launch_mutations") or []))
@@ -1331,11 +1351,32 @@ def _hinerv_feedback_launch_adjustment(
         launch_mutations.append(
             "enable_pose_distillation_huber_from_repeated_low_lr_instability"
         )
+    seg_stagnation = bool(feedback.get("seg_stagnation_detected"))
+    recommended_seg_weight = _float_or_none(
+        feedback.get("recommended_segnet_distillation_weight")
+    )
+    segnet_weight_applied = bool(
+        seg_stagnation
+        and recommended_seg_weight is not None
+        and recommended_seg_weight > 1.0
+    )
+    if segnet_weight_applied:
+        launch_mutations.extend(
+            mutation
+            for mutation in (feedback.get("recommended_launch_mutations") or [])
+            if mutation not in launch_mutations
+        )
+    applied = bool(
+        lower_learning_rate_applied
+        or pose_protected_pathway_applied
+        or segnet_weight_applied
+    )
     return {
         "schema": "hinerv_feedback_launch_adjustment.v1",
         "applied": applied,
         "lower_learning_rate_applied": lower_learning_rate_applied,
         "pose_protected_pathway_applied": pose_protected_pathway_applied,
+        "segnet_weight_applied": segnet_weight_applied,
         "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
         "reason": (
             "pose_instability_recommended_lower_learning_rate"
@@ -1344,15 +1385,20 @@ def _hinerv_feedback_launch_adjustment(
                 "repeated_pose_instability_at_low_lr_pose_protected_pathway"
                 if pose_protected_pathway_applied
                 else (
-                    "pose_instability_feedback_without_lower_lr"
-                    if pose_instability
-                    else "feedback_does_not_request_launch_adjustment"
+                    "segnet_stagnation_recommended_higher_segnet_weight"
+                    if segnet_weight_applied
+                    else (
+                        "pose_instability_feedback_without_lower_lr"
+                        if pose_instability
+                        else "feedback_does_not_request_launch_adjustment"
+                    )
                 )
             )
         ),
         "source_feedback_kind": feedback.get("feedback_kind"),
         "source_feedback_scope": feedback.get("feedback_scope"),
         "pose_instability_detected": pose_instability,
+        "seg_stagnation_detected": seg_stagnation,
         "observed_learning_rate": observed,
         "low_learning_rate_floor": lr_floor,
         "repeated_low_lr_pose_instability": repeated_low_lr_instability,
@@ -1360,6 +1406,10 @@ def _hinerv_feedback_launch_adjustment(
         "recommended_learning_rate": recommended,
         "learning_rate": float(
             recommended if lower_learning_rate_applied else learning_rate
+        ),
+        "recommended_segnet_distillation_weight": recommended_seg_weight,
+        "segnet_distillation_weight": float(
+            recommended_seg_weight if segnet_weight_applied else 1.0
         ),
         "pose_distillation_loss": (
             HINERV_POSE_PROTECTED_LOSS if pose_protected_pathway_applied else "mse"
@@ -1521,9 +1571,19 @@ def _campaign_output_basename(
     suffix_parts = ["feedback"]
     if launch_feedback_adjustment.get("pose_instability_detected"):
         suffix_parts.append("pose_instability")
+    if launch_feedback_adjustment.get("seg_stagnation_detected"):
+        suffix_parts.append("seg_stagnation")
     learning_rate = _float_or_none(launch_feedback_adjustment.get("learning_rate"))
     if learning_rate is not None:
         suffix_parts.append(f"lr{_safe_path_token(_float_token(learning_rate))}")
+    segnet_weight = _float_or_none(
+        launch_feedback_adjustment.get("segnet_distillation_weight")
+    )
+    if (
+        launch_feedback_adjustment.get("segnet_weight_applied")
+        and segnet_weight is not None
+    ):
+        suffix_parts.append(f"segw{_safe_path_token(_float_token(segnet_weight))}")
     mutations = [
         _safe_path_token(str(mutation))[:48]
         for mutation in (launch_feedback_adjustment.get("launch_mutations") or [])

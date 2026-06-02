@@ -304,17 +304,35 @@ def test_planner_row_launch_gate_allows_planner_or_explicit_manual() -> None:
 
 def test_compact_family_startup_marker_records_mlx_custody(
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
+    weight_path = tmp_path.parent / "joint_p18_p19_recon_pixel_weight.npz"
+    weight_path.write_bytes(b"joint-weight")
+
+    def fake_discover_joint_recon_pixel_weight_path(*, repo_root, num_pairs):
+        return weight_path, {
+            "schema": "compact_auto_joint_recon_pixel_weight_discovery.v1",
+            "num_pairs": int(num_pairs),
+        }
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_discover_joint_recon_pixel_weight_path",
+        fake_discover_joint_recon_pixel_weight_path,
+    )
     args = SimpleNamespace(
         execute_family="hi_nerv",
         planner_row_id="hi_nerv::candidate::adamw",
         modelsize_candidate_id="candidate",
+        auto_joint_recon_pixel_weight=True,
         distillation_device="mps",
         requested_distillation_device="gpu",
         mlx_prefilter_scorer_device="gpu",
         mlx_prefilter_scorer_batch_pairs=8,
         mlx_prefilter_progress_every=10,
+        num_pairs=600,
         output_dir=tmp_path,
+        repo_root=Path("/repo"),
     )
 
     path = runner_mod._write_compact_family_startup_marker(
@@ -334,6 +352,14 @@ def test_compact_family_startup_marker_records_mlx_custody(
     assert payload["requested_distillation_device"] == "gpu"
     assert payload["mlx_prefilter_scorer_device"] == "gpu"
     assert payload["mlx_prefilter_scorer_batch_pairs"] == 8
+    assert payload["auto_joint_recon_pixel_weight_path"] == weight_path.as_posix()
+    assert payload["auto_joint_recon_pixel_weight_sha256"] == runner_mod._sha256_file(
+        weight_path
+    )
+    assert payload["auto_joint_recon_pixel_weight_error"] is None
+    assert payload["campaign_identity"]["auto_joint_recon_pixel_weight_path"] == (
+        weight_path.as_posix()
+    )
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

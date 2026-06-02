@@ -7753,10 +7753,25 @@ def _write_compact_family_startup_marker(
     if family not in PLANNER_ROW_REQUIRED_FAMILIES:
         return None
     output_dir.mkdir(parents=True, exist_ok=True)
+    campaign_identity = _active_campaign_lock_payload(
+        args,
+        source_video_path=source_video_path,
+        hard_byte_ceilings=hard_byte_ceilings,
+    )
     payload = {
         "schema": "compact_carrier_startup_marker.v1",
         "created_utc": datetime.now(UTC).isoformat(),
         "pid": os.getpid(),
+        "campaign_identity": campaign_identity,
+        "auto_joint_recon_pixel_weight_path": campaign_identity.get(
+            "auto_joint_recon_pixel_weight_path"
+        ),
+        "auto_joint_recon_pixel_weight_sha256": campaign_identity.get(
+            "auto_joint_recon_pixel_weight_sha256"
+        ),
+        "auto_joint_recon_pixel_weight_error": campaign_identity.get(
+            "auto_joint_recon_pixel_weight_error"
+        ),
         "execute_family": family,
         "planner_row_id": str(getattr(args, "planner_row_id", "") or "").strip()
         or None,

@@ -283,6 +283,88 @@ def test_training_telemetry_feedback_detects_partial_window_pose_instability(
     ]
 
 
+def test_training_telemetry_feedback_does_not_replan_recovered_midrun_instability(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "recovered_midrun_telemetry.jsonl"
+    rows = []
+    for epoch in range(96):
+        pose_bad = epoch < 24
+        rows.append(
+            {
+                "epoch": epoch,
+                "learning_rate": 2.7e-5,
+                "loss_components": {
+                    "loss_part_pose_distill": 1_200_000.0 if pose_bad else 2.0,
+                },
+                "per_axis_decomposition": {
+                    "pose": 900_000.0 if pose_bad else 2.0,
+                    "seg": 6.0,
+                },
+            }
+        )
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000",
+        candidate_num_pairs=600,
+        stop_reason="midrun_feedback_snapshot_do_not_stop_training",
+    )
+
+    assert row["training_stopped"] is False
+    assert row["pose_instability_ever_detected"] is True
+    assert row["pose_instability_recovered"] is True
+    assert row["pose_instability_active_latest_window"] is False
+    assert row["pose_instability_detected"] is False
+    assert row["recommended_learning_rate"] is None
+    assert row["recommended_launch_mutations"] == []
+    assert "hi_nerv_pose_instability_telemetry_feedback" not in row["blockers"]
+
+
+def test_training_telemetry_feedback_detects_segnet_stagnation(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "segnet_stagnation_telemetry.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {"loss_part_pose_distill": 1.0},
+            "per_axis_decomposition": {
+                "pose": 2.0,
+                "seg": 6.3 - min(epoch, 127) * 0.0005,
+            },
+        }
+        for epoch in range(160)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000",
+        candidate_num_pairs=600,
+    )
+
+    assert row["pose_instability_detected"] is False
+    assert row["seg_stagnation_detected"] is True
+    assert row["recommended_segnet_distillation_weight"] == 2.0
+    assert row["seg_stagnation_relative_improvement"] < 0.05
+    assert "increase_segnet_distillation_weight_from_stagnation_telemetry" in row[
+        "recommended_launch_mutations"
+    ]
+    assert "hi_nerv_segnet_stagnation_telemetry_feedback" in row["blockers"]
+    assert row["score_claim"] is False
+
+
 def test_write_training_telemetry_feedback_files_writes_manifest_and_ledger(
     tmp_path: Path,
 ) -> None:
