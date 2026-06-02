@@ -122,6 +122,73 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
     )
 
 
+def test_evaluate_decoder_scores_section_value_pressure_during_qat(
+    monkeypatch,
+) -> None:
+    from tac.substrates.snerv_inverse_steg_carrier import scorer_loop_decoder_qat
+
+    responses = iter(
+        [
+            (0.01, 0.01),
+            (0.40, 0.40),
+            (0.01, 0.01),
+        ]
+    )
+    monkeypatch.setattr(
+        scorer_loop_decoder_qat,
+        "measure_pair_d_seg_d_pose",
+        lambda *_args, **_kwargs: next(responses),
+    )
+    step_maps = tuple(
+        np.linspace(1.0, 2.0 + idx, 4, dtype=np.float32).reshape(2, 2)
+        for idx in range(6)
+    )
+    prepared = _PreparedState(
+        pairs=torch.zeros((1, 2, 3, 4, 4), dtype=torch.float32),
+        codes=(),
+        lf_quant_planes=tuple(np.zeros((2, 2), dtype=np.int64) for _ in range(6)),
+        lf_zero_points=tuple(0.0 for _ in range(6)),
+        step_maps=step_maps,
+        step_map_packet=encode_step_maps(list(step_maps), bins=4).packet,
+        baseline_decoder=_decoder(),
+        model_size=_decoder().model_size,
+        levels=1,
+        wavelet="haar",
+        orig_hw=(4, 4),
+        step_map_bins=4,
+    )
+
+    row = _evaluate_decoder(
+        _decoder(),
+        prepared=prepared,
+        posenet=object(),
+        segnet=object(),
+        qat_bits=8,
+        decoder_payload_codec="int4_symmetric",
+        label="section_value_bound_eval",
+        iteration=1,
+        accepted=False,
+        byte_pressure_multiplier=1.0,
+        section_value_pressure_multiplier=2.0,
+    )
+
+    sections = {item.section: item for item in row.section_value_neutralizations}
+    assert row.section_value_pressure_ready is True
+    assert set(sections) == {"decoder_payload", "step_map_packet"}
+    assert sections["decoder_payload"].economic_surplus_linf > 0.0
+    assert sections["decoder_payload"].pressure_linf == 0.0
+    assert sections["step_map_packet"].delta_nonrate_score == pytest.approx(0.0)
+    assert sections["step_map_packet"].pressure_linf == pytest.approx(
+        sections["step_map_packet"].section_rate_cost_linf
+    )
+    assert row.section_value_pressure_linf == pytest.approx(
+        sections["step_map_packet"].section_rate_cost_linf
+    )
+    assert row.rate_aware_objective_linf == pytest.approx(
+        row.score_linf + 2.0 * row.section_value_pressure_linf
+    )
+
+
 def test_pack_receiver_archive_records_scorer_loop_adapter_config() -> None:
     cfg = SnervModelSizeConfig(
         fc_dim=12,
@@ -320,6 +387,59 @@ def test_decoder_trial_pose_guard_uses_byte_pressure_objective() -> None:
         )
         is False
     )
+
+
+def test_decoder_trial_pose_guard_uses_section_value_pressure_objective() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.2,
+        d_seg=0.01,
+        replay=True,
+        archive_bytes=1000,
+        rate_term=0.010,
+        section_value_pressure=0.0,
+    )
+    candidate = _eval(
+        label="tiny_score_gain_low_value_sections",
+        score=6.99,
+        d_pose=0.19,
+        d_seg=0.009,
+        replay=True,
+        archive_bytes=1000,
+        rate_term=0.010,
+        section_value_pressure=1.0,
+    )
+
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            section_value_pressure_multiplier=0.0,
+        )
+        is True
+    )
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            section_value_pressure_multiplier=1.0,
+        )
+        is False
+    )
+
+
+def test_decoder_trial_pose_guard_fails_closed_without_section_value_binding() -> None:
+    current = _eval(label="baseline", score=7.0, d_pose=0.2, replay=True)
+    candidate = _eval(
+        label="score_gain_missing_section_binding",
+        score=6.8,
+        d_pose=0.19,
+        replay=True,
+        section_value_pressure_ready=False,
+    )
+
+    assert decoder_trial_passes_pose_guard(candidate, current) is False
 
 
 def test_decoder_trial_pose_guard_never_accepts_raw_score_regression() -> None:
@@ -800,6 +920,8 @@ def _eval(
     d_seg: float = 0.01,
     archive_bytes: int = 1234,
     rate_term: float = 0.001,
+    section_value_pressure: float = 0.0,
+    section_value_pressure_ready: bool = True,
     per_pair: tuple[SnervPairEval, ...] | None = None,
 ) -> SnervDecoderEval:
     if per_pair is None:
@@ -837,4 +959,6 @@ def _eval(
             payload_sha256_fp32_receiver="1" * 64,
         ),
         per_pair=per_pair,
+        section_value_pressure_linf=float(section_value_pressure),
+        section_value_pressure_ready=bool(section_value_pressure_ready),
     )
