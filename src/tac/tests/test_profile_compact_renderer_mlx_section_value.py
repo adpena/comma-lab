@@ -73,6 +73,14 @@ def test_build_profile_records_baseline_score_and_section_byte_blockers(
     assert sections["decoder_qw"]["value_status"] == (
         "blocked_missing_section_neutralization_or_ablation_evidence"
     )
+    admission = profile["byte_price_admission_plan"]
+    assert admission["schema"] == "compact_nerv_byte_price_controller.v1"
+    assert admission["source_schema"] == profile["schema"]
+    assert admission["input_row_count"] == 1
+    assert admission["decision_rows"][0]["row_id"] == "baseline"
+    assert admission["decision_rows"][0]["decision"] == "demote"
+    assert admission["score_claim"] is False
+    assert admission["ready_for_exact_eval_dispatch"] is False
     assert "compact_base_long_training_required_before_family_demote" in profile["blockers"]
     assert "section_neutralization_or_ablation_replay_missing" in profile["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in profile["blockers"]

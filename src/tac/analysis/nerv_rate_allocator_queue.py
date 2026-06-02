@@ -19,6 +19,9 @@ from tac.analysis.nerv_rate_allocator_bridge import (
 from tac.analysis.nerv_rate_allocator_bridge import (
     SCHEMA as RATE_BRIDGE_SCHEMA,
 )
+from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
+    build_nerv_byte_price_plan,
+)
 
 SCHEMA = "nerv_rate_allocator_work_queue.v1"
 AXIS_TAG = "[planning/control]"
@@ -40,6 +43,7 @@ class NervRateAllocatorQueueError(ValueError):
 def build_nerv_rate_allocator_work_queue(
     *,
     rate_bridge: Mapping[str, Any],
+    section_value_artifacts: Sequence[Mapping[str, Any]] = (),
     queue_id: str = DEFAULT_QUEUE_ID,
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
@@ -70,6 +74,12 @@ def build_nerv_rate_allocator_work_queue(
     precision_modes = _precision_modes_from_policy(
         rate_bridge.get("receiver_precision_mode_policy")
     )
+    admission_plans = [
+        build_nerv_byte_price_plan(artifact)
+        for artifact in section_value_artifacts
+        if isinstance(artifact, Mapping)
+    ]
+    admission_rows = _section_admission_queue_rows(admission_plans)
 
     return {
         "schema": SCHEMA,
@@ -111,6 +121,13 @@ def build_nerv_rate_allocator_work_queue(
         "blocked_queue_row_count": len(blocked_rows),
         "local_planning_ready_row_count": len(planning_ready_rows),
         "blocking_queue_row_ids": [row["queue_row_id"] for row in blocked_rows],
+        "section_admission_plans": admission_plans,
+        "section_admission_plan_count": len(admission_plans),
+        "section_admission_queue_rows": admission_rows,
+        "section_admission_queue_row_count": len(admission_rows),
+        "section_admission_decision_counts": _section_admission_decision_counts(
+            admission_rows
+        ),
         "target_consumer_index": _target_consumer_index(rows),
         "precision_mode_index": _precision_mode_index(rows, precision_modes),
         "blockers": _dedupe_strings(
@@ -119,6 +136,11 @@ def build_nerv_rate_allocator_work_queue(
                 "nerv_rate_allocator_queue_is_false_authority",
                 "exact_or_full_video_cuda_blocked_until_PR101_and_Z5_terminal",
                 "real_bit_assignment_requires_measured_sensitivity_and_receiver_proof",
+                *[
+                    blocker
+                    for plan in admission_plans
+                    for blocker in _string_list(plan.get("blockers"))
+                ],
             ]
         ),
         "predicted_delta_adjustment": 0.0,
@@ -221,6 +243,89 @@ def _precision_mode_index(
         for mode in _string_list(row.get("receiver_precision_modes")):
             index.setdefault(mode, []).append(row_id)
     return {key: sorted(values) for key, values in sorted(index.items())}
+
+
+def _section_admission_queue_rows(
+    admission_plans: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    rows = []
+    for plan_index, plan in enumerate(admission_plans):
+        for row_index, decision in enumerate(_mapping_list(plan.get("decision_rows"))):
+            decision_id = str(decision.get("row_id") or f"decision_{row_index:04d}")
+            final_decision = str(decision.get("decision") or "demote")
+            blockers = _string_list(decision.get("blockers"))
+            rows.append(
+                {
+                    "queue_row_id": (
+                        f"nerv_section_admission_row_{plan_index:04d}_"
+                        f"{row_index:04d}_{decision_id}"
+                    ),
+                    "source_plan_schema": plan.get("schema"),
+                    "candidate_id": decision.get("candidate_id")
+                    or plan.get("candidate_id"),
+                    "section_id": decision.get("section_id"),
+                    "row_id": decision_id,
+                    "row_kind": decision.get("row_kind"),
+                    "decision": final_decision,
+                    "economic_decision": decision.get("economic_decision"),
+                    "status": (
+                        "blocked_fail_closed"
+                        if blockers
+                        else f"local_section_{final_decision}_ready_no_exact_dispatch"
+                    ),
+                    "blocked": bool(blockers),
+                    "blockers": blockers,
+                    "byte_delta": decision.get("byte_delta"),
+                    "section_bytes": decision.get("section_bytes"),
+                    "delta_nonrate_score": decision.get("delta_nonrate_score"),
+                    "delta_rate_score": decision.get("delta_rate_score"),
+                    "delta_total_score": decision.get("delta_total_score"),
+                    "archive_sha256": decision.get("archive_sha256"),
+                    "axis_labels": list(decision.get("axis_labels") or ()),
+                    "receiver_proof_status": decision.get("receiver_proof_status"),
+                    "full_video_coverage": bool(decision.get("full_video_coverage")),
+                    "target_consumers": [
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "bounded_runner",
+                    ],
+                    "planner_action": _section_admission_planner_action(
+                        final_decision
+                    ),
+                    "predicted_delta_adjustment": 0.0,
+                    **QUEUE_FALSE_AUTHORITY,
+                }
+            )
+    return sorted(
+        rows,
+        key=lambda row: (
+            bool(row.get("blocked")),
+            str(row.get("decision") or ""),
+            str(row.get("queue_row_id") or ""),
+        ),
+    )
+
+
+def _section_admission_decision_counts(
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        decision = str(row.get("decision") or "unknown")
+        counts[decision] = counts.get(decision, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _section_admission_planner_action(decision: str) -> str:
+    if decision == "cut":
+        return "materialize_section_cut_candidate_after_receiver_replay"
+    if decision == "admit":
+        return "materialize_residual_or_sidecar_candidate_after_receiver_replay"
+    if decision == "protect":
+        return "protect_section_bytes_in_training_and_codec_sweep"
+    if decision == "retrain":
+        return "retrain_section_or_residual_until_value_exceeds_byte_price"
+    return "demote_or_block_section_family_until_custody_repairs"
 
 
 def _mapping_list(value: Any) -> list[Mapping[str, Any]]:

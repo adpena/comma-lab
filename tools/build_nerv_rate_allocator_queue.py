@@ -31,6 +31,16 @@ def _default_out() -> Path:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rate-bridge", type=Path, required=True)
+    parser.add_argument(
+        "--section-value-json",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Optional section-value/profile artifact to price through the "
+            "compact NeRV byte-price controller. Repeatable."
+        ),
+    )
     parser.add_argument("--queue-id", default="nerv_rate_allocator_work_queue")
     parser.add_argument("--out", type=Path)
     parser.add_argument(
@@ -54,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     payload = build_nerv_rate_allocator_work_queue(
         rate_bridge=_load(args.rate_bridge),
+        section_value_artifacts=[_load(path) for path in args.section_value_json],
         queue_id=args.queue_id,
     )
     out_path = args.out or _default_out()
@@ -70,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  queue_rows: {payload['queue_row_count']}")
     print(f"  blocked_queue_rows: {payload['blocked_queue_row_count']}")
     print(f"  local_planning_ready_rows: {payload['local_planning_ready_row_count']}")
+    print(f"  section_admission_rows: {payload['section_admission_queue_row_count']}")
     print(f"  blockers: {len(payload['blockers'])}")
     print(f"  wrote {result.path} ({result.bytes_written} bytes sha256={result.sha256})")
     return 0

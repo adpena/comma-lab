@@ -250,8 +250,48 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
 
 def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     rate_bridge = _synthetic_rate_bridge()
+    section_value = {
+        "schema": "compact_renderer_mlx_section_value_profile.v1",
+        "candidate_id": "compact_candidate",
+        "section_value_rows": [
+            {
+                "row_id": "cut_selector",
+                "section_id": "selectors_rc",
+                "archive_sha256": "a" * 64,
+                "axis_tag": "[contest-CUDA]",
+                "receiver_proof_status": "satisfied",
+                "full_video_coverage": True,
+                "archive_bytes_removed_vs_baseline": 200_000,
+                "delta_nonrate_score": 0.01,
+            },
+            {
+                "row_id": "admit_residual",
+                "section_id": "residual_rc",
+                "row_kind": "new_residual_sidecar",
+                "archive_sha256": "b" * 64,
+                "axis_tag": "[contest-CUDA]",
+                "receiver_proof_status": "satisfied",
+                "full_video_coverage": True,
+                "bytes": 10_000,
+                "delta_nonrate_score": -0.01,
+            },
+            {
+                "row_id": "sampled_residual",
+                "section_id": "residual_sampled",
+                "row_kind": "new_residual_sidecar",
+                "archive_sha256": "c" * 64,
+                "axis_tag": "[contest-CUDA]",
+                "receiver_proof_status": "satisfied",
+                "max_pairs": 600,
+                "n_samples": 6,
+                "bytes": 10_000,
+                "delta_nonrate_score": -0.01,
+            },
+        ],
+    }
     queue = build_nerv_rate_allocator_work_queue(
         rate_bridge=rate_bridge,
+        section_value_artifacts=(section_value,),
         queue_id="test_nerv_rate_allocator_queue",
     )
 
@@ -260,6 +300,11 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     assert queue["queue_row_count"] == rate_bridge["work_order_count"]
     assert queue["blocked_queue_row_count"] > 0
     assert queue["local_planning_ready_row_count"] >= 0
+    assert queue["section_admission_plan_count"] == 1
+    assert queue["section_admission_queue_row_count"] == 3
+    assert queue["section_admission_decision_counts"]["admit"] == 1
+    assert queue["section_admission_decision_counts"]["cut"] == 1
+    assert queue["section_admission_decision_counts"]["demote"] == 1
     assert queue["score_claim"] is False
     assert queue["score_claim_valid"] is False
     assert queue["promotion_eligible"] is False
@@ -287,6 +332,20 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         assert row["ready_for_exact_eval_dispatch"] is False
         assert row["dispatch_allowed"] is False
         assert row["exact_or_full_video_cuda_allowed"] is False
+    admission_rows = {
+        row["row_id"]: row for row in queue["section_admission_queue_rows"]
+    }
+    assert admission_rows["cut_selector"]["decision"] == "cut"
+    assert admission_rows["admit_residual"]["decision"] == "admit"
+    assert admission_rows["sampled_residual"]["decision"] == "demote"
+    assert "full_video_coverage_missing" in admission_rows["sampled_residual"][
+        "blockers"
+    ]
+    for row in queue["section_admission_queue_rows"]:
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert row["dispatch_allowed"] is False
 
 
 def _synthetic_rate_bridge() -> dict:

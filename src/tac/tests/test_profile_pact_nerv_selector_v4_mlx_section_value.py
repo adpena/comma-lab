@@ -181,6 +181,12 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
     assert profile["residual_admission_policy"]["schema"] == (
         "pact_nerv_selector_v4_residual_admission_policy.v1"
     )
+    admission = profile["byte_price_admission_plan"]
+    assert admission["schema"] == "compact_nerv_byte_price_controller.v1"
+    assert admission["source_schema"] == profile["schema"]
+    assert admission["input_row_count"] == 5
+    assert admission["score_claim"] is False
+    assert admission["ready_for_exact_eval_dispatch"] is False
     rows = {row["variant_id"]: row for row in profile["section_value_rows"]}
     assert set(rows) == {
         "baseline",

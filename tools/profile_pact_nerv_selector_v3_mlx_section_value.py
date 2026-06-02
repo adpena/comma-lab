@@ -41,6 +41,9 @@ from tac.local_acceleration.mlx_scorer_response import (  # noqa: E402
     write_mlx_scorer_response_payload,
 )
 from tac.repo_io import write_json  # noqa: E402
+from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (  # noqa: E402
+    build_nerv_byte_price_plan,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
 from tac.substrates.pact_nerv_selector_v3.section_value import (  # noqa: E402
     PSV3_SECTION_VALUE_PROFILE_SCHEMA,
@@ -599,7 +602,7 @@ def _build_report(
                     **FALSE_AUTHORITY,
                 }
             )
-    return {
+    profile = {
         "schema": profile_schema,
         "source_schema": source_schema,
         "created_at_unix": time.time(),
@@ -682,6 +685,8 @@ def _build_report(
         ],
         **FALSE_AUTHORITY,
     }
+    profile["byte_price_admission_plan"] = build_nerv_byte_price_plan(profile)
+    return profile
 
 
 def _baseline_cache_quality_gate(

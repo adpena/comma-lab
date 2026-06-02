@@ -31,6 +31,9 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.archive_byte_profile import contest_rate_term  # noqa: E402
 from tac.auth_eval_schema import contest_formula_score  # noqa: E402
+from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (  # noqa: E402
+    build_nerv_byte_price_plan,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
 from tac.substrates.hprc.spine_bounded_runner import (  # noqa: E402
     HPRC_MLX_COMPONENT_PROFILE_SCHEMA,
@@ -202,7 +205,7 @@ def build_compact_renderer_mlx_section_value_profile(
             **FALSE_AUTHORITY,
         }
     ]
-    return {
+    profile = {
         "schema": HPRC_MLX_COMPONENT_PROFILE_SCHEMA,
         "source_schema": COMPACT_RENDERER_MLX_SECTION_VALUE_SOURCE_SCHEMA,
         "created_at_unix": time.time(),
@@ -269,6 +272,8 @@ def build_compact_renderer_mlx_section_value_profile(
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+    profile["byte_price_admission_plan"] = build_nerv_byte_price_plan(profile)
+    return profile
 
 
 def _nonrate_components(
