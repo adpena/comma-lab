@@ -100,6 +100,41 @@ def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
     return archive.packet
 
 
+def _write_mlx_prefilter_profile(
+    path: Path,
+    *,
+    pairs: int,
+    batch_pairs: int,
+    score: float,
+) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "producer": "tac.local_acceleration.mlx_renderer_prefilter_profile",
+                "max_pairs": int(pairs),
+                "num_pairs": int(pairs),
+                "n_samples": int(pairs),
+                "scorer_batch_pairs": int(batch_pairs),
+                "scope_status": {"full_video": "executed"},
+                "score_components": {"canonical_score": float(score)},
+                "mlx_response_summary": {
+                    "batch_pairs": int(batch_pairs),
+                    "max_pairs": int(pairs),
+                    "n_samples": int(pairs),
+                },
+                "section_value_rows": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def _write_verified_joint_recon_weight(
     root: Path,
     *,
@@ -2381,31 +2416,11 @@ def test_hinerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
         submission = out / "submission"
         submission.mkdir()
         (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-        profile = out / "local_mlx_prefilter_profile.json"
-        profile.write_text(
-            json.dumps(
-                {
-                    "schema": "hprc_mlx_component_neutralization_profile.v1",
-                    "producer": "tac.local_acceleration.mlx_renderer_prefilter_profile",
-                    "max_pairs": 600,
-                    "num_pairs": 600,
-                    "n_samples": 600,
-                    "scorer_batch_pairs": 8,
-                    "scope_status": {"full_video": "executed"},
-                    "score_components": {"canonical_score": 91.0},
-                    "mlx_response_summary": {
-                        "batch_pairs": 8,
-                        "max_pairs": 600,
-                        "n_samples": 600,
-                    },
-                    "section_value_rows": [],
-                    "score_claim": False,
-                    "promotion_eligible": False,
-                    "ready_for_exact_eval_dispatch": False,
-                },
-                sort_keys=True,
-            ),
-            encoding="utf-8",
+        _write_mlx_prefilter_profile(
+            out / "local_mlx_prefilter_profile.json",
+            pairs=600,
+            batch_pairs=8,
+            score=91.0,
         )
         return {
             "archive_path": archive.as_posix(),
@@ -2462,6 +2477,18 @@ def test_hinerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
     ]
     assert "hi_nerv_full_video_local_prefilter_missing" not in feedback_blockers
     assert "hi_nerv_local_cpu_replay_gate_missing" in feedback_blockers
+    feedback_row = out["candidate_feedback"]["row"]
+    assert feedback_row["mlx_prefilter_has_full_video"] is True
+    assert feedback_row["mlx_prefilter_local_replay_passed"] is False
+    assert feedback_row["mlx_prefilter_blockers"] == [
+        "mlx_profile_batch_pairs_not_singleton"
+    ]
+    assert feedback_row["local_cpu_replay_gate_has_full_video_mlx_prefilter"] is True
+    assert (
+        feedback_row["local_cpu_replay_gate_local_replay_mlx_prefilter_passed"]
+        is False
+    )
+    assert feedback_row["local_cpu_replay_gate_executed"] is False
 
 
 def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
@@ -2972,6 +2999,177 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     ]
     assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
+
+
+def test_snerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet = _synthetic_snerv_packet(pairs=600)
+
+    def fake_run_snerv_advisory(**kwargs):
+        assert kwargs["n_pairs"] == 600
+
+        def as_jsonable() -> dict[str, object]:
+            return {
+                "schema": "fake_snerv_advisory.v1",
+                "receiver_archive_packet": {
+                    "bytes": len(packet),
+                    "sha256": "0" * 64,
+                    "redacted": True,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+        return SimpleNamespace(
+            n_pairs=600,
+            receiver_archive_packet=packet,
+            as_jsonable=as_jsonable,
+            levels=int(kwargs["levels"]),
+            wavelet="db2",
+            score_linf=91.0,
+            score_l2=92.0,
+            d_seg_mean_linf=0.5,
+            d_pose_mean_linf=160.0,
+            archive_bytes_total=len(packet),
+            snerv_fc_dim=9,
+            snerv_emb_size=0,
+            snerv_patch_radius=1,
+            decoder_feature_count=9,
+            beats_frontier_rate=True,
+            receiver_archive_replay_verified=True,
+        )
+
+    def fake_export_snerv_archive_bound_candidate_package(**kwargs):
+        package_dir = Path(kwargs["output_dir"])
+        package_dir.mkdir(parents=True, exist_ok=True)
+        archive = package_dir / "archive.zip"
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", bytes(kwargs["packet"]))
+        submission = package_dir / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        proof = package_dir / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+        proof.parent.mkdir()
+        proof.write_text(
+            json.dumps(
+                {
+                    "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+                    "runtime_consumption_proof_ready": True,
+                    "receiver_contract_satisfied": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        row = {
+            "candidate_archive_path": archive.as_posix(),
+            "candidate_archive_bytes": archive.stat().st_size,
+            "candidate_archive_sha256": runner_mod._sha256_file(archive),
+            "runtime_consumption_proof_ready": True,
+            "receiver_contract_satisfied": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        (package_dir / "archive_bound_candidate_adapter_package.json").write_text(
+            json.dumps({"candidate_rows": [row]}, sort_keys=True),
+            encoding="utf-8",
+        )
+        return {
+            "archive_bound_candidate_adapter_package": {
+                "candidate_rows": [row],
+            },
+            "receiver_proof": {
+                "proof_path": proof.as_posix(),
+                "runtime_consumption_proof_ready": True,
+                "receiver_contract_satisfied": True,
+                "blockers": [],
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    import tac.substrates.snerv_inverse_steg_carrier.advisory as advisory_mod
+    import tac.substrates.snerv_inverse_steg_carrier.archive_candidate as package_mod
+
+    monkeypatch.setattr(advisory_mod, "run_snerv_advisory", fake_run_snerv_advisory)
+    monkeypatch.setattr(
+        package_mod,
+        "export_snerv_archive_bound_candidate_package",
+        fake_export_snerv_archive_bound_candidate_package,
+    )
+    batched_profile = _write_mlx_prefilter_profile(
+        tmp_path / "snerv_batched_mlx_full600.json",
+        pairs=600,
+        batch_pairs=8,
+        score=91.0,
+    )
+
+    out = execute_snerv_inverse_steg_advisory_and_adapt(
+        output_dir=tmp_path / "snerv_batched_gpu_gate",
+        num_pairs=600,
+        epochs=3,
+        hard_byte_ceilings=(178_000, 216_000),
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        mlx_profile_paths=(batched_profile,),
+        modelsize_candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "snerv-full600-batched-profile",
+            "levels": 2,
+            "bits_per_coeff": 1.5,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int2_symmetric",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
+            "nominal_under_ceiling": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["local_cpu_replay_gate"]["executed"] is False
+    assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is True
+    assert out["local_cpu_replay_gate"]["local_replay_mlx_prefilter_passed"] is False
+    assert out["mlx_prefilter_coverage"]["has_full_video_mlx_prefilter"] is True
+    assert out["mlx_prefilter_coverage"]["local_replay_profile_paths"] == []
+    assert out["mlx_prefilter_coverage"]["blockers"] == [
+        "mlx_profile_batch_pairs_not_singleton"
+    ]
+    assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" not in out[
+        "blockers"
+    ]
+    assert "local_cpu_replay_blocked_by_mlx_prefilter_score" in out["blockers"]
+    feedback_blockers = out["candidate_feedback"]["row"][
+        "pr95_stack_binding_blockers"
+    ]
+    assert "full_video_mlx_scorer_replay_not_attached" not in feedback_blockers
+    feedback_row = out["candidate_feedback"]["row"]
+    assert "local_cpu_replay_blocked_by_mlx_prefilter_score" in feedback_row[
+        "blockers"
+    ]
+    assert feedback_row["mlx_prefilter_has_full_video"] is True
+    assert feedback_row["mlx_prefilter_local_replay_passed"] is False
+    assert feedback_row["mlx_prefilter_blockers"] == [
+        "mlx_profile_batch_pairs_not_singleton"
+    ]
+    assert feedback_row["local_cpu_replay_gate_has_full_video_mlx_prefilter"] is True
+    assert (
+        feedback_row["local_cpu_replay_gate_local_replay_mlx_prefilter_passed"]
+        is False
+    )
+    assert feedback_row["local_cpu_replay_gate_executed"] is False
 
 
 def test_snerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(

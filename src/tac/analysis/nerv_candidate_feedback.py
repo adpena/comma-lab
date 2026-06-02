@@ -65,6 +65,8 @@ def build_nerv_candidate_feedback_row(
         else None
     )
     local_replay = runner_report.get("local_cpu_replay_summary")
+    local_replay_gate = dict(runner_report.get("local_cpu_replay_gate") or {})
+    mlx_prefilter = dict(runner_report.get("mlx_prefilter_coverage") or {})
     snerv_profile = dict(runner_report.get("snerv_binary_profile") or {})
     return {
         "schema": SCHEMA,
@@ -128,6 +130,37 @@ def build_nerv_candidate_feedback_row(
             if isinstance(local_replay, Mapping)
             else None
         ),
+        "local_cpu_replay_gate_requested": local_replay_gate.get("requested"),
+        "local_cpu_replay_gate_default_enabled_for_full_coverage": (
+            local_replay_gate.get("default_enabled_for_full_coverage")
+        ),
+        "local_cpu_replay_gate_has_full_video_mlx_prefilter": (
+            local_replay_gate.get("has_full_video_mlx_prefilter")
+        ),
+        "local_cpu_replay_gate_local_replay_mlx_prefilter_passed": (
+            local_replay_gate.get("local_replay_mlx_prefilter_passed")
+        ),
+        "local_cpu_replay_gate_coverage_valid_for_replay": (
+            local_replay_gate.get("coverage_valid_for_replay")
+        ),
+        "local_cpu_replay_gate_executed": local_replay_gate.get("executed"),
+        "mlx_prefilter_profile_count": mlx_prefilter.get("profile_count"),
+        "mlx_prefilter_has_full_video": mlx_prefilter.get(
+            "has_full_video_mlx_prefilter"
+        ),
+        "mlx_prefilter_local_replay_passed": mlx_prefilter.get(
+            "local_replay_mlx_prefilter_passed"
+        ),
+        "mlx_prefilter_best_full_video_mlx_score": mlx_prefilter.get(
+            "best_full_video_mlx_score"
+        ),
+        "mlx_prefilter_full_video_profile_paths": list(
+            mlx_prefilter.get("full_video_profile_paths") or []
+        ),
+        "mlx_prefilter_local_replay_profile_paths": list(
+            mlx_prefilter.get("local_replay_profile_paths") or []
+        ),
+        "mlx_prefilter_blockers": list(mlx_prefilter.get("blockers") or []),
         "blockers": list(runner_report.get("blockers") or []),
         **FALSE_AUTHORITY,
     }

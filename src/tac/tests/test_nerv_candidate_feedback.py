@@ -73,6 +73,27 @@ def _runner_report(tmp_path: Path) -> dict[str, object]:
             "blockers": ["snerv_lf_payload_dominates_packet"],
         },
         "receiver_proof_report_paths": [proof.as_posix()],
+        "local_cpu_replay_gate": {
+            "schema": "compact_runner_local_cpu_replay_gate.v1",
+            "requested": None,
+            "default_enabled_for_full_coverage": False,
+            "has_full_video_mlx_prefilter": True,
+            "local_replay_mlx_prefilter_passed": False,
+            "coverage_valid_for_replay": True,
+            "executed": False,
+        },
+        "mlx_prefilter_coverage": {
+            "schema": "hprc_mlx_prefilter_coverage.v1",
+            "profile_count": 1,
+            "has_full_video_mlx_prefilter": True,
+            "local_replay_mlx_prefilter_passed": False,
+            "best_full_video_mlx_score": 91.0,
+            "full_video_profile_paths": [
+                (tmp_path / "batched_mlx_profile.json").as_posix()
+            ],
+            "local_replay_profile_paths": [],
+            "blockers": ["mlx_profile_batch_pairs_not_singleton"],
+        },
         "blockers": ["partial_pair_byte_feedback_only"],
     }
 
@@ -124,6 +145,27 @@ def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
     assert row["long_campaign_prelaunch_launch_allowed"] is False
     assert row["long_campaign_prelaunch_blockers"] == [
         "hi_nerv_real_posenet_teacher_missing"
+    ]
+    assert row["local_cpu_replay_gate_requested"] is None
+    assert (
+        row["local_cpu_replay_gate_default_enabled_for_full_coverage"]
+        is False
+    )
+    assert row["local_cpu_replay_gate_has_full_video_mlx_prefilter"] is True
+    assert (
+        row["local_cpu_replay_gate_local_replay_mlx_prefilter_passed"]
+        is False
+    )
+    assert row["local_cpu_replay_gate_coverage_valid_for_replay"] is True
+    assert row["local_cpu_replay_gate_executed"] is False
+    assert row["mlx_prefilter_profile_count"] == 1
+    assert row["mlx_prefilter_has_full_video"] is True
+    assert row["mlx_prefilter_local_replay_passed"] is False
+    assert row["mlx_prefilter_best_full_video_mlx_score"] == 91.0
+    assert len(row["mlx_prefilter_full_video_profile_paths"]) == 1
+    assert row["mlx_prefilter_local_replay_profile_paths"] == []
+    assert row["mlx_prefilter_blockers"] == [
+        "mlx_profile_batch_pairs_not_singleton"
     ]
     assert row["source_report_sha256"] is not None
     assert row["blockers"] == ["partial_pair_byte_feedback_only"]
