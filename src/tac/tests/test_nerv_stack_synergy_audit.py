@@ -60,6 +60,8 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     assert "hinerv_torchac_style_bitstream_pipeline_missing" in stacks["hi_nerv"]["blockers"]
     assert "hinerv_decoder_weight_saliency_waterfill_not_in_trainer" in stacks["hi_nerv"]["blockers"]
     assert "hi_nerv_real_posenet_teacher_missing" in stacks["hi_nerv"]["blockers"]
+    assert "hi_nerv_qat_forward_missing" not in stacks["hi_nerv"]["blockers"]
+    assert "hi_nerv_coder_aware_regularizer_missing" not in stacks["hi_nerv"]["blockers"]
     assert "snerv_pr95_staged_curriculum_missing" in stacks["snerv"]["blockers"]
     assert (
         "hinerv_execute_family_does_not_yet_consume_modelsize_candidate_id"

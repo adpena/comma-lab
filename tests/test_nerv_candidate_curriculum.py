@@ -2,9 +2,9 @@
 """Regression tests for NeRV candidate curriculum planning.
 
 These tests pin the PR95 binding semantics that gate long HiNeRV/SNeRV
-campaigns. In particular, coder-aware regularization is not the same thing as a
-fake-quantized forward pass; conflating those two would grant false launch
-authority to long campaigns.
+campaigns. HiNeRV now has a real decoder-weight fake-quant forward path, but
+that does not grant launch authority until the remaining PR95 scorer/eval/EMA
+bindings are present.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ def _requirement(plan: dict[str, Any], requirement_id: str) -> dict[str, Any]:
     raise AssertionError(f"missing requirement row {requirement_id!r}")
 
 
-def test_hinerv_modelsize_candidate_enables_coder_regularizer_not_qat_forward() -> None:
+def test_hinerv_modelsize_candidate_enables_decoder_fake_quant_forward_qat() -> None:
     plan = build_hinerv_candidate_curriculum_plan(
         candidate=_candidate(),
         requested_epochs=8,
@@ -54,14 +54,14 @@ def test_hinerv_modelsize_candidate_enables_coder_regularizer_not_qat_forward() 
         "launch_mutations"
     ]
     assert plan["coder_pressure"]["regularizer_enabled"] is True
-    assert plan["coder_pressure"]["fake_quant_forward_enabled"] is False
+    assert plan["coder_pressure"]["fake_quant_forward_enabled"] is True
     assert plan["coder_pressure"]["quant_bits"] == 4
 
     assert _requirement(plan, "coder_aware_regularizer")["satisfied"] is True
-    assert _requirement(plan, "qat_forward")["satisfied"] is False
-    assert "hi_nerv_qat_forward_missing" in plan["long_campaign_prelaunch_gate"][
-        "blockers"
-    ]
+    assert _requirement(plan, "qat_forward")["satisfied"] is True
+    assert "hi_nerv_qat_forward_missing" not in plan[
+        "long_campaign_prelaunch_gate"
+    ]["blockers"]
 
 
 def test_hinerv_prelaunch_gate_keeps_true_unimplemented_pr95_pieces_blocking() -> None:
@@ -82,7 +82,6 @@ def test_hinerv_prelaunch_gate_keeps_true_unimplemented_pr95_pieces_blocking() -
         "differentiable_pose_preprocess",
         "eval_roundtrip_ste",
         "ema_archive_selection",
-        "qat_forward",
     }
     assert _requirement(plan, "real_segnet_teacher")["satisfied"] is True
     assert _requirement(plan, "real_posenet_teacher")["satisfied"] is True

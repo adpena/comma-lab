@@ -51,6 +51,13 @@ try:
 except ImportError:
     _MLX_AVAILABLE = False
 
+try:
+    import av as _av  # noqa: F401
+
+    _AV_AVAILABLE = True
+except ImportError:
+    _AV_AVAILABLE = False
+
 
 def _write_synthetic_pr95_archive(path: Path, *, pairs: int = 600) -> Path:
     chunks = []
@@ -2108,7 +2115,10 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     }
 
 
-@pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for HiNeRV adapter smoke")
+@pytest.mark.skipif(
+    not _MLX_AVAILABLE or not _AV_AVAILABLE,
+    reason="MLX and PyAV runtime video decode are required for HiNeRV adapter smoke",
+)
 def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     tmp_path: Path,
 ) -> None:

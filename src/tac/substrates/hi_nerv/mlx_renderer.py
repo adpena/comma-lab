@@ -44,6 +44,7 @@ else:
 
 SCHEMA_VERSION = "hi_nerv_mlx_renderer_v1"
 MLX_EVIDENCE_GRADE = "[macOS-MLX research-signal]"
+_MIN_POSITIVE_FP16_SCALE = 5.960464477539063e-08
 
 
 def _require_mlx() -> None:
@@ -86,6 +87,60 @@ def _siren_uniform_bound(fan_in: int, w: float) -> float:
     return math.sqrt(6.0 / max(int(fan_in), 1)) / max(float(w), 1.0)
 
 
+def _fake_quant_symmetric_ste(values: Any, *, bits: int) -> Any:
+    """Archive-aligned symmetric fake quantization with STE.
+
+    Decoder archive codecs use signed symmetric integer values with fp16 scales:
+    per-output-channel (axis 0) for matrix/conv tensors and per-tensor for
+    vectors.  This forward proxy mirrors that geometry so score-aware training
+    sees the receiver surface it is being pushed toward, while the hard archive
+    byte oracle still decides promotion.
+    """
+
+    _require_mlx()
+    levels = max(1, (1 << (int(bits) - 1)) - 1)
+    abs_values = mx.abs(values)  # type: ignore[union-attr]
+    if len(values.shape) >= 2 and int(values.shape[0]) > 1:
+        reduce_axes = tuple(range(1, len(values.shape)))
+        abs_max = mx.max(abs_values, axis=reduce_axes, keepdims=True)  # type: ignore[union-attr]
+    else:
+        abs_max = mx.max(abs_values)  # type: ignore[union-attr]
+    raw_scale = abs_max / float(levels)
+    scale32 = mx.where(  # type: ignore[union-attr]
+        abs_max > 0.0,
+        mx.maximum(raw_scale, _MIN_POSITIVE_FP16_SCALE),  # type: ignore[union-attr]
+        1.0,
+    )
+    scale = mx.stop_gradient(scale32.astype(mx.float16).astype(mx.float32))  # type: ignore[union-attr]
+    q = mx.round(values / scale)  # type: ignore[union-attr]
+    q = mx.clip(q, -float(levels), float(levels))  # type: ignore[union-attr]
+    dequant = q * scale
+    return values + mx.stop_gradient(dequant - values)  # type: ignore[union-attr]
+
+
+def _linear_with_params(layer: Any, x: Any, *, fake_quant_bits: int | None) -> Any:
+    _require_mlx()
+    weight = layer.weight
+    bias = layer.bias
+    if fake_quant_bits is not None:
+        weight = _fake_quant_symmetric_ste(weight, bits=int(fake_quant_bits))
+        bias = _fake_quant_symmetric_ste(bias, bits=int(fake_quant_bits))
+    return x @ mx.transpose(weight) + bias  # type: ignore[union-attr]
+
+
+def _conv2d_with_params(layer: Any, x: Any, *, fake_quant_bits: int | None) -> Any:
+    _require_mlx()
+    weight = layer.weight
+    bias = layer.bias
+    if fake_quant_bits is not None:
+        weight = _fake_quant_symmetric_ste(weight, bits=int(fake_quant_bits))
+        bias = _fake_quant_symmetric_ste(bias, bits=int(fake_quant_bits))
+    padding = getattr(layer, "padding", 0)
+    stride = getattr(layer, "stride", 1)
+    dilation = getattr(layer, "dilation", 1)
+    return mx.conv2d(x, weight, stride=stride, padding=padding, dilation=dilation) + bias  # type: ignore[union-attr]
+
+
 class _UpBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
     """MLX Conv2d -> sin -> PixelShuffle(2), matching PyTorch ``_UpBlock``."""
 
@@ -102,8 +157,9 @@ class _UpBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc
             padding=1,
         )
 
-    def __call__(self, x: Any) -> Any:
-        return _pixel_shuffle_2x_nhwc(mx.sin(self.w * self.conv(x)))  # type: ignore[union-attr]
+    def __call__(self, x: Any, *, fake_quant_bits: int | None = None) -> Any:
+        conv = _conv2d_with_params(self.conv, x, fake_quant_bits=fake_quant_bits)
+        return _pixel_shuffle_2x_nhwc(mx.sin(self.w * conv))  # type: ignore[union-attr]
 
 
 class _LatentInjectorMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
@@ -116,9 +172,15 @@ class _LatentInjectorMLX(nn.Module if nn is not None else object):  # type: igno
         self.channels = int(channels)
         self.proj: Any = nn.Linear(int(latent_dim), int(channels))  # type: ignore[union-attr]
 
-    def __call__(self, latent: Any, spatial_shape: tuple[int, int]) -> Any:
+    def __call__(
+        self,
+        latent: Any,
+        spatial_shape: tuple[int, int],
+        *,
+        fake_quant_bits: int | None = None,
+    ) -> Any:
         h, w = int(spatial_shape[0]), int(spatial_shape[1])
-        v = self.proj(latent)
+        v = _linear_with_params(self.proj, latent, fake_quant_bits=fake_quant_bits)
         v = mx.reshape(v, (-1, 1, 1, self.channels))  # type: ignore[union-attr]
         return mx.broadcast_to(v, (int(v.shape[0]), h, w, self.channels))  # type: ignore[union-attr]
 
@@ -182,7 +244,34 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         self.head_rgb_1: Any = nn.Conv2d(  # type: ignore[union-attr]
             in_channels=final_ch, out_channels=3, kernel_size=3, padding=1
         )
+        self.decoder_fake_quant_forward_enabled = False
+        self.decoder_fake_quant_bits = 8
         self._siren_init()
+
+    def configure_decoder_fake_quant_forward(
+        self,
+        *,
+        enabled: bool,
+        quant_bits: int = 8,
+    ) -> None:
+        """Enable decoder-weight fake-quant forward QAT for training.
+
+        This affects forward computation only; archive/export still measures
+        real packet bytes independently.
+        """
+
+        bits = int(quant_bits)
+        if bits < 1 or bits > 16:
+            raise ValueError(f"quant_bits must be in [1, 16]; got {quant_bits}")
+        self.decoder_fake_quant_forward_enabled = bool(enabled)
+        self.decoder_fake_quant_bits = bits
+
+    def _fake_quant_bits(self) -> int | None:
+        return (
+            int(self.decoder_fake_quant_bits)
+            if bool(self.decoder_fake_quant_forward_enabled)
+            else None
+        )
 
     def _siren_init(self) -> None:
         w = float(self.cfg.sin_frequency)
@@ -236,7 +325,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         z_m = mx.take(self.latents_mid, pair_indices, axis=0)  # type: ignore[union-attr]
         z_f = mx.take(self.latents_fine, pair_indices, axis=0)  # type: ignore[union-attr]
 
-        h = self.latent_embed(z_c)
+        fake_quant_bits = self._fake_quant_bits()
+        h = _linear_with_params(
+            self.latent_embed,
+            z_c,
+            fake_quant_bits=fake_quant_bits,
+        )
         h = mx.reshape(  # type: ignore[union-attr]
             h,
             (
@@ -248,19 +342,39 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         )
         h = mx.transpose(h, (0, 2, 3, 1))  # type: ignore[union-attr]
         for i, block in enumerate(self.blocks):
-            h = block(h)
+            h = block(h, fake_quant_bits=fake_quant_bits)
             if i == int(self.cfg.mid_injection_block_index):
-                h = h + self.mid_injector(z_m, (int(h.shape[1]), int(h.shape[2])))
+                h = h + self.mid_injector(
+                    z_m,
+                    (int(h.shape[1]), int(h.shape[2])),
+                    fake_quant_bits=fake_quant_bits,
+                )
             if i == int(self.cfg.fine_injection_block_index):
-                h = h + self.fine_injector(z_f, (int(h.shape[1]), int(h.shape[2])))
+                h = h + self.fine_injector(
+                    z_f,
+                    (int(h.shape[1]), int(h.shape[2])),
+                    fake_quant_bits=fake_quant_bits,
+                )
 
         h = _bilinear_resize_nhwc(
             h,
             int(self.cfg.output_height),
             int(self.cfg.output_width),
         )
-        rgb_0 = mx.sigmoid(self.head_rgb_0(h)) * 255.0  # type: ignore[union-attr]
-        rgb_1 = mx.sigmoid(self.head_rgb_1(h)) * 255.0  # type: ignore[union-attr]
+        rgb_0 = mx.sigmoid(
+            _conv2d_with_params(
+                self.head_rgb_0,
+                h,
+                fake_quant_bits=fake_quant_bits,
+            )
+        ) * 255.0  # type: ignore[union-attr]
+        rgb_1 = mx.sigmoid(
+            _conv2d_with_params(
+                self.head_rgb_1,
+                h,
+                fake_quant_bits=fake_quant_bits,
+            )
+        ) * 255.0  # type: ignore[union-attr]
         pair_nhwc = mx.stack([rgb_0, rgb_1], axis=1)  # type: ignore[union-attr]
         return mx.transpose(pair_nhwc, (0, 1, 4, 2, 3))  # type: ignore[union-attr]
 

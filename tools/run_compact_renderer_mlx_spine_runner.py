@@ -4880,6 +4880,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         magnitude_weight=float(coder_qat_magnitude_weight),
         delta_weight=float(coder_qat_delta_weight),
     ).validated()
+    model.configure_decoder_fake_quant_forward(
+        enabled=bool(coder_qat_cfg.enabled),
+        quant_bits=int(coder_qat_cfg.quant_bits),
+    )
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
         return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
@@ -4933,6 +4937,17 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "decoder_fake_quant_forward": {
+                "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
+                "enabled": bool(coder_qat_cfg.enabled),
+                "quant_bits": int(coder_qat_cfg.quant_bits),
+                "quantizer_geometry": (
+                    "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
+                    "per_tensor_fp16_scale_for_biases"
+                ),
+                "target": "decoder weights and decoder biases; latents remain priced by their archive section",
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
             "local_mlx_prefilter": {
                 "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",

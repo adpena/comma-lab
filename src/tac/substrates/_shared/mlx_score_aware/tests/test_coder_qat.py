@@ -66,6 +66,18 @@ def test_quant_residual_is_zero_on_symmetric_int_grid() -> None:
 
 
 @mlx_only
+def test_quant_residual_uses_archive_axis0_scale_for_decoder_matrices() -> None:
+    import mlx.core as mx
+
+    cfg = CoderAwareQATConfig(enabled=True, quant_bits=2)
+    model = _TinyParamTree([[0.0, 0.0, 4.0], [0.5, 0.0, 0.0]])
+    terms = build_decoder_coder_qat_terms(model, cfg)
+    mx.eval(terms["coder_qat_quant_residual"])
+
+    assert float(terms["coder_qat_quant_residual"].item()) == pytest.approx(0.0)
+
+
+@mlx_only
 def test_quant_residual_penalizes_off_grid_decoder_weights() -> None:
     import mlx.core as mx
 
@@ -163,6 +175,10 @@ def test_qat_metadata_avoids_duplicate_authority_fields() -> None:
     assert metadata["schema"] == "coder_aware_decoder_qat.v1"
     assert metadata["enabled"] is True
     assert metadata["quant_bits"] == 4
+    assert metadata["quantizer_geometry"] == (
+        "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
+        "per_tensor_fp16_scale_for_biases"
+    )
     assert metadata["authority"] == "false_macos_mlx_research_signal"
     assert "score_claim" not in metadata
     assert "promotion_eligible" not in metadata

@@ -183,7 +183,10 @@ def _hi_nerv_stack_audit(
     )
     pr95_binding = build_pr95_stack_binding_requirements(
         family="hi_nerv",
-        evidence=build_pr95_stack_binding_evidence(),
+        evidence=build_pr95_stack_binding_evidence(
+            qat_forward=True,
+            coder_aware_regularizer=True,
+        ),
     )
     blockers = [
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle",
@@ -195,7 +198,7 @@ def _hi_nerv_stack_audit(
         "hinerv_official_quantnoise_control_not_bound_to_mlx_trainer",
         "hinerv_torchac_style_bitstream_pipeline_missing",
         "hinerv_decoder_weight_saliency_waterfill_not_in_trainer",
-        "hinerv_pr95_c1a_qat_muon_schedule_not_fully_bound_to_real_trainer",
+        "hinerv_pr95_c1a_muon_ema_archive_schedule_not_fully_bound_to_real_trainer",
         "hinerv_legacy_full_trainer_archive_is_not_hermetic",
         "hinerv_receiver_load_strict_false_schema_drift_risk",
         "hinerv_legacy_trainer_rate_proxy_not_codec_matched",
@@ -236,9 +239,10 @@ def _hi_nerv_stack_audit(
             "byte ceiling selects capacity candidate before launch",
             "PR95-faithful staged curriculum is required for non-smoke runs",
             "real SegNet/PoseNet teachers must both be positive for frontier-targeted runs",
-            "coder-aware regularization, true QAT-forward, and recon_pixel_weight must be candidate-specific",
+            "decoder fake-quant forward is wired; exact byte oracle still chooses int2/int4/int8/fp16 per candidate",
+            "coder-aware regularization and recon_pixel_weight must be candidate-specific",
             "decoder-weight saliency/waterfill must feed the real MLX trainer, not only posthoc export",
-            "PR95 C1a/QAT/Muon stages remain mandatory control-arm bindings, not optional polish",
+            "PR95 C1a/Muon/EMA/archive-eval stages remain mandatory control-arm bindings, not optional polish",
         ],
         "anti_arbitrariness_requirements": [
             "no arbitrary latent_dim/embed_dim/decoder_channel launch without budget row",

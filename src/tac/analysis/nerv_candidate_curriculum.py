@@ -204,10 +204,7 @@ def build_hinerv_candidate_curriculum_plan(
             pr95_staged_curriculum=epochs >= 8,
             real_segnet_teacher=_num(segnet_distillation_weight) > 0.0,
             real_posenet_teacher=_num(pose_distillation_weight) > 0.0,
-            # The current HiNeRV scorer loop applies a real decoder-weight
-            # quant-grid/entropy-shaping regularizer. It does NOT yet run the
-            # renderer through fake-quantized weights during the forward pass.
-            qat_forward=False,
+            qat_forward=effective_coder_regularizer,
             coder_aware_regularizer=effective_coder_regularizer,
             muon_adamw_partition=epochs >= 8,
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
@@ -242,7 +239,7 @@ def build_hinerv_candidate_curriculum_plan(
         "coder_pressure": {
             "enabled": effective_coder_regularizer,
             "regularizer_enabled": effective_coder_regularizer,
-            "fake_quant_forward_enabled": False,
+            "fake_quant_forward_enabled": effective_coder_regularizer,
             "quant_bits": int(q_bits),
             "candidate_decoder_codec": str(codec),
             "candidate_decoder_codec_bits": int(codec_bits),
@@ -250,8 +247,9 @@ def build_hinerv_candidate_curriculum_plan(
                 "modelsize_candidate" if candidate_selected else "manual_cli_knobs"
             ),
             "implementation_status": (
-                "decoder_weight_quant_residual_regularizer_only_"
-                "fake_quant_forward_missing"
+                "decoder_weight_fake_quant_forward_plus_quant_residual_regularizer"
+                if effective_coder_regularizer
+                else "disabled"
             ),
         },
         "byte_oracle_logging": byte_feedback,

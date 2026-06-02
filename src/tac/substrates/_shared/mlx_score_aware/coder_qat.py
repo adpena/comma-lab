@@ -32,6 +32,7 @@ DEFAULT_DECODER_EXCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "quantizer",
 )
 CODER_QAT_AUTHORITY = "false_macos_mlx_research_signal"
+_MIN_POSITIVE_FP16_SCALE = 5.960464477539063e-08
 
 
 @dataclass(frozen=True)
@@ -120,6 +121,10 @@ def coder_qat_metadata(cfg: CoderAwareQATConfig) -> dict[str, Any]:
         "quant_residual_weight": float(c.quant_residual_weight),
         "magnitude_weight": float(c.magnitude_weight),
         "delta_weight": float(c.delta_weight),
+        "quantizer_geometry": (
+            "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
+            "per_tensor_fp16_scale_for_biases"
+        ),
         "include_substrings": list(c.include_substrings),
         "exclude_substrings": list(c.exclude_substrings),
         "target": (
@@ -165,6 +170,27 @@ def _selected_arrays(model: Any, cfg: CoderAwareQATConfig) -> list[tuple[str, An
     return rows
 
 
+def _archive_quant_scale(values: Any, *, quant_bits: int) -> tuple[Any, Any]:
+    """Return archive-shaped ``(normalized, scale)`` for decoder QAT pressure."""
+
+    mx = require_mlx_for_harness()
+    levels = max(1, (1 << (int(quant_bits) - 1)) - 1)
+    abs_values = mx.abs(values)
+    if len(values.shape) >= 2 and int(values.shape[0]) > 1:
+        reduce_axes = tuple(range(1, len(values.shape)))
+        abs_max = mx.max(abs_values, axis=reduce_axes, keepdims=True)
+    else:
+        abs_max = mx.max(abs_values)
+    raw_scale = abs_max / float(levels)
+    scale32 = mx.where(
+        abs_max > 0.0,
+        mx.maximum(raw_scale, _MIN_POSITIVE_FP16_SCALE),
+        1.0,
+    )
+    scale = mx.stop_gradient(scale32.astype(mx.float16).astype(mx.float32))
+    return values / scale, scale
+
+
 def build_decoder_coder_qat_terms(
     model: Any,
     cfg: CoderAwareQATConfig,
@@ -183,16 +209,17 @@ def build_decoder_coder_qat_terms(
         return {}
 
     arrays = _selected_arrays(model, c)
-    levels = max(1, (1 << (int(c.quant_bits) - 1)) - 1)
     quant_terms: list[Any] = []
     magnitude_terms: list[Any] = []
     delta_terms: list[Any] = []
 
     for _name, arr in arrays:
         values = arr.astype(mx.float32)
-        scale = mx.stop_gradient(mx.max(mx.abs(values)) + float(c.eps))
-        normalized = values / scale
-        quantized = mx.stop_gradient(mx.round(normalized * levels) / levels)
+        normalized, _scale = _archive_quant_scale(values, quant_bits=c.quant_bits)
+        levels = max(1, (1 << (int(c.quant_bits) - 1)) - 1)
+        quantized = mx.stop_gradient(
+            mx.clip(mx.round(normalized), -float(levels), float(levels))
+        )
         quant_terms.append(mx.mean((normalized - quantized) ** 2))
         magnitude_terms.append(mx.mean(mx.abs(normalized)))
         flat = mx.reshape(normalized, (-1,))

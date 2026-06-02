@@ -156,6 +156,80 @@ def test_mlx_renderer_generic_resize_path_matches_pytorch() -> None:
 
 
 @skip_no_mlx
+def test_mlx_decoder_fake_quant_uses_archive_axis0_scale() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.mlx_renderer import _fake_quant_symmetric_ste
+
+    values = mx.array(
+        [
+            [1.0, 1.7, 4.0],
+            [0.50, 0.20, -0.10],
+        ],
+        dtype=mx.float32,
+    )
+    quantized = _fake_quant_symmetric_ste(values, bits=2)
+    mx.eval(quantized)
+
+    np.testing.assert_allclose(
+        np.asarray(quantized),
+        np.asarray(
+            [
+                [0.0, 0.0, 4.0],
+                [0.50, 0.0, -0.0],
+            ],
+            dtype=np.float32,
+        ),
+        atol=0.0,
+    )
+
+
+@skip_no_mlx
+def test_mlx_decoder_fake_quant_forward_changes_surface_without_mutating_export() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    pair_indices = mx.array([0, 1, 2], dtype=mx.int32)
+    baseline = model(pair_indices)
+    mx.eval(baseline)
+    exported_before = model.export_state_dict()
+
+    model.configure_decoder_fake_quant_forward(enabled=True, quant_bits=2)
+    quantized = model(pair_indices)
+    mx.eval(quantized)
+    exported_after = model.export_state_dict()
+
+    assert tuple(int(s) for s in quantized.shape) == tuple(
+        int(s) for s in baseline.shape
+    )
+    assert np.isfinite(np.asarray(quantized)).all()
+    assert float(mx.min(quantized)) >= 0.0
+    assert float(mx.max(quantized)) <= 255.0
+    assert float(mx.max(mx.abs(quantized - baseline))) > 1.0e-7
+    for name, before in exported_before.items():
+        np.testing.assert_array_equal(before, exported_after[name])
+
+    model.configure_decoder_fake_quant_forward(enabled=False, quant_bits=2)
+    restored = model(pair_indices)
+    mx.eval(restored)
+    assert float(mx.max(mx.abs(restored - baseline))) < 1.0e-6
+
+
+@skip_no_mlx
+def test_mlx_decoder_fake_quant_rejects_invalid_quant_bits() -> None:
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    model = HinervSubstrateMLX(_smoke_cfg())
+    with pytest.raises(ValueError, match="quant_bits"):
+        model.configure_decoder_fake_quant_forward(enabled=True, quant_bits=0)
+
+
+@skip_no_mlx
 def test_mlx_exported_state_dict_matches_pytorch_forward() -> None:
     import mlx.core as mx
     import numpy as np
