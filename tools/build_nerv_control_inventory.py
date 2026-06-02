@@ -23,6 +23,8 @@ from tac.analysis.nerv_control_inventory import (  # noqa: E402
 )
 from tac.repo_io import write_json  # noqa: E402
 
+RESEARCH_DIR = REPO_ROOT / ".omx" / "research"
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -87,48 +89,36 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     focus = tuple(args.focus_family or ("hi_nerv", "snerv"))
-    hinerv_archive_size_ladder_report = None
-    if args.hinerv_archive_size_ladder_json is not None:
-        hinerv_archive_size_ladder_report = json.loads(
-            args.hinerv_archive_size_ladder_json.expanduser().read_text(
-                encoding="utf-8"
-            )
-        )
-    hinerv_archive_ladder_waterfill_report = None
-    if args.hinerv_archive_ladder_waterfill_json is not None:
-        hinerv_archive_ladder_waterfill_report = json.loads(
-            args.hinerv_archive_ladder_waterfill_json.expanduser().read_text(
-                encoding="utf-8"
-            )
-        )
-    snerv_trained_ladder_waterfill_report = None
-    if args.snerv_trained_ladder_waterfill_json is not None:
-        snerv_trained_ladder_waterfill_report = json.loads(
-            args.snerv_trained_ladder_waterfill_json.expanduser().read_text(
-                encoding="utf-8"
-            )
-        )
-    hinerv_decoder_weight_saliency_report = None
-    if args.hinerv_decoder_weight_saliency_json is not None:
-        hinerv_decoder_weight_saliency_report = json.loads(
-            args.hinerv_decoder_weight_saliency_json.expanduser().read_text(
-                encoding="utf-8"
-            )
-        )
-    snerv_waterfill_mode_assignment_report = None
-    if args.snerv_waterfill_mode_assignment_json is not None:
-        snerv_waterfill_mode_assignment_report = json.loads(
-            args.snerv_waterfill_mode_assignment_json.expanduser().read_text(
-                encoding="utf-8"
-            )
-        )
-    snerv_decoder_mode_probe_report = None
-    if args.snerv_decoder_mode_probe_json is not None:
-        snerv_decoder_mode_probe_report = json.loads(
-            args.snerv_decoder_mode_probe_json.expanduser().read_text(
-                encoding="utf-8"
-            )
-        )
+    hinerv_archive_size_ladder_report = _load_optional_report(
+        args.hinerv_archive_size_ladder_json,
+        pattern="hinerv_archive_size_ladder*.json",
+        schema="hinerv_archive_size_ladder.v1",
+    )
+    hinerv_archive_ladder_waterfill_report = _load_optional_report(
+        args.hinerv_archive_ladder_waterfill_json,
+        pattern="hinerv_archive_ladder_waterfill*.json",
+        schema="hinerv_archive_ladder_waterfill.v1",
+    )
+    snerv_trained_ladder_waterfill_report = _load_optional_report(
+        args.snerv_trained_ladder_waterfill_json,
+        pattern="snerv_trained_ladder_waterfill*.json",
+        schema="snerv_trained_ladder_waterfill.v1",
+    )
+    hinerv_decoder_weight_saliency_report = _load_optional_report(
+        args.hinerv_decoder_weight_saliency_json,
+        pattern="hinerv_decoder_weight_saliency_replay*.json",
+        schema="hinerv_decoder_weight_saliency_replay.v1",
+    )
+    snerv_waterfill_mode_assignment_report = _load_optional_report(
+        args.snerv_waterfill_mode_assignment_json,
+        pattern="snerv_waterfill_mode_assignment*.json",
+        schema="snerv_waterfill_mode_assignment.v1",
+    )
+    snerv_decoder_mode_probe_report = _load_optional_report(
+        args.snerv_decoder_mode_probe_json,
+        pattern="snerv_decoder_mode_assignment_probe*.json",
+        schema="snerv_decoder_mode_assignment_probe.v1",
+    )
     report = build_nerv_control_inventory(
         focus_families=focus,
         repo_root=args.repo_root,
@@ -162,6 +152,33 @@ def main(argv: list[str] | None = None) -> int:
         )
     print(json.dumps(_summary(report), sort_keys=True))
     return 0
+
+
+def _load_optional_report(
+    path: Path | None,
+    *,
+    pattern: str,
+    schema: str,
+) -> dict[str, Any] | None:
+    if path is not None:
+        return _load_json(path)
+    for candidate in sorted(RESEARCH_DIR.glob(pattern), reverse=True):
+        payload = _load_json(candidate)
+        if payload.get("schema") == schema:
+            payload.setdefault("source_artifact_path", candidate.as_posix())
+            return payload
+    return None
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    source = path.expanduser()
+    if not source.is_absolute():
+        source = REPO_ROOT / source
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise SystemExit(f"{source}: expected JSON object")
+    payload.setdefault("source_artifact_path", source.as_posix())
+    return payload
 
 
 def _summary(report: dict[str, Any]) -> dict[str, Any]:

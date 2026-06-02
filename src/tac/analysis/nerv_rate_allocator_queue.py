@@ -225,6 +225,41 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             ),
             "runnable_now": False,
         }
+    if work_order_type == "decoder_weight_waterfill_archive_replay":
+        payload = (
+            work_order.get("payload", {})
+            if isinstance(work_order.get("payload"), Mapping)
+            else {}
+        )
+        replay_command_argv = _string_list(
+            payload.get("archive_ladder_replay_command_argv")
+        )
+        replay_output_dir = str(payload.get("archive_ladder_replay_output_dir") or "")
+        replay_runnable = bool(replay_command_argv and replay_output_dir)
+        family = str(payload.get("family") or "")
+        producer_tool, existing_tool_ingress = _waterfill_replay_tools(family)
+        return {
+            "ingest_kind": "decoder_weight_waterfill_archive_replay",
+            "planner_action": planner_action,
+            "producer_tool": producer_tool,
+            "existing_tool_ingress": existing_tool_ingress,
+            "missing_tool_or_proof": (
+                "full_video_decoder_weight_saliency_replay_and_paired_exact_axes"
+            ),
+            "local_replay_runnable_now": replay_runnable,
+            "local_replay_command_argv": replay_command_argv,
+            "local_replay_command_hint": payload.get(
+                "archive_ladder_replay_command_hint"
+            ),
+            "local_replay_axis_tag": payload.get(
+                "archive_ladder_replay_command_axis_tag"
+            ),
+            "local_replay_output_dir": replay_output_dir or None,
+            "local_replay_output_is_promotion_authority": False,
+            "archive_bytes": payload.get("archive_bytes"),
+            "archive_sha256": payload.get("archive_sha256"),
+            "runnable_now": False,
+        }
     if work_order_type == "receiver_visible_decoder_mode_assignment":
         payload = (
             work_order.get("payload", {})
@@ -297,6 +332,20 @@ def _precision_modes_from_policy(value: Any) -> list[str]:
         if mode:
             modes.append(str(mode))
     return _dedupe_strings(modes)
+
+
+def _waterfill_replay_tools(family: str) -> tuple[str, str]:
+    if family in {"hi_nerv", "hinerv"}:
+        return (
+            "tools/build_hinerv_archive_ladder_waterfill.py",
+            "tools/build_hinerv_archive_size_ladder.py",
+        )
+    if family == "snerv":
+        return (
+            "tools/build_snerv_trained_ladder_waterfill.py",
+            "tools/prove_snerv_receiver_archive.py",
+        )
+    return ("unknown_decoder_weight_waterfill_producer", "unknown_receiver_replay_tool")
 
 
 def _target_consumer_index(rows: Sequence[Mapping[str, Any]]) -> dict[str, list[str]]:

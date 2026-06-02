@@ -275,6 +275,57 @@ def _control_inventory_evidence_units(
 ) -> list[dict[str, Any]]:
     units: list[dict[str, Any]] = []
     for family, report in _mapping_items(
+        control_inventory.get("decoder_weight_waterfill_reports")
+    ):
+        rows = _mapping_list(report.get("waterfill_rows"))
+        for index, row in enumerate(rows):
+            row_id = str(row.get("row_id") or f"waterfill_row_{index:04d}")
+            replay_command_argv = _string_list(
+                row.get("archive_ladder_replay_command_argv")
+            )
+            replay_output_dir = row.get("archive_ladder_replay_output_dir")
+            blockers = _string_list(report.get("blockers")) + _string_list(
+                row.get("blockers")
+            )
+            if replay_command_argv and not replay_output_dir:
+                blockers.append("decoder_weight_waterfill_replay_output_dir_missing")
+            if replay_output_dir and not replay_command_argv:
+                blockers.append("decoder_weight_waterfill_replay_command_missing")
+            units.append(
+                {
+                    "unit_id": f"{family}_{row_id}_decoder_weight_waterfill",
+                    "unit_type": "decoder_weight_waterfill_report",
+                    "family": str(family),
+                    "row_id": row_id,
+                    "report_path": report.get("report_path"),
+                    "archive_bytes": row.get("archive_bytes"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "state_npz_artifact_sha256": row.get(
+                        "state_npz_artifact_sha256"
+                    ),
+                    "waterfill_summary": row.get("waterfill_summary") or {},
+                    "archive_ladder_replay_command_axis_tag": row.get(
+                        "archive_ladder_replay_command_axis_tag"
+                    ),
+                    "archive_ladder_replay_command_argv": replay_command_argv,
+                    "archive_ladder_replay_command_hint": row.get(
+                        "archive_ladder_replay_command_hint"
+                    ),
+                    "archive_ladder_replay_output_dir": replay_output_dir,
+                    "target_consumers": [
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "cathedral_autopilot",
+                    ],
+                    "planner_action": (
+                        "run_decoder_weight_waterfill_replay_against_archive_ladder"
+                    ),
+                    "blockers": _unique(blockers),
+                    "predicted_delta_adjustment": 0.0,
+                    **FALSE_AUTHORITY,
+                }
+            )
+    for family, report in _mapping_items(
         control_inventory.get("decoder_weight_saliency_replays")
     ):
         blockers = _string_list(report.get("blockers"))

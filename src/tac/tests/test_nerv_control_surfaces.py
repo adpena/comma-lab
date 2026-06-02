@@ -238,6 +238,8 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
         for row in orders.values()
     )
     assert "bind_hi_nerv_decoder_weight_saliency_to_waterfill" in orders
+    assert "replay_hi_nerv_hi_nerv_local_tiny_decoder_weight_waterfill" in orders
+    assert "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill" in orders
     assert "compile_snerv_snerv_local_tiny_decoder_modes_to_receiver" in orders
     assert "replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust" in orders
     zero_order = orders["route_bitmask_and_zero_packing_to_rate_allocator"]
@@ -259,6 +261,24 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
         "/snerv_local_tiny"
     )
     assert "receiver_decoded_byte_accounting_required" in mode_order["blockers"]
+    waterfill_order = orders["replay_hi_nerv_hi_nerv_local_tiny_decoder_weight_waterfill"]
+    assert waterfill_order["work_order_type"] == "decoder_weight_waterfill_archive_replay"
+    assert waterfill_order["payload"]["archive_ladder_replay_command_argv"] == [
+        ".venv/bin/python",
+        "tools/build_hinerv_archive_size_ladder.py",
+        "--row-id",
+        "hi_nerv_local_tiny",
+    ]
+    assert waterfill_order["payload"]["archive_ladder_replay_output_dir"].endswith(
+        "/hi_nerv_local_tiny"
+    )
+    assert "full_video_decoder_weight_saliency_replay_missing" in waterfill_order[
+        "blockers"
+    ]
+    snerv_waterfill_order = orders[
+        "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill"
+    ]
+    assert snerv_waterfill_order["payload"]["archive_ladder_replay_command_argv"] == []
     probe_order = orders["replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust"]
     assert probe_order["payload"]["candidate_count"] == 1
     assert probe_order["payload"]["receiver_archive_packet_path"] == (
@@ -420,6 +440,32 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     assert saliency_row["planner_ingest"]["ingest_kind"] == (
         "decoder_weight_saliency_waterfill_binding"
     )
+    waterfill_row = rows["replay_hi_nerv_hi_nerv_local_tiny_decoder_weight_waterfill"]
+    assert waterfill_row["planner_ingest"]["ingest_kind"] == (
+        "decoder_weight_waterfill_archive_replay"
+    )
+    assert waterfill_row["planner_ingest"]["local_replay_runnable_now"] is True
+    assert waterfill_row["planner_ingest"]["local_replay_command_argv"] == [
+        ".venv/bin/python",
+        "tools/build_hinerv_archive_size_ladder.py",
+        "--row-id",
+        "hi_nerv_local_tiny",
+    ]
+    assert (
+        waterfill_row["planner_ingest"]["local_replay_output_is_promotion_authority"]
+        is False
+    )
+    assert waterfill_row["planner_ingest"]["runnable_now"] is False
+    snerv_waterfill_row = rows[
+        "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill"
+    ]
+    assert snerv_waterfill_row["planner_ingest"]["producer_tool"] == (
+        "tools/build_snerv_trained_ladder_waterfill.py"
+    )
+    assert snerv_waterfill_row["planner_ingest"]["existing_tool_ingress"] == (
+        "tools/prove_snerv_receiver_archive.py"
+    )
+    assert snerv_waterfill_row["planner_ingest"]["local_replay_runnable_now"] is False
     for row in queue["queue_rows"]:
         assert row["score_claim"] is False
         assert row["score_claim_valid"] is False
@@ -484,6 +530,67 @@ def _synthetic_rate_bridge() -> dict:
                 "saliency_group_count": 1,
                 "blockers": ["full_video_coverage_missing"],
             }
+        },
+        "decoder_weight_waterfill_reports": {
+            "hi_nerv": {
+                "schema": "hinerv_archive_ladder_waterfill.v1",
+                "report_path": ".omx/research/hinerv_archive_ladder_waterfill.json",
+                "row_count": 1,
+                "waterfill_rows": [
+                    {
+                        "row_id": "hi_nerv_local_tiny",
+                        "archive_bytes": 134_938,
+                        "archive_sha256": "e" * 64,
+                        "state_npz_artifact_sha256": "f" * 64,
+                        "waterfill_summary": {
+                            "group_count": 24,
+                            "total_selected_byte_delta": -307_010,
+                        },
+                        "archive_ladder_replay_command_axis_tag": (
+                            "[planning/control:false-authority]"
+                        ),
+                        "archive_ladder_replay_command_argv": [
+                            ".venv/bin/python",
+                            "tools/build_hinerv_archive_size_ladder.py",
+                            "--row-id",
+                            "hi_nerv_local_tiny",
+                        ],
+                        "archive_ladder_replay_command_hint": (
+                            ".venv/bin/python tools/build_hinerv_archive_size_ladder.py "
+                            "--row-id hi_nerv_local_tiny"
+                        ),
+                        "archive_ladder_replay_output_dir": (
+                            "/Volumes/VertigoDataTier/pact/"
+                            "hinerv_archive_ladder_waterfill_replay/"
+                            "hi_nerv_local_tiny"
+                        ),
+                        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                    }
+                ],
+                "blockers": [
+                    "decoder_weight_saliency_replay_required_for_authority"
+                ],
+            },
+            "snerv": {
+                "schema": "snerv_trained_ladder_waterfill.v1",
+                "report_path": ".omx/research/snerv_trained_ladder_waterfill.json",
+                "row_count": 1,
+                "waterfill_rows": [
+                    {
+                        "row_id": "snerv_trained_ladder_row_archive",
+                        "archive_bytes": 1_188_221,
+                        "archive_sha256": "9" * 64,
+                        "archive_ladder_replay_command_argv": [],
+                        "archive_ladder_replay_output_dir": None,
+                        "waterfill_summary": {
+                            "group_count": 3,
+                            "total_selected_byte_delta": 0,
+                        },
+                        "blockers": ["sample_pair_count_below_full600"],
+                    }
+                ],
+                "blockers": ["sample_pair_count_below_full600"],
+            },
         },
         "decoder_mode_assignment_reports": {
             "snerv": {

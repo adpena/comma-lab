@@ -341,6 +341,20 @@ def _decoder_weight_waterfill_reports(
                     "archive_sha256": row.get("archive_sha256"),
                     "state_npz_artifact_sha256": row.get("state_npz_artifact_sha256"),
                     "waterfill_summary": row.get("waterfill_summary"),
+                    "archive_ladder_replay_command_axis_tag": row.get(
+                        "archive_ladder_replay_command_axis_tag"
+                    ),
+                    "archive_ladder_replay_command_argv": list(
+                        row.get("archive_ladder_replay_command_argv") or ()
+                    )
+                    if row.get("archive_ladder_replay_command_argv")
+                    else None,
+                    "archive_ladder_replay_command_hint": row.get(
+                        "archive_ladder_replay_command_hint"
+                    ),
+                    "archive_ladder_replay_output_dir": row.get(
+                        "archive_ladder_replay_output_dir"
+                    ),
                     "blockers": list(row.get("blockers") or ()),
                 }
                 for row in report.get("rows", ())

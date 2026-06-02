@@ -328,6 +328,65 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                 )
             )
             continue
+        if unit_type == "decoder_weight_waterfill_report":
+            row_id = str(unit.get("row_id") or "unknown")
+            orders.append(
+                _work_order(
+                    work_order_id=f"replay_{family}_{row_id}_decoder_weight_waterfill",
+                    work_order_type="decoder_weight_waterfill_archive_replay",
+                    target_consumers=[
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "cathedral_autopilot",
+                    ],
+                    planner_action=(
+                        "execute_decoder_weight_waterfill_archive_ladder_replay"
+                    ),
+                    source_unit_id=str(unit.get("unit_id") or ""),
+                    priority=9,
+                    receiver_precision_modes=[
+                        "fp16_protected",
+                        "int8_protected",
+                        "int4",
+                        "int2",
+                        "zero",
+                    ],
+                    rationale=(
+                        "turn measured decoder-weight waterfill rows into "
+                        "receiver replay commands before long-run training "
+                        "or exact dispatch can consume them"
+                    ),
+                    payload={
+                        "family": family,
+                        "row_id": row_id,
+                        "report_path": unit.get("report_path"),
+                        "archive_bytes": unit.get("archive_bytes"),
+                        "archive_sha256": unit.get("archive_sha256"),
+                        "state_npz_artifact_sha256": unit.get(
+                            "state_npz_artifact_sha256"
+                        ),
+                        "waterfill_summary": unit.get("waterfill_summary") or {},
+                        "archive_ladder_replay_command_axis_tag": unit.get(
+                            "archive_ladder_replay_command_axis_tag"
+                        ),
+                        "archive_ladder_replay_command_argv": _string_list(
+                            unit.get("archive_ladder_replay_command_argv")
+                        ),
+                        "archive_ladder_replay_command_hint": unit.get(
+                            "archive_ladder_replay_command_hint"
+                        ),
+                        "archive_ladder_replay_output_dir": unit.get(
+                            "archive_ladder_replay_output_dir"
+                        ),
+                    },
+                    blockers=[
+                        *blockers,
+                        "full_video_decoder_weight_saliency_replay_missing",
+                        "paired_contest_cpu_cuda_auth_eval_missing",
+                    ],
+                )
+            )
+            continue
         if unit_type == "decoder_mode_assignment_route":
             row_id = str(unit.get("row_id") or "unknown")
             modes = _receiver_precision_modes_from_unit(unit)
