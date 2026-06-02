@@ -24,6 +24,7 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
     _parse_args,
     _require_scorer_upstream_dir_for_distillation,
+    _resolve_execute_modelsize_candidate,
     _resolve_source_video_path,
     adapt_pr95_mlx_report_to_spine,
     adapt_pr95_stage8_report_to_spine,
@@ -155,6 +156,25 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         repo_root=REPO_ROOT,
     )
 
+    assert report["nerv_oss_flag_audit"]["schema"] == "nerv_oss_flag_audit.v1"
+    assert "--modelsize" in report["nerv_oss_flag_audit"]["hnerv_high_ev_flags"]
+    assert "--modelsize" in report["nerv_oss_flag_audit"]["snerv_high_ev_flags"]
+    assert "--quant-level" in report["nerv_oss_flag_audit"]["hinerv_high_ev_flags"]
+    assert report["hinerv_modelsize_budget"]["schema"] == "nerv_modelsize_budget.v1"
+    assert report["hinerv_modelsize_budget"]["selected_candidate_count"] > 0
+    assert report["hinerv_modelsize_budget"]["score_claim"] is False
+    assert report["snerv_modelsize_budget"]["schema"] == "snerv_modelsize_budget.v1"
+    assert report["snerv_modelsize_budget"]["selected_candidate_count"] > 0
+    assert report["snerv_modelsize_budget"]["score_claim"] is False
+    assert report["nerv_stack_synergy_audit"]["schema"] == (
+        "nerv_stack_synergy_audit.v1"
+    )
+    assert report["nerv_stack_synergy_audit"]["score_claim"] is False
+    assert {row["stack_id"] for row in report["nerv_stack_synergy_audit"]["stacks"]} == {
+        "hi_nerv",
+        "snerv",
+    }
+
     families = {row["family"]: row for row in report["target_family_rows"]}
     assert "pr95_hnerv" in families
     assert "hi_nerv" in families
@@ -277,6 +297,16 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     assert "export_hi_nerv_mlx_archive" in rows[("hi_nerv", 178_000)][
         "archive_exporter"
     ]
+    modelsize_budget = rows[("hi_nerv", 178_000)]["modelsize_budget"]
+    assert modelsize_budget["schema"] == "nerv_modelsize_budget.v1"
+    assert modelsize_budget["hard_byte_ceilings"] == [178_000]
+    assert modelsize_budget["selected_candidate_count"] > 0
+    assert modelsize_budget["ready_for_exact_eval_dispatch"] is False
+    snerv_budget = rows[("snerv", 178_000)]["modelsize_budget"]
+    assert snerv_budget["schema"] == "snerv_modelsize_budget.v1"
+    assert snerv_budget["hard_byte_ceilings"] == [178_000]
+    assert snerv_budget["selected_candidate_count"] > 0
+    assert snerv_budget["ready_for_exact_eval_dispatch"] is False
     campaign_plan = rows[("hi_nerv", 178_000)][
         "score_aware_carrier_training_plan"
     ]
@@ -309,6 +339,48 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         rows[("pact_nerv_selector_v4", 178_000)]["ready_for_exact_eval_dispatch"]
         is False
     )
+
+
+def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() -> None:
+    hi = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000, 285_000),
+    )
+    sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000, 285_000),
+    )
+
+    assert hi is not None
+    assert hi["family"] == "hi_nerv"
+    assert hi["hard_byte_ceiling"] == 178_000
+    assert hi["nominal_under_ceiling"] is True
+    assert sn is not None
+    assert sn["family"] == "snerv"
+    assert sn["hard_byte_ceiling"] == 285_000
+    assert sn["nominal_under_ceiling"] is True
+    explicit = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id=hi["candidate_id"],
+        hard_byte_ceilings=(178_000, 285_000),
+    )
+    assert explicit == hi
+    assert (
+        _resolve_execute_modelsize_candidate(
+            family="hi_nerv",
+            candidate_id="manual",
+            hard_byte_ceilings=(178_000,),
+        )
+        is None
+    )
+    with pytest.raises(runner_mod.CompactRendererMlxSpineRunnerError):
+        _resolve_execute_modelsize_candidate(
+            family="snerv",
+            candidate_id="missing-candidate",
+            hard_byte_ceilings=(178_000,),
+        )
 
 
 def test_active_campaign_lock_identity_excludes_output_dir(tmp_path: Path) -> None:
@@ -727,6 +799,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "2",
             "--post-export-materializer-max-experiments",
             "1",
+            "--modelsize-candidate-id",
+            "manual",
         ]
     )
     sn = _parse_args(["--execute-family", "snerv", "--num-pairs", "128"])
@@ -746,8 +820,10 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.post_export_materializer_max_steps == 3
     assert hi.post_export_materializer_max_parallel == 2
     assert hi.post_export_materializer_max_experiments == 1
+    assert hi.modelsize_candidate_id == "manual"
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
+    assert sn.modelsize_candidate_id == "auto"
     assert sn.post_export_materializer_max_experiments == 1
 
 
@@ -1863,6 +1939,20 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         embed_dim=4,
         decoder_channel=4,
         decoder_codec="int2_scale_bundled",
+        modelsize_candidate={
+            "schema": "hinerv_modelsize_candidate.v1",
+            "family": "hi_nerv",
+            "candidate_id": "hinerv-unit-candidate",
+            "latent_dim": 12,
+            "embed_dim": 16,
+            "decoder_channel": 6,
+            "decoder_codec": "int4_mixed",
+            "hard_byte_ceiling": 178_000,
+            "nominal_under_ceiling": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         coder_aware_qat=True,
         coder_qat_quant_bits=4,
         coder_qat_quant_residual_weight=0.001,
@@ -1876,7 +1966,10 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     )
 
     assert captured_train_kwargs["coder_aware_qat"] is True
-    assert captured_train_kwargs["decoder_codec"] == "int2_scale_bundled"
+    assert captured_train_kwargs["latent_dim"] == 12
+    assert captured_train_kwargs["embed_dim"] == 16
+    assert captured_train_kwargs["decoder_channel"] == 6
+    assert captured_train_kwargs["decoder_codec"] == "int4_mixed"
     assert captured_train_kwargs["coder_qat_quant_bits"] == 4
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
@@ -1894,7 +1987,14 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         "delta_weight": 0.0002,
         "authority": "false_macos_mlx_research_signal",
     }
-    assert out["score_aware_training"]["decoder_codec"] == "int2_scale_bundled"
+    selection = out["modelsize_candidate_selection"]
+    assert selection["selection_mode"] == "planner_candidate"
+    assert selection["candidate"]["candidate_id"] == "hinerv-unit-candidate"
+    assert selection["launch_latent_dim"] == 12
+    assert selection["launch_embed_dim"] == 16
+    assert selection["launch_decoder_channel"] == 6
+    assert selection["launch_decoder_codec"] == "int4_mixed"
+    assert out["score_aware_training"]["decoder_codec"] == "int4_mixed"
     assert out["score_aware_training"]["recon_pixel_weight"][
         "source_kind"
     ] == "file"
@@ -1955,8 +2055,10 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     monkeypatch,
 ) -> None:
     packet = b"SNERVPACKET"
+    captured_advisory_kwargs: dict[str, object] = {}
 
     def fake_run_snerv_advisory(**kwargs):
+        captured_advisory_kwargs.update(kwargs)
         assert kwargs["n_pairs"] == 2
 
         def as_jsonable() -> dict[str, object]:
@@ -1976,7 +2078,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             n_pairs=2,
             receiver_archive_packet=packet,
             as_jsonable=as_jsonable,
-            levels=3,
+            levels=int(kwargs["levels"]),
             wavelet="db2",
             score_linf=12.0,
             score_l2=13.0,
@@ -2062,12 +2164,37 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
         epochs=3,
         hard_byte_ceilings=(178_000, 216_000),
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        modelsize_candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "snerv-unit-candidate",
+            "levels": 2,
+            "bits_per_coeff": 1.5,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int2_symmetric",
+            "hard_byte_ceiling": 178_000,
+            "nominal_under_ceiling": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         repo_root=REPO_ROOT,
     )
 
     assert out["mode"] == "executed_snerv_archive_bound_advisory_and_exported"
     assert out["execute_family"] == "snerv"
     assert out["training_executed"] is False
+    assert captured_advisory_kwargs["levels"] == 2
+    assert captured_advisory_kwargs["target_bits_per_coeff"] == 1.5
+    assert captured_advisory_kwargs["step_map_coder_mode"] == "waterfill"
+    assert captured_advisory_kwargs["step_map_waterfill_bits_per_coeff"] == 0.5
+    assert captured_advisory_kwargs["decoder_payload_codec"] == "int2_symmetric"
+    selection = out["modelsize_candidate_selection"]
+    assert selection["selection_mode"] == "planner_candidate"
+    assert selection["candidate"]["candidate_id"] == "snerv-unit-candidate"
+    assert selection["launch_levels"] == 2
+    assert selection["launch_bits_per_coeff"] == 1.5
+    assert selection["launch_decoder_payload_codec"] == "int2_symmetric"
     assert Path(out["archive_path"]).is_file()
     assert out["archive_bytes"] == Path(out["archive_path"]).stat().st_size
     assert Path(out["receiver_archive_packet_path"]).read_bytes() == packet
@@ -2092,6 +2219,9 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert out["score_aware_training"]["status"] == (
         "executed_cpu_advisory_mlx_native_training_missing"
     )
+    assert out["score_aware_training"]["target_bits_per_coeff"] == 1.5
+    assert out["score_aware_training"]["step_map_coder_mode"] == "waterfill"
+    assert out["score_aware_training"]["decoder_payload_codec"] == "int2_symmetric"
     assert out["score_aware_training"]["beats_frontier_rate"] is True
     assert out["reusable_optimization_followups"][
         "applies_after_byte_closed_export"

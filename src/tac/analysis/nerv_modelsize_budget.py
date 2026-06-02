@@ -1,0 +1,964 @@
+# SPDX-License-Identifier: MIT
+"""NeRV-family model-size budget planner.
+
+The HNeRV/SNeRV upstreams expose ``--modelsize`` as a parameter-budget knob.
+For this contest, the useful inverse is stricter: pick architecture capacity
+from a charged archive-byte ceiling, then verify with the real archive exporter.
+
+This module is deliberately planner-grade, not score authority. It produces
+machine-readable size candidates and OSS flag coverage so the queue runner can
+stop launching one arbitrary compact HiNeRV point.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from math import ceil
+from typing import Any
+
+CONTEST_RATE_DENOM_BYTES = 37_545_489
+CONTEST_RATE_MULTIPLIER = 25.0
+RATE_SCORE_PER_BYTE = CONTEST_RATE_MULTIPLIER / CONTEST_RATE_DENOM_BYTES
+
+SCHEMA = "nerv_modelsize_budget.v1"
+OSS_FLAG_AUDIT_SCHEMA = "nerv_oss_flag_audit.v1"
+
+DEFAULT_HINERV_LATENT_DIMS = (4, 8, 12, 16, 24, 28)
+DEFAULT_HINERV_EMBED_DIMS = (8, 12, 16, 24, 32)
+DEFAULT_HINERV_DECODER_CHANNELS = (4, 6, 8, 12, 16, 24, 32)
+DEFAULT_HINERV_DECODER_CODECS = (
+    "portfolio_auto",
+    "int8_mixed",
+    "int4_mixed",
+    "int2_mixed",
+)
+DEFAULT_SNERV_LEVELS = (2, 3, 4, 5)
+DEFAULT_SNERV_BITS_PER_COEFF = (1.5, 2.0, 2.5, 3.0, 4.0)
+DEFAULT_SNERV_STEP_MAP_BITS_PER_COEFF = (0.5, 1.0, 2.0, 4.0)
+DEFAULT_SNERV_DECODER_CODECS = (
+    "mixed_magnitude_symmetric",
+    "int8_symmetric",
+    "int4_symmetric",
+    "int2_symmetric",
+)
+
+
+class NervModelSizeBudgetError(ValueError):
+    """Raised when a model-size budget request is malformed."""
+
+
+@dataclass(frozen=True)
+class HinervModelSizeCandidate:
+    """One local HiNeRV capacity point, priced before real training/export."""
+
+    schema: str
+    family: str
+    candidate_id: str
+    num_pairs: int
+    hard_byte_ceiling: int
+    latent_dim: int
+    embed_dim: int
+    decoder_channel: int
+    decoder_channels: tuple[int, ...]
+    decoder_codec: str
+    latent_dim_coarse: int
+    latent_dim_mid: int
+    latent_dim_fine: int
+    total_trainable_params: int
+    decoder_trainable_params: int
+    latent_trainable_params: int
+    latent_int16_payload_bytes: int
+    raw_fp32_total_param_bytes: int
+    nominal_decoder_payload_bytes: int
+    nominal_total_payload_bytes: int
+    nominal_rate_score: float
+    nominal_under_ceiling: bool
+    byte_headroom: int
+    modelsize_mparams: float
+    upstream_modelsize_analogue: str
+    requires_archive_byte_oracle: bool
+    score_claim: bool
+    promotion_eligible: bool
+    ready_for_exact_eval_dispatch: bool
+
+    def as_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["decoder_channels"] = list(self.decoder_channels)
+        return payload
+
+
+@dataclass(frozen=True)
+class SnervModelSizeCandidate:
+    """One SNeRV LF/HF receiver-grammar budget point, before real replay."""
+
+    schema: str
+    family: str
+    candidate_id: str
+    num_pairs: int
+    hard_byte_ceiling: int
+    carrier_hw: tuple[int, int]
+    wavelet: str
+    levels: int
+    bits_per_coeff: float
+    step_map_bits_per_coeff: float
+    decoder_payload_codec: str
+    lf_coeffs_per_plane: int
+    lf_plane_count: int
+    lf_coeff_count_total: int
+    hf_decoder_weight_count: int
+    nominal_lf_payload_bytes: int
+    nominal_step_map_payload_bytes: int
+    nominal_decoder_payload_bytes: int
+    nominal_metadata_payload_bytes: int
+    nominal_header_overhead_bytes: int
+    nominal_total_payload_bytes: int
+    nominal_rate_score: float
+    nominal_under_ceiling: bool
+    byte_headroom: int
+    upstream_modelsize_analogue: str
+    requires_snAR1_archive_byte_oracle: bool
+    score_claim: bool
+    promotion_eligible: bool
+    ready_for_exact_eval_dispatch: bool
+
+    def as_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["carrier_hw"] = list(self.carrier_hw)
+        return payload
+
+
+def decoder_codec_nominal_bits(codec: str) -> int:
+    """Return the nominal per-weight bit width for planner byte priors."""
+
+    normalized = str(codec).strip().lower()
+    if normalized in {"fp16", "fp16_enveloped", "fp16_brotli_legacy", "legacy"}:
+        return 16
+    if normalized.startswith("int8") or normalized in {"auto", "portfolio_auto"}:
+        return 8
+    if normalized.startswith("int4"):
+        return 4
+    if normalized.startswith("int2"):
+        return 2
+    raise NervModelSizeBudgetError(f"unsupported decoder codec: {codec!r}")
+
+
+def snerv_decoder_codec_nominal_bits(codec: str) -> int:
+    """Return a nominal per-weight bit width for SNeRV HF decoder codecs."""
+
+    normalized = str(codec).strip().lower()
+    if normalized in {"float32_lzma", "fp32_lzma", "float32", "legacy"}:
+        return 32
+    if normalized in {"mixed_magnitude_symmetric", "mixed_symmetric"}:
+        return 4
+    if normalized.startswith("int8"):
+        return 8
+    if normalized.startswith("int4"):
+        return 4
+    if normalized.startswith("int2"):
+        return 2
+    raise NervModelSizeBudgetError(f"unsupported SNeRV decoder codec: {codec!r}")
+
+
+def build_hinerv_config_from_size_knobs(
+    *,
+    num_pairs: int,
+    latent_dim: int,
+    embed_dim: int,
+    decoder_channel: int,
+):
+    """Build the current local HiNeRV config from compact size knobs."""
+
+    from tac.substrates.hi_nerv.architecture import HinervConfig
+
+    if num_pairs <= 0:
+        raise NervModelSizeBudgetError("num_pairs must be positive")
+    if latent_dim <= 0 or embed_dim <= 0 or decoder_channel <= 0:
+        raise NervModelSizeBudgetError(
+            "latent_dim, embed_dim, and decoder_channel must be positive"
+        )
+    return HinervConfig(
+        latent_dim_coarse=max(1, int(latent_dim) // 2),
+        latent_dim_mid=max(1, int(latent_dim)),
+        latent_dim_fine=max(1, int(latent_dim) * 2),
+        embed_dim=max(1, int(embed_dim)),
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=tuple([max(1, int(decoder_channel))] * 7),
+        num_pairs=int(num_pairs),
+        output_height=384,
+        output_width=512,
+    )
+
+
+def _count_hinerv_params(cfg: Any) -> tuple[int, int, int]:
+    """Closed-form parameter count for ``tac.substrates.hi_nerv.architecture``."""
+
+    latent = int(cfg.num_pairs) * (
+        int(cfg.latent_dim_coarse)
+        + int(cfg.latent_dim_mid)
+        + int(cfg.latent_dim_fine)
+    )
+    embed_out = int(cfg.embed_dim) * int(cfg.initial_grid_h) * int(cfg.initial_grid_w)
+    decoder = int(cfg.latent_dim_coarse) * embed_out + embed_out
+    channels = [int(cfg.embed_dim), *[int(v) for v in cfg.decoder_channels]]
+    for i in range(int(cfg.num_upsample_blocks)):
+        in_ch = channels[i]
+        out_ch = channels[i + 1]
+        # _UpBlock Conv2d(in_ch, out_ch * 4, kernel=3, bias=True)
+        decoder += (out_ch * 4) * in_ch * 3 * 3 + (out_ch * 4)
+    mid_ch = channels[int(cfg.mid_injection_block_index) + 1]
+    fine_ch = channels[int(cfg.fine_injection_block_index) + 1]
+    decoder += int(cfg.latent_dim_mid) * mid_ch + mid_ch
+    decoder += int(cfg.latent_dim_fine) * fine_ch + fine_ch
+    final_ch = channels[int(cfg.num_upsample_blocks)]
+    # Two RGB heads Conv2d(final_ch, 3, kernel=3, bias=True).
+    decoder += 2 * (3 * final_ch * 3 * 3 + 3)
+    return int(decoder + latent), int(decoder), int(latent)
+
+
+def analyze_hinerv_modelsize_candidate(
+    *,
+    hard_byte_ceiling: int,
+    num_pairs: int,
+    latent_dim: int,
+    embed_dim: int,
+    decoder_channel: int,
+    decoder_codec: str,
+) -> HinervModelSizeCandidate:
+    """Analyze one local HiNeRV size point against an archive-byte ceiling."""
+
+    if hard_byte_ceiling <= 0:
+        raise NervModelSizeBudgetError("hard_byte_ceiling must be positive")
+    cfg = build_hinerv_config_from_size_knobs(
+        num_pairs=num_pairs,
+        latent_dim=latent_dim,
+        embed_dim=embed_dim,
+        decoder_channel=decoder_channel,
+    )
+    total_params, decoder_params, latent_params = _count_hinerv_params(cfg)
+    latent_payload = int(
+        2
+        * int(num_pairs)
+        * (
+            int(cfg.latent_dim_coarse)
+            + int(cfg.latent_dim_mid)
+            + int(cfg.latent_dim_fine)
+        )
+    )
+    bits = decoder_codec_nominal_bits(decoder_codec)
+    nominal_decoder_payload = int((decoder_params * bits + 7) // 8)
+    nominal_total_payload = int(latent_payload + nominal_decoder_payload)
+    headroom = int(hard_byte_ceiling) - nominal_total_payload
+    return HinervModelSizeCandidate(
+        schema="hinerv_modelsize_candidate.v1",
+        family="hi_nerv",
+        candidate_id=(
+            f"hinerv_np{int(num_pairs)}_ld{int(latent_dim)}_ed{int(embed_dim)}_"
+            f"dc{int(decoder_channel)}_{decoder_codec}_ceil{int(hard_byte_ceiling)}"
+        ),
+        num_pairs=int(num_pairs),
+        hard_byte_ceiling=int(hard_byte_ceiling),
+        latent_dim=int(latent_dim),
+        embed_dim=int(embed_dim),
+        decoder_channel=int(decoder_channel),
+        decoder_channels=tuple(int(v) for v in cfg.decoder_channels),
+        decoder_codec=str(decoder_codec),
+        latent_dim_coarse=int(cfg.latent_dim_coarse),
+        latent_dim_mid=int(cfg.latent_dim_mid),
+        latent_dim_fine=int(cfg.latent_dim_fine),
+        total_trainable_params=total_params,
+        decoder_trainable_params=decoder_params,
+        latent_trainable_params=latent_params,
+        latent_int16_payload_bytes=latent_payload,
+        raw_fp32_total_param_bytes=int(total_params * 4),
+        nominal_decoder_payload_bytes=nominal_decoder_payload,
+        nominal_total_payload_bytes=nominal_total_payload,
+        nominal_rate_score=float(nominal_total_payload * RATE_SCORE_PER_BYTE),
+        nominal_under_ceiling=bool(headroom >= 0),
+        byte_headroom=headroom,
+        modelsize_mparams=float(total_params / 1_000_000.0),
+        upstream_modelsize_analogue=(
+            "local repeated-channel HiNeRV analogue of upstream "
+            "HNeRV/SNeRV --modelsize parameter budget; real authority is the "
+            "measured archive exporter byte oracle"
+        ),
+        requires_archive_byte_oracle=True,
+        score_claim=False,
+        promotion_eligible=False,
+        ready_for_exact_eval_dispatch=False,
+    )
+
+
+def enumerate_hinerv_modelsize_candidates(
+    *,
+    hard_byte_ceilings: tuple[int, ...],
+    num_pairs: int,
+    latent_dims: tuple[int, ...] = DEFAULT_HINERV_LATENT_DIMS,
+    embed_dims: tuple[int, ...] = DEFAULT_HINERV_EMBED_DIMS,
+    decoder_channels: tuple[int, ...] = DEFAULT_HINERV_DECODER_CHANNELS,
+    decoder_codecs: tuple[str, ...] = DEFAULT_HINERV_DECODER_CODECS,
+) -> list[HinervModelSizeCandidate]:
+    """Enumerate local HiNeRV capacity points for queue planning."""
+
+    rows: list[HinervModelSizeCandidate] = []
+    for ceiling in sorted({int(v) for v in hard_byte_ceilings if int(v) > 0}):
+        for latent_dim in latent_dims:
+            for embed_dim in embed_dims:
+                for decoder_channel in decoder_channels:
+                    for decoder_codec in decoder_codecs:
+                        rows.append(
+                            analyze_hinerv_modelsize_candidate(
+                                hard_byte_ceiling=ceiling,
+                                num_pairs=num_pairs,
+                                latent_dim=latent_dim,
+                                embed_dim=embed_dim,
+                                decoder_channel=decoder_channel,
+                                decoder_codec=decoder_codec,
+                            )
+                        )
+    return rows
+
+
+def select_hinerv_modelsize_candidates(
+    candidates: list[HinervModelSizeCandidate],
+    *,
+    per_ceiling_limit: int = 8,
+) -> list[HinervModelSizeCandidate]:
+    """Pick byte-plausible candidates without collapsing the quantization ladder."""
+
+    if per_ceiling_limit <= 0:
+        raise NervModelSizeBudgetError("per_ceiling_limit must be positive")
+    selected: list[HinervModelSizeCandidate] = []
+    ceilings = sorted({row.hard_byte_ceiling for row in candidates})
+    for ceiling in ceilings:
+        group = [row for row in candidates if row.hard_byte_ceiling == ceiling]
+        under = [row for row in group if row.nominal_under_ceiling]
+        chosen: dict[str, HinervModelSizeCandidate] = {}
+        for codec in DEFAULT_HINERV_DECODER_CODECS:
+            codec_rows = [row for row in under if row.decoder_codec == codec]
+            if not codec_rows:
+                continue
+            best_for_codec = max(
+                codec_rows,
+                key=lambda row: (
+                    row.total_trainable_params,
+                    row.decoder_trainable_params,
+                    row.nominal_total_payload_bytes,
+                ),
+            )
+            chosen[best_for_codec.candidate_id] = best_for_codec
+        if under:
+            tightest_under = max(under, key=lambda row: row.nominal_total_payload_bytes)
+            chosen[tightest_under.candidate_id] = tightest_under
+        under.sort(
+            key=lambda row: (
+                row.total_trainable_params,
+                row.decoder_trainable_params,
+                row.nominal_total_payload_bytes,
+            ),
+            reverse=True,
+        )
+        for row in under:
+            if len(chosen) >= per_ceiling_limit:
+                break
+            chosen.setdefault(row.candidate_id, row)
+        selected.extend(list(chosen.values())[:per_ceiling_limit])
+        if not under:
+            group.sort(key=lambda row: abs(row.byte_headroom))
+            selected.extend(group[: min(2, per_ceiling_limit)])
+    return selected
+
+
+def build_hinerv_modelsize_budget_report(
+    *,
+    hard_byte_ceilings: tuple[int, ...],
+    num_pairs: int,
+    per_ceiling_limit: int = 8,
+) -> dict[str, Any]:
+    """Return a planner-safe local HiNeRV model-size budget report."""
+
+    candidates = enumerate_hinerv_modelsize_candidates(
+        hard_byte_ceilings=hard_byte_ceilings,
+        num_pairs=num_pairs,
+    )
+    selected = select_hinerv_modelsize_candidates(
+        candidates,
+        per_ceiling_limit=per_ceiling_limit,
+    )
+    by_ceiling: dict[str, list[dict[str, Any]]] = {}
+    for row in selected:
+        by_ceiling.setdefault(str(row.hard_byte_ceiling), []).append(row.as_dict())
+    return {
+        "schema": SCHEMA,
+        "family": "hi_nerv",
+        "num_pairs": int(num_pairs),
+        "hard_byte_ceilings": sorted({int(v) for v in hard_byte_ceilings}),
+        "candidate_count": len(candidates),
+        "selected_candidate_count": len(selected),
+        "selected_candidates": [row.as_dict() for row in selected],
+        "selected_candidates_by_ceiling": by_ceiling,
+        "budget_math": {
+            "contest_rate_score_per_byte": RATE_SCORE_PER_BYTE,
+            "nominal_payload_is_not_authority": True,
+            "selection_strategy": (
+                "for each byte ceiling, retain the best byte-plausible point "
+                "from every available decoder codec family before filling with "
+                "highest-capacity candidates; exact archive bytes and scorer "
+                "replay arbitrate the quantization ladder"
+            ),
+            "real_authority": (
+                "trained byte-closed archive.zip bytes measured after "
+                "export_hi_nerv_mlx_archive plus receiver proof"
+            ),
+            "marginal_rule": (
+                "admit extra latent/channel/coder capacity only when the "
+                "full-video scorer distortion reduction per added byte exceeds "
+                "the contest rate price"
+            ),
+        },
+        "blockers": [
+            "hinerv_modelsize_candidates_require_trained_archive_byte_oracle",
+            "hinerv_modelsize_candidates_require_full_video_mlx_prefilter",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def analyze_snerv_modelsize_candidate(
+    *,
+    hard_byte_ceiling: int,
+    num_pairs: int,
+    carrier_hw: tuple[int, int] = (384, 512),
+    wavelet: str = "db2",
+    levels: int,
+    bits_per_coeff: float,
+    step_map_bits_per_coeff: float,
+    decoder_payload_codec: str,
+) -> SnervModelSizeCandidate:
+    """Analyze one SNeRV receiver-grammar point against an archive ceiling."""
+
+    if hard_byte_ceiling <= 0:
+        raise NervModelSizeBudgetError("hard_byte_ceiling must be positive")
+    if num_pairs <= 0:
+        raise NervModelSizeBudgetError("num_pairs must be positive")
+    if levels <= 0:
+        raise NervModelSizeBudgetError("levels must be positive")
+    if bits_per_coeff <= 0 or step_map_bits_per_coeff < 0:
+        raise NervModelSizeBudgetError(
+            "bits_per_coeff must be positive and step_map_bits_per_coeff non-negative"
+        )
+    from tac.substrates.snerv_inverse_steg_carrier.dwt import lf_coeff_count
+
+    lf_per_plane = lf_coeff_count(carrier_hw, levels=levels, wavelet=wavelet)
+    plane_count = int(num_pairs) * 2 * 3
+    lf_total = int(lf_per_plane * plane_count)
+    decoder_weight_count = int(levels) * 3 * 9
+    decoder_bits = snerv_decoder_codec_nominal_bits(decoder_payload_codec)
+    lf_payload = ceil(lf_total * float(bits_per_coeff) / 8.0)
+    step_payload = ceil(lf_total * float(step_map_bits_per_coeff) / 8.0)
+    decoder_payload = ceil(decoder_weight_count * decoder_bits / 8.0) + int(levels) * 12
+    metadata_payload = int(plane_count * 4)
+    header_overhead = 1024
+    total_payload = (
+        lf_payload + step_payload + decoder_payload + metadata_payload + header_overhead
+    )
+    headroom = int(hard_byte_ceiling) - int(total_payload)
+    bits_label = f"{float(bits_per_coeff):g}".replace(".", "p")
+    step_label = f"{float(step_map_bits_per_coeff):g}".replace(".", "p")
+    return SnervModelSizeCandidate(
+        schema="snerv_modelsize_candidate.v1",
+        family="snerv",
+        candidate_id=(
+            f"snerv_np{int(num_pairs)}_lv{int(levels)}_lfb{bits_label}_"
+            f"stepb{step_label}_{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
+        ),
+        num_pairs=int(num_pairs),
+        hard_byte_ceiling=int(hard_byte_ceiling),
+        carrier_hw=(int(carrier_hw[0]), int(carrier_hw[1])),
+        wavelet=str(wavelet),
+        levels=int(levels),
+        bits_per_coeff=float(bits_per_coeff),
+        step_map_bits_per_coeff=float(step_map_bits_per_coeff),
+        decoder_payload_codec=str(decoder_payload_codec),
+        lf_coeffs_per_plane=lf_per_plane,
+        lf_plane_count=plane_count,
+        lf_coeff_count_total=lf_total,
+        hf_decoder_weight_count=decoder_weight_count,
+        nominal_lf_payload_bytes=lf_payload,
+        nominal_step_map_payload_bytes=step_payload,
+        nominal_decoder_payload_bytes=decoder_payload,
+        nominal_metadata_payload_bytes=metadata_payload,
+        nominal_header_overhead_bytes=header_overhead,
+        nominal_total_payload_bytes=total_payload,
+        nominal_rate_score=float(total_payload * RATE_SCORE_PER_BYTE),
+        nominal_under_ceiling=bool(headroom >= 0),
+        byte_headroom=headroom,
+        upstream_modelsize_analogue=(
+            "SNeRV local analogue of upstream --modelsize: LF resolution/bit "
+            "budget plus shared HF decoder payload define archive capacity; "
+            "real authority is measured SNAR1 archive bytes"
+        ),
+        requires_snAR1_archive_byte_oracle=True,
+        score_claim=False,
+        promotion_eligible=False,
+        ready_for_exact_eval_dispatch=False,
+    )
+
+
+def enumerate_snerv_modelsize_candidates(
+    *,
+    hard_byte_ceilings: tuple[int, ...],
+    num_pairs: int,
+    carrier_hw: tuple[int, int] = (384, 512),
+    wavelet: str = "db2",
+    levels: tuple[int, ...] = DEFAULT_SNERV_LEVELS,
+    bits_per_coeffs: tuple[float, ...] = DEFAULT_SNERV_BITS_PER_COEFF,
+    step_map_bits_per_coeffs: tuple[float, ...] = DEFAULT_SNERV_STEP_MAP_BITS_PER_COEFF,
+    decoder_codecs: tuple[str, ...] = DEFAULT_SNERV_DECODER_CODECS,
+) -> list[SnervModelSizeCandidate]:
+    """Enumerate SNeRV LF/HF receiver-grammar capacity points."""
+
+    rows: list[SnervModelSizeCandidate] = []
+    for ceiling in sorted({int(v) for v in hard_byte_ceilings if int(v) > 0}):
+        for lvl in levels:
+            for bits in bits_per_coeffs:
+                for step_bits in step_map_bits_per_coeffs:
+                    for decoder_codec in decoder_codecs:
+                        rows.append(
+                            analyze_snerv_modelsize_candidate(
+                                hard_byte_ceiling=ceiling,
+                                num_pairs=num_pairs,
+                                carrier_hw=carrier_hw,
+                                wavelet=wavelet,
+                                levels=lvl,
+                                bits_per_coeff=bits,
+                                step_map_bits_per_coeff=step_bits,
+                                decoder_payload_codec=decoder_codec,
+                            )
+                        )
+    return rows
+
+
+def select_snerv_modelsize_candidates(
+    candidates: list[SnervModelSizeCandidate],
+    *,
+    per_ceiling_limit: int = 8,
+) -> list[SnervModelSizeCandidate]:
+    """Pick SNeRV points while preserving level and precision diversity."""
+
+    if per_ceiling_limit <= 0:
+        raise NervModelSizeBudgetError("per_ceiling_limit must be positive")
+    selected: list[SnervModelSizeCandidate] = []
+    ceilings = sorted({row.hard_byte_ceiling for row in candidates})
+    for ceiling in ceilings:
+        group = [row for row in candidates if row.hard_byte_ceiling == ceiling]
+        under = [row for row in group if row.nominal_under_ceiling]
+        chosen: dict[str, SnervModelSizeCandidate] = {}
+        for lvl in DEFAULT_SNERV_LEVELS:
+            lvl_rows = [row for row in under if row.levels == lvl]
+            if lvl_rows:
+                best_for_level = max(
+                    lvl_rows,
+                    key=lambda row: (
+                        row.nominal_total_payload_bytes,
+                        row.bits_per_coeff,
+                        row.step_map_bits_per_coeff,
+                    ),
+                )
+            else:
+                level_blockers = [row for row in group if row.levels == lvl]
+                if not level_blockers:
+                    continue
+                best_for_level = min(level_blockers, key=lambda row: abs(row.byte_headroom))
+            chosen[best_for_level.candidate_id] = best_for_level
+        for bits in DEFAULT_SNERV_BITS_PER_COEFF:
+            bit_rows = [row for row in under if row.bits_per_coeff == bits]
+            if bit_rows:
+                best_for_bits = max(bit_rows, key=lambda row: row.nominal_total_payload_bytes)
+            else:
+                bit_blockers = [row for row in group if row.bits_per_coeff == bits]
+                if not bit_blockers:
+                    continue
+                best_for_bits = min(bit_blockers, key=lambda row: abs(row.byte_headroom))
+            chosen[best_for_bits.candidate_id] = best_for_bits
+        under.sort(
+            key=lambda row: (
+                row.nominal_total_payload_bytes,
+                row.levels,
+                row.bits_per_coeff,
+            ),
+            reverse=True,
+        )
+        for row in under:
+            if len(chosen) >= per_ceiling_limit:
+                break
+            chosen.setdefault(row.candidate_id, row)
+        selected.extend(list(chosen.values())[:per_ceiling_limit])
+        if not under:
+            group.sort(key=lambda row: abs(row.byte_headroom))
+            selected.extend(group[: min(2, per_ceiling_limit)])
+    return selected
+
+
+def build_snerv_modelsize_budget_report(
+    *,
+    hard_byte_ceilings: tuple[int, ...],
+    num_pairs: int,
+    per_ceiling_limit: int = 8,
+    carrier_hw: tuple[int, int] = (384, 512),
+    wavelet: str = "db2",
+) -> dict[str, Any]:
+    """Return a planner-safe SNeRV model-size budget report."""
+
+    candidates = enumerate_snerv_modelsize_candidates(
+        hard_byte_ceilings=hard_byte_ceilings,
+        num_pairs=num_pairs,
+        carrier_hw=carrier_hw,
+        wavelet=wavelet,
+    )
+    selected = select_snerv_modelsize_candidates(
+        candidates,
+        per_ceiling_limit=per_ceiling_limit,
+    )
+    by_ceiling: dict[str, list[dict[str, Any]]] = {}
+    for row in selected:
+        by_ceiling.setdefault(str(row.hard_byte_ceiling), []).append(row.as_dict())
+    return {
+        "schema": "snerv_modelsize_budget.v1",
+        "family": "snerv",
+        "num_pairs": int(num_pairs),
+        "carrier_hw": [int(carrier_hw[0]), int(carrier_hw[1])],
+        "wavelet": str(wavelet),
+        "hard_byte_ceilings": sorted({int(v) for v in hard_byte_ceilings}),
+        "candidate_count": len(candidates),
+        "selected_candidate_count": len(selected),
+        "selected_candidates": [row.as_dict() for row in selected],
+        "selected_candidates_by_ceiling": by_ceiling,
+        "budget_math": {
+            "contest_rate_score_per_byte": RATE_SCORE_PER_BYTE,
+            "nominal_payload_is_not_authority": True,
+            "selection_strategy": (
+                "retain diverse DWT levels and LF/step precision points under "
+                "each byte ceiling, then let real SNAR1 archive bytes and "
+                "full-video scorer replay arbitrate"
+            ),
+            "real_authority": (
+                "receiver-visible SNAR1 packet or packaged archive.zip bytes "
+                "from run_snerv_advisory/export_snerv_archive_bound_candidate_package"
+            ),
+            "marginal_rule": (
+                "admit LF precision, step-map precision, or HF decoder payload "
+                "only when full-video P18/P19 distortion reduction per byte "
+                "exceeds the contest rate price"
+            ),
+        },
+        "blockers": [
+            "snerv_modelsize_candidates_require_real_snAR1_archive_byte_oracle",
+            "snerv_modelsize_candidates_require_full_video_mlx_prefilter",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def official_nerv_oss_flag_audit() -> dict[str, Any]:
+    """Return the upstream flag families that should inform local adapters."""
+
+    return {
+        "schema": OSS_FLAG_AUDIT_SCHEMA,
+        "sources": {
+            "hnerv": "https://github.com/haochen-rye/HNeRV",
+            "snerv": "https://github.com/qwertja/SNeRV",
+            "hinerv": "https://github.com/hmkx/HiNeRV",
+            "local_research_basis": "tac.optimization.research_basis",
+            "local_priority_seam": "tac.analysis.nerv_top_priority_stack_seam",
+        },
+        "hnerv_high_ev_flags": [
+            "--modelsize",
+            "--ks",
+            "--reduce",
+            "--lower_width",
+            "--enc_strds",
+            "--dec_strds",
+            "--enc_dim",
+            "--fc_hw",
+            "--conv_type",
+            "--num_blks",
+            "--quant_model_bit",
+            "--quant_embed_bit",
+            "--quant_axis",
+            "--loss",
+            "--lr_type",
+            "--out_bias",
+        ],
+        "snerv_high_ev_flags": [
+            "--modelsize",
+            "--fc_dim",
+            "--emb_size",
+            "--num_blocks",
+            "--enc_strds",
+            "--dec_strds",
+            "--quant_model_bit",
+            "--quant_embed_bit",
+            "--quant_embed2_bit",
+            "--quant_axis",
+            "--model snerv_t",
+            "--model snerv_t_2d",
+            "--grad_max_norm",
+            "--loss",
+            "--lr_type",
+        ],
+        "hinerv_high_ev_flags": [
+            "--channels",
+            "--channels-reduce",
+            "--channels-reduce-base",
+            "--channels-min",
+            "--depths",
+            "--exps",
+            "--kernels",
+            "--scales-t",
+            "--scales-hw",
+            "--base-grid-size",
+            "--base-grid-level",
+            "--base-grid-level-scale",
+            "--enc-grid-size",
+            "--enc-grid-level",
+            "--enc-grid-level-scale",
+            "--enc-grid-depth-scale",
+            "--upsample-type",
+            "--eval-patch-size",
+            "--prune-ratio",
+            "--prune-weight",
+            "--quant-level",
+            "--quant-noise",
+            "--quant-ste",
+            "--bitstream",
+            "--bitstream-q",
+        ],
+        "local_gap": (
+            "Current local HiNeRV execution exposes latent_dim/embed_dim/"
+            "decoder_channel/decoder_codec. It does not yet expose upstream "
+            "stride/kernel/reduction/fc/grid/prune schedules as executable "
+            "capacity atoms."
+        ),
+        "control_to_local_consumer_map": [
+            {
+                "control_family": "archive_byte_capacity",
+                "upstream_flags": [
+                    "--modelsize",
+                    "--fc_dim",
+                    "--channels",
+                    "--channels-reduce",
+                    "--depths",
+                    "--base-grid-size",
+                ],
+                "local_consumers": [
+                    "tac.analysis.nerv_modelsize_budget",
+                    "tools/run_compact_renderer_mlx_spine_runner.py",
+                    "tac.substrates.hprc.spine_acquisition",
+                    "tac.substrates.hprc.spine_bounded_runner",
+                ],
+                "exploit": (
+                    "invert target archive bytes into capacity candidates, train "
+                    "only byte-plausible points, then promote by measured "
+                    "archive bytes"
+                ),
+            },
+            {
+                "control_family": "scorer_saliency_and_inverse_steganalysis",
+                "upstream_flags": [
+                    "--loss",
+                    "--reg",
+                    "--eval-metric",
+                    "--quant-noise",
+                    "--quant-ste",
+                ],
+                "local_consumers": [
+                    "tac.analysis.score_exact_saliency",
+                    "tac.analysis.hinerv_latent_linf_allocation",
+                    "tac.analysis.inverse_steganalysis_linf_vs_l2_gate",
+                    "tac.master_gradient_pose_vulnerability",
+                    "tac.sensitivity_map",
+                    "experiments/build_component_response_plan_from_sensitivity_artifacts.py",
+                ],
+                "exploit": (
+                    "replace PSNR/MSE-only capacity allocation with joint "
+                    "P18/P19 scorer-gradient pricing over decoder weights, "
+                    "latents, regions, and pair incidence"
+                ),
+            },
+            {
+                "control_family": "quantization_and_entropy_payload",
+                "upstream_flags": [
+                    "--quant_model_bit",
+                    "--quant_embed_bit",
+                    "--quant_embed2_bit",
+                    "--quant_axis",
+                    "--quant-level",
+                    "--bitstream-q",
+                ],
+                "local_consumers": [
+                    "tac.substrates._shared.decoder_state_codec",
+                    "tools/probe_snerv_decoder_mode_assignments.py",
+                    "src/tac/analysis/snerv_step_map_coder.py",
+                    "tools/profile_pact_nerv_selector_v3_mlx_section_value.py",
+                    "tools/profile_pact_nerv_selector_v4_mlx_section_value.py",
+                ],
+                "exploit": (
+                    "choose int2/int4/int8/fp16/codebook/bitplane payloads per "
+                    "tensor or token from scorer value, not uniform bit depth"
+                ),
+            },
+            {
+                "control_family": "resolution_patch_and_pose_pathway",
+                "upstream_flags": [
+                    "--resize_list",
+                    "--input-size",
+                    "--patch-size",
+                    "--eval-patch-size",
+                    "--scales-t",
+                    "--scales-hw",
+                    "--upsample-type",
+                ],
+                "local_consumers": [
+                    "tac.substrates.hprc.resolution_contract",
+                    "materialize_mlx_scorer_cache_from_submission.py",
+                    "tac.analysis.nerv_top_priority_stack_seam",
+                    "experiments/gt_sparse_tto.py",
+                    "experiments/renderer_tto.py",
+                ],
+                "exploit": (
+                    "encode near scorer input resolution, protect pose-critical "
+                    "pathways, and spend high-res rate only where PoseNet/SegNet "
+                    "actually observe it"
+                ),
+            },
+            {
+                "control_family": "synergy_and_component_attribution",
+                "upstream_flags": [
+                    "--eval_freq",
+                    "--eval-epochs",
+                    "--profile",
+                    "--bitstream",
+                    "--bitstream-q",
+                ],
+                "local_consumers": [
+                    "tools/run_mlx_scorer_response_cache.py",
+                    "tools/profile_mlx_scorer_response_cache.py",
+                    "tools/build_byte_shaving_signal_surface.py",
+                    "tools/canvas_multiop_composition_closed_form_prediction_sweep.py",
+                    "tools/check_substrate_dykstra_feasibility.py",
+                ],
+                "exploit": (
+                    "turn every trained/exported candidate into component "
+                    "movement, section value, Venn/synergy, and Dykstra feasibility "
+                    "signal before exact auth spend"
+                ),
+            },
+        ],
+        "cross_variant_design_priors": [
+            {
+                "variant": "HNeRV / PR95-HNeRV",
+                "role": "control arm and cheap-by-construction reference",
+                "transfer_to_hinerv": [
+                    "archive-byte budget should be input, not afterthought",
+                    "model weights are the dominant score-bearing payload",
+                    "8-stage/curriculum/Muon/QAT/coder-aware regularization are rate levers too",
+                ],
+                "transfer_to_snerv": [
+                    "do not let generated-HF novelty replace byte-closed archive discipline",
+                    "train under quantized payload pressure, not just posthoc LF storage",
+                ],
+            },
+            {
+                "variant": "SR-NeRV",
+                "role": "resolution-axis enhancer",
+                "transfer_to_hinerv": [
+                    "encode at scorer-observed resolution first",
+                    "super-resolve only for receiver output compliance",
+                    "protect PoseNet geometry separately when low-res content is insufficient",
+                ],
+                "transfer_to_snerv": [
+                    "LF/HF split should be paired with scorer-resolution dead-zone checks",
+                    "HF generation should target SegNet boundary and PoseNet geometry, not perceptual detail",
+                ],
+            },
+            {
+                "variant": "RNeRV / E-NeRV",
+                "role": "spatial-temporal disentanglement and config-search prior",
+                "transfer_to_hinerv": [
+                    "separate content amortized in decoder from per-pair motion or latent channels",
+                    "search capacity distribution across temporal/spatial blocks",
+                ],
+                "transfer_to_snerv": [
+                    "use temporal side information where pair geometry dominates PoseNet",
+                    "consider temporal SNeRV_T/SNeRV_T_2D branches as pose-path enhancers",
+                ],
+            },
+            {
+                "variant": "FFNeRV",
+                "role": "flow-guided pose-channel enhancer",
+                "transfer_to_hinerv": [
+                    "add flow/ego-motion-conditioned pathway only if byte-priced and receiver-closed",
+                    "use PoseNet Fisher signal to decide where flow conditioning buys bytes",
+                ],
+                "transfer_to_snerv": [
+                    "generated detail can be flow-conditioned for pose-critical regions",
+                ],
+            },
+            {
+                "variant": "BoostNeRV",
+                "role": "conditional decoder / temporal affine bolt-on",
+                "transfer_to_hinerv": [
+                    "use as a byte-priced enhancer after base capacity is scorer-fit",
+                    "regularize conditional parameters for entropy coding",
+                ],
+                "transfer_to_snerv": [
+                    "test as HF-generator conditioner, not as a separate carrier",
+                ],
+            },
+            {
+                "variant": "HiNeRV upstream",
+                "role": "hierarchical grid, patch, prune, quant bitstream prior",
+                "transfer_to_hinerv": [
+                    "promote pruning/QAT/bitstream stages into queue-owned schedule",
+                    "map grid/channel/depth controls to archive-byte candidates",
+                ],
+                "transfer_to_snerv": [
+                    "use patch/grid scheduling for full-video training throughput and scorer cache reuse",
+                ],
+            },
+        ],
+        "top_priority": (
+            "Implement archive-byte inversion first: target byte ceiling -> "
+            "capacity candidates -> real train/export archive byte oracle -> "
+            "full-video MLX prefilter -> local CPU replay."
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+__all__ = [
+    "HinervModelSizeCandidate",
+    "NervModelSizeBudgetError",
+    "SnervModelSizeCandidate",
+    "analyze_hinerv_modelsize_candidate",
+    "analyze_snerv_modelsize_candidate",
+    "build_hinerv_config_from_size_knobs",
+    "build_hinerv_modelsize_budget_report",
+    "build_snerv_modelsize_budget_report",
+    "decoder_codec_nominal_bits",
+    "enumerate_hinerv_modelsize_candidates",
+    "enumerate_snerv_modelsize_candidates",
+    "official_nerv_oss_flag_audit",
+    "select_hinerv_modelsize_candidates",
+    "select_snerv_modelsize_candidates",
+    "snerv_decoder_codec_nominal_bits",
+]

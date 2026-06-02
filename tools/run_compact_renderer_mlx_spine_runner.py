@@ -36,6 +36,16 @@ from comma_lab.local_submission_replay import (  # noqa: E402
     run_local_submission_replay,
     stage_local_replay_submission,
 )
+from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
+    build_hinerv_modelsize_budget_report,
+    build_snerv_modelsize_budget_report,
+    enumerate_hinerv_modelsize_candidates,
+    enumerate_snerv_modelsize_candidates,
+    official_nerv_oss_flag_audit,
+)
+from tac.analysis.nerv_stack_synergy_audit import (  # noqa: E402
+    build_nerv_stack_synergy_audit,
+)
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
 )
@@ -1635,6 +1645,78 @@ def execute_planner_gated_compact_family(
     return {**report, "report_path": path.as_posix()}
 
 
+def _resolve_execute_modelsize_candidate(
+    *,
+    family: str,
+    candidate_id: str,
+    hard_byte_ceilings: tuple[int, ...],
+    num_pairs: int = CONTEST_PAIR_COUNT,
+) -> dict[str, Any] | None:
+    """Resolve an executable NeRV byte-budget candidate for a family launch.
+
+    ``auto`` chooses a byte-plausible candidate from the complete enumeration,
+    not just the truncated report rows. ``none/manual/off`` preserves the
+    explicit CLI knobs for focused probes. Unknown ids fail before any campaign
+    starts so the planner cannot silently drift away from curriculum provenance.
+    """
+
+    token = str(candidate_id or "auto").strip()
+    if token.lower() in {"none", "manual", "off", "false", "0"}:
+        return None
+    if family == "hi_nerv":
+        candidates = [
+            row.as_dict()
+            for row in enumerate_hinerv_modelsize_candidates(
+                hard_byte_ceilings=hard_byte_ceilings,
+                num_pairs=int(num_pairs),
+            )
+        ]
+    elif family == "snerv":
+        candidates = [
+            row.as_dict()
+            for row in enumerate_snerv_modelsize_candidates(
+                hard_byte_ceilings=hard_byte_ceilings,
+                num_pairs=int(num_pairs),
+            )
+        ]
+    else:
+        raise CompactRendererMlxSpineRunnerError(
+            f"modelsize candidate resolution is only supported for hi_nerv/snerv; got {family!r}"
+        )
+    if not candidates:
+        raise CompactRendererMlxSpineRunnerError(
+            f"no {family} modelsize candidates were enumerated"
+        )
+    if token.lower() == "auto":
+        under = [row for row in candidates if bool(row.get("nominal_under_ceiling"))]
+        if under:
+            tightest_ceiling = min(int(row["hard_byte_ceiling"]) for row in under)
+            tightest_under = [
+                row for row in under if int(row["hard_byte_ceiling"]) == tightest_ceiling
+            ]
+            return max(
+                tightest_under,
+                key=lambda row: (
+                    int(row["nominal_total_payload_bytes"]),
+                    int(row.get("total_trainable_params", 0)),
+                ),
+            )
+        return min(
+            candidates,
+            key=lambda row: (
+                abs(int(row.get("byte_headroom") or 0)),
+                int(row["hard_byte_ceiling"]),
+            ),
+        )
+    for row in candidates:
+        if row["candidate_id"] == token:
+            return row
+    raise CompactRendererMlxSpineRunnerError(
+        f"unknown {family} --modelsize-candidate-id {token!r}; "
+        "rerun plan mode and select one of the emitted candidate_id values"
+    )
+
+
 def execute_snerv_inverse_steg_advisory_and_adapt(
     *,
     output_dir: str | Path,
@@ -1652,6 +1734,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     post_export_materializer_max_parallel: int = 0,
     post_export_materializer_max_experiments: int | None = 1,
     distillation_device: str = "cpu",
+    modelsize_candidate: Mapping[str, Any] | None = None,
+    step_map_coder_mode: str | None = None,
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -1685,14 +1769,31 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv",
         COMPACT_FAMILY_BACKENDS["snerv"],
     )
+    candidate = dict(modelsize_candidate or {})
+    levels = int(candidate.get("levels", 3))
+    target_bits_per_coeff = float(candidate.get("bits_per_coeff", 2.5))
+    step_map_waterfill_bits_per_coeff = float(
+        candidate.get("step_map_bits_per_coeff", 4.0)
+    )
+    decoder_payload_codec = str(
+        candidate.get("decoder_payload_codec", "float32_lzma")
+    )
+    resolved_step_map_coder_mode = (
+        step_map_coder_mode
+        if step_map_coder_mode is not None
+        else ("waterfill" if candidate else "uniform")
+    )
     advisory = run_snerv_advisory(
         n_pairs=int(num_pairs),
-        levels=3,
+        levels=levels,
         wavelet="db2",
-        target_bits_per_coeff=2.5,
+        target_bits_per_coeff=target_bits_per_coeff,
         video_path=resolved_source_video.as_posix(),
         upstream_dir=scorer_upstream.as_posix(),
         device=distillation_device,
+        step_map_coder_mode=str(resolved_step_map_coder_mode),
+        step_map_waterfill_bits_per_coeff=step_map_waterfill_bits_per_coeff,
+        decoder_payload_codec=decoder_payload_codec,
     )
     packet_path = out / "snerv_inverse_steg_advisory.snar"
     packet_path.write_bytes(advisory.receiver_archive_packet)
@@ -1820,6 +1921,23 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "coverage_valid_for_base_comparison": int(num_pairs) >= CONTEST_PAIR_COUNT,
             "training_executed": False,
             "adapter_smoke_only": False,
+            "modelsize_candidate_selection": {
+                "schema": "compact_execute_modelsize_candidate_selection.v1",
+                "family": "snerv",
+                "selection_mode": "planner_candidate" if candidate else "manual_cli_knobs",
+                "candidate": candidate or None,
+                "num_pairs_for_budget": CONTEST_PAIR_COUNT,
+                "launch_levels": levels,
+                "launch_bits_per_coeff": target_bits_per_coeff,
+                "launch_step_map_coder_mode": str(resolved_step_map_coder_mode),
+                "launch_step_map_waterfill_bits_per_coeff": (
+                    step_map_waterfill_bits_per_coeff
+                ),
+                "launch_decoder_payload_codec": decoder_payload_codec,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "archive_path": archive_path,
             "archive_bytes": row.get("candidate_archive_bytes"),
             "archive_sha256": row.get("candidate_archive_sha256"),
@@ -1844,7 +1962,12 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "axis_tag": "[macOS-CPU advisory]",
                 "levels": int(advisory.levels),
                 "wavelet": advisory.wavelet,
-                "target_bits_per_coeff": 2.5,
+                "target_bits_per_coeff": target_bits_per_coeff,
+                "step_map_coder_mode": str(resolved_step_map_coder_mode),
+                "step_map_waterfill_bits_per_coeff": (
+                    step_map_waterfill_bits_per_coeff
+                ),
+                "decoder_payload_codec": decoder_payload_codec,
                 "score_linf": float(advisory.score_linf),
                 "score_l2": float(advisory.score_l2),
                 "d_seg_mean_linf": float(advisory.d_seg_mean_linf),
@@ -3204,6 +3327,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     embed_dim: int = 8,
     decoder_channel: int = 8,
     decoder_codec: str = "portfolio_auto",
+    modelsize_candidate: Mapping[str, Any] | None = None,
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
@@ -3247,6 +3371,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             f"output dir is non-empty; pass --overwrite: {out}"
         )
     out.mkdir(parents=True, exist_ok=True)
+    candidate = dict(modelsize_candidate or {})
+    launch_latent_dim = int(candidate.get("latent_dim", latent_dim))
+    launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
+    launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
+    launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
     try:
         artifact = _run_hi_nerv_mlx_scoreaware_smoke(
             output_dir=out / "hi_nerv_mlx_training",
@@ -3255,10 +3384,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             batch_pair_indices_per_step=batch_pair_indices_per_step,
             learning_rate=learning_rate,
             source_video_path=resolved_source_video,
-            latent_dim=latent_dim,
-            embed_dim=embed_dim,
-            decoder_channel=decoder_channel,
-            decoder_codec=decoder_codec,
+            latent_dim=launch_latent_dim,
+            embed_dim=launch_embed_dim,
+            decoder_channel=launch_decoder_channel,
+            decoder_codec=launch_decoder_codec,
             ema_decay=ema_decay,
             segnet_distillation_weight=segnet_distillation_weight,
             pose_distillation_weight=pose_distillation_weight,
@@ -3294,6 +3423,22 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             {
                 "execute_family": "hi_nerv",
                 "failure": repr(exc),
+                "modelsize_candidate_selection": {
+                    "schema": "compact_execute_modelsize_candidate_selection.v1",
+                    "family": "hi_nerv",
+                    "selection_mode": (
+                        "planner_candidate" if candidate else "manual_cli_knobs"
+                    ),
+                    "candidate": candidate or None,
+                    "num_pairs_for_budget": CONTEST_PAIR_COUNT,
+                    "launch_latent_dim": launch_latent_dim,
+                    "launch_embed_dim": launch_embed_dim,
+                    "launch_decoder_channel": launch_decoder_channel,
+                    "launch_decoder_codec": launch_decoder_codec,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
@@ -3422,6 +3567,20 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "coverage_valid_for_base_comparison": int(num_pairs) >= 600,
             "training_executed": True,
             "adapter_smoke_only": False,
+            "modelsize_candidate_selection": {
+                "schema": "compact_execute_modelsize_candidate_selection.v1",
+                "family": "hi_nerv",
+                "selection_mode": "planner_candidate" if candidate else "manual_cli_knobs",
+                "candidate": candidate or None,
+                "num_pairs_for_budget": CONTEST_PAIR_COUNT,
+                "launch_latent_dim": launch_latent_dim,
+                "launch_embed_dim": launch_embed_dim,
+                "launch_decoder_channel": launch_decoder_channel,
+                "launch_decoder_codec": launch_decoder_codec,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "archive_path": archive_path,
             "archive_bytes": artifact_dict.get("archive_bytes"),
             "archive_sha256": artifact_dict.get("archive_sha256"),
@@ -3437,7 +3596,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
-                "decoder_codec": str(decoder_codec),
+                "decoder_codec": str(launch_decoder_codec),
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
@@ -3809,6 +3968,24 @@ def _base_report(
             "score_authority": "contest CPU/CUDA exact eval only",
             "promotion_surface": "archive.zip bytes plus receiver proof plus exact gate",
         },
+        "nerv_oss_flag_audit": official_nerv_oss_flag_audit(),
+        "hinerv_modelsize_budget": build_hinerv_modelsize_budget_report(
+            hard_byte_ceilings=hard_byte_ceilings,
+            num_pairs=CONTEST_PAIR_COUNT,
+            per_ceiling_limit=6,
+        ),
+        "snerv_modelsize_budget": build_snerv_modelsize_budget_report(
+            hard_byte_ceilings=hard_byte_ceilings,
+            num_pairs=CONTEST_PAIR_COUNT,
+            per_ceiling_limit=6,
+        ),
+        "nerv_stack_synergy_audit": build_nerv_stack_synergy_audit(
+            repo_root=repo_root,
+            hard_byte_ceilings=hard_byte_ceilings,
+            num_pairs=CONTEST_PAIR_COUNT,
+            memo_limit_per_stack=24,
+            marker_limit_per_stack=40,
+        ),
         "target_family_rows": _target_family_rows(),
         "compact_base_campaign_rows": _compact_base_campaign_rows(
             hard_byte_ceilings=hard_byte_ceilings
@@ -4249,6 +4426,23 @@ def _compact_base_campaign_rows(
                     "allowed_enhancers": backend.get("allowed_enhancers", []),
                     "rate_axis_evidence": backend.get("rate_axis_evidence"),
                     "distortion_fit_blocker": backend.get("distortion_fit_blocker"),
+                    "modelsize_budget": (
+                        build_hinerv_modelsize_budget_report(
+                            hard_byte_ceilings=(int(ceiling),),
+                            num_pairs=CONTEST_PAIR_COUNT,
+                            per_ceiling_limit=4,
+                        )
+                        if family == "hi_nerv"
+                        else (
+                            build_snerv_modelsize_budget_report(
+                                hard_byte_ceilings=(int(ceiling),),
+                                num_pairs=CONTEST_PAIR_COUNT,
+                                per_ceiling_limit=4,
+                            )
+                            if family == "snerv"
+                            else None
+                        )
+                    ),
                     "score_aware_carrier_training_plan": (
                         _score_aware_carrier_training_plan(family, backend)
                     ),
@@ -5603,6 +5797,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--modelsize-candidate-id",
+        default="auto",
+        help=(
+            "HiNeRV/SNeRV launch candidate from the planner budget report. "
+            "'auto' selects a byte-plausible planner candidate for the contest "
+            "pair count; 'none'/'manual'/'off' uses the explicit compact CLI knobs."
+        ),
+    )
+    parser.add_argument(
         "--compact-ema-decay",
         default=0.9,
         type=float,
@@ -5878,6 +6081,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.post_export_materializer_max_experiments == 0
         else args.post_export_materializer_max_experiments
     )
+    modelsize_candidate: dict[str, Any] | None = None
+    if args.execute_family in {"hi_nerv", "snerv"}:
+        modelsize_candidate = _resolve_execute_modelsize_candidate(
+            family=args.execute_family,
+            candidate_id=args.modelsize_candidate_id,
+            hard_byte_ceilings=ceilings,
+            num_pairs=CONTEST_PAIR_COUNT,
+        )
     _acquire_active_campaign_lock(
         output_dir=Path(output_dir).expanduser().resolve(strict=False),
         args=args,
@@ -6120,6 +6331,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             distillation_device=args.distillation_device,
+            modelsize_candidate=modelsize_candidate,
             upstream_dir=scorer_upstream_dir,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -6139,6 +6351,7 @@ def main(argv: list[str] | None = None) -> int:
             embed_dim=args.compact_embed_dim,
             decoder_channel=args.compact_decoder_channel,
             decoder_codec=args.compact_decoder_codec,
+            modelsize_candidate=modelsize_candidate,
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
