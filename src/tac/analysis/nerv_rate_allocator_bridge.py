@@ -361,6 +361,22 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                         ),
                         "mode_plan_cli_arg": unit.get("mode_plan_cli_arg"),
                         "mode_histogram": unit.get("mode_histogram") or {},
+                        "ready_for_local_advisory_probe": unit.get(
+                            "ready_for_local_advisory_probe"
+                        ),
+                        "ready_for_receiver_mode_export": unit.get(
+                            "ready_for_receiver_mode_export"
+                        ),
+                        "probe_command_axis_tag": unit.get(
+                            "probe_command_axis_tag"
+                        ),
+                        "probe_command_argv": _string_list(
+                            unit.get("probe_command_argv")
+                        ),
+                        "probe_command_hint": unit.get("probe_command_hint"),
+                        "probe_receiver_packet_dir": unit.get(
+                            "probe_receiver_packet_dir"
+                        ),
                     },
                     blockers=[
                         *blockers,
@@ -373,9 +389,12 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
             continue
         if unit_type == "decoder_mode_probe_result":
             label = str(unit.get("best_plan_label") or "unknown")
-            modes = _receiver_precision_modes_from_unit(
-                unit.get("best_candidate") if isinstance(unit.get("best_candidate"), Mapping) else unit
+            best_candidate = (
+                unit.get("best_candidate")
+                if isinstance(unit.get("best_candidate"), Mapping)
+                else {}
             )
+            modes = _receiver_precision_modes_from_unit(best_candidate or unit)
             orders.append(
                 _work_order(
                     work_order_id=(
@@ -405,6 +424,25 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                             "best_plan_score_linf_advisory"
                         ),
                         "candidate_count": unit.get("candidate_count"),
+                        "receiver_archive_packet_path": best_candidate.get(
+                            "receiver_archive_packet_path"
+                        ),
+                        "receiver_archive_packet_bytes": best_candidate.get(
+                            "receiver_archive_packet_bytes"
+                        ),
+                        "receiver_archive_packet_sha256": best_candidate.get(
+                            "receiver_archive_packet_sha256"
+                        ),
+                        "receiver_archive_replay_verified": best_candidate.get(
+                            "receiver_archive_replay_verified"
+                        )
+                        is True,
+                        "receiver_archive_packet_is_contest_archive_zip": (
+                            best_candidate.get(
+                                "receiver_archive_packet_is_contest_archive_zip"
+                            )
+                            is True
+                        ),
                     },
                     blockers=[
                         *blockers,

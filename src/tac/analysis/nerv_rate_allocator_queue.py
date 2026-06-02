@@ -226,6 +226,14 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "runnable_now": False,
         }
     if work_order_type == "receiver_visible_decoder_mode_assignment":
+        payload = (
+            work_order.get("payload", {})
+            if isinstance(work_order.get("payload"), Mapping)
+            else {}
+        )
+        probe_command_argv = _string_list(payload.get("probe_command_argv"))
+        probe_packet_dir = str(payload.get("probe_receiver_packet_dir") or "")
+        probe_runnable = bool(probe_command_argv and probe_packet_dir)
         return {
             "ingest_kind": "receiver_visible_decoder_mode_assignment",
             "planner_action": planner_action,
@@ -234,9 +242,22 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "missing_tool_or_proof": (
                 "receiver_visible_mixed_precision_decoder_grammar_export"
             ),
+            "local_advisory_probe_runnable_now": probe_runnable,
+            "local_advisory_probe_command_argv": probe_command_argv,
+            "local_advisory_probe_command_hint": payload.get("probe_command_hint"),
+            "local_advisory_probe_axis_tag": payload.get("probe_command_axis_tag"),
+            "local_advisory_receiver_packet_dir": probe_packet_dir or None,
+            "local_advisory_output_is_promotion_authority": False,
             "runnable_now": False,
         }
     if work_order_type == "decoder_mode_pair_robust_probe_followup":
+        payload = (
+            work_order.get("payload", {})
+            if isinstance(work_order.get("payload"), Mapping)
+            else {}
+        )
+        packet_path = str(payload.get("receiver_archive_packet_path") or "")
+        replay_verified = payload.get("receiver_archive_replay_verified") is True
         return {
             "ingest_kind": "decoder_mode_pair_robust_probe_followup",
             "planner_action": planner_action,
@@ -245,6 +266,21 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "missing_tool_or_proof": (
                 "stratified_pair_pose_guard_replay_and_full600_receiver_proof"
             ),
+            "source_receiver_packet_path": packet_path or None,
+            "source_receiver_packet_bytes": payload.get(
+                "receiver_archive_packet_bytes"
+            ),
+            "source_receiver_packet_sha256": payload.get(
+                "receiver_archive_packet_sha256"
+            ),
+            "source_receiver_replay_verified": replay_verified,
+            "source_receiver_packet_is_contest_archive_zip": (
+                payload.get("receiver_archive_packet_is_contest_archive_zip") is True
+            ),
+            "local_pair_robust_replay_runnable_now": bool(
+                packet_path and replay_verified
+            ),
+            "local_pair_robust_replay_is_promotion_authority": False,
             "runnable_now": False,
         }
     return {

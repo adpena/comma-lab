@@ -247,7 +247,29 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     mode_order = orders["compile_snerv_snerv_local_tiny_decoder_modes_to_receiver"]
     assert {"fp16_protected", "int4"} <= set(mode_order["receiver_precision_modes"])
     assert mode_order["payload"]["mode_plan_cli_arg"] == "fp16,int4,fp16"
+    assert mode_order["payload"]["probe_command_argv"] == [
+        ".venv/bin/python",
+        "tools/probe_snerv_decoder_mode_assignments.py",
+        "--mode-plan",
+        "fp16,int4,fp16",
+        "--receiver-packet-dir",
+        "/Volumes/VertigoDataTier/pact/snerv_decoder_mode_assignment_packets/snerv_local_tiny",
+    ]
+    assert mode_order["payload"]["probe_receiver_packet_dir"].endswith(
+        "/snerv_local_tiny"
+    )
     assert "receiver_decoded_byte_accounting_required" in mode_order["blockers"]
+    probe_order = orders["replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust"]
+    assert probe_order["payload"]["candidate_count"] == 1
+    assert probe_order["payload"]["receiver_archive_packet_path"] == (
+        "/Volumes/VertigoDataTier/pact/snerv_decoder_mode_assignment_packets/"
+        "snerv_local_tiny/0000_explicit_fp163.snar"
+    )
+    assert probe_order["payload"]["receiver_archive_replay_verified"] is True
+    assert (
+        probe_order["payload"]["receiver_archive_packet_is_contest_archive_zip"]
+        is False
+    )
     for order in orders.values():
         assert order["score_claim"] is False
         assert order["score_claim_valid"] is False
@@ -360,12 +382,39 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     assert mode_row["planner_ingest"]["producer_tool"] == (
         "tools/build_snerv_waterfill_mode_assignment.py"
     )
+    assert mode_row["planner_ingest"]["local_advisory_probe_runnable_now"] is True
+    assert mode_row["planner_ingest"]["local_advisory_probe_command_argv"] == [
+        ".venv/bin/python",
+        "tools/probe_snerv_decoder_mode_assignments.py",
+        "--mode-plan",
+        "fp16,int4,fp16",
+        "--receiver-packet-dir",
+        "/Volumes/VertigoDataTier/pact/snerv_decoder_mode_assignment_packets/snerv_local_tiny",
+    ]
+    assert (
+        mode_row["planner_ingest"]["local_advisory_output_is_promotion_authority"]
+        is False
+    )
     probe_row = rows["replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust"]
     assert probe_row["planner_ingest"]["ingest_kind"] == (
         "decoder_mode_pair_robust_probe_followup"
     )
     assert probe_row["planner_ingest"]["producer_tool"] == (
         "tools/probe_snerv_decoder_mode_assignments.py"
+    )
+    assert probe_row["planner_ingest"]["source_receiver_packet_path"] == (
+        "/Volumes/VertigoDataTier/pact/snerv_decoder_mode_assignment_packets/"
+        "snerv_local_tiny/0000_explicit_fp163.snar"
+    )
+    assert probe_row["planner_ingest"]["source_receiver_replay_verified"] is True
+    assert (
+        probe_row["planner_ingest"]["local_pair_robust_replay_runnable_now"] is True
+    )
+    assert (
+        probe_row["planner_ingest"][
+            "local_pair_robust_replay_is_promotion_authority"
+        ]
+        is False
     )
     saliency_row = rows["bind_hi_nerv_decoder_weight_saliency_to_waterfill"]
     assert saliency_row["planner_ingest"]["ingest_kind"] == (
@@ -446,7 +495,28 @@ def _synthetic_rate_bridge() -> dict:
                         "decoder_payload_schema": "snerv_decoder_payload.v3",
                         "mode_plan_cli_arg": "fp16,int4,fp16",
                         "mode_histogram": {"fp16": 2, "int4": 1},
-                        "ready_for_receiver_mode_export": False,
+                        "ready_for_local_advisory_probe": True,
+                        "ready_for_receiver_mode_export": True,
+                        "probe_command_axis_tag": "[macOS-CPU advisory]",
+                        "probe_command_argv": [
+                            ".venv/bin/python",
+                            "tools/probe_snerv_decoder_mode_assignments.py",
+                            "--mode-plan",
+                            "fp16,int4,fp16",
+                            "--receiver-packet-dir",
+                            "/Volumes/VertigoDataTier/pact/snerv_decoder_mode_assignment_packets/snerv_local_tiny",
+                        ],
+                        "probe_command_hint": (
+                            ".venv/bin/python "
+                            "tools/probe_snerv_decoder_mode_assignments.py "
+                            "--mode-plan fp16,int4,fp16 --receiver-packet-dir "
+                            "/Volumes/VertigoDataTier/pact/"
+                            "snerv_decoder_mode_assignment_packets/snerv_local_tiny"
+                        ),
+                        "probe_receiver_packet_dir": (
+                            "/Volumes/VertigoDataTier/pact/"
+                            "snerv_decoder_mode_assignment_packets/snerv_local_tiny"
+                        ),
                         "blockers": [
                             "receiver_mode_export_requires_byte_accounting"
                         ],
@@ -462,13 +532,22 @@ def _synthetic_rate_bridge() -> dict:
                 "schema": "snerv_decoder_mode_assignment_probe.v1",
                 "best_plan_label": "explicit_fp163",
                 "best_plan_score_linf_advisory": 3.58,
-                "candidate_count": 1,
-                "candidate_rows": [
+                "mode_plan_count": 1,
+                "candidates": [
                     {
                         "label": "explicit_fp163",
                         "modes": ["fp16", "fp16", "fp16"],
                         "mode_histogram": {"fp16": 3},
                         "score_linf": 3.58,
+                        "receiver_archive_packet_path": (
+                            "/Volumes/VertigoDataTier/pact/"
+                            "snerv_decoder_mode_assignment_packets/"
+                            "snerv_local_tiny/0000_explicit_fp163.snar"
+                        ),
+                        "receiver_archive_packet_bytes": 456_578,
+                        "receiver_archive_packet_sha256": "d" * 64,
+                        "receiver_archive_replay_verified": True,
+                        "receiver_archive_packet_is_contest_archive_zip": False,
                     }
                 ],
                 "blockers": ["macos_cpu_advisory_only"],

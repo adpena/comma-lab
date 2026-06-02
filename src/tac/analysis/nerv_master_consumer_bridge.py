@@ -311,6 +311,12 @@ def _control_inventory_evidence_units(
             blockers = _string_list(report.get("blockers")) + _string_list(
                 row.get("blockers")
             )
+            probe_command_argv = _string_list(row.get("probe_command_argv"))
+            probe_receiver_packet_dir = row.get("probe_receiver_packet_dir")
+            if bool(row.get("ready_for_local_advisory_probe")) and (
+                not probe_command_argv or not probe_receiver_packet_dir
+            ):
+                blockers.append("decoder_mode_probe_command_missing")
             if not bool(row.get("ready_for_receiver_mode_export")):
                 blockers.append("receiver_visible_decoder_mode_export_missing")
             units.append(
@@ -322,6 +328,16 @@ def _control_inventory_evidence_units(
                     "decoder_payload_schema": row.get("decoder_payload_schema"),
                     "mode_plan_cli_arg": row.get("mode_plan_cli_arg"),
                     "mode_histogram": dict(row.get("mode_histogram") or {}),
+                    "ready_for_local_advisory_probe": bool(
+                        row.get("ready_for_local_advisory_probe")
+                    ),
+                    "ready_for_receiver_mode_export": bool(
+                        row.get("ready_for_receiver_mode_export")
+                    ),
+                    "probe_command_axis_tag": row.get("probe_command_axis_tag"),
+                    "probe_command_argv": probe_command_argv,
+                    "probe_command_hint": row.get("probe_command_hint"),
+                    "probe_receiver_packet_dir": probe_receiver_packet_dir,
                     "receiver_precision_modes": modes,
                     "target_consumers": [
                         "final_rate_attack",
@@ -341,8 +357,16 @@ def _control_inventory_evidence_units(
     ):
         blockers = _string_list(report.get("blockers"))
         candidate_rows = _mapping_list(report.get("candidate_rows"))
+        if not candidate_rows:
+            candidate_rows = _mapping_list(report.get("candidates"))
         best_label = str(report.get("best_plan_label") or "")
         best_candidate = _first_matching_candidate(candidate_rows, best_label)
+        candidate_count = int(
+            report.get("candidate_count")
+            or len(candidate_rows)
+            or report.get("mode_plan_count")
+            or 0
+        )
         units.append(
             {
                 "unit_id": f"{family}_{best_label or 'unknown'}_decoder_mode_probe",
@@ -352,7 +376,7 @@ def _control_inventory_evidence_units(
                 "best_plan_score_linf_advisory": report.get(
                     "best_plan_score_linf_advisory"
                 ),
-                "candidate_count": int(report.get("candidate_count", 0) or 0),
+                "candidate_count": candidate_count,
                 "best_candidate": dict(best_candidate or {}),
                 "target_consumers": [
                     "final_rate_attack",
