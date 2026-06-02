@@ -1,0 +1,3048 @@
+{
+  "axis_tag": "[planning/control]",
+  "baseline_id": "pr95_hnerv",
+  "blocked_row_count": 20,
+  "blocker_records": [
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_modelsize_ladder_not_ready",
+      "scope": "ladder"
+    },
+    {
+      "carrier_id": "snerv",
+      "minimum_receiver_closed_rows": 2,
+      "reason": "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+      "receiver_closed_row_count": 0,
+      "scope": "ladder"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "no_rows_eligible_for_modelsize_budget_plan",
+      "scope": "ladder"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0000",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0000",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0000",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0000",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0001",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0001",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0001",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0001",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0002",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0002",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0002",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0002",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0003",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0003",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0003",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0003",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0004",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0004",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0004",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0004",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0005",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0005",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0005",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0006",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0006",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0006",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0007",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0007",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0007",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0008",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0008",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0008",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0009",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0009",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0009",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0010",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0010",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0010",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0010",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0011",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0011",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0011",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0011",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0012",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0012",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0012",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0012",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0013",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0013",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0013",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0013",
+      "scope": "row"
+    },
+    {
+      "accepted_carrier_aliases": [
+        "snerv",
+        "snerv_t",
+        "snervt"
+      ],
+      "carrier_id": "snerv",
+      "reason": "carrier_family_mismatch",
+      "row_id": "modelsize_0014",
+      "scope": "row",
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0014",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0014",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0014",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0015",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0015",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0015",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0016",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0016",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0016",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0017",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0017",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0017",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0018",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0018",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0018",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "measured_archive_bytes_missing",
+      "row_id": "modelsize_0019",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "modelsize_0019",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "modelsize_0019",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "modelsize_budget_ladder_has_fewer_than_two_points",
+      "scope": "modelsize_budget"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+      "scope": "modelsize_budget"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "nerv_receiver_closed_modelsize_ladder_is_false_authority",
+      "scope": "authority"
+    },
+    {
+      "carrier_id": "snerv",
+      "reason": "exact_or_full_video_cuda_blocked_until_PR101_and_Z5_terminal",
+      "scope": "dispatch"
+    }
+  ],
+  "blockers": [
+    "receiver_closed_modelsize_ladder_not_ready",
+    "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+    "no_rows_eligible_for_modelsize_budget_plan",
+    "row:modelsize_0000:carrier_family_mismatch",
+    "row:modelsize_0000:measured_archive_bytes_missing",
+    "row:modelsize_0000:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0000:receiver_closed_byte_proof_missing",
+    "row:modelsize_0001:carrier_family_mismatch",
+    "row:modelsize_0001:measured_archive_bytes_missing",
+    "row:modelsize_0001:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0001:receiver_closed_byte_proof_missing",
+    "row:modelsize_0002:carrier_family_mismatch",
+    "row:modelsize_0002:measured_archive_bytes_missing",
+    "row:modelsize_0002:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0002:receiver_closed_byte_proof_missing",
+    "row:modelsize_0003:carrier_family_mismatch",
+    "row:modelsize_0003:measured_archive_bytes_missing",
+    "row:modelsize_0003:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0003:receiver_closed_byte_proof_missing",
+    "row:modelsize_0004:carrier_family_mismatch",
+    "row:modelsize_0004:measured_archive_bytes_missing",
+    "row:modelsize_0004:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0004:receiver_closed_byte_proof_missing",
+    "row:modelsize_0005:measured_archive_bytes_missing",
+    "row:modelsize_0005:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0005:receiver_closed_byte_proof_missing",
+    "row:modelsize_0006:measured_archive_bytes_missing",
+    "row:modelsize_0006:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0006:receiver_closed_byte_proof_missing",
+    "row:modelsize_0007:measured_archive_bytes_missing",
+    "row:modelsize_0007:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0007:receiver_closed_byte_proof_missing",
+    "row:modelsize_0008:measured_archive_bytes_missing",
+    "row:modelsize_0008:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0008:receiver_closed_byte_proof_missing",
+    "row:modelsize_0009:measured_archive_bytes_missing",
+    "row:modelsize_0009:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0009:receiver_closed_byte_proof_missing",
+    "row:modelsize_0010:carrier_family_mismatch",
+    "row:modelsize_0010:measured_archive_bytes_missing",
+    "row:modelsize_0010:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0010:receiver_closed_byte_proof_missing",
+    "row:modelsize_0011:carrier_family_mismatch",
+    "row:modelsize_0011:measured_archive_bytes_missing",
+    "row:modelsize_0011:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0011:receiver_closed_byte_proof_missing",
+    "row:modelsize_0012:carrier_family_mismatch",
+    "row:modelsize_0012:measured_archive_bytes_missing",
+    "row:modelsize_0012:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0012:receiver_closed_byte_proof_missing",
+    "row:modelsize_0013:carrier_family_mismatch",
+    "row:modelsize_0013:measured_archive_bytes_missing",
+    "row:modelsize_0013:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0013:receiver_closed_byte_proof_missing",
+    "row:modelsize_0014:carrier_family_mismatch",
+    "row:modelsize_0014:measured_archive_bytes_missing",
+    "row:modelsize_0014:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0014:receiver_closed_byte_proof_missing",
+    "row:modelsize_0015:measured_archive_bytes_missing",
+    "row:modelsize_0015:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0015:receiver_closed_byte_proof_missing",
+    "row:modelsize_0016:measured_archive_bytes_missing",
+    "row:modelsize_0016:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0016:receiver_closed_byte_proof_missing",
+    "row:modelsize_0017:measured_archive_bytes_missing",
+    "row:modelsize_0017:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0017:receiver_closed_byte_proof_missing",
+    "row:modelsize_0018:measured_archive_bytes_missing",
+    "row:modelsize_0018:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0018:receiver_closed_byte_proof_missing",
+    "row:modelsize_0019:measured_archive_bytes_missing",
+    "row:modelsize_0019:nonrate_score_or_component_distortions_missing",
+    "row:modelsize_0019:receiver_closed_byte_proof_missing",
+    "modelsize_budget:modelsize_budget_ladder_has_fewer_than_two_points",
+    "modelsize_budget:receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+    "nerv_receiver_closed_modelsize_ladder_is_false_authority",
+    "exact_or_full_video_cuda_blocked_until_PR101_and_Z5_terminal"
+  ],
+  "budget_row_count": 0,
+  "carrier_id": "snerv",
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "modelsize_budget_plan": {
+    "baseline_id": "pr95_hnerv",
+    "blockers": [
+      "modelsize_budget_ladder_has_fewer_than_two_points",
+      "receiver_closed_modelsize_ladder_has_fewer_than_two_points"
+    ],
+    "carrier_id": "snerv",
+    "contest_byte_price_score": 6.658589531221714e-07,
+    "decision_basis": "all_rows",
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "marginal_steps": [],
+    "measured_points": [],
+    "original_video_bytes": 37545489,
+    "point_count_by_evidence": {},
+    "points": [],
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_closed_points": [],
+    "receiver_closed_selected_archive_bytes": null,
+    "receiver_closed_selected_point": null,
+    "recommended_next_actions": [
+      "run_receiver_closed_modelsize_ladder_before_long_budget_spend",
+      "include_archive_bytes_and_nonrate_score_for_each_size_point"
+    ],
+    "schema": "compact_carrier_modelsize_budget_plan.v2",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selected_archive_bytes": null,
+    "selected_point": null,
+    "status": "insufficient_modelsize_ladder"
+  },
+  "modelsize_budget_rows": [],
+  "normalized_rows": [
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 8,
+      "modelsize_mparams": 0.04060799999999787,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0000",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.00024573985389291246,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 22175.999999997868,
+            "embed_dim": 16,
+            "embed_hw": 1.92,
+            "embed_param_estimate": 18432.0,
+            "fc_dim": 8,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 40607.99999999787
+          },
+          "family": "hnerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 13824,
+            "ideal_packed_payload_bytes": 36000,
+            "measured": false,
+            "model_payload_bytes": 22176,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.04060799999999787,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.04060799999999787,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 36000,
+            "slack_bytes": 0,
+            "target_bytes": 36000
+          }
+        },
+        "target_archive_byte_cap": 36000,
+        "target_cap_rate_term": 0.00024573985389291246
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 13,
+      "modelsize_mparams": 0.07660799999998694,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0001",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0004914797077858249,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 58175.99999998693,
+            "embed_dim": 16,
+            "embed_hw": 1.92,
+            "embed_param_estimate": 18432.0,
+            "fc_dim": 13,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 76607.99999998693
+          },
+          "family": "hnerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 13824,
+            "ideal_packed_payload_bytes": 72000,
+            "measured": false,
+            "model_payload_bytes": 58176,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.07660799999998694,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.07660799999998694,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 72000,
+            "slack_bytes": 0,
+            "target_bytes": 72000
+          }
+        },
+        "target_archive_byte_cap": 72000,
+        "target_cap_rate_term": 0.0004914797077858249
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 18,
+      "modelsize_mparams": 0.12460799999998654,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0002",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0008191328463097083,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 106175.99999998654,
+            "embed_dim": 16,
+            "embed_hw": 1.92,
+            "embed_param_estimate": 18432.0,
+            "fc_dim": 18,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 124607.99999998654
+          },
+          "family": "hnerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 13824,
+            "ideal_packed_payload_bytes": 120000,
+            "measured": false,
+            "model_payload_bytes": 106176,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.12460799999998654,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.12460799999998654,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 120000,
+            "slack_bytes": 0,
+            "target_bytes": 120000
+          }
+        },
+        "target_archive_byte_cap": 120000,
+        "target_cap_rate_term": 0.0008191328463097083
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 20,
+      "modelsize_mparams": 0.15460799999999164,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0003",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0010239160578871353,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 136175.99999999165,
+            "embed_dim": 16,
+            "embed_hw": 1.92,
+            "embed_param_estimate": 18432.0,
+            "fc_dim": 20,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 154607.99999999165
+          },
+          "family": "hnerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 13824,
+            "ideal_packed_payload_bytes": 150000,
+            "measured": false,
+            "model_payload_bytes": 136176,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.15460799999999164,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.15460799999999164,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 150000,
+            "slack_bytes": 0,
+            "target_bytes": 150000
+          }
+        },
+        "target_archive_byte_cap": 150000,
+        "target_cap_rate_term": 0.0010239160578871353
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 22,
+      "modelsize_mparams": 0.18302499999999106,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0004",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0012178935420003268,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 164592.99999999107,
+            "embed_dim": 16,
+            "embed_hw": 1.92,
+            "embed_param_estimate": 18432.0,
+            "fc_dim": 22,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 183024.99999999107
+          },
+          "family": "hnerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 13824,
+            "ideal_packed_payload_bytes": 178417,
+            "measured": false,
+            "model_payload_bytes": 164593,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.18302499999999106,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.18302499999999106,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 178417,
+            "slack_bytes": 0,
+            "target_bytes": 178417
+          }
+        },
+        "target_archive_byte_cap": 178417,
+        "target_cap_rate_term": 0.0012178935420003268
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 11,
+      "modelsize_mparams": 0.03869999999999116,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0005",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.00024573985389291246,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 27899.99999999116,
+            "embed_dim": 16,
+            "embed_hw": 1,
+            "embed_param_estimate": 10800.0,
+            "fc_dim": 11,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 38699.99999999116
+          },
+          "family": "snerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 8100,
+            "ideal_packed_payload_bytes": 36000,
+            "measured": false,
+            "model_payload_bytes": 27900,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.03869999999999116,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.03869999999999116,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 36000,
+            "slack_bytes": 0,
+            "target_bytes": 36000
+          }
+        },
+        "target_archive_byte_cap": 36000,
+        "target_cap_rate_term": 0.00024573985389291246
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 17,
+      "modelsize_mparams": 0.07469999999999441,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0006",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0004914797077858249,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 63899.99999999441,
+            "embed_dim": 16,
+            "embed_hw": 1,
+            "embed_param_estimate": 10800.0,
+            "fc_dim": 17,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 74699.99999999441
+          },
+          "family": "snerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 8100,
+            "ideal_packed_payload_bytes": 72000,
+            "measured": false,
+            "model_payload_bytes": 63900,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.07469999999999441,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.07469999999999441,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 72000,
+            "slack_bytes": 0,
+            "target_bytes": 72000
+          }
+        },
+        "target_archive_byte_cap": 72000,
+        "target_cap_rate_term": 0.0004914797077858249
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 23,
+      "modelsize_mparams": 0.12269999999999406,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0007",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0008191328463097083,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 111899.99999999406,
+            "embed_dim": 16,
+            "embed_hw": 1,
+            "embed_param_estimate": 10800.0,
+            "fc_dim": 23,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 122699.99999999406
+          },
+          "family": "snerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 8100,
+            "ideal_packed_payload_bytes": 120000,
+            "measured": false,
+            "model_payload_bytes": 111900,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.12269999999999406,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.12269999999999406,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 120000,
+            "slack_bytes": 0,
+            "target_bytes": 120000
+          }
+        },
+        "target_archive_byte_cap": 120000,
+        "target_cap_rate_term": 0.0008191328463097083
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 26,
+      "modelsize_mparams": 0.15269999999999911,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0008",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0010239160578871353,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 141899.99999999913,
+            "embed_dim": 16,
+            "embed_hw": 1,
+            "embed_param_estimate": 10800.0,
+            "fc_dim": 26,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 152699.99999999913
+          },
+          "family": "snerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 8100,
+            "ideal_packed_payload_bytes": 150000,
+            "measured": false,
+            "model_payload_bytes": 141900,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.15269999999999911,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.15269999999999911,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 150000,
+            "slack_bytes": 0,
+            "target_bytes": 150000
+          }
+        },
+        "target_archive_byte_cap": 150000,
+        "target_cap_rate_term": 0.0010239160578871353
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 29,
+      "modelsize_mparams": 0.18111699999999853,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0009",
+      "source": {
+        "resolution_mode": "scorer_internal_384x512",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0012178935420003268,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 170316.99999999852,
+            "embed_dim": 16,
+            "embed_hw": 1,
+            "embed_param_estimate": 10800.0,
+            "fc_dim": 29,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 181116.99999999852
+          },
+          "family": "snerv",
+          "frame_pixels": 196608,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 8100,
+            "ideal_packed_payload_bytes": 178417,
+            "measured": false,
+            "model_payload_bytes": 170317,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.18111699999999853,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.18111699999999853,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 178417,
+            "slack_bytes": 0,
+            "target_bytes": 178417
+          }
+        },
+        "target_archive_byte_cap": 178417,
+        "target_cap_rate_term": 0.0012178935420003268
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 1,
+      "modelsize_mparams": 0.09583145653015027,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0010",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing",
+            "target_byte_cap_below_minimum_solved_budget"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0004914046206082465,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 456.20653015027347,
+            "embed_dim": 16,
+            "embed_hw": 9.934921875,
+            "embed_param_estimate": 95375.25,
+            "fc_dim": 1,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 95831.45653015027
+          },
+          "family": "hnerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 71532,
+            "ideal_packed_payload_bytes": 71989,
+            "measured": false,
+            "model_payload_bytes": 457,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.09583145653015027,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.09583145653015027,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 71989,
+            "slack_bytes": -35989,
+            "target_bytes": 36000
+          }
+        },
+        "target_archive_byte_cap": 36000,
+        "target_cap_rate_term": 0.00024573985389291246
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 1,
+      "modelsize_mparams": 0.09584324999999118,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0011",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0004914797077858249,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 467.99999999118154,
+            "embed_dim": 16,
+            "embed_hw": 9.934921875,
+            "embed_param_estimate": 95375.25,
+            "fc_dim": 1,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 95843.24999999118
+          },
+          "family": "hnerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 71532,
+            "ideal_packed_payload_bytes": 72000,
+            "measured": false,
+            "model_payload_bytes": 468,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.09584324999999118,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.09584324999999118,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 72000,
+            "slack_bytes": 0,
+            "target_bytes": 72000
+          }
+        },
+        "target_archive_byte_cap": 72000,
+        "target_cap_rate_term": 0.0004914797077858249
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 12,
+      "modelsize_mparams": 0.14384324999999082,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0012",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0008191328463097083,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 48467.99999999083,
+            "embed_dim": 16,
+            "embed_hw": 9.934921875,
+            "embed_param_estimate": 95375.25,
+            "fc_dim": 12,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 143843.24999999083
+          },
+          "family": "hnerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 71532,
+            "ideal_packed_payload_bytes": 120000,
+            "measured": false,
+            "model_payload_bytes": 48468,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.14384324999999082,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.14384324999999082,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 120000,
+            "slack_bytes": 0,
+            "target_bytes": 120000
+          }
+        },
+        "target_archive_byte_cap": 120000,
+        "target_cap_rate_term": 0.0008191328463097083
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 15,
+      "modelsize_mparams": 0.17384324999999584,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0013",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0010239160578871353,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 78467.99999999584,
+            "embed_dim": 16,
+            "embed_hw": 9.934921875,
+            "embed_param_estimate": 95375.25,
+            "fc_dim": 15,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 173843.24999999584
+          },
+          "family": "hnerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 71532,
+            "ideal_packed_payload_bytes": 150000,
+            "measured": false,
+            "model_payload_bytes": 78468,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.17384324999999584,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.17384324999999584,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 150000,
+            "slack_bytes": 0,
+            "target_bytes": 150000
+          }
+        },
+        "target_archive_byte_cap": 150000,
+        "target_cap_rate_term": 0.0010239160578871353
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "carrier_family_mismatch",
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 18,
+      "modelsize_mparams": 0.20226024999999526,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0014",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0012178935420003268,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 106884.99999999526,
+            "embed_dim": 16,
+            "embed_hw": 9.934921875,
+            "embed_param_estimate": 95375.25,
+            "fc_dim": 18,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 202260.24999999526
+          },
+          "family": "hnerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 71532,
+            "ideal_packed_payload_bytes": 178417,
+            "measured": false,
+            "model_payload_bytes": 106885,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.20226024999999526,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              4,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.20226024999999526,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "decoder_size = modelsize*1e6 - embed_param; fc_dim=max_root([a,b,c-decoder_size])",
+            "head_sha_observed": "4872129c8d004a25477e0c1ffbbff4ba71943ad5",
+            "official_controls": [
+              "--modelsize",
+              "--ks",
+              "--reduce",
+              "--lower_width",
+              "--enc_dim",
+              "--enc_strds",
+              "--dec_strds",
+              "--quant_model_bit",
+              "--quant_embed_bit"
+            ],
+            "repo_url": "https://github.com/haochen-rye/HNeRV.git",
+            "source_file": "train_nerv_all.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 178417,
+            "slack_bytes": 0,
+            "target_bytes": 178417
+          }
+        },
+        "target_archive_byte_cap": 178417,
+        "target_cap_rate_term": 0.0012178935420003268
+      },
+      "source_family": "hnerv",
+      "source_family_key": "hnerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 1,
+      "modelsize_mparams": 0.08793564325854611,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0015",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing",
+            "target_byte_cap_below_minimum_solved_budget"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0004507688053242324,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 335.64325854611525,
+            "embed_dim": 16,
+            "embed_hw": 9,
+            "embed_param_estimate": 87600.0,
+            "fc_dim": 1,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 87935.64325854612
+          },
+          "family": "snerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 65700,
+            "ideal_packed_payload_bytes": 66036,
+            "measured": false,
+            "model_payload_bytes": 336,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.08793564325854611,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.08793564325854611,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 66036,
+            "slack_bytes": -30036,
+            "target_bytes": 36000
+          }
+        },
+        "target_archive_byte_cap": 36000,
+        "target_cap_rate_term": 0.00024573985389291246
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 5,
+      "modelsize_mparams": 0.0938999999999971,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0016",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0004914797077858249,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 6299.999999997104,
+            "embed_dim": 16,
+            "embed_hw": 9,
+            "embed_param_estimate": 87600.0,
+            "fc_dim": 5,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 93899.9999999971
+          },
+          "family": "snerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 65700,
+            "ideal_packed_payload_bytes": 72000,
+            "measured": false,
+            "model_payload_bytes": 6300,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.0938999999999971,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.0938999999999971,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 72000,
+            "slack_bytes": 0,
+            "target_bytes": 72000
+          }
+        },
+        "target_archive_byte_cap": 72000,
+        "target_cap_rate_term": 0.0004914797077858249
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 16,
+      "modelsize_mparams": 0.14189999999999675,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0017",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0008191328463097083,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 54299.99999999674,
+            "embed_dim": 16,
+            "embed_hw": 9,
+            "embed_param_estimate": 87600.0,
+            "fc_dim": 16,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 141899.99999999674
+          },
+          "family": "snerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 65700,
+            "ideal_packed_payload_bytes": 120000,
+            "measured": false,
+            "model_payload_bytes": 54300,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.14189999999999675,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.14189999999999675,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 120000,
+            "slack_bytes": 0,
+            "target_bytes": 120000
+          }
+        },
+        "target_archive_byte_cap": 120000,
+        "target_cap_rate_term": 0.0008191328463097083
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 20,
+      "modelsize_mparams": 0.17189999999998767,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0018",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0010239160578871353,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 84299.99999998766,
+            "embed_dim": 16,
+            "embed_hw": 9,
+            "embed_param_estimate": 87600.0,
+            "fc_dim": 20,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 171899.99999998766
+          },
+          "family": "snerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 65700,
+            "ideal_packed_payload_bytes": 150000,
+            "measured": false,
+            "model_payload_bytes": 84300,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.17189999999998767,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.17189999999998767,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 150000,
+            "slack_bytes": 0,
+            "target_bytes": 150000
+          }
+        },
+        "target_archive_byte_cap": 150000,
+        "target_cap_rate_term": 0.0010239160578871353
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    },
+    {
+      "archive_bytes": null,
+      "archive_bytes_key": null,
+      "archive_path": null,
+      "archive_sha256": null,
+      "blockers": [
+        "measured_archive_bytes_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": 23,
+      "modelsize_mparams": 0.20031699999998703,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "modelsize_0019",
+      "source": {
+        "resolution_mode": "contest_output_1164x874",
+        "solved_budget": {
+          "blockers": [
+            "trained_state_dict_missing",
+            "entropy_coded_payload_measurement_missing",
+            "zip_brotli_archive_measurement_missing",
+            "receiver_inflate_parity_missing",
+            "scorer_component_deltas_missing"
+          ],
+          "contest_rate_terms": {
+            "ideal_payload_rate": 0.0012178935420003268,
+            "raw_video_bytes": 3662409600
+          },
+          "derived": {
+            "decoder_param_budget_estimate": 112716.99999998702,
+            "embed_dim": 16,
+            "embed_hw": 9,
+            "embed_param_estimate": 87600.0,
+            "fc_dim": 23,
+            "fc_param": 9.0,
+            "total_param_budget_estimate": 200316.99999998702
+          },
+          "family": "snerv",
+          "frame_pixels": 1017336,
+          "frontier_score_claim": false,
+          "full_data_length": 600,
+          "ideal_quant_payload": {
+            "assumption": "ceil(param_count * quant_bits / 8) lower bound; excludes per-tensor min/scale overhead, entropy coding headers, zip/brotli container bytes, runtime glue, and scorer-fit effects",
+            "embedding_payload_bytes": 65700,
+            "ideal_packed_payload_bytes": 178417,
+            "measured": false,
+            "model_payload_bytes": 112717,
+            "temporal_embedding_payload_bytes": 0
+          },
+          "lower_bound_only": true,
+          "measured_archive_bytes": null,
+          "measured_score_components": null,
+          "modelsize_mparams": 0.20031699999998703,
+          "official_controls": {
+            "--dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--emb_size": 0,
+            "--enc_dim": "64_16",
+            "--enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "--ks": "0_1_5",
+            "--lower_width": 12,
+            "--modelsize": 0.20031699999998703,
+            "--quant_axis": 0,
+            "--quant_embed2_bit": 6,
+            "--quant_embed_bit": 6,
+            "--quant_model_bit": 8,
+            "--reduce": 1.2
+          },
+          "production_hardened_claim": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_official_modelsize_budget_row.v1",
+          "score_claim": false,
+          "source_formula": {
+            "formula": "SNeRV extends HNeRV modelsize solve with LF/norm/temporal embedding overhead",
+            "head_sha_observed": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+            "official_controls": [
+              "--modelsize",
+              "--fc_dim",
+              "--ks",
+              "--reduce",
+              "--enc_dim",
+              "--emb_size",
+              "--quant_model_bit",
+              "--quant_embed_bit",
+              "--quant_embed2_bit"
+            ],
+            "repo_url": "https://github.com/qwertja/SNeRV.git",
+            "source_file": "train_snerv.py"
+          },
+          "target_fit": {
+            "fit_is_lower_bound_only": true,
+            "ideal_packed_payload_bytes": 178417,
+            "slack_bytes": 0,
+            "target_bytes": 178417
+          }
+        },
+        "target_archive_byte_cap": 178417,
+        "target_cap_rate_term": 0.0012178935420003268
+      },
+      "source_family": "snerv",
+      "source_family_key": "snerv"
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_carrier_training_plan": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_score_aware_training": false,
+  "receiver_closed_row_count": 0,
+  "receiver_closed_selected_archive_bytes": null,
+  "receiver_closed_selected_fc_dim": null,
+  "receiver_closed_selected_modelsize_mparams": null,
+  "recommended_next_actions": [
+    "materialize_at_least_two_trained_receiver_archive_rows_with_modelsize_or_fc_dim",
+    "prove_receiver_inflate_or_archive_replay_for_each_ladder_row",
+    "attach_nonrate_score_or_seg_pose_component_deltas_to_each_ladder_row"
+  ],
+  "row_count": 20,
+  "schema": "nerv_receiver_closed_modelsize_ladder.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_artifact_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-snerv-stratified-smoke-20260602T112911Z/.omx/research/nerv_modelsize_archive_curve_20260602T124222Z.json",
+  "status": "receiver_closed_modelsize_ladder_blocked",
+  "verdict": "NO_GO_CARRIER_TRAINING_GATE_INPUT__RECEIVER_CLOSED_LADDER_MISSING"
+}

@@ -322,6 +322,22 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     zero_row = rows["route_bitmask_and_zero_packing_to_rate_allocator"]
     assert zero_row["planner_ingest"]["ingest_kind"] == "reuse_existing_control_binding"
     assert {"zero", "rle_only"} <= set(zero_row["receiver_precision_modes"])
+    modelsize_rows = [
+        row
+        for row in rows.values()
+        if row["planner_ingest"]["ingest_kind"] == "measured_modelsize_ladder_work_order"
+    ]
+    assert modelsize_rows
+    assert all(
+        row["planner_ingest"]["existing_tool_ingress"]
+        == "tools/build_nerv_receiver_closed_modelsize_ladder.py"
+        for row in modelsize_rows
+    )
+    assert all(
+        row["planner_ingest"]["planning_context_tool"]
+        == "tools/build_nerv_modelsize_archive_curve.py"
+        for row in modelsize_rows
+    )
     gate_row = rows["close_snerv_receiver_rate_promotion_gates"]
     assert gate_row["status"] == "blocked_until_prerequisite_evidence"
     assert gate_row["planner_ingest"]["runnable_now"] is False
