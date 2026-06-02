@@ -79,17 +79,20 @@ def mlx_profile_has_full_video_coverage(
     *,
     required_pairs: int = CONTEST_PAIR_COUNT,
 ) -> bool:
-    """Return whether a profile is eligible as full-video MLX prefilter evidence."""
+    """Return whether a profile covers the full video.
+
+    Full-video coverage is useful acquisition evidence even when it is batched
+    or run on local MLX GPU. Unlocking local CPU replay is stricter and handled
+    separately by ``local_replay_prefilter`` below.
+    """
 
     if profile.get("schema") != HPRC_MLX_COMPONENT_PROFILE_SCHEMA:
         return False
     count = mlx_profile_pair_count(profile)
-    batch_pairs = mlx_profile_batch_pairs(profile)
     return (
         mlx_profile_full_video_scope(profile) == "executed"
         and count is not None
         and int(count) >= int(required_pairs)
-        and batch_pairs == 1
     )
 
 
@@ -136,16 +139,24 @@ def summarize_mlx_prefilter_coverage(
     full_records = [
         record for record in records if record.get("full_video_prefilter") is True
     ]
+    replay_records = [
+        record for record in records if record.get("local_replay_prefilter") is True
+    ]
     scored_full_records = [
         record
         for record in full_records
         if _finite_float(record.get("mlx_score_estimate")) is not None
     ]
-    local_replay_passed = bool(full_records)
+    scored_replay_records = [
+        record
+        for record in replay_records
+        if _finite_float(record.get("mlx_score_estimate")) is not None
+    ]
+    local_replay_passed = bool(replay_records)
     if score_threshold is not None:
         local_replay_passed = any(
             float(record["mlx_score_estimate"]) < score_threshold
-            for record in scored_full_records
+            for record in scored_replay_records
         )
     blockers: list[str] = []
     if not records:
@@ -162,9 +173,16 @@ def summarize_mlx_prefilter_coverage(
             for record in records
             for blocker in record.get("blockers", [])
         )
+    elif not replay_records:
+        blockers.extend(
+            str(blocker)
+            for record in full_records
+            for blocker in record.get("blockers", [])
+            if blocker == "mlx_profile_batch_pairs_not_singleton"
+        )
     elif score_threshold is not None and not local_replay_passed:
         blockers.append("mlx_prefilter_score_not_below_local_replay_threshold")
-        if not scored_full_records:
+        if not scored_replay_records:
             blockers.append("mlx_score_missing_or_nonfinite")
         else:
             blockers.append("mlx_score_above_hard_demote_threshold")
@@ -184,6 +202,11 @@ def summarize_mlx_prefilter_coverage(
             str(record["path"])
             for record in records
             if record.get("full_video_prefilter") is True
+        ],
+        "local_replay_profile_paths": [
+            str(record["path"])
+            for record in records
+            if record.get("local_replay_prefilter") is True
         ],
         "profile_records": records,
         "blockers": _dedupe(blockers),
@@ -236,6 +259,9 @@ def _profile_path_record(
                 required_pairs=int(required_pairs),
             ),
         }
+    )
+    record["local_replay_prefilter"] = bool(
+        record["full_video_prefilter"] is True and batch_pairs == 1
     )
     if schema != HPRC_MLX_COMPONENT_PROFILE_SCHEMA:
         record["blockers"].append("mlx_profile_schema_unsupported")

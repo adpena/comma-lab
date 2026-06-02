@@ -2369,6 +2369,101 @@ def test_hinerv_full_video_bad_mlx_score_does_not_unlock_default_cpu_replay(
     assert "mlx_score_above_hard_demote_threshold" in out["blockers"]
 
 
+def test_hinerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=600)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        profile = out / "local_mlx_prefilter_profile.json"
+        profile.write_text(
+            json.dumps(
+                {
+                    "schema": "hprc_mlx_component_neutralization_profile.v1",
+                    "producer": "tac.local_acceleration.mlx_renderer_prefilter_profile",
+                    "max_pairs": 600,
+                    "num_pairs": 600,
+                    "n_samples": 600,
+                    "scorer_batch_pairs": 8,
+                    "scope_status": {"full_video": "executed"},
+                    "score_components": {"canonical_score": 91.0},
+                    "mlx_response_summary": {
+                        "batch_pairs": 8,
+                        "max_pairs": 600,
+                        "n_samples": 600,
+                    },
+                    "section_value_rows": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    replay_calls: list[dict[str, object]] = []
+
+    def fake_run_local_submission_replay(**kwargs):
+        replay_calls.append(kwargs)
+        raise AssertionError("batched MLX acquisition profile must not run CPU replay")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+    monkeypatch.setattr(
+        runner_mod,
+        "run_local_submission_replay",
+        fake_run_local_submission_replay,
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_batched_gpu_gate",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        repo_root=REPO_ROOT,
+    )
+
+    assert replay_calls == []
+    assert out["local_cpu_replay_gate"]["executed"] is False
+    assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is True
+    assert out["local_cpu_replay_gate"]["local_replay_mlx_prefilter_passed"] is False
+    assert out["mlx_prefilter_coverage"]["has_full_video_mlx_prefilter"] is True
+    assert out["mlx_prefilter_coverage"]["local_replay_profile_paths"] == []
+    assert out["mlx_prefilter_coverage"]["blockers"] == [
+        "mlx_profile_batch_pairs_not_singleton"
+    ]
+    assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
+    assert "hi_nerv_full_video_local_prefilter_missing" not in out["blockers"]
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" not in out[
+        "blockers"
+    ]
+    assert "hi_nerv_local_cpu_replay_gate_missing" in out["blockers"]
+    feedback_blockers = out["candidate_feedback"]["row"][
+        "pr95_stack_binding_blockers"
+    ]
+    assert "hi_nerv_full_video_local_prefilter_missing" not in feedback_blockers
+    assert "hi_nerv_local_cpu_replay_gate_missing" in feedback_blockers
+
+
 def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
     tmp_path: Path,
     monkeypatch,
