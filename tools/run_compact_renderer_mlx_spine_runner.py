@@ -563,6 +563,7 @@ def _compile_carrier_post_export_materializer_plan(
         backlog_path = output_root / "materializer_backlog.json"
         work_queue_path = output_root / "materializer_work_queue.json"
         experiment_queue_path = output_root / "experiment_queue.json"
+        experiment_queue_state_path = output_root / "experiment_queue.sqlite"
         payloads = build_frontier_rate_attack_payloads(
             repo_root=root,
             queue_id=queue_id,
@@ -573,6 +574,7 @@ def _compile_carrier_post_export_materializer_plan(
             local_cpu_concurrency=int(local_cpu_concurrency),
             lane_id=f"compact_carrier_post_export:{family_token}",
             source_work_queue_path=work_queue_path,
+            source_state_path=experiment_queue_state_path,
             include_exact_readiness_followup=True,
             exact_readiness_followup_require_ready=False,
         )
@@ -594,6 +596,7 @@ def _compile_carrier_post_export_materializer_plan(
             "materializer_backlog_path": backlog_path.as_posix(),
             "materializer_work_queue_path": work_queue_path.as_posix(),
             "experiment_queue_path": experiment_queue_path.as_posix(),
+            "experiment_queue_state_path": experiment_queue_state_path.as_posix(),
             "executable_target_count": payloads["bootstrap"].get(
                 "executable_target_count"
             ),
@@ -645,13 +648,19 @@ def _execute_carrier_post_export_materializer_plan(
         else root / ".omx" / "state" / "compact_carrier_post_export_materializers"
     )
     execution_path = output_root / "post_export_materializer_execution.json"
+    state_path_raw = plan.get("experiment_queue_state_path")
+    state_path = (
+        _resolve(state_path_raw, base=root)
+        if isinstance(state_path_raw, str) and state_path_raw
+        else output_root / "experiment_queue.sqlite"
+    )
     base_result: dict[str, Any] = {
         "schema": "compact_carrier_post_export_materializer_execution.v1",
         "requested": bool(requested),
         "executed": False,
         "queue_id": plan.get("queue_id"),
         "queue_path": plan.get("experiment_queue_path"),
-        "state_path": (output_root / "experiment_queue.sqlite").as_posix(),
+        "state_path": state_path.as_posix(),
         "log_root": (output_root / "experiment_queue_logs").as_posix(),
         "execution_path": execution_path.as_posix(),
         "max_steps": int(max_steps),
@@ -692,7 +701,6 @@ def _execute_carrier_post_export_materializer_plan(
     try:
         queue_path = _resolve(queue_path_raw, base=root)
         queue = load_queue_definition(queue_path)
-        state_path = output_root / "experiment_queue.sqlite"
         log_root = output_root / "experiment_queue_logs"
         with connect_state(state_path) as conn:
             initialize_queue_state(conn, queue)

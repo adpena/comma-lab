@@ -1009,6 +1009,14 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert Path(post_export["experiment_queue_path"]).is_file()
     queue = json.loads(Path(post_export["experiment_queue_path"]).read_text())
     assert queue["schema"] == "experiment_queue.v1"
+    assert post_export["experiment_queue_state_path"].endswith(
+        "/experiment_queue.sqlite"
+    )
+    harvest_step = queue["experiments"][0]["steps"][1]
+    state_arg_index = harvest_step["command"].index("--state") + 1
+    assert harvest_step["command"][state_arg_index] == post_export[
+        "experiment_queue_state_path"
+    ]
     assert post_export["score_claim"] is False
     assert post_export["ready_for_exact_eval_dispatch"] is False
     post_export_execution = out["post_export_materializer_execution"]
@@ -1623,6 +1631,12 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert post_export["queue_launch_executed"] is False
     assert post_export["experiment_count"] > 0
     assert Path(post_export["experiment_queue_path"]).is_file()
+    queue = json.loads(Path(post_export["experiment_queue_path"]).read_text())
+    harvest_step = queue["experiments"][0]["steps"][1]
+    state_arg_index = harvest_step["command"].index("--state") + 1
+    assert harvest_step["command"][state_arg_index] == post_export[
+        "experiment_queue_state_path"
+    ]
     post_export_execution = out["post_export_materializer_execution"]
     assert post_export_execution["requested"] is False
     assert post_export_execution["executed"] is False
