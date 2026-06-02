@@ -3,10 +3,13 @@
 
 from __future__ import annotations
 
+import inspect
+
 import numpy as np
 import pytest
 import torch
 
+import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_SPECTRA_PRESERVING_ADAPTER,
@@ -66,6 +69,13 @@ def test_first_class_qat_runner_preserves_false_authority_wrapper(monkeypatch) -
 
     assert result == "sentinel_result"
     assert calls == {"n_pairs": 2, "wavelet": "haar"}
+
+
+def test_prepare_state_disables_score_exact_saliency_diagnostics_hot_loop() -> None:
+    src = inspect.getsource(qat_mod._prepare_state)
+
+    assert "compute_s_seg_flip_risk(segnet, pairs[pair_idx], diagnostics=False)" in src
+    assert "compute_s_pose_fisher(posenet, pairs[pair_idx], diagnostics=False)" in src
 
 
 def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(

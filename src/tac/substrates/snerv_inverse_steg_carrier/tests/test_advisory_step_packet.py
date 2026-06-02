@@ -75,11 +75,15 @@ def test_advisory_charges_l2_with_separate_receiver_packet(monkeypatch) -> None:
         ]
     ).unsqueeze(0)
 
-    def fake_seg(_segnet, _pair):
+    saliency_diagnostics: list[bool | None] = []
+
+    def fake_seg(_segnet, _pair, *, diagnostics=None):
+        saliency_diagnostics.append(diagnostics)
         field = torch.linspace(0.1, 2.0, 16 * 24, dtype=torch.float32).reshape(16, 24)
         return SimpleNamespace(flip_risk=field)
 
-    def fake_pose(_posenet, _pair):
+    def fake_pose(_posenet, _pair, *, diagnostics=None):
+        saliency_diagnostics.append(diagnostics)
         field = torch.linspace(2.0, 0.1, 16 * 24, dtype=torch.float32).reshape(16, 24)
         return SimpleNamespace(s_pose=field)
 
@@ -91,6 +95,15 @@ def test_advisory_charges_l2_with_separate_receiver_packet(monkeypatch) -> None:
         advisory_mod,
         "measure_pair_d_seg_d_pose",
         lambda *_a, **_kw: (0.25, 0.04),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        advisory_mod,
+        "measure_pairs_d_seg_d_pose_batched",
+        lambda *_a, **_kw: (
+            np.asarray([0.25], dtype=np.float64),
+            np.asarray([0.04], dtype=np.float64),
+        ),
     )
 
     result = run_snerv_advisory(
@@ -112,6 +125,8 @@ def test_advisory_charges_l2_with_separate_receiver_packet(monkeypatch) -> None:
         CONTEST_BYTE_PRICE * result.archive_bytes_total_l2
     )
     assert result.score_l2 == pytest.approx(expected_l2)
+    assert saliency_diagnostics
+    assert set(saliency_diagnostics) == {False}
 
 
 def test_hf_decoder_saliency_component_selector_is_explicit() -> None:

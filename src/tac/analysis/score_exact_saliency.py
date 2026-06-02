@@ -275,7 +275,10 @@ class SegFlipRisk:
 
 
 def compute_s_seg_flip_risk(
-    segnet: torch.nn.Module, pair_btchw: torch.Tensor
+    segnet: torch.nn.Module,
+    pair_btchw: torch.Tensor,
+    *,
+    diagnostics: bool = True,
 ) -> SegFlipRisk:
     """P18: per-pixel SegNet flip-risk on the LAST frame of one pair.
 
@@ -298,15 +301,20 @@ def compute_s_seg_flip_risk(
     grad_energy = grad.pow(2).sum(dim=1)  # (1, H, W) sum over RGB channels
     flip_risk = grad_energy / (margin.detach().pow(2) + 1e-6)  # (1, H, W)
 
-    finite = bool(torch.isfinite(grad).all().item()) and bool(
-        torch.isfinite(flip_risk).all().item()
-    )
+    if diagnostics:
+        finite = bool(torch.isfinite(grad).all().item()) and bool(
+            torch.isfinite(flip_risk).all().item()
+        )
+        grad_nonzero_frac = float((grad.abs() > 0).float().mean().item())
+    else:
+        finite = True
+        grad_nonzero_frac = float("nan")
     return SegFlipRisk(
         flip_risk=flip_risk.detach().squeeze(0),  # (H, W)
         grad_energy=grad_energy.detach().squeeze(0),
         margin=margin.detach().squeeze(0),
         grad_finite=finite,
-        grad_nonzero_frac=float((grad.abs() > 0).float().mean().item()),
+        grad_nonzero_frac=grad_nonzero_frac,
         scorer_input_hw=tuple(seg_in.shape[-2:]),  # type: ignore[arg-type]
     )
 
@@ -333,6 +341,7 @@ def compute_s_pose_fisher(
     pair_btchw: torch.Tensor,
     *,
     method: str = "batched_vjp",
+    diagnostics: bool = True,
 ) -> PoseFisher:
     """P19: per-pixel PoseNet Fisher info over BOTH frames of one pair.
 
@@ -352,13 +361,18 @@ def compute_s_pose_fisher(
     """
     pair = _as_single_pair(pair_btchw)  # (1, 2, 3, H, W)
     if method == "loop":
-        return _pose_fisher_loop(posenet, pair)
+        return _pose_fisher_loop(posenet, pair, diagnostics=diagnostics)
     if method == "batched_vjp":
-        return _pose_fisher_batched_vjp(posenet, pair)
+        return _pose_fisher_batched_vjp(posenet, pair, diagnostics=diagnostics)
     raise ValueError(f"unknown method {method!r}; use 'loop' or 'batched_vjp'")
 
 
-def _pose_fisher_loop(posenet: torch.nn.Module, pair: torch.Tensor) -> PoseFisher:
+def _pose_fisher_loop(
+    posenet: torch.nn.Module,
+    pair: torch.Tensor,
+    *,
+    diagnostics: bool,
+) -> PoseFisher:
     """Baseline: 6 separate backward passes (one per pose scalar)."""
     pair = pair.detach().clone().requires_grad_(True)  # (1, 2, 3, H, W)
     pose_in = posenet.preprocess_input(pair)  # (1, 12, 192, 256)
@@ -369,13 +383,24 @@ def _pose_fisher_loop(posenet: torch.nn.Module, pair: torch.Tensor) -> PoseFishe
         g = torch.autograd.grad(
             pose_out[0, k], pair, retain_graph=(k < 5), create_graph=False
         )[0]
-        if not torch.isfinite(g).all():
+        if diagnostics and not bool(torch.isfinite(g).all().item()):
             grads_finite = False
         s_pose = s_pose + g.pow(2)
-    return _finalize_pose_fisher(s_pose, pair, grads_finite, "loop")
+    return _finalize_pose_fisher(
+        s_pose,
+        pair,
+        grads_finite,
+        "loop",
+        diagnostics=diagnostics,
+    )
 
 
-def _pose_fisher_batched_vjp(posenet: torch.nn.Module, pair: torch.Tensor) -> PoseFisher:
+def _pose_fisher_batched_vjp(
+    posenet: torch.nn.Module,
+    pair: torch.Tensor,
+    *,
+    diagnostics: bool,
+) -> PoseFisher:
     """OPTIMIZED: single is_grads_batched=True backward over a 6-row identity.
 
     For the 6-output, single-input case this computes the full input-Jacobian of
@@ -402,24 +427,42 @@ def _pose_fisher_batched_vjp(posenet: torch.nn.Module, pair: torch.Tensor) -> Po
         create_graph=False,
         is_grads_batched=True,
     )[0]  # (6, 1, 2, 3, H, W)
-    grads_finite = bool(torch.isfinite(jac_rows).all().item())
+    grads_finite = (
+        bool(torch.isfinite(jac_rows).all().item()) if diagnostics else True
+    )
     # diag(J^T J)_i = sum_k (J_ki)^2 = sum over the 6 batched rows of the square.
     s_pose = jac_rows.pow(2).sum(dim=0)  # (1, 2, 3, H, W)
-    return _finalize_pose_fisher(s_pose, pair, grads_finite, "batched_vjp")
+    return _finalize_pose_fisher(
+        s_pose,
+        pair,
+        grads_finite,
+        "batched_vjp",
+        diagnostics=diagnostics,
+    )
 
 
 def _finalize_pose_fisher(
-    s_pose: torch.Tensor, pair: torch.Tensor, grads_finite: bool, method: str
+    s_pose: torch.Tensor,
+    pair: torch.Tensor,
+    grads_finite: bool,
+    method: str,
+    *,
+    diagnostics: bool,
 ) -> PoseFisher:
     # s_pose: (1, 2, 3, H, W) — collapse RGB -> per-frame, and frames -> per-pixel.
     s_pose_per_frame = s_pose.detach().squeeze(0).sum(dim=1)  # (2, H, W)
     s_pose_per_pixel = s_pose_per_frame.sum(dim=0)  # (H, W)
-    finite = grads_finite and bool(torch.isfinite(s_pose_per_pixel).all().item())
+    if diagnostics:
+        finite = grads_finite and bool(torch.isfinite(s_pose_per_pixel).all().item())
+        nonzero_frac = float((s_pose_per_pixel > 0).float().mean().item())
+    else:
+        finite = bool(grads_finite)
+        nonzero_frac = float("nan")
     return PoseFisher(
         s_pose=s_pose_per_pixel,
         s_pose_per_frame=s_pose_per_frame,
         grad_finite=finite,
-        s_pose_nonzero_frac=float((s_pose_per_pixel > 0).float().mean().item()),
+        s_pose_nonzero_frac=nonzero_frac,
         method=method,
         scorer_input_hw=tuple(pair.shape[-2:]),  # type: ignore[arg-type]
     )

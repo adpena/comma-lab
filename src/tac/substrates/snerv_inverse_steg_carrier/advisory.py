@@ -417,8 +417,8 @@ def run_snerv_advisory(
     pair_saliency_cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
     for p in range(n_pairs):
         if hf_decoder_fit_mode == "score_weighted":
-            seg = compute_s_seg_flip_risk(segnet, pairs[p])
-            pose = compute_s_pose_fisher(posenet, pairs[p])
+            seg = compute_s_seg_flip_risk(segnet, pairs[p], diagnostics=False)
+            pose = compute_s_pose_fisher(posenet, pairs[p], diagnostics=False)
             seg_hw = seg.flip_risk.cpu().numpy()
             pose_hw = pose.s_pose.cpu().numpy()
             pair_saliency_cache[p] = (seg_hw, pose_hw)
@@ -493,8 +493,8 @@ def run_snerv_advisory(
         if p in pair_saliency_cache:
             seg_hw, pose_hw = pair_saliency_cache[p]
         else:
-            seg = compute_s_seg_flip_risk(segnet, pairs[p])
-            pose = compute_s_pose_fisher(posenet, pairs[p])
+            seg = compute_s_seg_flip_risk(segnet, pairs[p], diagnostics=False)
+            pose = compute_s_pose_fisher(posenet, pairs[p], diagnostics=False)
             seg_hw = seg.flip_risk.cpu().numpy()  # (384,512)
             pose_hw = pose.s_pose.cpu().numpy()  # (H?,W?) at native after preprocess backprop
 

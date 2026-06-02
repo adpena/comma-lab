@@ -18,6 +18,7 @@ Slot EEE discipline (CLAUDE.md "NO FAKE IMPLEMENTATIONS"):
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
@@ -197,6 +198,34 @@ def test_pose_fisher_loop_equals_batched_vjp(real_scorers_and_pairs):
     assert batched.method == "batched_vjp"
     max_diff = (loop.s_pose - batched.s_pose).abs().max().item()
     assert max_diff < 1e-6, f"batched_vjp must equal loop, max_abs_diff={max_diff}"
+
+
+@_real_weights
+def test_diagnostics_fast_path_preserves_saliency_tensors(real_scorers_and_pairs):
+    """Campaign fast mode may skip scalar diagnostics, never saliency tensors."""
+    posenet, segnet, pairs = real_scorers_and_pairs
+    seg_full = compute_s_seg_flip_risk(segnet, pairs[0], diagnostics=True)
+    seg_fast = compute_s_seg_flip_risk(segnet, pairs[0], diagnostics=False)
+    pose_full = compute_s_pose_fisher(
+        posenet,
+        pairs[0],
+        method="batched_vjp",
+        diagnostics=True,
+    )
+    pose_fast = compute_s_pose_fisher(
+        posenet,
+        pairs[0],
+        method="batched_vjp",
+        diagnostics=False,
+    )
+
+    assert torch.allclose(seg_fast.flip_risk, seg_full.flip_risk)
+    assert torch.allclose(seg_fast.margin, seg_full.margin)
+    assert torch.allclose(pose_fast.s_pose, pose_full.s_pose)
+    assert seg_fast.grad_finite is True
+    assert pose_fast.grad_finite is True
+    assert math.isnan(seg_fast.grad_nonzero_frac)
+    assert math.isnan(pose_fast.s_pose_nonzero_frac)
 
 
 @_real_weights

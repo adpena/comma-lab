@@ -1245,8 +1245,8 @@ def _prepare_state(
 
     raw_step_maps: list[np.ndarray] = []
     for pair_idx in range(n_pairs):
-        seg = compute_s_seg_flip_risk(segnet, pairs[pair_idx])
-        pose = compute_s_pose_fisher(posenet, pairs[pair_idx])
+        seg = compute_s_seg_flip_risk(segnet, pairs[pair_idx], diagnostics=False)
+        pose = compute_s_pose_fisher(posenet, pairs[pair_idx], diagnostics=False)
         seg_hw = seg.flip_risk.detach().cpu().numpy()
         pose_hw = pose.s_pose.detach().cpu().numpy()
         for rec_pair, _frame_idx, _channel_idx, pyr in records:
