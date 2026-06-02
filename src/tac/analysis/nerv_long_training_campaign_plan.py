@@ -601,6 +601,9 @@ def _snerv_campaign_row(
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
+    rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(
+        candidate
+    )
     blockers = _dedupe(
         [
             (
@@ -609,6 +612,11 @@ def _snerv_campaign_row(
                 else ""
             ),
             "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+            (
+                "snerv_nominal_payload_far_over_ceiling_refuse_long_training"
+                if not bounded_proof_only and not rate_plausible_for_long_training
+                else ""
+            ),
             "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes"
             if candidate.get("nominal_under_ceiling") is not True
             else "",
@@ -623,11 +631,17 @@ def _snerv_campaign_row(
         candidate=candidate,
         curriculum_plan=curriculum,
         command_argv=command,
-        local_mlx_launch_command_ready=True,
+        local_mlx_launch_command_ready=(
+            True if bounded_proof_only else bool(rate_plausible_for_long_training)
+        ),
         implementation_status=(
             "bounded_native_export_scorer_loop_stage_ready"
             if bounded_proof_only
-            else "native_rate_aware_long_training_queue_ready"
+            else (
+                "native_rate_aware_long_training_queue_ready"
+                if rate_plausible_for_long_training
+                else "native_rate_aware_long_training_rate_blocked"
+            )
         ),
         blockers=blockers,
         extra={
@@ -975,7 +989,43 @@ def _selected_candidates(
         for row in payload.get("selected_candidates", [])
         if isinstance(row, Mapping) and row.get("family") == family
     ]
+    if family == "snerv":
+        rows.sort(key=_snerv_long_training_candidate_sort_key)
     return rows[: max(1, int(limit))]
+
+
+def _snerv_rate_plausible_for_long_training(candidate: Mapping[str, Any]) -> bool:
+    if candidate.get("nominal_under_ceiling") is True:
+        return True
+    ceiling = int(candidate.get("hard_byte_ceiling") or 0)
+    byte_headroom = _candidate_byte_headroom(candidate)
+    if ceiling <= 0:
+        return False
+    # Permit near-miss long-training rows because real SNAR1 bytes can move
+    # after QAT/coding; refuse rows whose nominal payload is orders over budget.
+    return abs(byte_headroom) <= max(int(ceiling), 65_536)
+
+
+def _snerv_long_training_candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
+    under = row.get("nominal_under_ceiling") is True
+    ceiling = int(row.get("hard_byte_ceiling") or 0)
+    headroom = _candidate_byte_headroom(row)
+    total = int(row.get("nominal_total_payload_bytes") or 0)
+    return (
+        0 if under else 1,
+        headroom if under else abs(headroom),
+        ceiling,
+        total,
+        str(row.get("candidate_id") or ""),
+    )
+
+
+def _candidate_byte_headroom(row: Mapping[str, Any]) -> int:
+    if row.get("byte_headroom") is not None:
+        return int(row.get("byte_headroom") or 0)
+    ceiling = int(row.get("hard_byte_ceiling") or 0)
+    total = int(row.get("nominal_total_payload_bytes") or 0)
+    return int(ceiling - total)
 
 
 def _snerv_source_bound_control_blockers(candidate: Mapping[str, Any]) -> list[str]:
