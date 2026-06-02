@@ -901,6 +901,8 @@ def _eval_as_gate_row(row: SnervDecoderEval) -> dict[str, Any]:
         "d_seg_mean_linf": row.d_seg_linf,
         "d_pose_mean_linf": row.d_pose_linf,
         "score_linf": row.score_linf,
+        "accepted": row.accepted,
+        "blockers": list(row.blockers),
         "pair_count": len(row.per_pair),
         "per_pair": [pair.as_jsonable() for pair in row.per_pair],
         "source_artifact": "snerv_scorer_loop_decoder_qat_smoke",
