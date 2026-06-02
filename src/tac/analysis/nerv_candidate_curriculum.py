@@ -154,13 +154,15 @@ def build_hinerv_candidate_curriculum_plan(
     q_bits = min(max(1, int(coder_qat_quant_bits)), codec_bits)
     if candidate_selected:
         q_bits = codec_bits
-    effective_qat = bool(coder_aware_qat or candidate_selected)
+    effective_coder_regularizer = bool(coder_aware_qat or candidate_selected)
     epochs = max(0, int(requested_epochs))
     full_video = int(num_pairs) >= 600
     blockers: list[str] = []
     launch_mutations: list[str] = []
     if candidate_selected and not coder_aware_qat:
-        launch_mutations.append("enabled_coder_aware_qat_from_modelsize_candidate")
+        launch_mutations.append(
+            "enabled_decoder_coder_regularizer_from_modelsize_candidate"
+        )
     if candidate_selected and int(coder_qat_quant_bits) != q_bits:
         launch_mutations.append("aligned_coder_qat_quant_bits_to_candidate_codec")
     if epochs < 8:
@@ -202,8 +204,11 @@ def build_hinerv_candidate_curriculum_plan(
             pr95_staged_curriculum=epochs >= 8,
             real_segnet_teacher=_num(segnet_distillation_weight) > 0.0,
             real_posenet_teacher=_num(pose_distillation_weight) > 0.0,
-            qat_forward=effective_qat,
-            coder_aware_regularizer=bool(coder_aware_qat),
+            # The current HiNeRV scorer loop applies a real decoder-weight
+            # quant-grid/entropy-shaping regularizer. It does NOT yet run the
+            # renderer through fake-quantized weights during the forward pass.
+            qat_forward=False,
+            coder_aware_regularizer=effective_coder_regularizer,
             muon_adamw_partition=epochs >= 8,
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
@@ -235,12 +240,18 @@ def build_hinerv_candidate_curriculum_plan(
             "auto_teacher_weights_are_forbidden": True,
         },
         "coder_pressure": {
-            "enabled": effective_qat,
+            "enabled": effective_coder_regularizer,
+            "regularizer_enabled": effective_coder_regularizer,
+            "fake_quant_forward_enabled": False,
             "quant_bits": int(q_bits),
             "candidate_decoder_codec": str(codec),
             "candidate_decoder_codec_bits": int(codec_bits),
             "source": (
                 "modelsize_candidate" if candidate_selected else "manual_cli_knobs"
+            ),
+            "implementation_status": (
+                "decoder_weight_quant_residual_regularizer_only_"
+                "fake_quant_forward_missing"
             ),
         },
         "byte_oracle_logging": byte_feedback,

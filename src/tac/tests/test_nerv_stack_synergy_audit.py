@@ -55,6 +55,10 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle"
         in stacks["hi_nerv"]["blockers"]
     )
+    assert "hinerv_official_convnext_feature_grid_path_missing" in stacks["hi_nerv"]["blockers"]
+    assert "hinerv_official_trilinear_feature_interpolation_path_missing" in stacks["hi_nerv"]["blockers"]
+    assert "hinerv_torchac_style_bitstream_pipeline_missing" in stacks["hi_nerv"]["blockers"]
+    assert "hinerv_decoder_weight_saliency_waterfill_not_in_trainer" in stacks["hi_nerv"]["blockers"]
     assert "hi_nerv_real_posenet_teacher_missing" in stacks["hi_nerv"]["blockers"]
     assert "snerv_pr95_staged_curriculum_missing" in stacks["snerv"]["blockers"]
     assert (
@@ -65,6 +69,11 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "snerv_local_carrier_not_source_faithful_official_snerv_multilayer_stack"
         in stacks["snerv"]["blockers"]
     )
+    assert "snerv_official_mfu_block_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_official_hfr_block_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_official_snerv_t_temporal_path_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_official_haar_j1_parity_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_l2_linf_receiver_packet_rate_accounting_not_separated" in stacks["snerv"]["blockers"]
     assert (
         "snerv_modelsize_candidate_consumption_requires_real_snar1_archive_byte_oracle"
         in stacks["snerv"]["blockers"]
