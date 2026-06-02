@@ -661,6 +661,9 @@ def test_pact_vq_core_negative_sections_open_projection_gap_repair(
     )
     acquisition_path = tmp_path / "acquisition.json"
     acquisition_path.write_text(json.dumps(acquisition), encoding="utf-8")
+    copied_manifest = tmp_path / "copied_manifest" / manifest.name
+    copied_manifest.parent.mkdir()
+    copied_manifest.write_text(manifest.read_text(encoding="utf-8"), encoding="utf-8")
     profile_path = tmp_path / "pact_vq_full_profile_gap.json"
     profile_path.write_text(
         json.dumps(
@@ -669,7 +672,12 @@ def test_pact_vq_core_negative_sections_open_projection_gap_repair(
                 "family": "pact_nerv_vq",
                 "max_pairs": 600,
                 "scorer_batch_pairs": 1,
-                "projection_manifest_path": manifest.as_posix(),
+                "projection_manifest_path": copied_manifest.as_posix(),
+                "candidate_archive": {
+                    "path": archive.as_posix(),
+                    "sha256": "e" * 64,
+                    "bytes": archive.stat().st_size,
+                },
                 "scope_status": {"full_video": "executed"},
                 "projection_gap_analysis": {
                     "schema": "hprc_archive_projection_gap_analysis.v1",
@@ -685,7 +693,7 @@ def test_pact_vq_core_negative_sections_open_projection_gap_repair(
                         "variant_id": "neutralize_decoder_qw",
                         "neutralized_section": "decoder_qw",
                         "family": "pact_nerv_vq",
-                        "projection_manifest_path": manifest.as_posix(),
+                        "projection_manifest_path": copied_manifest.as_posix(),
                         "archive_bytes_removed_vs_baseline": 20,
                         "delta_nonrate_score": -0.5,
                         "delta_total_mlx_score_advisory": -0.5,
@@ -695,7 +703,7 @@ def test_pact_vq_core_negative_sections_open_projection_gap_repair(
                         "variant_id": "neutralize_codebooks_q",
                         "neutralized_section": "codebooks_q",
                         "family": "pact_nerv_vq",
-                        "projection_manifest_path": manifest.as_posix(),
+                        "projection_manifest_path": copied_manifest.as_posix(),
                         "archive_bytes_removed_vs_baseline": 12,
                         "delta_nonrate_score": -0.25,
                         "delta_total_mlx_score_advisory": -0.25,

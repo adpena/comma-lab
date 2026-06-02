@@ -926,7 +926,10 @@ def _projection_gap_repair_work_orders(
         profile_analysis_rows = [
             row
             for row in profile_analyses
-            if row.get("projection_manifest_path") in (None, "", projection)
+            if _profile_analysis_matches_acquisition(
+                analysis=row,
+                acquisition_row=acquisition_row,
+            )
         ]
         suspected_by_profile = any(
             row.get("status") == "archive_projection_gap_suspected"
@@ -977,6 +980,7 @@ def _projection_gap_profile_analyses(
                 "profile_path": profile["path"],
                 "profile_sha256": profile["sha256"],
                 "projection_manifest_path": payload.get("projection_manifest_path"),
+                "candidate_archive": _profile_candidate_archive(payload),
                 "family": payload.get("family"),
             }
         )
@@ -1429,6 +1433,7 @@ def _section_evidence_row(*, row: dict[str, Any], profile: dict[str, Any]) -> di
             row.get("projection_manifest_path")
             or profile["payload"].get("projection_manifest_path")
         ),
+        "profile_candidate_archive": _profile_candidate_archive(profile["payload"]),
         "variant_id": row.get("variant_id"),
         "neutralized_section": row.get("neutralized_section"),
         "archive_bytes_removed_vs_baseline": bytes_removed,
@@ -1454,7 +1459,71 @@ def _section_evidence_matches_acquisition(
     evidence_projection = evidence.get("profile_projection_manifest_path")
     if evidence_projection in (None, ""):
         return True
-    return str(evidence_projection) == str(acquisition_row.get("projection_manifest_path") or "")
+    if str(evidence_projection) == str(acquisition_row.get("projection_manifest_path") or ""):
+        return True
+    return _candidate_archive_matches_acquisition(
+        candidate_archive=evidence.get("profile_candidate_archive"),
+        acquisition_row=acquisition_row,
+    )
+
+
+def _profile_analysis_matches_acquisition(
+    *,
+    analysis: dict[str, Any],
+    acquisition_row: dict[str, Any],
+) -> bool:
+    analysis_family = analysis.get("family")
+    if analysis_family not in (None, "") and analysis_family != acquisition_row.get("family"):
+        return False
+    projection = analysis.get("projection_manifest_path")
+    if projection in (None, ""):
+        return True
+    if str(projection) == str(acquisition_row.get("projection_manifest_path") or ""):
+        return True
+    return _candidate_archive_matches_acquisition(
+        candidate_archive=analysis.get("candidate_archive"),
+        acquisition_row=acquisition_row,
+    )
+
+
+def _candidate_archive_matches_acquisition(
+    *,
+    candidate_archive: Any,
+    acquisition_row: dict[str, Any],
+) -> bool:
+    if not isinstance(candidate_archive, dict):
+        return False
+    source = (
+        acquisition_row.get("source_archive")
+        if isinstance(acquisition_row.get("source_archive"), dict)
+        else {}
+    )
+    candidate_sha = str(
+        candidate_archive.get("archive_zip_sha256")
+        or candidate_archive.get("sha256")
+        or ""
+    )
+    source_sha = str(source.get("archive_zip_sha256") or source.get("sha256") or "")
+    if candidate_sha and source_sha and candidate_sha == source_sha:
+        return True
+    candidate_path = str(
+        candidate_archive.get("archive_zip_path")
+        or candidate_archive.get("path")
+        or ""
+    )
+    source_path = str(_source_archive_path(source) or "")
+    return bool(candidate_path and source_path and candidate_path == source_path)
+
+
+def _profile_candidate_archive(payload: dict[str, Any]) -> dict[str, Any] | None:
+    candidate = payload.get("candidate_archive")
+    if not isinstance(candidate, dict):
+        return None
+    return {
+        "path": candidate.get("path") or candidate.get("archive_zip_path"),
+        "sha256": candidate.get("sha256") or candidate.get("archive_zip_sha256"),
+        "bytes": candidate.get("bytes") or candidate.get("archive_zip_bytes"),
+    }
 
 
 def _best_section_evidence(evidence_rows: list[dict[str, Any]]) -> dict[str, Any] | None:
