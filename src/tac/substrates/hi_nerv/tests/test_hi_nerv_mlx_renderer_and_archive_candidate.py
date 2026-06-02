@@ -214,3 +214,14 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert proof["receiver_output_kind"] == "file"
     assert proof["receiver_output_retained"] is False
     assert package["receiver_proof"]["receiver_contract_satisfied"] is True
+    row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    portability = row["runtime_adapter_manifest"][
+        "mlx_numpy_portability_contract"
+    ]
+    assert portability["portability_status"] == (
+        "numpy_export_bridge_ready_receiver_not_numpy"
+    )
+    assert portability["numpy_array_export"] is True
+    assert portability["pure_numpy_inflate"] is False
+    assert "torch" in portability["non_numpy_receiver_dependencies"]
+    assert "inflate_runtime_not_pure_numpy" in portability["portability_blockers"]
