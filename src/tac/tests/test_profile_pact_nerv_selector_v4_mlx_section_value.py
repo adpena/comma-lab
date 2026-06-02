@@ -121,6 +121,9 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
                     archive_bytes=variant.archive_bytes,
                 ),
                 "components": {"artifacts": {}},
+                "n_samples": 600,
+                "candidate_cache_pairs": 600,
+                "reference_cache_pairs": 600,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -209,6 +212,8 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
         "demote_residual_token_variant"
     )
     assert "full_video_mlx_response_not_executed" not in profile["blockers"]
+    assert profile["scope_status"]["full_video"] == "executed"
+    assert profile["mlx_response_coverage"]["status"] == "executed"
     assert "contest_cpu_cuda_exact_eval_not_executed" in profile["blockers"]
     assert profile["score_claim"] is False
     assert profile["ready_for_exact_eval_dispatch"] is False

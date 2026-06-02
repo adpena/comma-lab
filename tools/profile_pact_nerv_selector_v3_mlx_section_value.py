@@ -45,6 +45,7 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import ( 
     build_nerv_byte_price_plan,
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
+from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT  # noqa: E402
 from tac.substrates.pact_nerv_selector_v3.section_value import (  # noqa: E402
     PSV3_SECTION_VALUE_PROFILE_SCHEMA,
     PSV3_SECTION_VALUE_SOURCE_SCHEMA,
@@ -571,6 +572,10 @@ def _build_report(
         max_pairs=max_pairs,
     )
     cache_quality_blockers = list(baseline_cache_quality_gate.get("blockers") or [])
+    full_video_coverage = _full_video_mlx_response_coverage(
+        payloads=payloads,
+        requested_max_pairs=max_pairs,
+    )
     section_rows = [
         _section_value_row(
             baseline=baseline,
@@ -634,6 +639,7 @@ def _build_report(
         layout_key: layout,
         "cache_materialization_rows": cache_rows,
         "baseline_cache_quality_gate": baseline_cache_quality_gate,
+        "mlx_response_coverage": full_video_coverage,
         "max_pairs": int(max_pairs),
         "window_pairs": int(window_pairs),
         "scorer_batch_pairs": int(scorer_batch_pairs),
@@ -663,7 +669,7 @@ def _build_report(
                 if int(scorer_batch_pairs) == 1
                 else "batched scorer response executed as research signal only"
             ),
-            "full_video": "executed" if int(max_pairs) >= 600 else "sampled_prefix_requires_full_video_rerun",
+            "full_video": full_video_coverage["status"],
             "class_region": "blocked_missing_segnet_class_logit_or_label_surface_in_cache",
             "boundary": "blocked_missing_boundary_surface_in_cache",
         },
@@ -677,7 +683,7 @@ def _build_report(
         "blockers": [
             "mlx_local_response_is_advisory_not_score_authority",
             *cache_quality_blockers,
-            *([] if int(max_pairs) >= 600 else ["full_video_mlx_response_not_executed"]),
+            *full_video_coverage["blockers"],
             *(
                 ["batch_shape_research_signal_requires_singleton_rerun_before_promotion"]
                 if int(scorer_batch_pairs) != 1
@@ -690,6 +696,98 @@ def _build_report(
     }
     profile["byte_price_admission_plan"] = build_nerv_byte_price_plan(profile)
     return profile
+
+
+def _full_video_mlx_response_coverage(
+    *,
+    payloads: dict[str, dict[str, Any]],
+    requested_max_pairs: int,
+) -> dict[str, Any]:
+    """Fail closed unless every response actually covers the full 600 pairs."""
+
+    rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    if int(requested_max_pairs) < CONTEST_PAIR_COUNT:
+        return {
+            "schema": "compact_section_value_mlx_response_coverage.v1",
+            "status": "sampled_prefix_requires_full_video_rerun",
+            "required_pairs": CONTEST_PAIR_COUNT,
+            "requested_max_pairs": int(requested_max_pairs),
+            "rows": rows,
+            "blockers": ["full_video_mlx_response_not_executed"],
+            **FALSE_AUTHORITY,
+        }
+
+    for variant_id, payload in sorted(payloads.items()):
+        n_samples = _optional_int(payload.get("n_samples"))
+        candidate_pairs = _optional_int(
+            payload.get("candidate_cache_pairs", payload.get("total_cache_pairs"))
+        )
+        reference_pairs = _optional_int(payload.get("reference_cache_pairs"))
+        row_blockers: list[str] = []
+        if n_samples is None:
+            row_blockers.append(f"mlx_response_n_samples_missing:{variant_id}")
+        elif n_samples < CONTEST_PAIR_COUNT:
+            row_blockers.append(f"mlx_response_pair_coverage_partial:{variant_id}")
+        if candidate_pairs is None:
+            row_blockers.append(f"candidate_cache_pairs_missing:{variant_id}")
+        elif candidate_pairs < CONTEST_PAIR_COUNT:
+            row_blockers.append(f"candidate_cache_pair_coverage_partial:{variant_id}")
+        if reference_pairs is None:
+            row_blockers.append(f"reference_cache_pairs_missing:{variant_id}")
+        elif reference_pairs < CONTEST_PAIR_COUNT:
+            row_blockers.append(f"reference_cache_pair_coverage_partial:{variant_id}")
+        rows.append(
+            {
+                "variant_id": variant_id,
+                "n_samples": n_samples,
+                "candidate_cache_pairs": candidate_pairs,
+                "reference_cache_pairs": reference_pairs,
+                "required_pairs": CONTEST_PAIR_COUNT,
+                "full_video_executed": not row_blockers,
+                "blockers": row_blockers,
+            }
+        )
+        blockers.extend(row_blockers)
+
+    blockers = _dedupe(
+        [
+            "full_video_mlx_response_not_executed",
+            "mlx_response_pair_coverage_missing_or_partial",
+            *blockers,
+        ]
+        if blockers
+        else []
+    )
+    return {
+        "schema": "compact_section_value_mlx_response_coverage.v1",
+        "status": "executed" if not blockers else "blocked_response_coverage_partial_or_missing",
+        "required_pairs": CONTEST_PAIR_COUNT,
+        "requested_max_pairs": int(requested_max_pairs),
+        "rows": rows,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
 
 
 def _baseline_cache_quality_gate(

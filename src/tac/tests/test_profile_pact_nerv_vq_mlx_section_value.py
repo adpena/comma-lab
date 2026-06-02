@@ -244,6 +244,9 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
                     archive_bytes=variant.archive_bytes,
                 ),
                 "components": {"artifacts": {}},
+                "n_samples": 600,
+                "candidate_cache_pairs": 600,
+                "reference_cache_pairs": 600,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -339,8 +342,86 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
         "demote_residual_token_variant"
     )
     assert "contest_cpu_cuda_exact_eval_not_executed" in profile["blockers"]
+    assert profile["scope_status"]["full_video"] == "executed"
+    assert profile["mlx_response_coverage"]["status"] == "executed"
     assert profile["score_claim"] is False
     assert profile["ready_for_exact_eval_dispatch"] is False
+
+
+def test_shared_section_report_refuses_requested_full_video_when_payload_partial(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "profile"
+    candidate_cache = output_dir / "mlx_caches" / "baseline"
+    reference_cache = tmp_path / "reference_cache"
+    _write_quality_cache(candidate_cache, offset=25.0)
+    _write_quality_cache(reference_cache, offset=24.0)
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive-bytes")
+    bin_path = tmp_path / "0.bin"
+    bin_path.write_bytes(b"bin-bytes")
+    variant = shared_profiler.VariantSpec(
+        variant_id="baseline",
+        neutralized_section=None,
+        archive_zip_path=archive,
+        submission_dir=tmp_path / "submission",
+        bin_path=bin_path,
+        archive_bytes=archive.stat().st_size,
+        archive_sha256=shared_profiler._sha256_file(archive),
+        bin_sha256=shared_profiler._sha256_file(bin_path),
+        variant_dir=tmp_path / "variant",
+    )
+    payload = {
+        "avg_segnet_dist": 0.02,
+        "avg_posenet_dist": 0.10,
+        "score_rate_contribution": contest_rate_term(variant.archive_bytes),
+        "canonical_score": contest_formula_score(
+            seg_dist=0.02,
+            pose_dist=0.10,
+            archive_bytes=variant.archive_bytes,
+        ),
+        "n_samples": 2,
+        "candidate_cache_pairs": 2,
+        "reference_cache_pairs": 600,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = shared_profiler._build_report(
+        raw_argv=[],
+        variants=[variant],
+        absent_sections=[],
+        cache_rows={
+            "baseline": {
+                "report_output": (tmp_path / "cache_report.json").as_posix(),
+            }
+        },
+        payloads={"baseline": payload},
+        layout={},
+        output_dir=output_dir,
+        repo_root=REPO,
+        upstream_dir=tmp_path / "upstream",
+        video_names_file=None,
+        archive=archive,
+        projection_manifest=None,
+        reference_cache_dir=reference_cache,
+        max_pairs=600,
+        window_pairs=1,
+        scorer_batch_pairs=1,
+        started=0.0,
+    )
+
+    assert report["scope_status"]["full_video"] == (
+        "blocked_response_coverage_partial_or_missing"
+    )
+    coverage = report["mlx_response_coverage"]
+    assert coverage["status"] == "blocked_response_coverage_partial_or_missing"
+    assert "mlx_response_pair_coverage_partial:baseline" in coverage["blockers"]
+    assert "candidate_cache_pair_coverage_partial:baseline" in coverage["blockers"]
+    assert "full_video_mlx_response_not_executed" in report["blockers"]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_shared_section_report_blocks_flat_baseline_cache_quality(tmp_path: Path) -> None:

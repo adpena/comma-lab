@@ -733,7 +733,32 @@ def _axis_labels(
                 values.extend(str(item) for item in value if str(item))
             elif value:
                 values.append(str(value))
+    if not values:
+        values.extend(_inferred_axis_labels(row, artifact_context))
     return tuple(_ordered_unique(values))
+
+
+def _inferred_axis_labels(
+    row: Mapping[str, Any],
+    artifact_context: Mapping[str, Any],
+) -> tuple[str, ...]:
+    text = " ".join(
+        [
+            str(row.get("schema") or ""),
+            str(artifact_context.get("schema") or ""),
+            str(artifact_context.get("source_schema") or ""),
+            " ".join(_string_list(row.get("blockers"))),
+            " ".join(_string_list(artifact_context.get("blockers"))),
+        ]
+    ).lower()
+    if (
+        "mlx_local_response_is_advisory_not_score_authority" in text
+        or "mlx_component_neutralization_profile" in text
+        or "mlx_section_value_profile" in text
+        or "pact_nerv_selector" in text
+    ):
+        return ("[macOS-MLX research-signal]",)
+    return ()
 
 
 def _archive_sha256(mapping: Mapping[str, Any]) -> str | None:

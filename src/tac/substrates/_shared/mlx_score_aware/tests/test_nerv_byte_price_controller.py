@@ -210,6 +210,36 @@ def test_artifact_level_runtime_ready_and_full_video_scope_are_custody_context()
     assert "full_video_coverage_missing" not in row["blockers"]
 
 
+def test_legacy_mlx_section_profile_gets_explicit_advisory_axis_without_authority() -> None:
+    plan = build_nerv_byte_price_plan(
+        {
+            "schema": "hprc_mlx_component_neutralization_profile.v1",
+            "source_schema": "pact_nerv_selector_v4_section_value_profile.v1",
+            "candidate_archive": {"sha256": "c" * 64},
+            "scope_status": {"full_video": "executed"},
+            "blockers": ["mlx_local_response_is_advisory_not_score_authority"],
+            "section_value_rows": [
+                {
+                    "variant_id": "neutralize_latents_rc",
+                    "neutralized_section": "latents_rc",
+                    "archive_bytes_removed_vs_baseline": 10_000,
+                    "delta_nonrate_score": 0.0,
+                    "receiver_proof_status": "satisfied",
+                }
+            ],
+        },
+        byte_price=_price(),
+    )
+
+    row = plan["decision_rows"][0]
+    assert row["axis_labels"] == ["[macOS-MLX research-signal]"]
+    assert row["economic_decision"] == CUT
+    assert row["decision"] == DEMOTE
+    assert "axis_label_missing" not in row["blockers"]
+    assert "advisory_or_proxy_axis_not_promotion_authority" in row["blockers"]
+    assert plan["score_claim"] is False
+
+
 def test_missing_original_video_bytes_fallback_fails_closed() -> None:
     missing_price = ContestBytePrice(
         score_per_byte=None,
