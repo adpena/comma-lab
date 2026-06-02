@@ -146,6 +146,19 @@ class SnervAdvisoryResult:
     linf_steps_mean_relative_error: float
     archive_bytes_total: int  # charged packet byte estimate (the rate numerator)
     rate_term: float  # 25 * archive_bytes / N
+    l2_lf_payload_bytes: int
+    l2_steps_payload_bytes: int
+    l2_steps_payload_codec: str
+    l2_steps_coder_bins: int
+    l2_steps_fp32_lzma_baseline_bytes: int
+    l2_steps_max_relative_error: float
+    l2_steps_mean_relative_error: float
+    receiver_archive_l2_packet_bytes: int
+    receiver_archive_l2_sha256: str
+    receiver_archive_l2_replay_verified: bool
+    receiver_archive_l2_replay_error: str
+    archive_bytes_total_l2: int
+    rate_term_l2: float
     # distortion (advisory, bit-exact mirror)
     d_seg_mean_linf: float
     d_pose_mean_linf: float
@@ -434,9 +447,12 @@ def run_snerv_advisory(
     lf_quant_linf: list[np.ndarray] = []
     lf_quant_l2: list[np.ndarray] = []
     lf_zero_points_linf: list[float] = []
+    lf_zero_points_l2: list[float] = []
     linf_step_maps: list[np.ndarray] = []
+    l2_step_maps: list[np.ndarray] = []
     linf_map_importance: list[float] = []
     linf_records: list[_LfRecord] = []
+    l2_records: list[_LfRecord] = []
     recon_pairs_linf = pairs.clone()
     recon_pairs_l2 = pairs.clone()
     lf_count_total = 0
@@ -495,17 +511,15 @@ def run_snerv_advisory(
                 # L2 baseline: uniform step at the SAME total bit budget
                 l2alloc = allocate_l2_uniform(lf.size, target_bits=target_bits)
                 l2steps = l2alloc.steps.reshape(lf.shape)
-                q_l2, sc_l2, zr_l2 = quantize_lf(lf, per_element_steps=l2steps)
-                lf_quant_l2.append(q_l2)
-                code_l2 = SnervFrameCode(
-                    lf_quant=q_l2, lf_scale=sc_l2, lf_zero=zr_l2,
-                    lf_shape=lf.shape, levels=levels, wavelet=wavelet,
-                    orig_hw=(H, W), per_element_steps=l2steps,
+                l2_step_maps.append(l2steps)
+                l2_records.append(
+                    _LfRecord(
+                        pair_index=p,
+                        frame_index=fidx,
+                        channel_index=c,
+                        lf=lf,
+                    )
                 )
-                recon_l2 = decode_frame(code_l2, receiver_decoder)
-                recon_pairs_l2[p, fidx, c] = torch.from_numpy(
-                    np.clip(recon_l2, 0.0, 255.0)
-                ).to(recon_pairs_l2)
 
     steps_packet, receiver_step_maps = _encode_decode_linf_steps_packet(
         linf_step_maps,
@@ -540,7 +554,57 @@ def run_snerv_advisory(
             record.channel_index,
         ] = torch.from_numpy(np.clip(recon_linf, 0.0, 255.0)).to(recon_pairs_linf)
 
+    l2_steps_packet, receiver_l2_step_maps = _encode_decode_linf_steps_packet(
+        l2_step_maps,
+        bins=step_map_coder_bins,
+        mode="uniform",
+    )
+    for record, receiver_steps in zip(l2_records, receiver_l2_step_maps, strict=True):
+        q_l2, sc_l2, zr_l2 = quantize_lf(
+            record.lf,
+            per_element_steps=receiver_steps,
+        )
+        lf_zero_points_l2.append(float(zr_l2))
+        lf_quant_l2.append(q_l2)
+        code_l2 = SnervFrameCode(
+            lf_quant=q_l2,
+            lf_scale=sc_l2,
+            lf_zero=zr_l2,
+            lf_shape=record.lf.shape,
+            levels=levels,
+            wavelet=wavelet,
+            orig_hw=(H, W),
+            per_element_steps=receiver_steps,
+        )
+        recon_l2 = decode_frame(code_l2, receiver_decoder)
+        recon_pairs_l2[
+            record.pair_index,
+            record.frame_index,
+            record.channel_index,
+        ] = torch.from_numpy(np.clip(recon_l2, 0.0, 255.0)).to(recon_pairs_l2)
+
     # ---- 6. Charge the receiver-visible packet (the rate numerator) ----
+    common_archive_metadata = {
+        "n_pairs": n_pairs,
+        "frames_per_pair": 2,
+        "channels": 3,
+        "levels": levels,
+        "wavelet": wavelet,
+        "carrier_hw": [H, W],
+        "lf_coeff_count_total": lf_count_total,
+        "lf_zero_dtype": "float32_le",
+        "lf_scale_mode": "implicit_per_element_steps_scale_1",
+        "step_map_coder_bins": step_map_coder_bins,
+        "hf_decoder_fit_mode": hf_decoder_fit_mode,
+        "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
+        "hf_decoder_saliency_component": hf_decoder_saliency_component,
+        "decoder_payload_codec": decoder_payload_codec,
+        "decoder_payload_mixed_modes": (
+            list(decoder_payload_mixed_modes)
+            if decoder_payload_mixed_modes is not None
+            else None
+        ),
+    }
     lf_payload = encode_lf_quant_payload(lf_quant_linf)
     metadata_payload = encode_lf_metadata_payload(
         lf_zero_points=lf_zero_points_linf,
@@ -551,36 +615,41 @@ def run_snerv_advisory(
         decoder_payload=decoder_bytes,
         step_map_packet=steps_packet.packet,
         metadata={
-            "n_pairs": n_pairs,
-            "frames_per_pair": 2,
-            "channels": 3,
-            "levels": levels,
-            "wavelet": wavelet,
-            "carrier_hw": [H, W],
+            **common_archive_metadata,
+            "allocation_mode": "linf_score_saliency",
             "lf_plane_count": len(lf_zero_points_linf),
-            "lf_coeff_count_total": lf_count_total,
-            "lf_zero_dtype": "float32_le",
-            "lf_scale_mode": "implicit_per_element_steps_scale_1",
             "step_map_packet_schema": steps_packet.schema,
             "step_map_coder_mode": step_map_coder_mode,
-            "step_map_coder_bins": step_map_coder_bins,
             "step_map_adaptive_bin_choices": list(step_map_adaptive_bin_choices),
             "step_map_constant_importance_quantile": step_map_constant_importance_quantile,
             "step_map_waterfill_bits_per_coeff": step_map_waterfill_bits_per_coeff,
-            "hf_decoder_fit_mode": hf_decoder_fit_mode,
-            "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
-            "hf_decoder_saliency_component": hf_decoder_saliency_component,
-            "decoder_payload_codec": decoder_payload_codec,
-            "decoder_payload_mixed_modes": (
-                list(decoder_payload_mixed_modes)
-                if decoder_payload_mixed_modes is not None
-                else None
-            ),
+        },
+    )
+    l2_lf_payload = encode_lf_quant_payload(lf_quant_l2)
+    l2_metadata_payload = encode_lf_metadata_payload(
+        lf_zero_points=lf_zero_points_l2,
+    )
+    receiver_archive_l2 = pack_snerv_archive(
+        metadata_payload=l2_metadata_payload,
+        lf_payload=l2_lf_payload,
+        decoder_payload=decoder_bytes,
+        step_map_packet=l2_steps_packet.packet,
+        metadata={
+            **common_archive_metadata,
+            "allocation_mode": "l2_uniform",
+            "lf_plane_count": len(lf_zero_points_l2),
+            "step_map_packet_schema": l2_steps_packet.schema,
+            "step_map_coder_mode": "uniform",
+            "step_map_adaptive_bin_choices": [],
+            "step_map_constant_importance_quantile": None,
+            "step_map_waterfill_bits_per_coeff": None,
         },
     )
     metadata = len(metadata_payload)
     archive_bytes = receiver_archive.total_bytes
     rate_term = CONTEST_BYTE_PRICE * archive_bytes
+    archive_bytes_l2 = receiver_archive_l2.total_bytes
+    rate_term_l2 = CONTEST_BYTE_PRICE * archive_bytes_l2
     section_replay_ok, section_replay_error = _verify_receiver_archive_roundtrip(
         receiver_archive,
         lf_quant_planes=lf_quant_linf,
@@ -600,6 +669,29 @@ def run_snerv_advisory(
     )
     if receiver_frames_np is not None:
         recon_pairs_linf = torch.from_numpy(receiver_frames_np).to(pairs)
+    l2_section_replay_ok, l2_section_replay_error = _verify_receiver_archive_roundtrip(
+        receiver_archive_l2,
+        lf_quant_planes=lf_quant_l2,
+        lf_zero_points=lf_zero_points_l2,
+        step_maps=receiver_l2_step_maps,
+        decoder=receiver_decoder,
+    )
+    l2_frame_replay_ok, l2_frame_replay_error, receiver_l2_frames_np = (
+        _verify_receiver_archive_full_frame_replay(
+            receiver_archive_l2,
+            reference_frames=recon_pairs_l2,
+        )
+    )
+    receiver_archive_l2_replay_verified = bool(
+        l2_section_replay_ok and l2_frame_replay_ok
+    )
+    receiver_archive_l2_replay_error = (
+        l2_section_replay_error
+        if not l2_section_replay_ok
+        else l2_frame_replay_error
+    )
+    if receiver_l2_frames_np is not None:
+        recon_pairs_l2 = torch.from_numpy(receiver_l2_frames_np).to(pairs)
 
     # ---- 7. Re-measure d_seg/d_pose via bit-exact mirror ----
     dsegs_linf, dposes_linf, dsegs_l2, dposes_l2 = [], [], [], []
@@ -621,7 +713,7 @@ def run_snerv_advisory(
     d_seg_l2 = float(np.mean(dsegs_l2))
     d_pose_l2 = float(np.mean(dposes_l2))
     score_linf = 100.0 * d_seg_linf + float(np.sqrt(10.0 * max(d_pose_linf, 0.0))) + rate_term
-    score_l2 = 100.0 * d_seg_l2 + float(np.sqrt(10.0 * max(d_pose_l2, 0.0))) + rate_term
+    score_l2 = 100.0 * d_seg_l2 + float(np.sqrt(10.0 * max(d_pose_l2, 0.0))) + rate_term_l2
 
     # ---- Z8-falsification: would STORING the detail blow the archive? ----
     # Estimate the bytes the HF detail WOULD cost if stored at the same coder (the
@@ -667,6 +759,8 @@ def run_snerv_advisory(
         blockers.insert(0, "full_600_pair_receiver_replay_missing")
     if not receiver_archive_replay_verified:
         blockers.insert(0, "receiver_archive_full_frame_replay_failed")
+    if not receiver_archive_l2_replay_verified:
+        blockers.insert(0, "receiver_archive_l2_full_frame_replay_failed")
 
     return SnervAdvisoryResult(
         n_pairs=n_pairs,
@@ -698,6 +792,21 @@ def run_snerv_advisory(
         linf_steps_mean_relative_error=steps_packet.mean_relative_error,
         archive_bytes_total=archive_bytes,
         rate_term=rate_term,
+        l2_lf_payload_bytes=len(l2_lf_payload),
+        l2_steps_payload_bytes=l2_steps_packet.total_bytes,
+        l2_steps_payload_codec=l2_steps_packet.schema,
+        l2_steps_coder_bins=int(getattr(l2_steps_packet, "bins", 0)),
+        l2_steps_fp32_lzma_baseline_bytes=l2_steps_packet.fp32_lzma_baseline_bytes,
+        l2_steps_max_relative_error=l2_steps_packet.max_relative_error,
+        l2_steps_mean_relative_error=l2_steps_packet.mean_relative_error,
+        receiver_archive_l2_packet_bytes=receiver_archive_l2.total_bytes,
+        receiver_archive_l2_sha256=receiver_archive_l2.as_jsonable()["packet"][
+            "sha256"
+        ],
+        receiver_archive_l2_replay_verified=receiver_archive_l2_replay_verified,
+        receiver_archive_l2_replay_error=receiver_archive_l2_replay_error,
+        archive_bytes_total_l2=archive_bytes_l2,
+        rate_term_l2=rate_term_l2,
         d_seg_mean_linf=d_seg_linf,
         d_pose_mean_linf=d_pose_linf,
         score_linf=score_linf,

@@ -47,7 +47,13 @@ def write_snerv_contest_runtime(
         Path(submission_dir),
         substrate_pkg_name="snerv_inverse_steg_carrier",
         repo_root=root,
-        runtime_module_files=("inflate.py", "archive.py", "carrier.py", "dwt.py"),
+        runtime_module_files=(
+            "inflate.py",
+            "archive.py",
+            "carrier.py",
+            "dwt.py",
+            "lf_payload_codec.py",
+        ),
         vendor_extra_tac_subpackages=(
             ("analysis", ("snerv_step_map_coder.py",)),
             ("substrates._shared", ("int_stream_codec.py",)),
