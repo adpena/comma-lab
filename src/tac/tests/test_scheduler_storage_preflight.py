@@ -33,6 +33,10 @@ def test_storage_preflight_defaults_to_operator_policy() -> None:
     storage_command = storage_step["command"]
     cleanup_command = cleanup_step["command"]
 
+    assert _flag_values(storage_command, "--output") == [
+        ".omx/research/fixture_storage_plan_20260524T010203Z.json"
+    ]
+    assert "--storage-plan-path" not in storage_command
     assert _flag_values(storage_command, "--storage-tier") == [
         "vertigo=/Volumes/VertigoDataTier/pact",
         "apdatastore=/Volumes/APDataStore/pact",

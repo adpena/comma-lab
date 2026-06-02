@@ -184,8 +184,6 @@ def build_scheduler_storage_preflight_experiment(
         POLICY_ID,
         "--policy-schema",
         POLICY_SCHEMA,
-        "--storage-plan-path",
-        storage_plan,
         "--cleanup-plan-path",
         cleanup_plan,
         "--journal-path",
