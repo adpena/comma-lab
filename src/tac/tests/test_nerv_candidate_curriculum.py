@@ -94,6 +94,10 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     )
 
     feedback = plan["byte_oracle_logging"]
+    assert feedback["candidate_num_pairs"] == 600
+    assert feedback["measured_num_pairs"] == 600
+    assert feedback["feedback_scope"] == "candidate_full_scope"
+    assert feedback["scope_matches_candidate"] is True
     assert feedback["feedback_ready"] is True
     assert feedback["measured_archive_bytes"] == measured
     assert feedback["measured_minus_nominal_bytes"] == 123
@@ -101,6 +105,43 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
         "blockers"
     ]
     assert "hinerv_candidate_curriculum_requires_min_8_epochs" not in plan[
+        "blockers"
+    ]
+
+
+def test_hinerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:
+    candidate = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        latent_dim=12,
+        embed_dim=24,
+        decoder_channel=32,
+        decoder_codec="int4_mixed",
+    ).as_dict()
+    measured = int(candidate["nominal_total_payload_bytes"]) - 512
+
+    plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=8,
+        num_pairs=32,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        recon_pixel_weight_attached=True,
+        measured_archive_bytes=measured,
+    )
+
+    feedback = plan["byte_oracle_logging"]
+    assert feedback["candidate_num_pairs"] == 600
+    assert feedback["measured_num_pairs"] == 32
+    assert feedback["feedback_scope"] == "partial_pair_advisory"
+    assert feedback["scope_matches_candidate"] is False
+    assert feedback["feedback_ready"] is False
+    assert feedback["measured_archive_bytes"] == measured
+    assert feedback["measured_minus_nominal_bytes"] == -512
+    assert "partial_pair_byte_feedback_only" in plan["blockers"]
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in plan[
         "blockers"
     ]
 
@@ -133,6 +174,10 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
         "decoder_payload_codec": "int8_symmetric",
     }
     assert plan["byte_oracle_logging"]["feedback_ready"] is True
+    assert plan["byte_oracle_logging"]["candidate_num_pairs"] == 600
+    assert plan["byte_oracle_logging"]["measured_num_pairs"] == 600
+    assert plan["byte_oracle_logging"]["feedback_scope"] == "candidate_full_scope"
+    assert plan["byte_oracle_logging"]["scope_matches_candidate"] is True
     assert plan["byte_oracle_logging"]["measured_payload_bytes"] == 190_000
     assert plan["byte_oracle_logging"]["measured_archive_bytes"] == 191_000
     assert "snerv_snar1_byte_feedback_missing" not in plan["blockers"]
@@ -141,6 +186,37 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     ]
     assert "snerv_mlx_native_train_export_adapter_missing" in plan["blockers"]
     assert plan["score_claim"] is False
+
+
+def test_snerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=600,
+        levels=5,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+    ).as_dict()
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=0,
+        num_pairs=128,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=12_000,
+        measured_archive_bytes=13_000,
+    )
+
+    feedback = plan["byte_oracle_logging"]
+    assert feedback["candidate_num_pairs"] == 600
+    assert feedback["measured_num_pairs"] == 128
+    assert feedback["feedback_scope"] == "partial_pair_advisory"
+    assert feedback["scope_matches_candidate"] is False
+    assert feedback["feedback_ready"] is False
+    assert feedback["measured_payload_bytes"] == 12_000
+    assert feedback["measured_archive_bytes"] == 13_000
+    assert "partial_pair_byte_feedback_only" in plan["blockers"]
+    assert "snerv_snar1_byte_feedback_missing" not in plan["blockers"]
 
 
 def test_snerv_candidate_curriculum_blocks_non_waterfill_and_partial_coverage() -> None:

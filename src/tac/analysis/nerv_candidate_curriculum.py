@@ -90,15 +90,25 @@ def strip_candidate_curriculum_authority_fields(value: Any) -> Any:
 def _base_byte_feedback(
     *,
     candidate: Mapping[str, Any],
+    measured_num_pairs: int,
     measured_payload_bytes: int | None = None,
     measured_archive_bytes: int | None = None,
 ) -> dict[str, Any]:
     nominal = _int(candidate.get("nominal_total_payload_bytes"))
     measured = measured_archive_bytes if measured_archive_bytes is not None else measured_payload_bytes
     delta = None if measured is None else int(measured) - int(nominal)
+    candidate_num_pairs = _int(candidate.get("num_pairs"))
+    measured_pairs = int(measured_num_pairs)
+    scope_matches = candidate_num_pairs > 0 and measured_pairs == candidate_num_pairs
     return {
         "schema": BYTE_FEEDBACK_SCHEMA,
         "candidate_id": candidate.get("candidate_id"),
+        "candidate_num_pairs": candidate_num_pairs,
+        "measured_num_pairs": measured_pairs,
+        "feedback_scope": (
+            "candidate_full_scope" if scope_matches else "partial_pair_advisory"
+        ),
+        "scope_matches_candidate": scope_matches,
         "hard_byte_ceiling": _int(candidate.get("hard_byte_ceiling")),
         "nominal_total_payload_bytes": nominal,
         "measured_payload_bytes": (
@@ -111,7 +121,7 @@ def _base_byte_feedback(
         "measured_minus_nominal_rate_score_delta": (
             None if delta is None else float(delta * RATE_SCORE_PER_BYTE)
         ),
-        "feedback_ready": measured is not None,
+        "feedback_ready": measured is not None and scope_matches,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -162,16 +172,23 @@ def build_hinerv_candidate_curriculum_plan(
         blockers.append("hinerv_modelsize_candidate_not_selected_manual_probe")
     byte_feedback = _base_byte_feedback(
         candidate=candidate_row,
+        measured_num_pairs=int(num_pairs),
         measured_archive_bytes=measured_archive_bytes,
     ) if candidate_selected else {
         "schema": BYTE_FEEDBACK_SCHEMA,
         "candidate_id": None,
+        "candidate_num_pairs": None,
+        "measured_num_pairs": int(num_pairs),
+        "feedback_scope": "manual_cli_probe",
+        "scope_matches_candidate": False,
         "feedback_ready": False,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
-    if candidate_selected and not byte_feedback["feedback_ready"]:
+    if candidate_selected and measured_archive_bytes is not None and not byte_feedback["scope_matches_candidate"]:
+        blockers.append("partial_pair_byte_feedback_only")
+    elif candidate_selected and not byte_feedback["feedback_ready"]:
         blockers.append("hinerv_trained_archive_byte_oracle_feedback_missing")
     return {
         "schema": SCHEMA,
@@ -230,11 +247,16 @@ def build_snerv_candidate_curriculum_plan(
     decoder_codec = str(candidate_row.get("decoder_payload_codec", "manual_cli"))
     byte_feedback = _base_byte_feedback(
         candidate=candidate_row,
+        measured_num_pairs=int(num_pairs),
         measured_payload_bytes=measured_packet_bytes,
         measured_archive_bytes=measured_archive_bytes,
     ) if candidate_selected else {
         "schema": BYTE_FEEDBACK_SCHEMA,
         "candidate_id": None,
+        "candidate_num_pairs": None,
+        "measured_num_pairs": int(num_pairs),
+        "feedback_scope": "manual_cli_probe",
+        "scope_matches_candidate": False,
         "feedback_ready": False,
         "score_claim": False,
         "promotion_eligible": False,
@@ -250,7 +272,13 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("snerv_candidate_curriculum_full600_required_for_promotion")
     if str(step_map_coder_mode) != "waterfill":
         blockers.append("snerv_candidate_curriculum_requires_waterfill_step_maps")
-    if candidate_selected and not byte_feedback["feedback_ready"]:
+    if (
+        candidate_selected
+        and (measured_packet_bytes is not None or measured_archive_bytes is not None)
+        and not byte_feedback["scope_matches_candidate"]
+    ):
+        blockers.append("partial_pair_byte_feedback_only")
+    elif candidate_selected and not byte_feedback["feedback_ready"]:
         blockers.append("snerv_snar1_byte_feedback_missing")
     return {
         "schema": SCHEMA,

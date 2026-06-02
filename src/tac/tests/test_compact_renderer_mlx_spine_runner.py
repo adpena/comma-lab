@@ -1947,7 +1947,9 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
             "embed_dim": 16,
             "decoder_channel": 6,
             "decoder_codec": "int4_mixed",
+            "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 160_000,
             "nominal_under_ceiling": True,
             "score_claim": False,
             "promotion_eligible": False,
@@ -2002,9 +2004,21 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     assert selection["launch_decoder_channel"] == 6
     assert selection["launch_decoder_codec"] == "int4_mixed"
     assert out["score_aware_training"]["decoder_codec"] == "int4_mixed"
-    assert out["candidate_curriculum_plan"]["byte_oracle_logging"][
-        "feedback_ready"
-    ] is True
+    feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
+    assert feedback["candidate_num_pairs"] == 600
+    assert feedback["measured_num_pairs"] == 2
+    assert feedback["feedback_scope"] == "partial_pair_advisory"
+    assert feedback["scope_matches_candidate"] is False
+    assert feedback["feedback_ready"] is False
+    assert "partial_pair_byte_feedback_only" in out["blockers"]
+    candidate_feedback = out["candidate_feedback"]
+    assert Path(candidate_feedback["row_path"]).is_file()
+    assert Path(candidate_feedback["ledger_path"]).is_file()
+    assert candidate_feedback["row"]["candidate_id"] == "hinerv-unit-candidate"
+    assert candidate_feedback["row"]["candidate_num_pairs"] == 600
+    assert candidate_feedback["row"]["measured_num_pairs"] == 2
+    assert candidate_feedback["row"]["feedback_ready"] is False
+    assert candidate_feedback["score_claim"] is False
     assert out["score_aware_training"]["recon_pixel_weight"][
         "source_kind"
     ] == "file"
@@ -2182,7 +2196,9 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             "bits_per_coeff": 1.5,
             "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int2_symmetric",
+            "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
             "nominal_under_ceiling": True,
             "score_claim": False,
             "promotion_eligible": False,
@@ -2235,15 +2251,23 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert out["score_aware_training"]["target_bits_per_coeff"] == 1.5
     assert out["score_aware_training"]["step_map_coder_mode"] == "waterfill"
     assert out["score_aware_training"]["decoder_payload_codec"] == "int2_symmetric"
-    assert out["candidate_curriculum_plan"]["byte_oracle_logging"][
-        "feedback_ready"
-    ] is True
-    assert out["candidate_curriculum_plan"]["byte_oracle_logging"][
-        "measured_payload_bytes"
-    ] == len(packet)
-    assert out["candidate_curriculum_plan"]["byte_oracle_logging"][
-        "measured_archive_bytes"
-    ] == Path(out["archive_path"]).stat().st_size
+    feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
+    assert feedback["candidate_num_pairs"] == 600
+    assert feedback["measured_num_pairs"] == 2
+    assert feedback["feedback_scope"] == "partial_pair_advisory"
+    assert feedback["scope_matches_candidate"] is False
+    assert feedback["feedback_ready"] is False
+    assert feedback["measured_payload_bytes"] == len(packet)
+    assert feedback["measured_archive_bytes"] == Path(out["archive_path"]).stat().st_size
+    assert "partial_pair_byte_feedback_only" in out["blockers"]
+    candidate_feedback = out["candidate_feedback"]
+    assert Path(candidate_feedback["row_path"]).is_file()
+    assert Path(candidate_feedback["ledger_path"]).is_file()
+    assert candidate_feedback["row"]["candidate_id"] == "snerv-unit-candidate"
+    assert candidate_feedback["row"]["candidate_num_pairs"] == 600
+    assert candidate_feedback["row"]["measured_num_pairs"] == 2
+    assert candidate_feedback["row"]["feedback_ready"] is False
+    assert candidate_feedback["score_claim"] is False
     assert out["score_aware_training"]["beats_frontier_rate"] is True
     assert out["reusable_optimization_followups"][
         "applies_after_byte_closed_export"

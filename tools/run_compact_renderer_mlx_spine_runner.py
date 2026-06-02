@@ -41,6 +41,9 @@ from tac.analysis.nerv_candidate_curriculum import (  # noqa: E402
     build_snerv_candidate_curriculum_plan,
     strip_candidate_curriculum_authority_fields,
 )
+from tac.analysis.nerv_candidate_feedback import (  # noqa: E402
+    write_nerv_candidate_feedback_files,
+)
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
@@ -2066,6 +2069,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "blockers": blockers,
         }
     )
+    final["candidate_feedback"] = write_nerv_candidate_feedback_files(
+        runner_report=final,
+        output_dir=out,
+    )
     path = out / "compact_renderer_mlx_spine_runner_report.json"
     _write_json(path, final)
     return {**final, "report_path": path.as_posix()}
@@ -3744,6 +3751,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "selected_runner_rows": selected_runner_rows,
             "blockers": _dedupe(blockers),
         }
+    )
+    final["candidate_feedback"] = write_nerv_candidate_feedback_files(
+        runner_report=final,
+        output_dir=out,
     )
     path = out / "compact_renderer_mlx_spine_runner_report.json"
     _write_json(path, final)
