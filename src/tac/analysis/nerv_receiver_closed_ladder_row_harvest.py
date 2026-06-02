@@ -96,14 +96,14 @@ def build_nerv_receiver_closed_ladder_row_harvest(
     modelsize_present_rows = [
         row
         for row in harvested_rows
-        if row.get("modelsize_mparams") is not None or row.get("fc_dim") is not None
+        if _row_has_capacity_axis(row)
     ]
     ladder_candidate_rows = [
         row
         for row in harvested_rows
         if row["receiver_proof_passed"]
         and not row["harvest_blockers"]
-        and (row.get("modelsize_mparams") is not None or row.get("fc_dim") is not None)
+        and _row_has_capacity_axis(row)
         and row.get("archive_bytes") is not None
         and row.get("nonrate_score") is not None
     ]
@@ -186,7 +186,7 @@ def _harvest_row(
     pair_count = _first_int(
         candidate,
         source_payload,
-        keys=("pair_count", "n_pairs", "sample_count", "n_samples"),
+        keys=("pair_count", "n_pairs", "num_pairs", "sample_count", "n_samples"),
     )
     sample_scope = (
         "full600_or_better"
@@ -252,6 +252,11 @@ def _harvest_row(
             ("solved_budget", "official_controls", "--modelsize"),
         ),
     )
+    modelsize_scale = _first_float(
+        candidate,
+        source_payload,
+        keys=("modelsize_scale", ("solved_budget", "modelsize_scale")),
+    )
     fc_dim = _first_int(
         candidate,
         source_payload,
@@ -284,7 +289,7 @@ def _harvest_row(
         blockers.append("archive_sha256_missing")
     if nonrate_score is None:
         blockers.append("nonrate_score_or_component_distortions_missing")
-    if modelsize is None and fc_dim is None:
+    if modelsize is None and fc_dim is None and modelsize_scale is None:
         blockers.append("modelsize_or_fc_dim_missing")
     if not local_receiver_replay:
         blockers.append("receiver_replay_or_contract_missing")
@@ -307,6 +312,7 @@ def _harvest_row(
         "sample_pair_count": pair_count,
         "sample_scope": sample_scope,
         "modelsize_mparams": modelsize,
+        "modelsize_scale": modelsize_scale,
         "fc_dim": fc_dim,
         "archive_bytes": archive_bytes,
         "archive_sha256": archive_sha,
@@ -332,6 +338,9 @@ def _candidate_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     explicit = payload.get("rows")
     if isinstance(explicit, list):
         rows.extend(row for row in explicit if isinstance(row, Mapping))
+    archive_rows = payload.get("archive_rows")
+    if isinstance(archive_rows, list):
+        rows.extend(row for row in archive_rows if isinstance(row, Mapping))
     profiles = payload.get("profile_records")
     if isinstance(profiles, list):
         rows.extend(row for row in profiles if isinstance(row, Mapping))
@@ -376,6 +385,14 @@ def _source_family(payload: Mapping[str, Any]) -> str | None:
     if key.startswith("hnerv"):
         return "hnerv"
     return None
+
+
+def _row_has_capacity_axis(row: Mapping[str, Any]) -> bool:
+    return (
+        row.get("modelsize_mparams") is not None
+        or row.get("modelsize_scale") is not None
+        or row.get("fc_dim") is not None
+    )
 
 
 def _row_id(

@@ -131,6 +131,92 @@ def test_prefilter_profile_records_preserve_full_scope_without_receiver_proof() 
     assert payload["ready_for_receiver_closed_modelsize_ladder"] is False
 
 
+def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis() -> None:
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "family": "hi_nerv",
+                "num_pairs": 600,
+                "archive_rows": [
+                    {
+                        "row_id": "hi_nerv_local_tiny",
+                        "family": "hi_nerv",
+                        "modelsize_scale": 0.25,
+                        "archive_bytes": 134_842,
+                        "archive_sha256": "f" * 64,
+                        "runtime_consumption_proof_ready": True,
+                        "d_seg": 0.01,
+                        "d_pose": 0.0025,
+                        "blockers": [],
+                    },
+                    {
+                        "row_id": "hi_nerv_local_small",
+                        "family": "hi_nerv",
+                        "modelsize_scale": 0.5,
+                        "archive_bytes": 247_815,
+                        "archive_sha256": "1" * 64,
+                        "runtime_consumption_proof_ready": True,
+                        "d_seg": 0.008,
+                        "d_pose": 0.002,
+                        "blockers": [],
+                    },
+                ],
+            }
+        ],
+        carrier_id="hi_nerv",
+    )
+
+    assert payload["status"] == "receiver_closed_ladder_rows_ready"
+    assert payload["harvested_row_count"] == 2
+    assert payload["receiver_proof_row_count"] == 2
+    assert payload["modelsize_present_row_count"] == 2
+    assert payload["ladder_candidate_row_count"] == 2
+    first = payload["harvested_rows"][0]
+    assert first["row_id"] == "hi_nerv_local_tiny"
+    assert first["sample_pair_count"] == 600
+    assert first["sample_scope"] == "full600_or_better"
+    assert first["modelsize_mparams"] is None
+    assert first["modelsize_scale"] == 0.25
+    assert first["fc_dim"] is None
+    assert first["receiver_proof_passed"] is True
+    assert first["nonrate_score"] is not None
+    assert first["harvest_blockers"] == []
+    assert payload["score_claim"] is False
+
+
+def test_hinerv_archive_size_ladder_without_nonrate_stays_blocked() -> None:
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "family": "hi_nerv",
+                "num_pairs": 600,
+                "archive_rows": [
+                    {
+                        "row_id": "hi_nerv_local_tiny",
+                        "family": "hi_nerv",
+                        "modelsize_scale": 0.25,
+                        "archive_bytes": 134_842,
+                        "archive_sha256": "f" * 64,
+                        "runtime_consumption_proof_ready": True,
+                    }
+                ],
+            }
+        ],
+        carrier_id="hi_nerv",
+    )
+
+    assert payload["status"] == "receiver_closed_ladder_rows_blocked"
+    assert payload["modelsize_present_row_count"] == 1
+    assert payload["ladder_candidate_row_count"] == 0
+    row = payload["harvested_rows"][0]
+    assert row["modelsize_scale"] == 0.25
+    assert "nonrate_score_or_component_distortions_missing" in row[
+        "harvest_blockers"
+    ]
+
+
 def _full_row(
     row_id: str,
     modelsize: float,
