@@ -13,10 +13,18 @@ from typing import Any
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     build_modelsize_budget_plan,
 )
-from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
 SCHEMA = "nerv_receiver_closed_modelsize_ladder.v1"
 AXIS_TAG = "[planning/control]"
+FALSE_AUTHORITY = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "frontier_score_claim": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "production_hardened_claim": False,
+    "ready_for_exact_eval_dispatch": False,
+}
 
 _ARCHIVE_BYTE_KEYS = (
     "measured_archive_bytes",

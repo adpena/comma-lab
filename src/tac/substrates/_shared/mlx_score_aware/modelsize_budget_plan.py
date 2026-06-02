@@ -16,10 +16,18 @@ from math import isfinite
 from typing import Any
 
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
-from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
 MODEL_SIZE_BUDGET_PLAN_SCHEMA = "compact_carrier_modelsize_budget_plan.v2"
 CONTEST_BYTE_PRICE_SCORE = 25.0 / float(ORIGINAL_VIDEO_BYTES)
+FALSE_AUTHORITY = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "frontier_score_claim": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "production_hardened_claim": False,
+    "ready_for_exact_eval_dispatch": False,
+}
 
 _RECEIVER_CLOSED_PROOF_KEYS = (
     "receiver_closed",

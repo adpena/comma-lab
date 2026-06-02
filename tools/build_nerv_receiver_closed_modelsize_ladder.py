@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Build a fail-closed receiver-closed NeRV modelsize/fc_dim ladder."""
 
@@ -38,7 +38,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default="modelsize_budget_rows",
         help=(
             "Rows key inside --rows-json; falls back to "
-            "rows/candidates/variant_rows/curve_rows."
+            "harvested_rows/rows/candidates/variant_rows/curve_rows."
         ),
     )
     parser.add_argument("--carrier-id", required=True)
@@ -92,6 +92,8 @@ def _load_rows(path: Path, *, rows_key: str) -> list[Mapping[str, Any]]:
     elif isinstance(payload, dict):
         rows = payload.get(rows_key)
         if rows is None:
+            rows = payload.get("harvested_rows")
+        if rows is None:
             rows = payload.get("rows")
         if rows is None:
             rows = payload.get("candidates")
@@ -103,7 +105,8 @@ def _load_rows(path: Path, *, rows_key: str) -> list[Mapping[str, Any]]:
         raise SystemExit(f"{source}: expected JSON object or array")
     if not isinstance(rows, list):
         raise SystemExit(
-            f"{source}: no list rows under {rows_key}/rows/candidates/curve_rows"
+            f"{source}: no list rows under "
+            f"{rows_key}/harvested_rows/rows/candidates/curve_rows"
         )
     if not all(isinstance(row, dict) for row in rows):
         raise SystemExit(f"{source}: rows must all be JSON objects")

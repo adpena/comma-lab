@@ -1,0 +1,265 @@
+{
+  "axis_tag": "[planning/control]",
+  "baseline_id": "pr95_hnerv",
+  "blocked_row_count": 2,
+  "blocker_records": [
+    {
+      "carrier_id": "hinerv",
+      "reason": "receiver_closed_modelsize_ladder_not_ready",
+      "scope": "ladder"
+    },
+    {
+      "carrier_id": "hinerv",
+      "minimum_receiver_closed_rows": 2,
+      "reason": "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+      "receiver_closed_row_count": 0,
+      "scope": "ladder"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "no_rows_eligible_for_modelsize_budget_plan",
+      "scope": "ladder"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "modelsize_or_fc_dim_missing",
+      "row_id": "hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex:row_0000",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex:row_0000",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex:row_0000",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "modelsize_or_fc_dim_missing",
+      "row_id": "hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex:row_0000",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "nonrate_score_or_component_distortions_missing",
+      "row_id": "hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex:row_0000",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "receiver_closed_byte_proof_missing",
+      "row_id": "hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex:row_0000",
+      "scope": "row"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "modelsize_budget_ladder_has_fewer_than_two_points",
+      "scope": "modelsize_budget"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+      "scope": "modelsize_budget"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "nerv_receiver_closed_modelsize_ladder_is_false_authority",
+      "scope": "authority"
+    },
+    {
+      "carrier_id": "hinerv",
+      "reason": "exact_or_full_video_cuda_blocked_until_PR101_and_Z5_terminal",
+      "scope": "dispatch"
+    }
+  ],
+  "blockers": [
+    "receiver_closed_modelsize_ladder_not_ready",
+    "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+    "no_rows_eligible_for_modelsize_budget_plan",
+    "row:hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex:row_0000:modelsize_or_fc_dim_missing",
+    "row:hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex:row_0000:nonrate_score_or_component_distortions_missing",
+    "row:hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex:row_0000:receiver_closed_byte_proof_missing",
+    "row:hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex:row_0000:modelsize_or_fc_dim_missing",
+    "row:hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex:row_0000:nonrate_score_or_component_distortions_missing",
+    "row:hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex:row_0000:receiver_closed_byte_proof_missing",
+    "modelsize_budget:modelsize_budget_ladder_has_fewer_than_two_points",
+    "modelsize_budget:receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+    "nerv_receiver_closed_modelsize_ladder_is_false_authority",
+    "exact_or_full_video_cuda_blocked_until_PR101_and_Z5_terminal"
+  ],
+  "budget_row_count": 0,
+  "carrier_id": "hinerv",
+  "frontier_score_claim": false,
+  "modelsize_budget_plan": {
+    "baseline_id": "pr95_hnerv",
+    "blockers": [
+      "modelsize_budget_ladder_has_fewer_than_two_points",
+      "receiver_closed_modelsize_ladder_has_fewer_than_two_points"
+    ],
+    "carrier_id": "hinerv",
+    "contest_byte_price_score": 6.658589531221714e-07,
+    "decision_basis": "all_rows",
+    "frontier_score_claim": false,
+    "marginal_steps": [],
+    "measured_points": [],
+    "original_video_bytes": 37545489,
+    "point_count_by_evidence": {},
+    "points": [],
+    "production_hardened_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_closed_points": [],
+    "receiver_closed_selected_archive_bytes": null,
+    "receiver_closed_selected_point": null,
+    "recommended_next_actions": [
+      "run_receiver_closed_modelsize_ladder_before_long_budget_spend",
+      "include_archive_bytes_and_nonrate_score_for_each_size_point"
+    ],
+    "schema": "compact_carrier_modelsize_budget_plan.v2",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selected_archive_bytes": null,
+    "selected_point": null,
+    "status": "insufficient_modelsize_ladder"
+  },
+  "modelsize_budget_rows": [],
+  "normalized_rows": [
+    {
+      "archive_bytes": 19967,
+      "archive_bytes_key": "archive_bytes",
+      "archive_path": null,
+      "archive_sha256": "978b48bcc6caeb455a625e6ae9d6d026ce00cd4990d81d8f247357e5a7595825",
+      "blockers": [
+        "modelsize_or_fc_dim_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": null,
+      "modelsize_mparams": null,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex:row_0000",
+      "source": {
+        "accepted": true,
+        "archive_bytes": 19967,
+        "archive_sha256": "978b48bcc6caeb455a625e6ae9d6d026ce00cd4990d81d8f247357e5a7595825",
+        "carrier_id": "hinerv",
+        "d_pose": null,
+        "d_seg": null,
+        "family": "hinerv",
+        "fc_dim": null,
+        "full600_receiver_proof": false,
+        "harvest_blockers": [
+          "nonrate_score_or_component_distortions_missing",
+          "modelsize_or_fc_dim_missing",
+          "receiver_replay_or_contract_missing",
+          "local_smoke_only_not_full600_receiver_proof"
+        ],
+        "local_receiver_archive_replay_verified": false,
+        "modelsize_mparams": null,
+        "nonrate_score": null,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_archive_replay_verified_local_only": false,
+        "receiver_closed": false,
+        "receiver_proof_passed": false,
+        "row_id": "hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex:row_0000",
+        "sample_pair_count": 128,
+        "sample_scope": "local_pair_smoke",
+        "score_claim": false,
+        "source_artifact_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-snerv-stratified-smoke-20260602T112911Z/.omx/research/hinerv_128pair_mlx_prefilter_coverage_20260601T222216Z_codex.json",
+        "source_axis_tag": null,
+        "source_candidate_index": 0,
+        "source_label": null,
+        "source_schema": "hprc_mlx_prefilter_coverage.v1"
+      },
+      "source_family": "hinerv",
+      "source_family_key": "hinerv"
+    },
+    {
+      "archive_bytes": 19962,
+      "archive_bytes_key": "archive_bytes",
+      "archive_path": null,
+      "archive_sha256": "78b839c7e2fe8392919fd2b33cea0c0c723cd6663b12f08e052dc1511e799300",
+      "blockers": [
+        "modelsize_or_fc_dim_missing",
+        "nonrate_score_or_component_distortions_missing",
+        "receiver_closed_byte_proof_missing"
+      ],
+      "eligible_for_modelsize_budget_plan": false,
+      "fc_dim": null,
+      "modelsize_mparams": null,
+      "nonrate_score": null,
+      "receiver_closed_modelsize_row": false,
+      "receiver_proof_passed": false,
+      "row_id": "hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex:row_0000",
+      "source": {
+        "accepted": true,
+        "archive_bytes": 19962,
+        "archive_sha256": "78b839c7e2fe8392919fd2b33cea0c0c723cd6663b12f08e052dc1511e799300",
+        "carrier_id": "hinerv",
+        "d_pose": null,
+        "d_seg": null,
+        "family": "hinerv",
+        "fc_dim": null,
+        "full600_receiver_proof": false,
+        "harvest_blockers": [
+          "nonrate_score_or_component_distortions_missing",
+          "modelsize_or_fc_dim_missing",
+          "receiver_replay_or_contract_missing"
+        ],
+        "local_receiver_archive_replay_verified": false,
+        "modelsize_mparams": null,
+        "nonrate_score": null,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_archive_replay_verified_local_only": false,
+        "receiver_closed": false,
+        "receiver_proof_passed": false,
+        "row_id": "hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex:row_0000",
+        "sample_pair_count": 600,
+        "sample_scope": "full600_or_better",
+        "score_claim": false,
+        "source_artifact_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-snerv-stratified-smoke-20260602T112911Z/.omx/research/hinerv_full600_mlx_prefilter_coverage_20260601T223811Z_codex.json",
+        "source_axis_tag": null,
+        "source_candidate_index": 0,
+        "source_label": null,
+        "source_schema": "hprc_mlx_prefilter_coverage.v1"
+      },
+      "source_family": "hinerv",
+      "source_family_key": "hinerv"
+    }
+  ],
+  "production_hardened_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_carrier_training_plan": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_score_aware_training": false,
+  "receiver_closed_row_count": 0,
+  "receiver_closed_selected_archive_bytes": null,
+  "receiver_closed_selected_fc_dim": null,
+  "receiver_closed_selected_modelsize_mparams": null,
+  "recommended_next_actions": [
+    "materialize_at_least_two_trained_receiver_archive_rows_with_modelsize_or_fc_dim",
+    "prove_receiver_inflate_or_archive_replay_for_each_ladder_row",
+    "attach_nonrate_score_or_seg_pose_component_deltas_to_each_ladder_row"
+  ],
+  "row_count": 2,
+  "schema": "nerv_receiver_closed_modelsize_ladder.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_artifact_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-snerv-stratified-smoke-20260602T112911Z/.omx/research/nerv_receiver_closed_ladder_row_harvest_hinerv_mlx_prefilter_20260602T151500Z.json",
+  "status": "receiver_closed_modelsize_ladder_blocked",
+  "verdict": "NO_GO_CARRIER_TRAINING_GATE_INPUT__RECEIVER_CLOSED_LADDER_MISSING"
+}
