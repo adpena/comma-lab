@@ -1542,6 +1542,7 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "tools/xray_hardpair_hitlist.py",
         ],
         "nerv_carriers": [
+            "experiments/train_substrate_hi_nerv_mlx_local.py",
             "tools/run_compact_renderer_mlx_spine_runner.py",
             "src/tac/substrates/hi_nerv",
             "src/tac/analysis/snerv_step_map_coder.py",

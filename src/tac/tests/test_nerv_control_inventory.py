@@ -150,6 +150,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "src/tac/submission_packet/paired_auth_eval.py" in surfaces[
         "receiver_and_exact_custody"
     ]
+    assert "experiments/train_substrate_hi_nerv_mlx_local.py" in surfaces[
+        "nerv_carriers"
+    ]
     assert report["runner_spend_rule"]["score_claim"] is False
     assert report["runner_policy"]["bounded_runner_must_select_from_inventory_rows"]
     ladder = report["modelsize_ladder"]
