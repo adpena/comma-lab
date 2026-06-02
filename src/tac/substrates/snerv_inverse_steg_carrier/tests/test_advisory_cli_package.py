@@ -124,6 +124,7 @@ def _fake_advisory_result(packet: bytes):
         receiver_archive_header_bytes=64,
         decoder_bytes=40,
         decoder_payload_codec="float32_lzma",
+        decoder_payload_header={"schema": "snerv_decoder_payload.v1"},
         hf_decoder_fit_mode="least_squares",
         hf_decoder_saliency_gain=1.0,
         hf_decoder_saliency_component="combined",

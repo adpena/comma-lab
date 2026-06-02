@@ -72,6 +72,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
+    inspect_decoder_payload_header,
     pack_snerv_archive,
     unpack_snerv_archive,
 )
@@ -123,6 +124,7 @@ class SnervAdvisoryResult:
     lf_coeff_count_total: int  # stored LF coeffs across all frames+channels
     decoder_bytes: int
     decoder_payload_codec: str
+    decoder_payload_header: dict[str, Any]
     hf_decoder_fit_mode: str
     hf_decoder_saliency_gain: float
     hf_decoder_saliency_component: str
@@ -409,6 +411,7 @@ def run_snerv_advisory(
     else:
         raise RuntimeError(f"unknown HF decoder fit mode: {hf_decoder_fit_mode!r}")
     decoder_bytes = encode_decoder_payload(decoder, codec=decoder_payload_codec)
+    decoder_payload_header = inspect_decoder_payload_header(decoder_bytes)
     receiver_decoder = decode_decoder_payload(decoder_bytes)
 
     # ---- 2. Oracle: per-pixel saliency on the LAST frame (seg) + both (pose) ----
@@ -663,6 +666,7 @@ def run_snerv_advisory(
         lf_coeff_count_total=lf_count_total,
         decoder_bytes=len(decoder_bytes),
         decoder_payload_codec=decoder_payload_codec,
+        decoder_payload_header=decoder_payload_header,
         hf_decoder_fit_mode=hf_decoder_fit_mode,
         hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),
         hf_decoder_saliency_component=hf_decoder_saliency_component,

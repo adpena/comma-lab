@@ -108,6 +108,7 @@ def main(argv: list[str] | None = None) -> int:
             "int8_symmetric",
             "int4_symmetric",
             "int2_symmetric",
+            "mixed_magnitude_symmetric",
         ),
         default="float32_lzma",
         help="Receiver-visible HF decoder payload grammar.",

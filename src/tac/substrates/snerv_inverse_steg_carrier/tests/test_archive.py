@@ -190,6 +190,45 @@ def test_quantized_decoder_payload_codecs_roundtrip_receiver_values() -> None:
     assert decode_decoder_payload(legacy_payload).levels == decoder.levels
 
 
+def test_mixed_decoder_payload_uses_per_kernel_modes_and_roundtrip_values() -> None:
+    decoder = HfGenerationDecoder.zeros(levels=2)
+    magnitudes = [0.0, 0.008, 0.025, 0.08, 0.2, 0.012]
+    groups = [
+        (lvl, subband)
+        for lvl in range(decoder.levels)
+        for subband in ("LH", "HL", "HH")
+    ]
+    pattern = np.linspace(-1.0, 1.0, 9, dtype=np.float64).reshape(3, 3)
+    for magnitude, (lvl, subband) in zip(magnitudes, groups, strict=True):
+        decoder.kernels[lvl][subband] = pattern * magnitude
+
+    payload = encode_decoder_payload(decoder, codec="mixed_magnitude_symmetric")
+    header = _read_subpacket_header(payload)
+    decoded = decode_decoder_payload(payload)
+
+    assert header["schema"] == "snerv_decoder_payload.v3"
+    assert header["codec"] == "mixed_magnitude_symmetric"
+    assert header["quantizer"] == "mixed_per_kernel_zero_int2_int4_int8_fp16"
+    assert header["mode_code_bits"] == 3
+    assert header["mode_histogram"] == {
+        "zero": 1,
+        "int2": 2,
+        "int4": 1,
+        "int8": 1,
+        "fp16": 1,
+    }
+    assert header["mode_code_bytes"] == 3
+    assert header["scale_count"] == 4
+    assert header["fp16_value_bytes"] == 18
+    for lvl, subband in groups:
+        np.testing.assert_allclose(
+            decoded.kernels[lvl][subband],
+            decoder.kernels[lvl][subband],
+            atol=0.02,
+            rtol=0.0,
+        )
+
+
 def test_quantized_decoder_payload_rejects_corrupt_payload_bytes() -> None:
     decoder = HfGenerationDecoder.zeros(levels=1)
     payload = bytearray(encode_decoder_payload(decoder, codec="int4_symmetric"))
