@@ -52,11 +52,11 @@ def test_hinerv_official_source_parity_gaps_block_long_training() -> None:
     )
 
 
-def test_snerv_official_mfu_hfr_and_fc_dim_controls_still_block_long_training() -> None:
+def test_snerv_official_mfu_hfr_still_blocks_long_training() -> None:
     report = build_nerv_source_parity_contract(repo_root=REPO_ROOT, families=("snerv",))
 
     assert "snerv_mfu_hfr_stride_stack_missing" in report["blockers"]
-    assert "snerv_fc_dim_modelsize_control_missing" in report["blockers"]
+    assert "snerv_fc_dim_modelsize_control_missing" not in report["blockers"]
     assert "snerv_scorer_loop_decoder_qat_missing" not in report["blockers"]
     assert "snerv_lf_quant_intn_codec_missing" not in report["blockers"]
     assert "snerv_qat_receiver_codec_pricing_missing" not in report["blockers"]
@@ -78,6 +78,10 @@ def test_snerv_official_mfu_hfr_and_fc_dim_controls_still_block_long_training() 
         "SnervTemporalExtension",
     }.issubset(missing_symbols)
     controls = {row["control_id"]: row for row in report["control_rows"]}
+    assert controls["snerv_fc_dim_modelsize_control"]["status"] == (
+        "implemented_or_declared"
+    )
+    assert controls["snerv_fc_dim_modelsize_control"]["missing_markers"] == []
     assert controls["snerv_lf_stepmap_and_intN_control"]["status"] == (
         "implemented_or_declared"
     )
