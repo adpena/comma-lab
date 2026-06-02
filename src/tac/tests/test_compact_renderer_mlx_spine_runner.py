@@ -2383,6 +2383,95 @@ def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in out["blockers"]
 
 
+def test_pr95_hnerv_execute_arm_uses_real_scorer_binding_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "pr95_public_archive.zip"
+        _write_synthetic_pr95_archive(archive)
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "score_aware_training": {
+                    "schema": "mlx_score_aware_training_objective.v1",
+                    "segnet_distillation_weight": 0.05,
+                    "pose_distillation_weight": 0.0005,
+                    "has_real_segnet_teacher": True,
+                    "has_real_posenet_teacher": True,
+                    "allow_mock_scorer_teacher": False,
+                    "allow_segnet_only_research": False,
+                }
+            },
+        }
+
+    def fake_receiver_proof(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = Path(kwargs["archive_zip"])
+        report = {
+            "schema": "pr95_hnerv_receiver_proof.v1",
+            "proof_path": (out / "pr95_hnerv_receiver_proof.json").as_posix(),
+            "archive_path": archive.as_posix(),
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "runtime_consumption_proof_passed": True,
+            "receiver_proof_valid": True,
+            "blockers": [],
+            "exact_readiness_refusal": {
+                "schema": "exact_readiness_refusal.v1",
+                "ready": False,
+                "blockers": ["runtime_consumption_smoke_is_not_score_authority"],
+            },
+        }
+        Path(report["proof_path"]).write_text(
+            json.dumps(report, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return report
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_run_pr95_hnerv_mlx_scoreaware_smoke",
+        fake_train,
+    )
+    monkeypatch.setattr(runner_mod, "run_pr95_hnerv_receiver_proof", fake_receiver_proof)
+
+    out = execute_pr95_hnerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "run",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-5,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        source_archive_zip=tmp_path / "synthetic_source_pr95.zip",
+        hard_byte_ceilings=(178_000,),
+        segnet_distillation_weight=0.05,
+        pose_distillation_weight=0.0005,
+        run_receiver_proof=True,
+        allow_overwrite=True,
+        repo_root=REPO_ROOT,
+    )
+
+    assert "pr95_segnet_posenet_network_loss_not_wired_to_mlx" not in out["blockers"]
+    assert (
+        "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss"
+        not in out["blockers"]
+    )
+    assert (
+        "pr95_hnerv_default_scorer_distillation_weights_are_zero_unless_cli_overridden"
+        not in out["blockers"]
+    )
+    assert (
+        "pr95_mlx_scoreaware_teacher_distillation_is_advisory_not_exact_contest_loss"
+        in out["blockers"]
+    )
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in out["blockers"]
+
+
 def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     tmp_path: Path,
     monkeypatch,
