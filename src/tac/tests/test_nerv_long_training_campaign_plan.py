@@ -1143,6 +1143,61 @@ def test_long_training_campaign_plan_consumes_hinerv_foreground_feedback_schema(
     assert hi["score_claim"] is False
 
 
+def test_long_training_campaign_plan_keeps_foreground_pose_recovery_nonlaunch(
+) -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "hinerv_training_telemetry_feedback.v1",
+                "source_kind": "foreground_official_controls_proof",
+                "candidate_id": "hinerv_tiny",
+                "telemetry_path": (
+                    "/Volumes/VertigoDataTier/pact/test/telemetry.jsonl"
+                ),
+                "row_count": 128,
+                "last_epoch": 127,
+                "first_pose_axis": 62_414.0,
+                "last_pose_axis": 5.51,
+                "first_seg_axis": 6.36,
+                "last_seg_axis": 6.35,
+                "learning_rate": 2.7e-5,
+                "observed_segnet_distillation_weight": 1.0,
+                "pose_recovered_from_initial_spike": True,
+                "segnet_still_binding": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    feedback = hi["candidate_feedback"]
+    assert feedback["feedback_match_scope"] == "candidate"
+    assert feedback["pose_recovered_from_initial_spike"] is True
+    assert feedback["launch_control_feedback_ready"] is False
+    assert hi["command_argv"][
+        hi["command_argv"].index("--learning-rate") + 1
+    ] == "2.7e-05"
+    assert hi["command_argv"][
+        hi["command_argv"].index("--segnet-distillation-weight") + 1
+    ] == "1"
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["applied"] is False
+    assert adjustment["reason"] == "feedback_not_launch_control_ready"
+    assert adjustment["launch_control_feedback_ready"] is False
+    assert hi["output_dir_reuse_policy"] == "stable_candidate_optimizer_path"
+    assert "hinerv_pose_instability_feedback_unapplied" not in hi["blockers"]
+    assert "hinerv_segnet_stagnation_feedback_unapplied" not in hi["blockers"]
+
+
 def test_long_training_campaign_plan_blocks_repeated_low_lr_pose_instability(
 ) -> None:
     report = build_nerv_long_training_campaign_plan(

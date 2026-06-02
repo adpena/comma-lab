@@ -1225,6 +1225,8 @@ def _normalize_hinerv_training_telemetry_feedback(
     last_epoch = int(source.get("last_epoch") or 0)
     seg_still_binding = bool(source.get("segnet_still_binding") is True)
     pose_recovered = bool(source.get("pose_recovered_from_initial_spike") is True)
+    pose_instability = bool(source.get("pose_instability_detected") is True)
+    recommended_lr = _float_or_none(source.get("recommended_learning_rate"))
     observed_seg_weight = _float_or_none(
         source.get("observed_segnet_distillation_weight")
     )
@@ -1243,15 +1245,29 @@ def _normalize_hinerv_training_telemetry_feedback(
         recommended_mutations.append(
             "increase_segnet_distillation_weight_from_stagnation_telemetry"
         )
+    launch_control_feedback_ready = bool(
+        candidate_id
+        and last_epoch > 0
+        and (
+            (
+                pose_instability
+                and recommended_lr is not None
+                and recommended_lr > 0.0
+            )
+            or (
+                seg_still_binding
+                and recommended_seg_weight is not None
+                and recommended_seg_weight > 1.0
+            )
+        )
+    )
     return {
         "schema": NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA,
         "telemetry_feedback_schema": str(source.get("schema")),
         "feedback_kind": "training_telemetry",
         "feedback_scope": "full600_training_telemetry",
         "feedback_ready": False,
-        "launch_control_feedback_ready": bool(
-            candidate_id and last_epoch > 0 and (pose_recovered or seg_still_binding)
-        ),
+        "launch_control_feedback_ready": launch_control_feedback_ready,
         "family": "hi_nerv",
         "candidate_id": candidate_id,
         "candidate_num_pairs": 600,
@@ -1260,7 +1276,8 @@ def _normalize_hinerv_training_telemetry_feedback(
         "training_stopped": False,
         "source_report_path": source.get("telemetry_path"),
         "observed_learning_rate": source.get("learning_rate"),
-        "pose_instability_detected": False,
+        "pose_instability_detected": pose_instability,
+        "recommended_learning_rate": recommended_lr,
         "pose_recovered_from_initial_spike": pose_recovered,
         "seg_stagnation_detected": seg_still_binding,
         "segnet_still_binding": seg_still_binding,

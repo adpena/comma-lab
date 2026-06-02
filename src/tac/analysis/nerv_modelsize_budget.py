@@ -16,6 +16,10 @@ from dataclasses import asdict, dataclass
 from math import ceil
 from typing import Any
 
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+)
+
 CONTEST_RATE_DENOM_BYTES = 37_545_489
 CONTEST_RATE_MULTIPLIER = 25.0
 RATE_SCORE_PER_BYTE = CONTEST_RATE_MULTIPLIER / CONTEST_RATE_DENOM_BYTES
@@ -41,10 +45,45 @@ DEFAULT_SNERV_DECODER_CODECS = (
     "int4_symmetric",
     "int2_symmetric",
 )
+DEFAULT_SNERV_MODEL_SIZE_ADAPTER = "snerv_fc_dim_emb_size_adapter_v1"
+_SNERV_ADAPTER_TO_ID_TOKEN = {
+    DEFAULT_SNERV_MODEL_SIZE_ADAPTER: "base",
+    SNERV_SPECTRA_PRESERVING_ADAPTER: "spectra",
+}
+_SNERV_ID_TOKEN_TO_ADAPTER = {
+    value: key for key, value in _SNERV_ADAPTER_TO_ID_TOKEN.items()
+}
 
 
 class NervModelSizeBudgetError(ValueError):
     """Raised when a model-size budget request is malformed."""
+
+
+def snerv_model_size_adapter_id_token(adapter: str) -> str:
+    """Encode a SNeRV adapter string into a lossless candidate-id token."""
+
+    normalized = str(adapter)
+    known = _SNERV_ADAPTER_TO_ID_TOKEN.get(normalized)
+    if known is not None:
+        return known
+    return "hx" + normalized.encode("utf-8").hex()
+
+
+def snerv_model_size_adapter_from_id_token(token: str) -> str:
+    """Decode a SNeRV adapter candidate-id token."""
+
+    normalized = str(token)
+    known = _SNERV_ID_TOKEN_TO_ADAPTER.get(normalized)
+    if known is not None:
+        return known
+    if normalized.startswith("hx"):
+        try:
+            return bytes.fromhex(normalized[2:]).decode("utf-8")
+        except (UnicodeDecodeError, ValueError) as exc:
+            raise NervModelSizeBudgetError(
+                f"invalid SNeRV adapter id token: {token!r}"
+            ) from exc
+    raise NervModelSizeBudgetError(f"unknown SNeRV adapter id token: {token!r}")
 
 
 @dataclass(frozen=True)
@@ -545,7 +584,7 @@ def analyze_snerv_modelsize_candidate(
     bits_per_coeff: float,
     step_map_bits_per_coeff: float,
     decoder_payload_codec: str,
-    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     fc_dim: int = 9,
     emb_size: int = 0,
     patch_radius: int = 1,
@@ -595,14 +634,20 @@ def analyze_snerv_modelsize_candidate(
     headroom = int(hard_byte_ceiling) - int(total_payload)
     bits_label = f"{float(bits_per_coeff):g}".replace(".", "p")
     step_label = f"{float(step_map_bits_per_coeff):g}".replace(".", "p")
+    hfr_label = f"{float(model_size.hfr_gain):g}".replace(".", "p")
     wavelet_label = str(wavelet).replace(".", "p").replace("_", "")
     feature_label = f"fc{int(model_size.fc_dim)}e{int(model_size.emb_size)}"
+    mfu_label = "-".join(str(int(value)) for value in model_size.mfu_scales)
+    adapter_label = snerv_model_size_adapter_id_token(model_size.adapter)
     return SnervModelSizeCandidate(
         schema="snerv_modelsize_candidate.v1",
         family="snerv",
         candidate_id=(
             f"snerv_np{int(num_pairs)}_{wavelet_label}_lv{int(levels)}_"
             f"lfb{bits_label}_stepb{step_label}_{feature_label}_"
+            f"p{int(model_size.patch_radius)}_mfu{mfu_label}_"
+            f"hfr{hfr_label}_t{int(model_size.temporal_context)}_"
+            f"ad{adapter_label}_"
             f"{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
         ),
         num_pairs=int(num_pairs),
@@ -657,7 +702,7 @@ def enumerate_snerv_modelsize_candidates(
     bits_per_coeffs: tuple[float, ...] = DEFAULT_SNERV_BITS_PER_COEFF,
     step_map_bits_per_coeffs: tuple[float, ...] = DEFAULT_SNERV_STEP_MAP_BITS_PER_COEFF,
     decoder_codecs: tuple[str, ...] = DEFAULT_SNERV_DECODER_CODECS,
-    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     fc_dims: tuple[int, ...] = (9,),
     emb_sizes: tuple[int, ...] = (0,),
     patch_radius: int = 1,
@@ -769,7 +814,7 @@ def build_snerv_modelsize_budget_report(
     wavelet: str = "haar",
     fc_dims: tuple[int, ...] = (9,),
     emb_sizes: tuple[int, ...] = (0,),
-    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     patch_radius: int = 1,
     mfu_scales: tuple[int, ...] = (1, 2, 4),
     hfr_gain: float = 0.0,
@@ -1124,6 +1169,7 @@ def official_nerv_oss_flag_audit() -> dict[str, Any]:
 
 
 __all__ = [
+    "DEFAULT_SNERV_MODEL_SIZE_ADAPTER",
     "HinervModelSizeCandidate",
     "NervModelSizeBudgetError",
     "SnervModelSizeCandidate",
@@ -1139,4 +1185,6 @@ __all__ = [
     "select_hinerv_modelsize_candidates",
     "select_snerv_modelsize_candidates",
     "snerv_decoder_codec_nominal_bits",
+    "snerv_model_size_adapter_from_id_token",
+    "snerv_model_size_adapter_id_token",
 ]

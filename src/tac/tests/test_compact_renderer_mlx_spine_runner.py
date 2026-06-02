@@ -35,6 +35,7 @@ if str(REPO_ROOT) not in sys.path:
 import tools.run_compact_renderer_mlx_spine_runner as runner_mod  # noqa: E402
 from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+    CompactRendererMlxSpineRunnerError,
     _parse_args,
     _require_scorer_upstream_dir_for_distillation,
     _resolve_execute_modelsize_candidate,
@@ -1089,7 +1090,18 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     )
     sn_rich = _resolve_execute_modelsize_candidate(
         family="snerv",
-        candidate_id="snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_int2_symmetric_ceil36000",
+        candidate_id=(
+            "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p1_"
+            "mfu1-3_hfr0p25_t1_adbase_int2_symmetric_ceil36000"
+        ),
+        hard_byte_ceilings=(178_000,),
+    )
+    sn_spectra = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=(
+            "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
+            "mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
+        ),
         hard_byte_ceilings=(178_000,),
     )
 
@@ -1118,11 +1130,40 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert sn["decoder_payload_codec"] == "int2_symmetric"
     assert sn_rich is not None
     assert sn_rich["candidate_id"] == (
-        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_int2_symmetric_ceil36000"
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p1_"
+        "mfu1-3_hfr0p25_t1_adbase_int2_symmetric_ceil36000"
     )
     assert sn_rich["wavelet"] == "haar"
     assert sn_rich["fc_dim"] == 11
     assert sn_rich["emb_size"] == 2
+    assert sn_rich["patch_radius"] == 1
+    assert sn_rich["mfu_scales"] == [1, 3]
+    assert sn_rich["hfr_gain"] == 0.25
+    assert sn_rich["temporal_context"] == 1
+    assert sn_rich["snerv_model_size_adapter"] == (
+        "snerv_fc_dim_emb_size_adapter_v1"
+    )
+    assert sn_spectra is not None
+    assert sn_spectra["candidate_id"] == (
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
+        "mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
+    )
+    assert sn_spectra["patch_radius"] == 3
+    assert sn_spectra["mfu_scales"] == [1, 5]
+    assert sn_spectra["hfr_gain"] == pytest.approx(0.375)
+    assert sn_spectra["temporal_context"] == 2
+    assert sn_spectra["snerv_model_size_adapter"] == (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
+    with pytest.raises(CompactRendererMlxSpineRunnerError):
+        _resolve_execute_modelsize_candidate(
+            family="snerv",
+            candidate_id=(
+                "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
+                "mfu1-5_hfr0p3750_t2_adspectra_int2_symmetric_ceil36000"
+            ),
+            hard_byte_ceilings=(178_000,),
+        )
 
 
 def test_pose_instability_epoch_monitor_requires_sustained_bad_pose() -> None:

@@ -3,15 +3,23 @@
 
 from __future__ import annotations
 
+import pytest
+
 from tac.analysis.nerv_modelsize_budget import (
+    NervModelSizeBudgetError,
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
     build_hinerv_config_from_size_knobs,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
     official_nerv_oss_flag_audit,
+    snerv_model_size_adapter_from_id_token,
+    snerv_model_size_adapter_id_token,
 )
 from tac.substrates.hi_nerv.architecture import HinervSubstrate
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+)
 
 
 def test_hinerv_modelsize_closed_form_matches_real_module() -> None:
@@ -168,6 +176,10 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     )
 
     assert row.family == "snerv"
+    assert row.candidate_id == (
+        "snerv_np600_db2_lv3_lfb2_stepb1_fc11e2_"
+        "p1_mfu1-3_hfr0p25_t1_adbase_int4_symmetric_ceil178000"
+    )
     assert row.wavelet == "db2"
     assert row.fc_dim == 11
     assert row.emb_size == 2
@@ -203,6 +215,45 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     assert all(row["fc_dim"] == 9 for row in selected)
     assert all(row["emb_size"] == 0 for row in selected)
     assert report["score_claim"] is False
+
+
+def test_snerv_modelsize_candidate_id_tokens_losslessly_bind_receiver_controls() -> None:
+    row = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=36_000,
+        num_pairs=600,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        levels=2,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int2_symmetric",
+        snerv_model_size_adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+        fc_dim=11,
+        emb_size=2,
+        patch_radius=3,
+        mfu_scales=(1, 5),
+        hfr_gain=0.375,
+        temporal_context=2,
+    )
+
+    assert row.candidate_id == (
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_"
+        "p3_mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
+    )
+    assert snerv_model_size_adapter_id_token(
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    ) == "spectra"
+    assert snerv_model_size_adapter_from_id_token("spectra") == (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
+    custom_adapter = "snerv_custom/research:v2"
+    custom_token = snerv_model_size_adapter_id_token(custom_adapter)
+    assert custom_token.startswith("hx")
+    assert snerv_model_size_adapter_from_id_token(custom_token) == custom_adapter
+    with pytest.raises(NervModelSizeBudgetError):
+        snerv_model_size_adapter_from_id_token("unknown")
+    with pytest.raises(NervModelSizeBudgetError):
+        snerv_model_size_adapter_from_id_token("hxnothex")
 
 
 def test_snerv_fc_dim_and_emb_size_are_receiver_decoder_controls() -> None:

@@ -58,6 +58,7 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     enumerate_hinerv_modelsize_candidates,
     enumerate_snerv_modelsize_candidates,
     official_nerv_oss_flag_audit,
+    snerv_model_size_adapter_from_id_token,
 )
 from tac.analysis.nerv_stack_synergy_audit import (  # noqa: E402
     build_nerv_stack_synergy_audit,
@@ -1916,6 +1917,19 @@ _SNERV_MODEL_SIZE_ID_RE = re.compile(
     r"lfb(?P<bits_per_coeff>\d+(?:p\d+)?)_"
     r"stepb(?P<step_map_bits_per_coeff>\d+(?:p\d+)?)_"
     r"fc(?P<fc_dim>\d+)e(?P<emb_size>\d+)_"
+    r"p(?P<patch_radius>\d+)_"
+    r"mfu(?P<mfu_scales>\d+(?:-\d+)*)_"
+    r"hfr(?P<hfr_gain>\d+(?:p\d+)?)_"
+    r"t(?P<temporal_context>\d+)_"
+    r"ad(?P<adapter_token>[A-Za-z0-9]+)_"
+    r"(?P<decoder_payload_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
+)
+_SNERV_PARTIAL_MODEL_SIZE_ID_RE = re.compile(
+    r"^snerv_np(?P<num_pairs>\d+)_(?P<wavelet>[A-Za-z0-9]+)_"
+    r"lv(?P<levels>\d+)_"
+    r"lfb(?P<bits_per_coeff>\d+(?:p\d+)?)_"
+    r"stepb(?P<step_map_bits_per_coeff>\d+(?:p\d+)?)_"
+    r"fc(?P<fc_dim>\d+)e(?P<emb_size>\d+)_"
     r"(?P<decoder_payload_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
 )
 _SNERV_LEGACY_MODEL_SIZE_ID_RE = re.compile(
@@ -1961,14 +1975,18 @@ def _modelsize_candidate_from_self_describing_id(
             use_hierarchical_feature_grid="_hfg" in control_suffix,
             use_convnext_blocks="_cnx" in control_suffix,
         ).as_dict()
+        if row["candidate_id"] != token:
+            return None
     elif family == "snerv":
         match = _SNERV_MODEL_SIZE_ID_RE.match(token)
+        partial_match = _SNERV_PARTIAL_MODEL_SIZE_ID_RE.match(token)
         legacy_match = _SNERV_LEGACY_MODEL_SIZE_ID_RE.match(token)
-        if match is None and legacy_match is None:
+        if match is None and partial_match is None and legacy_match is None:
             return None
-        matched = match or legacy_match
+        matched = match or partial_match or legacy_match
         if matched is None:  # pragma: no cover - defensive for type checkers
             return None
+        groups = matched.groupdict()
         row = analyze_snerv_modelsize_candidate(
             hard_byte_ceiling=int(matched.group("hard_byte_ceiling")),
             num_pairs=int(matched.group("num_pairs")),
@@ -1990,13 +2008,42 @@ def _modelsize_candidate_from_self_describing_id(
             ),
             emb_size=(
                 int(matched.group("emb_size"))
-                if "emb_size" in matched.groupdict()
+                if "emb_size" in groups
                 else 0
             ),
+            patch_radius=(
+                int(matched.group("patch_radius"))
+                if "patch_radius" in groups
+                else 1
+            ),
+            mfu_scales=(
+                tuple(int(v) for v in matched.group("mfu_scales").split("-"))
+                if "mfu_scales" in groups
+                else (1, 2, 4)
+            ),
+            hfr_gain=(
+                _float_token(matched.group("hfr_gain"))
+                if "hfr_gain" in groups
+                else 0.0
+            ),
+            temporal_context=(
+                int(matched.group("temporal_context"))
+                if "temporal_context" in groups
+                else 0
+            ),
+            snerv_model_size_adapter=(
+                snerv_model_size_adapter_from_id_token(
+                    matched.group("adapter_token")
+                )
+                if "adapter_token" in groups
+                else "snerv_fc_dim_emb_size_adapter_v1"
+            ),
         ).as_dict()
-        if legacy_match is not None:
+        if partial_match is not None or legacy_match is not None:
             row["candidate_id"] = token
             row["legacy_candidate_id"] = True
+        elif row["candidate_id"] != token:
+            return None
     else:
         return None
     if row["candidate_id"] != token:
