@@ -619,6 +619,129 @@ def _compile_carrier_post_export_materializer_plan(
     return result
 
 
+def _execute_carrier_post_export_materializer_plan(
+    *,
+    plan: Mapping[str, Any],
+    requested: bool,
+    max_steps: int = 1,
+    max_parallel: int = 0,
+    repo_root: str | Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Run a bounded local wave of a compiled carrier materializer queue."""
+
+    from comma_lab.scheduler.experiment_queue import (
+        connect_state,
+        initialize_queue_state,
+        load_queue_definition,
+        queue_summary,
+        run_queue_worker,
+    )
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    output_root_raw = plan.get("queue_output_dir") or plan.get("materializer_results_root")
+    output_root = (
+        _resolve(output_root_raw, base=root)
+        if isinstance(output_root_raw, str) and output_root_raw
+        else root / ".omx" / "state" / "compact_carrier_post_export_materializers"
+    )
+    execution_path = output_root / "post_export_materializer_execution.json"
+    base_result: dict[str, Any] = {
+        "schema": "compact_carrier_post_export_materializer_execution.v1",
+        "requested": bool(requested),
+        "executed": False,
+        "queue_id": plan.get("queue_id"),
+        "queue_path": plan.get("experiment_queue_path"),
+        "state_path": (output_root / "experiment_queue.sqlite").as_posix(),
+        "log_root": (output_root / "experiment_queue_logs").as_posix(),
+        "execution_path": execution_path.as_posix(),
+        "max_steps": int(max_steps),
+        "max_parallel": int(max_parallel),
+        **FALSE_AUTHORITY,
+    }
+    if not requested:
+        result = {
+            **base_result,
+            "blockers": [],
+            "mode": "compile_only_execution_not_requested",
+        }
+        _write_json(execution_path, result)
+        return result
+    if plan.get("compiled") is not True:
+        result = {
+            **base_result,
+            "blockers": ["post_export_materializer_queue_not_compiled"],
+        }
+        _write_json(execution_path, result)
+        return result
+    queue_path_raw = plan.get("experiment_queue_path")
+    if not isinstance(queue_path_raw, str) or not queue_path_raw:
+        result = {
+            **base_result,
+            "blockers": ["post_export_materializer_experiment_queue_path_missing"],
+        }
+        _write_json(execution_path, result)
+        return result
+    if int(max_steps) < 1:
+        result = {
+            **base_result,
+            "blockers": ["post_export_materializer_max_steps_must_be_positive"],
+        }
+        _write_json(execution_path, result)
+        return result
+
+    try:
+        queue_path = _resolve(queue_path_raw, base=root)
+        queue = load_queue_definition(queue_path)
+        state_path = output_root / "experiment_queue.sqlite"
+        log_root = output_root / "experiment_queue_logs"
+        with connect_state(state_path) as conn:
+            initialize_queue_state(conn, queue)
+            before = queue_summary(conn, queue, repo_root=root)
+            worker = run_queue_worker(
+                conn,
+                queue,
+                repo_root=root,
+                execute=True,
+                max_steps=int(max_steps),
+                max_parallel=int(max_parallel),
+                idle_sleep_seconds=0.1,
+                max_idle_cycles=1,
+                poll_interval_seconds=0.1,
+                stop_policy="drain",
+                allow_cloud=False,
+                allow_orphaned_state=False,
+                noncanonical_state_rationale=(
+                    "archive-specific post-export queue state is scoped under "
+                    "the carrier output directory to avoid cross-run state reuse"
+                ),
+                log_root=log_root,
+            )
+            after = queue_summary(conn, queue, repo_root=root)
+        blockers: list[str] = []
+        if int(worker.get("failure_count") or 0) > 0:
+            blockers.append("post_export_materializer_worker_failures")
+        if int(worker.get("steps_started") or 0) < 1:
+            blockers.append("post_export_materializer_worker_started_no_steps")
+        result = {
+            **base_result,
+            "executed": True,
+            "queue_path": queue_path.as_posix(),
+            "state_path": state_path.as_posix(),
+            "log_root": log_root.as_posix(),
+            "before": before,
+            "worker": worker,
+            "after": after,
+            "blockers": _dedupe(blockers),
+        }
+    except (OSError, RuntimeError, ValueError) as exc:
+        result = {
+            **base_result,
+            "blockers": [f"post_export_materializer_execution_failed:{exc}"],
+        }
+    _write_json(execution_path, result)
+    return result
+
+
 def _scorer_coupled_rd_metadata() -> dict[str, Any]:
     """Return durable scorer-domain facts for advisory compact-run metadata."""
 
@@ -1220,6 +1343,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
     cleanup_failed_local_replay_scratch: bool = True,
+    run_post_export_materializers: bool = False,
+    post_export_materializer_max_steps: int = 1,
+    post_export_materializer_max_parallel: int = 0,
     distillation_device: str = "cpu",
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
@@ -1332,6 +1458,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         family="snerv",
         repo_root=root,
     )
+    post_export_materializer_execution = (
+        _execute_carrier_post_export_materializer_plan(
+            plan=post_export_materializer_plan,
+            requested=run_post_export_materializers,
+            max_steps=post_export_materializer_max_steps,
+            max_parallel=post_export_materializer_max_parallel,
+            repo_root=root,
+        )
+    )
 
     blockers = _dedupe(
         [
@@ -1340,6 +1475,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "snerv_longer_staged_score_aware_training_not_executed",
             *local_cpu_replay_blockers,
             *list(post_export_materializer_plan.get("blockers") or []),
+            *list(post_export_materializer_execution.get("blockers") or []),
             *list(row.get("blockers") or []),
             *list(mlx_prefilter_coverage.get("blockers") or []),
         ]
@@ -1415,9 +1551,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "post_export_experiment_queue_path": (
                     post_export_materializer_plan.get("experiment_queue_path")
                 ),
+                "post_export_execution_path": (
+                    post_export_materializer_execution.get("execution_path")
+                ),
                 "authority": "planner_hook_false_authority_until_executed",
             },
             "post_export_materializer_plan": post_export_materializer_plan,
+            "post_export_materializer_execution": post_export_materializer_execution,
             "local_cpu_replay_summary_paths": [
                 path.as_posix() for path in local_cpu_replay_paths
             ],
@@ -1819,6 +1959,9 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     receiver_proof_runtime_dir: str | Path = DEFAULT_PR95_RECEIVER_RUNTIME_DIR,
     keep_receiver_proof_output: bool = False,
     receiver_proof_timeout_seconds: int = 1800,
+    run_post_export_materializers: bool = False,
+    post_export_materializer_max_steps: int = 1,
+    post_export_materializer_max_parallel: int = 0,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -1987,6 +2130,14 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])
+    post_export_materializer_execution = _execute_carrier_post_export_materializer_plan(
+        plan=post_export_materializer_plan,
+        requested=run_post_export_materializers,
+        max_steps=post_export_materializer_max_steps,
+        max_parallel=post_export_materializer_max_parallel,
+        repo_root=root,
+    )
+    blockers.extend(post_export_materializer_execution.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -2021,6 +2172,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             ),
             "selected_runner_rows": selected_runner_rows,
             "post_export_materializer_plan": post_export_materializer_plan,
+            "post_export_materializer_execution": post_export_materializer_execution,
             "ema_decay": float(ema_decay),
             "score_aware_training": {
                 "schema": "compact_pr95_hnerv_scoreaware_training.v1",
@@ -2276,6 +2428,9 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     coder_qat_quant_residual_weight: float = 1.0e-4,
     coder_qat_magnitude_weight: float = 0.0,
     coder_qat_delta_weight: float = 0.0,
+    run_post_export_materializers: bool = False,
+    post_export_materializer_max_steps: int = 1,
+    post_export_materializer_max_parallel: int = 0,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -2394,6 +2549,14 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])
+    post_export_materializer_execution = _execute_carrier_post_export_materializer_plan(
+        plan=post_export_materializer_plan,
+        requested=run_post_export_materializers,
+        max_steps=post_export_materializer_max_steps,
+        max_parallel=post_export_materializer_max_parallel,
+        repo_root=root,
+    )
+    blockers.extend(post_export_materializer_execution.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -2454,6 +2617,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             ),
             "selected_runner_rows": selected_runner_rows,
             "post_export_materializer_plan": post_export_materializer_plan,
+            "post_export_materializer_execution": post_export_materializer_execution,
             "blockers": _dedupe(blockers),
         }
     )
@@ -2501,6 +2665,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
     cleanup_failed_local_replay_scratch: bool = True,
+    run_post_export_materializers: bool = False,
+    post_export_materializer_max_steps: int = 1,
+    post_export_materializer_max_parallel: int = 0,
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -2667,6 +2834,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])
+    post_export_materializer_execution = _execute_carrier_post_export_materializer_plan(
+        plan=post_export_materializer_plan,
+        requested=run_post_export_materializers,
+        max_steps=post_export_materializer_max_steps,
+        max_parallel=post_export_materializer_max_parallel,
+        repo_root=root,
+    )
+    blockers.extend(post_export_materializer_execution.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -2733,6 +2908,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ],
             "local_cpu_replay_summary": local_cpu_replay_summary,
             "post_export_materializer_plan": post_export_materializer_plan,
+            "post_export_materializer_execution": post_export_materializer_execution,
             "local_cpu_replay_gate": {
                 "schema": "compact_runner_local_cpu_replay_gate.v1",
                 "requested": run_local_cpu_replay,
@@ -2820,6 +2996,9 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     coder_qat_quant_residual_weight: float = 1.0e-4,
     coder_qat_magnitude_weight: float = 0.0,
     coder_qat_delta_weight: float = 0.0,
+    run_post_export_materializers: bool = False,
+    post_export_materializer_max_steps: int = 1,
+    post_export_materializer_max_parallel: int = 0,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -2943,6 +3122,14 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
         repo_root=root,
     )
     blockers.extend(post_export_materializer_plan.get("blockers") or [])
+    post_export_materializer_execution = _execute_carrier_post_export_materializer_plan(
+        plan=post_export_materializer_plan,
+        requested=run_post_export_materializers,
+        max_steps=post_export_materializer_max_steps,
+        max_parallel=post_export_materializer_max_parallel,
+        repo_root=root,
+    )
+    blockers.extend(post_export_materializer_execution.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -3014,6 +3201,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             ),
             "selected_runner_rows": selected_runner_rows,
             "post_export_materializer_plan": post_export_materializer_plan,
+            "post_export_materializer_execution": post_export_materializer_execution,
             "blockers": _dedupe(blockers),
         }
     )
@@ -4754,6 +4942,30 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--run-post-export-materializers",
+        action="store_true",
+        help=(
+            "After a byte-closed carrier export, run a bounded local wave of "
+            "the compiled post-export final-rate materializer queue. Results "
+            "remain false-authority and output-scoped until exact gates pass."
+        ),
+    )
+    parser.add_argument(
+        "--post-export-materializer-max-steps",
+        default=1,
+        type=int,
+        help="Maximum local post-export materializer queue steps to start.",
+    )
+    parser.add_argument(
+        "--post-export-materializer-max-parallel",
+        default=0,
+        type=int,
+        help=(
+            "Maximum local post-export materializer queue parallelism. Zero "
+            "uses the queue worker's sequential bounded execution."
+        ),
+    )
+    parser.add_argument(
         "--mlx-prefilter-scorer-batch-pairs",
         default=1,
         type=int,
@@ -4996,6 +5208,13 @@ def main(argv: list[str] | None = None) -> int:
             receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
             keep_receiver_proof_output=args.keep_receiver_proof_output,
             receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
+            run_post_export_materializers=args.run_post_export_materializers,
+            post_export_materializer_max_steps=(
+                args.post_export_materializer_max_steps
+            ),
+            post_export_materializer_max_parallel=(
+                args.post_export_materializer_max_parallel
+            ),
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -5031,6 +5250,13 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
+            run_post_export_materializers=args.run_post_export_materializers,
+            post_export_materializer_max_steps=(
+                args.post_export_materializer_max_steps
+            ),
+            post_export_materializer_max_parallel=(
+                args.post_export_materializer_max_parallel
+            ),
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -5066,6 +5292,13 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
+            run_post_export_materializers=args.run_post_export_materializers,
+            post_export_materializer_max_steps=(
+                args.post_export_materializer_max_steps
+            ),
+            post_export_materializer_max_parallel=(
+                args.post_export_materializer_max_parallel
+            ),
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -5082,6 +5315,13 @@ def main(argv: list[str] | None = None) -> int:
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
+            run_post_export_materializers=args.run_post_export_materializers,
+            post_export_materializer_max_steps=(
+                args.post_export_materializer_max_steps
+            ),
+            post_export_materializer_max_parallel=(
+                args.post_export_materializer_max_parallel
+            ),
             distillation_device=args.distillation_device,
             upstream_dir=scorer_upstream_dir,
             allow_overwrite=args.overwrite,
@@ -5129,6 +5369,13 @@ def main(argv: list[str] | None = None) -> int:
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
+            run_post_export_materializers=args.run_post_export_materializers,
+            post_export_materializer_max_steps=(
+                args.post_export_materializer_max_steps
+            ),
+            post_export_materializer_max_parallel=(
+                args.post_export_materializer_max_parallel
+            ),
             upstream_dir=scorer_upstream_dir,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,

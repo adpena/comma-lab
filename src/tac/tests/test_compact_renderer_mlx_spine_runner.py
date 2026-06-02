@@ -581,6 +581,11 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "8",
             "--mlx-prefilter-progress-every",
             "10",
+            "--run-post-export-materializers",
+            "--post-export-materializer-max-steps",
+            "3",
+            "--post-export-materializer-max-parallel",
+            "2",
         ]
     )
     sn = _parse_args(["--execute-family", "snerv", "--num-pairs", "128"])
@@ -596,8 +601,97 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.recon_pixel_weight_normalize == "none"
     assert hi.mlx_prefilter_scorer_batch_pairs == 8
     assert hi.mlx_prefilter_progress_every == 10
+    assert hi.run_post_export_materializers is True
+    assert hi.post_export_materializer_max_steps == 3
+    assert hi.post_export_materializer_max_parallel == 2
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
+
+
+def test_post_export_materializer_executor_runs_output_scoped_queue(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "queue_artifact.json"
+    queue_path = tmp_path / "experiment_queue.json"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "unit_post_export_materializer",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "exp",
+                "lane_id": "unit",
+                "metadata": {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "steps": [
+                    {
+                        "id": "write_artifact",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            (
+                                "import json, pathlib; "
+                                f"pathlib.Path({artifact.as_posix()!r}).write_text("
+                                "json.dumps({'schema':'post-export-unit.v1'}), "
+                                "encoding='utf-8')"
+                            ),
+                        ],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": artifact.as_posix(),
+                                "key": "schema",
+                                "equals": "post-export-unit.v1",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    queue_path.write_text(json.dumps(queue, sort_keys=True), encoding="utf-8")
+    queue_root = tmp_path / "queue_root"
+    plan = {
+        "schema": "compact_carrier_post_export_materializer_plan.v1",
+        "compiled": True,
+        "queue_id": "unit_post_export_materializer",
+        "experiment_queue_path": queue_path.as_posix(),
+        "queue_output_dir": queue_root.as_posix(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    result = runner_mod._execute_carrier_post_export_materializer_plan(
+        plan=plan,
+        requested=True,
+        max_steps=1,
+        max_parallel=1,
+        repo_root=REPO_ROOT,
+    )
+
+    assert result["schema"] == "compact_carrier_post_export_materializer_execution.v1"
+    assert result["requested"] is True
+    assert result["executed"] is True
+    assert result["blockers"] == []
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+    assert result["worker"]["success_count"] == 1
+    assert result["worker"]["failure_count"] == 0
+    assert result["worker"]["steps_started"] == 1
+    assert Path(result["state_path"]).is_file()
+    assert Path(result["log_root"]).is_dir()
+    assert Path(result["execution_path"]).is_file()
+    assert artifact.is_file()
+    persisted = json.loads(Path(result["execution_path"]).read_text(encoding="utf-8"))
+    assert persisted["state_path"] == result["state_path"]
+    assert persisted["worker"]["success_count"] == 1
 
 
 def test_recon_pixel_weight_loader_records_file_custody(
@@ -917,6 +1011,11 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert queue["schema"] == "experiment_queue.v1"
     assert post_export["score_claim"] is False
     assert post_export["ready_for_exact_eval_dispatch"] is False
+    post_export_execution = out["post_export_materializer_execution"]
+    assert post_export_execution["requested"] is False
+    assert post_export_execution["executed"] is False
+    assert post_export_execution["mode"] == "compile_only_execution_not_requested"
+    assert Path(post_export_execution["execution_path"]).is_file()
     assert "local_cpu_replay_not_executed" not in out["blockers"]
     assert "local_cpu_replay_not_run_partial_pair_coverage" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
@@ -1524,6 +1623,10 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert post_export["queue_launch_executed"] is False
     assert post_export["experiment_count"] > 0
     assert Path(post_export["experiment_queue_path"]).is_file()
+    post_export_execution = out["post_export_materializer_execution"]
+    assert post_export_execution["requested"] is False
+    assert post_export_execution["executed"] is False
+    assert Path(post_export_execution["execution_path"]).is_file()
     assert out["reusable_optimization_followups"][
         "post_export_experiment_queue_path"
     ] == post_export["experiment_queue_path"]
@@ -1792,6 +1895,8 @@ def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(
     assert post_export["schema"] == "compact_carrier_post_export_materializer_plan.v1"
     assert post_export["compiled"] is True
     assert Path(post_export["experiment_queue_path"]).is_file()
+    assert out["post_export_materializer_execution"]["requested"] is False
+    assert out["post_export_materializer_execution"]["executed"] is False
     assert out["control_arm_scope"]["source_faithful_pr95_reproduction"] is False
     assert (
         "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction"
@@ -2016,6 +2121,8 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert post_export["schema"] == "compact_carrier_post_export_materializer_plan.v1"
     assert post_export["compiled"] is True
     assert Path(post_export["experiment_queue_path"]).is_file()
+    assert out["post_export_materializer_execution"]["requested"] is False
+    assert out["post_export_materializer_execution"]["executed"] is False
     assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
     assert "pact_nerv_selector_v4_spine_projection_manifest_missing" not in out[
