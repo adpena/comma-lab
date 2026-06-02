@@ -69,14 +69,16 @@ def _bilinear_resize_nhwc(x: Any, target_h: int, target_w: int) -> Any:
         return x
     from tac.local_acceleration.pr95_hnerv_mlx import (
         bilinear_resize2x_align_corners_false_nhwc,
+        bilinear_resize_nhwc,
     )
 
     if src_h * 2 == target_h and src_w * 2 == target_w:
         return bilinear_resize2x_align_corners_false_nhwc(x)
-    raise NotImplementedError(
-        f"_bilinear_resize_nhwc generic resize ({src_h}x{src_w} -> "
-        f"{target_h}x{target_w}) not implemented; canonical HiNeRV configs "
-        "land exactly through PixelShuffle or a final 2x resize."
+    return bilinear_resize_nhwc(
+        x,
+        target_h=int(target_h),
+        target_w=int(target_w),
+        align_corners=False,
     )
 
 

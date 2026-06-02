@@ -30,6 +30,18 @@ skip_no_mlx = pytest.mark.skipif(
 )
 
 
+def test_mlx_renderer_uses_canonical_generic_resize_helper() -> None:
+    source = (
+        REPO_ROOT / "src" / "tac" / "substrates" / "hi_nerv" / "mlx_renderer.py"
+    ).read_text(encoding="utf-8")
+
+    assert "bilinear_resize_nhwc" in source
+    resize_body = source.split("def _bilinear_resize_nhwc", maxsplit=1)[1].split(
+        "def _siren_uniform_bound", maxsplit=1
+    )[0]
+    assert "NotImplementedError" not in resize_body
+
+
 def _smoke_cfg():
     from tac.substrates.hi_nerv.architecture import HinervConfig
 
@@ -117,6 +129,33 @@ def test_mlx_renderer_forward_shape_b2chw_255() -> None:
 
 
 @skip_no_mlx
+def test_mlx_renderer_generic_resize_path_matches_pytorch() -> None:
+    import mlx.core as mx
+    import numpy as np
+    import torch.nn.functional as F
+
+    from tac.substrates.hi_nerv.mlx_renderer import _bilinear_resize_nhwc
+
+    rng = np.random.default_rng(17)
+    x_np = rng.normal(size=(2, 5, 7, 3)).astype("float32")
+    y_mlx = np.asarray(
+        _bilinear_resize_nhwc(mx.array(x_np), target_h=13, target_w=17),
+        dtype=np.float32,
+    )
+    y_ref = (
+        F.interpolate(
+            torch.from_numpy(x_np).permute(0, 3, 1, 2),
+            size=(13, 17),
+            mode="bilinear",
+            align_corners=False,
+        )
+        .permute(0, 2, 3, 1)
+        .numpy()
+    )
+    assert float(np.max(np.abs(y_mlx - y_ref))) < 1e-5
+
+
+@skip_no_mlx
 def test_mlx_exported_state_dict_matches_pytorch_forward() -> None:
     import mlx.core as mx
     import numpy as np
@@ -173,6 +212,23 @@ def test_archive_candidate_int8_decoder_packet_roundtrip() -> None:
     )
     assert arc.meta["_decoder_state_codec"]["codec"] == "int8_mixed"
     assert "latents_coarse" not in arc.decoder_state_dict
+
+
+def test_archive_candidate_rejects_incomplete_exported_decoder_state() -> None:
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    exportable = _exportable_torch_model()
+    exported = exportable.export_state_dict()
+    exported.pop("head_rgb_1.bias")
+
+    with pytest.raises(ValueError, match="hi_nerv_exported_decoder_state invalid"):
+        pack_archive_from_exported_state_dict(
+            exported_state_dict=exported,
+            cfg=exportable.cfg,
+            decoder_codec="int8_mixed",
+        )
 
 
 def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> None:

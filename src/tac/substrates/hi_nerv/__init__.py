@@ -45,7 +45,12 @@ Catalog #124 archive-grammar 8 fields:
     no_op_detector_planned:    Catalog #139 _build_no_op_proof + byte-mutation smoke
 """
 
-from .architecture import HinervConfig, HinervSubstrate
+from .architecture import (
+    HinervConfig,
+    HinervSubstrate,
+    expected_decoder_state_shapes,
+    validate_decoder_state_dict,
+)
 from .archive import (
     HinervArchive,
     pack_archive,
@@ -64,9 +69,11 @@ __all__ = [
     "HinervScoreAwareLoss",
     "HinervSubstrate",
     "ScoreAwareLossWeights",
+    "expected_decoder_state_shapes",
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
     "pack_archive",
     "pack_archive_from_exported_state_dict",
     "parse_archive",
+    "validate_decoder_state_dict",
 ]

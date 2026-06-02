@@ -18,6 +18,7 @@ from tac.substrates.hi_nerv.archive import (
     pack_archive,
     parse_archive,
 )
+from tac.substrates.hi_nerv.inflate import build_model_from_archive
 
 
 def _smoke_cfg() -> HinervConfig:
@@ -162,6 +163,90 @@ def test_forward_pass_after_roundtrip_matches_original_within_tolerance():
 
     assert torch.allclose(rgb_0_a, rgb_0_b, atol=5e-2)
     assert torch.allclose(rgb_1_a, rgb_1_b, atol=5e-2)
+
+
+def test_receiver_rejects_missing_decoder_weight_before_rendering():
+    cfg = _smoke_cfg()
+    torch.manual_seed(23)
+    model = HinervSubstrate(cfg).eval()
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    decoder_sd.pop("head_rgb_1.bias")
+
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        _smoke_meta(cfg),
+    )
+
+    try:
+        build_model_from_archive(blob)
+    except ValueError as exc:
+        assert "hi_nerv_archive_decoder_state invalid" in str(exc)
+        assert "head_rgb_1.bias" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected receiver to reject missing decoder weight")
+
+
+def test_receiver_rejects_unexpected_decoder_weight_before_rendering():
+    cfg = _smoke_cfg()
+    torch.manual_seed(24)
+    model = HinervSubstrate(cfg).eval()
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    decoder_sd["extra.weight"] = torch.zeros(1)
+
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        _smoke_meta(cfg),
+    )
+
+    try:
+        build_model_from_archive(blob)
+    except ValueError as exc:
+        assert "hi_nerv_archive_decoder_state invalid" in str(exc)
+        assert "extra.weight" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected receiver to reject unexpected decoder weight")
+
+
+def test_receiver_rejects_shape_corrupt_decoder_weight_before_rendering():
+    cfg = _smoke_cfg()
+    torch.manual_seed(25)
+    model = HinervSubstrate(cfg).eval()
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v.clone() for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    decoder_sd["head_rgb_0.bias"] = decoder_sd["head_rgb_0.bias"][:2].clone()
+
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        _smoke_meta(cfg),
+    )
+
+    try:
+        build_model_from_archive(blob)
+    except ValueError as exc:
+        assert "shape_mismatch" in str(exc)
+        assert "head_rgb_0.bias" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected receiver to reject corrupt decoder shape")
 
 
 # ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation smoke

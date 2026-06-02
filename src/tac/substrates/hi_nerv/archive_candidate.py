@@ -34,6 +34,7 @@ from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
 )
+from tac.substrates.hi_nerv.architecture import validate_decoder_state_dict
 from tac.substrates.hi_nerv.archive import pack_archive
 from tac.substrates.hprc.representation_spine import (
     build_hi_nerv_spine_from_archive_payload,
@@ -173,6 +174,11 @@ def pack_archive_from_exported_state_dict(
         decoder_state[name] = torch.from_numpy(np.asarray(arr).copy()).to(
             dtype=torch.float32
         )
+    validate_decoder_state_dict(
+        decoder_state,
+        cfg,
+        context="hi_nerv_exported_decoder_state",
+    )
 
     return pack_archive(
         decoder_state,

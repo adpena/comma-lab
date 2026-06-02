@@ -25,7 +25,12 @@ from tac.substrates._shared.inflate_runtime import (
     write_rgb_pair_to_raw,
 )
 
-from .architecture import HinervConfig, HinervSubstrate
+from .architecture import (
+    LATENT_STATE_KEYS,
+    HinervConfig,
+    HinervSubstrate,
+    validate_decoder_state_dict,
+)
 from .archive import HinervArchive, parse_archive
 
 
@@ -57,7 +62,20 @@ def build_model_from_archive(
     )
 
     model = HinervSubstrate(cfg).to(device).eval()
-    model.load_state_dict(arc.decoder_state_dict, strict=False)
+    validate_decoder_state_dict(
+        arc.decoder_state_dict,
+        cfg,
+        context="hi_nerv_archive_decoder_state",
+    )
+    load_result = model.load_state_dict(arc.decoder_state_dict, strict=False)
+    expected_missing = set(LATENT_STATE_KEYS)
+    actual_missing = {str(key) for key in load_result.missing_keys}
+    if actual_missing != expected_missing or load_result.unexpected_keys:
+        raise ValueError(
+            "hi_nerv_archive_decoder_state load mismatch: "
+            f"missing={load_result.missing_keys}, "
+            f"unexpected={load_result.unexpected_keys}"
+        )
     with torch.no_grad():
         model.latents_coarse.copy_(
             arc.latents_coarse.to(device=device, dtype=model.latents_coarse.dtype)

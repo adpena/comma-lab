@@ -47,6 +47,7 @@ CLAUDE.md compliance:
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import torch
@@ -57,6 +58,11 @@ _CONTEST_H = 384
 _CONTEST_W = 512
 _NUM_FRAMES = 1200
 _PAIRS = _NUM_FRAMES // 2
+LATENT_STATE_KEYS: tuple[str, str, str] = (
+    "latents_coarse",
+    "latents_mid",
+    "latents_fine",
+)
 
 
 @dataclass(frozen=True)
@@ -253,3 +259,48 @@ class HinervSubstrate(nn.Module):
     def num_parameters(self) -> int:
         """Total trainable parameter count (target ~240K)."""
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+def expected_decoder_state_shapes(cfg: HinervConfig) -> dict[str, tuple[int, ...]]:
+    """Return required non-latent decoder state keys and tensor shapes."""
+
+    model = HinervSubstrate(cfg)
+    return {
+        key: tuple(int(dim) for dim in tensor.shape)
+        for key, tensor in model.state_dict().items()
+        if key not in LATENT_STATE_KEYS
+    }
+
+
+def validate_decoder_state_dict(
+    decoder_state_dict: Mapping[str, torch.Tensor],
+    cfg: HinervConfig,
+    *,
+    context: str = "hi_nerv_decoder_state",
+) -> None:
+    """Fail closed if decoder state is incomplete, extra, or shape-corrupt."""
+
+    expected = expected_decoder_state_shapes(cfg)
+    given = {
+        str(key): tuple(int(dim) for dim in tensor.shape)
+        for key, tensor in decoder_state_dict.items()
+    }
+    missing = tuple(sorted(set(expected) - set(given)))
+    unexpected = tuple(sorted(set(given) - set(expected)))
+    shape_mismatch = tuple(
+        sorted(
+            key
+            for key in expected.keys() & given.keys()
+            if expected[key] != given[key]
+        )
+    )
+    if missing or unexpected or shape_mismatch:
+        detail = {
+            "missing": missing,
+            "unexpected": unexpected,
+            "shape_mismatch": {
+                key: {"expected": expected[key], "actual": given[key]}
+                for key in shape_mismatch
+            },
+        }
+        raise ValueError(f"{context} invalid: {detail}")
