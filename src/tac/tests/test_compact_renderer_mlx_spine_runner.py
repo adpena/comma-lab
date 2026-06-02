@@ -438,6 +438,31 @@ def test_hi_nerv_source_faithfulness_separates_official_controls_from_pr95_gaps(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_hi_nerv_source_faithfulness_metadata_strips_authority_keys() -> None:
+    metadata = runner_mod._hi_nerv_source_faithfulness_metadata(
+        cfg=SimpleNamespace(
+            use_hierarchical_feature_grid=True,
+            use_convnext_blocks=True,
+            local_grid_levels=2,
+            local_grid_channels=4,
+            convnext_mlp_ratio=2,
+            convnext_kernel_size=3,
+        ),
+        decoder_codec="portfolio_auto",
+    )
+
+    assert metadata["schema"] == "hi_nerv_source_faithfulness.v1"
+    assert metadata["source_faithful_official_hinerv"] is True
+    for forbidden in (
+        "score_claim",
+        "frontier_score_claim",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        assert forbidden not in metadata
+
+
 def test_startup_marker_only_output_dir_is_not_dirty(tmp_path: Path) -> None:
     out = tmp_path / "candidate"
     out.mkdir()

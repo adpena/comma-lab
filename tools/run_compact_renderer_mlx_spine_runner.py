@@ -6571,6 +6571,25 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
     }
 
 
+def _hi_nerv_source_faithfulness_metadata(
+    *, cfg: Any, decoder_codec: str
+) -> dict[str, Any]:
+    """Return source-faithfulness facts safe for nested substrate metadata.
+
+    ``_hi_nerv_source_faithfulness_report`` is also used as a top-level report
+    surface and therefore carries canonical false-authority fields. The shared
+    MLX harness intentionally rejects those fields inside
+    ``substrate_artifact_metadata`` so there is one custody surface. Keep the
+    source-control signal, strip only authority/readiness flags at the boundary.
+    """
+
+    report = _hi_nerv_source_faithfulness_report(
+        cfg=cfg,
+        decoder_codec=decoder_codec,
+    )
+    return strip_candidate_curriculum_authority_fields(report)
+
+
 def _run_hi_nerv_mlx_scoreaware_smoke(
     *,
     output_dir: Path,
@@ -6762,7 +6781,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "full_video_pairs_required_for_promotion": 600,
         "decoder_codec": str(decoder_codec),
         "model_num_parameters_at_init": int(model.num_parameters()),
-        "source_faithfulness": _hi_nerv_source_faithfulness_report(
+        "source_faithfulness": _hi_nerv_source_faithfulness_metadata(
             cfg=cfg,
             decoder_codec=str(decoder_codec),
         ),
