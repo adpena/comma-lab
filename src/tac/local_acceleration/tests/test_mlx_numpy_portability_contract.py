@@ -30,6 +30,24 @@ def test_contract_marks_pure_numpy_receiver_ready() -> None:
     assert contract["ready_for_exact_eval_dispatch"] is False
 
 
+def test_contract_allows_custom_numpy_packet_without_npz_bridge() -> None:
+    contract = build_mlx_numpy_portability_contract(
+        substrate_id="hprc",
+        exported_state_kind="custom_packet_sections",
+        archive_payload_kind="hprc_packet",
+        receiver_runtime_kind="numpy_decode_receiver",
+        receiver_dependencies=("numpy", "python_stdlib"),
+        numpy_array_export=True,
+        canonical_npz_bridge_required=False,
+        canonical_npz_bridge_used=False,
+        pure_numpy_inflate=True,
+    )
+
+    assert contract["portability_status"] == "pure_numpy_inflate_ready"
+    assert contract["canonical_npz_bridge_required"] is False
+    assert contract["portability_blockers"] == []
+
+
 def test_contract_distinguishes_torch_receiver_from_numpy_inflate() -> None:
     contract = build_mlx_numpy_portability_contract(
         substrate_id="hi_nerv",

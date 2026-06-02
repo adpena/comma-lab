@@ -32,6 +32,7 @@ def build_mlx_numpy_portability_contract(
     receiver_runtime_kind: str,
     receiver_dependencies: Sequence[str],
     numpy_array_export: bool,
+    canonical_npz_bridge_required: bool = True,
     canonical_npz_bridge_used: bool = False,
     pure_numpy_inflate: bool,
     notes: str = "",
@@ -54,7 +55,7 @@ def build_mlx_numpy_portability_contract(
         blockers.append("training_backend_not_mlx")
     if not bool(numpy_array_export):
         blockers.append("numpy_array_export_not_declared")
-    if not bool(canonical_npz_bridge_used):
+    if bool(canonical_npz_bridge_required) and not bool(canonical_npz_bridge_used):
         blockers.append("canonical_npz_bridge_not_used_or_not_applicable")
     non_numpy_deps = sorted(
         dep for dep in deps if dep not in {"numpy", "python_stdlib"}
@@ -80,6 +81,7 @@ def build_mlx_numpy_portability_contract(
         "receiver_runtime_kind": str(receiver_runtime_kind),
         "receiver_dependencies": list(deps),
         "numpy_array_export": bool(numpy_array_export),
+        "canonical_npz_bridge_required": bool(canonical_npz_bridge_required),
         "canonical_npz_bridge_used": bool(canonical_npz_bridge_used),
         "pure_numpy_inflate": bool(pure_numpy_inflate),
         "non_numpy_receiver_dependencies": non_numpy_deps,
