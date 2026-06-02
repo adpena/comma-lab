@@ -419,6 +419,8 @@ def test_adapter_artifact_metadata_records_score_aware_objective() -> None:
     bundle.segnet_hinge_margin = 0.5
     bundle.eval_roundtrip_ste_enabled = True
     bundle.eval_roundtrip_camera_hw = (874, 1164)
+    bundle.pose_distillation_loss = "huber"
+    bundle.pose_distillation_huber_delta = 2.5
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
 
     metadata = adapter.artifact_metadata()
@@ -427,6 +429,8 @@ def test_adapter_artifact_metadata_records_score_aware_objective() -> None:
     assert objective["segnet_tau_boundary"] == 2.0
     assert objective["segnet_hinge_margin"] == 0.5
     assert objective["allow_mock_scorer_teacher"] is True
+    assert objective["pose_distillation_loss"] == "huber"
+    assert objective["pose_distillation_huber_delta"] == 2.5
     assert objective["eval_roundtrip_ste"]["enabled"] is True
     assert objective["eval_roundtrip_ste"]["camera_hw"] == [874, 1164]
     assert objective["pose_student_input_preprocess"]["mode"] == "rgb"

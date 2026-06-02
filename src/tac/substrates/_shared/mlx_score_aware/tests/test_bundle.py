@@ -117,6 +117,26 @@ def test_rejects_negative_pose_distillation_weight() -> None:
         )
 
 
+def test_rejects_bad_pose_distillation_loss_config() -> None:
+    with pytest.raises(MlxScoreAwareHarnessError, match="pose_distillation_loss"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            pose_distillation_loss="not_real",
+        )
+    with pytest.raises(MlxScoreAwareHarnessError, match="pose_distillation_huber_delta"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            pose_distillation_loss="huber",
+            pose_distillation_huber_delta=0.0,
+        )
+
+
 def test_rejects_bad_pose_dims() -> None:
     with pytest.raises(MlxScoreAwareHarnessError, match="pose_dims"):
         RendererBundle(

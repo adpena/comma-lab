@@ -530,6 +530,10 @@ class MlxScoreAwareAdapter:
             "segnet_teacher_frame_index": int(self.bundle.segnet_teacher_frame_index),
             "segnet_distillation_weight": float(self.bundle.distillation_weight),
             "pose_distillation_weight": float(self.bundle.pose_distillation_weight),
+            "pose_distillation_loss": str(self.bundle.pose_distillation_loss),
+            "pose_distillation_huber_delta": float(
+                self.bundle.pose_distillation_huber_delta
+            ),
             "pose_dims": int(self.bundle.pose_dims),
             "has_real_segnet_teacher": self.bundle.scorer_teacher is not None,
             "has_real_posenet_teacher": self.bundle.pose_scorer_teacher is not None,

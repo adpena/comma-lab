@@ -3214,6 +3214,8 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    pose_distillation_loss: str,
+    pose_distillation_huber_delta: float,
     segnet_distillation_objective: str,
     distillation_temperature: float,
     segnet_tau_boundary: float,
@@ -3256,6 +3258,14 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     if pose_distillation_weight < 0.0:
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_weight must be >= 0"
+        )
+    if str(pose_distillation_loss) not in {"mse", "huber"}:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_loss must be one of ['mse', 'huber']"
+        )
+    if float(pose_distillation_huber_delta) <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_huber_delta must be > 0"
         )
     if (
         segnet_distillation_weight > 0.0
@@ -3335,6 +3345,8 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             "schema": "compact_pr95_hnerv_scoreaware_training.v1",
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
+            "pose_distillation_loss": str(pose_distillation_loss),
+            "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
             "segnet_distillation_objective": segnet_distillation_objective,
             "distillation_temperature": float(distillation_temperature),
             "segnet_tau_boundary": float(segnet_tau_boundary),
@@ -3399,6 +3411,8 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
         ),
         pose_distillation_weight=float(pose_distillation_weight),
+        pose_distillation_loss=str(pose_distillation_loss),
+        pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=int(pose_scorer_teacher.pose_dims)
@@ -3443,6 +3457,8 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    pose_distillation_loss: str = "mse",
+    pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
     distillation_temperature: float = 2.0,
     segnet_tau_boundary: float = 1.0,
@@ -3486,6 +3502,8 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             ema_decay=ema_decay,
             segnet_distillation_weight=segnet_distillation_weight,
             pose_distillation_weight=pose_distillation_weight,
+            pose_distillation_loss=pose_distillation_loss,
+            pose_distillation_huber_delta=pose_distillation_huber_delta,
             segnet_distillation_objective=segnet_distillation_objective,
             distillation_temperature=distillation_temperature,
             segnet_tau_boundary=segnet_tau_boundary,
@@ -3923,6 +3941,8 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    pose_distillation_loss: str = "mse",
+    pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
     distillation_temperature: float = 2.0,
     segnet_tau_boundary: float = 1.0,
@@ -3970,6 +3990,8 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             ema_decay=ema_decay,
             segnet_distillation_weight=segnet_distillation_weight,
             pose_distillation_weight=pose_distillation_weight,
+            pose_distillation_loss=pose_distillation_loss,
+            pose_distillation_huber_delta=pose_distillation_huber_delta,
             segnet_distillation_objective=segnet_distillation_objective,
             distillation_temperature=distillation_temperature,
             segnet_tau_boundary=segnet_tau_boundary,
@@ -4088,6 +4110,10 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                 "schema": "compact_pact_nerv_vq_score_aware_training.v1",
                 "segnet_distillation_weight": float(segnet_distillation_weight),
                 "pose_distillation_weight": float(pose_distillation_weight),
+                "pose_distillation_loss": str(pose_distillation_loss),
+                "pose_distillation_huber_delta": float(
+                    pose_distillation_huber_delta
+                ),
                 "segnet_distillation_objective": segnet_distillation_objective,
                 "distillation_temperature": float(distillation_temperature),
                 "segnet_tau_boundary": float(segnet_tau_boundary),
@@ -4158,6 +4184,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    pose_distillation_loss: str = "mse",
+    pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
     distillation_temperature: float = 2.0,
     segnet_tau_boundary: float = 1.0,
@@ -4445,6 +4473,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ema_decay=ema_decay,
             segnet_distillation_weight=effective_segnet_distillation_weight,
             pose_distillation_weight=effective_pose_distillation_weight,
+            pose_distillation_loss=str(pose_distillation_loss),
+            pose_distillation_huber_delta=float(pose_distillation_huber_delta),
             segnet_distillation_objective=segnet_distillation_objective,
             distillation_temperature=distillation_temperature,
             segnet_tau_boundary=segnet_tau_boundary,
@@ -4717,6 +4747,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     effective_segnet_distillation_weight
                 ),
                 "pose_distillation_weight": effective_pose_distillation_weight,
+                "pose_distillation_loss": str(pose_distillation_loss),
+                "pose_distillation_huber_delta": float(
+                    pose_distillation_huber_delta
+                ),
                 "modelsize_launch_pressure": launch_pressure_binding,
                 "segnet_distillation_objective": segnet_distillation_objective,
                 "distillation_temperature": float(distillation_temperature),
@@ -4861,6 +4895,8 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    pose_distillation_loss: str = "mse",
+    pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
     distillation_temperature: float = 2.0,
     segnet_tau_boundary: float = 1.0,
@@ -4907,6 +4943,8 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             ema_decay=ema_decay,
             segnet_distillation_weight=segnet_distillation_weight,
             pose_distillation_weight=pose_distillation_weight,
+            pose_distillation_loss=pose_distillation_loss,
+            pose_distillation_huber_delta=pose_distillation_huber_delta,
             segnet_distillation_objective=segnet_distillation_objective,
             distillation_temperature=distillation_temperature,
             segnet_tau_boundary=segnet_tau_boundary,
@@ -5039,6 +5077,10 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                 "schema": "compact_pact_nerv_selector_v4_score_aware_training.v1",
                 "segnet_distillation_weight": float(segnet_distillation_weight),
                 "pose_distillation_weight": float(pose_distillation_weight),
+                "pose_distillation_loss": str(pose_distillation_loss),
+                "pose_distillation_huber_delta": float(
+                    pose_distillation_huber_delta
+                ),
                 "segnet_distillation_objective": segnet_distillation_objective,
                 "distillation_temperature": float(distillation_temperature),
                 "segnet_tau_boundary": float(segnet_tau_boundary),
@@ -6198,6 +6240,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    pose_distillation_loss: str,
+    pose_distillation_huber_delta: float,
     segnet_distillation_objective: str,
     distillation_temperature: float,
     segnet_tau_boundary: float,
@@ -6256,6 +6300,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     if pose_distillation_weight < 0.0:
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_weight must be >= 0"
+        )
+    if str(pose_distillation_loss) not in {"mse", "huber"}:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_loss must be one of ['mse', 'huber']"
+        )
+    if float(pose_distillation_huber_delta) <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_huber_delta must be > 0"
         )
     if (
         segnet_distillation_weight > 0.0
@@ -6363,6 +6415,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             ),
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
+            "pose_distillation_loss": str(pose_distillation_loss),
+            "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
             "segnet_distillation_objective": segnet_distillation_objective,
             "distillation_temperature": float(distillation_temperature),
             "segnet_tau_boundary": float(segnet_tau_boundary),
@@ -6518,6 +6572,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
         ),
         pose_distillation_weight=float(pose_distillation_weight),
+        pose_distillation_loss=str(pose_distillation_loss),
+        pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=int(pose_scorer_teacher.pose_dims)
@@ -6611,6 +6667,8 @@ def _run_pact_nerv_vq_mlx_smoke(
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    pose_distillation_loss: str,
+    pose_distillation_huber_delta: float,
     segnet_distillation_objective: str,
     distillation_temperature: float,
     segnet_tau_boundary: float,
@@ -6657,6 +6715,14 @@ def _run_pact_nerv_vq_mlx_smoke(
     if pose_distillation_weight < 0.0:
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_weight must be >= 0"
+        )
+    if str(pose_distillation_loss) not in {"mse", "huber"}:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_loss must be one of ['mse', 'huber']"
+        )
+    if float(pose_distillation_huber_delta) <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_huber_delta must be > 0"
         )
     if (
         segnet_distillation_weight > 0.0
@@ -6734,6 +6800,8 @@ def _run_pact_nerv_vq_mlx_smoke(
             "schema": "compact_pact_nerv_vq_score_aware_training.v1",
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
+            "pose_distillation_loss": str(pose_distillation_loss),
+            "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
             "segnet_distillation_objective": segnet_distillation_objective,
             "distillation_temperature": float(distillation_temperature),
             "segnet_tau_boundary": float(segnet_tau_boundary),
@@ -6800,6 +6868,8 @@ def _run_pact_nerv_vq_mlx_smoke(
             int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
         ),
         pose_distillation_weight=float(pose_distillation_weight),
+        pose_distillation_loss=str(pose_distillation_loss),
+        pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=int(pose_scorer_teacher.pose_dims)
@@ -6847,6 +6917,8 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    pose_distillation_loss: str,
+    pose_distillation_huber_delta: float,
     segnet_distillation_objective: str,
     distillation_temperature: float,
     segnet_tau_boundary: float,
@@ -6902,6 +6974,14 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     if pose_distillation_weight < 0.0:
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_weight must be >= 0"
+        )
+    if str(pose_distillation_loss) not in {"mse", "huber"}:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_loss must be one of ['mse', 'huber']"
+        )
+    if float(pose_distillation_huber_delta) <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_huber_delta must be > 0"
         )
     if (
         segnet_distillation_weight > 0.0
@@ -6995,6 +7075,8 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             "schema": "compact_pact_nerv_selector_v4_score_aware_training.v1",
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
+            "pose_distillation_loss": str(pose_distillation_loss),
+            "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
             "segnet_distillation_objective": segnet_distillation_objective,
             "distillation_temperature": float(distillation_temperature),
             "segnet_tau_boundary": float(segnet_tau_boundary),
@@ -7060,6 +7142,8 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
         ),
         pose_distillation_weight=float(pose_distillation_weight),
+        pose_distillation_loss=str(pose_distillation_loss),
+        pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=int(pose_scorer_teacher.pose_dims)
@@ -7659,6 +7743,22 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--pose-distillation-loss",
+        choices=("mse", "huber"),
+        default="mse",
+        help=(
+            "Train-time PoseNet-teacher loss. mse preserves the exact legacy "
+            "surrogate; huber keeps the same small-error quadratic but bounds "
+            "large-error gradients for pose-protected HiNeRV recovery runs."
+        ),
+    )
+    parser.add_argument(
+        "--pose-distillation-huber-delta",
+        default=1.0,
+        type=float,
+        help="Positive Huber transition delta used by --pose-distillation-loss huber.",
+    )
+    parser.add_argument(
         "--segnet-distillation-objective",
         choices=(
             "kl_t2",
@@ -8169,6 +8269,8 @@ def main(argv: list[str] | None = None) -> int:
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
+            pose_distillation_loss=args.pose_distillation_loss,
+            pose_distillation_huber_delta=args.pose_distillation_huber_delta,
             segnet_distillation_objective=args.segnet_distillation_objective,
             distillation_temperature=args.distillation_temperature,
             segnet_tau_boundary=args.segnet_tau_boundary,
@@ -8211,6 +8313,8 @@ def main(argv: list[str] | None = None) -> int:
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
+            pose_distillation_loss=args.pose_distillation_loss,
+            pose_distillation_huber_delta=args.pose_distillation_huber_delta,
             segnet_distillation_objective=args.segnet_distillation_objective,
             distillation_temperature=args.distillation_temperature,
             segnet_tau_boundary=args.segnet_tau_boundary,
@@ -8254,6 +8358,8 @@ def main(argv: list[str] | None = None) -> int:
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
+            pose_distillation_loss=args.pose_distillation_loss,
+            pose_distillation_huber_delta=args.pose_distillation_huber_delta,
             segnet_distillation_objective=args.segnet_distillation_objective,
             distillation_temperature=args.distillation_temperature,
             segnet_tau_boundary=args.segnet_tau_boundary,
@@ -8358,6 +8464,8 @@ def main(argv: list[str] | None = None) -> int:
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
+            pose_distillation_loss=args.pose_distillation_loss,
+            pose_distillation_huber_delta=args.pose_distillation_huber_delta,
             segnet_distillation_objective=args.segnet_distillation_objective,
             distillation_temperature=args.distillation_temperature,
             segnet_tau_boundary=args.segnet_tau_boundary,

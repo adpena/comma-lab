@@ -259,6 +259,36 @@ def _weighted_recon(bundle: RendererBundle, rgb: Any, gt: Any, weight: Any) -> A
     return weighted
 
 
+def _pose_distillation_loss_and_raw_mse(
+    bundle: RendererBundle,
+    *,
+    student_pose: Any,
+    teacher_pose: Any,
+    per_dim_scale: Any = None,
+) -> tuple[Any, Any]:
+    """Return the train-time pose loss plus exact raw MSE telemetry.
+
+    ``pose_distillation_loss == "mse"`` preserves the legacy canonical
+    PoseNet-teacher objective exactly. ``"huber"`` uses an MSE-matched Huber:
+    ``diff**2`` inside the delta and ``2*delta*abs(diff)-delta**2`` outside,
+    so small-error curvature matches MSE while large-error gradients are
+    bounded. The raw MSE is always computed from the same scaled diff for
+    diagnostics and admission gates.
+    """
+    mx = require_mlx_for_harness()
+    diff = student_pose - teacher_pose
+    if per_dim_scale is not None:
+        diff = diff / mx.maximum(per_dim_scale, 1.0e-12)
+    raw_mse = mx.mean(diff * diff)
+    if bundle.pose_distillation_loss == "mse":
+        return raw_mse, raw_mse
+    delta = float(bundle.pose_distillation_huber_delta)
+    abs_diff = mx.abs(diff)
+    quadratic = diff * diff
+    linear = 2.0 * delta * abs_diff - delta * delta
+    return mx.mean(mx.where(abs_diff <= delta, quadratic, linear)), raw_mse
+
+
 def score_aware_loss(
     bundle: RendererBundle,
     idx: Any,
@@ -412,10 +442,6 @@ def score_aware_loss(
         # finding); the learnable-head surrogate gives a FINITE, scorer-bound
         # gradient. ``bundle.__post_init__`` already enforces that
         # pose_scorer_teacher + learnable_pose_student_head are both wired.
-        from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-            pose_distillation_mse_loss,
-        )
-
         pose_head = bundle.learnable_pose_student_head
         if pose_head is None or bundle.pose_scorer_teacher is None:
             raise ValueError(
@@ -429,13 +455,16 @@ def score_aware_loss(
         # Standardize per-dim by the teacher's per-dim std (canonical scale-
         # stable pose objective) when the teacher cache supplies it.
         per_dim_scale = getattr(bundle.pose_scorer_teacher, "per_dim_scale", None)
-        pose_distill = pose_distillation_mse_loss(
+        pose_distill, pose_distill_raw_mse = _pose_distillation_loss_and_raw_mse(
+            bundle,
             student_pose=student_pose,
             teacher_pose=teacher_pose,
             per_dim_scale=per_dim_scale,
         )
         total = total + bundle.pose_distillation_weight * pose_stage_weight * pose_distill
         parts["pose_distill"] = pose_distill
+        if bundle.pose_distillation_loss != "mse":
+            parts["pose_distill_raw_mse"] = pose_distill_raw_mse
 
     if bundle.extra_loss_terms is not None:
         extra = bundle.extra_loss_terms(bundle.model, idx)

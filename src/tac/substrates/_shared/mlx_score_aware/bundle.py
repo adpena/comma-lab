@@ -41,6 +41,7 @@ _RECON_PIXEL_WEIGHT_NORMALIZE_MODES: frozenset[str] = frozenset({"mean", "none"}
 _POSE_STUDENT_INPUT_PREPROCESS_MODES: frozenset[str] = frozenset(
     {"rgb", "pr95_yuv6"}
 )
+_POSE_DISTILLATION_LOSS_MODES: frozenset[str] = frozenset({"mse", "huber"})
 
 _SUBSTRATE_METADATA_FORBIDDEN_AUTHORITY_KEYS: frozenset[str] = frozenset(
     {
@@ -324,6 +325,16 @@ class RendererBundle:
             RGB->YUV6 before the pose student, matching the source-faithful
             PoseNet preprocessing lane while retaining finite surrogate
             gradients.
+        pose_distillation_loss: pose surrogate loss used for the train-time
+            gradient. ``"mse"`` is the exact legacy PoseNet-teacher MSE.
+            ``"huber"`` uses an MSE-matched Huber penalty after the canonical
+            per-dim scaling: quadratic for small errors and bounded-gradient
+            linear outside ``pose_distillation_huber_delta``. This is an
+            explicit pose-protected training mode for HiNeRV long runs that
+            show catastrophic PoseNet-teacher startup spikes; it still exposes
+            the raw MSE telemetry and remains false-authority MLX evidence.
+        pose_distillation_huber_delta: positive robust-loss transition point
+            used only when ``pose_distillation_loss == "huber"``.
     """
 
     model: Any
@@ -358,6 +369,8 @@ class RendererBundle:
     eval_roundtrip_ste_enabled: bool = False
     eval_roundtrip_camera_hw: tuple[int, int] = (874, 1164)
     pose_student_input_preprocess: str = "rgb"
+    pose_distillation_loss: str = "mse"
+    pose_distillation_huber_delta: float = 1.0
 
     def __post_init__(self) -> None:
         if self.forward_convention not in FORWARD_CONVENTIONS:
@@ -433,6 +446,17 @@ class RendererBundle:
                 "pose_student_input_preprocess must be one of "
                 f"{sorted(_POSE_STUDENT_INPUT_PREPROCESS_MODES)}; got "
                 f"{self.pose_student_input_preprocess!r}"
+            )
+        if self.pose_distillation_loss not in _POSE_DISTILLATION_LOSS_MODES:
+            raise MlxScoreAwareHarnessError(
+                "pose_distillation_loss must be one of "
+                f"{sorted(_POSE_DISTILLATION_LOSS_MODES)}; got "
+                f"{self.pose_distillation_loss!r}"
+            )
+        if self.pose_distillation_huber_delta <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                "pose_distillation_huber_delta must be > 0; got "
+                f"{self.pose_distillation_huber_delta}"
             )
         try:
             cam_h, cam_w = self.eval_roundtrip_camera_hw

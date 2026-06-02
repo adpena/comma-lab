@@ -285,6 +285,39 @@ def test_pose_distill_composes_real_pose_teacher_and_head() -> None:
     )
 
 
+def test_pose_distill_huber_keeps_raw_mse_telemetry() -> None:
+    target_0, target_1 = _targets()
+
+    class _PoseTeacher:
+        pose_dims = 6
+
+        def teacher_pose_for_indices(self, idx):
+            return mx.zeros((idx.shape[0], self.pose_dims))
+
+    class _PoseHead:
+        def __call__(self, rgb_0, rgb_1):
+            return mx.full((rgb_0.shape[0], 6), 10.0)
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        pose_distillation_weight=1.0,
+        pose_scorer_teacher=_PoseTeacher(),
+        learnable_pose_student_head=_PoseHead(),
+        pose_distillation_loss="huber",
+        pose_distillation_huber_delta=1.0,
+    )
+    total, parts = score_aware_loss(bundle, mx.array([0, 1]))
+
+    assert _scalar(parts["recon"]) < 1e-10
+    assert _scalar(parts["pose_distill_raw_mse"]) == pytest.approx(100.0)
+    assert _scalar(parts["pose_distill"]) == pytest.approx(19.0)
+    assert _scalar(total) == pytest.approx(19.0)
+
+
 def test_build_mlx_posenet_pair_teacher_uses_upstream_pair_scale(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

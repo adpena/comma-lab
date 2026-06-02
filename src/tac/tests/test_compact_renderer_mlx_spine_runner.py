@@ -1001,6 +1001,10 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
             "0.25",
             "--pose-distillation-weight",
             "0.75",
+            "--pose-distillation-loss",
+            "huber",
+            "--pose-distillation-huber-delta",
+            "2.5",
             "--segnet-distillation-objective",
             "boundary_argmax_hinge",
             "--distillation-temperature",
@@ -1030,6 +1034,8 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.segnet_distillation_weight == 0.25
     assert args.upstream_dir == Path("canonical_upstream")
     assert args.pose_distillation_weight == 0.75
+    assert args.pose_distillation_loss == "huber"
+    assert args.pose_distillation_huber_delta == 2.5
     assert args.segnet_distillation_objective == "boundary_argmax_hinge"
     assert args.distillation_temperature == 1.5
     assert args.segnet_tau_boundary == 0.8
@@ -2984,6 +2990,8 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
         },
         segnet_distillation_weight=0.0,
         pose_distillation_weight=0.0,
+        pose_distillation_loss="huber",
+        pose_distillation_huber_delta=2.5,
         coder_aware_qat=False,
         coder_qat_quant_bits=8,
         optimizer_kind="adafactor",
@@ -2993,6 +3001,8 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert captured_train_kwargs["optimizer_kind"] == "adafactor"
     assert captured_train_kwargs["segnet_distillation_weight"] == 1.0
     assert captured_train_kwargs["pose_distillation_weight"] == 1.0
+    assert captured_train_kwargs["pose_distillation_loss"] == "huber"
+    assert captured_train_kwargs["pose_distillation_huber_delta"] == 2.5
     assert captured_train_kwargs["coder_aware_qat"] is True
     assert captured_train_kwargs["coder_qat_quant_bits"] == 4
     plan = captured_train_kwargs["candidate_curriculum_plan"]
