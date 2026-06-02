@@ -69,13 +69,17 @@ from tac.framework_agnostic.decorators import (
     pytorch_first_with_numpy_fallback,
 )
 from tac.framework_agnostic.helpers import (
+    NPZ_BRIDGE_MANIFEST_SCHEMA,
     assert_no_framework_mismatch,
+    build_npz_bridge_manifest,
     convert_mlx_state_dict_to_pytorch_oihw,
     detect_available_backends_dict,
     mlx_state_dict_to_npz_bridge,
     npz_to_numpy_primitives,
+    numpy_state_dict_to_npz_bridge,
     pytorch_state_dict_to_npz_bridge,
     tinygrad_state_dict_to_npz_bridge,
+    write_npz_bridge_artifact,
 )
 from tac.framework_agnostic.mlx_runtime import (
     MlxRuntime,
@@ -135,11 +139,15 @@ __all__ = [  # noqa: RUF022 - grouped by public contract surface.
     "require_mlx_runtime",
     "require_mlx_utils",
     # Bridge helpers (CLAUDE.md 8th standing directive)
+    "NPZ_BRIDGE_MANIFEST_SCHEMA",
     "assert_no_framework_mismatch",
+    "build_npz_bridge_manifest",
     "convert_mlx_state_dict_to_pytorch_oihw",
     "detect_available_backends_dict",
     "mlx_state_dict_to_npz_bridge",
+    "numpy_state_dict_to_npz_bridge",
     "npz_to_numpy_primitives",
     "pytorch_state_dict_to_npz_bridge",
     "tinygrad_state_dict_to_npz_bridge",
+    "write_npz_bridge_artifact",
 ]

@@ -10,6 +10,7 @@ shared archive-bound receiver proof/package.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -17,6 +18,10 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import torch
 
+from tac.framework_agnostic.helpers import (
+    npz_to_numpy_primitives,
+    write_npz_bridge_artifact,
+)
 from tac.local_acceleration.mlx_numpy_portability_contract import (
     build_mlx_numpy_portability_contract,
 )
@@ -47,9 +52,14 @@ HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY = "hi_nerv_mlx"
 HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND = "hi_nerv_mlx_archive"
 
 _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
+_STATE_NPZ_NAME = "hi_nerv_mlx_exported_state.npz"
+_STATE_NPZ_MANIFEST_NAME = "hi_nerv_mlx_exported_state_npz_manifest.json"
 
 
-def hi_nerv_mlx_numpy_portability_contract() -> dict[str, Any]:
+def hi_nerv_mlx_numpy_portability_contract(
+    *,
+    canonical_npz_bridge_used: bool = True,
+) -> dict[str, Any]:
     """Return the honest portability contract for the current HiNeRV receiver."""
 
     return build_mlx_numpy_portability_contract(
@@ -60,7 +70,7 @@ def hi_nerv_mlx_numpy_portability_contract() -> dict[str, Any]:
         receiver_runtime_kind="torch_decode_receiver",
         receiver_dependencies=("torch", "brotli", "python_stdlib"),
         numpy_array_export=True,
-        canonical_npz_bridge_used=False,
+        canonical_npz_bridge_used=canonical_npz_bridge_used,
         pure_numpy_inflate=False,
         notes=(
             "HiNeRV MLX export is NumPy-array backed, but the contest receiver "
@@ -89,6 +99,34 @@ def hi_nerv_meta_from_config(cfg: HinervConfig) -> dict[str, object]:
         "output_height": int(cfg.output_height),
         "output_width": int(cfg.output_width),
     }
+
+
+def _state_bridge_paths(out_dir: Path) -> tuple[Path, Path]:
+    return out_dir / _STATE_NPZ_NAME, out_dir / _STATE_NPZ_MANIFEST_NAME
+
+
+def _write_and_reload_exported_state_via_numpy_bridge(
+    *,
+    exported_state_dict: dict[str, np.ndarray],
+    output_dir: Path,
+) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+    """Persist and reload the exact NumPy bridge consumed by the packer."""
+
+    npz_path, manifest_path = _state_bridge_paths(output_dir)
+    manifest = write_npz_bridge_artifact(
+        exported_state_dict,
+        npz_path,
+        source_backend="mlx",
+        bridge_kind="hi_nerv_mlx_export_state_dict_to_npz",
+        manifest_path=manifest_path,
+        require_finite=True,
+    )
+    if manifest.get("consumption_recommended") is not True:
+        raise ValueError(
+            "HiNeRV MLX export NPZ bridge is not consumption-recommended: "
+            f"{manifest.get('blockers')}"
+        )
+    return npz_to_numpy_primitives(npz_path.read_bytes()), manifest
 
 
 def _require_exported_tensor(
@@ -169,8 +207,14 @@ def export_hi_nerv_mlx_archive(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = model.cfg
+    exported_state_dict, npz_bridge_manifest = (
+        _write_and_reload_exported_state_via_numpy_bridge(
+            exported_state_dict=model.export_state_dict(),
+            output_dir=out_dir,
+        )
+    )
     bin_bytes = pack_archive_from_exported_state_dict(
-        exported_state_dict=model.export_state_dict(),
+        exported_state_dict=exported_state_dict,
         cfg=cfg,
         decoder_codec=decoder_codec,
     )
@@ -208,6 +252,12 @@ def export_hi_nerv_mlx_archive(
                 "archive_bytes_are_authority_for_rate": True,
                 "decoder_codec": decoder_codec,
                 "num_pairs": int(cfg.num_pairs),
+                "state_npz_bridge": {
+                    "artifact_path": npz_bridge_manifest["artifact_path"],
+                    "artifact_sha256": npz_bridge_manifest["artifact_sha256"],
+                    "manifest_path": npz_bridge_manifest["manifest_path"],
+                    "tensor_count": npz_bridge_manifest["tensor_count"],
+                },
             },
         ),
         basename="hprc_representation_spine_hi_nerv",
@@ -236,6 +286,7 @@ def export_hi_nerv_mlx_archive(
                 "latent_pyramid": ["coarse", "mid", "fine"],
                 "decoder_codec": decoder_codec,
                 "num_pairs": int(cfg.num_pairs),
+                "state_npz_bridge_manifest": npz_bridge_manifest,
                 "mlx_numpy_portability_contract": (
                     hi_nerv_mlx_numpy_portability_contract()
                 ),
@@ -274,6 +325,10 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     if not out_dir.is_absolute():
         out_dir = root / out_dir
     cfg = model.cfg
+    _, npz_bridge_manifest_path = _state_bridge_paths(out_dir)
+    npz_bridge_manifest = json.loads(
+        npz_bridge_manifest_path.read_text(encoding="utf-8")
+    )
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID,
         candidate_family=HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY,
@@ -297,6 +352,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
             "latent_pyramid": ["coarse", "mid", "fine"],
             "decoder_codec": decoder_codec,
             "num_pairs": int(cfg.num_pairs),
+            "state_npz_bridge_manifest": npz_bridge_manifest,
             "mlx_numpy_portability_contract": (
                 hi_nerv_mlx_numpy_portability_contract()
             ),
@@ -314,7 +370,7 @@ __all__ = [
     "HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND",
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
-    "hi_nerv_mlx_numpy_portability_contract",
     "hi_nerv_meta_from_config",
+    "hi_nerv_mlx_numpy_portability_contract",
     "pack_archive_from_exported_state_dict",
 ]
