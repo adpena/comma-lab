@@ -1,0 +1,549 @@
+{
+  "axis_tag": "[planning/control:false-authority]",
+  "blockers": [
+    "source_parity:snerv_mfu_hfr_stride_stack_missing",
+    "emission_gap:snerv:fewer_than_two_full600_rows_observed",
+    "emission_gap:snerv:fewer_than_two_receiver_proof_rows_observed",
+    "emission_gap:snerv:fewer_than_two_modelsize_or_fc_dim_rows_observed",
+    "emission_gap:snerv:fewer_than_two_ladder_candidate_rows_observed",
+    "source_parity:hi_nerv_official_feature_grid_convnext_trilinear_missing",
+    "source_parity:hi_nerv_prune_quantnoise_torchac_pipeline_missing",
+    "emission_gap:hinerv:fewer_than_two_receiver_proof_rows_observed",
+    "emission_gap:hinerv:fewer_than_two_modelsize_or_fc_dim_rows_observed",
+    "emission_gap:hinerv:fewer_than_two_ladder_candidate_rows_observed"
+  ],
+  "families": [
+    "snerv",
+    "hinerv"
+  ],
+  "family_rows": [
+    {
+      "blockers": [
+        "source_parity:snerv_mfu_hfr_stride_stack_missing",
+        "emission_gap:snerv:fewer_than_two_full600_rows_observed",
+        "emission_gap:snerv:fewer_than_two_receiver_proof_rows_observed",
+        "emission_gap:snerv:fewer_than_two_modelsize_or_fc_dim_rows_observed",
+        "emission_gap:snerv:fewer_than_two_ladder_candidate_rows_observed"
+      ],
+      "emission_gap_ids": [
+        "fewer_than_two_full600_rows_observed",
+        "fewer_than_two_receiver_proof_rows_observed",
+        "fewer_than_two_modelsize_or_fc_dim_rows_observed",
+        "fewer_than_two_ladder_candidate_rows_observed"
+      ],
+      "family": "snerv",
+      "frontier_score_claim": false,
+      "observed_harvest_summary": {
+        "archive_export_backend_counts": {},
+        "full600_receiver_packet_export_count": 0,
+        "full_scope_row_count": 0,
+        "harvest_payload_count": 1,
+        "harvested_row_count": 30,
+        "ladder_candidate_row_count": 0,
+        "local_receiver_replay_row_count": 31,
+        "modelsize_present_row_count": 0,
+        "receiver_packet_export_bytes_total": 456578,
+        "receiver_packet_export_count": 1,
+        "receiver_packet_export_verified_count": 1,
+        "receiver_packet_probe_payload_count": 1,
+        "receiver_proof_row_count": 0,
+        "report_blockers": [],
+        "row_blockers": [],
+        "source_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/nerv_receiver_closed_ladder_row_harvest_snerv_local_smokes_20260602T151500Z.json",
+          "/Users/adpena/Projects/pact/.omx/research/snerv_decoder_mode_assignment_probe_20260602T150440Z_ssd_packet_false_authority.json"
+        ]
+      },
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_trained_ladder_row_emission": false,
+      "required_field_groups": [
+        {
+          "group_id": "carrier_identity",
+          "paths": [
+            "family",
+            "carrier_id"
+          ],
+          "requirement": "one_of",
+          "why": "prevents HNeRV/SNeRV/HiNeRV row laundering"
+        },
+        {
+          "group_id": "source_bound_modelsize_control",
+          "paths": [
+            "modelsize_mparams",
+            "official_controls.--modelsize",
+            "solved_budget.modelsize_mparams",
+            "fc_dim",
+            "derived.fc_dim",
+            "solved_budget.derived.fc_dim"
+          ],
+          "requirement": "one_of",
+          "why": "makes --modelsize/fc_dim byte curves receiver-priced instead of projected"
+        },
+        {
+          "group_id": "archive_byte_custody",
+          "paths": [
+            [
+              "archive_bytes",
+              "archive_bytes_total",
+              "measured_archive_bytes",
+              "archive_zip_bytes"
+            ],
+            [
+              "archive_sha256",
+              "receiver_archive_sha256",
+              "archive_zip_sha256"
+            ]
+          ],
+          "requirement": "all_of_any_alias",
+          "why": "rate evidence must be measured archive bytes plus content hash"
+        },
+        {
+          "group_id": "full600_scope",
+          "paths": [
+            "pair_count",
+            "n_pairs",
+            "sample_pair_count",
+            "n_samples",
+            "sample_count"
+          ],
+          "requirement": "numeric_at_least_600",
+          "why": "local 1/2/4-pair smokes are useful but not ladder authority"
+        },
+        {
+          "group_id": "receiver_replay_proof",
+          "paths": [
+            "receiver_archive_replay_verified",
+            "receiver_contract_satisfied",
+            "byte_closed_receiver_proof"
+          ],
+          "requirement": "truthy",
+          "why": "MLX prefilter/full-scope coverage is not receiver archive replay"
+        },
+        {
+          "group_id": "nonrate_distortion",
+          "paths": [
+            "nonrate_score",
+            "nonrate_score_value",
+            [
+              "d_seg+d_pose",
+              "d_seg_mean_linf+d_pose_mean_linf"
+            ],
+            [
+              "avg_segnet_dist+avg_posenet_dist"
+            ]
+          ],
+          "requirement": "one_of",
+          "why": "waterfill needs distortion movement independent of rate bytes"
+        },
+        {
+          "group_id": "snerv_official_source_controls",
+          "paths": [
+            "official_controls.--modelsize",
+            "official_controls.fc_dim",
+            "official_controls.emb_size",
+            "official_controls.wavelet",
+            "official_controls.levels",
+            "official_controls.mfu_enabled",
+            "official_controls.hfr_enabled",
+            "official_controls.snerv_t_enabled"
+          ],
+          "requirement": "must_emit_all_available",
+          "why": "source-faithful SNeRV evidence must preserve MFU/HFR/SNeRV_T and size controls"
+        },
+        {
+          "group_id": "snerv_receiver_pricing_controls",
+          "paths": [
+            "receiver_codec_mode",
+            "lf_payload_codec",
+            "decoder_precision_mode",
+            "step_map_codec",
+            "target_bits_per_coeff",
+            "qat_bits"
+          ],
+          "requirement": "must_emit_all_available",
+          "why": "decoder QAT and LF/HF rate work must price the receiver-visible grammar"
+        }
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_parity_blockers": [
+        "snerv_mfu_hfr_stride_stack_missing"
+      ]
+    },
+    {
+      "blockers": [
+        "source_parity:hi_nerv_official_feature_grid_convnext_trilinear_missing",
+        "source_parity:hi_nerv_prune_quantnoise_torchac_pipeline_missing",
+        "emission_gap:hinerv:fewer_than_two_receiver_proof_rows_observed",
+        "emission_gap:hinerv:fewer_than_two_modelsize_or_fc_dim_rows_observed",
+        "emission_gap:hinerv:fewer_than_two_ladder_candidate_rows_observed"
+      ],
+      "emission_gap_ids": [
+        "fewer_than_two_receiver_proof_rows_observed",
+        "fewer_than_two_modelsize_or_fc_dim_rows_observed",
+        "fewer_than_two_ladder_candidate_rows_observed"
+      ],
+      "family": "hinerv",
+      "frontier_score_claim": false,
+      "observed_harvest_summary": {
+        "archive_export_backend_counts": {
+          "pytorch_portable_fallback": 1
+        },
+        "full600_receiver_packet_export_count": 0,
+        "full_scope_row_count": 2,
+        "harvest_payload_count": 2,
+        "harvested_row_count": 3,
+        "ladder_candidate_row_count": 0,
+        "local_receiver_replay_row_count": 1,
+        "modelsize_present_row_count": 1,
+        "receiver_packet_export_bytes_total": 0,
+        "receiver_packet_export_count": 0,
+        "receiver_packet_export_verified_count": 0,
+        "receiver_packet_probe_payload_count": 0,
+        "receiver_proof_row_count": 1,
+        "report_blockers": [
+          "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "archive_export_backend_not_mlx"
+        ],
+        "row_blockers": [
+          "hinerv_archive_size_row_has_no_nonrate_score",
+          "contest_cpu_cuda_exact_eval_not_executed",
+          "archive_export_backend_not_mlx"
+        ],
+        "source_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/nerv_receiver_closed_ladder_row_harvest_hinerv_mlx_prefilter_20260602T151500Z.json",
+          "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_tiny_false_authority.json"
+        ]
+      },
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_trained_ladder_row_emission": false,
+      "required_field_groups": [
+        {
+          "group_id": "carrier_identity",
+          "paths": [
+            "family",
+            "carrier_id"
+          ],
+          "requirement": "one_of",
+          "why": "prevents HNeRV/SNeRV/HiNeRV row laundering"
+        },
+        {
+          "group_id": "source_bound_modelsize_control",
+          "paths": [
+            "modelsize_mparams",
+            "official_controls.--modelsize",
+            "solved_budget.modelsize_mparams",
+            "fc_dim",
+            "derived.fc_dim",
+            "solved_budget.derived.fc_dim"
+          ],
+          "requirement": "one_of",
+          "why": "makes --modelsize/fc_dim byte curves receiver-priced instead of projected"
+        },
+        {
+          "group_id": "archive_byte_custody",
+          "paths": [
+            [
+              "archive_bytes",
+              "archive_bytes_total",
+              "measured_archive_bytes",
+              "archive_zip_bytes"
+            ],
+            [
+              "archive_sha256",
+              "receiver_archive_sha256",
+              "archive_zip_sha256"
+            ]
+          ],
+          "requirement": "all_of_any_alias",
+          "why": "rate evidence must be measured archive bytes plus content hash"
+        },
+        {
+          "group_id": "full600_scope",
+          "paths": [
+            "pair_count",
+            "n_pairs",
+            "sample_pair_count",
+            "n_samples",
+            "sample_count"
+          ],
+          "requirement": "numeric_at_least_600",
+          "why": "local 1/2/4-pair smokes are useful but not ladder authority"
+        },
+        {
+          "group_id": "receiver_replay_proof",
+          "paths": [
+            "receiver_archive_replay_verified",
+            "receiver_contract_satisfied",
+            "byte_closed_receiver_proof"
+          ],
+          "requirement": "truthy",
+          "why": "MLX prefilter/full-scope coverage is not receiver archive replay"
+        },
+        {
+          "group_id": "nonrate_distortion",
+          "paths": [
+            "nonrate_score",
+            "nonrate_score_value",
+            [
+              "d_seg+d_pose",
+              "d_seg_mean_linf+d_pose_mean_linf"
+            ],
+            [
+              "avg_segnet_dist+avg_posenet_dist"
+            ]
+          ],
+          "requirement": "one_of",
+          "why": "waterfill needs distortion movement independent of rate bytes"
+        },
+        {
+          "group_id": "hinerv_official_source_controls",
+          "paths": [
+            "official_controls.config_name",
+            "official_controls.patch_mode",
+            "official_controls.hierarchical_grid_shapes",
+            "official_controls.decoder_channels",
+            "official_controls.prune_config",
+            "official_controls.quant_config",
+            "official_controls.bitstream_q"
+          ],
+          "requirement": "must_emit_all_available",
+          "why": "HiNeRV is distinct from HNeRV and must preserve its own config/bitstream controls"
+        },
+        {
+          "group_id": "hinerv_receiver_pricing_controls",
+          "paths": [
+            "receiver_codec_mode",
+            "decoder_precision_mode",
+            "latent_precision_mode",
+            "hierarchical_grid_precision_modes",
+            "bitstream_codec"
+          ],
+          "requirement": "must_emit_all_available",
+          "why": "HiNeRV pruning/quantization must be receiver-priced before ladder authority"
+        }
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_parity_blockers": [
+        "hi_nerv_official_feature_grid_convnext_trilinear_missing",
+        "hi_nerv_prune_quantnoise_torchac_pipeline_missing"
+      ]
+    }
+  ],
+  "frontier_score_claim": false,
+  "generic_required_field_groups": [
+    {
+      "group_id": "carrier_identity",
+      "paths": [
+        "family",
+        "carrier_id"
+      ],
+      "requirement": "one_of",
+      "why": "prevents HNeRV/SNeRV/HiNeRV row laundering"
+    },
+    {
+      "group_id": "source_bound_modelsize_control",
+      "paths": [
+        "modelsize_mparams",
+        "official_controls.--modelsize",
+        "solved_budget.modelsize_mparams",
+        "fc_dim",
+        "derived.fc_dim",
+        "solved_budget.derived.fc_dim"
+      ],
+      "requirement": "one_of",
+      "why": "makes --modelsize/fc_dim byte curves receiver-priced instead of projected"
+    },
+    {
+      "group_id": "archive_byte_custody",
+      "paths": [
+        [
+          "archive_bytes",
+          "archive_bytes_total",
+          "measured_archive_bytes",
+          "archive_zip_bytes"
+        ],
+        [
+          "archive_sha256",
+          "receiver_archive_sha256",
+          "archive_zip_sha256"
+        ]
+      ],
+      "requirement": "all_of_any_alias",
+      "why": "rate evidence must be measured archive bytes plus content hash"
+    },
+    {
+      "group_id": "full600_scope",
+      "paths": [
+        "pair_count",
+        "n_pairs",
+        "sample_pair_count",
+        "n_samples",
+        "sample_count"
+      ],
+      "requirement": "numeric_at_least_600",
+      "why": "local 1/2/4-pair smokes are useful but not ladder authority"
+    },
+    {
+      "group_id": "receiver_replay_proof",
+      "paths": [
+        "receiver_archive_replay_verified",
+        "receiver_contract_satisfied",
+        "byte_closed_receiver_proof"
+      ],
+      "requirement": "truthy",
+      "why": "MLX prefilter/full-scope coverage is not receiver archive replay"
+    },
+    {
+      "group_id": "nonrate_distortion",
+      "paths": [
+        "nonrate_score",
+        "nonrate_score_value",
+        [
+          "d_seg+d_pose",
+          "d_seg_mean_linf+d_pose_mean_linf"
+        ],
+        [
+          "avg_segnet_dist+avg_posenet_dist"
+        ]
+      ],
+      "requirement": "one_of",
+      "why": "waterfill needs distortion movement independent of rate bytes"
+    }
+  ],
+  "next_actions": [
+    "snerv: emit modelsize_mparams or fc_dim from trainer/export metadata",
+    "snerv: run byte-closed full600 receiver replay row producer",
+    "snerv: attach receiver archive replay proof before ladder input",
+    "snerv: close source-parity blockers before long training",
+    "hinerv: emit modelsize_mparams or fc_dim from trainer/export metadata",
+    "hinerv: attach receiver archive replay proof before ladder input",
+    "hinerv: close source-parity blockers before long training"
+  ],
+  "production_hardened_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_trained_ladder_row_emission": false,
+  "receiver_packet_probe_summaries": [
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "blockers": [
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip"
+      ],
+      "candidate_count": 1,
+      "carrier_id": "snerv",
+      "contest_archive_zip_export_count": 0,
+      "frontier_score_claim": false,
+      "full600_receiver_packet_export_count": 0,
+      "local_receiver_replay_verified_count": 1,
+      "n_pairs": 1,
+      "packet_rows": [
+        {
+          "blockers": [],
+          "bytes_actual": 456578,
+          "bytes_declared": 456578,
+          "bytes_match_export": true,
+          "contest_archive_zip": false,
+          "expected_sha256": "d11295cefe3356d220356b4f9efadf8e0e3ead8e7e196fb3554e564ba103a69d",
+          "expected_sha256_matches": true,
+          "file_exists": true,
+          "kind": "snerv_receiver_packet_snar1_not_contest_archive_zip",
+          "label": "explicit_fp163",
+          "path": "/Volumes/VertigoDataTier/pact/snerv_decoder_mode_assignment_packets/snerv_trained_ladder_row_archive/0000_explicit_fp163.snar",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "sha256_actual": "d11295cefe3356d220356b4f9efadf8e0e3ead8e7e196fb3554e564ba103a69d",
+          "sha256_declared": "d11295cefe3356d220356b4f9efadf8e0e3ead8e7e196fb3554e564ba103a69d",
+          "sha256_matches_export": true
+        }
+      ],
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_packet_export_bytes_total": 456578,
+      "receiver_packet_export_count": 1,
+      "receiver_packet_export_verified_count": 1,
+      "schema": "nerv_receiver_packet_probe_summary.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_path": "/Users/adpena/Projects/pact/.omx/research/snerv_decoder_mode_assignment_probe_20260602T150440Z_ssd_packet_false_authority.json",
+      "source_schema": "snerv_decoder_mode_assignment_probe.v1"
+    }
+  ],
+  "row_harvest_summaries": [
+    {
+      "carrier_id": "snerv",
+      "full_scope_row_count": 0,
+      "harvested_row_count": 30,
+      "ladder_candidate_row_count": 0,
+      "local_receiver_replay_row_count": 30,
+      "modelsize_present_row_count": 0,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_row_count": 0,
+      "schema": "nerv_receiver_closed_ladder_row_harvest.v1",
+      "score_claim": false,
+      "source_path": "/Users/adpena/Projects/pact/.omx/research/nerv_receiver_closed_ladder_row_harvest_snerv_local_smokes_20260602T151500Z.json",
+      "status": "receiver_closed_ladder_rows_blocked"
+    },
+    {
+      "carrier_id": "hinerv",
+      "full_scope_row_count": 1,
+      "harvested_row_count": 2,
+      "ladder_candidate_row_count": 0,
+      "local_receiver_replay_row_count": 0,
+      "modelsize_present_row_count": 0,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_row_count": 0,
+      "schema": "nerv_receiver_closed_ladder_row_harvest.v1",
+      "score_claim": false,
+      "source_path": "/Users/adpena/Projects/pact/.omx/research/nerv_receiver_closed_ladder_row_harvest_hinerv_mlx_prefilter_20260602T151500Z.json",
+      "status": "receiver_closed_ladder_rows_blocked"
+    },
+    {
+      "archive_export_backend_counts": {
+        "pytorch_portable_fallback": 1
+      },
+      "carrier_id": "hinerv",
+      "full_scope_row_count": 1,
+      "harvested_row_count": 1,
+      "ladder_candidate_row_count": 0,
+      "local_receiver_replay_row_count": 1,
+      "modelsize_present_row_count": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_proof_row_count": 1,
+      "report_blockers": [
+        "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "archive_export_backend_not_mlx"
+      ],
+      "row_blockers": [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "archive_export_backend_not_mlx"
+      ],
+      "schema": "hinerv_archive_size_ladder.v1",
+      "score_claim": false,
+      "source_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_replay_hi_nerv_local_tiny_false_authority.json",
+      "status": "hinerv_archive_size_ladder_observed_false_authority"
+    }
+  ],
+  "schema": "nerv_ladder_row_emission_contract.v1",
+  "score_claim": false,
+  "score_claim_valid": false
+}

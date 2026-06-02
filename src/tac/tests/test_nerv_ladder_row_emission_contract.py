@@ -121,6 +121,65 @@ def test_hinerv_prefilter_harvest_blocks_receiver_proof_and_modelsize() -> None:
     )
 
 
+def test_hinerv_archive_size_ladder_counts_receiver_proof_but_not_ladder_authority() -> None:
+    payload = build_nerv_ladder_row_emission_contract(
+        families=("hi_nerv",),
+        source_parity_contract={"family_rows": [{"family": "hi_nerv", "blockers": []}]},
+        row_harvests=[
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "family": "hi_nerv",
+                "report_path": ".omx/research/hinerv_archive_size_ladder.json",
+                "num_pairs": 600,
+                "archive_export_backend_counts": {"pytorch_portable_fallback": 1},
+                "archive_rows": [
+                    {
+                        "row_id": "hi_nerv_local_tiny",
+                        "archive_bytes": 134908,
+                        "archive_sha256": "5" * 64,
+                        "num_parameters": 94764,
+                        "runtime_consumption_proof_ready": True,
+                        "backend_claim_blockers": ["archive_export_backend_not_mlx"],
+                        "blockers": [
+                            "hinerv_archive_size_row_has_no_nonrate_score",
+                            "archive_export_backend_not_mlx",
+                        ],
+                    }
+                ],
+                "blockers": [
+                    "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+                    "archive_export_backend_not_mlx",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+    )
+
+    row = payload["family_rows"][0]
+    observed = row["observed_harvest_summary"]
+    assert observed["source_paths"] == [
+        ".omx/research/hinerv_archive_size_ladder.json"
+    ]
+    assert observed["harvested_row_count"] == 1
+    assert observed["full_scope_row_count"] == 1
+    assert observed["local_receiver_replay_row_count"] == 1
+    assert observed["receiver_proof_row_count"] == 1
+    assert observed["modelsize_present_row_count"] == 1
+    assert observed["ladder_candidate_row_count"] == 0
+    assert observed["archive_export_backend_counts"] == {
+        "pytorch_portable_fallback": 1
+    }
+    assert "archive_export_backend_not_mlx" in observed["row_blockers"]
+    assert "no_harvested_rows_observed" not in row["emission_gap_ids"]
+    assert (
+        "emission_gap:hinerv:fewer_than_two_ladder_candidate_rows_observed"
+        in payload["blockers"]
+    )
+    assert payload["ready_for_trained_ladder_row_emission"] is False
+
+
 def test_snerv_receiver_packet_probe_is_hash_checked_but_not_ladder_authority(
     tmp_path: Path,
 ) -> None:

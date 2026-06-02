@@ -226,7 +226,11 @@ def _family_contract_row(
 
 
 def _harvest_summary(harvest: Mapping[str, Any]) -> dict[str, Any]:
-    carrier = _family_key(harvest.get("carrier_id") or "unknown")
+    if harvest.get("schema") == "hinerv_archive_size_ladder.v1":
+        return _hinerv_archive_size_ladder_summary(harvest)
+    carrier = _family_key(
+        harvest.get("carrier_id") or harvest.get("family") or "unknown"
+    )
     return {
         "schema": harvest.get("schema"),
         "carrier_id": carrier,
@@ -244,6 +248,74 @@ def _harvest_summary(harvest: Mapping[str, Any]) -> dict[str, Any]:
         "promotion_eligible": harvest.get("promotion_eligible") is True,
         "ready_for_exact_eval_dispatch": harvest.get("ready_for_exact_eval_dispatch") is True,
     }
+
+
+def _hinerv_archive_size_ladder_summary(harvest: Mapping[str, Any]) -> dict[str, Any]:
+    rows = [
+        row
+        for row in harvest.get("archive_rows", ())
+        if isinstance(row, Mapping)
+    ]
+    num_pairs = _int(harvest.get("num_pairs"))
+    full_scope = num_pairs >= 600
+    receiver_proof_rows = [
+        row for row in rows if row.get("runtime_consumption_proof_ready") is True
+    ]
+    modelsize_rows = [
+        row
+        for row in rows
+        if _int(row.get("num_parameters")) > 0 or isinstance(row.get("config"), Mapping)
+    ]
+    ladder_rows = [
+        row
+        for row in rows
+        if full_scope
+        and row.get("runtime_consumption_proof_ready") is True
+        and _int(row.get("archive_bytes")) > 0
+        and bool(row.get("archive_sha256"))
+        and _int(row.get("num_parameters")) > 0
+        and _row_has_nonrate_distortion(row)
+        and not row.get("backend_claim_blockers")
+    ]
+    return {
+        "schema": harvest.get("schema"),
+        "carrier_id": _family_key(harvest.get("family") or "hinerv"),
+        "status": "hinerv_archive_size_ladder_observed_false_authority",
+        "source_path": harvest.get("source_artifact_path") or harvest.get("report_path"),
+        "harvested_row_count": len(rows),
+        "full_scope_row_count": len(rows) if full_scope else 0,
+        "local_receiver_replay_row_count": len(receiver_proof_rows),
+        "receiver_proof_row_count": len(receiver_proof_rows),
+        "modelsize_present_row_count": len(modelsize_rows),
+        "ladder_candidate_row_count": len(ladder_rows),
+        "archive_export_backend_counts": dict(
+            harvest.get("archive_export_backend_counts") or {}
+        ),
+        "row_blockers": _ordered_unique(
+            blocker
+            for row in rows
+            for blocker in row.get("blockers", ())
+            if blocker
+        ),
+        "report_blockers": list(harvest.get("blockers") or ()),
+        "score_claim": harvest.get("score_claim") is True,
+        "promotion_eligible": harvest.get("promotion_eligible") is True,
+        "ready_for_exact_eval_dispatch": harvest.get("ready_for_exact_eval_dispatch") is True,
+    }
+
+
+def _row_has_nonrate_distortion(row: Mapping[str, Any]) -> bool:
+    return any(
+        key in row and row.get(key) is not None
+        for key in (
+            "nonrate_score",
+            "nonrate_score_value",
+            "d_seg_mean_linf",
+            "d_pose_mean_linf",
+            "avg_segnet_dist",
+            "avg_posenet_dist",
+        )
+    )
 
 
 def _packet_probe_summary(artifact: Mapping[str, Any]) -> dict[str, Any]:
@@ -443,6 +515,21 @@ def _merge_harvest_summaries(
         "ladder_candidate_row_count": sum(
             _int(row.get("ladder_candidate_row_count")) for row in selected
         ),
+        "archive_export_backend_counts": _merge_count_maps(
+            row.get("archive_export_backend_counts") for row in selected
+        ),
+        "row_blockers": _ordered_unique(
+            blocker
+            for row in selected
+            for blocker in row.get("row_blockers", ())
+            if blocker
+        ),
+        "report_blockers": _ordered_unique(
+            blocker
+            for row in selected
+            for blocker in row.get("report_blockers", ())
+            if blocker
+        ),
     }
 
 
@@ -501,6 +588,17 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _merge_count_maps(values: Iterable[Any]) -> dict[str, int]:
+    merged: dict[str, int] = {}
+    for value in values:
+        if not isinstance(value, Mapping):
+            continue
+        for key, count in value.items():
+            text = str(key)
+            merged[text] = merged.get(text, 0) + _int(count)
+    return merged
 
 
 def _ordered_unique(values: Iterable[str]) -> list[str]:
