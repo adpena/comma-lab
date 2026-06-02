@@ -65,6 +65,7 @@ from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
 
 COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA = "compact_renderer_mlx_spine_runner.v1"
 ACTIVE_CAMPAIGN_LOCK_SCHEMA = "compact_renderer_active_campaign_lock.v1"
+ACTIVE_FAMILY_PROCESS_REFUSAL_SCHEMA = "compact_renderer_active_family_process_refusal.v1"
 DEFAULT_SSD_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact"),
     Path("/Volumes/APDataStore/pact"),
@@ -4824,6 +4825,136 @@ def _pid_is_alive(pid: int) -> bool:
     return True
 
 
+def _active_process_table_rows() -> list[dict[str, Any]]:
+    completed = subprocess.run(
+        ["ps", "-axo", "pid=,ppid=,etime=,command="],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in completed.stdout.splitlines():
+        parts = line.strip().split(maxsplit=3)
+        if len(parts) < 4:
+            continue
+        pid_text, ppid_text, elapsed, command = parts
+        try:
+            pid = int(pid_text)
+            ppid = int(ppid_text)
+        except ValueError:
+            continue
+        rows.append(
+            {
+                "pid": pid,
+                "ppid": ppid,
+                "elapsed": elapsed,
+                "command": command,
+            }
+        )
+    return rows
+
+
+def _active_family_process_needles(family: str) -> tuple[str, ...]:
+    family_token = str(family or "").strip()
+    generic = (
+        f"--execute-family {family_token}",
+        f"--execute-family={family_token}",
+    )
+    if family_token == "snerv":
+        return (
+            *generic,
+            "tools/run_snerv_inverse_steg_advisory.py",
+            "run_snerv_inverse_steg_advisory.py",
+        )
+    if family_token == "hi_nerv":
+        return (
+            *generic,
+            "hi_nerv",
+            "hinerv",
+        )
+    return generic
+
+
+def _active_family_campaign_processes(
+    *,
+    family: str | None,
+    current_pid: int,
+    process_rows: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    if not family:
+        return []
+    needles = _active_family_process_needles(str(family))
+    if not needles:
+        return []
+    rows = process_rows if process_rows is not None else _active_process_table_rows()
+    by_pid: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        try:
+            by_pid[int(row.get("pid") or -1)] = row
+        except (TypeError, ValueError):
+            continue
+    excluded_pids = {int(current_pid)}
+    cursor = int(current_pid)
+    while True:
+        parent = by_pid.get(cursor, {}).get("ppid")
+        try:
+            parent_pid = int(parent)
+        except (TypeError, ValueError):
+            break
+        if parent_pid <= 0 or parent_pid in excluded_pids:
+            break
+        excluded_pids.add(parent_pid)
+        cursor = parent_pid
+    matches: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            pid = int(row.get("pid") or -1)
+        except (TypeError, ValueError):
+            continue
+        if pid <= 0 or pid in excluded_pids:
+            continue
+        if not _pid_is_alive(pid):
+            continue
+        command = str(row.get("command") or "")
+        if not any(needle and needle in command for needle in needles):
+            continue
+        matches.append(
+            {
+                "pid": pid,
+                "ppid": row.get("ppid"),
+                "elapsed": row.get("elapsed"),
+                "command": command,
+            }
+        )
+    return matches
+
+
+def _write_active_family_process_refusal(
+    *,
+    lock_dir: Path,
+    output_dir: Path,
+    family: str,
+    conflicts: list[dict[str, Any]],
+) -> Path:
+    path = lock_dir / f"family_process_refusal_{family}_{_stamp()}.json"
+    payload = {
+        "schema": ACTIVE_FAMILY_PROCESS_REFUSAL_SCHEMA,
+        "family": family,
+        "created_utc": datetime.now(UTC).isoformat(),
+        "output_dir": output_dir.as_posix(),
+        "active_processes": conflicts,
+        "refusal_reason": "active_same_family_process_detected",
+        "override": "pass --allow-duplicate-campaign only when intentional",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
 def _release_active_campaign_lock(lock_path: Path, pid: int) -> None:
     try:
         payload = json.loads(lock_path.read_text(encoding="utf-8"))
@@ -4844,14 +4975,32 @@ def _acquire_active_campaign_lock(
 
     if bool(getattr(args, "allow_duplicate_campaign", False)):
         return None
+    lock_dir = output_dir.parent / ".active_compact_renderer_campaign_locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    family = str(getattr(args, "execute_family", "") or "").strip()
+    family_conflicts = _active_family_campaign_processes(
+        family=family,
+        current_pid=os.getpid(),
+    )
+    if family_conflicts:
+        refusal_path = _write_active_family_process_refusal(
+            lock_dir=lock_dir,
+            output_dir=output_dir,
+            family=family,
+            conflicts=family_conflicts,
+        )
+        raise SystemExit(
+            "active same-family compact-renderer campaign refused: "
+            f"family={family} refusal={refusal_path} "
+            f"active_pids={[row['pid'] for row in family_conflicts]}; pass "
+            "--allow-duplicate-campaign only when this is intentional"
+        ) from None
     payload = _active_campaign_lock_payload(
         args,
         source_video_path=source_video_path,
         hard_byte_ceilings=hard_byte_ceilings,
     )
     digest = _campaign_lock_digest(payload)
-    lock_dir = output_dir.parent / ".active_compact_renderer_campaign_locks"
-    lock_dir.mkdir(parents=True, exist_ok=True)
     lock_path = lock_dir / f"{digest}.json"
     manifest = {
         "schema": ACTIVE_CAMPAIGN_LOCK_SCHEMA,

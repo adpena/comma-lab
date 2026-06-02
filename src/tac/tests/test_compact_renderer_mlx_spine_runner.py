@@ -388,6 +388,141 @@ def test_active_campaign_lock_refuses_duplicate_active_pid(tmp_path: Path) -> No
     assert not lock_path.exists()
 
 
+def test_active_campaign_lock_refuses_same_family_snerv_process(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "0.mkv"
+    source.write_bytes(b"video")
+    args = _parse_args([
+        "--execute-family",
+        "snerv",
+        "--num-pairs",
+        "32",
+        "--epochs",
+        "1",
+    ])
+    monkeypatch.setattr(
+        runner_mod,
+        "_active_process_table_rows",
+        lambda: [
+            {
+                "pid": 424242,
+                "ppid": 1,
+                "elapsed": "03:55",
+                "command": (
+                    ".venv/bin/python tools/run_snerv_inverse_steg_advisory.py "
+                    "--n-pairs 600 --packet-out /Volumes/VertigoDataTier/pact/x.snar"
+                ),
+            }
+        ],
+    )
+    monkeypatch.setattr(runner_mod, "_pid_is_alive", lambda pid: pid == 424242)
+
+    with pytest.raises(SystemExit, match="active same-family"):
+        runner_mod._acquire_active_campaign_lock(
+            output_dir=tmp_path / "snerv_run",
+            args=args,
+            source_video_path=source,
+            hard_byte_ceilings=(178_000,),
+        )
+
+    refusal_paths = sorted(
+        (tmp_path / ".active_compact_renderer_campaign_locks").glob(
+            "family_process_refusal_snerv_*.json"
+        )
+    )
+    assert len(refusal_paths) == 1
+    payload = json.loads(refusal_paths[0].read_text(encoding="utf-8"))
+    assert payload["schema"] == runner_mod.ACTIVE_FAMILY_PROCESS_REFUSAL_SCHEMA
+    assert payload["family"] == "snerv"
+    assert payload["active_processes"][0]["pid"] == 424242
+    assert payload["score_claim"] is False
+
+
+def test_active_family_process_detection_ignores_current_process_ancestors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(runner_mod, "_pid_is_alive", lambda pid: pid in {10, 11, 12})
+    rows = [
+        {
+            "pid": 10,
+            "ppid": 9,
+            "elapsed": "00:01",
+            "command": (
+                "/bin/zsh -lc python tools/run_compact_renderer_mlx_spine_runner.py "
+                "--execute-family snerv"
+            ),
+        },
+        {
+            "pid": 11,
+            "ppid": 10,
+            "elapsed": "00:01",
+            "command": (
+                "/Users/adpena/Projects/pact/.venv/bin/python "
+                "tools/run_compact_renderer_mlx_spine_runner.py --execute-family snerv"
+            ),
+        },
+        {
+            "pid": 12,
+            "ppid": 1,
+            "elapsed": "03:55",
+            "command": (
+                ".venv/bin/python tools/run_snerv_inverse_steg_advisory.py "
+                "--n-pairs 600"
+            ),
+        },
+    ]
+
+    matches = runner_mod._active_family_campaign_processes(
+        family="snerv",
+        current_pid=11,
+        process_rows=rows,
+    )
+
+    assert [row["pid"] for row in matches] == [12]
+
+
+def test_active_campaign_lock_allow_duplicate_skips_family_process_refusal(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "0.mkv"
+    source.write_bytes(b"video")
+    args = _parse_args([
+        "--execute-family",
+        "snerv",
+        "--num-pairs",
+        "32",
+        "--epochs",
+        "1",
+        "--allow-duplicate-campaign",
+    ])
+    monkeypatch.setattr(
+        runner_mod,
+        "_active_process_table_rows",
+        lambda: [
+            {
+                "pid": 424242,
+                "ppid": 1,
+                "elapsed": "03:55",
+                "command": ".venv/bin/python tools/run_snerv_inverse_steg_advisory.py",
+            }
+        ],
+    )
+    monkeypatch.setattr(runner_mod, "_pid_is_alive", lambda pid: pid == 424242)
+
+    lock_path = runner_mod._acquire_active_campaign_lock(
+        output_dir=tmp_path / "snerv_run",
+        args=args,
+        source_video_path=source,
+        hard_byte_ceilings=(178_000,),
+    )
+
+    assert lock_path is None
+    assert not (tmp_path / ".active_compact_renderer_campaign_locks").exists()
+
+
 def test_pact_vq_runner_forwards_pr95_curriculum_kwargs() -> None:
     source = Path(runner_mod.__file__).read_text(encoding="utf-8")
     tree = ast.parse(source)
