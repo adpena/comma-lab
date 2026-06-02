@@ -29,6 +29,19 @@ def test_missing_snerv_mlx_native_adapter_fails_closed() -> None:
     assert contract["score_claim"] is False
 
 
+def test_default_snerv_mlx_native_adapter_surfaces_are_discoverable() -> None:
+    contract = build_snerv_mlx_native_adapter_contract()
+
+    assert contract["module_loaded"] is True
+    assert contract["surfaces_ready"] is True
+    assert contract["ready_surface_count"] == len(REQUIRED_SURFACES)
+    assert contract["full600_campaign_ready"] is False
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in contract[
+        "blockers"
+    ]
+    assert contract["score_claim"] is False
+
+
 def test_present_surfaces_still_require_live_smoke(monkeypatch) -> None:
     module_name = "unit_fake_snerv_mlx_adapter"
     module = types.ModuleType(module_name)
