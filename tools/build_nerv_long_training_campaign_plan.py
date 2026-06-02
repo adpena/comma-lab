@@ -43,6 +43,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument("--output-md", type=Path)
     parser.add_argument("--output-queue", type=Path)
+    parser.add_argument(
+        "--experiment-queue-id",
+        help=(
+            "Queue id for the emitted experiment_queue.v1. Defaults to a fresh "
+            "id derived from --output-json so normal operator builds do not "
+            "reuse stale SQLite state."
+        ),
+    )
     parser.add_argument("--expected-output-json-sha256")
     parser.add_argument("--expected-output-md-sha256")
     parser.add_argument("--expected-output-queue-sha256")
@@ -99,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--snerv-bounded-proof-epochs", type=int, default=3)
     args = parser.parse_args(argv)
 
+    experiment_queue_id = args.experiment_queue_id or (
+        f"nerv_long_training_campaign_{_safe_token(args.output_json.stem)}.v1"
+    )
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_load(args.hinerv_modelsize_budget),
         snerv_modelsize_budget=_load(args.snerv_modelsize_budget),
@@ -121,6 +132,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         snerv_bounded_proof_only=bool(args.snerv_bounded_proof_only),
         snerv_bounded_proof_epochs=int(args.snerv_bounded_proof_epochs),
+        experiment_queue_id=experiment_queue_id,
     )
     write_json_artifact(
         args.output_json,
@@ -164,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
                     if args.output_queue is None
                     else args.output_queue.as_posix()
                 ),
+                "experiment_queue_id": report["experiment_queue_id"],
             },
             sort_keys=True,
         )

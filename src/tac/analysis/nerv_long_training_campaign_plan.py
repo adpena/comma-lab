@@ -45,6 +45,7 @@ from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 SCHEMA = "nerv_long_training_campaign_plan.v1"
 ROW_SCHEMA = "nerv_long_training_campaign_row.v1"
 EXPERIMENT_QUEUE_SCHEMA = "experiment_queue.v1"
+DEFAULT_EXPERIMENT_QUEUE_ID = "nerv_long_training_campaign_queue.v1"
 SCORE_LOWERING_GATE_SCHEMA = "nerv_long_training_score_lowering_gate.v1"
 DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"
 DEFAULT_EPOCHS = 29_650
@@ -89,6 +90,7 @@ def build_nerv_long_training_campaign_plan(
     decoder_weight_waterfill_sources: Sequence[Mapping[str, Any]] = (),
     snerv_bounded_proof_only: bool = False,
     snerv_bounded_proof_epochs: int = 3,
+    experiment_queue_id: str = DEFAULT_EXPERIMENT_QUEUE_ID,
 ) -> dict[str, Any]:
     """Build the shared HiNeRV/SNeRV long-training campaign matrix."""
 
@@ -109,6 +111,9 @@ def build_nerv_long_training_campaign_plan(
         raise NervLongTrainingCampaignPlanError("batch_pairs must be positive")
     if float(learning_rate) <= 0.0:
         raise NervLongTrainingCampaignPlanError("learning_rate must be positive")
+    queue_id = str(experiment_queue_id or "").strip()
+    if not queue_id:
+        raise NervLongTrainingCampaignPlanError("experiment_queue_id must be non-empty")
     joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(
         joint_recon_weight_manifest_paths
     )
@@ -163,7 +168,7 @@ def build_nerv_long_training_campaign_plan(
             str(row.get("row_id") or ""),
         ),
     )
-    experiment_queue = _experiment_queue(rows)
+    experiment_queue = _experiment_queue(rows, queue_id=queue_id)
     return {
         "schema": SCHEMA,
         "baseline_to_beat": "pr95_public_control_arm_plus_frontier_exact_axes",
@@ -351,6 +356,8 @@ def _hinerv_campaign_row(
         "tools/run_compact_renderer_mlx_spine_runner.py",
         "--execute-family",
         "hi_nerv",
+        "--planner-row-id",
+        row_id,
         "--num-pairs",
         str(num_pairs),
         "--epochs",
@@ -548,6 +555,8 @@ def _snerv_campaign_row(
         "tools/run_compact_renderer_mlx_spine_runner.py",
         "--execute-family",
         "snerv",
+        "--planner-row-id",
+        row_id,
         "--num-pairs",
         str(int(candidate.get("num_pairs") or 600)),
         "--epochs",
@@ -660,10 +669,14 @@ def _row(
     }
 
 
-def _experiment_queue(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _experiment_queue(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    queue_id: str,
+) -> dict[str, Any]:
     return {
         "schema": EXPERIMENT_QUEUE_SCHEMA,
-        "queue_id": "nerv_long_training_campaign_queue.v1",
+        "queue_id": queue_id,
         "owner": "nerv_long_training_campaign_plan",
         "description": (
             "Queue-owned MLX-first HiNeRV/SNeRV long-training campaign. "

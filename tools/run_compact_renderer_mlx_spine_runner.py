@@ -152,6 +152,7 @@ EXECUTABLE_FAMILIES = (
 )
 PLANNER_GATED_FAMILIES: tuple[str, ...] = ()
 CLI_EXECUTE_FAMILIES = (*EXECUTABLE_FAMILIES, *PLANNER_GATED_FAMILIES)
+PLANNER_ROW_REQUIRED_FAMILIES = ("hi_nerv", "snerv")
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
         "canonical_family": "pr95_hnerv",
@@ -7470,6 +7471,81 @@ def _active_family_campaign_processes(
     return matches
 
 
+def _planner_row_launch_blockers(args: argparse.Namespace) -> list[str]:
+    """Return fail-closed blockers for direct launches of top-priority carriers."""
+
+    family = str(getattr(args, "execute_family", "") or "").strip()
+    if family not in PLANNER_ROW_REQUIRED_FAMILIES:
+        return []
+    if bool(getattr(args, "allow_manual_compact_family_launch", False)):
+        return []
+    row_id = str(getattr(args, "planner_row_id", "") or "").strip()
+    if row_id:
+        return []
+    return [
+        f"{family}_planner_row_id_missing",
+        (
+            "top_priority_compact_carrier_launch_must_come_from_"
+            "nerv_long_training_campaign_plan"
+        ),
+    ]
+
+
+def _write_planner_row_launch_refusal(
+    *,
+    output_dir: Path,
+    args: argparse.Namespace,
+    blockers: list[str],
+    hard_byte_ceilings: tuple[int, ...],
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Write a normal runner report for planner-custody launch refusals."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report = _base_report(
+        output_dir=output_dir,
+        mode="compact_carrier_planner_row_launch_refused",
+        hard_byte_ceilings=hard_byte_ceilings,
+        repo_root=repo_root,
+    )
+    family = str(getattr(args, "execute_family", "") or "").strip()
+    report.update(
+        {
+            "execute_family": family,
+            "training_executed": False,
+            "trainer_launch_allowed": False,
+            "launch_refusal_reason": (
+                "HiNeRV/SNeRV production launches must carry the planner row "
+                "identity emitted by nerv_long_training_campaign_plan; direct "
+                "manual launches require --allow-manual-compact-family-launch "
+                "and remain false-authority research."
+            ),
+            "planner_launch_contract": {
+                "schema": "compact_carrier_planner_launch_contract.v1",
+                "required_families": list(PLANNER_ROW_REQUIRED_FAMILIES),
+                "planner_row_id": str(
+                    getattr(args, "planner_row_id", "") or ""
+                ).strip()
+                or None,
+                "allow_manual_compact_family_launch": bool(
+                    getattr(args, "allow_manual_compact_family_launch", False)
+                ),
+                "required_source": (
+                    "tac.analysis.nerv_long_training_campaign_plan."
+                    "build_nerv_long_training_campaign_plan"
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "blockers": _dedupe(blockers),
+        }
+    )
+    path = output_dir / "compact_renderer_mlx_spine_runner_report.json"
+    _write_json(path, report)
+    return {**report, "report_path": path.as_posix()}
+
+
 def _write_active_family_process_refusal(
     *,
     lock_dir: Path,
@@ -7711,6 +7787,24 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "HiNeRV/SNeRV launch candidate from the planner budget report. "
             "'auto' selects a byte-plausible planner candidate for the contest "
             "pair count; 'none'/'manual'/'off' uses the explicit compact CLI knobs."
+        ),
+    )
+    parser.add_argument(
+        "--planner-row-id",
+        default="",
+        help=(
+            "Queue/planner row identity emitted by "
+            "nerv_long_training_campaign_plan for top-priority HiNeRV/SNeRV "
+            "launch custody. Required for production launches."
+        ),
+    )
+    parser.add_argument(
+        "--allow-manual-compact-family-launch",
+        action="store_true",
+        help=(
+            "Explicitly bypass the HiNeRV/SNeRV planner-row custody gate for "
+            "research-only manual launches. Reports remain false-authority and "
+            "not promotion-ready."
         ),
     )
     parser.add_argument(
@@ -8157,6 +8251,30 @@ def main(argv: list[str] | None = None) -> int:
             hard_byte_ceilings=ceilings,
             num_pairs=CONTEST_PAIR_COUNT,
         )
+    planner_launch_blockers = _planner_row_launch_blockers(args)
+    if planner_launch_blockers:
+        report = _write_planner_row_launch_refusal(
+            output_dir=Path(output_dir).expanduser().resolve(strict=False),
+            args=args,
+            blockers=planner_launch_blockers,
+            hard_byte_ceilings=ceilings,
+            repo_root=Path(args.repo_root).expanduser().resolve(strict=False),
+        )
+        print(
+            json.dumps(
+                {
+                    "schema": "compact_renderer_mlx_spine_runner_cli_result.v1",
+                    "report_path": report["report_path"],
+                    "mode": report.get("mode"),
+                    "blockers": report.get("blockers", []),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     _acquire_active_campaign_lock(
         output_dir=Path(output_dir).expanduser().resolve(strict=False),
         args=args,

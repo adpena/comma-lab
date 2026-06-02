@@ -34,6 +34,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["campaign_row_count"] == 3
     assert report["experiment_queue"]["schema"] == "experiment_queue.v1"
+    assert report["experiment_queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
     assert report["launchable_local_row_count"] == 3
     assert report["family_counts"] == {"hi_nerv": 2, "snerv": 1}
@@ -81,6 +82,13 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     )
     hi_step = hi_rows[0]["experiment_queue_entry"]["steps"][0]
     assert hi_step["command"] == hi_rows[0]["command_argv"]
+    assert "--planner-row-id" in hi_rows[0]["command_argv"]
+    assert (
+        hi_rows[0]["command_argv"][
+            hi_rows[0]["command_argv"].index("--planner-row-id") + 1
+        ]
+        == hi_rows[0]["row_id"]
+    )
     assert hi_step["resources"]["kind"] == "local_mlx"
     assert {
         (condition["key"], condition.get("equals"))
@@ -109,6 +117,13 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["execution_epochs"] == 29_650
     assert snerv_row["current_command_is_bounded_proof_not_long_training"] is False
     assert "--snerv-scorer-loop-qat" in snerv_row["command_argv"]
+    assert "--planner-row-id" in snerv_row["command_argv"]
+    assert (
+        snerv_row["command_argv"][
+            snerv_row["command_argv"].index("--planner-row-id") + 1
+        ]
+        == snerv_row["row_id"]
+    )
     assert snerv_row["command_argv"][
         snerv_row["command_argv"].index("--epochs") + 1
     ] == "29650"
@@ -126,6 +141,38 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     markdown = render_nerv_long_training_campaign_plan_markdown(report)
     assert "NeRV Long-Training Campaign Plan" in markdown
     assert "hi_nerv::hinerv_tiny::lion" in markdown
+
+
+def test_long_training_campaign_plan_accepts_unique_experiment_queue_id() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        experiment_queue_id="nerv_hinerv_lr_recovery_unique_queue.v1",
+    )
+
+    assert report["experiment_queue_id"] == "nerv_hinerv_lr_recovery_unique_queue.v1"
+    assert report["experiment_queue"]["queue_id"] == (
+        "nerv_hinerv_lr_recovery_unique_queue.v1"
+    )
+
+
+def test_long_training_campaign_plan_rejects_empty_experiment_queue_id() -> None:
+    with pytest.raises(
+        NervLongTrainingCampaignPlanError, match="experiment_queue_id must be non-empty"
+    ):
+        build_nerv_long_training_campaign_plan(
+            hinerv_modelsize_budget=_hinerv_budget(),
+            snerv_modelsize_budget=_snerv_budget(),
+            optimizer_kinds=("lion",),
+            epochs=29_650,
+            output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+            max_candidates_per_family=1,
+            experiment_queue_id="",
+        )
 
 
 def test_long_training_campaign_plan_pins_verified_joint_recon_weight(
@@ -597,8 +644,12 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert snerv_row["candidate_feedback"]["candidate_id"] == "snerv_tiny"
     assert "partial_pair_byte_feedback_only" in snerv_row["blockers"]
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
+    assert payload["experiment_queue_id"] == (
+        f"nerv_long_training_campaign_{out_json.stem}.v1"
+    )
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
     assert queue == payload["experiment_queue"]
+    assert queue["queue_id"] == f"nerv_long_training_campaign_{out_json.stem}.v1"
     assert queue["experiments"][0]["steps"][0]["postconditions"]
     loaded_queue = load_queue_definition(out_queue)
     assert loaded_queue["schema"] == "experiment_queue.v1"

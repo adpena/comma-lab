@@ -182,6 +182,69 @@ def _write_verified_joint_recon_weight(
     return weight_path, manifest_path
 
 
+def test_planner_row_launch_gate_rejects_manual_hinerv_without_row_id(
+    tmp_path: Path,
+) -> None:
+    args = SimpleNamespace(
+        execute_family="hi_nerv",
+        planner_row_id="",
+        allow_manual_compact_family_launch=False,
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(args)
+    assert blockers == [
+        "hi_nerv_planner_row_id_missing",
+        (
+            "top_priority_compact_carrier_launch_must_come_from_"
+            "nerv_long_training_campaign_plan"
+        ),
+    ]
+
+    report = runner_mod._write_planner_row_launch_refusal(
+        output_dir=tmp_path,
+        args=args,
+        blockers=blockers,
+        hard_byte_ceilings=(178_000, 216_000, 285_000),
+        repo_root=REPO_ROOT,
+    )
+    payload = json.loads(
+        Path(report["report_path"]).read_text(encoding="utf-8")
+    )
+
+    assert payload["mode"] == "compact_carrier_planner_row_launch_refused"
+    assert payload["trainer_launch_allowed"] is False
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["planner_launch_contract"]["planner_row_id"] is None
+    assert payload["planner_launch_contract"]["allow_manual_compact_family_launch"] is False
+    assert payload["blockers"] == blockers
+
+
+def test_planner_row_launch_gate_allows_planner_or_explicit_manual() -> None:
+    assert runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="hi_nerv",
+            planner_row_id="hi_nerv::candidate::adamw",
+            allow_manual_compact_family_launch=False,
+        )
+    ) == []
+    assert runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="snerv",
+            planner_row_id="",
+            allow_manual_compact_family_launch=True,
+        )
+    ) == []
+    assert runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="pr95_hnerv",
+            planner_row_id="",
+            allow_manual_compact_family_launch=False,
+        )
+    ) == []
+
+
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
     tmp_path: Path,
 ) -> None:
@@ -1159,6 +1222,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "1",
             "--modelsize-candidate-id",
             "manual",
+            "--planner-row-id",
+            "hi_nerv::manual::lion",
             "--optimizer-kind",
             "lion",
         ]
@@ -1193,6 +1258,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "1,3",
             "--snerv-hfr-gain",
             "0.25",
+            "--planner-row-id",
+            "snerv::manual::native_rate_aware_training",
             "--skip-snerv-native-mlx-export",
             "--snerv-native-mlx-receiver-proof-timeout",
             "123",
@@ -1217,6 +1284,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.post_export_materializer_max_parallel == 2
     assert hi.post_export_materializer_max_experiments == 1
     assert hi.modelsize_candidate_id == "manual"
+    assert hi.planner_row_id == "hi_nerv::manual::lion"
     assert hi.optimizer_kind == "lion"
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
@@ -1233,11 +1301,40 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_spectra_preserving_adapter is True
     assert sn.snerv_mfu_scales == "1,3"
     assert sn.snerv_hfr_gain == 0.25
+    assert sn.planner_row_id == "snerv::manual::native_rate_aware_training"
     assert sn.skip_snerv_native_mlx_export is True
     assert sn.snerv_native_mlx_receiver_proof_timeout == 123
-    assert sn.modelsize_candidate_id == "auto"
-    assert sn.post_export_materializer_max_experiments == 1
-    assert sn.optimizer_kind == "adamw"
+
+
+def test_top_priority_family_cli_refuses_missing_planner_row(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "hinerv_missing_planner"
+    rc = runner_mod.main(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--num-pairs",
+            "32",
+            "--epochs",
+            "29650",
+            "--output-dir",
+            out.as_posix(),
+            "--repo-root",
+            REPO_ROOT.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    report_path = out / "compact_renderer_mlx_spine_runner_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["mode"] == "compact_carrier_planner_row_launch_refused"
+    assert report["execute_family"] == "hi_nerv"
+    assert report["training_executed"] is False
+    assert report["trainer_launch_allowed"] is False
+    assert "hi_nerv_planner_row_id_missing" in report["blockers"]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_main_from_snerv_advisory_forwards_cleanup_scratch_flag(
