@@ -971,8 +971,8 @@ def _control_rows() -> list[dict[str, Any]]:
             scorer="score_exact_saliency + hprc_saliency_rd_allocation",
             allocator="G3 adjoint pushes pixel saliency into wavelet/LF/HF domains",
             archive="SNAR packet + compact LF residual grammar",
-            status="partially_wired_cpu_advisory_mlx_missing",
-            missing=["mlx_native_snerv_train_export", "receiver_closed_learned_hfr"],
+            status="receiver_hfr_mfu_t_ready_mlx_export_missing",
+            missing=["mlx_native_snerv_train_export"],
         ),
         _row(
             "snerv_lf_modelsize_and_stepmap",
@@ -1142,7 +1142,7 @@ def _control_rows() -> list[dict[str, Any]]:
 def _implementation_stack_row(root: Path, family: str) -> dict[str, Any]:
     specs = _implementation_specs(family)
     category_rows = [_implementation_category_row(root, family, spec) for spec in specs]
-    official_feature_rows = _official_feature_rows(family)
+    official_feature_rows = _official_feature_rows(root, family)
     blocking_gaps = _unique(
         [
             gap
@@ -1367,7 +1367,6 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
                 "reference": "SNeRV spectral split plus waterfilled intN/zero/RLE packet grammar",
                 "intrinsic_gaps": [
                     "snerv_measured_modelsize_ladder_missing",
-                    "snerv_receiver_closed_learned_hfr_missing",
                 ],
                 "next_action": (
                     "make mixed LF/HF packet modes receiver-decoded and priced by "
@@ -1379,32 +1378,38 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
     return []
 
 
-def _official_feature_rows(family: str) -> list[dict[str, Any]]:
+def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
     if family == "hi_nerv":
         rows = [
             (
                 "official_hierarchical_feature_grid_encoding",
                 "partial_local_three_scale_latent_pyramid_not_official_feature_grid",
+                (),
             ),
             (
                 "official_patch_mode_frame_mode_equivalence",
                 "missing_patch_frame_equivalence_proof",
+                (),
             ),
             (
                 "official_fast_3d_hierarchical_upsampling",
                 "missing_official_3d_upsampling_parity",
+                (),
             ),
             (
                 "official_config_family_size_sweeps",
                 "missing_measured_config_family_ladder",
+                (),
             ),
             (
                 "official_pruning_quant_noise_quant_ste_stack",
                 "missing_prune_quant_noise_qste_bitstream_roundtrip",
+                (),
             ),
             (
                 "official_torchac_or_equivalent_integer_bitstream_codec",
                 "missing_integer_bitstream_q_roundtrip",
+                (),
             ),
         ]
     elif family == "snerv":
@@ -1412,48 +1417,94 @@ def _official_feature_rows(family: str) -> list[dict[str, Any]]:
             (
                 "official_encoder_decoder_stride_stack",
                 "missing_official_stride_stack_parity",
+                (),
             ),
             (
                 "official_haar_dwt_idwt_low_high_frequency_reconstruction",
                 "partial_native_dwt_present_hfr_receiver_not_source_faithful",
+                (
+                    "OFFICIAL_SNERV_HAAR_MODE_PROOF",
+                    "HighFrequencyRestorer",
+                ),
             ),
             (
                 "official_multi_resolution_fusion_blocks",
                 "missing_mfu_blocks",
+                ("MultiResolutionFusionUnit",),
             ),
             (
                 "official_high_frequency_restoration_heads",
                 "missing_official_hfr_heads",
+                ("HighFrequencyRestorer",),
             ),
             (
                 "official_temporal_extension_snerv_t",
                 "missing_snerv_t_temporal_path_or_no_go",
+                ("SnervTemporalExtension",),
             ),
             (
                 "official_modelsize_fc_dim_budget_binding",
                 "missing_measured_fc_dim_modelsize_ladder",
+                (),
             ),
             (
                 "official_quant_model_embedding_payload_accounting",
                 "missing_quant_payload_receiver_replay",
+                (),
             ),
         ]
     else:
         rows = []
-    return [
-        {
-            "feature_id": feature,
-            "gap_id": f"{family}_{gap}",
-            "local_binding_status": "missing_or_partial",
-            "score_interpretation": (
-                "bad local scores are implementation/config signals until this "
-                "official feature is either source-faithfully implemented or "
-                "explicitly blocked by a receiver-closed proof"
-            ),
-            **FALSE_AUTHORITY,
-        }
-        for feature, gap in rows
-    ]
+    out = []
+    for feature, gap, markers in rows:
+        missing_markers = _missing_official_feature_markers(root, family, markers)
+        local_binding_status = (
+            "implemented_or_receiver_proven"
+            if markers and not missing_markers
+            else "missing_or_partial"
+        )
+        out.append(
+            {
+                "feature_id": feature,
+                "gap_id": f"{family}_{gap}",
+                "local_binding_status": local_binding_status,
+                "required_markers": tuple(markers),
+                "missing_markers": tuple(missing_markers),
+                "score_interpretation": (
+                    "bad local scores are implementation/config signals until this "
+                    "official feature is either source-faithfully implemented or "
+                    "explicitly blocked by a receiver-closed proof"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return out
+
+
+def _missing_official_feature_markers(
+    root: Path,
+    family: str,
+    markers: Iterable[str],
+) -> list[str]:
+    if not markers:
+        return list(markers)
+    source_dirs = {
+        "hi_nerv": ("src/tac/substrates/hi_nerv", "src/tac/analysis"),
+        "snerv": ("src/tac/substrates/snerv_inverse_steg_carrier", "src/tac/analysis"),
+    }
+    text = "\n".join(_read_source_text(root / rel) for rel in source_dirs.get(family, ()))
+    return [marker for marker in markers if marker not in text]
+
+
+def _read_source_text(path: Path) -> str:
+    if path.is_dir():
+        return "\n".join(
+            child.read_text(encoding="utf-8", errors="replace")
+            for child in sorted(path.rglob("*.py"))
+        )
+    if path.is_file():
+        return path.read_text(encoding="utf-8", errors="replace")
+    return ""
 
 
 def _category_status(

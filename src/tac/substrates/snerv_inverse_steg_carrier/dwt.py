@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Orthonormal multi-level 2D DWT for the SNeRV inverse-steganalysis carrier.
 
-The SNeRV carrier (arXiv 2501.01681 — Scalable NeRV) stores ONLY the low-frequency
+The SNeRV carrier (arXiv 2501.01681 — Spectra-preserving NeRV) stores ONLY the low-frequency
 (coarse) approximation subband of a multi-level 2D wavelet decomposition and
 GENERATES the high-frequency detail subbands with a small decoder. This cures the
 "Z8 disease" (`feedback_z8_*`): the byte-heavy detail blob is *generated*, not

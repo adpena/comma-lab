@@ -44,16 +44,22 @@ OFFICIAL_SOURCE_REFS: tuple[dict[str, str], ...] = (
         "why": "hierarchical encodings and compressed bitstream procedure",
     },
     {
-        "source_id": "snerv_official_repo",
+        "source_id": "snerv_spectra_preserving_official_repo",
         "family": "snerv",
         "url": "https://github.com/qwertja/SNeRV",
         "why": "DWT LF/HF stack, encoder/decoder strides, MFU, HFR, SNeRV_T and fc_dim controls",
     },
     {
-        "source_id": "snerv_paper",
+        "source_id": "snerv_spectra_preserving_paper",
         "family": "snerv",
         "url": "https://arxiv.org/abs/2501.01681",
         "why": "spectral split, high-frequency restoration, multi-resolution fusion",
+    },
+    {
+        "source_id": "snerv_scalable_layer_paper",
+        "family": "snerv",
+        "url": "https://openreview.net/forum?id=ZqN4bnXSSY",
+        "why": "separate scalable base/enhancement-layer SNeRV; do not conflate with spectra-preserving DWT SNeRV",
     },
 )
 
@@ -284,7 +290,7 @@ def _source_features() -> tuple[SourceFeature, ...]:
         SourceFeature(
             family="snerv",
             feature_id="snerv_symbol_map",
-            official_source_id="snerv_official_repo",
+            official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target="DWT, LF/HF carrier, archive, and receiver symbols resolve",
             required_symbols=(
                 RequiredSymbol("snerv", "snerv_symbol_map", "tac.substrates.snerv_inverse_steg_carrier.dwt", "dwt2_multilevel", "DWT analysis"),
@@ -298,7 +304,7 @@ def _source_features() -> tuple[SourceFeature, ...]:
         SourceFeature(
             family="snerv",
             feature_id="snerv_receiver_bitstream_roundtrip",
-            official_source_id="snerv_official_repo",
+            official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target="SNAR1 packet consumes LF, decoder, step maps into frames",
             required_symbols=(
                 RequiredSymbol("snerv", "snerv_receiver_bitstream_roundtrip", "tac.substrates.snerv_inverse_steg_carrier.archive", "unpack_snerv_archive", "archive parser"),
@@ -309,19 +315,23 @@ def _source_features() -> tuple[SourceFeature, ...]:
         SourceFeature(
             family="snerv",
             feature_id="snerv_official_mfu_hfr_stride_stack",
-            official_source_id="snerv_paper",
-            implementation_target="official MFU/HFR/stride-stack parity or explicit no-go",
+            official_source_id="snerv_spectra_preserving_paper",
+            implementation_target=(
+                "receiver-safe spectra-preserving MFU/HFR/SNeRV_T adapter "
+                "or exact official parity proof"
+            ),
             required_symbols=(
                 RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "MultiResolutionFusionUnit", "official MFU block"),
                 RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "HighFrequencyRestorer", "official HFR block"),
                 RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SnervTemporalExtension", "official SNeRV_T temporal path"),
+                RequiredSymbol("snerv", "snerv_official_mfu_hfr_stride_stack", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF", "receiver-safe adapter proof constant"),
             ),
             blocker_if_missing="snerv_mfu_hfr_stride_stack_missing",
         ),
         SourceFeature(
             family="snerv",
             feature_id="snerv_scorer_loop_decoder_qat",
-            official_source_id="snerv_paper",
+            official_source_id="snerv_spectra_preserving_paper",
             implementation_target="score-aware decoder-weight QAT before packet export",
             required_symbols=(
                 RequiredSymbol("snerv", "snerv_scorer_loop_decoder_qat", "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat", "run_snerv_scorer_loop_decoder_qat", "full trainer entrypoint"),
@@ -331,7 +341,7 @@ def _source_features() -> tuple[SourceFeature, ...]:
         SourceFeature(
             family="snerv",
             feature_id="snerv_qat_receiver_codec_pricing",
-            official_source_id="snerv_paper",
+            official_source_id="snerv_spectra_preserving_paper",
             implementation_target="QAT objective prices the same decoder codec consumed by receiver",
             required_symbols=(
                 RequiredSymbol("snerv", "snerv_qat_receiver_codec_pricing", "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat", "SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF", "receiver-priced QAT proof constant"),
@@ -341,7 +351,7 @@ def _source_features() -> tuple[SourceFeature, ...]:
         SourceFeature(
             family="snerv",
             feature_id="snerv_official_haar_mode",
-            official_source_id="snerv_official_repo",
+            official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target="official Haar DWT/IDWT path or explicit forked-adapter label",
             required_symbols=(
                 RequiredSymbol("snerv", "snerv_official_haar_mode", "tac.substrates.snerv_inverse_steg_carrier.dwt", "OFFICIAL_SNERV_HAAR_MODE_PROOF", "official Haar mode proof constant"),
@@ -351,7 +361,7 @@ def _source_features() -> tuple[SourceFeature, ...]:
         SourceFeature(
             family="snerv",
             feature_id="snerv_receiver_dependency_custody",
-            official_source_id="snerv_official_repo",
+            official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target="receiver DWT runtime is pure NumPy or contest-proven dependency closure",
             required_symbols=(
                 RequiredSymbol("snerv", "snerv_receiver_dependency_custody", "tac.substrates.snerv_inverse_steg_carrier.dwt", "SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF", "receiver dependency custody proof constant"),

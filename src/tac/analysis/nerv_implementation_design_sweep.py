@@ -81,9 +81,11 @@ STACK_REQUIREMENTS: dict[str, dict[str, Any]] = {
         ],
         "local_feature_tokens": {
             "source_faithful_adapter_gate": [
-                "simplified",
-                "not_source_faithful",
-                "official_SNeRV",
+                "SNERV_SPECTRA_PRESERVING_ADAPTER",
+                "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+                "MultiResolutionFusionUnit",
+                "HighFrequencyRestorer",
+                "SnervTemporalExtension",
             ],
             "receiver_proof": ["receiver", "archive", "sha256", "bytes"],
             "mixed_decoder_modes": ["int2", "int4", "int8", "fp16", "zero"],

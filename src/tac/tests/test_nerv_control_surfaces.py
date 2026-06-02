@@ -971,7 +971,9 @@ def _write_local_sources(repo_root: Path) -> None:
         _write(
             repo_root / rel,
             (
-                "simplified not_source_faithful official_SNeRV receiver archive "
+                "SNERV_SPECTRA_PRESERVING_ADAPTER "
+                "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF MultiResolutionFusionUnit "
+                "HighFrequencyRestorer SnervTemporalExtension receiver archive "
                 "sha256 bytes int2 int4 int8 fp16 zero PoseNet pose guard "
                 "scorer_loop waterfill linf allocation"
             ),

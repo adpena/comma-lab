@@ -52,10 +52,11 @@ def test_hinerv_official_source_parity_gaps_block_long_training() -> None:
     )
 
 
-def test_snerv_official_mfu_hfr_still_blocks_long_training() -> None:
+def test_snerv_spectra_preserving_mfu_hfr_adapter_unblocks_source_stack() -> None:
     report = build_nerv_source_parity_contract(repo_root=REPO_ROOT, families=("snerv",))
 
-    assert "snerv_mfu_hfr_stride_stack_missing" in report["blockers"]
+    assert report["required_for_long_training_ready"] is True
+    assert "snerv_mfu_hfr_stride_stack_missing" not in report["blockers"]
     assert "snerv_fc_dim_modelsize_control_missing" not in report["blockers"]
     assert "snerv_scorer_loop_decoder_qat_missing" not in report["blockers"]
     assert "snerv_lf_quant_intn_codec_missing" not in report["blockers"]
@@ -67,16 +68,17 @@ def test_snerv_official_mfu_hfr_still_blocks_long_training() -> None:
     assert rows["snerv_qat_receiver_codec_pricing"]["status"] == "implemented_or_bound"
     assert rows["snerv_official_haar_mode"]["status"] == "implemented_or_bound"
     assert rows["snerv_receiver_dependency_custody"]["status"] == "implemented_or_bound"
-    missing_symbols = {
+    present_symbols = {
         symbol["symbol"]
         for symbol in rows["snerv_official_mfu_hfr_stride_stack"]["symbol_rows"]
-        if symbol["status"] == "missing"
+        if symbol["status"] == "present"
     }
     assert {
         "MultiResolutionFusionUnit",
         "HighFrequencyRestorer",
         "SnervTemporalExtension",
-    }.issubset(missing_symbols)
+        "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+    }.issubset(present_symbols)
     controls = {row["control_id"]: row for row in report["control_rows"]}
     assert controls["snerv_fc_dim_modelsize_control"]["status"] == (
         "implemented_or_declared"

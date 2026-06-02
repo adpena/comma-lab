@@ -13,10 +13,15 @@ import numpy as np
 import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF,
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
+    HighFrequencyRestorer,
+    MultiResolutionFusionUnit,
     SnervCarrierError,
     SnervFrameCode,
     SnervModelSizeConfig,
+    SnervTemporalExtension,
     decode_frame,
     dequantize_lf,
     encode_frame_lf,
@@ -161,6 +166,98 @@ def test_model_size_controls_change_decoder_capacity_and_reconstruction():
         orig_hw=frames[0].shape,
     )
     assert not np.allclose(decode_frame(code, base), decode_frame(code, wider))
+
+
+def test_spectra_preserving_mfu_adapter_changes_features_and_reconstruction():
+    """NO-FAKE: MFU adapter changes the fitted receiver basis and decoded pixels."""
+
+    rng = np.random.default_rng(24)
+    frames = [_smooth_frame(rng) for _ in range(5)]
+    pyrs = [encode_frame_lf(f, levels=2, wavelet="haar") for f in frames]
+    base_cfg = SnervModelSizeConfig(fc_dim=12, emb_size=0, patch_radius=1)
+    mfu_cfg = SnervModelSizeConfig(
+        fc_dim=12,
+        emb_size=0,
+        patch_radius=1,
+        adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+        mfu_scales=(1, 2, 4),
+    )
+    base = fit_hf_decoder_least_squares(pyrs, levels=2, model_size=base_cfg)
+    mfu = fit_hf_decoder_least_squares(pyrs, levels=2, model_size=mfu_cfg)
+
+    assert SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF.startswith("receiver_safe_numpy")
+    assert MultiResolutionFusionUnit(scales=(1, 2)).features(
+        pyrs[0].lf,
+        feature_count=12,
+        patch_radius=1,
+    ).shape == (*pyrs[0].lf.shape, 12)
+    assert mfu.model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
+    assert mfu.byte_cost() == base.byte_cost()
+    assert not np.allclose(base.kernels[0]["LH"], mfu.kernels[0]["LH"])
+
+    p0 = pyrs[0]
+    q, sc, zr = quantize_lf(p0.lf, n_levels=128)
+    code = SnervFrameCode(
+        lf_quant=q,
+        lf_scale=sc,
+        lf_zero=zr,
+        lf_shape=p0.lf.shape,
+        levels=2,
+        wavelet=p0.wavelet,
+        orig_hw=frames[0].shape,
+    )
+    assert not np.allclose(decode_frame(code, base), decode_frame(code, mfu))
+
+
+def test_hfr_gain_is_compensated_during_fit_and_changes_decode():
+    """NO-FAKE: HFR is an executable residual path, not a marker constant."""
+
+    rng = np.random.default_rng(25)
+    frames = [_smooth_frame(rng) for _ in range(4)]
+    pyrs = [encode_frame_lf(f, levels=2, wavelet="haar") for f in frames]
+    no_hfr = fit_hf_decoder_least_squares(
+        pyrs,
+        levels=2,
+        model_size=SnervModelSizeConfig(
+            fc_dim=12,
+            adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+            hfr_gain=0.0,
+        ),
+    )
+    hfr = fit_hf_decoder_least_squares(
+        pyrs,
+        levels=2,
+        model_size=SnervModelSizeConfig(
+            fc_dim=12,
+            adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+            hfr_gain=0.25,
+        ),
+    )
+    correction = HighFrequencyRestorer(gain=0.25).correction(
+        pyrs[0].lf,
+        subband="LH",
+        target_hw=pyrs[0].details[0][0].shape,
+    )
+    assert np.std(correction) > 0
+    assert not np.allclose(no_hfr.kernels[0]["LH"], hfr.kernels[0]["LH"])
+
+
+def test_temporal_extension_exposes_lf_motion_without_hidden_sidecars():
+    """NO-FAKE: SNeRV_T utility derives pair/window signal from archived LF planes."""
+
+    rng = np.random.default_rng(26)
+    lfs = [
+        encode_frame_lf(_smooth_frame(rng) + offset, levels=2, wavelet="haar").lf
+        for offset in (0.0, 2.0, 5.0)
+    ]
+    features = SnervTemporalExtension(radius=1).sequence_delta_features(
+        lfs,
+        index=1,
+        target_hw=lfs[1].shape,
+    )
+    assert features.shape == (*lfs[1].shape, 2)
+    assert np.any(features[:, :, 0] != 0)
+    assert np.any(features[:, :, 1] != 0)
 
 
 def test_generate_hf_produces_correct_shapes():

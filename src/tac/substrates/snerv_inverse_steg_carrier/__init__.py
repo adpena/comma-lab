@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """SNeRV inverse-steganalysis carrier — super-small-rate-by-design.
 
-A Scalable-NeRV (arXiv 2501.01681) carrier that STORES only the low-frequency
+A spectra-preserving SNeRV (arXiv 2501.01681) carrier that STORES only the low-frequency
 (coarse) orthonormal-DWT approximation and GENERATES the high-frequency detail
 with a small decoder, then places the stored LF bits with the proven L-inf
 pose-Fisher-led inverse-steganalysis allocator (``allocation.py``) via the EXACT
@@ -31,10 +31,15 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     DEFAULT_SNERV_MODEL_SIZE,
+    SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF,
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
+    HighFrequencyRestorer,
+    MultiResolutionFusionUnit,
     SnervCarrierError,
     SnervFrameCode,
     SnervModelSizeConfig,
+    SnervTemporalExtension,
     decode_frame,
     dequantize_lf,
     encode_frame_lf,
@@ -59,13 +64,18 @@ __all__ = [
     "DEFAULT_SNERV_MODEL_SIZE",
     "DEFAULT_WAVELET",
     "DWT_MODE",
+    "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+    "SNERV_SPECTRA_PRESERVING_ADAPTER",
     "HfGenerationDecoder",
+    "HighFrequencyRestorer",
     "LfSaliency",
+    "MultiResolutionFusionUnit",
     "SnervAllocationError",
     "SnervCarrierError",
     "SnervDwtError",
     "SnervFrameCode",
     "SnervModelSizeConfig",
+    "SnervTemporalExtension",
     "WaveletPyramid",
     "allocate_lf_linf",
     "decode_frame",
