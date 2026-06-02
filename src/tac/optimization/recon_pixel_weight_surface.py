@@ -218,6 +218,25 @@ def _finalize_joint_weight_surface(
     nonfinite_records = [
         item for item in gradient_sanitization if int(item["nonfinite_count"]) > 0
     ]
+    total_nonfinite = sum(
+        int(item["nonfinite_count"]) for item in gradient_sanitization
+    )
+    gradient_health = {
+        "schema": "joint_recon_pixel_weight_gradient_health.v1",
+        "surface_generation_backend": surface_generation_backend,
+        "component_count": len(gradient_sanitization),
+        "components_with_nonfinite": len(nonfinite_records),
+        "total_nonfinite_values": int(total_nonfinite),
+        "sanitized_components": [
+            str(item["component"]) for item in nonfinite_records
+        ],
+        "status": (
+            "pass_finite"
+            if not nonfinite_records
+            else "fail_nonfinite_sanitized"
+        ),
+        "consumption_recommended": not nonfinite_records,
+    }
     blockers = [
         f"nonfinite_gradient_sanitized:{item['component']}"
         for item in nonfinite_records
@@ -259,6 +278,7 @@ def _finalize_joint_weight_surface(
         "weight_stats": _stats(weight),
         "seg_saliency_stats": _stats(seg),
         "pose_saliency_stats": _stats(pose),
+        "gradient_health": gradient_health,
         "gradient_sanitization": gradient_sanitization,
         "blockers": blockers,
         "training_consumption_recommended": not blockers,

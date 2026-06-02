@@ -2741,17 +2741,22 @@ def _load_recon_pixel_weight(
             weight = np.asarray(data[key], dtype=np.float32)
     else:
         weight = np.asarray(np.load(resolved), dtype=np.float32)
+    source_sha256 = _sha256_file(resolved)
     weight = _validate_recon_pixel_weight_array(
         weight,
         expected_hw=expected_hw,
         expected_pairs=expected_pairs,
+    )
+    producer_manifest = _recon_pixel_weight_producer_manifest(
+        resolved,
+        expected_weight_sha256=source_sha256,
     )
     metadata = {
         "schema": "compact_recon_pixel_weight.v1",
         "enabled": True,
         "source_kind": "file",
         "path": resolved.as_posix(),
-        "sha256": _sha256_file(resolved),
+        "sha256": source_sha256,
         "npz_key": key,
         "normalize": normalize,
         "scorer_terms": {
@@ -2759,11 +2764,98 @@ def _load_recon_pixel_weight(
             "p19_posenet": "caller_supplied",
         },
         "stats": _weight_stats(weight),
+        "producer_manifest": producer_manifest,
         "authority": "false_macos_mlx_research_signal",
     }
     if expected_pairs is not None:
         metadata["expected_pairs"] = int(expected_pairs)
     return weight, metadata
+
+
+def _recon_pixel_weight_producer_manifest(
+    weight_path: Path,
+    *,
+    expected_weight_sha256: str,
+) -> dict[str, Any]:
+    """Return fail-closed producer-manifest custody for a recon weight file."""
+
+    manifest_path = weight_path.with_name(
+        "joint_p18_p19_recon_pixel_weight_manifest.json"
+    )
+    if not manifest_path.is_file():
+        return {
+            "schema": "compact_recon_pixel_weight_producer_manifest.v1",
+            "status": "not_found_unverified_manual_or_legacy_weight",
+            "path": manifest_path.as_posix(),
+            "consumption_certified": False,
+        }
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise CompactRendererMlxSpineRunnerError(
+            f"recon pixel weight producer manifest is not valid JSON: {manifest_path}"
+        ) from exc
+    if not isinstance(manifest, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            f"recon pixel weight producer manifest must be an object: {manifest_path}"
+        )
+
+    manifest_weight_path = manifest.get("weight_path")
+    if manifest_weight_path is not None:
+        manifest_resolved = _resolve_existing(manifest_weight_path, base=weight_path.parent)
+        if manifest_resolved != weight_path:
+            raise CompactRendererMlxSpineRunnerError(
+                "recon pixel weight producer manifest points at a different "
+                f"weight file: {manifest_resolved} != {weight_path}"
+            )
+    manifest_weight_sha = manifest.get("weight_sha256")
+    if manifest_weight_sha is not None and str(manifest_weight_sha) != expected_weight_sha256:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest SHA does not match loaded "
+            f"weight file: {manifest_weight_sha} != {expected_weight_sha256}"
+        )
+
+    producer_metadata = manifest.get("metadata")
+    if not isinstance(producer_metadata, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest is missing metadata object"
+        )
+    gradient_health = producer_metadata.get("gradient_health")
+    if not isinstance(gradient_health, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest is missing gradient_health; "
+            "regenerate the surface with the finite-gradient producer"
+        )
+    blockers = list(producer_metadata.get("blockers") or [])
+    consumption_recommended = bool(
+        producer_metadata.get("training_consumption_recommended", False)
+    )
+    if gradient_health.get("status") != "pass_finite":
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest did not pass finite-gradient "
+            f"health: {gradient_health.get('status')}"
+        )
+    if not consumption_recommended or blockers:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest is not recommended for "
+            f"training consumption; blockers={blockers}"
+        )
+
+    return {
+        "schema": "compact_recon_pixel_weight_producer_manifest.v1",
+        "status": "verified_finite_gradient_manifest",
+        "path": manifest_path.as_posix(),
+        "sha256": _sha256_file(manifest_path),
+        "producer_schema": manifest.get("schema"),
+        "producer_metadata_schema": producer_metadata.get("schema"),
+        "weight_path": Path(str(manifest.get("weight_path", weight_path))).as_posix(),
+        "weight_sha256": expected_weight_sha256,
+        "gradient_health": gradient_health,
+        "blockers": blockers,
+        "training_consumption_recommended": consumption_recommended,
+        "consumption_certified": True,
+    }
 
 
 def _segnet_boundary_recon_pixel_weight(

@@ -163,6 +163,16 @@ def test_torch_joint_recon_pixel_weight_surface_is_finite_and_recommended() -> N
     assert metadata["surface_generation_backend"] == "torch_exact_cpu_scorer_vjp.v1"
     assert metadata["training_consumption_recommended"] is True
     assert metadata["blockers"] == []
+    assert metadata["gradient_health"] == {
+        "schema": "joint_recon_pixel_weight_gradient_health.v1",
+        "surface_generation_backend": "torch_exact_cpu_scorer_vjp.v1",
+        "component_count": 14,
+        "components_with_nonfinite": 0,
+        "total_nonfinite_values": 0,
+        "sanitized_components": [],
+        "status": "pass_finite",
+        "consumption_recommended": True,
+    }
     assert metadata["seg_saliency_stats"]["max"] > 0.0
     assert metadata["pose_saliency_stats"]["max"] > 0.0
 
@@ -180,6 +190,16 @@ def test_write_joint_recon_pixel_weight_artifact_preserves_blockers(
         return weight, {
             "schema": JOINT_RECON_PIXEL_WEIGHT_SCHEMA,
             "blockers": ["nonfinite_gradient_sanitized:pose_axis_0_grad_pairs_0_1"],
+            "gradient_health": {
+                "schema": "joint_recon_pixel_weight_gradient_health.v1",
+                "surface_generation_backend": "mlx_direct_scorer_vjp.v1",
+                "component_count": 1,
+                "components_with_nonfinite": 1,
+                "total_nonfinite_values": 40,
+                "sanitized_components": ["pose_axis_0_grad_pairs_0_1"],
+                "status": "fail_nonfinite_sanitized",
+                "consumption_recommended": False,
+            },
             "training_consumption_recommended": False,
             "score_claim": False,
             "ready_for_exact_eval_dispatch": False,
@@ -207,6 +227,9 @@ def test_write_joint_recon_pixel_weight_artifact_preserves_blockers(
     assert loaded["metadata"]["blockers"] == [
         "nonfinite_gradient_sanitized:pose_axis_0_grad_pairs_0_1"
     ]
+    assert loaded["metadata"]["gradient_health"]["status"] == (
+        "fail_nonfinite_sanitized"
+    )
     assert loaded["scorer_backend"] == "torch"
     assert loaded["score_claim"] is False
     assert loaded["ready_for_exact_eval_dispatch"] is False
