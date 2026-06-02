@@ -352,6 +352,36 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "local_backend_output_is_promotion_authority": False,
             "runnable_now": False,
         }
+    if work_order_type == "snerv_scorer_loop_qat_full600_followup":
+        payload = (
+            work_order.get("payload", {})
+            if isinstance(work_order.get("payload"), Mapping)
+            else {}
+        )
+        command = _snerv_scorer_loop_full600_command(payload)
+        return {
+            "ingest_kind": "snerv_scorer_loop_qat_full600_followup",
+            "planner_action": planner_action,
+            "producer_tool": "experiments/train_substrate_snerv_scorer_loop_local.py",
+            "existing_tool_ingress": "tools/build_nerv_control_inventory.py",
+            "missing_tool_or_proof": (
+                "full600_receiver_proof_section_value_and_paired_exact_axes"
+            ),
+            "source_report_path": payload.get("report_path"),
+            "source_result_sha256": payload.get("result_sha256"),
+            "source_n_pairs": payload.get("n_pairs"),
+            "source_scorer_loop_evaluations": payload.get(
+                "scorer_loop_evaluations"
+            ),
+            "source_accepted_improvement": payload.get("accepted_improvement") is True,
+            "source_receiver_contract_satisfied": (
+                payload.get("receiver_contract_satisfied") is True
+            ),
+            "local_full600_continuation_runnable_now": bool(command),
+            "local_full600_continuation_command_argv": command,
+            "local_full600_continuation_output_is_promotion_authority": False,
+            "runnable_now": False,
+        }
     if work_order_type == "receiver_visible_decoder_mode_assignment":
         payload = (
             work_order.get("payload", {})
@@ -525,6 +555,46 @@ def _full_video_response_command(
         "--response-family",
         f"hi_nerv_{_safe_token(row_id)}",
     ]
+
+
+def _snerv_scorer_loop_full600_command(payload: Mapping[str, Any]) -> list[str]:
+    levels = _positive_int(payload.get("levels")) or 1
+    qat_bits = _positive_int(payload.get("qat_bits")) or 8
+    search_mode = str(payload.get("search_mode") or "nes_pair_robust")
+    wavelet = str(payload.get("wavelet") or "haar")
+    return [
+        ".venv/bin/python",
+        "experiments/train_substrate_snerv_scorer_loop_local.py",
+        "--score-loop",
+        "--n-pairs",
+        "600",
+        "--levels",
+        str(levels),
+        "--wavelet",
+        wavelet,
+        "--qat-bits",
+        str(qat_bits),
+        "--search-mode",
+        search_mode,
+        "--max-trials",
+        "16",
+        "--byte-pressure-multiplier",
+        "2.0",
+        "--pair-guard-min-score-improved-fraction",
+        "0.75",
+        "--pair-guard-max-pose-worsened-fraction",
+        "0.0",
+        "--storage-workload-subdir",
+        "snerv_scorer_loop_qat_full600_followup",
+    ]
+
+
+def _positive_int(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
 
 
 def _safe_token(value: str) -> str:

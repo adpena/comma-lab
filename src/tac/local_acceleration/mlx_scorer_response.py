@@ -13,7 +13,7 @@ import hashlib
 import json
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -31,6 +31,10 @@ from tac.local_acceleration.mlx_scorer_adapters import (
 )
 
 SCHEMA_VERSION = "mlx_scorer_response.v1"
+CACHE_QUALITY_GATE_SCHEMA = "mlx_cache_quality_gate.v1"
+FALSE_AUTHORITY_BLOCKER = "mlx_scorer_response_is_false_authority"
+CACHE_QUALITY_GATE_FAILED_BLOCKER = "mlx_scorer_response_cache_quality_gate_failed"
+CACHE_QUALITY_GATE_DEGENERATE_BLOCKER = "mlx_scorer_response_candidate_cache_degenerate"
 GPU_RESEARCH_SIGNAL_BLOCKER = "mlx_gpu_scorer_response_requires_explicit_research_signal_allowance"
 GPU_BATCH_SHAPE_BLOCKER = "mlx_gpu_scorer_response_requires_singleton_batches_until_invariance_passes"
 BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER = (
@@ -151,6 +155,8 @@ def build_mlx_scorer_response_payload(
     allow_local_cpu_advisory_cache_identity: bool = False,
     response_family: str | None = None,
     cache_integrity_mode: str = STRICT_CACHE_INTEGRITY_MODE,
+    cache_quality_gate: Mapping[str, Any] | None = None,
+    cache_quality_gate_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
 
@@ -184,7 +190,7 @@ def build_mlx_scorer_response_payload(
     dist = _load_upstream_distortion_net(scorer_upstream_dir)
     with temporary_mlx_device(device_type):
         adapter = torch_distortion_net_to_mlx(dist)
-        return _build_mlx_scorer_response_payload_loaded(
+        payload = _build_mlx_scorer_response_payload_loaded(
             reference=reference,
             candidate=candidate,
             pairing_plan=pairing_plan,
@@ -205,6 +211,13 @@ def build_mlx_scorer_response_payload(
             allow_local_cpu_advisory_cache_identity=allow_local_cpu_advisory_cache_identity,
             scorer_upstream_dir=scorer_upstream_dir,
         )
+    if cache_quality_gate is not None:
+        payload = attach_cache_quality_gate_to_mlx_scorer_response(
+            payload,
+            cache_quality_gate,
+            source_path=cache_quality_gate_path,
+        )
+    return payload
 
 
 def build_mlx_scorer_response_payload_batch(
@@ -420,6 +433,7 @@ def _build_mlx_scorer_response_payload_loaded(
     candidate_cache_identity = _cache_identity(candidate)
     candidate_cache_identity["candidate_cache_identity_mode"] = candidate_cache_identity_mode
     return {
+        "schema": SCHEMA_VERSION,
         "schema_version": SCHEMA_VERSION,
         "evidence_grade": EVIDENCE_GRADE_MLX,
         "evidence_tag": EVIDENCE_TAG_MLX,
@@ -621,7 +635,71 @@ def write_mlx_scorer_response_payload(payload: dict[str, Any], output: str | Pat
 
     path = Path(output)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(_jsonable(payload), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(_jsonable(payload), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def attach_cache_quality_gate_to_mlx_scorer_response(
+    payload: Mapping[str, Any],
+    cache_quality_gate: Mapping[str, Any],
+    *,
+    source_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Attach cache-quality custody to a non-authoritative MLX response payload."""
+
+    schema = cache_quality_gate.get("schema")
+    if schema != CACHE_QUALITY_GATE_SCHEMA:
+        raise ValueError(
+            "cache_quality_gate must have schema "
+            f"{CACHE_QUALITY_GATE_SCHEMA!r}, got {schema!r}"
+        )
+
+    out = dict(payload)
+    gate_blockers = _string_list(cache_quality_gate.get("blockers"))
+    gate_recommended_actions = _string_list(cache_quality_gate.get("recommended_next_actions"))
+    candidate_cache_nondegenerate = cache_quality_gate.get("candidate_cache_nondegenerate")
+    fit_gate_passed = cache_quality_gate.get("fit_gate_passed")
+    gate_summary: dict[str, Any] = {
+        "schema": CACHE_QUALITY_GATE_SCHEMA,
+        "verdict": cache_quality_gate.get("verdict"),
+        "candidate_cache_nondegenerate": candidate_cache_nondegenerate,
+        "fit_gate_passed": fit_gate_passed,
+        "blockers": gate_blockers,
+        "recommended_next_actions": gate_recommended_actions,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if source_path is not None:
+        gate_summary["source_path"] = str(source_path)
+    if "stats" in cache_quality_gate:
+        gate_summary["stats"] = cache_quality_gate["stats"]
+    if "distance_to_reference" in cache_quality_gate:
+        gate_summary["distance_to_reference"] = cache_quality_gate["distance_to_reference"]
+
+    blockers = _string_list(out.get("blockers"))
+    blockers.append(FALSE_AUTHORITY_BLOCKER)
+    blockers.extend(gate_blockers)
+    if fit_gate_passed is not True:
+        blockers.append(CACHE_QUALITY_GATE_FAILED_BLOCKER)
+    if candidate_cache_nondegenerate is not True:
+        blockers.append(CACHE_QUALITY_GATE_DEGENERATE_BLOCKER)
+
+    out["cache_quality_gate"] = gate_summary
+    out["blockers"] = _ordered_unique_strings(blockers)
+    out["score_claim"] = False
+    out["score_claim_valid"] = False
+    out["promotion_eligible"] = False
+    out["promotable"] = False
+    out["rank_or_kill_eligible"] = False
+    out["ready_for_exact_eval_dispatch"] = False
+    out["requires_exact_eval_before_promotion"] = True
+    return out
 
 
 def _resolve_upstream_dir(
@@ -1059,6 +1137,26 @@ def _normalize_response_family(value: str | None) -> str | None:
     return text
 
 
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, Sequence):
+        return [str(item) for item in value if isinstance(item, str) and item]
+    return []
+
+
+def _ordered_unique_strings(values: Sequence[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            out.append(value)
+    return out
+
+
 def _jsonable(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(k): _jsonable(v) for k, v in value.items()}
@@ -1073,7 +1171,11 @@ def _jsonable(value: Any) -> Any:
 
 __all__ = [
     "CACHE_INTEGRITY_BLOCKER",
+    "CACHE_QUALITY_GATE_DEGENERATE_BLOCKER",
+    "CACHE_QUALITY_GATE_FAILED_BLOCKER",
+    "CACHE_QUALITY_GATE_SCHEMA",
     "CANDIDATE_CACHE_TRANSFER_BLOCKER",
+    "FALSE_AUTHORITY_BLOCKER",
     "GPU_BATCH_SHAPE_BLOCKER",
     "GPU_RESEARCH_SIGNAL_BLOCKER",
     "MANIFEST_CACHE_INTEGRITY_MODE",
@@ -1081,6 +1183,7 @@ __all__ = [
     "STRICT_CACHE_INTEGRITY_MODE",
     "MLXScorerResponseBatchJob",
     "ScorerInputCache",
+    "attach_cache_quality_gate_to_mlx_scorer_response",
     "build_mlx_scorer_response_payload",
     "build_mlx_scorer_response_payload_batch",
     "load_scorer_input_cache",

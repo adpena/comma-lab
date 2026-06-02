@@ -39,6 +39,7 @@ def build_nerv_control_inventory(
     hinerv_decoder_weight_saliency_report: Mapping[str, Any] | None = None,
     snerv_waterfill_mode_assignment_report: Mapping[str, Any] | None = None,
     snerv_decoder_mode_probe_report: Mapping[str, Any] | None = None,
+    snerv_scorer_loop_qat_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a machine-readable map of NeRV controls and required bindings."""
 
@@ -103,6 +104,10 @@ def build_nerv_control_inventory(
         ),
         "decoder_mode_probe_reports": _decoder_mode_probe_reports(
             snerv_decoder_mode_probe_report=snerv_decoder_mode_probe_report,
+            focus_families=focus,
+        ),
+        "snerv_scorer_loop_qat_reports": _snerv_scorer_loop_qat_reports(
+            snerv_scorer_loop_qat_report=snerv_scorer_loop_qat_report,
             focus_families=focus,
         ),
         "control_rows": controls,
@@ -231,6 +236,15 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
                 f"- `{family}`: best `{probe_row.get('best_plan_label')}` "
                 f"score `{probe_row.get('best_plan_score_linf_advisory')}` "
                 f"({probe_row.get('candidate_count', 0)} candidates)"
+            )
+    scorer_loop_reports = report.get("snerv_scorer_loop_qat_reports")
+    if isinstance(scorer_loop_reports, Mapping):
+        lines.extend(["", "## SNeRV Scorer-Loop QAT", ""])
+        for family, scorer_row in scorer_loop_reports.items():
+            lines.append(
+                f"- `{family}`: `{scorer_row.get('status')}` "
+                f"({scorer_row.get('n_pairs', 0)} pairs, "
+                f"accepted={scorer_row.get('accepted_improvement')})"
             )
     policy = report.get("source_review_policy")
     if isinstance(policy, Mapping):
@@ -675,6 +689,51 @@ def _decoder_mode_probe_reports(
                 for row in report.get("candidates", ())
                 if isinstance(row, Mapping)
             ],
+            "blockers": list(report.get("blockers") or ()),
+            **FALSE_AUTHORITY,
+        }
+    return rows
+
+
+def _snerv_scorer_loop_qat_reports(
+    *,
+    snerv_scorer_loop_qat_report: Mapping[str, Any] | None,
+    focus_families: Iterable[str],
+) -> dict[str, Any]:
+    focus = {str(family) for family in focus_families}
+    rows: dict[str, Any] = {}
+    if snerv_scorer_loop_qat_report is not None and (
+        not focus or "snerv" in focus
+    ):
+        report = snerv_scorer_loop_qat_report
+        rows["snerv"] = {
+            "schema": report.get("schema"),
+            "status": "snerv_scorer_loop_qat_report_available_false_authority",
+            "axis_tag": report.get("axis_tag"),
+            "report_path": report.get("report_path")
+            or report.get("research_json_path")
+            or report.get("result_path"),
+            "research_json_path": report.get("research_json_path"),
+            "research_markdown_path": report.get("research_markdown_path"),
+            "result_path": report.get("result_path"),
+            "result_sha256": report.get("result_sha256"),
+            "n_pairs": report.get("n_pairs"),
+            "levels": report.get("levels"),
+            "wavelet": report.get("wavelet"),
+            "qat_bits": report.get("qat_bits"),
+            "search_mode": report.get("search_mode"),
+            "scorer_loop_evaluations": report.get("scorer_loop_evaluations"),
+            "baseline_archive_bytes": report.get("baseline_archive_bytes"),
+            "best_archive_bytes": report.get("best_archive_bytes"),
+            "baseline_score_linf": report.get("baseline_score_linf"),
+            "best_score_linf": report.get("best_score_linf"),
+            "accepted_improvement": bool(report.get("accepted_improvement")),
+            "ready_for_pose_guard_gate": bool(
+                report.get("ready_for_pose_guard_gate")
+            ),
+            "receiver_contract_satisfied": bool(
+                report.get("receiver_contract_satisfied")
+            ),
             "blockers": list(report.get("blockers") or ()),
             **FALSE_AUTHORITY,
         }
@@ -1543,6 +1602,7 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
         ],
         "nerv_carriers": [
             "experiments/train_substrate_hi_nerv_mlx_local.py",
+            "experiments/train_substrate_snerv_scorer_loop_local.py",
             "tools/run_compact_renderer_mlx_spine_runner.py",
             "src/tac/substrates/hi_nerv",
             "src/tac/analysis/snerv_step_map_coder.py",

@@ -16,12 +16,16 @@ from tac.local_acceleration.mlx_scorer_response import (
     AUDIT_STAMP_DEREFERENCE_BLOCKER,
     BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER,
     CACHE_INTEGRITY_BLOCKER,
+    CACHE_QUALITY_GATE_DEGENERATE_BLOCKER,
+    CACHE_QUALITY_GATE_FAILED_BLOCKER,
     CANDIDATE_CACHE_TRANSFER_BLOCKER,
+    FALSE_AUTHORITY_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
     LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER,
     MANIFEST_CACHE_INTEGRITY_MODE,
     STRICT_CACHE_INTEGRITY_MODE,
     ScorerInputCache,
+    attach_cache_quality_gate_to_mlx_scorer_response,
     build_mlx_scorer_response_payload,
     load_scorer_input_cache,
 )
@@ -74,6 +78,8 @@ def test_mlx_scorer_response_cache_cli_is_non_authoritative(tmp_path: Path) -> N
     expected_rate_score = 25.0 * archive_size_bytes / ORIGINAL_VIDEO_BYTES
     assert stdout["score_claim"] is False
     assert stdout["promotable"] is False
+    assert payload["schema"] == "mlx_scorer_response.v1"
+    assert payload["schema_version"] == "mlx_scorer_response.v1"
     assert payload["score_claim"] is False
     assert payload["promotable"] is False
     assert payload["promotion_eligible"] is False
@@ -86,6 +92,81 @@ def test_mlx_scorer_response_cache_cli_is_non_authoritative(tmp_path: Path) -> N
     assert payload["cache_integrity"]["reference"]["passed"] is True
     assert payload["cache_integrity"]["candidate"]["passed"] is True
     assert payload["cache_identity"]["candidate"]["cache_integrity"]["passed"] is True
+
+
+def test_mlx_scorer_response_cache_cli_attaches_quality_gate_blockers(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(tmp_path / "reference", seg=seg, pose=pose, pair_indices=pair_indices)
+    candidate_dir = _write_test_cache(tmp_path / "candidate", seg=seg, pose=pose, pair_indices=pair_indices)
+    output = tmp_path / "mlx_response.json"
+    gate_path = tmp_path / "quality_gate.json"
+    gate_path.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_cache_quality_gate.v1",
+                "verdict": "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE",
+                "candidate_cache_nondegenerate": False,
+                "fit_gate_passed": False,
+                "blockers": [
+                    "mlx_cache_quality_gate_is_false_authority",
+                    "candidate_segnet_last_rgb_degenerate_constant_or_flat",
+                ],
+                "recommended_next_actions": ["block_exact_eval_and_score_claims"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1000",
+            "--output",
+            str(output),
+            "--repo-root",
+                str(REPO),
+                *_upstream_cli_args(),
+            "--cache-quality-json",
+            str(gate_path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["cache_quality_gate"]["verdict"] == "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+    assert payload["cache_quality_gate"]["source_path"] == str(gate_path)
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert FALSE_AUTHORITY_BLOCKER in payload["blockers"]
+    assert CACHE_QUALITY_GATE_FAILED_BLOCKER in payload["blockers"]
+    assert CACHE_QUALITY_GATE_DEGENERATE_BLOCKER in payload["blockers"]
+    assert "candidate_segnet_last_rgb_degenerate_constant_or_flat" in payload["blockers"]
+
+
+def test_attach_cache_quality_gate_rejects_wrong_schema() -> None:
+    with pytest.raises(ValueError, match=r"mlx_cache_quality_gate\.v1"):
+        attach_cache_quality_gate_to_mlx_scorer_response(
+            {"schema": "mlx_scorer_response.v1"},
+            {"schema": "other"},
+        )
 
 
 def test_load_scorer_input_cache_rejects_hash_only_manifest(tmp_path: Path) -> None:

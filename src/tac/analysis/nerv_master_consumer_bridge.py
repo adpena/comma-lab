@@ -550,6 +550,53 @@ def _control_inventory_evidence_units(
                 **FALSE_AUTHORITY,
             }
         )
+    for family, report in _mapping_items(
+        control_inventory.get("snerv_scorer_loop_qat_reports")
+    ):
+        blockers = _string_list(report.get("blockers"))
+        if int(report.get("n_pairs") or 0) < 600:
+            blockers.append("snerv_scorer_loop_qat_full600_missing")
+        if report.get("receiver_contract_satisfied") is not True:
+            blockers.append("snerv_scorer_loop_qat_receiver_contract_missing")
+        blockers.append("paired_contest_cpu_cuda_auth_eval_missing")
+        units.append(
+            {
+                "unit_id": f"{family}_scorer_loop_qat_result",
+                "unit_type": "snerv_scorer_loop_qat_result",
+                "family": str(family),
+                "report_path": report.get("report_path"),
+                "axis_tag": report.get("axis_tag"),
+                "n_pairs": report.get("n_pairs"),
+                "levels": report.get("levels"),
+                "wavelet": report.get("wavelet"),
+                "qat_bits": report.get("qat_bits"),
+                "search_mode": report.get("search_mode"),
+                "scorer_loop_evaluations": report.get("scorer_loop_evaluations"),
+                "baseline_archive_bytes": report.get("baseline_archive_bytes"),
+                "best_archive_bytes": report.get("best_archive_bytes"),
+                "baseline_score_linf": report.get("baseline_score_linf"),
+                "best_score_linf": report.get("best_score_linf"),
+                "accepted_improvement": bool(report.get("accepted_improvement")),
+                "ready_for_pose_guard_gate": bool(
+                    report.get("ready_for_pose_guard_gate")
+                ),
+                "receiver_contract_satisfied": bool(
+                    report.get("receiver_contract_satisfied")
+                ),
+                "result_sha256": report.get("result_sha256"),
+                "target_consumers": [
+                    "final_rate_attack",
+                    "bit_allocator",
+                    "probe_disambiguator",
+                    "cathedral_autopilot",
+                    "continual_learning_posterior",
+                ],
+                "planner_action": "scale_snerv_scorer_loop_qat_to_full600_receiver_proof",
+                "blockers": _unique(blockers),
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
     return units
 
 

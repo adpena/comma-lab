@@ -244,6 +244,7 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     assert "replay_snerv_snerv_trained_ladder_row_archive_decoder_weight_waterfill" in orders
     assert "compile_snerv_snerv_local_tiny_decoder_modes_to_receiver" in orders
     assert "replay_snerv_explicit_fp163_decoder_mode_plan_pair_robust" in orders
+    assert "scale_snerv_scorer_loop_qat_to_full600" in orders
     zero_order = orders["route_bitmask_and_zero_packing_to_rate_allocator"]
     assert {"zero", "rle_only", "int2", "int4"} <= set(
         zero_order["receiver_precision_modes"]
@@ -307,6 +308,11 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
         probe_order["payload"]["receiver_archive_packet_is_contest_archive_zip"]
         is False
     )
+    qat_order = orders["scale_snerv_scorer_loop_qat_to_full600"]
+    assert qat_order["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    assert qat_order["payload"]["n_pairs"] == 1
+    assert qat_order["payload"]["receiver_contract_satisfied"] is True
+    assert "snerv_scorer_loop_qat_full600_missing" in qat_order["blockers"]
     for order in orders.values():
         assert order["score_claim"] is False
         assert order["score_claim_valid"] is False
@@ -466,6 +472,35 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     )
     assert (
         drift_row["planner_ingest"]["local_backend_output_is_promotion_authority"]
+        is False
+    )
+    qat_row = rows["scale_snerv_scorer_loop_qat_to_full600"]
+    assert (
+        qat_row["planner_ingest"]["ingest_kind"]
+        == "snerv_scorer_loop_qat_full600_followup"
+    )
+    assert (
+        qat_row["planner_ingest"]["producer_tool"]
+        == "experiments/train_substrate_snerv_scorer_loop_local.py"
+    )
+    assert (
+        qat_row["planner_ingest"]["local_full600_continuation_runnable_now"]
+        is True
+    )
+    qat_command = qat_row["planner_ingest"][
+        "local_full600_continuation_command_argv"
+    ]
+    assert qat_command[:3] == [
+        ".venv/bin/python",
+        "experiments/train_substrate_snerv_scorer_loop_local.py",
+        "--score-loop",
+    ]
+    assert qat_command[qat_command.index("--n-pairs") + 1] == "600"
+    assert qat_command[qat_command.index("--wavelet") + 1] == "haar"
+    assert (
+        qat_row["planner_ingest"][
+            "local_full600_continuation_output_is_promotion_authority"
+        ]
         is False
     )
     gate_row = rows["close_snerv_receiver_rate_promotion_gates"]
@@ -809,6 +844,35 @@ def _synthetic_rate_bridge() -> dict:
                     }
                 ],
                 "blockers": ["macos_cpu_advisory_only"],
+            }
+        },
+        "snerv_scorer_loop_qat_reports": {
+            "snerv": {
+                "schema": "snerv_scorer_loop_qat_local_trainer.v1",
+                "status": "snerv_scorer_loop_qat_report_available_false_authority",
+                "axis_tag": "[macOS-CPU advisory]",
+                "report_path": (
+                    ".omx/research/"
+                    "snerv_scorer_loop_qat_local_trainer_smoke.json"
+                ),
+                "n_pairs": 1,
+                "levels": 1,
+                "wavelet": "haar",
+                "qat_bits": 8,
+                "search_mode": "random_signed",
+                "scorer_loop_evaluations": 1,
+                "baseline_archive_bytes": 929_937,
+                "best_archive_bytes": 929_937,
+                "baseline_score_linf": 0.8545,
+                "best_score_linf": 0.8545,
+                "accepted_improvement": False,
+                "ready_for_pose_guard_gate": False,
+                "receiver_contract_satisfied": True,
+                "result_sha256": "e" * 64,
+                "blockers": [
+                    "local_smoke_only_not_full_600_pairs",
+                    "paired_contest_cpu_cuda_pass_missing",
+                ],
             }
         },
         "score_claim": False,

@@ -1,0 +1,102 @@
+{
+  "blockers": [
+    "mlx_cache_quality_gate_is_false_authority",
+    "candidate_segnet_last_rgb_degenerate_constant_or_flat",
+    "candidate_segnet_last_rgb_dynamic_range_too_low",
+    "candidate_segnet_last_rgb_far_from_reference_fit_gate"
+  ],
+  "candidate_cache_dir": "/Volumes/VertigoDataTier/pact/hinerv_full_video_mlx_replay/hi_nerv_local_tiny/candidate_cache",
+  "candidate_cache_nondegenerate": false,
+  "dispatch_attempted": false,
+  "distance_to_reference": {
+    "posenet_yuv6_pair_mae": 69.79214477539062,
+    "posenet_yuv6_pair_rmse": 85.37295532226562,
+    "segnet_last_rgb_mae": 102.92231750488281,
+    "segnet_last_rgb_rmse": 104.65399932861328
+  },
+  "fit_gate_passed": false,
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_actions": [
+    "block_exact_eval_and_score_claims",
+    "inspect_renderer_initialization_training_step_and_archive_export",
+    "require_nonconstant_cache_gate_before_section_value_or_spend"
+  ],
+  "reference_cache_dir": "/Users/adpena/Projects/pact/experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_full_video_mlx_cache_quality_hi_nerv_local_tiny_false_authority.json",
+  "sample_pairs": 32,
+  "schema": "mlx_cache_quality_gate.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "stats": {
+    "candidate_posenet_yuv6_pair": {
+      "dtype": "float32",
+      "dynamic_range": 1.5,
+      "max": 128.5,
+      "mean": 127.66786193847656,
+      "min": 127.0,
+      "name": "candidate_posenet_yuv6_pair",
+      "shape": [
+        32,
+        12,
+        192,
+        256
+      ],
+      "std": 0.34693020582199097
+    },
+    "candidate_segnet_last_rgb": {
+      "dtype": "float32",
+      "dynamic_range": 1.0,
+      "max": 128.0,
+      "mean": 127.50491333007812,
+      "min": 127.0,
+      "name": "candidate_segnet_last_rgb",
+      "shape": [
+        32,
+        3,
+        384,
+        512
+      ],
+      "std": 0.44662660360336304
+    },
+    "reference_posenet_yuv6_pair": {
+      "dtype": "float32",
+      "dynamic_range": 255.0,
+      "max": 255.0,
+      "mean": 59.52345275878906,
+      "min": 0.0,
+      "name": "reference_posenet_yuv6_pair",
+      "shape": [
+        32,
+        12,
+        192,
+        256
+      ],
+      "std": 51.64963150024414
+    },
+    "reference_segnet_last_rgb": {
+      "dtype": "float32",
+      "dynamic_range": 255.0,
+      "max": 255.0,
+      "mean": 24.685768127441406,
+      "min": 0.0,
+      "name": "reference_segnet_last_rgb",
+      "shape": [
+        32,
+        3,
+        384,
+        512
+      ],
+      "std": 19.506656646728516
+    }
+  },
+  "thresholds": {
+    "max_segnet_mae_vs_reference_for_fit_gate": 64.0,
+    "min_segnet_dynamic_range": 16.0,
+    "min_segnet_std": 1.0
+  },
+  "verdict": "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+}

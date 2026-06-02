@@ -104,6 +104,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Optional false-authority SNeRV decoder-mode advisory probe JSON.",
     )
+    parser.add_argument(
+        "--snerv-scorer-loop-qat-json",
+        default=None,
+        type=Path,
+        help="Optional false-authority SNeRV scorer-loop QAT local trainer JSON.",
+    )
     args = parser.parse_args(argv)
 
     focus = tuple(args.focus_family or ("hi_nerv", "snerv"))
@@ -147,6 +153,11 @@ def main(argv: list[str] | None = None) -> int:
         pattern="snerv_decoder_mode_assignment_probe*.json",
         schema="snerv_decoder_mode_assignment_probe.v1",
     )
+    snerv_scorer_loop_qat_report = _load_optional_report(
+        args.snerv_scorer_loop_qat_json,
+        pattern="snerv_scorer_loop_qat_local_trainer*.json",
+        schema="snerv_scorer_loop_qat_local_trainer.v1",
+    )
     report = build_nerv_control_inventory(
         focus_families=focus,
         repo_root=args.repo_root,
@@ -168,6 +179,7 @@ def main(argv: list[str] | None = None) -> int:
             snerv_waterfill_mode_assignment_report
         ),
         snerv_decoder_mode_probe_report=snerv_decoder_mode_probe_report,
+        snerv_scorer_loop_qat_report=snerv_scorer_loop_qat_report,
     )
     output = Path(args.output_json).expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)

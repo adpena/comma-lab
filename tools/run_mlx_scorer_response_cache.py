@@ -118,6 +118,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "datasets, e.g. mlx_fec6_frontier or mlx_decoder_q."
         ),
     )
+    parser.add_argument(
+        "--cache-quality-json",
+        type=Path,
+        help=(
+            "Optional mlx_cache_quality_gate.v1 JSON to attach to the response. "
+            "Failing gates keep the response non-authoritative and add blockers "
+            "for downstream planner/allocator consumers."
+        ),
+    )
     return parser
 
 
@@ -142,6 +151,12 @@ def main(argv: list[str] | None = None) -> int:
             allow_local_cpu_advisory_cache_identity=args.allow_local_cpu_advisory_cache_identity,
             response_family=args.response_family,
             cache_integrity_mode=args.cache_integrity_mode,
+            cache_quality_gate=(
+                None
+                if args.cache_quality_json is None
+                else _load_json_object(args.cache_quality_json)
+            ),
+            cache_quality_gate_path=args.cache_quality_json,
         )
     except (OSError, ValueError, NotImplementedError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
@@ -162,6 +177,13 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0
+
+
+def _load_json_object(path: Path) -> dict[str, object]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"expected JSON object: {path}")
+    return payload
 
 
 if __name__ == "__main__":  # pragma: no cover

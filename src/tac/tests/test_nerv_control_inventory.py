@@ -153,6 +153,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "experiments/train_substrate_hi_nerv_mlx_local.py" in surfaces[
         "nerv_carriers"
     ]
+    assert "experiments/train_substrate_snerv_scorer_loop_local.py" in surfaces[
+        "nerv_carriers"
+    ]
     assert report["runner_spend_rule"]["score_claim"] is False
     assert report["runner_policy"]["bounded_runner_must_select_from_inventory_rows"]
     ladder = report["modelsize_ladder"]
@@ -595,6 +598,46 @@ def test_nerv_control_inventory_accepts_snerv_decoder_mode_probe_report() -> Non
     assert measured["best_plan_label"] == "explicit_fp163"
     assert measured["candidate_count"] == 2
     assert measured["candidate_rows"][1]["modes"] == ["fp16", "fp16", "fp16"]
+
+
+def test_nerv_control_inventory_accepts_snerv_scorer_loop_qat_report() -> None:
+    qat_report = {
+        "schema": "snerv_scorer_loop_qat_local_trainer.v1",
+        "axis_tag": "[macOS-CPU advisory]",
+        "research_json_path": ".omx/research/snerv_scorer_loop_qat_fake.json",
+        "result_path": "/Volumes/VertigoDataTier/pact/snerv/result.json",
+        "result_sha256": "a" * 64,
+        "n_pairs": 1,
+        "levels": 1,
+        "wavelet": "haar",
+        "qat_bits": 8,
+        "search_mode": "random_signed",
+        "scorer_loop_evaluations": 3,
+        "baseline_archive_bytes": 1000,
+        "best_archive_bytes": 1000,
+        "baseline_score_linf": 0.9,
+        "best_score_linf": 0.9,
+        "accepted_improvement": False,
+        "ready_for_pose_guard_gate": False,
+        "receiver_contract_satisfied": True,
+        "blockers": ["local_smoke_only_not_full_600_pairs"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("snerv",),
+        snerv_scorer_loop_qat_report=qat_report,
+    )
+
+    measured = report["snerv_scorer_loop_qat_reports"]["snerv"]
+    assert measured["schema"] == "snerv_scorer_loop_qat_local_trainer.v1"
+    assert measured["score_claim"] is False
+    assert measured["n_pairs"] == 1
+    assert measured["accepted_improvement"] is False
+    assert measured["result_sha256"] == "a" * 64
+    markdown = render_nerv_control_inventory_markdown(report)
+    assert "## SNeRV Scorer-Loop QAT" in markdown
 
 
 def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
@@ -1049,3 +1092,54 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_decoder_mode_probe_repor
     )
     assert payload["decoder_mode_probe_reports"]["snerv"]["candidate_count"] == 1
     assert payload["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_snerv_scorer_loop_qat_report(
+    tmp_path: Path,
+) -> None:
+    qat_path = tmp_path / "snerv_qat.json"
+    output_json = tmp_path / "inventory.json"
+    qat_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_scorer_loop_qat_local_trainer.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "research_json_path": ".omx/research/snerv_qat_fake.json",
+                "result_sha256": "a" * 64,
+                "n_pairs": 1,
+                "levels": 1,
+                "wavelet": "haar",
+                "qat_bits": 8,
+                "search_mode": "random_signed",
+                "scorer_loop_evaluations": 3,
+                "baseline_score_linf": 0.9,
+                "best_score_linf": 0.9,
+                "accepted_improvement": False,
+                "receiver_contract_satisfied": True,
+                "blockers": ["local_smoke_only_not_full_600_pairs"],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "snerv",
+            "--repo-root",
+            str(REPO),
+            "--snerv-scorer-loop-qat-json",
+            str(qat_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    measured = payload["snerv_scorer_loop_qat_reports"]["snerv"]
+    assert measured["n_pairs"] == 1
+    assert measured["result_sha256"] == "a" * 64
+    assert measured["score_claim"] is False

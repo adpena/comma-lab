@@ -629,6 +629,71 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                     ],
                 )
             )
+            continue
+        if unit_type == "snerv_scorer_loop_qat_result":
+            orders.append(
+                _work_order(
+                    work_order_id=f"scale_{family}_scorer_loop_qat_to_full600",
+                    work_order_type="snerv_scorer_loop_qat_full600_followup",
+                    target_consumers=[
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "probe_disambiguator",
+                        "cathedral_autopilot",
+                    ],
+                    planner_action=(
+                        "scale_snerv_scorer_loop_qat_to_full600_receiver_proof"
+                    ),
+                    source_unit_id=str(unit.get("unit_id") or ""),
+                    priority=8,
+                    receiver_precision_modes=[
+                        "fp16_protected",
+                        "int8_protected",
+                        "int4",
+                        "int2",
+                        "zero",
+                        "rle_only",
+                    ],
+                    rationale=(
+                        "promote the local SNeRV scorer-loop/QAT wrapper from "
+                        "pair smoke evidence to full600 receiver-proven "
+                        "section-value evidence before exact spend"
+                    ),
+                    payload={
+                        "family": family,
+                        "report_path": unit.get("report_path"),
+                        "axis_tag": unit.get("axis_tag"),
+                        "n_pairs": unit.get("n_pairs"),
+                        "levels": unit.get("levels"),
+                        "wavelet": unit.get("wavelet"),
+                        "qat_bits": unit.get("qat_bits"),
+                        "search_mode": unit.get("search_mode"),
+                        "scorer_loop_evaluations": unit.get(
+                            "scorer_loop_evaluations"
+                        ),
+                        "baseline_archive_bytes": unit.get(
+                            "baseline_archive_bytes"
+                        ),
+                        "best_archive_bytes": unit.get("best_archive_bytes"),
+                        "baseline_score_linf": unit.get("baseline_score_linf"),
+                        "best_score_linf": unit.get("best_score_linf"),
+                        "accepted_improvement": unit.get("accepted_improvement"),
+                        "ready_for_pose_guard_gate": unit.get(
+                            "ready_for_pose_guard_gate"
+                        ),
+                        "receiver_contract_satisfied": unit.get(
+                            "receiver_contract_satisfied"
+                        ),
+                        "result_sha256": unit.get("result_sha256"),
+                    },
+                    blockers=[
+                        *blockers,
+                        "full600_receiver_proof_required",
+                        "section_value_profile_missing",
+                        "paired_contest_cpu_cuda_auth_eval_missing",
+                    ],
+                )
+            )
     return orders
 
 
