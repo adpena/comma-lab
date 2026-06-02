@@ -6011,7 +6011,7 @@ def _resolve_source_video_path(
 
 
 def _optional_existing(path: Any, *, base: Path) -> Path | None:
-    if not isinstance(path, str) or not path:
+    if not isinstance(path, (str, os.PathLike)) or not path:
         return None
     resolved = _resolve(path, base=base)
     return resolved if resolved.is_file() else None
