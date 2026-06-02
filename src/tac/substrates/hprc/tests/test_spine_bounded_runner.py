@@ -741,6 +741,22 @@ def test_pact_vq_core_negative_sections_open_projection_gap_repair(
     assert first_launch["runner_output_dir"] in first_launch["argv"]
     assert first_launch["runner_output_dir"] not in first_launch["launch_metadata_dir"]
     assert first_launch["output_dir_must_be_empty_before_runner_start"] is True
+    sweep = first_launch["post_export_codec_sweep"]
+    assert sweep["schema"] == "hprc_spine_compact_decoder_codec_sweep_work_order.v1"
+    assert sweep["status"] == "queued_after_projection_gap_runner_success"
+    assert sweep["tool"] == "tools/sweep_compact_decoder_codecs.py"
+    assert sweep["source_archive_zip"].endswith(
+        "/capacity_l8_e16_k32_ch32/runner_output/pact_nerv_vq_mlx_training/archive.zip"
+    )
+    assert sweep["output_dir"].endswith(
+        "/capacity_l8_e16_k32_ch32/decoder_codec_sweep"
+    )
+    assert "portfolio_auto" in sweep["decoder_codecs"]
+    assert "int2_scale_bundled" in sweep["decoder_codecs"]
+    assert "tools/sweep_compact_decoder_codecs.py" in sweep["argv"]
+    assert sweep["run_receiver_proof"] is True
+    assert sweep["score_claim"] is False
+    assert "contest_cpu_cuda_exact_eval_not_executed" in sweep["blockers"]
     assert all("--execute-family" in argv for argv in order["argv_rows"])
     assert any("pact_nerv_vq" in argv for argv in order["argv_rows"])
     assert "archive_projection_gap_requires_training_or_export_repair" in plan[

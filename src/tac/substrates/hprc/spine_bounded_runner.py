@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.archive_byte_profile import contest_rate_term
+from tac.substrates._shared.compact_decoder_codec_sweep import (
+    SUPPORTED_COMPACT_DECODER_CODECS,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.hprc.campaign import HPRC_QUEUE_FOLLOWUP_REPORT_SCHEMA
 from tac.substrates.hprc.mlx_prefilter_coverage import (
@@ -31,6 +34,9 @@ HPRC_SPINE_SECTION_CUT_MATERIALIZER_WORK_ORDER_SCHEMA = (
 )
 HPRC_SPINE_PROJECTION_GAP_REPAIR_WORK_ORDER_SCHEMA = (
     "hprc_spine_projection_gap_repair_work_order.v1"
+)
+HPRC_SPINE_COMPACT_DECODER_CODEC_SWEEP_WORK_ORDER_SCHEMA = (
+    "hprc_spine_compact_decoder_codec_sweep_work_order.v1"
 )
 _PROJECTION_GAP_STRUCTURAL_SECTIONS = frozenset(
     ("decoder_qw", "codebooks_q", "latents_rc")
@@ -1171,6 +1177,56 @@ def _pact_vq_projection_gap_repair_launch_row(
             repo_root=repo_root,
             upstream_dir=upstream_dir,
         ),
+        "post_export_codec_sweep": _pact_vq_post_export_codec_sweep_row(
+            run_root=run_root,
+            runner_output_dir=runner_output_dir,
+            repo_root=repo_root,
+        ),
+    }
+
+
+def _pact_vq_post_export_codec_sweep_row(
+    *,
+    run_root: Path,
+    runner_output_dir: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    source_archive = runner_output_dir / "pact_nerv_vq_mlx_training" / "archive.zip"
+    output_dir = run_root / "decoder_codec_sweep"
+    argv = [
+        ".venv/bin/python",
+        "tools/sweep_compact_decoder_codecs.py",
+        "--source-archive-zip",
+        source_archive.as_posix(),
+        "--output-dir",
+        output_dir.as_posix(),
+        "--family",
+        "pact_nerv_vq",
+        "--repo-root",
+        repo_root.as_posix(),
+        "--receiver-proof-timeout-seconds",
+        "1800",
+    ]
+    return {
+        "schema": HPRC_SPINE_COMPACT_DECODER_CODEC_SWEEP_WORK_ORDER_SCHEMA,
+        "status": "queued_after_projection_gap_runner_success",
+        "tool": "tools/sweep_compact_decoder_codecs.py",
+        "source_archive_zip": source_archive.as_posix(),
+        "output_dir": output_dir.as_posix(),
+        "decoder_codecs": list(SUPPORTED_COMPACT_DECODER_CODECS),
+        "run_receiver_proof": True,
+        "receiver_output_retained": False,
+        "promotion_boundary": (
+            "codec variants remain false-authority until full-video MLX "
+            "section-value replay and contest CPU/CUDA exact gate"
+        ),
+        "argv": argv,
+        "blockers": [
+            "projection_gap_runner_must_complete_successfully_first",
+            "full_video_mlx_scorer_replay_not_attached",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        **FALSE_AUTHORITY,
     }
 
 
