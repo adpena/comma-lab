@@ -586,6 +586,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "3",
             "--post-export-materializer-max-parallel",
             "2",
+            "--post-export-materializer-max-experiments",
+            "1",
         ]
     )
     sn = _parse_args(["--execute-family", "snerv", "--num-pairs", "128"])
@@ -604,8 +606,10 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.run_post_export_materializers is True
     assert hi.post_export_materializer_max_steps == 3
     assert hi.post_export_materializer_max_parallel == 2
+    assert hi.post_export_materializer_max_experiments == 1
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
+    assert sn.post_export_materializer_max_experiments == 1
 
 
 def test_post_export_materializer_executor_runs_output_scoped_queue(
@@ -692,6 +696,156 @@ def test_post_export_materializer_executor_runs_output_scoped_queue(
     persisted = json.loads(Path(result["execution_path"]).read_text(encoding="utf-8"))
     assert persisted["state_path"] == result["state_path"]
     assert persisted["worker"]["success_count"] == 1
+
+
+def test_post_export_materializer_executor_can_focus_one_chain(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "first.json"
+    second = tmp_path / "second.json"
+    other = tmp_path / "other.json"
+    queue_path = tmp_path / "experiment_queue.json"
+    queue_root = tmp_path / "queue_root"
+    handoff_dir = queue_root / "archive_zip_repack_v1_exact_eval_handoff"
+    source_queue = handoff_dir / "source_queue.json"
+    harvest_report = handoff_dir / "harvest_report.json"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "unit_post_export_chain_focus",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "archive_zip_repack_chain",
+                "steps": [
+                    {
+                        "id": "materialize_local_proof_chain",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            (
+                                "import json, pathlib; "
+                                f"pathlib.Path({first.as_posix()!r}).write_text("
+                                "json.dumps({'schema':'first.v1'}), "
+                                "encoding='utf-8')"
+                            ),
+                        ],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": first.as_posix(),
+                                "key": "schema",
+                                "equals": "first.v1",
+                            }
+                        ],
+                    },
+                    {
+                        "id": "harvest_materializer_chains",
+                        "requires": ["materialize_local_proof_chain"],
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            (
+                                "import json, pathlib; "
+                                f"pathlib.Path({handoff_dir.as_posix()!r}).mkdir("
+                                "parents=True, exist_ok=True); "
+                                f"pathlib.Path({second.as_posix()!r}).write_text("
+                                "json.dumps({'schema':'second.v1'}), "
+                                "encoding='utf-8'); "
+                                f"pathlib.Path({source_queue.as_posix()!r}).write_text("
+                                "json.dumps({'schema':'optimizer_candidate_queue_v1'}), "
+                                "encoding='utf-8'); "
+                                f"pathlib.Path({harvest_report.as_posix()!r}).write_text("
+                                "json.dumps({'schema':'materializer_chain_harvest_report.v1', "
+                                "'score_claim': False, "
+                                "'ready_for_exact_eval_dispatch': False}), "
+                                "encoding='utf-8')"
+                            ),
+                        ],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": second.as_posix(),
+                                "key": "schema",
+                                "equals": "second.v1",
+                            }
+                        ],
+                    },
+                ],
+            },
+            {
+                "id": "packet_member_zip_header_elide_chain",
+                "steps": [
+                    {
+                        "id": "materialize_local_proof_chain",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            (
+                                "import json, pathlib; "
+                                f"pathlib.Path({other.as_posix()!r}).write_text("
+                                "json.dumps({'schema':'other.v1'}), "
+                                "encoding='utf-8')"
+                            ),
+                        ],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": other.as_posix(),
+                                "key": "schema",
+                                "equals": "other.v1",
+                            }
+                        ],
+                    }
+                ],
+            },
+        ],
+    }
+    queue_path.write_text(json.dumps(queue, sort_keys=True), encoding="utf-8")
+    plan = {
+        "schema": "compact_carrier_post_export_materializer_plan.v1",
+        "compiled": True,
+        "queue_id": "unit_post_export_chain_focus",
+        "experiment_queue_path": queue_path.as_posix(),
+        "experiment_queue_state_path": (queue_root / "experiment_queue.sqlite").as_posix(),
+        "queue_output_dir": queue_root.as_posix(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    result = runner_mod._execute_carrier_post_export_materializer_plan(
+        plan=plan,
+        requested=True,
+        max_steps=2,
+        max_parallel=1,
+        max_experiments=1,
+        repo_root=REPO_ROOT,
+    )
+
+    assert result["blockers"] == []
+    assert result["max_experiments"] == 1
+    assert result["worker"]["steps_started"] == 2
+    assert result["worker"]["started_experiment_ids"] == ["archive_zip_repack_chain"]
+    assert [row["ready_step"]["step_id"] for row in result["worker"]["step_results"]] == [
+        "materialize_local_proof_chain",
+        "harvest_materializer_chains",
+    ]
+    assert first.is_file()
+    assert second.is_file()
+    assert not other.exists()
+    handoff_summary = result["handoff_summary"]
+    assert handoff_summary["handoff_count"] == 1
+    handoff = handoff_summary["rows"][0]
+    assert handoff["target_kind"] == "archive_zip_repack_v1"
+    assert handoff["source_queue_path"] == source_queue.as_posix()
+    assert handoff["harvest_report_path"] == harvest_report.as_posix()
+    assert handoff["source_queue_schema"] == "optimizer_candidate_queue_v1"
+    assert handoff["harvest_report_schema"] == "materializer_chain_harvest_report.v1"
+    assert handoff["ready_for_exact_eval_dispatch"] is False
 
 
 def test_recon_pixel_weight_loader_records_file_custody(

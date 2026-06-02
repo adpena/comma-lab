@@ -622,12 +622,90 @@ def _compile_carrier_post_export_materializer_plan(
     return result
 
 
+def _post_export_materializer_handoff_summary(
+    output_root: Path,
+) -> dict[str, Any]:
+    """Summarize queue-produced exact-readiness handoffs without granting authority."""
+
+    rows: list[dict[str, Any]] = []
+    for handoff_dir in sorted(output_root.glob("*_exact_eval_handoff")):
+        if not handoff_dir.is_dir():
+            continue
+        target_kind = handoff_dir.name.removesuffix("_exact_eval_handoff")
+        source_queue_path = handoff_dir / "source_queue.json"
+        harvest_report_path = handoff_dir / "harvest_report.json"
+        closure_report_path = (
+            handoff_dir / "submission_closure" / "submission_closure_report.json"
+        )
+        exact_readiness_bridge_path = handoff_dir / "exact_readiness_bridge_report.json"
+        dispatch_plan_path = handoff_dir / "dispatch_plan.json"
+        dispatch_queue_path = handoff_dir / "dispatch_queue.json"
+        row: dict[str, Any] = {
+            "schema": "compact_carrier_post_export_materializer_handoff.v1",
+            "target_kind": target_kind,
+            "handoff_dir": handoff_dir.as_posix(),
+            "source_queue_path": (
+                source_queue_path.as_posix() if source_queue_path.is_file() else None
+            ),
+            "harvest_report_path": (
+                harvest_report_path.as_posix()
+                if harvest_report_path.is_file()
+                else None
+            ),
+            "submission_closure_report_path": (
+                closure_report_path.as_posix() if closure_report_path.is_file() else None
+            ),
+            "exact_readiness_bridge_report_path": (
+                exact_readiness_bridge_path.as_posix()
+                if exact_readiness_bridge_path.is_file()
+                else None
+            ),
+            "dispatch_plan_path": (
+                dispatch_plan_path.as_posix() if dispatch_plan_path.is_file() else None
+            ),
+            "dispatch_queue_path": (
+                dispatch_queue_path.as_posix() if dispatch_queue_path.is_file() else None
+            ),
+            **FALSE_AUTHORITY,
+        }
+        for key, path in (
+            ("source_queue_schema", source_queue_path),
+            ("harvest_report_schema", harvest_report_path),
+            ("submission_closure_report_schema", closure_report_path),
+            ("exact_readiness_bridge_report_schema", exact_readiness_bridge_path),
+            ("dispatch_plan_schema", dispatch_plan_path),
+            ("dispatch_queue_schema", dispatch_queue_path),
+        ):
+            if not path.is_file():
+                row[key] = None
+                continue
+            try:
+                payload = _load_json(path)
+            except (OSError, CompactRendererMlxSpineRunnerError, json.JSONDecodeError):
+                row[key] = "unreadable"
+            else:
+                row[key] = payload.get("schema")
+                if key == "harvest_report_schema":
+                    row["harvest_report_blockers"] = payload.get("blockers")
+                    row["harvest_report_ready_for_exact_eval_dispatch"] = payload.get(
+                        "ready_for_exact_eval_dispatch"
+                    )
+        rows.append(row)
+    return {
+        "schema": "compact_carrier_post_export_materializer_handoff_summary.v1",
+        "handoff_count": len(rows),
+        "rows": rows,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _execute_carrier_post_export_materializer_plan(
     *,
     plan: Mapping[str, Any],
     requested: bool,
     max_steps: int = 1,
     max_parallel: int = 0,
+    max_experiments: int | None = 1,
     repo_root: str | Path = REPO_ROOT,
 ) -> dict[str, Any]:
     """Run a bounded local wave of a compiled carrier materializer queue."""
@@ -665,6 +743,7 @@ def _execute_carrier_post_export_materializer_plan(
         "execution_path": execution_path.as_posix(),
         "max_steps": int(max_steps),
         "max_parallel": int(max_parallel),
+        "max_experiments": max_experiments,
         **FALSE_AUTHORITY,
     }
     if not requested:
@@ -697,6 +776,15 @@ def _execute_carrier_post_export_materializer_plan(
         }
         _write_json(execution_path, result)
         return result
+    if max_experiments is not None and int(max_experiments) < 1:
+        result = {
+            **base_result,
+            "blockers": [
+                "post_export_materializer_max_experiments_must_be_positive_or_null"
+            ],
+        }
+        _write_json(execution_path, result)
+        return result
 
     try:
         queue_path = _resolve(queue_path_raw, base=root)
@@ -723,6 +811,7 @@ def _execute_carrier_post_export_materializer_plan(
                     "the carrier output directory to avoid cross-run state reuse"
                 ),
                 log_root=log_root,
+                max_experiments=max_experiments,
             )
             after = queue_summary(conn, queue, repo_root=root)
         blockers: list[str] = []
@@ -739,6 +828,9 @@ def _execute_carrier_post_export_materializer_plan(
             "before": before,
             "worker": worker,
             "after": after,
+            "handoff_summary": _post_export_materializer_handoff_summary(
+                output_root
+            ),
             "blockers": _dedupe(blockers),
         }
     except (OSError, RuntimeError, ValueError) as exc:
@@ -1354,6 +1446,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
+    post_export_materializer_max_experiments: int | None = 1,
     distillation_device: str = "cpu",
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
@@ -1472,6 +1565,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             requested=run_post_export_materializers,
             max_steps=post_export_materializer_max_steps,
             max_parallel=post_export_materializer_max_parallel,
+            max_experiments=post_export_materializer_max_experiments,
             repo_root=root,
         )
     )
@@ -1970,6 +2064,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
+    post_export_materializer_max_experiments: int | None = 1,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -2143,6 +2238,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
         requested=run_post_export_materializers,
         max_steps=post_export_materializer_max_steps,
         max_parallel=post_export_materializer_max_parallel,
+        max_experiments=post_export_materializer_max_experiments,
         repo_root=root,
     )
     blockers.extend(post_export_materializer_execution.get("blockers") or [])
@@ -2439,6 +2535,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
+    post_export_materializer_max_experiments: int | None = 1,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -2562,6 +2659,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
         requested=run_post_export_materializers,
         max_steps=post_export_materializer_max_steps,
         max_parallel=post_export_materializer_max_parallel,
+        max_experiments=post_export_materializer_max_experiments,
         repo_root=root,
     )
     blockers.extend(post_export_materializer_execution.get("blockers") or [])
@@ -2676,6 +2774,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
+    post_export_materializer_max_experiments: int | None = 1,
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -2847,6 +2946,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         requested=run_post_export_materializers,
         max_steps=post_export_materializer_max_steps,
         max_parallel=post_export_materializer_max_parallel,
+        max_experiments=post_export_materializer_max_experiments,
         repo_root=root,
     )
     blockers.extend(post_export_materializer_execution.get("blockers") or [])
@@ -3007,6 +3107,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
+    post_export_materializer_max_experiments: int | None = 1,
     random_seed: int = 0,
     allow_overwrite: bool = False,
     repo_root: str | Path = REPO_ROOT,
@@ -3135,6 +3236,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
         requested=run_post_export_materializers,
         max_steps=post_export_materializer_max_steps,
         max_parallel=post_export_materializer_max_parallel,
+        max_experiments=post_export_materializer_max_experiments,
         repo_root=root,
     )
     blockers.extend(post_export_materializer_execution.get("blockers") or [])
@@ -4974,6 +5076,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--post-export-materializer-max-experiments",
+        default=1,
+        type=int,
+        help=(
+            "Maximum post-export materializer experiment chains to advance in "
+            "one bounded run. Default 1 focuses the step budget on one target "
+            "family through harvest/readiness. Use 0 for fanout across all "
+            "ready materializer families."
+        ),
+    )
+    parser.add_argument(
         "--mlx-prefilter-scorer-batch-pairs",
         default=1,
         type=int,
@@ -5117,6 +5230,11 @@ def main(argv: list[str] | None = None) -> int:
         base=Path(args.repo_root).expanduser().resolve(strict=False),
         upstream_dir=scorer_upstream_dir,
     )
+    post_export_materializer_max_experiments = (
+        None
+        if args.post_export_materializer_max_experiments == 0
+        else args.post_export_materializer_max_experiments
+    )
     _acquire_active_campaign_lock(
         output_dir=Path(output_dir).expanduser().resolve(strict=False),
         args=args,
@@ -5223,6 +5341,7 @@ def main(argv: list[str] | None = None) -> int:
             post_export_materializer_max_parallel=(
                 args.post_export_materializer_max_parallel
             ),
+            post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -5265,6 +5384,7 @@ def main(argv: list[str] | None = None) -> int:
             post_export_materializer_max_parallel=(
                 args.post_export_materializer_max_parallel
             ),
+            post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -5307,6 +5427,7 @@ def main(argv: list[str] | None = None) -> int:
             post_export_materializer_max_parallel=(
                 args.post_export_materializer_max_parallel
             ),
+            post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
@@ -5330,6 +5451,7 @@ def main(argv: list[str] | None = None) -> int:
             post_export_materializer_max_parallel=(
                 args.post_export_materializer_max_parallel
             ),
+            post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             distillation_device=args.distillation_device,
             upstream_dir=scorer_upstream_dir,
             allow_overwrite=args.overwrite,
@@ -5384,6 +5506,7 @@ def main(argv: list[str] | None = None) -> int:
             post_export_materializer_max_parallel=(
                 args.post_export_materializer_max_parallel
             ),
+            post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             upstream_dir=scorer_upstream_dir,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
