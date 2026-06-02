@@ -1766,7 +1766,12 @@ def adapt_snerv_advisory_report_to_spine(
     out.mkdir(parents=True, exist_ok=True)
     advisory_payload = _load_json(report_path)
     package = advisory_payload.get("runtime_package")
-    package_payload = package if isinstance(package, Mapping) else {}
+    if isinstance(package, Mapping):
+        package_payload = dict(package)
+    elif isinstance(advisory_payload.get("archive_bound_candidate_adapter_package"), Mapping):
+        package_payload = advisory_payload
+    else:
+        package_payload = {}
     candidate_rows = list(
         (
             package_payload.get("archive_bound_candidate_adapter_package", {})
@@ -1808,7 +1813,19 @@ def adapt_snerv_advisory_report_to_spine(
     local_cpu_replay_blockers: list[str] = []
     resolved_archive_path = _optional_existing(archive_path, base=root)
     runtime_submission_dir = package_dir / "submission"
-    num_pairs = int(advisory_payload.get("n_pairs") or 0)
+    num_pairs_raw = advisory_payload.get("n_pairs")
+    if not num_pairs_raw:
+        runtime_manifest = row.get("runtime_adapter_manifest")
+        if not isinstance(runtime_manifest, Mapping):
+            contract = row.get("archive_bound_candidate_contract")
+            runtime_manifest = (
+                contract.get("runtime_adapter_manifest")
+                if isinstance(contract, Mapping)
+                else {}
+            )
+        if isinstance(runtime_manifest, Mapping):
+            num_pairs_raw = runtime_manifest.get("n_pairs")
+    num_pairs = int(num_pairs_raw or 0)
     if resolved_archive_path is not None:
         (
             local_cpu_replay_summary,

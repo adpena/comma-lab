@@ -2185,6 +2185,81 @@ def test_adapt_snerv_advisory_report_uses_package_dir_archive_fallback(
     ]
 
 
+def test_adapt_snerv_advisory_report_accepts_archive_package_manifest(
+    tmp_path: Path,
+) -> None:
+    package_dir = tmp_path / "snerv_package"
+    submission = package_dir / "submission"
+    submission.mkdir(parents=True)
+    (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    (submission / "inflate.py").write_text("print('inflate')\n", encoding="utf-8")
+    archive = _write_synthetic_pr95_archive(package_dir / "archive.zip", pairs=600)
+    archive_sha = runner_mod._sha256_file(archive)
+    archive_bytes = archive.stat().st_size
+    proof_path = package_dir / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+    proof_path.parent.mkdir()
+    proof_payload = {
+        "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+        "proof_path": proof_path.as_posix(),
+        "runtime_consumption_proof_passed": True,
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    proof_path.write_text(json.dumps(proof_payload), encoding="utf-8")
+    package_manifest = package_dir / "archive_bound_candidate_adapter_package.json"
+    package_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_inverse_steg_archive_bound_candidate_package.v1",
+                "archive_bound_candidate_adapter_package": {
+                    "candidate_rows": [
+                        {
+                            "candidate_archive_path": archive.as_posix(),
+                            "candidate_archive_sha256": archive_sha,
+                            "candidate_archive_bytes": archive_bytes,
+                            "runtime_adapter_manifest": {"n_pairs": 600},
+                            "blockers": [
+                                "paired_contest_cpu_cuda_auth_eval_missing"
+                            ],
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    ]
+                },
+                "receiver_proof": proof_payload,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    out = runner_mod.adapt_snerv_advisory_report_to_spine(
+        snerv_advisory_report_path=package_manifest,
+        output_dir=tmp_path / "adapted",
+        hard_byte_ceilings=(178_000,),
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["source_snerv_advisory_report_sha256"] == runner_mod._sha256_file(
+        package_manifest
+    )
+    assert out["runtime_package_dir"].endswith("/snerv_package")
+    assert out["archive_sha256"] == archive_sha
+    assert out["receiver_proof_report_paths"] == [proof_path.as_posix()]
+    assert "snerv_packet_not_full_600_pairs" not in out["blockers"]
+    assert "paired_contest_cpu_cuda_auth_eval_missing" in out["blockers"]
+    assert out["post_export_materializer_plan"]["archive_record"][
+        "source_runtime_dir"
+    ].endswith("/snerv_package/submission")
+
+
 def test_pr95_stage8_execute_parser_exposes_source_lane_controls() -> None:
     args = _parse_args(
         [
