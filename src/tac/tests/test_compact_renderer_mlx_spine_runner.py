@@ -438,6 +438,61 @@ def test_compact_family_startup_marker_records_mlx_custody(
     )
 
 
+def test_compact_family_interrupted_report_preserves_false_authority_custody(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "hi_nerv_mlx_training" / "telemetry.jsonl"
+    telemetry.parent.mkdir()
+    telemetry.write_text('{"epoch":0,"loss":1.0}\n', encoding="utf-8")
+    startup = tmp_path / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+    startup.write_text(
+        '{"schema":"compact_carrier_startup_marker.v1"}\n',
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        execute_family="hi_nerv",
+        planner_row_id="hi_nerv::candidate::adamw",
+        modelsize_candidate_id="candidate",
+        allow_duplicate_campaign=False,
+        output_dir=tmp_path,
+        overwrite=False,
+        repo_root=Path("/repo"),
+        num_pairs=600,
+        auto_joint_recon_pixel_weight=False,
+        distillation_device="mps",
+        mlx_prefilter_scorer_device="gpu",
+    )
+
+    report = runner_mod._write_compact_family_interrupted_report(
+        output_dir=tmp_path,
+        args=args,
+        source_video_path=Path("/Volumes/VertigoDataTier/pact/source/0.mkv"),
+        hard_byte_ceilings=(178_000,),
+        modelsize_candidate={"candidate_id": "candidate", "num_pairs": 600},
+        signum=15,
+        reason="unit_test_signal",
+    )
+
+    assert report["schema"] == COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA
+    assert report["mode"] == "interrupted_compact_family_run"
+    assert report["signal_name"] == "SIGTERM"
+    assert report["interruption_reason"] == "unit_test_signal"
+    assert report["execute_family"] == "hi_nerv"
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert "hi_nerv_training_interrupted_before_export" in report["blockers"]
+    evidence_by_name = {
+        Path(row["path"]).name: row for row in report["evidence_files"]
+    }
+    assert "telemetry.jsonl" in evidence_by_name
+    assert evidence_by_name["telemetry.jsonl"]["sha256"] == runner_mod._sha256_file(
+        telemetry
+    )
+    report_path = tmp_path / "compact_renderer_mlx_spine_runner_report.json"
+    assert report_path.is_file()
+
+
 def test_hi_nerv_source_faithfulness_classifies_local_adaptation() -> None:
     report = runner_mod._hi_nerv_source_faithfulness_report(
         cfg=SimpleNamespace(

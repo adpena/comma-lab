@@ -2485,8 +2485,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     modelsize_candidate: Mapping[str, Any] | None = None,
     step_map_coder_mode: str | None = None,
     snerv_spectra_preserving_adapter: bool = False,
+    snerv_model_size_adapter_override: str | None = None,
+    snerv_fc_dim_override: int | None = None,
+    snerv_emb_size_override: int | None = None,
+    snerv_patch_radius_override: int | None = None,
     snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
     snerv_hfr_gain: float = 0.0,
+    snerv_temporal_context_override: int | None = None,
     run_native_mlx_export: bool = False,
     snerv_native_mlx_receiver_proof_timeout_seconds: int = 1800,
     run_scorer_loop_qat: bool = False,
@@ -2554,20 +2559,59 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     decoder_payload_codec = str(
         candidate.get("decoder_payload_codec", "float32_lzma")
     )
-    snerv_fc_dim = int(candidate.get("fc_dim", candidate.get("snerv_fc_dim", 9)))
-    snerv_emb_size = int(candidate.get("emb_size", candidate.get("snerv_emb_size", 0)))
+    snerv_fc_dim = int(
+        candidate.get(
+            "fc_dim",
+            candidate.get(
+                "snerv_fc_dim",
+                9 if snerv_fc_dim_override is None else int(snerv_fc_dim_override),
+            ),
+        )
+    )
+    snerv_emb_size = int(
+        candidate.get(
+            "emb_size",
+            candidate.get(
+                "snerv_emb_size",
+                0 if snerv_emb_size_override is None else int(snerv_emb_size_override),
+            ),
+        )
+    )
     snerv_patch_radius = int(
-        candidate.get("patch_radius", candidate.get("snerv_patch_radius", 1))
+        candidate.get(
+            "patch_radius",
+            candidate.get(
+                "snerv_patch_radius",
+                (
+                    1
+                    if snerv_patch_radius_override is None
+                    else int(snerv_patch_radius_override)
+                ),
+            ),
+        )
     )
     snerv_temporal_context = int(
-        candidate.get("temporal_context", candidate.get("snerv_temporal_context", 0))
+        candidate.get(
+            "temporal_context",
+            candidate.get(
+                "snerv_temporal_context",
+                (
+                    0
+                    if snerv_temporal_context_override is None
+                    else int(snerv_temporal_context_override)
+                ),
+            ),
+        )
     )
     snerv_model_size_adapter = str(
         candidate.get(
             "snerv_model_size_adapter",
-            SNERV_SPECTRA_PRESERVING_ADAPTER
-            if snerv_spectra_preserving_adapter
-            else "snerv_fc_dim_emb_size_adapter_v1",
+            snerv_model_size_adapter_override
+            or (
+                SNERV_SPECTRA_PRESERVING_ADAPTER
+                if snerv_spectra_preserving_adapter
+                else "snerv_fc_dim_emb_size_adapter_v1"
+            ),
         )
     )
     resolved_step_map_coder_mode = (
