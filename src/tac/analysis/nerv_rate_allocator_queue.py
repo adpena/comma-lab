@@ -185,11 +185,14 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
         return {
             "ingest_kind": "measured_modelsize_ladder_work_order",
             "planner_action": planner_action,
+            "producer_tool": "tools/emit_nerv_trained_ladder_row.py",
             "existing_tool_ingress": (
                 "tools/build_nerv_receiver_closed_modelsize_ladder.py"
             ),
             "planning_context_tool": "tools/build_nerv_modelsize_archive_curve.py",
-            "missing_tool_or_proof": "trained_receiver_closed_archive_byte_ladder",
+            "missing_tool_or_proof": (
+                "trained_receiver_closed_archive_byte_ladder_rows"
+            ),
             "runnable_now": False,
         }
     if work_order_type == "rate_allocator_control_binding":

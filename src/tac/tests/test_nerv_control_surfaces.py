@@ -329,6 +329,11 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     ]
     assert modelsize_rows
     assert all(
+        row["planner_ingest"]["producer_tool"]
+        == "tools/emit_nerv_trained_ladder_row.py"
+        for row in modelsize_rows
+    )
+    assert all(
         row["planner_ingest"]["existing_tool_ingress"]
         == "tools/build_nerv_receiver_closed_modelsize_ladder.py"
         for row in modelsize_rows

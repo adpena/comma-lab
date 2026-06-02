@@ -57,12 +57,16 @@ def test_snerv_official_mfu_hfr_and_fc_dim_controls_still_block_long_training() 
 
     assert "snerv_mfu_hfr_stride_stack_missing" in report["blockers"]
     assert "snerv_fc_dim_modelsize_control_missing" in report["blockers"]
-    assert "snerv_scorer_loop_decoder_qat_missing" in report["blockers"]
+    assert "snerv_scorer_loop_decoder_qat_missing" not in report["blockers"]
     assert "snerv_lf_quant_intn_codec_missing" not in report["blockers"]
-    assert "snerv_qat_receiver_codec_pricing_missing" in report["blockers"]
-    assert "snerv_official_haar_mode_missing" in report["blockers"]
-    assert "snerv_receiver_dependency_custody_missing" in report["blockers"]
+    assert "snerv_qat_receiver_codec_pricing_missing" not in report["blockers"]
+    assert "snerv_official_haar_mode_missing" not in report["blockers"]
+    assert "snerv_receiver_dependency_custody_missing" not in report["blockers"]
     rows = {row["feature_id"]: row for row in report["feature_rows"]}
+    assert rows["snerv_scorer_loop_decoder_qat"]["status"] == "implemented_or_bound"
+    assert rows["snerv_qat_receiver_codec_pricing"]["status"] == "implemented_or_bound"
+    assert rows["snerv_official_haar_mode"]["status"] == "implemented_or_bound"
+    assert rows["snerv_receiver_dependency_custody"]["status"] == "implemented_or_bound"
     missing_symbols = {
         symbol["symbol"]
         for symbol in rows["snerv_official_mfu_hfr_stride_stack"]["symbol_rows"]
