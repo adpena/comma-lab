@@ -68,7 +68,11 @@ def main(argv: list[str] | None = None) -> int:
 def _row_saliency(payload: Any) -> dict[str, dict[str, float]]:
     if not isinstance(payload, Mapping):
         return {}
-    rows = payload.get("row_saliency") or payload.get("saliency_by_row_id")
+    rows = (
+        payload.get("row_saliency")
+        or payload.get("saliency_by_row_id")
+        or payload.get("saliency_by_row")
+    )
     if not isinstance(rows, Mapping):
         return {}
     out: dict[str, dict[str, float]] = {}
@@ -84,6 +88,12 @@ def _row_saliency(payload: Any) -> dict[str, dict[str, float]]:
 
 def _global_saliency(payload: Any) -> dict[str, float]:
     if not isinstance(payload, Mapping):
+        return {}
+    has_row_scoped_saliency = any(
+        key in payload
+        for key in ("row_saliency", "saliency_by_row_id", "saliency_by_row")
+    )
+    if has_row_scoped_saliency and "global_saliency" not in payload:
         return {}
     mapping = payload.get("global_saliency") or payload.get("saliency_by_name")
     if not isinstance(mapping, Mapping):

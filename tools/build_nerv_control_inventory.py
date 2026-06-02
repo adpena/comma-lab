@@ -66,6 +66,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Optional false-authority SNeRV trained-ladder decoder-waterfill JSON.",
     )
+    parser.add_argument(
+        "--hinerv-decoder-weight-saliency-json",
+        default=None,
+        type=Path,
+        help="Optional false-authority HiNeRV decoder-weight saliency replay JSON.",
+    )
     args = parser.parse_args(argv)
 
     focus = tuple(args.focus_family or ("hi_nerv", "snerv"))
@@ -90,6 +96,13 @@ def main(argv: list[str] | None = None) -> int:
                 encoding="utf-8"
             )
         )
+    hinerv_decoder_weight_saliency_report = None
+    if args.hinerv_decoder_weight_saliency_json is not None:
+        hinerv_decoder_weight_saliency_report = json.loads(
+            args.hinerv_decoder_weight_saliency_json.expanduser().read_text(
+                encoding="utf-8"
+            )
+        )
     report = build_nerv_control_inventory(
         focus_families=focus,
         repo_root=args.repo_root,
@@ -99,6 +112,9 @@ def main(argv: list[str] | None = None) -> int:
         ),
         snerv_trained_ladder_waterfill_report=(
             snerv_trained_ladder_waterfill_report
+        ),
+        hinerv_decoder_weight_saliency_report=(
+            hinerv_decoder_weight_saliency_report
         ),
     )
     output = Path(args.output_json).expanduser().resolve(strict=False)

@@ -16,7 +16,12 @@ from tac.repo_io import sha256_file
 from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
     NERV_BYTE_PRICE_CONTROLLER_SCHEMA,
 )
-from tools.build_hinerv_archive_ladder_waterfill import main as tool_main
+from tools.build_hinerv_archive_ladder_waterfill import (
+    _global_saliency,
+)
+from tools.build_hinerv_archive_ladder_waterfill import (
+    main as tool_main,
+)
 
 
 def test_hinerv_archive_ladder_waterfill_consumes_state_npz_manifest(
@@ -81,7 +86,7 @@ def test_build_hinerv_archive_ladder_waterfill_cli_smoke(tmp_path: Path) -> None
     output_md = tmp_path / "waterfill.md"
     ladder_path.write_text(json.dumps(ladder), encoding="utf-8")
     saliency_path.write_text(
-        json.dumps({"global_saliency": {"blocks.0.weight": 0.0}}),
+        json.dumps({"saliency_by_row": {"tiny": {"blocks.0.weight": 0.0}}}),
         encoding="utf-8",
     )
 
@@ -107,6 +112,17 @@ def test_build_hinerv_archive_ladder_waterfill_cli_smoke(tmp_path: Path) -> None
     assert "HiNeRV archive ladder decoder waterfill" in output_md.read_text(
         encoding="utf-8"
     )
+
+
+def test_hinerv_archive_ladder_waterfill_keeps_row_saliency_row_scoped() -> None:
+    payload = {
+        "saliency_by_row": {
+            "hi_nerv_local_tiny": {"head_rgb_1.weight": 0.25},
+        },
+        "saliency_by_name": {"head_rgb_1.weight": 0.25},
+    }
+
+    assert _global_saliency(payload) == {}
 
 
 def _ladder(tmp_path: Path, *, row_id: str, saliency_ready: bool) -> dict:

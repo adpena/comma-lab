@@ -51,7 +51,7 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     gap_ids = {row["gap_id"] for row in report["binding_gap_rows"]}
     assert {
         "measured_hi_nerv_modelsize_budget_ladder",
-        "decoder_weight_saliency_replay_for_hi_nerv_archive_rows",
+        "full_video_decoder_weight_saliency_replay_for_hi_nerv_archive_rows",
         "mlx_native_snerv_train_export",
         "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
         "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
@@ -107,6 +107,12 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "tools/build_snerv_trained_ladder_waterfill.py" in surfaces[
         "section_value_and_codebook"
     ]
+    assert "src/tac/analysis/hinerv_decoder_weight_saliency_replay.py" in surfaces[
+        "section_value_and_codebook"
+    ]
+    assert "tools/build_hinerv_decoder_weight_saliency_replay.py" in surfaces[
+        "section_value_and_codebook"
+    ]
     assert "src/tac/submission_packet/paired_auth_eval.py" in surfaces[
         "receiver_and_exact_custody"
     ]
@@ -128,7 +134,7 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "hi_nerv_full600_receiver_proven_candidate_missing",
         "hi_nerv_missing_measured_config_family_ladder",
         "hi_nerv_missing_integer_bitstream_q_roundtrip",
-        "hi_nerv_decoder_weight_saliency_replay_missing",
+        "hi_nerv_full_video_decoder_weight_saliency_replay_missing",
     }.issubset(set(stack_rows["hi_nerv"]["blocking_gaps"]))
     assert {
         "snerv_official_symbol_parity_map_missing",
@@ -295,6 +301,41 @@ def test_nerv_control_inventory_accepts_snerv_trained_ladder_waterfill_report() 
     assert measured["waterfill_rows"][0]["waterfill_summary"]["group_count"] == 3
 
 
+def test_nerv_control_inventory_accepts_hinerv_decoder_weight_saliency_report() -> None:
+    saliency_report = {
+        "schema": "hinerv_decoder_weight_saliency_replay.v1",
+        "report_path": ".omx/research/hinerv_decoder_weight_saliency_fake.json",
+        "row_count": 1,
+        "full_video_coverage": False,
+        "scorer_source": "real_upstream_differentiable_scorers",
+        "pair_schedule": {"max_pairs": 1, "start_pair": 0, "pair_stride": 1},
+        "saliency_by_name": {"head_rgb_1.weight": 0.125},
+        "saliency_rows": [
+            {
+                "group_name": "head_rgb_1.weight",
+                "decoder_weight_saliency": 0.125,
+                "score_saliency": 0.125,
+            }
+        ],
+        "blockers": ["full_video_coverage_missing"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("hi_nerv",),
+        hinerv_decoder_weight_saliency_report=saliency_report,
+    )
+
+    measured = report["decoder_weight_saliency_replays"]["hi_nerv"]
+    assert measured["schema"] == "hinerv_decoder_weight_saliency_replay.v1"
+    assert measured["score_claim"] is False
+    assert measured["row_count"] == 1
+    assert measured["full_video_coverage"] is False
+    assert measured["saliency_group_count"] == 1
+    assert measured["saliency_rows"][0]["decoder_weight_saliency"] == 0.125
+
+
 def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
     tmp_path: Path,
 ) -> None:
@@ -400,4 +441,53 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_waterfill_report(
     assert payload["decoder_weight_waterfill_reports"]["snerv"][
         "section_value_row_count"
     ] == 1
+    assert payload["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_hinerv_saliency_report(
+    tmp_path: Path,
+) -> None:
+    saliency_path = tmp_path / "saliency.json"
+    output_json = tmp_path / "inventory.json"
+    saliency_path.write_text(
+        """
+        {
+          "schema": "hinerv_decoder_weight_saliency_replay.v1",
+          "report_path": ".omx/research/hinerv_decoder_weight_saliency_fake.json",
+          "row_count": 1,
+          "full_video_coverage": false,
+          "scorer_source": "real_upstream_differentiable_scorers",
+          "pair_schedule": {"max_pairs": 1, "start_pair": 0, "pair_stride": 1},
+          "saliency_by_name": {"head_rgb_1.weight": 0.125},
+          "saliency_rows": [
+            {
+              "group_name": "head_rgb_1.weight",
+              "decoder_weight_saliency": 0.125,
+              "score_saliency": 0.125
+            }
+          ],
+          "blockers": ["full_video_coverage_missing"],
+          "score_claim": false,
+          "ready_for_exact_eval_dispatch": false
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "hi_nerv",
+            "--repo-root",
+            str(REPO),
+            "--hinerv-decoder-weight-saliency-json",
+            str(saliency_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["decoder_weight_saliency_replays"]["hi_nerv"]["row_count"] == 1
     assert payload["score_claim"] is False
