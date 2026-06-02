@@ -35,6 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--snerv-modelsize-budget", type=Path, required=True)
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument("--output-md", type=Path)
+    parser.add_argument("--output-queue", type=Path)
     parser.add_argument("--optimizer-kind", action="append", default=None)
     parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
     parser.add_argument("--batch-pairs", type=int, default=DEFAULT_BATCH_PAIRS)
@@ -57,6 +58,8 @@ def main(argv: list[str] | None = None) -> int:
         max_candidates_per_family=args.max_candidates_per_family,
     )
     write_json(args.output_json, report)
+    if args.output_queue:
+        write_json(args.output_queue, report["experiment_queue"])
     if args.output_md:
         write_text_artifact(
             args.output_md,
@@ -77,6 +80,11 @@ def main(argv: list[str] | None = None) -> int:
                     "ready_for_exact_eval_dispatch"
                 ],
                 "output_json": args.output_json.as_posix(),
+                "output_queue": (
+                    None
+                    if args.output_queue is None
+                    else args.output_queue.as_posix()
+                ),
             },
             sort_keys=True,
         )

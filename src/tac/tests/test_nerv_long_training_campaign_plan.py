@@ -126,6 +126,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     snerv = tmp_path / "snerv_budget.json"
     out_json = tmp_path / "campaign.json"
     out_md = tmp_path / "campaign.md"
+    out_queue = tmp_path / "campaign_queue.json"
     hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
     snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
 
@@ -143,6 +144,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(out_json),
             "--output-md",
             str(out_md),
+            "--output-queue",
+            str(out_queue),
         ]
     )
 
@@ -150,6 +153,9 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["campaign_row_count"] == 2
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
+    queue = json.loads(out_queue.read_text(encoding="utf-8"))
+    assert queue == payload["experiment_queue"]
+    assert queue["experiments"][0]["steps"][0]["postconditions"]
     assert out_md.read_text(encoding="utf-8").startswith(
         "# NeRV Long-Training Campaign Plan"
     )
