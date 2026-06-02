@@ -20,6 +20,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
+
 SCHEMA = "nerv_source_parity_contract.v1"
 AUTHORITY = "false_authority_source_parity_no_score_claim"
 
@@ -474,7 +476,10 @@ def _source_marker_control_row(
     blocker: str,
     required_for_long_training: bool,
 ) -> dict[str, Any]:
-    text = "\n".join(_read_source(root / source_file) for source_file in source_files)
+    text = "\n".join(
+        _read_source_for_marker_scan(root / source_file)
+        for source_file in source_files
+    )
     missing = [marker for marker in markers if marker not in text]
     return {
         "family": family,
@@ -494,7 +499,10 @@ def _source_marker_row(root: Path, marker: str, family: str) -> dict[str, Any]:
         "hi_nerv": ("src/tac/substrates/hi_nerv", "src/tac/analysis"),
         "snerv": ("src/tac/substrates/snerv_inverse_steg_carrier", "src/tac/analysis"),
     }
-    text = "\n".join(_read_source(root / source_dir) for source_dir in source_dirs[family])
+    text = "\n".join(
+        _read_source_for_marker_scan(root / source_dir)
+        for source_dir in source_dirs[family]
+    )
     return {
         "marker": marker,
         "status": "present" if marker in text else "missing",
@@ -551,6 +559,13 @@ def _read_source(path: Path) -> str:
     if path.is_file():
         return path.read_text(encoding="utf-8", errors="replace")
     return ""
+
+
+def _read_source_for_marker_scan(path: Path) -> str:
+    return read_python_source_for_marker_scan(
+        path,
+        exclude_names=("nerv_source_parity_contract.py",),
+    )
 
 
 def _next_actions(blockers: tuple[str, ...]) -> tuple[str, ...]:

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -110,6 +111,45 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert frames.shape == (1, 2, 3, 16, 16)
 
 
+def test_train_export_reports_actual_active_decoder_payload_codec(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path,
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "float32_lzma",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        scorer_loop_qat_decoder_payload_codec="int8_symmetric",
+    )
+
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert report["decoder_payload_codec"] == "int8_symmetric"
+    assert decoded.metadata["decoder_payload_codec"] == "int8_symmetric"
+    assert report["packet_source"] == "mlx_target_hydration_numpy_closed_form_decoder_fit"
+
+
 def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -125,12 +165,26 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     def fake_decode_mlx_targets(*_args, **_kwargs):
         return target0, target1
 
+    best_packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs + 1.0,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+    ).packet
+    best_packet_sha256 = hashlib.sha256(best_packet).hexdigest()
+
     class FakeQatResult:
+        def __init__(self) -> None:
+            self.best_packet = best_packet
+
         def as_jsonable(self) -> dict:
             return {
                 "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
                 "axis_tag": "[macOS-CPU advisory]",
                 "n_pairs": 1,
+                "decoder_payload_codec": "int8_symmetric",
                 "scorer_loop_evaluations": 2,
                 "accepted_improvement": True,
                 "receiver_contract_satisfied": True,
@@ -141,10 +195,12 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
                     "score_linf": 3.0,
                 },
                 "best": {
-                    "archive_bytes": 109,
-                    "archive_sha256": "2" * 64,
+                    "archive_bytes": len(best_packet),
+                    "archive_sha256": best_packet_sha256,
                     "score_linf": 2.5,
                 },
+                "best_packet_bytes": len(best_packet),
+                "best_packet_sha256": best_packet_sha256,
                 "blockers": [],
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -185,6 +241,7 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert captured["n_pairs"] == 1
     assert captured["max_trials"] == 1
     assert captured["qat_bits"] == 4
+    assert captured["decoder_payload_codec"] == "int8_symmetric"
     assert captured["snerv_fc_dim"] == 5
     assert captured["snerv_mfu_scales"] == (1, 2)
     scorer_loop = report["scorer_loop_qat"]
@@ -192,11 +249,17 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["executed"] is True
     assert scorer_loop["receiver_contract_satisfied"] is True
     assert scorer_loop["accepted_improvement"] is True
-    assert scorer_loop["best_archive_sha256"] == "2" * 64
+    assert scorer_loop["best_archive_sha256"] == best_packet_sha256
+    assert scorer_loop["best_packet_sha256"] == best_packet_sha256
+    assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is True
+    assert scorer_loop["emitted_packet_sha256"] == best_packet_sha256
+    assert report["packet_source"] == "scorer_loop_qat_best_receiver_packet"
+    assert report["packet_sha256"] == best_packet_sha256
+    assert Path(report["packet_path"]).read_bytes() == best_packet
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report[
         "blockers"
     ]
-    assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" in report[
+    assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" not in report[
         "blockers"
     ]
     assert "snerv_scorer_loop_qat_not_full_video" in report["blockers"]

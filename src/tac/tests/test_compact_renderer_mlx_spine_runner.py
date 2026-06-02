@@ -310,7 +310,22 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         row["family"]
         for row in campaign_plan["campaign_rows"]
         if row["local_mlx_launch_command_ready"]
-    } == {"hi_nerv"}
+    } == {"hi_nerv", "snerv"}
+    snerv_campaign_rows = [
+        row for row in campaign_plan["campaign_rows"] if row["family"] == "snerv"
+    ]
+    assert snerv_campaign_rows
+    assert all(
+        row["score_lowering_gate"]["local_mlx_executable"] is True
+        and row["score_lowering_gate"]["cpu_replay_ready"] is False
+        and row["score_lowering_gate"]["exact_gate_ready"] is False
+        for row in snerv_campaign_rows
+    )
+    assert any(
+        "snerv_byte_closed_archive_export_missing"
+        in row["score_lowering_gate"]["promotion_blockers"]
+        for row in snerv_campaign_rows
+    )
     assert report["nerv_stack_synergy_audit"]["schema"] == (
         "nerv_stack_synergy_audit.v1"
     )
@@ -3400,6 +3415,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["scorer_loop_qat_max_trials"] == 1
     assert native_calls[0]["scorer_loop_qat_search_mode"] == "top_weight_coordinate"
     assert native_calls[0]["scorer_loop_qat_qat_bits"] == 4
+    assert native_calls[0]["scorer_loop_qat_decoder_payload_codec"] == (
+        "int2_symmetric"
+    )
     native = out["snerv_mlx_native_export"]
     assert native["executed"] is True
     assert native["receiver_proof_passed"] is True
@@ -3624,6 +3642,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_qat_kwargs["levels"] == 2
     assert captured_qat_kwargs["target_bits_per_coeff"] == 1.5
     assert captured_qat_kwargs["qat_bits"] == 4
+    assert captured_qat_kwargs["decoder_payload_codec"] == "int2_symmetric"
     assert captured_qat_kwargs["max_trials"] == 5
     assert captured_qat_kwargs["search_mode"] == "learned_random_subspace"
     assert captured_qat_kwargs["step_map_bins"] == 8

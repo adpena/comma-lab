@@ -1851,6 +1851,7 @@ def _run_snerv_scorer_loop_qat_attachment(
     distillation_device: str,
     step_map_bins: int,
     qat_bits: int,
+    decoder_payload_codec: str,
     max_trials: int,
     search_mode: str,
     perturb_scale: float,
@@ -1903,6 +1904,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             video_path=Path(source_video_path).as_posix(),
             device=str(distillation_device),
             step_map_bins=int(step_map_bins),
+            decoder_payload_codec=str(decoder_payload_codec),
             qat_bits=int(qat_bits),
             max_trials=int(max_trials),
             search_mode=str(search_mode),
@@ -1998,6 +2000,7 @@ def _run_snerv_native_mlx_export_attachment(
     scorer_loop_qat_max_trials: int,
     scorer_loop_qat_search_mode: str,
     scorer_loop_qat_qat_bits: int,
+    scorer_loop_qat_decoder_payload_codec: str,
     scorer_loop_qat_component_guard_mode: str,
     scorer_loop_qat_device: str,
 ) -> dict[str, Any]:
@@ -2045,6 +2048,9 @@ def _run_snerv_native_mlx_export_attachment(
             scorer_loop_qat_max_trials=int(scorer_loop_qat_max_trials),
             scorer_loop_qat_search_mode=str(scorer_loop_qat_search_mode),
             scorer_loop_qat_qat_bits=int(scorer_loop_qat_qat_bits),
+            scorer_loop_qat_decoder_payload_codec=str(
+                scorer_loop_qat_decoder_payload_codec
+            ),
             scorer_loop_qat_component_guard_mode=str(
                 scorer_loop_qat_component_guard_mode
             ),
@@ -2477,6 +2483,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         distillation_device=distillation_device,
         step_map_bins=int(snerv_scorer_loop_step_map_bins),
         qat_bits=int(snerv_scorer_loop_qat_bits),
+        decoder_payload_codec=decoder_payload_codec,
         max_trials=int(snerv_scorer_loop_max_trials),
         search_mode=str(snerv_scorer_loop_search_mode),
         perturb_scale=float(snerv_scorer_loop_perturb_scale),
@@ -2513,6 +2520,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         scorer_loop_qat_max_trials=int(snerv_scorer_loop_max_trials),
         scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
         scorer_loop_qat_qat_bits=int(snerv_scorer_loop_qat_bits),
+        scorer_loop_qat_decoder_payload_codec=decoder_payload_codec,
         scorer_loop_qat_component_guard_mode=(
             "score_primary"
         ),

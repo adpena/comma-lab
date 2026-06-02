@@ -133,6 +133,7 @@ def train_export_snerv_mlx_native(
     scorer_loop_qat_max_trials: int = 0,
     scorer_loop_qat_search_mode: str = "random_signed",
     scorer_loop_qat_qat_bits: int = 8,
+    scorer_loop_qat_decoder_payload_codec: str | None = None,
     scorer_loop_qat_component_guard_mode: str = "score_primary",
     scorer_loop_qat_device: str = "cpu",
     allow_overwrite: bool = False,
@@ -159,6 +160,11 @@ def train_export_snerv_mlx_native(
     target_bits_per_coeff = float(candidate.get("bits_per_coeff", 2.5))
     decoder_payload_codec = str(
         candidate.get("decoder_payload_codec", "mixed_magnitude_symmetric")
+    )
+    active_decoder_payload_codec = (
+        str(scorer_loop_qat_decoder_payload_codec)
+        if scorer_loop_qat_decoder_payload_codec
+        else decoder_payload_codec
     )
     lf_payload_codec = str(candidate.get("lf_payload_codec", "auto"))
     model_size = _model_size_from_candidate(candidate)
@@ -196,12 +202,12 @@ def train_export_snerv_mlx_native(
         )
 
     pairs_nchw255 = _target_pairs_to_nchw255(target0_np, target1_np)
-    archive = build_snerv_mlx_native_packet_from_numpy_pairs(
+    closed_form_archive = build_snerv_mlx_native_packet_from_numpy_pairs(
         pairs_nchw255,
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
-        decoder_payload_codec=decoder_payload_codec,
+        decoder_payload_codec=active_decoder_payload_codec,
         lf_payload_codec=lf_payload_codec,
         model_size=model_size,
         metadata_extra={
@@ -211,23 +217,6 @@ def train_export_snerv_mlx_native(
             "contest_scorer_distortion_objective": True,
             "score_aware_long_training_executed": False,
         },
-    )
-    packet_path = out / SNERV_MLX_NATIVE_PACKET_FILENAME
-    write_bytes_artifact(
-        packet_path,
-        archive.packet,
-        allow_overwrite=allow_overwrite,
-        expected_existing_sha256=(
-            sha256_file(packet_path)
-            if allow_overwrite and packet_path.is_file()
-            else None
-        ),
-    )
-
-    storage_preflight = build_snerv_mlx_native_storage_preflight(
-        output_dir=out,
-        n_pairs=int(num_pairs),
-        packet_bytes=int(archive.total_bytes),
     )
     scorer_loop_qat = _run_scorer_loop_qat_attachment(
         requested=bool(run_scorer_loop_qat),
@@ -242,9 +231,61 @@ def train_export_snerv_mlx_native(
         max_trials=int(scorer_loop_qat_max_trials),
         search_mode=str(scorer_loop_qat_search_mode),
         qat_bits=int(scorer_loop_qat_qat_bits),
+        decoder_payload_codec=active_decoder_payload_codec,
         component_guard_mode=str(scorer_loop_qat_component_guard_mode),
         device=str(scorer_loop_qat_device),
         allow_overwrite=allow_overwrite,
+    )
+    selected_packet = bytes(closed_form_archive.packet)
+    selected_packet_source = "mlx_target_hydration_numpy_closed_form_decoder_fit"
+    scorer_loop_qat_public = {
+        key: value for key, value in scorer_loop_qat.items() if key != "_best_packet_bytes"
+    }
+    best_packet = scorer_loop_qat.get("_best_packet_bytes")
+    if (
+        isinstance(best_packet, bytes)
+        and best_packet
+        and scorer_loop_qat.get("accepted_improvement") is True
+        and scorer_loop_qat.get("receiver_contract_satisfied") is True
+    ):
+        selected_packet = bytes(best_packet)
+        selected_packet_source = "scorer_loop_qat_best_receiver_packet"
+        scorer_loop_qat_public["emitted_packet_uses_scorer_loop_best_decoder"] = True
+        scorer_loop_qat_public["emitted_packet_bytes"] = len(selected_packet)
+        scorer_loop_qat_public["emitted_packet_sha256"] = _sha256_bytes(
+            selected_packet
+        )
+        scorer_loop_qat_public["blockers"] = [
+            str(blocker)
+            for blocker in scorer_loop_qat_public.get("blockers") or []
+            if str(blocker)
+            != "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
+        ]
+        report = scorer_loop_qat_public.get("report_path")
+        if report:
+            _payload_for_disk = {
+                key: value
+                for key, value in scorer_loop_qat_public.items()
+                if key != "report_path"
+            }
+            write_json(report, _payload_for_disk)
+
+    packet_path = out / SNERV_MLX_NATIVE_PACKET_FILENAME
+    write_bytes_artifact(
+        packet_path,
+        selected_packet,
+        allow_overwrite=allow_overwrite,
+        expected_existing_sha256=(
+            sha256_file(packet_path)
+            if allow_overwrite and packet_path.is_file()
+            else None
+        ),
+    )
+
+    storage_preflight = build_snerv_mlx_native_storage_preflight(
+        output_dir=out,
+        n_pairs=int(num_pairs),
+        packet_bytes=len(selected_packet),
     )
     package: dict[str, Any] | None = None
     blockers = [
@@ -253,7 +294,12 @@ def train_export_snerv_mlx_native(
     ]
     if scorer_custody.get("contract_valid") is not True:
         blockers.append("snerv_mlx_native_scorer_custody_contract_invalid")
-    blockers.extend(_scorer_loop_qat_blockers(scorer_loop_qat, num_pairs=int(num_pairs)))
+    blockers.extend(
+        _scorer_loop_qat_blockers(
+            scorer_loop_qat_public,
+            num_pairs=int(num_pairs),
+        )
+    )
     if run_archive_export:
         if storage_preflight["preflight_passed"] is not True:
             blockers.append("snerv_mlx_native_receiver_proof_storage_preflight_failed")
@@ -261,7 +307,7 @@ def train_export_snerv_mlx_native(
             package = export_snerv_mlx_archive(
                 model_or_artifact={
                     "packet_path": packet_path.as_posix(),
-                    "packet_sha256": _sha256_bytes(archive.packet),
+                    "packet_sha256": _sha256_bytes(selected_packet),
                 },
                 output_dir=out / "snerv_mlx_native_archive_bound_package",
                 repo_root=root,
@@ -274,18 +320,18 @@ def train_export_snerv_mlx_native(
         schema=SNERV_MLX_NATIVE_TRAIN_EXPORT_SCHEMA,
         output_dir=out.as_posix(),
         packet_path=packet_path.as_posix(),
-        packet_bytes=int(archive.total_bytes),
-        packet_sha256=_sha256_bytes(archive.packet),
+        packet_bytes=len(selected_packet),
+        packet_sha256=_sha256_bytes(selected_packet),
         num_pairs=int(num_pairs),
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
-        decoder_payload_codec=decoder_payload_codec,
+        decoder_payload_codec=active_decoder_payload_codec,
         lf_payload_codec=lf_payload_codec,
         model_size=model_size.as_jsonable(),
         bridge_drift=bridge,
         scorer_custody=scorer_custody,
-        scorer_loop_qat=scorer_loop_qat,
+        scorer_loop_qat=scorer_loop_qat_public,
         storage_preflight=storage_preflight,
         archive_package=package,
         archive_path=(
@@ -318,6 +364,7 @@ def train_export_snerv_mlx_native(
         blockers=tuple(dict.fromkeys(blockers)),
     )
     payload = artifact.as_jsonable()
+    payload["packet_source"] = selected_packet_source
     payload["wall_seconds"] = round(time.monotonic() - started, 6)
     report_path = out / SNERV_MLX_NATIVE_REPORT_FILENAME
     if report_path.exists() and not allow_overwrite:
@@ -430,6 +477,7 @@ def _run_scorer_loop_qat_attachment(
     max_trials: int,
     search_mode: str,
     qat_bits: int,
+    decoder_payload_codec: str,
     component_guard_mode: str,
     device: str,
     allow_overwrite: bool,
@@ -478,12 +526,16 @@ def _run_scorer_loop_qat_attachment(
             snerv_mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
             snerv_hfr_gain=float(model_size.hfr_gain),
             snerv_temporal_context=int(model_size.temporal_context),
+            decoder_payload_codec=str(decoder_payload_codec),
             qat_bits=int(qat_bits),
             max_trials=int(max_trials),
             search_mode=str(search_mode),
             component_guard_mode=str(component_guard_mode),
         )
         result_payload = result.as_jsonable()
+        best_packet = getattr(result, "best_packet", b"")
+        if best_packet:
+            best_packet = bytes(best_packet)
         blockers = [
             str(blocker) for blocker in result_payload.get("blockers") or [] if blocker
         ]
@@ -510,6 +562,11 @@ def _run_scorer_loop_qat_attachment(
             "best_archive_sha256": _nested(result_payload, "best", "archive_sha256"),
             "baseline_score_linf": _nested(result_payload, "baseline", "score_linf"),
             "best_score_linf": _nested(result_payload, "best", "score_linf"),
+            "best_packet_bytes": int(result_payload.get("best_packet_bytes") or 0),
+            "best_packet_sha256": result_payload.get("best_packet_sha256"),
+            "decoder_payload_codec": str(
+                result_payload.get("decoder_payload_codec") or decoder_payload_codec
+            ),
             "accepted_improvement": bool(result_payload.get("accepted_improvement")),
             "receiver_contract_satisfied": bool(
                 result_payload.get("receiver_contract_satisfied")
@@ -522,6 +579,8 @@ def _run_scorer_loop_qat_attachment(
             "blockers": _ordered_unique(blockers),
             **FALSE_AUTHORITY,
         }
+        if best_packet:
+            payload["_best_packet_bytes"] = best_packet
     except Exception as exc:
         payload = {
             "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
@@ -535,7 +594,10 @@ def _run_scorer_loop_qat_attachment(
             "blockers": ["snerv_scorer_loop_qat_attachment_failed"],
             **FALSE_AUTHORITY,
         }
-    write_json(report_path, payload)
+    payload_for_disk = {
+        key: value for key, value in payload.items() if key != "_best_packet_bytes"
+    }
+    write_json(report_path, payload_for_disk)
     return {**payload, "report_path": report_path.as_posix()}
 
 

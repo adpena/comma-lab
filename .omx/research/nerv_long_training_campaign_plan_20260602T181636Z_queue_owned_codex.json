@@ -58,10 +58,10 @@
         "4",
         "--optimizer-kind",
         "adamw",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -498,10 +498,10 @@
               "4",
               "--optimizer-kind",
               "adamw",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -557,6 +557,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "adamw",
@@ -683,10 +684,10 @@
         "4",
         "--optimizer-kind",
         "lion",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_lion"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_lion",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -1123,10 +1124,10 @@
               "4",
               "--optimizer-kind",
               "lion",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_lion"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_lion",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -1182,6 +1183,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "lion",
@@ -1308,10 +1310,10 @@
         "8",
         "--optimizer-kind",
         "adamw",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adamw"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adamw",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -1748,10 +1750,10 @@
               "8",
               "--optimizer-kind",
               "adamw",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adamw"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adamw",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -1807,6 +1809,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "adamw",
@@ -1933,10 +1936,10 @@
         "8",
         "--optimizer-kind",
         "lion",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_lion"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_lion",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -2373,10 +2376,10 @@
               "8",
               "--optimizer-kind",
               "lion",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_lion"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_lion",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -2432,6 +2435,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "lion",
@@ -2558,10 +2562,10 @@
         "8",
         "--optimizer-kind",
         "adamw",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -2998,10 +3002,10 @@
               "8",
               "--optimizer-kind",
               "adamw",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -3057,6 +3061,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "adamw",
@@ -3183,10 +3188,10 @@
         "8",
         "--optimizer-kind",
         "lion",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_lion"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_lion",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -3623,10 +3628,10 @@
               "8",
               "--optimizer-kind",
               "lion",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_lion"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_lion",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -3682,6 +3687,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "lion",
@@ -3808,10 +3814,10 @@
         "4",
         "--optimizer-kind",
         "adafactor",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adafactor"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adafactor",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -4248,10 +4254,10 @@
               "4",
               "--optimizer-kind",
               "adafactor",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adafactor"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adafactor",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -4307,6 +4313,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "adafactor",
@@ -4433,10 +4440,10 @@
         "4",
         "--optimizer-kind",
         "rmsprop",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_rmsprop"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_rmsprop",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -4873,10 +4880,10 @@
               "4",
               "--optimizer-kind",
               "rmsprop",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_rmsprop"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_rmsprop",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -4932,6 +4939,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "rmsprop",
@@ -5058,10 +5066,10 @@
         "8",
         "--optimizer-kind",
         "adafactor",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adafactor"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adafactor",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -5498,10 +5506,10 @@
               "8",
               "--optimizer-kind",
               "adafactor",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adafactor"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adafactor",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -5557,6 +5565,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "adafactor",
@@ -5683,10 +5692,10 @@
         "8",
         "--optimizer-kind",
         "rmsprop",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_rmsprop"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_rmsprop",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -6123,10 +6132,10 @@
               "8",
               "--optimizer-kind",
               "rmsprop",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_rmsprop"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_rmsprop",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -6182,6 +6191,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "rmsprop",
@@ -6308,10 +6318,10 @@
         "8",
         "--optimizer-kind",
         "adafactor",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adafactor"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adafactor",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -6748,10 +6758,10 @@
               "8",
               "--optimizer-kind",
               "adafactor",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adafactor"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adafactor",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -6807,6 +6817,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "adafactor",
@@ -6933,10 +6944,10 @@
         "8",
         "--optimizer-kind",
         "rmsprop",
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
-        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_rmsprop"
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_rmsprop",
+        "--auto-joint-recon-pixel-weight"
       ],
       "cpu_replay_ready": false,
       "curriculum_plan": {
@@ -7373,10 +7384,10 @@
               "8",
               "--optimizer-kind",
               "rmsprop",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_rmsprop"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_rmsprop",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -7432,6 +7443,7 @@
       "gpu_launched": false,
       "hard_byte_ceiling": 36000,
       "implementation_status": "shared_mlx_scoreaware_runner_launchable",
+      "joint_recon_pixel_weight_artifact": null,
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
       "optimizer_kind": "rmsprop",
@@ -10090,10 +10102,10 @@
               "4",
               "--optimizer-kind",
               "adamw",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -10255,10 +10267,10 @@
               "4",
               "--optimizer-kind",
               "lion",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_lion"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_lion",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -10420,10 +10432,10 @@
               "8",
               "--optimizer-kind",
               "adamw",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adamw"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adamw",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -10585,10 +10597,10 @@
               "8",
               "--optimizer-kind",
               "lion",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_lion"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_lion",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -10750,10 +10762,10 @@
               "8",
               "--optimizer-kind",
               "adamw",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -10915,10 +10927,10 @@
               "8",
               "--optimizer-kind",
               "lion",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_lion"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_lion",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -11080,10 +11092,10 @@
               "4",
               "--optimizer-kind",
               "adafactor",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adafactor"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adafactor",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -11245,10 +11257,10 @@
               "4",
               "--optimizer-kind",
               "rmsprop",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_rmsprop"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_rmsprop",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -11410,10 +11422,10 @@
               "8",
               "--optimizer-kind",
               "adafactor",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adafactor"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adafactor",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -11575,10 +11587,10 @@
               "8",
               "--optimizer-kind",
               "rmsprop",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_rmsprop"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_rmsprop",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -11740,10 +11752,10 @@
               "8",
               "--optimizer-kind",
               "adafactor",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adafactor"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adafactor",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -11905,10 +11917,10 @@
               "8",
               "--optimizer-kind",
               "rmsprop",
-              "--auto-joint-recon-pixel-weight",
               "--run-post-export-materializers",
               "--output-dir",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_rmsprop"
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_rmsprop",
+              "--auto-joint-recon-pixel-weight"
             ],
             "id": "run_mlx_first_campaign_row",
             "on_postcondition_failure": "failed",
@@ -12558,6 +12570,8 @@
     "snerv": 3
   },
   "gpu_launched": false,
+  "joint_recon_weight_artifact_count": 0,
+  "joint_recon_weight_artifacts": [],
   "launchable_local_row_count": 15,
   "learning_rate": 0.001,
   "objective": "Make HiNeRV and SNeRV full-stack PR95-or-better carriers: modelsize-byte constrained, real SegNet/PoseNet scorer-bound, QAT/coder pressured, MLX-first, NumPy-portable, receiver-proven, CPU replay gated, and exact-auth only after local wins.",

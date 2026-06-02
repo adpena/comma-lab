@@ -44,6 +44,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--batch-pairs", type=int, default=DEFAULT_BATCH_PAIRS)
     parser.add_argument("--learning-rate", type=float, default=DEFAULT_LEARNING_RATE)
     parser.add_argument(
+        "--joint-recon-weight-manifest",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Verified joint P18/P19 recon-pixel-weight manifest to pin in "
+            "HiNeRV campaign rows. Repeatable for multiple pair counts."
+        ),
+    )
+    parser.add_argument(
         "--output-root",
         default="/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
     )
@@ -59,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         learning_rate=args.learning_rate,
         output_root=args.output_root,
         max_candidates_per_family=args.max_candidates_per_family,
+        joint_recon_weight_manifest_paths=tuple(args.joint_recon_weight_manifest),
     )
     write_json_artifact(
         args.output_json,

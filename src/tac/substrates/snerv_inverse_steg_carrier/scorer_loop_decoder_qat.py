@@ -150,6 +150,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     snerv_hfr_gain: float
     snerv_temporal_context: int
     decoder_feature_count: int
+    decoder_payload_codec: str
     qat_bits: int
     max_trials: int
     search_mode: str
@@ -163,6 +164,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     component_guard_mode: str
     baseline: SnervDecoderEval
     best: SnervDecoderEval
+    best_packet: bytes
     evaluations: tuple[SnervDecoderEval, ...]
     accepted_improvement: bool
     improvement_score_delta: float
@@ -183,6 +185,9 @@ class SnervScorerLoopDecoderQatSmokeResult:
 
     def as_jsonable(self) -> dict[str, Any]:
         payload = asdict(self)
+        best_packet = bytes(payload.pop("best_packet", b""))
+        payload["best_packet_bytes"] = len(best_packet)
+        payload["best_packet_sha256"] = _sha256(best_packet) if best_packet else None
         payload["baseline"] = self.baseline.as_jsonable()
         payload["best"] = self.best.as_jsonable()
         payload["evaluations"] = [row.as_jsonable() for row in self.evaluations]
@@ -236,6 +241,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
     snerv_hfr_gain: float = 0.0,
     snerv_temporal_context: int = 0,
+    decoder_payload_codec: str = "float32_lzma",
     qat_bits: int = 8,
     max_trials: int = 2,
     search_mode: str = "random_signed",
@@ -342,6 +348,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         posenet=posenet,
         segnet=segnet,
         qat_bits=qat_bits,
+        decoder_payload_codec=decoder_payload_codec,
         label="least_squares_qat_baseline",
         iteration=0,
         accepted=True,
@@ -372,6 +379,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 posenet=posenet,
                 segnet=segnet,
                 qat_bits=qat_bits,
+                decoder_payload_codec=decoder_payload_codec,
                 label=f"{direction_label}_plus_probe",
                 iteration=trial,
                 accepted=False,
@@ -383,6 +391,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 posenet=posenet,
                 segnet=segnet,
                 qat_bits=qat_bits,
+                decoder_payload_codec=decoder_payload_codec,
                 label=f"{direction_label}_minus_probe",
                 iteration=trial,
                 accepted=False,
@@ -460,6 +469,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 posenet=posenet,
                 segnet=segnet,
                 qat_bits=qat_bits,
+                decoder_payload_codec=decoder_payload_codec,
                 label="nes_pair_robust_update",
                 iteration=max_trials + 1,
                 accepted=False,
@@ -518,6 +528,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     posenet=posenet,
                     segnet=segnet,
                     qat_bits=qat_bits,
+                    decoder_payload_codec=decoder_payload_codec,
                     label=f"{direction_label}_{'plus' if sign > 0 else 'minus'}",
                     iteration=trial,
                     accepted=False,
@@ -565,6 +576,15 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 rows.append(row)
 
     accepted_improvement = best_eval.label != baseline.label
+    best_quantized_decoder, _best_qstats = quantize_decoder_for_qat(
+        best_decoder,
+        bits=qat_bits,
+    )
+    best_packet = _pack_receiver_archive(
+        prepared,
+        best_quantized_decoder,
+        decoder_payload_codec=decoder_payload_codec,
+    ).packet
     blockers = []
     if not accepted_improvement:
         blockers.append("no_quantized_decoder_trial_improved_score_under_component_guard")
@@ -590,6 +610,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         snerv_hfr_gain=float(model_size.hfr_gain),
         snerv_temporal_context=int(model_size.temporal_context),
         decoder_feature_count=int(model_size.feature_count),
+        decoder_payload_codec=str(decoder_payload_codec),
         qat_bits=int(qat_bits),
         max_trials=int(max_trials),
         search_mode=search_mode,
@@ -611,6 +632,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         component_guard_mode=component_mode,
         baseline=baseline,
         best=best_eval,
+        best_packet=best_packet,
         evaluations=tuple(rows),
         accepted_improvement=accepted_improvement,
         improvement_score_delta=float(best_eval.score_linf - baseline.score_linf),
@@ -1193,13 +1215,18 @@ def _evaluate_decoder(
     posenet: torch.nn.Module,
     segnet: torch.nn.Module,
     qat_bits: int,
+    decoder_payload_codec: str,
     label: str,
     iteration: int,
     accepted: bool,
     byte_pressure_multiplier: float,
 ) -> SnervDecoderEval:
     quantized, qstats = quantize_decoder_for_qat(decoder, bits=qat_bits)
-    archive = _pack_receiver_archive(prepared, quantized)
+    archive = _pack_receiver_archive(
+        prepared,
+        quantized,
+        decoder_payload_codec=decoder_payload_codec,
+    )
     try:
         receiver_np = decode_snerv_archive_frames(archive.packet)
         replay_ok = receiver_np.shape == tuple(prepared.pairs.shape)
@@ -1261,13 +1288,18 @@ def _evaluate_decoder(
 def _pack_receiver_archive(
     prepared: _PreparedState,
     decoder: HfGenerationDecoder,
+    *,
+    decoder_payload_codec: str = "float32_lzma",
 ) -> SnervArchivePacket:
     return pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(
             lf_zero_points=list(prepared.lf_zero_points),
         ),
         lf_payload=encode_lf_quant_payload(list(prepared.lf_quant_planes)),
-        decoder_payload=encode_decoder_payload(decoder),
+        decoder_payload=encode_decoder_payload(
+            decoder,
+            codec=decoder_payload_codec,
+        ),
         step_map_packet=prepared.step_map_packet,
         metadata={
             "n_pairs": int(prepared.pairs.shape[0]),
@@ -1279,6 +1311,7 @@ def _pack_receiver_archive(
             "orig_hw": list(prepared.orig_hw),
             "lf_plane_count": len(prepared.lf_quant_planes),
             "hf_decoder_fit_mode": "scorer_loop_decoder_qat_smoke",
+            "decoder_payload_codec": str(decoder_payload_codec),
             "snerv_model_size_adapter": prepared.model_size.adapter,
             "snerv_spectra_preserving_adapter_enabled": (
                 prepared.model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER

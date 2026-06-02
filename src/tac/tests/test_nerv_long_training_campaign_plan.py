@@ -43,6 +43,8 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
     assert all(row["local_mlx_launch_command_ready"] is True for row in hi_rows)
     assert all(row["local_mlx_executable"] is True for row in hi_rows)
+    assert all("--auto-joint-recon-pixel-weight" in row["command_argv"] for row in hi_rows)
+    assert all("--recon-pixel-weight-path" not in row["command_argv"] for row in hi_rows)
     assert all(row["cpu_replay_ready"] is False for row in hi_rows)
     assert all(row["exact_gate_ready"] is False for row in hi_rows)
     assert all(
@@ -113,6 +115,37 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert "hi_nerv::hinerv_tiny::lion" in markdown
 
 
+def test_long_training_campaign_plan_pins_verified_joint_recon_weight(
+    tmp_path: Path,
+) -> None:
+    manifest = _joint_recon_weight_manifest(tmp_path, num_pairs=600)
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        joint_recon_weight_manifest_paths=(manifest,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    argv = hi["command_argv"]
+    assert "--auto-joint-recon-pixel-weight" not in argv
+    assert "--recon-pixel-weight-path" in argv
+    weight_arg = argv[argv.index("--recon-pixel-weight-path") + 1]
+    assert Path(weight_arg).is_file()
+    assert "requires_verified_joint_p18_p19_recon_pixel_weight_artifact" not in hi[
+        "blockers"
+    ]
+    artifact = hi["joint_recon_pixel_weight_artifact"]
+    assert artifact["num_pairs"] == 600
+    assert artifact["manifest_path"] == manifest.as_posix()
+    assert artifact["score_claim"] is False
+    assert report["joint_recon_weight_artifact_count"] == 1
+
+
 def test_long_training_campaign_plan_rejects_unknown_optimizer() -> None:
     with pytest.raises(NervLongTrainingCampaignPlanError, match="unsupported"):
         build_nerv_long_training_campaign_plan(
@@ -137,6 +170,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(hinerv),
             "--snerv-modelsize-budget",
             str(snerv),
+            "--joint-recon-weight-manifest",
+            str(_joint_recon_weight_manifest(tmp_path, num_pairs=600)),
             "--optimizer-kind",
             "lion",
             "--epochs",
@@ -153,6 +188,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert rc == 0
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["campaign_row_count"] == 2
+    hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
+    assert "--recon-pixel-weight-path" in hi["command_argv"]
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
     assert queue == payload["experiment_queue"]
@@ -237,3 +274,35 @@ def _snerv_budget() -> dict:
 
 def _sha256(path: Path) -> str:
     return sha256(path.read_bytes()).hexdigest()
+
+
+def _joint_recon_weight_manifest(root: Path, *, num_pairs: int) -> Path:
+    out = root / f"joint_weight_{num_pairs}"
+    out.mkdir(parents=True, exist_ok=True)
+    weight = out / "joint_p18_p19_recon_pixel_weight.npz"
+    weight.write_bytes(b"unit-weight-bytes")
+    manifest = out / "joint_p18_p19_recon_pixel_weight_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "joint_p18_p19_recon_pixel_weight_manifest.v1",
+                "weight_path": weight.as_posix(),
+                "weight_sha256": _sha256(weight),
+                "config": {"num_pairs": int(num_pairs)},
+                "metadata": {
+                    "gradient_health": {
+                        "status": "pass_finite",
+                        "nonfinite_count": 0,
+                    },
+                    "training_consumption_recommended": True,
+                    "blockers": [],
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return manifest

@@ -111,10 +111,10 @@
             "4",
             "--optimizer-kind",
             "adamw",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adamw",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -276,10 +276,10 @@
             "4",
             "--optimizer-kind",
             "lion",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_lion"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_lion",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -441,10 +441,10 @@
             "8",
             "--optimizer-kind",
             "adamw",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adamw"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adamw",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -606,10 +606,10 @@
             "8",
             "--optimizer-kind",
             "lion",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_lion"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_lion",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -771,10 +771,10 @@
             "8",
             "--optimizer-kind",
             "adamw",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adamw",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -936,10 +936,10 @@
             "8",
             "--optimizer-kind",
             "lion",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_lion"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_lion",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -1101,10 +1101,10 @@
             "4",
             "--optimizer-kind",
             "adafactor",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adafactor"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_adafactor",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -1266,10 +1266,10 @@
             "4",
             "--optimizer-kind",
             "rmsprop",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_rmsprop"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000_rmsprop",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -1431,10 +1431,10 @@
             "8",
             "--optimizer-kind",
             "adafactor",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adafactor"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_adafactor",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -1596,10 +1596,10 @@
             "8",
             "--optimizer-kind",
             "rmsprop",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_rmsprop"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_int8_mixed_ceil36000_rmsprop",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -1761,10 +1761,10 @@
             "8",
             "--optimizer-kind",
             "adafactor",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adafactor"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_adafactor",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",
@@ -1926,10 +1926,10 @@
             "8",
             "--optimizer-kind",
             "rmsprop",
-            "--auto-joint-recon-pixel-weight",
             "--run-post-export-materializers",
             "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_rmsprop"
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000_rmsprop",
+            "--auto-joint-recon-pixel-weight"
           ],
           "id": "run_mlx_first_campaign_row",
           "on_postcondition_failure": "failed",

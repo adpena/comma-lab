@@ -101,6 +101,7 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
         posenet=object(),
         segnet=object(),
         qat_bits=8,
+        decoder_payload_codec="int4_symmetric",
         label="receiver_priced_eval",
         iteration=1,
         accepted=False,
@@ -147,6 +148,7 @@ def test_pack_receiver_archive_records_scorer_loop_adapter_config() -> None:
     assert archive.metadata["snerv_mfu_scales"] == [1, 3]
     assert archive.metadata["snerv_hfr_gain"] == pytest.approx(0.25)
     assert archive.metadata["snerv_temporal_context"] == 1
+    assert archive.metadata["decoder_payload_codec"] == "float32_lzma"
     assert archive.metadata["decoder_feature_count"] == cfg.feature_count
 
 

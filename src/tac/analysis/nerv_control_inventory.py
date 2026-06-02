@@ -19,6 +19,7 @@ from tac.analysis.nerv_modelsize_ladder import (
     SCORER_ONLY_OBJECTIVE_AUTHORITY,
     build_nerv_modelsize_ladder,
 )
+from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
 )
@@ -1519,8 +1520,15 @@ def _missing_official_feature_markers(
         "hi_nerv": ("src/tac/substrates/hi_nerv",),
         "snerv": ("src/tac/substrates/snerv_inverse_steg_carrier",),
     }
-    text = "\n".join(_read_source_text(root / rel) for rel in source_dirs.get(family, ()))
+    text = "\n".join(
+        _read_source_text_for_marker_scan(root / rel)
+        for rel in source_dirs.get(family, ())
+    )
     return [marker for marker in markers if marker not in text]
+
+
+def _read_source_text_for_marker_scan(path: Path) -> str:
+    return read_python_source_for_marker_scan(path)
 
 
 def _read_source_text(path: Path) -> str:

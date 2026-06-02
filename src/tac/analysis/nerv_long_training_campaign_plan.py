@@ -11,6 +11,8 @@ partial runs.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,9 @@ from tac.analysis.nerv_candidate_curriculum import (
 from tac.analysis.nerv_modelsize_budget import (
     decoder_codec_nominal_bits,
     snerv_decoder_codec_nominal_bits,
+)
+from tac.optimization.recon_pixel_weight_surface import (
+    JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA,
 )
 from tac.substrates._shared.mlx_score_aware.adapter import (
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
@@ -58,6 +63,7 @@ def build_nerv_long_training_campaign_plan(
     learning_rate: float = DEFAULT_LEARNING_RATE,
     output_root: str | Path = DEFAULT_OUTPUT_ROOT,
     max_candidates_per_family: int = 3,
+    joint_recon_weight_manifest_paths: Sequence[str | Path] = (),
 ) -> dict[str, Any]:
     """Build the shared HiNeRV/SNeRV long-training campaign matrix."""
 
@@ -78,6 +84,9 @@ def build_nerv_long_training_campaign_plan(
         raise NervLongTrainingCampaignPlanError("batch_pairs must be positive")
     if float(learning_rate) <= 0.0:
         raise NervLongTrainingCampaignPlanError("learning_rate must be positive")
+    joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(
+        joint_recon_weight_manifest_paths
+    )
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -100,6 +109,7 @@ def build_nerv_long_training_campaign_plan(
                     batch_pairs=int(batch_pairs),
                     learning_rate=float(learning_rate),
                     output_root=Path(output_root),
+                    joint_recon_weight_artifacts=joint_recon_weight_artifacts,
                 )
             )
     for candidate in snerv_candidates:
@@ -135,6 +145,8 @@ def build_nerv_long_training_campaign_plan(
         "batch_pairs": int(batch_pairs),
         "learning_rate": float(learning_rate),
         "output_root": Path(output_root).as_posix(),
+        "joint_recon_weight_artifacts": list(joint_recon_weight_artifacts.values()),
+        "joint_recon_weight_artifact_count": len(joint_recon_weight_artifacts),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
         "experiment_queue": experiment_queue,
@@ -217,13 +229,18 @@ def _hinerv_campaign_row(
     batch_pairs: int,
     learning_rate: float,
     output_root: Path,
+    joint_recon_weight_artifacts: Mapping[int, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
+    num_pairs = int(candidate.get("num_pairs") or 600)
+    joint_recon_weight = dict(
+        (joint_recon_weight_artifacts or {}).get(num_pairs) or {}
+    )
     curriculum = build_hinerv_candidate_curriculum_plan(
         candidate=candidate,
         requested_epochs=int(epochs),
-        num_pairs=int(candidate.get("num_pairs") or 600),
+        num_pairs=num_pairs,
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
         coder_aware_qat=True,
@@ -248,7 +265,7 @@ def _hinerv_campaign_row(
         "--execute-family",
         "hi_nerv",
         "--num-pairs",
-        str(int(candidate.get("num_pairs") or 600)),
+        str(num_pairs),
         "--epochs",
         str(int(epochs)),
         "--batch-pairs",
@@ -266,13 +283,25 @@ def _hinerv_campaign_row(
         str(int(quant_bits)),
         "--optimizer-kind",
         str(optimizer_kind),
-        "--auto-joint-recon-pixel-weight",
         "--run-post-export-materializers",
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
+    if joint_recon_weight:
+        command.extend(
+            [
+                "--recon-pixel-weight-path",
+                str(joint_recon_weight["weight_path"]),
+            ]
+        )
+    else:
+        command.append("--auto-joint-recon-pixel-weight")
     blockers = [
-        "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
+        (
+            ""
+            if joint_recon_weight
+            else "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
+        ),
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *list(curriculum.get("blockers") or []),
@@ -294,6 +323,7 @@ def _hinerv_campaign_row(
         extra={
             "optimizer_kind": str(optimizer_kind),
             "quant_bits": int(quant_bits),
+            "joint_recon_pixel_weight_artifact": joint_recon_weight or None,
         },
     )
 
@@ -686,6 +716,98 @@ def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
     if not out:
         raise NervLongTrainingCampaignPlanError("at least one optimizer is required")
     return tuple(out)
+
+
+def _load_verified_joint_recon_weight_artifacts(
+    manifest_paths: Sequence[str | Path],
+) -> dict[int, dict[str, Any]]:
+    artifacts: dict[int, dict[str, Any]] = {}
+    for path_value in manifest_paths:
+        manifest_path = Path(path_value).expanduser().resolve(strict=False)
+        if not manifest_path.is_file():
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight manifest not found: {manifest_path}"
+            )
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise NervLongTrainingCampaignPlanError(
+                f"invalid joint recon weight manifest JSON: {manifest_path}"
+            ) from exc
+        if not isinstance(manifest, Mapping):
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight manifest must be an object: {manifest_path}"
+            )
+        if manifest.get("schema") != JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA:
+            raise NervLongTrainingCampaignPlanError(
+                f"unsupported joint recon weight manifest schema: {manifest_path}"
+            )
+        config = manifest.get("config")
+        metadata = manifest.get("metadata")
+        if not isinstance(config, Mapping) or not isinstance(metadata, Mapping):
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight manifest missing config/metadata: {manifest_path}"
+            )
+        try:
+            num_pairs = int(config.get("num_pairs"))
+        except (TypeError, ValueError) as exc:
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight manifest missing numeric num_pairs: {manifest_path}"
+            ) from exc
+        health = metadata.get("gradient_health")
+        if not isinstance(health, Mapping) or health.get("status") != "pass_finite":
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight manifest failed gradient health: {manifest_path}"
+            )
+        if metadata.get("training_consumption_recommended") is not True:
+            raise NervLongTrainingCampaignPlanError(
+                "joint recon weight manifest is not recommended for training "
+                f"consumption: {manifest_path}"
+            )
+        blockers = [str(item) for item in metadata.get("blockers") or [] if item]
+        if blockers:
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight manifest has blockers: {manifest_path}"
+            )
+        raw_weight_path = manifest.get("weight_path")
+        if raw_weight_path is None:
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight manifest missing weight_path: {manifest_path}"
+            )
+        weight_path = Path(str(raw_weight_path)).expanduser()
+        if not weight_path.is_absolute():
+            weight_path = manifest_path.parent / weight_path
+        weight_path = weight_path.resolve(strict=False)
+        if not weight_path.is_file():
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight file not found: {weight_path}"
+            )
+        actual_sha = _sha256_file(weight_path)
+        expected_sha = str(manifest.get("weight_sha256") or "")
+        if expected_sha and actual_sha != expected_sha:
+            raise NervLongTrainingCampaignPlanError(
+                f"joint recon weight sha mismatch: {weight_path}"
+            )
+        artifact = {
+            "schema": "nerv_long_training_joint_recon_weight_artifact.v1",
+            "num_pairs": int(num_pairs),
+            "manifest_path": manifest_path.as_posix(),
+            "weight_path": weight_path.as_posix(),
+            "weight_sha256": actual_sha,
+            "gradient_health": dict(health),
+            "training_consumption_recommended": True,
+            **FALSE_AUTHORITY,
+        }
+        artifacts[int(num_pairs)] = artifact
+    return dict(sorted(artifacts.items()))
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _family_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
