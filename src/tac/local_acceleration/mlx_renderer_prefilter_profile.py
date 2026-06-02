@@ -63,8 +63,10 @@ def write_mlx_renderer_prefilter_profile(
         archive_sha256: SHA-256 of that archive.
         upstream_dir: Upstream scorer/runtime directory used to load scorer
             weights.
-        scorer_device: Device used while importing upstream PyTorch scorers
-            before conversion to MLX. Usually ``"cpu"``.
+        scorer_device: MLX execution device type (``"cpu"`` or ``"gpu"``).
+            Upstream PyTorch scorer weights are loaded on CPU when this is
+            ``"gpu"`` because PyTorch does not recognize MLX's ``gpu`` device
+            string; only the converted MLX scorer runs on the requested device.
         scorer_batch_pairs: Number of pairs per MLX scorer forward. Strict
             replay gates currently require singleton batches for full-video
             promotion, so callers should keep this at ``1`` when they want the
@@ -86,10 +88,12 @@ def write_mlx_renderer_prefilter_profile(
         temporary_mlx_device,
     )
 
-    with temporary_mlx_device(scorer_device):
+    mlx_device_type = str(scorer_device)
+    torch_load_device = "cpu" if mlx_device_type == "gpu" else mlx_device_type
+    with temporary_mlx_device(mlx_device_type):
         adapter = load_mlx_distortion_scorer_adapter_from_upstream(
             upstream_dir,
-            device=scorer_device,
+            device=torch_load_device,
         )
         profile = build_mlx_renderer_prefilter_profile_loaded(
             bundle=bundle,
@@ -101,7 +105,7 @@ def write_mlx_renderer_prefilter_profile(
             run_id=run_id,
             source_video_path=source_video_path,
             upstream_dir=upstream_dir,
-            scorer_device=scorer_device,
+            scorer_device=mlx_device_type,
             progress_jsonl_path=progress_jsonl_path,
             progress_every=progress_every,
         )
