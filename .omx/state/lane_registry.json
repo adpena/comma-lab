@@ -66015,15 +66015,15 @@
       "id": "lane_pact_vq_projection_gap_repair_20260602",
       "name": "PACT/VQ projection-gap repair",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
           "status": false,
           "evidence": ""
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/run_20260602T0148Z/compact_renderer_mlx_spine_runner_report.json"
         },
         "contest_cuda": {
           "status": false,
@@ -66050,7 +66050,7 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "2026-06-02 Codex: first capacity_l8_e16_k32_ch32 PACT/VQ projection-gap repair produced receiver-proven 31,728B archive sha 084b44613e6ce711b938109168e0236408db3af513077ee62314206c6126d954; run report /Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/run_20260602T0148Z/compact_renderer_mlx_spine_runner_report.json. False-authority remains: full-video MLX replay/section pricing and exact CPU/CUDA gate missing."
     }
   ],
   "level_rules": {
@@ -66060,5 +66060,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-02T01:36:28Z"
+  "updated_at": "2026-06-02T01:46:19Z"
 }
