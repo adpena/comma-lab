@@ -1,0 +1,1221 @@
+{
+  "axis_tag": "[planning/control]",
+  "baseline_to_beat": "pr95_hnerv_muon",
+  "bit_allocator_ingest_contract": {
+    "allowed_use": "allocate_measurement_and_receiver_grammar_followups",
+    "consumer": "bit_allocator",
+    "forbidden_use": "assign_real_bits_without_measured_sensitivity_and_receiver_proof",
+    "requires_before_real_bit_assignment": [
+      "per_atom_or_per_group_sensitivity",
+      "receiver_decoded_byte_accounting",
+      "scorer_replay_under_axis_label"
+    ]
+  },
+  "blockers": [
+    "pr95_public_intake_root_missing",
+    "upstream_repo_dir_missing",
+    "snerv_official_oss_snapshot_missing",
+    "hinerv_official_oss_snapshot_missing",
+    "hnerv_pr95_control_official_oss_snapshot_missing",
+    "snerv_simplified_contest_adapter_not_source_faithful",
+    "hinerv_l0_sketch_not_source_faithful",
+    "pr101_cpu_recovery_pending_blocks_new_exact_or_full_video",
+    "z5_rao_ballard_modal_claims_still_need_terminal_adjudication",
+    "full_600_byte_closed_receiver_proof_missing_for_snerv_and_hinerv",
+    "paired_contest_cpu_cuda_pass_missing_for_winner",
+    "pr95_same_axis_control_replay_required_before_beat_claim",
+    "nerv_control_binding_gap:measured_hi_nerv_modelsize_budget_ladder",
+    "nerv_control_binding_gap:decoder_weight_saliency_into_trainer",
+    "nerv_control_binding_gap:cache_quality_gate_required_before_profile_or_spend",
+    "nerv_control_binding_gap:hi_nerv_decoder_codec_sweep_full600_replay",
+    "nerv_control_binding_gap:trained_scorer_preserving_sr_receiver_for_hi_nerv",
+    "nerv_control_binding_gap:receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv",
+    "nerv_control_binding_gap:decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main",
+    "nerv_control_binding_gap:mlx_native_snerv_train_export",
+    "nerv_control_binding_gap:receiver_closed_learned_hfr",
+    "nerv_control_binding_gap:snerv_measured_modelsize_ladder",
+    "nerv_control_binding_gap:learned_lf_generator_byte_collapse",
+    "nerv_control_binding_gap:snerv_scorer_loop_decoder_qat_full_video",
+    "nerv_control_binding_gap:feed_pr95_hnerv_measured_ladder_into_all_carrier_plans",
+    "nerv_control_binding_gap:runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls",
+    "nerv_control_binding_gap:byte_priced_flow_or_pose_support_tokens_for_hi_nerv_snerv",
+    "nerv_control_binding_gap:rate_priced_nervplusplus_block_ablation_for_hi_nerv_snerv",
+    "nerv_control_binding_gap:codebook_entropy_model_bytes_charged_in_spine",
+    "nerv_control_binding_gap:full_video_section_value_for_vq_codebook_indices",
+    "nerv_control_binding_gap:demote_codebook_sections_without_positive_total_value",
+    "nerv_control_binding_gap:push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
+    "nerv_control_binding_gap:nerv_control_inventory_consumer_for_master_gradient_rows",
+    "nerv_control_binding_gap:full_video_vjp_bundle_as_budget_spend_prerequisite",
+    "nerv_control_binding_gap:gradient_bundle_to_modelsize_and_section_allocator",
+    "nerv_control_binding_gap:hard_archive_projection_line_search_for_compact_carriers",
+    "nerv_control_binding_gap:hi_nerv_snerv_grouped_intN_zero_run_packet_layout",
+    "nerv_control_binding_gap:all_compact_carrier_emitters_on_shared_archive_bound_contract",
+    "nerv_control_binding_gap:bounded_runner_refuses_non_contract_candidate_paths",
+    "hi_nerv_official_symbol_parity_map_missing",
+    "hi_nerv_tiny_forward_parity_against_oss_missing",
+    "hi_nerv_bitstream_q_receiver_roundtrip_missing",
+    "src/tac/substrates/hi_nerv/mlx_renderer.py:notimplemented_marker_requires_explicit_blocker",
+    "tools/run_compact_renderer_mlx_spine_runner.py:scoreaware_trainer_pending_requires_real_training_path",
+    "tools/run_compact_renderer_mlx_spine_runner.py:mock_scorer_teacher_escape_hatch_requires_false_authority_guard",
+    "hi_nerv_long_real_teacher_scoreaware_training_missing",
+    "hi_nerv_decoder_weight_saliency_not_bound_to_full_main",
+    "hi_nerv_measured_modelsize_budget_ladder_missing",
+    "hi_nerv_grouped_intN_zero_run_packet_layout_missing",
+    "hi_nerv_full600_receiver_proven_candidate_missing",
+    "hi_nerv_same_axis_pr95_control_missing",
+    "hi_nerv_partial_local_three_scale_latent_pyramid_not_official_feature_grid",
+    "hi_nerv_missing_patch_frame_equivalence_proof",
+    "hi_nerv_missing_official_3d_upsampling_parity",
+    "hi_nerv_missing_measured_config_family_ladder",
+    "hi_nerv_missing_prune_quant_noise_qste_bitstream_roundtrip",
+    "hi_nerv_missing_integer_bitstream_q_roundtrip",
+    "snerv_official_symbol_parity_map_missing",
+    "snerv_tiny_forward_parity_against_oss_missing",
+    "snerv_quantized_checkpoint_payload_replay_missing",
+    "snerv_scorer_loop_decoder_qat_full_video_missing",
+    "snerv_mlx_native_train_export_missing",
+    "snerv_measured_modelsize_ladder_missing",
+    "snerv_receiver_closed_learned_hfr_missing",
+    "snerv_full600_receiver_proven_candidate_missing",
+    "snerv_same_axis_pr95_control_missing",
+    "snerv_missing_official_stride_stack_parity",
+    "snerv_partial_native_dwt_present_hfr_receiver_not_source_faithful",
+    "snerv_missing_mfu_blocks",
+    "snerv_missing_official_hfr_heads",
+    "snerv_missing_snerv_t_temporal_path_or_no_go",
+    "snerv_missing_measured_fc_dim_modelsize_ladder",
+    "snerv_missing_quant_payload_receiver_replay",
+    "implementation_sweep_is_false_authority",
+    "online_sources_are_research_context_not_score_authority",
+    "snerv_local_feature_missing:source_faithful_adapter_gate",
+    "snerv_proof_missing:official_forward_parity",
+    "snerv_proof_missing:source_faithful_contest_adapter",
+    "snerv_proof_missing:mixed_precision_receiver_byte_accounting",
+    "snerv_proof_missing:pair_robust_scorer_loop_QAT",
+    "snerv_proof_missing:full600_byte_closed_receiver_proof",
+    "snerv_proof_missing:paired_contest_CPU_CUDA_pass",
+    "hinerv_local_feature_missing:l0_sketch_gate",
+    "hinerv_local_feature_missing:score_aware_teacher",
+    "hinerv_local_feature_missing:dense_vjp_allocator_inputs",
+    "hinerv_proof_missing:official_forward_parity",
+    "hinerv_proof_missing:patch_mode_frame_mode_parity",
+    "hinerv_proof_missing:prune_quant_codec_roundtrip",
+    "hinerv_proof_missing:real_teacher_scorer_training",
+    "hinerv_proof_missing:full600_byte_closed_receiver_proof",
+    "hinerv_proof_missing:paired_contest_CPU_CUDA_pass",
+    "PR95_same_axis_control_replay_required_before_beat_claim",
+    "PR101_and_Z5_nonterminal_block_new_exact_or_full_video_cuda",
+    "modelsize_curve_is_ideal_packed_lower_bound_not_archive_measurement",
+    "official_source_forward_parity_missing",
+    "trained_quantized_receiver_payloads_missing",
+    "component_score_curve_missing",
+    "PR101_and_Z5_still_block_exact_full_video_cuda",
+    "rate_allocator_bridge_is_false_authority",
+    "real_bit_assignment_requires_measured_sensitivity_and_receiver_proof"
+  ],
+  "blocking_work_order_count": 24,
+  "blocking_work_order_ids": [
+    "close_hinerv_receiver_rate_promotion_gates",
+    "close_snerv_receiver_rate_promotion_gates",
+    "route_bitmask_and_zero_packing_to_rate_allocator",
+    "route_hi_nerv_bitstream_quantization_to_rate_allocator",
+    "route_receiver_exact_custody_gate_to_rate_allocator",
+    "route_sr_nerv_lowres_receiver_axis_to_rate_allocator",
+    "measure_hnerv_120000_modelsize_archive_ladder",
+    "measure_hnerv_150000_modelsize_archive_ladder",
+    "measure_hnerv_178417_modelsize_archive_ladder",
+    "measure_hnerv_36000_modelsize_archive_ladder",
+    "measure_hnerv_72000_modelsize_archive_ladder",
+    "measure_snerv_120000_modelsize_archive_ladder",
+    "measure_snerv_150000_modelsize_archive_ladder",
+    "measure_snerv_178417_modelsize_archive_ladder",
+    "measure_snerv_36000_modelsize_archive_ladder",
+    "measure_snerv_72000_modelsize_archive_ladder",
+    "route_full_video_vjp_master_gradient_authority_to_rate_allocator",
+    "route_hnerv_modelsize_control_to_rate_allocator",
+    "route_inverse_steganalysis_saliency_stack_to_rate_allocator",
+    "route_master_gradient_xray_stack_to_rate_allocator",
+    "route_snerv_lf_modelsize_and_stepmap_to_rate_allocator",
+    "route_hi_nerv_sr_resolution_axis_to_rate_allocator",
+    "route_snerv_frequency_split_to_rate_allocator",
+    "route_hi_nerv_inverse_steg_decoder_weight_fit_to_rate_allocator"
+  ],
+  "dispatch_attempted": false,
+  "final_rate_attack_ingest_contract": {
+    "allowed_use": "local_planning_and_receiver_grammar_work_order_selection",
+    "consumer": "final_rate_attack",
+    "forbidden_use": "score_claim_or_rank_or_exact_dispatch_authority",
+    "work_order_fields": [
+      "work_order_id",
+      "work_order_type",
+      "target_consumers",
+      "planner_action",
+      "receiver_precision_modes",
+      "blockers"
+    ]
+  },
+  "frontier_score_claim": false,
+  "generated_utc": "2026-06-02T12:27:24.065252+00:00",
+  "gpu_launched": false,
+  "production_hardened_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_allocator_work_orders": [
+    {
+      "blockers": [
+        "hinerv_proof_missing:full600_byte_closed_receiver_proof",
+        "hinerv_proof_missing:paired_contest_CPU_CUDA_pass"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "stack_id": "hinerv"
+      },
+      "planner_action": "close_receiver_byte_and_paired_axis_gates",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promotion remains blocked until the carrier has a source-faithful receiver, byte accounting, and paired axes",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hinerv_implementation_design_gate",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "close_hinerv_receiver_rate_promotion_gates",
+      "work_order_type": "receiver_rate_promotion_gate"
+    },
+    {
+      "blockers": [
+        "snerv_local_feature_missing:source_faithful_adapter_gate",
+        "snerv_proof_missing:source_faithful_contest_adapter",
+        "snerv_proof_missing:mixed_precision_receiver_byte_accounting",
+        "snerv_proof_missing:full600_byte_closed_receiver_proof",
+        "snerv_proof_missing:paired_contest_CPU_CUDA_pass"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "stack_id": "snerv"
+      },
+      "planner_action": "close_receiver_byte_and_paired_axis_gates",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "promotion remains blocked until the carrier has a source-faithful receiver, byte accounting, and paired axes",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_implementation_design_gate",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "close_snerv_receiver_rate_promotion_gates",
+      "work_order_type": "receiver_rate_promotion_gate"
+    },
+    {
+      "blockers": [
+        "hi_nerv_snerv_grouped_intN_zero_run_packet_layout"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_needs_family_specific_packet_layout",
+        "control_id": "bitmask_and_zero_packing",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "zero",
+        "rle_only",
+        "int2",
+        "int4"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "bitmask_and_zero_packing_master_consumer_route",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "route_bitmask_and_zero_packing_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "hi_nerv_decoder_codec_sweep_full600_replay"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "hi_nerv",
+        "binding_status": "partially_wired_needs_hi_nerv_codec_sweep_replay",
+        "control_id": "hi_nerv_bitstream_quantization",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_bitstream_quantization_master_consumer_route",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator",
+        "cathedral_autopilot"
+      ],
+      "work_order_id": "route_hi_nerv_bitstream_quantization_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": null,
+        "binding_status": null,
+        "control_id": "receiver_and_exact_custody",
+        "path_count": 4,
+        "paths": [
+          "src/tac/substrates/hprc/archive_candidate.py",
+          "src/tac/submission_packet/archive_grammar.py",
+          "src/tac/submission_packet/paired_auth_eval.py",
+          "tools/run_contest_oracle_batch.py"
+        ]
+      },
+      "planner_action": "reuse_binding_surface_before_new_code",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "receiver_and_exact_custody_binding_surface",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_receiver_and_exact_custody_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "all_compact_carrier_emitters_on_shared_archive_bound_contract",
+        "bounded_runner_refuses_non_contract_candidate_paths"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_must_remain_hard_gate",
+        "control_id": "receiver_exact_custody_gate",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "receiver_exact_custody_gate_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_receiver_exact_custody_gate_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "design_knob_needs_receiver_closed_training",
+        "control_id": "sr_nerv_lowres_receiver_axis",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 10,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "zero",
+        "rle_only",
+        "int2"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "sr_nerv_lowres_receiver_axis_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_sr_nerv_lowres_receiver_axis_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 120000,
+        "modelsize_mparams": 0.12460799999998654,
+        "target_archive_byte_cap": 120000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_120000_byte_cap_2",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_120000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 150000,
+        "modelsize_mparams": 0.15460799999999164,
+        "target_archive_byte_cap": 150000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_150000_byte_cap_3",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_150000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 178417,
+        "modelsize_mparams": 0.18302499999999106,
+        "target_archive_byte_cap": 178417
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_178417_byte_cap_4",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_178417_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 36000,
+        "modelsize_mparams": 0.04060799999999787,
+        "target_archive_byte_cap": 36000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_36000_byte_cap_0",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_36000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "hnerv",
+        "ideal_packed_payload_bytes": 72000,
+        "modelsize_mparams": 0.07660799999998694,
+        "target_archive_byte_cap": 72000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_hnerv_72000_byte_cap_1",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_hnerv_72000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 120000,
+        "modelsize_mparams": 0.12269999999999406,
+        "target_archive_byte_cap": 120000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_120000_byte_cap_7",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_120000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 150000,
+        "modelsize_mparams": 0.15269999999999911,
+        "target_archive_byte_cap": 150000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_150000_byte_cap_8",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_150000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 178417,
+        "modelsize_mparams": 0.18111699999999853,
+        "target_archive_byte_cap": 178417
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_178417_byte_cap_9",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_178417_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 36000,
+        "modelsize_mparams": 0.03869999999999116,
+        "target_archive_byte_cap": 36000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_36000_byte_cap_5",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_36000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "trained_receiver_archive_bytes_missing",
+        "nonrate_component_deltas_missing"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "family": "snerv",
+        "ideal_packed_payload_bytes": 72000,
+        "modelsize_mparams": 0.07469999999999441,
+        "target_archive_byte_cap": 72000
+      },
+      "planner_action": "measure_trained_receiver_archive_bytes",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "convert source-grounded modelsize lower-bound planning into measured archive bytes, entropy bytes, metadata bytes, and non-rate component deltas",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "modelsize_snerv_72000_byte_cap_6",
+      "target_consumers": [
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "measure_snerv_72000_modelsize_archive_ladder",
+      "work_order_type": "measured_modelsize_budget_ladder"
+    },
+    {
+      "blockers": [
+        "full_video_vjp_bundle_as_budget_spend_prerequisite",
+        "gradient_bundle_to_modelsize_and_section_allocator",
+        "hard_archive_projection_line_search_for_compact_carriers"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_needs_exact_reduced_bundle_consumer",
+        "control_id": "full_video_vjp_master_gradient_authority",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "full_video_vjp_master_gradient_authority_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "probe_disambiguator",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_full_video_vjp_master_gradient_authority_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "feed_pr95_hnerv_measured_ladder_into_all_carrier_plans"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "control_baseline_available",
+        "control_id": "hnerv_modelsize_control",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hnerv_modelsize_control_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_hnerv_modelsize_control_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_needs_carrier_domain_binding",
+        "control_id": "inverse_steganalysis_saliency_stack",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "inverse_steganalysis_saliency_stack_master_consumer_route",
+      "target_consumers": [
+        "probe_disambiguator",
+        "sensitivity_map",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_inverse_steganalysis_saliency_stack_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "nerv_control_inventory_consumer_for_master_gradient_rows"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "cross_stack",
+        "binding_status": "available_needs_nerv_control_consumer",
+        "control_id": "master_gradient_xray_stack",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "master_gradient_xray_stack_master_consumer_route",
+      "target_consumers": [
+        "sensitivity_map",
+        "cathedral_autopilot",
+        "probe_disambiguator",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_master_gradient_xray_stack_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": null,
+        "binding_status": null,
+        "control_id": "scorer_and_saliency",
+        "path_count": 5,
+        "paths": [
+          "src/tac/analysis/score_exact_saliency.py",
+          "src/tac/analysis/hprc_saliency_rd_allocation.py",
+          "src/tac/analysis/segnet_boundary_marginals.py",
+          "src/tac/optimization/joint_p18_p19_waterfill.py",
+          "src/tac/analysis/inverse_steganalysis_linf_vs_l2_gate.py"
+        ]
+      },
+      "planner_action": "reuse_binding_surface_before_new_code",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "scorer_and_saliency_binding_surface",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_scorer_and_saliency_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "snerv_measured_modelsize_ladder",
+        "learned_lf_generator_byte_collapse"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "snerv",
+        "binding_status": "needs_representation_change",
+        "control_id": "snerv_lf_modelsize_and_stepmap",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "fp16_protected"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_lf_modelsize_and_stepmap_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_snerv_lf_modelsize_and_stepmap_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": null,
+        "binding_status": null,
+        "control_id": "xray_and_master_gradient",
+        "path_count": 6,
+        "paths": [
+          "src/tac/master_gradient.py",
+          "src/tac/master_gradient_consumers.py",
+          "src/tac/master_gradient_mlx_pipeline.py",
+          "tools/build_pair_frame_scorer_geometry_lattice.py",
+          "tools/cpu_cuda_xray_loader_drift.py",
+          "tools/xray_hardpair_hitlist.py"
+        ]
+      },
+      "planner_action": "reuse_binding_surface_before_new_code",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 20,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "xray_and_master_gradient_binding_surface",
+      "target_consumers": [
+        "sensitivity_map",
+        "cathedral_autopilot",
+        "probe_disambiguator",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_xray_and_master_gradient_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "trained_scorer_preserving_sr_receiver_for_hi_nerv"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "hi_nerv",
+        "binding_status": "design_knob_needs_trained_sr_receiver",
+        "control_id": "hi_nerv_sr_resolution_axis",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 30,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "zero",
+        "rle_only",
+        "int2"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_sr_resolution_axis_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_hi_nerv_sr_resolution_axis_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "mlx_native_snerv_train_export",
+        "receiver_closed_learned_hfr"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "snerv",
+        "binding_status": "partially_wired_cpu_advisory_mlx_missing",
+        "control_id": "snerv_frequency_split",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 30,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "snerv_frequency_split_master_consumer_route",
+      "target_consumers": [
+        "cathedral_autopilot",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_snerv_frequency_split_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    },
+    {
+      "blockers": [
+        "decoder_weight_vjp_or_saliency_proxy_in_hi_nerv_full_main"
+      ],
+      "frontier_score_claim": false,
+      "payload": {
+        "applies_to": "hi_nerv",
+        "binding_status": "not_wired_into_real_trainer",
+        "control_id": "hi_nerv_inverse_steg_decoder_weight_fit",
+        "path_count": null,
+        "paths": []
+      },
+      "planner_action": "repair_missing_control_bindings",
+      "predicted_delta_adjustment": 0.0,
+      "priority": 60,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": "reuse the canonical NeRV control inventory route before creating new rate/allocator glue",
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_precision_modes": [
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero"
+      ],
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_unit_id": "hi_nerv_inverse_steg_decoder_weight_fit_master_consumer_route",
+      "target_consumers": [
+        "probe_disambiguator",
+        "sensitivity_map",
+        "final_rate_attack",
+        "bit_allocator"
+      ],
+      "work_order_id": "route_hi_nerv_inverse_steg_decoder_weight_fit_to_rate_allocator",
+      "work_order_type": "rate_allocator_control_binding"
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_precision_mode_policy": [
+    {
+      "intended_atoms": "PoseNet/SegNet critical decoder weights or scales",
+      "mode": "fp16_protected",
+      "requires": [
+        "measured_atom_sensitivity",
+        "receiver_fp16_grammar"
+      ]
+    },
+    {
+      "intended_atoms": "high-leverage but brotli-friendly decoder groups",
+      "mode": "int8_protected",
+      "requires": [
+        "measured_atom_sensitivity",
+        "receiver_int8_grammar"
+      ]
+    },
+    {
+      "intended_atoms": "ordinary decoder groups after QAT",
+      "mode": "int4",
+      "requires": [
+        "qat_roundtrip",
+        "receiver_int4_grammar"
+      ]
+    },
+    {
+      "intended_atoms": "low-sensitivity decoder groups",
+      "mode": "int2",
+      "requires": [
+        "qat_roundtrip",
+        "receiver_int2_grammar"
+      ]
+    },
+    {
+      "intended_atoms": "measured dead or prunable decoder groups",
+      "mode": "zero",
+      "requires": [
+        "zero_mask_receiver_grammar",
+        "post_prune_scorer_replay"
+      ]
+    },
+    {
+      "intended_atoms": "long zero/constant masks and sparse selectors",
+      "mode": "rle_only",
+      "requires": [
+        "run_length_receiver_grammar",
+        "charged_header_accounting"
+      ]
+    }
+  ],
+  "schema": "nerv_rate_allocator_bridge.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_candidate_id": "nerv_snerv_hinerv_top_priority_stack",
+  "source_faithful_stack_claim": false,
+  "source_schema": "nerv_master_consumer_bridge.v1",
+  "top_priority_carriers": [
+    "snerv",
+    "hinerv"
+  ],
+  "verdict": "GO_RATE_ALLOCATOR_ROUTING__NO_GO_SCORE_PROMOTION_OR_EXACT_DISPATCH",
+  "work_order_count": 27
+}

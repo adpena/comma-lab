@@ -20,6 +20,7 @@ from tac.analysis.nerv_modelsize_archive_curve import (
     build_modelsize_archive_curve,
     parse_byte_caps,
 )
+from tac.analysis.nerv_rate_allocator_bridge import build_nerv_rate_allocator_bridge
 from tac.cathedral.consumer_contract import validate_consumer_module
 from tac.cathedral_consumers import nerv_top_priority_stack_consumer
 
@@ -209,6 +210,106 @@ def test_master_consumer_bridge_and_cathedral_consumer_are_no_authority() -> Non
 
     registration = validate_consumer_module(nerv_top_priority_stack_consumer)
     assert registration.contract_compliant, registration.validation_errors
+
+
+def test_rate_allocator_bridge_routes_units_without_authority() -> None:
+    seam = {
+        "schema": "nerv_top_priority_stack_seam.v1",
+        "axis_tag": "[planning/control]",
+        "go_no_go_verdict": "GO_LOCAL_STACK_OPTIMIZATION__NO_GO",
+        "top_priority_carriers": ["snerv", "hinerv"],
+        "baseline_to_beat": "pr95_hnerv_muon",
+        "blockers": ["pr101_cpu_recovery_pending_blocks_new_exact_or_full_video"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    control_inventory = {
+        "schema": "nerv_control_inventory.v1",
+        "axis_tag": "[planning/control]",
+        "control_rows": [
+            {
+                "control_id": "bitmask_and_zero_packing",
+                "applies_to": "cross_stack",
+                "binding_status": "partially_wired",
+                "missing_bindings": ["receiver_zero_rle_grammar_missing"],
+            },
+            {
+                "control_id": "master_gradient_xray_stack",
+                "applies_to": "cross_stack",
+                "binding_status": "partially_wired",
+                "missing_bindings": ["decoder_atom_sensitivity_missing"],
+            },
+        ],
+        "binding_gap_rows": [
+            {"gap_id": "decoder_atom_sensitivity_missing"},
+        ],
+        "local_binding_surfaces": {},
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    implementation_sweep = {
+        "schema": "nerv_implementation_design_sweep.v1",
+        "axis_tag": "[planning/control]",
+        "stack_sweeps": [
+            {
+                "stack_id": "snerv",
+                "production_blockers": [
+                    "snerv_proof_missing:mixed_precision_receiver_byte_accounting",
+                    "snerv_proof_missing:full600_byte_closed_receiver_proof",
+                    "snerv_proof_missing:paired_contest_CPU_CUDA_pass",
+                ],
+            }
+        ],
+        "blockers": ["snerv_proof_missing:mixed_precision_receiver_byte_accounting"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    modelsize_curve = build_modelsize_archive_curve(
+        byte_caps=(178_417,),
+        resolution_modes={"scorer_internal_384x512": 384 * 512},
+    )
+    bridge = build_nerv_master_consumer_bridge(
+        seam=seam,
+        control_inventory=control_inventory,
+        implementation_sweep=implementation_sweep,
+        modelsize_curve=modelsize_curve,
+    )
+
+    rate_bridge = build_nerv_rate_allocator_bridge(master_bridge=bridge)
+
+    assert rate_bridge["schema"] == "nerv_rate_allocator_bridge.v1"
+    assert rate_bridge["score_claim"] is False
+    assert rate_bridge["promotion_eligible"] is False
+    assert rate_bridge["ready_for_exact_eval_dispatch"] is False
+    modes = {row["mode"] for row in rate_bridge["receiver_precision_mode_policy"]}
+    assert {
+        "fp16_protected",
+        "int8_protected",
+        "int4",
+        "int2",
+        "zero",
+        "rle_only",
+    } <= modes
+    orders = {row["work_order_id"]: row for row in rate_bridge["rate_allocator_work_orders"]}
+    assert "close_snerv_receiver_rate_promotion_gates" in orders
+    assert "route_bitmask_and_zero_packing_to_rate_allocator" in orders
+    assert "route_master_gradient_xray_stack_to_rate_allocator" in orders
+    assert any(
+        row["work_order_type"] == "measured_modelsize_budget_ladder"
+        for row in orders.values()
+    )
+    zero_order = orders["route_bitmask_and_zero_packing_to_rate_allocator"]
+    assert {"zero", "rle_only", "int2", "int4"} <= set(
+        zero_order["receiver_precision_modes"]
+    )
+    for order in orders.values():
+        assert order["score_claim"] is False
+        assert order["score_claim_valid"] is False
+        assert order["promotion_eligible"] is False
+        assert order["ready_for_exact_eval_dispatch"] is False
 
 
 def _minimal_repo_root(root: Path) -> Path:

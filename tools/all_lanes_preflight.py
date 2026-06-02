@@ -103,8 +103,8 @@ Currently runs:
             invalid or stale shared runtime-bridge contracts)
   Gate #35: NeRV top-priority stack production-hardening surfaces
            (SNeRV/HiNeRV modelsize curve, control inventory, implementation
-            sweep, and master-consumer bridge all remain fail-closed and
-            Cathedral-visible)
+            sweep, master-consumer bridge, and rate/allocator bridge all
+            remain fail-closed and Cathedral/final-rate visible)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -232,6 +232,7 @@ NERV_CONTROL_INVENTORY = TOOLS / "build_nerv_control_inventory.py"
 NERV_IMPLEMENTATION_DESIGN_SWEEP = TOOLS / "build_nerv_implementation_design_sweep.py"
 NERV_TOP_PRIORITY_SEAM = TOOLS / "build_nerv_top_priority_stack_seam.py"
 NERV_MASTER_CONSUMER_BRIDGE = TOOLS / "build_nerv_master_consumer_bridge.py"
+NERV_RATE_ALLOCATOR_BRIDGE = TOOLS / "build_nerv_rate_allocator_bridge.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -1661,6 +1662,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
         sweep = temp / "sweep.json"
         seam = temp / "seam.json"
         bridge = temp / "bridge.json"
+        rate_bridge = temp / "rate_bridge.json"
         oss_root = (
             Path("/Volumes/VertigoDataTier/pact/experiments/results")
             / "oss_nerv_source_audit_20260602T113720Z"
@@ -1705,6 +1707,14 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
                 "--out",
                 str(bridge),
             ],
+            [
+                sys.executable,
+                str(NERV_RATE_ALLOCATOR_BRIDGE),
+                "--master-bridge",
+                str(bridge),
+                "--out",
+                str(rate_bridge),
+            ],
         ]
         if oss_root.is_dir():
             commands[2][4:4] = ["--oss-audit-root", str(oss_root)]
@@ -1727,6 +1737,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             "implementation_sweep": _load_nerv_preflight_json(sweep),
             "top_priority_seam": _load_nerv_preflight_json(seam),
             "master_consumer_bridge": _load_nerv_preflight_json(bridge),
+            "rate_allocator_bridge": _load_nerv_preflight_json(rate_bridge),
         }
         expected_schemas = {
             "modelsize_curve": "nerv_modelsize_archive_curve.v1",
@@ -1734,6 +1745,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             "implementation_sweep": "nerv_implementation_design_sweep.v1",
             "top_priority_seam": "nerv_top_priority_stack_seam.v1",
             "master_consumer_bridge": "nerv_master_consumer_bridge.v1",
+            "rate_allocator_bridge": "nerv_rate_allocator_bridge.v1",
         }
         failures: list[str] = []
         for name, expected_schema in expected_schemas.items():
@@ -1774,6 +1786,40 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
         if not isinstance(memo_count, int) or memo_count <= 0:
             failures.append("master_consumer_bridge:omx_memo_refs_missing")
 
+        rate_payload = payloads["rate_allocator_bridge"]
+        work_orders = rate_payload.get("rate_allocator_work_orders")
+        if not isinstance(work_orders, list) or not work_orders:
+            failures.append("rate_allocator_bridge:work_orders_missing")
+            work_orders = []
+        for index, order in enumerate(work_orders):
+            if not isinstance(order, dict):
+                failures.append(f"rate_allocator_bridge:work_order_{index}:not_object")
+                continue
+            _append_nerv_authority_failures(
+                failures,
+                f"rate_allocator_bridge.work_order_{index}",
+                order,
+            )
+        precision_modes = {
+            str(row.get("mode"))
+            for row in rate_payload.get("receiver_precision_mode_policy", [])
+            if isinstance(row, dict)
+        }
+        required_modes = {
+            "fp16_protected",
+            "int8_protected",
+            "int4",
+            "int2",
+            "zero",
+            "rle_only",
+        }
+        missing_modes = sorted(required_modes - precision_modes)
+        if missing_modes:
+            failures.append(
+                "rate_allocator_bridge:precision_modes_missing:"
+                + ",".join(missing_modes)
+            )
+
         from tac.cathedral.consumer_contract import validate_consumer_module
         from tac.cathedral_consumers import nerv_top_priority_stack_consumer
 
@@ -1812,6 +1858,7 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             True,
             "NeRV top-priority preflight: PASS "
             f"(bridge_units={len(units)} routes={len(routes or [])} "
+            f"rate_work_orders={len(work_orders)} "
             f"memo_refs={memo_count} blockers={len(bridge_payload.get('blockers') or [])} "
             f"blocked_dispatch={seam_payload.get('blocked_dispatch')} "
             f"stack_rows={len(sweep_payload.get('stack_sweeps') or [])}; "
@@ -4015,6 +4062,7 @@ def main(argv: list[str] | None = None) -> int:
         NERV_IMPLEMENTATION_DESIGN_SWEEP,
         NERV_TOP_PRIORITY_SEAM,
         NERV_MASTER_CONSUMER_BRIDGE,
+        NERV_RATE_ALLOCATOR_BRIDGE,
         *[lane["tool"] for lane in lanes],
     ]:
         if not tool.is_file():
