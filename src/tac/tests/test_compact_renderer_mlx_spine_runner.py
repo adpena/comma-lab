@@ -361,8 +361,14 @@ def test_compact_family_startup_marker_records_mlx_custody(
         weight_path.as_posix()
     )
     assert payload["score_claim"] is False
+    assert payload["frontier_score_claim"] is False
     assert payload["promotion_eligible"] is False
+    assert payload["rank_or_kill_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["false_authority_flags"] == [
+        "macos_mlx_research_signal_until_archive_receiver_and_exact_eval",
+        "startup_marker_before_trained_export_or_full_video_replay",
+    ]
     assert (
         runner_mod._has_disallowed_existing_output_artifacts(
             tmp_path,

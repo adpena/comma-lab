@@ -406,6 +406,59 @@ def measure_pair_d_seg_d_pose(
     return d_seg, d_pose
 
 
+def measure_pairs_d_seg_d_pose_batched(
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    gt_pairs_btchw: torch.Tensor,
+    candidate_pairs_btchw: torch.Tensor,
+    *,
+    batch_pairs: int = 8,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Hard contest d_seg/d_pose for many pairs with exact chunked reduction.
+
+    This is mathematically the same measurement as ``measure_pair_d_seg_d_pose``
+    applied independently to each pair. The difference is execution shape: model
+    forwards and scalar transfers are chunked, so full600 advisory/replay paths do
+    not pay one Torch/MPS synchronization per pair and component.
+    """
+
+    if gt_pairs_btchw.shape != candidate_pairs_btchw.shape:
+        raise InverseSteganalysisGateError(
+            "gt_pairs_btchw and candidate_pairs_btchw must have the same shape"
+        )
+    if gt_pairs_btchw.ndim != 5:
+        raise InverseSteganalysisGateError(
+            "expected tensors shaped (pairs, 2, 3, H, W)"
+        )
+    n_pairs = int(gt_pairs_btchw.shape[0])
+    if n_pairs == 0:
+        return np.empty((0,), dtype=np.float64), np.empty((0,), dtype=np.float64)
+    chunk = max(1, int(batch_pairs))
+    d_seg_chunks: list[np.ndarray] = []
+    d_pose_chunks: list[np.ndarray] = []
+    with torch.no_grad():
+        for start in range(0, n_pairs, chunk):
+            stop = min(n_pairs, start + chunk)
+            gt = gt_pairs_btchw[start:stop]
+            cand = candidate_pairs_btchw[start:stop]
+
+            seg_in_gt = segnet.preprocess_input(gt)
+            seg_in_cand = segnet.preprocess_input(cand)
+            gt_arg = segnet(seg_in_gt).argmax(dim=1)
+            cand_arg = segnet(seg_in_cand).argmax(dim=1)
+            d_seg_chunk = (gt_arg != cand_arg).float().mean(dim=(1, 2))
+
+            pose_in_gt = posenet.preprocess_input(gt)
+            pose_in_cand = posenet.preprocess_input(cand)
+            pose_gt = posenet(pose_in_gt)["pose"][:, :6]
+            pose_cand = posenet(pose_in_cand)["pose"][:, :6]
+            d_pose_chunk = ((pose_cand - pose_gt) ** 2).mean(dim=1)
+
+            d_seg_chunks.append(d_seg_chunk.detach().cpu().numpy().astype(np.float64))
+            d_pose_chunks.append(d_pose_chunk.detach().cpu().numpy().astype(np.float64))
+    return np.concatenate(d_seg_chunks), np.concatenate(d_pose_chunks)
+
+
 __all__ = [
     "GATE_SCHEMA",
     "RATE_TOLERANCE_DEFAULT",
@@ -418,4 +471,5 @@ __all__ = [
     "apply_uniform_quantization_noise",
     "margin_budget_from_saliency",
     "measure_pair_d_seg_d_pose",
+    "measure_pairs_d_seg_d_pose_batched",
 ]

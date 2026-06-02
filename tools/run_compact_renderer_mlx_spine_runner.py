@@ -7990,8 +7990,14 @@ def _write_compact_family_startup_marker(
         ),
         "command_args": _jsonable_lock_value(vars(args)),
         "score_claim": False,
+        "frontier_score_claim": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "false_authority_flags": [
+            "macos_mlx_research_signal_until_archive_receiver_and_exact_eval",
+            "startup_marker_before_trained_export_or_full_video_replay",
+        ],
     }
     path = output_dir / COMPACT_FAMILY_STARTUP_MARKER_FILENAME
     _write_json(path, payload)
@@ -8015,8 +8021,13 @@ def _write_active_family_process_refusal(
         "refusal_reason": "active_same_family_process_detected",
         "override": "pass --allow-duplicate-campaign only when intentional",
         "score_claim": False,
+        "frontier_score_claim": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "false_authority_flags": [
+            "local_process_coordination_refusal_no_score_authority",
+        ],
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path

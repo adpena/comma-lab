@@ -45,7 +45,7 @@ import torch
 
 from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import (
     allocate_l2_uniform,
-    measure_pair_d_seg_d_pose,
+    measure_pairs_d_seg_d_pose_batched,
 )
 from tac.analysis.score_exact_saliency import (
     compute_s_pose_fisher,
@@ -736,20 +736,20 @@ def run_snerv_advisory(
         recon_pairs_l2 = torch.from_numpy(receiver_l2_frames_np).to(pairs)
 
     # ---- 7. Re-measure d_seg/d_pose via bit-exact mirror ----
-    dsegs_linf, dposes_linf, dsegs_l2, dposes_l2 = [], [], [], []
-    for p in range(n_pairs):
-        # measure expects (1, 2, 3, H, W) so preprocess's x[:, -1] slice works.
-        gt = pairs[p : p + 1]
-        ds_l, dp_l = measure_pair_d_seg_d_pose(
-            posenet, segnet, gt, recon_pairs_linf[p : p + 1]
-        )
-        ds_2, dp_2 = measure_pair_d_seg_d_pose(
-            posenet, segnet, gt, recon_pairs_l2[p : p + 1]
-        )
-        dsegs_linf.append(ds_l)
-        dposes_linf.append(dp_l)
-        dsegs_l2.append(ds_2)
-        dposes_l2.append(dp_2)
+    dsegs_linf, dposes_linf = measure_pairs_d_seg_d_pose_batched(
+        posenet,
+        segnet,
+        pairs,
+        recon_pairs_linf,
+        batch_pairs=8,
+    )
+    dsegs_l2, dposes_l2 = measure_pairs_d_seg_d_pose_batched(
+        posenet,
+        segnet,
+        pairs,
+        recon_pairs_l2,
+        batch_pairs=8,
+    )
     d_seg_linf = float(np.mean(dsegs_linf))
     d_pose_linf = float(np.mean(dposes_linf))
     d_seg_l2 = float(np.mean(dsegs_l2))

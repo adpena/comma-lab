@@ -27,6 +27,7 @@ from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import (
     apply_uniform_quantization_noise,
     margin_budget_from_saliency,
     measure_pair_d_seg_d_pose,
+    measure_pairs_d_seg_d_pose_batched,
 )
 
 # ---------------------------------------------------------------------------
@@ -249,12 +250,11 @@ class _FakeSegNet(torch.nn.Module):
 
 class _FakePoseNet(torch.nn.Module):
     def preprocess_input(self, pair):
-        return pair.reshape(1, -1)
+        return pair.reshape(pair.shape[0], -1)
 
     def forward(self, x):
         # pose = first 12 column means (deterministic in the input).
-        feats = x.reshape(-1)
-        pose = torch.stack([feats[k::12].mean() for k in range(12)]).reshape(1, 12)
+        pose = torch.stack([x[:, k::12].mean(dim=1) for k in range(12)], dim=1)
         return {"pose": pose}
 
 
@@ -287,6 +287,40 @@ def test_measure_d_pose_is_first_six_dims_mse():
     cand[0, 0, 0, 0, 0] = 12.0  # perturb a single input element
     _, d_pose = measure_pair_d_seg_d_pose(pose, seg, gt, cand)
     assert d_pose > 0.0  # the perturbation moves the pose head
+
+
+def test_measure_pairs_batched_matches_per_pair_measurement():
+    seg = _FakeSegNet()
+    pose = _FakePoseNet()
+    gt = torch.stack(
+        [
+            torch.full((2, 3, 8, 8), 80.0),
+            torch.full((2, 3, 8, 8), 120.0),
+            torch.full((2, 3, 8, 8), 180.0),
+        ],
+        dim=0,
+    )
+    cand = gt.clone()
+    cand[1, -1] = 250.0
+    cand[2, 0, 0, 0, 0] = 0.0
+
+    expected_seg, expected_pose = zip(
+        *(
+            measure_pair_d_seg_d_pose(pose, seg, gt[i : i + 1], cand[i : i + 1])
+            for i in range(gt.shape[0])
+        ),
+        strict=True,
+    )
+    got_seg, got_pose = measure_pairs_d_seg_d_pose_batched(
+        pose,
+        seg,
+        gt,
+        cand,
+        batch_pairs=2,
+    )
+
+    np.testing.assert_allclose(got_seg, np.asarray(expected_seg, dtype=np.float64))
+    np.testing.assert_allclose(got_pose, np.asarray(expected_pose, dtype=np.float64))
 
 
 # ---------------------------------------------------------------------------
