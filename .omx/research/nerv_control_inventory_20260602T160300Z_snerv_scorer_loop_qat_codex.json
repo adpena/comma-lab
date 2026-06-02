@@ -1,0 +1,3944 @@
+{
+  "anti_patterns_guarded": [
+    {
+      "anti_pattern": "cheap_unfit_carrier_overclaim",
+      "guard": "modelsize capacity is useful only after scorer-faithful full-video fit and value-per-byte replay"
+    },
+    {
+      "anti_pattern": "visual_quality_objective",
+      "guard": "controls are priced by SegNet/PoseNet/rate, not human visual fidelity"
+    },
+    {
+      "anti_pattern": "residual_sidecar_bloat",
+      "guard": "residual/codebook sections survive only when delta_nonrate plus rate cost is negative"
+    },
+    {
+      "anti_pattern": "proxy_or_mlx_score_promotion",
+      "guard": "FALSE_AUTHORITY is attached until receiver custody and exact-axis replay pass"
+    },
+    {
+      "anti_pattern": "oss_drift_or_fake_adapter",
+      "guard": "HiNeRV/SNeRV method negatives require OSS feature parity and tiny forward parity first"
+    },
+    {
+      "anti_pattern": "orphaned_research_signal",
+      "guard": "every research source maps to a local binding surface or explicit missing binding"
+    }
+  ],
+  "archive_backend_drift_reports": {},
+  "archive_ladder_replay_actuator_reports": {},
+  "authority": "false_authority_control_inventory_no_score_claim",
+  "binding_gap_rows": [
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "sr_nerv_lowres_receiver_axis",
+      "gap_id": "receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_frequency_split",
+      "gap_id": "mlx_native_snerv_train_export",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_frequency_split",
+      "gap_id": "receiver_closed_learned_hfr",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_lf_modelsize_and_stepmap",
+      "gap_id": "snerv_measured_modelsize_ladder",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_lf_modelsize_and_stepmap",
+      "gap_id": "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_lf_modelsize_and_stepmap",
+      "gap_id": "learned_lf_generator_byte_collapse",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "snerv",
+      "blocks_score_lowering": true,
+      "control_id": "snerv_pose_guarded_hf_restoration",
+      "gap_id": "snerv_scorer_loop_decoder_qat_full_video",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "hnerv_modelsize_control",
+      "gap_id": "feed_pr95_hnerv_measured_ladder_into_all_carrier_plans",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "rnerv_config_optimizer",
+      "gap_id": "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "ffnerv_flow_temporal_redundancy",
+      "gap_id": "byte_priced_flow_or_pose_support_tokens_for_hi_nerv_snerv",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "nervplusplus_decoder_efficiency_blocks",
+      "gap_id": "rate_priced_nervplusplus_block_ablation_for_hi_nerv_snerv",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "vq_c3_cool_chic_latent_codebook",
+      "gap_id": "codebook_entropy_model_bytes_charged_in_spine",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "vq_c3_cool_chic_latent_codebook",
+      "gap_id": "full_video_section_value_for_vq_codebook_indices",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "vq_c3_cool_chic_latent_codebook",
+      "gap_id": "demote_codebook_sections_without_positive_total_value",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "inverse_steganalysis_saliency_stack",
+      "gap_id": "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "master_gradient_xray_stack",
+      "gap_id": "nerv_control_inventory_consumer_for_master_gradient_rows",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "full_video_vjp_master_gradient_authority",
+      "gap_id": "full_video_vjp_bundle_as_budget_spend_prerequisite",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "full_video_vjp_master_gradient_authority",
+      "gap_id": "gradient_bundle_to_modelsize_and_section_allocator",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "full_video_vjp_master_gradient_authority",
+      "gap_id": "hard_archive_projection_line_search_for_compact_carriers",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "bitmask_and_zero_packing",
+      "gap_id": "hi_nerv_snerv_grouped_intN_zero_run_packet_layout",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "receiver_exact_custody_gate",
+      "gap_id": "all_compact_carrier_emitters_on_shared_archive_bound_contract",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "applies_to": "cross_stack",
+      "blocks_score_lowering": true,
+      "control_id": "receiver_exact_custody_gate",
+      "gap_id": "bounded_runner_refuses_non_contract_candidate_paths",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    }
+  ],
+  "control_rows": [
+    {
+      "allocator_binding": "resolution-axis dead-zone before atom-level waterfilling",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "receiver-generated SR, not stored high-frequency payload",
+      "binding_status": "design_knob_needs_receiver_closed_training",
+      "control_id": "sr_nerv_lowres_receiver_axis",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "sr_nerv_resolution_axis_mirror and scorer cache quality gate",
+      "missing_bindings": [
+        "receiver_closed_scorer_preserving_sr_axis_for_hi_nerv_and_snerv"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "contest scorer downsample mirror; reject SR detail that scorer cannot see",
+      "upstream_control": "SR-NeRV uses low-detail INR reconstruction plus SR to improve embedding efficiency"
+    },
+    {
+      "allocator_binding": "G3 adjoint pushes pixel saliency into wavelet/LF/HF domains",
+      "applies_to": "snerv",
+      "archive_runtime_binding": "SNAR packet + compact LF residual grammar",
+      "binding_status": "partially_wired_cpu_advisory_mlx_missing",
+      "control_id": "snerv_frequency_split",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "snerv_step_map_coder, SNeRV packet/runtime proofs, LF/HF advisories",
+      "missing_bindings": [
+        "mlx_native_snerv_train_export",
+        "receiver_closed_learned_hfr"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "score_exact_saliency + hprc_saliency_rd_allocation",
+      "upstream_control": "SNeRV DWT LF/HF split, HFR, MFU, temporal TUB"
+    },
+    {
+      "allocator_binding": "modelsize_budget_plan + nerv_decoder_weight_waterfill for decoder weights + waterfilling over LF/HF atoms",
+      "applies_to": "snerv",
+      "archive_runtime_binding": "deterministic receiver-side LF generator or symbolic residual grammar",
+      "binding_status": "needs_representation_change",
+      "control_id": "snerv_lf_modelsize_and_stepmap",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "step-map waterfill, LF predictor profiles, decoder mode probes",
+      "missing_bindings": [
+        "snerv_measured_modelsize_ladder",
+        "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
+        "learned_lf_generator_byte_collapse"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "cache quality gate + full-video scorer replay",
+      "upstream_control": "SNeRV controls enc_strds/dec_strds, fc_dim, num_blocks, emb_size"
+    },
+    {
+      "allocator_binding": "frame_0 pose-only vs frame_1 seg+pose asymmetry",
+      "applies_to": "snerv",
+      "archive_runtime_binding": "HF restoration should be receiver-generated, not stored as floats",
+      "binding_status": "advisory_only_needs_scorer_loop_training",
+      "control_id": "snerv_pose_guarded_hf_restoration",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "snerv_pose_guarded_decoder_gate, score-weighted decoder fit smokes",
+      "missing_bindings": [
+        "snerv_scorer_loop_decoder_qat_full_video"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "PoseNet Fisher over both frames and SegNet last-frame only",
+      "upstream_control": "SNeRV HFR restores high-frequency detail from compact LF features"
+    },
+    {
+      "allocator_binding": "fixed contest byte price; spend size only if marginal distortion drops enough",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "PR95-style byte-closed archive/runtime with staged QAT, C1a entropy shaping, sigma sweep, and Muon",
+      "binding_status": "control_baseline_available",
+      "control_id": "hnerv_modelsize_control",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "PR95 HNeRV MLX + modelsize_budget_plan",
+      "missing_bindings": [
+        "feed_pr95_hnerv_measured_ladder_into_all_carrier_plans"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "PR95 public control replay + MLX/PyTorch render parity + explicit CPU/CUDA axis separation",
+      "upstream_control": "HNeRV/NeRV use architecture size, pruning, quant_bit, model parameter bpp"
+    },
+    {
+      "allocator_binding": "acquisition rule over modelsize, codec, SR, saliency controls",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "only promote receiver-closed archive/runtime rows",
+      "binding_status": "planner_missing",
+      "control_id": "rnerv_config_optimizer",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "runner family configs, bounded runner, implementation readiness",
+      "missing_bindings": [
+        "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "timing smoke + cache gate + scorer replay gates",
+      "upstream_control": "RNeRV-style per-video configuration search"
+    },
+    {
+      "allocator_binding": "only spend flow/support tokens when byte-priced score drop pays",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "flow/support must be receiver-generated, tiny-tokenized, or entropy-coded",
+      "binding_status": "not_wired_into_compact_carrier_training",
+      "control_id": "ffnerv_flow_temporal_redundancy",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "pose/flow side-channel probes, RAFT/ego-motion priors, scorer-visible motion groups",
+      "missing_bindings": [
+        "byte_priced_flow_or_pose_support_tokens_for_hi_nerv_snerv"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "PoseNet pair sensitivity plus SegNet last-frame sensitivity",
+      "upstream_control": "FFNeRV injects flow information and compact convolutions for temporal redundancy"
+    },
+    {
+      "allocator_binding": "architecture changes must beat byte price after quantization and pruning",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "decoder block bytes must pass intN/coder-aware archive section proof",
+      "binding_status": "architecture_candidate_needs_rate_priced_ladder",
+      "control_id": "nervplusplus_decoder_efficiency_blocks",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "decoder architecture candidates for HiNeRV/SNeRV MLX trainers",
+      "missing_bindings": [
+        "rate_priced_nervplusplus_block_ablation_for_hi_nerv_snerv"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "cache gate plus modelsize_budget_plan before full-video training",
+      "upstream_control": "NeRV++ improves decoder capacity with separable residual blocks and skip layers"
+    },
+    {
+      "allocator_binding": "codebook and index bytes survive only if value-per-byte beats contest byte price",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "all codebooks, entropy models, indices, and synthesis weights inside archive.zip",
+      "binding_status": "partially_wired_needs_full_video_section_pricing",
+      "control_id": "vq_c3_cool_chic_latent_codebook",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "PACT-NeRV/VQ section profiler, HPRC packet spine, compact decoder codec sweeps",
+      "missing_bindings": [
+        "codebook_entropy_model_bytes_charged_in_spine",
+        "full_video_section_value_for_vq_codebook_indices",
+        "demote_codebook_sections_without_positive_total_value"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "full-video MLX section value by decoder/codebook/index/residual",
+      "upstream_control": "VQ-NeRV, C3, Cool-Chic, and NVRC expose discrete latent grids, codebooks, entropy models, and learned quantization controls"
+    },
+    {
+      "allocator_binding": "waterfill sparse atoms, zero dead zones, protect scorer-visible coefficients",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "int8/fp16 only for protected atoms; int4/int2/zero/RLE elsewhere",
+      "binding_status": "available_needs_carrier_domain_binding",
+      "control_id": "inverse_steganalysis_saliency_stack",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "score_exact_saliency, inverse_steganalysis_linf_vs_l2_gate, joint_p18_p19_waterfill, segnet_boundary_marginals",
+      "missing_bindings": [
+        "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "SegNet boundary/logit margin + PoseNet Fisher + exact byte price",
+      "upstream_control": "detector-aware allocation rather than perceptual allocation"
+    },
+    {
+      "allocator_binding": "rank controls by measured marginal score response",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "operator plans must include grammar-aware packet proof",
+      "binding_status": "available_needs_nerv_control_consumer",
+      "control_id": "master_gradient_xray_stack",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "master_gradient, xray tools, Venn composition, sensitivity maps",
+      "missing_bindings": [
+        "nerv_control_inventory_consumer_for_master_gradient_rows"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "component deltas and CPU/CUDA drift by pair/frame/byte group",
+      "upstream_control": "none; repo-native diagnostic score-response tensor"
+    },
+    {
+      "allocator_binding": "bundle/trust-region and hard archive projection decide accepted mutations",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "gradient proposals are advisory until receiver replay proves changed bytes",
+      "binding_status": "available_needs_exact_reduced_bundle_consumer",
+      "control_id": "full_video_vjp_master_gradient_authority",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "master_gradient anchors, MLX scorer port, joint P18/P19 waterfill",
+      "missing_bindings": [
+        "full_video_vjp_bundle_as_budget_spend_prerequisite",
+        "gradient_bundle_to_modelsize_and_section_allocator",
+        "hard_archive_projection_line_search_for_compact_carriers"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "all 600 pairs reduce into one SegNet/PoseNet scalar action before any update",
+      "upstream_control": "exact full-video constrained variational solve, not stochastic minibatch promotion"
+    },
+    {
+      "allocator_binding": "protect high-value atoms; RLE/zero low-value atoms",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "compact decoder codec sweep + arithmetic/range/ANS candidates",
+      "binding_status": "available_needs_family_specific_packet_layout",
+      "control_id": "bitmask_and_zero_packing",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "bitmask, packed-zero, intN codec sweeps, section value profiling",
+      "missing_bindings": [
+        "hi_nerv_snerv_grouped_intN_zero_run_packet_layout"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "section neutralization replay and cache quality gates",
+      "upstream_control": "standard entropy coding and sparse neural compression practice"
+    },
+    {
+      "allocator_binding": "exact budget cannot be spent without archive/runtime/content-tree custody",
+      "applies_to": "cross_stack",
+      "archive_runtime_binding": "single charged packet spine with hashes, argv, env, cleanup, and false-authority flags",
+      "binding_status": "available_must_remain_hard_gate",
+      "control_id": "receiver_exact_custody_gate",
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_control_surface": "archive_candidate contract, paired auth-eval, receiver proof tools",
+      "missing_bindings": [
+        "all_compact_carrier_emitters_on_shared_archive_bound_contract",
+        "bounded_runner_refuses_non_contract_candidate_paths"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_binding": "contest auth eval sees only archive bytes and inflated frames",
+      "upstream_control": "contest archive.zip plus deterministic inflate.sh contract"
+    }
+  ],
+  "decoder_mode_assignment_reports": {
+    "snerv": {
+      "assignment_rows": [
+        {
+          "archive_sha256": "b69d7b23f000cdf05827a38060af3baed78da6c438379f842517c3138b6317cc",
+          "blockers": [
+            "contest_cpu_cuda_exact_eval_not_executed",
+            "decoder_weight_saliency_replay_required_for_authority",
+            "sample_pair_count_below_full600",
+            "required_emission_field_missing:official_controls.--modelsize",
+            "required_emission_field_missing:official_controls.mfu_enabled",
+            "required_emission_field_missing:official_controls.hfr_enabled",
+            "required_emission_field_missing:official_controls.snerv_t_enabled",
+            "required_emission_field_missing:qat_bits",
+            "decoder_weight_saliency_missing_for_some_groups",
+            "full_video_coverage_missing",
+            "receiver_proof_not_satisfied",
+            "mixed_decoder_modes_do_not_support_fp32",
+            "fp32_protect_downgraded_to_fp16_requires_receiver_replay"
+          ],
+          "decoder_payload_schema": "snerv_decoder_payload.v3",
+          "mode_count": 3,
+          "mode_histogram": {
+            "fp16": 3
+          },
+          "mode_plan_cli_arg": "fp16,fp16,fp16",
+          "ready_for_local_advisory_probe": true,
+          "ready_for_receiver_mode_export": false,
+          "row_id": "snerv_trained_ladder_row_archive"
+        }
+      ],
+      "blockers": [
+        "mode_assignment_is_false_authority_until_receiver_replay_and_exact_eval",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "sample_pair_count_below_full600",
+        "required_emission_field_missing:official_controls.--modelsize",
+        "required_emission_field_missing:official_controls.mfu_enabled",
+        "required_emission_field_missing:official_controls.hfr_enabled",
+        "required_emission_field_missing:official_controls.snerv_t_enabled",
+        "required_emission_field_missing:qat_bits",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_coverage_missing",
+        "receiver_proof_not_satisfied",
+        "mixed_decoder_modes_do_not_support_fp32",
+        "fp32_protect_downgraded_to_fp16_requires_receiver_replay"
+      ],
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "local_advisory_probe_ready_row_count": 1,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_mode_export_ready_row_count": 0,
+      "report_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-snerv-stratified-smoke-20260602T112911Z/.omx/research/snerv_waterfill_mode_assignment_20260602T175800Z_real_archive_false_authority.json",
+      "row_count": 1,
+      "schema": "snerv_waterfill_mode_assignment.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "status": "decoder_mode_assignment_rows_available_false_authority"
+    }
+  },
+  "decoder_mode_probe_reports": {
+    "snerv": {
+      "axis_tag": "[macOS-CPU advisory]",
+      "best_plan_label": "explicit_fp163",
+      "best_plan_score_linf_advisory": 3.6133971405465926,
+      "blockers": [
+        "macos_cpu_advisory_only",
+        "full_600_pair_receiver_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "not_packaged_as_contest_archive_zip"
+      ],
+      "candidate_count": 1,
+      "candidate_rows": [
+        {
+          "archive_bytes_total": 456578,
+          "blockers": [
+            "full_600_pair_receiver_replay_missing",
+            "paired_contest_cpu_cuda_auth_eval_missing",
+            "not_packaged_as_contest_archive_zip"
+          ],
+          "d_pose_mean_linf": 0.38176921010017395,
+          "d_seg_mean_linf": 0.013554890640079975,
+          "decoder_bytes": 1030,
+          "label": "explicit_fp163",
+          "mode_assignment_source": "explicit",
+          "mode_histogram": {
+            "fp16": 3,
+            "int2": 0,
+            "int4": 0,
+            "int8": 0,
+            "zero": 0
+          },
+          "modes": [
+            "fp16",
+            "fp16",
+            "fp16"
+          ],
+          "receiver_archive_replay_verified": true,
+          "score_linf": 3.6133971405465926
+        }
+      ],
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "levels": 1,
+      "n_pairs": 1,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_decoder_mode_assignment_probe.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "status": "decoder_mode_probe_rows_available_false_authority"
+    }
+  },
+  "decoder_weight_saliency_replays": {},
+  "decoder_weight_waterfill_reports": {
+    "snerv": {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "decoder_weight_saliency_replay_required_for_authority",
+        "sample_pair_count_below_full600",
+        "required_emission_field_missing:official_controls.--modelsize",
+        "required_emission_field_missing:official_controls.mfu_enabled",
+        "required_emission_field_missing:official_controls.hfr_enabled",
+        "required_emission_field_missing:official_controls.snerv_t_enabled",
+        "required_emission_field_missing:qat_bits",
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_coverage_missing",
+        "receiver_proof_not_satisfied"
+      ],
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "report_path": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-snerv-stratified-smoke-20260602T112911Z/.omx/research/snerv_trained_ladder_waterfill_20260602T174500Z_real_archive_false_authority.json",
+      "row_count": 1,
+      "schema": "snerv_trained_ladder_waterfill.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section_value_row_count": 3,
+      "source_status": "trained_ladder_row_blocked",
+      "source_verdict": "NO_GO_HARVEST_INPUT__TRAINED_ROW_PROOF_INCOMPLETE",
+      "status": "decoder_weight_waterfill_rows_available_false_authority",
+      "waterfill_rows": [
+        {
+          "archive_bytes": 1188221,
+          "archive_sha256": "b69d7b23f000cdf05827a38060af3baed78da6c438379f842517c3138b6317cc",
+          "archive_sha256_actual": "b69d7b23f000cdf05827a38060af3baed78da6c438379f842517c3138b6317cc",
+          "blockers": [
+            "sample_pair_count_below_full600",
+            "required_emission_field_missing:official_controls.--modelsize",
+            "required_emission_field_missing:official_controls.mfu_enabled",
+            "required_emission_field_missing:official_controls.hfr_enabled",
+            "required_emission_field_missing:official_controls.snerv_t_enabled",
+            "required_emission_field_missing:qat_bits",
+            "decoder_weight_saliency_missing_for_some_groups",
+            "full_video_coverage_missing",
+            "receiver_proof_not_satisfied",
+            "contest_cpu_cuda_exact_eval_not_executed"
+          ],
+          "decoder_payload_schema": "snerv_decoder_payload.v3",
+          "decoder_precision_mode": "mixed_magnitude_symmetric",
+          "decoder_state_group_count": 3,
+          "receiver_codec_mode": "contest_archive_zip",
+          "row_id": "snerv_trained_ladder_row_archive",
+          "waterfill_summary": {
+            "group_count": 3,
+            "total_baseline_fp32_bytes": 108,
+            "total_selected_byte_delta": 0,
+            "total_selected_estimated_bytes": 108
+          }
+        }
+      ]
+    }
+  },
+  "dispatch_attempted": false,
+  "focus_families": [
+    "snerv"
+  ],
+  "gpu_launched": false,
+  "implementation_sweep": {
+    "blockers": [
+      "snerv_official_symbol_parity_map_missing",
+      "snerv_tiny_forward_parity_against_oss_missing",
+      "snerv_quantized_checkpoint_payload_replay_missing",
+      "snerv_scorer_loop_decoder_qat_full_video_missing",
+      "snerv_mlx_native_train_export_missing",
+      "snerv_measured_modelsize_ladder_missing",
+      "snerv_receiver_closed_learned_hfr_missing",
+      "snerv_full600_receiver_proven_candidate_missing",
+      "snerv_same_axis_pr95_control_missing",
+      "snerv_missing_official_stride_stack_parity",
+      "snerv_partial_native_dwt_present_hfr_receiver_not_source_faithful",
+      "snerv_missing_mfu_blocks",
+      "snerv_missing_official_hfr_heads",
+      "snerv_missing_snerv_t_temporal_path_or_no_go",
+      "snerv_missing_measured_fc_dim_modelsize_ladder",
+      "snerv_missing_quant_payload_receiver_replay",
+      "implementation_sweep_is_false_authority",
+      "online_sources_are_research_context_not_score_authority"
+    ],
+    "design_memo_index": {
+      "snerv": {
+        "memo_count": 175,
+        "memo_paths_are_complete": true,
+        "memo_rows": [
+          {
+            "bytes": 3965,
+            "path": ".omx/research/apple_local_compute_readiness_20260602T153647Z_hinerv_snerv_codex.json",
+            "sha256": "cb200a01ed76ab21d230db930d8898553c6b01c5241b396f2d861eb8c2c0a32f"
+          },
+          {
+            "bytes": 753,
+            "path": ".omx/research/apple_local_compute_readiness_20260602T153647Z_hinerv_snerv_codex.md",
+            "sha256": "059516d0a317ea53520813aa5a73cb76ca82f799f12ae9166489705e13519f12"
+          },
+          {
+            "bytes": 3871,
+            "path": ".omx/research/apple_local_compute_readiness_20260602T153706Z_hinerv_snerv_codex.json",
+            "sha256": "43d7ae45a5dbae43dea561dcc3b9cc8a33a8896eaa4879eb64749cbfb84473e0"
+          },
+          {
+            "bytes": 688,
+            "path": ".omx/research/apple_local_compute_readiness_20260602T153706Z_hinerv_snerv_codex.md",
+            "sha256": "0a1c7d75baccb3e8d544262eced1185d063a5111091d490f6df74a00f10af7a5"
+          },
+          {
+            "bytes": 2781,
+            "path": ".omx/research/carrier_training_modelsize_gate_proof_20260602T130023Z.json",
+            "sha256": "6662da92ada3eb62331c1543948982e34c3b923584a1382c153af02915766006"
+          },
+          {
+            "bytes": 2895,
+            "path": ".omx/research/codex_findings_carrier_training_modelsize_gate_20260602T130023Z_codex.md",
+            "sha256": "562cf93f87120a06089b7f5f6cc06d101219572346ee746833f5556559d476ee"
+          },
+          {
+            "bytes": 1815,
+            "path": ".omx/research/codex_findings_hinerv_snerv_execute_family_gate_20260601T211525Z_codex.md",
+            "sha256": "7fb3cd3f821e185782a100e3ae891e6738a9cc549ce81a011bb2719e0587b1ab"
+          },
+          {
+            "bytes": 3333,
+            "path": ".omx/research/codex_findings_nerv_modelsize_budget_receiver_split_20260602T125333Z_codex.md",
+            "sha256": "b4280bf2663510aa483b1bf1238ec5d7f742a2c8b8317826cd6eb8302038fa81"
+          },
+          {
+            "bytes": 5425,
+            "path": ".omx/research/codex_findings_nerv_modelsize_control_surface_20260602T115741Z_codex.md",
+            "sha256": "7ff8c58e25c32cd1896d8337b5427da87473fa12dfacfcd5bd163654ec0b116c"
+          },
+          {
+            "bytes": 4389,
+            "path": ".omx/research/codex_findings_nerv_modelsize_ladder_receiver_hardening_20260602T123014Z_codex.md",
+            "sha256": "20337c20c3fbca978a600584820e5cf4f805349c2ab28c10f18cafc080c8afc9"
+          },
+          {
+            "bytes": 17123,
+            "path": ".omx/research/codex_findings_rnerv_full_video_variational_20260531T174138Z_codex.md",
+            "sha256": "3acc838f94d9e13e455c260b34c1e04b53e4db17ebaa27931b6d8b6bcbfe7ead"
+          },
+          {
+            "bytes": 15805,
+            "path": ".omx/research/codex_findings_rnerv_pact_z8_residual_lane_research_20260531T223036Z_subagent.md",
+            "sha256": "621b2569f76f535430158f33e35b442b099a9e4d7eff4ae694292ab0b3502f9f"
+          },
+          {
+            "bytes": 4535,
+            "path": ".omx/research/codex_findings_rnerv_snerv_hinerv_carrier_routing_20260601T204316Z_codex.md",
+            "sha256": "4c1739062df019b65d1e20d7398e870aee7b0a319611ff5bf377deb84f8722c5"
+          },
+          {
+            "bytes": 3197,
+            "path": ".omx/research/codex_findings_snerv_coordinate_decoder_qat_2pair_continuation_20260601T2355Z_codex.md",
+            "sha256": "d30361babbfdf6bbe76473d5cc5dcc917034c6b2ef03f791d985183626757f11"
+          },
+          {
+            "bytes": 4699,
+            "path": ".omx/research/codex_findings_snerv_coordinate_decoder_qat_gate_go_20260601T2349Z_codex.md",
+            "sha256": "a885b0af35b8738d4a167a3fb90a3897f5cfa90a247175479c921a2771b32ceb"
+          },
+          {
+            "bytes": 5502,
+            "path": ".omx/research/codex_findings_snerv_coordinate_decoder_qat_pair_delta_continuation_20260602T010623Z_codex.md",
+            "sha256": "9c406fc852cb331c1d8ee8251d4ae900ab6b1f0229be6338d1ccdb6b1ca5a121"
+          },
+          {
+            "bytes": 4894,
+            "path": ".omx/research/codex_findings_snerv_current_limitations_and_candidate_feedback_scope_20260602T124542Z_codex.md",
+            "sha256": "816af4dc84c6e6c9811051ef788f0de58c0a198ed2b2ff8e85f4b3c5202ce6a4"
+          },
+          {
+            "bytes": 3587,
+            "path": ".omx/research/codex_findings_snerv_decoder_mode_assignment_probe_20260602T0315Z_codex.md",
+            "sha256": "e3b0e78f2fd89bc1e2cccac2dda56d4fcb007e6d2c2cdf944550f52a20620b87"
+          },
+          {
+            "bytes": 2909,
+            "path": ".omx/research/codex_findings_snerv_decoder_payload_codec_20260602T0252Z_codex.md",
+            "sha256": "823e8c4227d5cc91619b4d429c6038618655b043cf69d5355dab816d17197ab9"
+          },
+          {
+            "bytes": 2457,
+            "path": ".omx/research/codex_findings_snerv_explicit_decoder_modes_20260602T0305Z_codex.md",
+            "sha256": "3a84df243556a978cb6fe146ac75e3dd5191fea4c10783f4c897d0182d1e7002"
+          },
+          {
+            "bytes": 2841,
+            "path": ".omx/research/codex_findings_snerv_fresh_eyes_guardrail_hardening_20260602T023200Z_codex.md",
+            "sha256": "baa537f11f082c8505c937e2b1856044f92b8ba663cf7aa97acc14a9820b8cf3"
+          },
+          {
+            "bytes": 2087,
+            "path": ".omx/research/codex_findings_snerv_full600_lf_predictor_profile_20260602T111906Z_codex.md",
+            "sha256": "40d03065d5466266ed5ac4f5f899dd34d62fd67a771fbe08a1c79e46bbc3480a"
+          },
+          {
+            "bytes": 6312,
+            "path": ".omx/research/codex_findings_snerv_hf_decoder_component_sweeps_20260601T223927Z_codex.md",
+            "sha256": "55d75c0f0f442881a6b8e9a0e348ebc522c9482321348c2962ef6d2b0d9ade3a"
+          },
+          {
+            "bytes": 2475,
+            "path": ".omx/research/codex_findings_snerv_hinerv_byte_price_controller_binding_20260602T125202Z_codex.md",
+            "sha256": "79dea31d67da12d6cb6003ccab33bd9e2f8f78df3b2969270b780b6410cd9f5c"
+          },
+          {
+            "bytes": 2341,
+            "path": ".omx/research/codex_findings_snerv_hinerv_byte_price_queue_ingest_20260602T125817Z_codex.md",
+            "sha256": "1386fd68824a3bf6c9c1952bf5eacaeb2d7231076da389dfcaf3cc8496369b39"
+          },
+          {
+            "bytes": 5674,
+            "path": ".omx/research/codex_findings_snerv_learned_subspace_pair_guard_smoke_20260602T020802Z_codex.md",
+            "sha256": "27234aab309464b673a691e2490e137464bfbc21be58ab44deebe581b9393267"
+          },
+          {
+            "bytes": 2145,
+            "path": ".omx/research/codex_findings_snerv_mixed_decoder_payload_20260602T0303Z_codex.md",
+            "sha256": "9c63624e1ec944d56048494184f4bfddb3da16512bba48df18ab1046ad4870e2"
+          },
+          {
+            "bytes": 4763,
+            "path": ".omx/research/codex_findings_snerv_nes_pair_robust_4pair_contraction_20260602T022900Z_codex.md",
+            "sha256": "8ea9d45e65f5f3c287d82d84540c70d7d91afe188c9c5623b41eab6f5a5bbf49"
+          },
+          {
+            "bytes": 5604,
+            "path": ".omx/research/codex_findings_snerv_nes_pair_robust_reuse_map_20260602T022000Z_codex.md",
+            "sha256": "4d39814ec34615b154525b8d0f632e8a7918b7770f4c9a80cd6666e739382c6b"
+          },
+          {
+            "bytes": 3231,
+            "path": ".omx/research/codex_findings_snerv_pose_guarded_decoder_gate_20260601T2324Z_codex.md",
+            "sha256": "b1721a0d09fcfb38b7090121cc209ff89800f0d2ed88b18ee2d25409eb5966dc"
+          },
+          {
+            "bytes": 3452,
+            "path": ".omx/research/codex_findings_snerv_pose_hard_seg_slack_decoder_qat_smoke_20260602T113400Z_codex.md",
+            "sha256": "fb09f7a86c18432a167b7d5d1611edc9dc535f7bd5392c75c3f890bbfca21405"
+          },
+          {
+            "bytes": 4808,
+            "path": ".omx/research/codex_findings_snerv_rate_blocker_truth_assessment_20260602T124609Z_codex.md",
+            "sha256": "2156a4462fecfd9e3fc1e9397eeb988fed9297016c24344d3a684144156b4d14"
+          },
+          {
+            "bytes": 3436,
+            "path": ".omx/research/codex_findings_snerv_receiver_archive_proof_20260601T215500Z_codex.md",
+            "sha256": "713d7a19007655fe586f9c9d8a7d36271d7e0a6211880c3531daa74c2138e159"
+          },
+          {
+            "bytes": 4591,
+            "path": ".omx/research/codex_findings_snerv_runtime_package_closure_20260601T223000Z_codex.md",
+            "sha256": "d944df84d4e64b64e2e8b92003d68b946b856ddf660c4c1f0cbb0c4b76efe2ca"
+          },
+          {
+            "bytes": 2515,
+            "path": ".omx/research/codex_findings_snerv_score_aware_decoder_fit_work_order_20260601T222123Z_codex.md",
+            "sha256": "4c273a4d3c8ea9ae2cda43435305890a3c0ebce3bd8c9dccf120f786e862fde8"
+          },
+          {
+            "bytes": 4858,
+            "path": ".omx/research/codex_findings_snerv_score_weighted_decoder_gain_sweep_20260601T223158Z_codex.md",
+            "sha256": "b1e113691c24aaa60ccb1bca9875c1bac729c4941b77141b8b56be141e9767f1"
+          },
+          {
+            "bytes": 4209,
+            "path": ".omx/research/codex_findings_snerv_score_weighted_hf_decoder_fit_smoke_20260601T222541Z_codex.md",
+            "sha256": "d7675ca048b558c6d01083628d99c5ed5f58bf9344ddeed449780e05cf5d1146"
+          },
+          {
+            "bytes": 4214,
+            "path": ".omx/research/codex_findings_snerv_scorer_loop_decoder_qat_contract_20260601T2330Z_codex.md",
+            "sha256": "9589b8e7901b359362d84c16ae0685ba62c3c677e414adcebf1a273d97e419e6"
+          },
+          {
+            "bytes": 4465,
+            "path": ".omx/research/codex_findings_snerv_scorer_loop_decoder_qat_smoke_20260601T2339Z_codex.md",
+            "sha256": "d50cbbe6d5a989a0072bf8b7f520d7e868c46fd235a1d25fb88bd29f9c22bea7"
+          },
+          {
+            "bytes": 3956,
+            "path": ".omx/research/codex_findings_snerv_stepmap_waterfill_precision_ladder_20260601T221200Z_codex.md",
+            "sha256": "05c60e74146a85fce894996d7c4792a4ff4dc49f45c8a807d4178c384b0627ae"
+          },
+          {
+            "bytes": 2483,
+            "path": ".omx/research/codex_findings_sr_nerv_resolution_axis_enhancer_20260601T204414Z_codex.md",
+            "sha256": "de7b5accc54777fb0d97172e1a24359b2942d4c34b8e5788eb8d91e85d5bb5a9"
+          },
+          {
+            "bytes": 35095,
+            "path": ".omx/research/codex_rnerv_srneerv_byte_grammar_stack_design_20260601T122839Z_subagentB.md",
+            "sha256": "39b4611032ed5654327cdb241eed9c773e1dafc9a5737c8e75b08d702c5e6c82"
+          },
+          {
+            "bytes": 232823,
+            "path": ".omx/research/nerv_control_inventory_20260602T135555Z_snerv_modelsize_closed_codex.json",
+            "sha256": "14da8675c26bfb2bbacd13b8d5682b50d46ef23878aee996f1d313de2f275c59"
+          },
+          {
+            "bytes": 4859,
+            "path": ".omx/research/nerv_control_inventory_20260602T135555Z_snerv_modelsize_closed_codex.md",
+            "sha256": "1c642ca4eb7fb297b0b87929bc8ff197d4c5d635de6a49c9d38ee22f15d02232"
+          },
+          {
+            "bytes": 587773,
+            "path": ".omx/research/nerv_control_inventory_20260602T145324Z_hinerv_snerv_saliency_mode_probe_bound_codex.json",
+            "sha256": "280d1c0f6bce05f3b0f1018d96f9287481282511c7f18949c823e1036f692590"
+          },
+          {
+            "bytes": 5754,
+            "path": ".omx/research/nerv_control_inventory_20260602T145324Z_hinerv_snerv_saliency_mode_probe_bound_codex.md",
+            "sha256": "db2ffaeebd5d219c1556ea22b22091f1e1b088e4340cefd54e66e2985cb8af9c"
+          },
+          {
+            "bytes": 628355,
+            "path": ".omx/research/nerv_control_inventory_20260602T154100Z_hinerv_snerv_source_replay_bound_codex.json",
+            "sha256": "df91bd45c532fe12baeb204b04df3f3cc7d2faef6281209de80ce06654407eef"
+          },
+          {
+            "bytes": 7464,
+            "path": ".omx/research/nerv_control_inventory_20260602T154100Z_hinerv_snerv_source_replay_bound_codex.md",
+            "sha256": "a6d993c48189a9c4fa5fc484b5ef6a08ed81261aada0ee8d8e98b23e64c54717"
+          },
+          {
+            "bytes": 570660,
+            "path": ".omx/research/nerv_control_inventory_20260602T174700Z_hinerv_snerv_waterfill_bound_codex.json",
+            "sha256": "ff9cdede6e8db3b327f17a184044181fe066770c287743ddb3e24efc0cc71d5e"
+          },
+          {
+            "bytes": 5381,
+            "path": ".omx/research/nerv_control_inventory_20260602T174700Z_hinerv_snerv_waterfill_bound_codex.md",
+            "sha256": "acd12a365654afd170e9659f7411718c886a78876741f1cde0124d8988524e9d"
+          },
+          {
+            "bytes": 582468,
+            "path": ".omx/research/nerv_control_inventory_20260602T180300Z_hinerv_snerv_mode_probe_bound_codex.json",
+            "sha256": "df2a2f0eef962c1a6cf79cc1e06c334c62e9e726913fc77babe4b1af640d087a"
+          },
+          {
+            "bytes": 5607,
+            "path": ".omx/research/nerv_control_inventory_20260602T180300Z_hinerv_snerv_mode_probe_bound_codex.md",
+            "sha256": "9c8ee050c5cafc781c84d529dd6491a1bf73895a0cdf45d5d584be9364b11a66"
+          },
+          {
+            "bytes": 18424,
+            "path": ".omx/research/nerv_ladder_row_emission_contract_20260602T151018Z_snerv_packet_export_bound.json",
+            "sha256": "987b2f69378281b243617dbfb3f4095c272d35bbd01d6dfabfe2f2bede5b5f8d"
+          },
+          {
+            "bytes": 20013,
+            "path": ".omx/research/nerv_ladder_row_emission_contract_20260602T152103Z_snerv_packet_hinerv_archive_bound.json",
+            "sha256": "58352ff2797462ff0bb2d9fa5585fd38ab938057749a6c9ed238b6c1518b260d"
+          },
+          {
+            "bytes": 16724,
+            "path": ".omx/research/nerv_ladder_row_emission_contract_snerv_hinerv_20260602T153000Z.json",
+            "sha256": "966a07ef3a4c78871822c851b342338a5a8fd9dcef084eb3fc674bf04095964c"
+          },
+          {
+            "bytes": 195341,
+            "path": ".omx/research/nerv_master_consumer_bridge_20260602T150126Z_snerv_mode_evidence_units.json",
+            "sha256": "a1215ed8b81979b7d8f2734ea7301e03a3efe40defd927cc5e5dbbec7f94ebbb"
+          },
+          {
+            "bytes": 68678,
+            "path": ".omx/research/nerv_modelsize_archive_curve_20260602T122010Z.json",
+            "sha256": "b9871b2dafdc2950e9ed6056eff61feccfde78b398b1f906ffc8d8640ab0813b"
+          },
+          {
+            "bytes": 68678,
+            "path": ".omx/research/nerv_modelsize_archive_curve_20260602T124222Z.json",
+            "sha256": "b9871b2dafdc2950e9ed6056eff61feccfde78b398b1f906ffc8d8640ab0813b"
+          },
+          {
+            "bytes": 16363,
+            "path": ".omx/research/nerv_modelsize_budget_receiver_split_proof_20260602T125333Z.json",
+            "sha256": "78fd6c6d6983ba7e097d71b962c5ae84232809b27b7dc5f191ed527c65096d1a"
+          },
+          {
+            "bytes": 49294,
+            "path": ".omx/research/nerv_modelsize_ladder_20260602T122618Z.json",
+            "sha256": "90de9de9320cc7724b9fbfddd61fa8da8810d124bca407195a3574982dfaa530"
+          },
+          {
+            "bytes": 3574,
+            "path": ".omx/research/nerv_modelsize_ladder_20260602T122618Z.md",
+            "sha256": "a76e2495d8f3f16a3267e3f4d4988b47029d138fdf90173b6dd30210b502a998"
+          },
+          {
+            "bytes": 51416,
+            "path": ".omx/research/nerv_rate_allocator_bridge_20260602T150126Z_snerv_mode_evidence_units.json",
+            "sha256": "28b00dee778f3761abed2817cacaf91ba90ab1f33b884467cf425af5e95817ab"
+          },
+          {
+            "bytes": 146177,
+            "path": ".omx/research/nerv_rate_allocator_queue_20260602T125817Z_snerv_hinerv_byte_price.json",
+            "sha256": "1ff8a2ce3abc59602d0f5064f634cbeac8bab97df98d2fc63ebe52dfe0814f6e"
+          },
+          {
+            "bytes": 162352,
+            "path": ".omx/research/nerv_rate_allocator_queue_20260602T131342Z_snerv16_hinerv_byte_price.json",
+            "sha256": "c29c9b6143cc7fd41223a296e253a3277503785b5106f9ec2567647439571097"
+          },
+          {
+            "bytes": 161680,
+            "path": ".omx/research/nerv_rate_allocator_queue_20260602T131700Z_snerv16_hinerv_byte_price.json",
+            "sha256": "433d1aa3da9a7ed8a93122ebd1aacea25d9a079f539c43bb47c0026025379d8c"
+          },
+          {
+            "bytes": 98288,
+            "path": ".omx/research/nerv_rate_allocator_queue_20260602T150126Z_snerv_mode_evidence_units.json",
+            "sha256": "b844c9bda8245a227e1328e058c30d425f6327c78274d7b98aabf22db1001e12"
+          },
+          {
+            "bytes": 194091,
+            "path": ".omx/research/nerv_rate_allocator_queue_20260602T_unsigned_modes_snerv16_hinerv_byte_price.json",
+            "sha256": "07d943857ee0a634bb5ebf0520a14fe66ad7c2d09c4deb470e7ec986ae1812ff"
+          },
+          {
+            "bytes": 58051,
+            "path": ".omx/research/nerv_receiver_closed_ladder_row_harvest_snerv_local_smokes_20260602T151500Z.json",
+            "sha256": "bc3e06e3ea5651d70ea2cc867388128d6c8f3aa44795680bfe966fa1a9ec3d3a"
+          },
+          {
+            "bytes": 108329,
+            "path": ".omx/research/nerv_receiver_closed_modelsize_ladder_hinerv_from_curve_20260602T130900Z.json",
+            "sha256": "f121ff435cc0537f1b1664113bbaef0fbc7e8a1b41625111c18d5cefcf6a616d"
+          },
+          {
+            "bytes": 10683,
+            "path": ".omx/research/nerv_receiver_closed_modelsize_ladder_hinerv_from_harvest_20260602T151500Z.json",
+            "sha256": "3f511d96ad5296e9384bd12d15fb3f36f8da433c8b023e5380a28674eb0f3cd2"
+          },
+          {
+            "bytes": 104290,
+            "path": ".omx/research/nerv_receiver_closed_modelsize_ladder_snerv_from_curve_20260602T130900Z.json",
+            "sha256": "e5608989adc4be127c6d61bd9c02b8070697ff521f96614667b6c2c5f1e1bfec"
+          },
+          {
+            "bytes": 95988,
+            "path": ".omx/research/nerv_receiver_closed_modelsize_ladder_snerv_from_harvest_20260602T151500Z.json",
+            "sha256": "e8531b816841f4da21b009204eeedcd772fd4045d9dec4514711284e500e51fe"
+          },
+          {
+            "bytes": 23163,
+            "path": ".omx/research/nerv_source_parity_contract_20260602T133203Z_tightened_hi_snerv_codex.json",
+            "sha256": "ca2dd2070779d73c38018a032d4fcb785018128bceda270486e5eaf0e43b206a"
+          },
+          {
+            "bytes": 834,
+            "path": ".omx/research/nerv_source_parity_contract_20260602T133203Z_tightened_hi_snerv_codex.md",
+            "sha256": "000ec7e7e0e90a55d703ee4ce0add2375b562344f058a6d92eaf2339010143ff"
+          },
+          {
+            "bytes": 21829,
+            "path": ".omx/research/nerv_source_parity_contract_20260602T135554Z_snerv_modelsize_closed_codex.json",
+            "sha256": "256034600f0b44a8c847968f8375166d1ba239c1440074291f9c6bdb79ea656f"
+          },
+          {
+            "bytes": 621,
+            "path": ".omx/research/nerv_source_parity_contract_20260602T135554Z_snerv_modelsize_closed_codex.md",
+            "sha256": "3d4ec1551c25835170e73b8500db0df82a4f3c81261bcf800282cdec154e0069"
+          },
+          {
+            "bytes": 22020,
+            "path": ".omx/research/nerv_source_parity_contract_20260602T_snerv_qat_entry_closed_codex.json",
+            "sha256": "b97a93634f8e68816343f55b864ef385a4f8650e531ad5635173fed28d8d4f8c"
+          },
+          {
+            "bytes": 664,
+            "path": ".omx/research/nerv_source_parity_contract_20260602T_snerv_qat_entry_closed_codex.md",
+            "sha256": "c859bf8347f4c66199df4d39dca44fe5ada9800f1adc7d15b7847b9fa6933e0d"
+          },
+          {
+            "bytes": 23163,
+            "path": ".omx/research/nerv_source_parity_contract_20260602T_tightened_hi_snerv_codex.json",
+            "sha256": "781652ab17627e168ede26aabc57a4d62ab3ac3ae006543cae9c7f6c6bc62aab"
+          },
+          {
+            "bytes": 834,
+            "path": ".omx/research/nerv_source_parity_contract_20260602T_tightened_hi_snerv_codex.md",
+            "sha256": "8dda9fc29e105540372be8ae657a54d5f0d5166279d7a0f6f51c1d466a2608d8"
+          },
+          {
+            "bytes": 8026,
+            "path": ".omx/research/rnerv_pact_z8_residual_lane_design_20260531T222520Z_codex.md",
+            "sha256": "2ec91a462c530a60f916c1effc180b0d6aedca12392aa8bbe498b66cfba5f27b"
+          },
+          {
+            "bytes": 9510,
+            "path": ".omx/research/snerv_binary_profile_full600_20260602T130529Z.json",
+            "sha256": "4c529a878871e6365eae5edd22bcf28d955cbf1cf94d8655cfeb00e525b643e3"
+          },
+          {
+            "bytes": 3632,
+            "path": ".omx/research/snerv_decoder_mode_assignment_probe_1pair_20260602T0315Z.json",
+            "sha256": "97dc598654ae0d8d7e25acd47c785d82a102784defbdb00ca08c4e61cf8971ef"
+          },
+          {
+            "bytes": 3326,
+            "path": ".omx/research/snerv_decoder_mode_assignment_probe_20260602T150440Z_ssd_packet_false_authority.json",
+            "sha256": "749df5f3d05a6731f8594b2aff31e6740ebdcd557c44cb2a30d33569766f7a15"
+          },
+          {
+            "bytes": 2752,
+            "path": ".omx/research/snerv_decoder_payload_codec_int8_1pair_smoke_20260602T024507Z.json",
+            "sha256": "24466941eda6ae400c77a7eaec8db55cff49267c7e3dc9ecb5041ed41b1ddeee"
+          },
+          {
+            "bytes": 2685,
+            "path": ".omx/research/snerv_decoder_payload_codec_int8_receiver_scored_1pair_smoke_20260602T0250Z.json",
+            "sha256": "687c24060e3dee0abfb0ca9d20ac924cc010b24682ceac4a306e7210ebde0f00"
+          },
+          {
+            "bytes": 3784,
+            "path": ".omx/research/snerv_decoder_payload_codec_mixed_header_receiver_scored_1pair_smoke_20260602T0300Z.json",
+            "sha256": "b997ef054dbc2e977518d03907a582f4f50a9f039229b6e63e9d5584f1d23c7f"
+          },
+          {
+            "bytes": 3824,
+            "path": ".omx/research/snerv_decoder_payload_explicit_modes_receiver_scored_1pair_smoke_20260602T030144Z.json",
+            "sha256": "42ddc23829bb2ba7fd8601c96f999ec407488be127fd0fe00791def8691ee4b8"
+          },
+          {
+            "bytes": 2660,
+            "path": ".omx/research/snerv_full600_lf_predictor_profile_20260602T111906Z.json",
+            "sha256": "dd51f32fa061b0de7192f9eed2357a7e85238d86a4f36eb5975658a955d70503"
+          },
+          {
+            "bytes": 95715,
+            "path": ".omx/research/snerv_haar_j1_modelsize_advisory_1pair_20260602T135447Z.json",
+            "sha256": "dedc568768d99a013a17b0ff508cf42ce81600ff58bc7d526e015c1605074a3b"
+          },
+          {
+            "bytes": 3632,
+            "path": ".omx/research/snerv_hf_decoder_component_combined_gain0p25_advisory_20260601T223741Z.json",
+            "sha256": "b45e9dc0318526b5e68f6096cfd02923426b6e978ec589ae99a4f8b3a83e949e"
+          },
+          {
+            "bytes": 3630,
+            "path": ".omx/research/snerv_hf_decoder_component_pose_gain0p25_advisory_20260601T223741Z.json",
+            "sha256": "96214ed005644a2450853e373d30e173a9f5d5b36ca58ee659bc22165467d910"
+          },
+          {
+            "bytes": 3629,
+            "path": ".omx/research/snerv_hf_decoder_component_seg_gain0p25_advisory_20260601T223741Z.json",
+            "sha256": "ba72fb41ad7ba37b84aec2d4dfd7531e3756da3388e4dd4afaff8b2a02319e0f"
+          },
+          {
+            "bytes": 3631,
+            "path": ".omx/research/snerv_hf_decoder_pose_gain0p01_advisory_20260601T223927Z.json",
+            "sha256": "917b61f37ca139c37de9431cb0015da11c57cbc9b525f57ceacb890ddd5ffab9"
+          },
+          {
+            "bytes": 3629,
+            "path": ".omx/research/snerv_hf_decoder_pose_gain0p05_advisory_20260601T223927Z.json",
+            "sha256": "9b3d82310b48c0b488d2f083072ac8aaaac8ee4e88098e3cd6690b5bb6ef289f"
+          },
+          {
+            "bytes": 3624,
+            "path": ".omx/research/snerv_hf_decoder_pose_gain0p1_advisory_20260601T223927Z.json",
+            "sha256": "660bd919a131fe15e4516c6eb5fe01858e48fd3b1ebe45ba92122606d6cd0d3b"
+          },
+          {
+            "bytes": 3626,
+            "path": ".omx/research/snerv_hf_decoder_pose_gain0p2_advisory_20260601T223927Z.json",
+            "sha256": "bbce6ad2dea72a73e359234ca983ff48a1ba5ffb422ca3e222a1c122ba4b856a"
+          },
+          {
+            "bytes": 27315,
+            "path": ".omx/research/snerv_hf_decoder_pose_saliency_gain_sweep_20260601T223927Z.json",
+            "sha256": "9c0d87416ce3002a290a6f0763b84f779802ccc86a66b8e29611136ee09461fa"
+          },
+          {
+            "bytes": 19934,
+            "path": ".omx/research/snerv_hf_decoder_pose_saliency_gain_sweep_adjudication_20260601T223927Z.json",
+            "sha256": "955bc2eed83ef4058e4923e14630e5ce3e27536296a33b7170b0c1b88149b47f"
+          },
+          {
+            "bytes": 18551,
+            "path": ".omx/research/snerv_hf_decoder_saliency_component_sweep_20260601T223741Z.json",
+            "sha256": "bf46cab9751148765cc1eabffe479298c92cdaa21c41c99fedecde4afe5b3a2f"
+          },
+          {
+            "bytes": 13821,
+            "path": ".omx/research/snerv_hf_decoder_saliency_component_sweep_adjudication_20260601T223741Z.json",
+            "sha256": "a3d251bdbf55eb9bb2d69860b07b1f5e5d832bc2ffe8dd385a142c9e0788d962"
+          },
+          {
+            "bytes": 9787,
+            "path": ".omx/research/snerv_inverse_steg_advisory_16pair_20260602T130014Z.json",
+            "sha256": "847def88bbb917eea0793ce4c8e7b958ccf10be3cc170306ea3759c2cfab6115"
+          },
+          {
+            "bytes": 1649,
+            "path": ".omx/research/snerv_inverse_steg_advisory_20260601.json",
+            "sha256": "49b4962b565bae65c3e4cd898aa238c23fd150f602dbc0fe89d5224c51126af0"
+          },
+          {
+            "bytes": 4569,
+            "path": ".omx/research/snerv_inverse_steg_advisory_2pair_20260602T130731Z.json",
+            "sha256": "1bc9b8f9b694585ad41ac9f3243576cb770439fc5676acd08a35cb2d507f4297"
+          },
+          {
+            "bytes": 101508,
+            "path": ".omx/research/snerv_inverse_steg_advisory_trained_ladder_bridge_20260602T171500Z.json",
+            "sha256": "6c3fd14f8246813a0abb3a58d1eea186a80f654074d252111011f62cc11df5b5"
+          },
+          {
+            "bytes": 1145058,
+            "path": ".omx/research/snerv_inverse_steg_advisory_trained_ladder_bridge_20260602T171500Z.snar",
+            "sha256": "6cc6680de4d7f3da5773e1ae64c36607b08a84c0eda29dbeadbc11725efb2ef8"
+          },
+          {
+            "bytes": 3507,
+            "path": ".omx/research/snerv_inverse_steg_advisory_waterfill_20260601T221200Z.json",
+            "sha256": "bca8424b18f5153e0a7c3b0746938219846ac21f740fcdd853c7dec14e6b5d32"
+          },
+          {
+            "bytes": 4635,
+            "path": ".omx/research/snerv_inverse_steg_advisory_waterfill_adjudication_20260601T221200Z.json",
+            "sha256": "eeccd2225b4ad75fd8bc70f34c909683b723b489daee57151d85c48e5ada3993"
+          },
+          {
+            "bytes": 14108,
+            "path": ".omx/research/snerv_inverse_steg_carrier_real_frame_smoke_20260601.json",
+            "sha256": "26935a8a32ff066d44989519e5ac57d6d0490cfff21399bcce35aafb80c037a6"
+          },
+          {
+            "bytes": 16191,
+            "path": ".omx/research/snerv_inverse_steganalysis_carrier_landed_20260601.md",
+            "sha256": "fc843a720b313551038dda7c2ce10c1da17ac094f18ca7d113444bea452d6877"
+          },
+          {
+            "bytes": 59956,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T130907Z.json",
+            "sha256": "e80fa2e517632916eb2c515104dea225df48cbd8b7a8ca731a494361b6fbe721"
+          },
+          {
+            "bytes": 1052,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T130907Z.md",
+            "sha256": "1f992043b1f8ecd3b2aee7e3558b65025427074edd7e89c179f35b072f5550ed"
+          },
+          {
+            "bytes": 59789,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T131612Z.json",
+            "sha256": "fbe5ba0f052c5f042be75d1e4d18250e0012cf565db1f82f1caaacf097c3c533"
+          },
+          {
+            "bytes": 905,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T131612Z.md",
+            "sha256": "8ac33d64d09ee314144aec2356958523407097d19eb7d779b6c8301b935fa7a9"
+          },
+          {
+            "bytes": 90594,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T_unsigned_modes.json",
+            "sha256": "164c472654a060400a1682edddb0d2a8070c894e2e3d7c0157ed6b556b50ce2c"
+          },
+          {
+            "bytes": 1181,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T_unsigned_modes.md",
+            "sha256": "29141a620c1d63bf0d0a64170f0f630cd44c15889f48e952a8e08a5479f75125"
+          },
+          {
+            "bytes": 40283,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_20260602T125127Z.json",
+            "sha256": "dea7124aae957c0b5d4cb627bf24460421e4df85469eb7c2ca9f32a090d95403"
+          },
+          {
+            "bytes": 869,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_20260602T125127Z.md",
+            "sha256": "53f5c8d342cb63459a45397eb3d6ba16f415a1b54d3186a234a6b2c6f7c5bb81"
+          },
+          {
+            "bytes": 40223,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_20260602T125202Z.json",
+            "sha256": "ba1311b73233eeab135859e462bc479e0799b3215bb396b5d17d47192de2c1fd"
+          },
+          {
+            "bytes": 869,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_20260602T125202Z.md",
+            "sha256": "b0101e9f0592ad52dabaa6facc5f0488a0f5c3fe83f92e68442ac09372802aec"
+          },
+          {
+            "bytes": 56949,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_2pair_20260602T130907Z.json",
+            "sha256": "c10547154c8b89376defe5c9daf4d1315b6cc11369ce329dfe6b25b5ef4dd43c"
+          },
+          {
+            "bytes": 1038,
+            "path": ".omx/research/snerv_lf_payload_codec_sweep_2pair_20260602T130907Z.md",
+            "sha256": "cb853ef4d3b5c6633cab08ad15c5ec025940511edc9b18933ba10f64054f5ee4"
+          },
+          {
+            "bytes": 21414,
+            "path": ".omx/research/snerv_pose_guarded_decoder_gate_20260601T2324Z.json",
+            "sha256": "25f577bce214d08499e56bf4d7a39d8117aa57a8a654b91a8dd15d2fc211e0c5"
+          },
+          {
+            "bytes": 2287,
+            "path": ".omx/research/snerv_rate_sweep_20260601.json",
+            "sha256": "3a1a98c93d948c354e978d9b6e289b3a79629852300cbf129ee76c76a8d91167"
+          },
+          {
+            "bytes": 9463,
+            "path": ".omx/research/snerv_rate_sweep_adjudication_20260601T205538Z.json",
+            "sha256": "21aad6fb6a45d5817774324a555952d6a9c3f468070be037f9b62501e8a879ea"
+          },
+          {
+            "bytes": 2679,
+            "path": ".omx/research/snerv_rate_sweep_charged_adjudication_20260601T210518Z.json",
+            "sha256": "d3343eedd3860d1f770026b6112b6eae6cbd6b3833c0cf24c557e74c5df82efe"
+          },
+          {
+            "bytes": 7973,
+            "path": ".omx/research/snerv_rate_sweep_legacy_undercharged_adjudication_20260601T205538Z.json",
+            "sha256": "693e2a22c46521493b517aeee47abb634684e8a4342d4b9a95df303c58a43a72"
+          },
+          {
+            "bytes": 7973,
+            "path": ".omx/research/snerv_rate_sweep_legacy_undercharged_adjudication_20260601T210518Z.json",
+            "sha256": "693e2a22c46521493b517aeee47abb634684e8a4342d4b9a95df303c58a43a72"
+          },
+          {
+            "bytes": 2899,
+            "path": ".omx/research/snerv_receiver_archive_proof_20260601T215200Z.json",
+            "sha256": "5fe2e1048ca635cb5d59e4ec0a877f4f814c6a1a2b2402ac6f6bd3da3df8f68a"
+          },
+          {
+            "bytes": 3196,
+            "path": ".omx/research/snerv_receiver_archive_proof_bins4_20260601T215000Z.json",
+            "sha256": "e66133d5ff5c689aed71f638e1f53df0691fd87e6a55a802d6c0824e0cc4867a"
+          },
+          {
+            "bytes": 2100,
+            "path": ".omx/research/snerv_receiver_archive_proof_bins4_20260601T215000Z.snar",
+            "sha256": "ac9b21eb9a2d4e01f1b9f245faad1eb4be87c58b9fea015e0c3a4c04c25f88b2"
+          },
+          {
+            "bytes": 3702,
+            "path": ".omx/research/snerv_score_aware_decoder_fit_work_order_20260601T222123Z.json",
+            "sha256": "07547eaca2eaa2eedef0d7e5419287918c6f1c19b54f6c01b45138fbe8a204a8"
+          },
+          {
+            "bytes": 3585,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_gain0p0_advisory_20260601T223158Z.json",
+            "sha256": "4273f61b734f9dce413191db60aad48d347472d3630b3848a511406d6fa08c32"
+          },
+          {
+            "bytes": 3587,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_gain0p25_advisory_20260601T223158Z.json",
+            "sha256": "15d77a719b901f1a3e081366432cc2920d5629158e19a9cbc33eee3289c985e0"
+          },
+          {
+            "bytes": 3588,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_gain0p5_advisory_20260601T223158Z.json",
+            "sha256": "29ee263c1880c352eab423d38f2d627bf3dea2d19d4a583821c085605ac77ee5"
+          },
+          {
+            "bytes": 3585,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_gain1p0_advisory_20260601T223158Z.json",
+            "sha256": "3d152a111e12d1d74ebc7543b8dcbef1ea8292edcd4f70a3d6527b8109cac4c6"
+          },
+          {
+            "bytes": 3585,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_gain2p0_advisory_20260601T223158Z.json",
+            "sha256": "40463720c61f7fed81e1f7eaa5397fb75caca66c2a49e53b4f9bd23f72505fd0"
+          },
+          {
+            "bytes": 31807,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_gain_sweep_20260601T223158Z.json",
+            "sha256": "87210984063ab158484049a41d86bd2a5f363e6f62b1e8c5f86dc0ad53380477"
+          },
+          {
+            "bytes": 22998,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_gain_sweep_adjudication_20260601T223158Z.json",
+            "sha256": "967eaae4acd445a9221354dc93235b790c33702f4014abd38c253a1241168fe6"
+          },
+          {
+            "bytes": 4651,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_waterfill_adjudication_20260601T222541Z.json",
+            "sha256": "517f3f28a7d0b0912c71daf339ef8108340b6bbc1d7c885e64fb10065e8e0f4e"
+          },
+          {
+            "bytes": 3587,
+            "path": ".omx/research/snerv_score_weighted_decoder_fit_waterfill_advisory_20260601T222541Z.json",
+            "sha256": "b1e0bed066f20a5aa923dabccfe0bdbbcedc5cd4c71060b9bed9078d31494c46"
+          },
+          {
+            "bytes": 5118,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_contract_20260601T2330Z.json",
+            "sha256": "bc66dc698d9e89823f5d60f28ecc0fb59d1eaacb1e5359795cac55afa2eaa067"
+          },
+          {
+            "bytes": 13697,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_pose_gate_20260601T2355Z.json",
+            "sha256": "2ae63f19601d3de3c8c8f50bcd01f898c1ff51d2cbb17992b358ae91fcaae5bd"
+          },
+          {
+            "bytes": 15667,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_smoke_20260601T2353Z.json",
+            "sha256": "de4d028d94d38385ab55abee6710f7d7b88712ff3a6cd9dea17feb420e285537"
+          },
+          {
+            "bytes": 12552,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_strided_pose_gate_20260602T0001Z.json",
+            "sha256": "fe7516ba190f47015683b31d2b0b40fd64e11a0fa0ac3427ed0cad8cb124d664"
+          },
+          {
+            "bytes": 24595,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_strided_smoke_20260601T2359Z.json",
+            "sha256": "c983b7303177c58a8707f6ed829e3961ec5f8599f7f3ddd0c7403d859134c540"
+          },
+          {
+            "bytes": 10761,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_4pair_strided_pose_gate_20260602T0007Z.json",
+            "sha256": "977e46385c7db86ffc42abee9c13acf1d254bcd999b78a6ca5e749b7af816857"
+          },
+          {
+            "bytes": 32708,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_4pair_strided_smoke_20260602T0003Z.json",
+            "sha256": "68a62581a7f5e7ff8cced44bdcd389301273928c872b9784d75bfa67b8a5a5eb"
+          },
+          {
+            "bytes": 17765,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_pose_gate_20260601T2349Z.json",
+            "sha256": "73634132479ba50eb8d7912e43bcf0beed8f55b580e83e34af318270a68fd258"
+          },
+          {
+            "bytes": 15659,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_smoke_20260601T2348Z.json",
+            "sha256": "264b52d2ab5bc330832d03f48bf2e45374d6ac490f2a5329a3bf48b3172394e3"
+          },
+          {
+            "bytes": 13284,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_learned_subspace_2pair_strided_pose_gate_20260602T0202Z.json",
+            "sha256": "c347ad5c9207a89333c6d97e5c98d5f8d403f3aaadd22dce20742e4d971c3729"
+          },
+          {
+            "bytes": 26480,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_learned_subspace_2pair_strided_smoke_20260602T0200Z.json",
+            "sha256": "20414f80e1bc0fa295fa3885cc78ada679b0fc25cbd32086f7bf3c4d34811d4d"
+          },
+          {
+            "bytes": 16330,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_nes_pair_robust_2pair_strided_pose_gate_20260602T0219Z.json",
+            "sha256": "97f16ea4f2885da171ff756fb77066e588c82615ab1daa5878747e530a8fcaaf"
+          },
+          {
+            "bytes": 29430,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_nes_pair_robust_2pair_strided_smoke_20260602T0218Z.json",
+            "sha256": "51bd7d8c65891061d6773594cb51e9af4ae9f77b604817dd581570926eeac1af"
+          },
+          {
+            "bytes": 16186,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_nes_pair_robust_4pair_strided_pose_gate_20260602T0228Z.json",
+            "sha256": "2d6aceb0df23d98ff257ad8742a0edc090b12ff1abb85451d5039dfa5a8ab892"
+          },
+          {
+            "bytes": 39163,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_nes_pair_robust_4pair_strided_smoke_20260602T0225Z.json",
+            "sha256": "9c15dafcd174de87390c0494f9a944347f6030bf41b25c1ccc71305a9ac805c0"
+          },
+          {
+            "bytes": 3800,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_pose_gate_20260601T2339Z.json",
+            "sha256": "9a7efbd3a72f1c15824282795e353dd7927d740d73531a78e932c3c70df7aafe"
+          },
+          {
+            "bytes": 7088,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_smoke_20260601T2338Z.json",
+            "sha256": "78c6d2b05b22b2998fb56bea217b8e1ab1f737a7df40f8f2bfe08a5d4dcb6592"
+          },
+          {
+            "bytes": 11922,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_smoke_nes1pair_20260602T112900Z.json",
+            "sha256": "86cc8e8ae90d7069508d029e64f7c3011e06d44608cd02ec1ff2a47db9562efe"
+          },
+          {
+            "bytes": 11822,
+            "path": ".omx/research/snerv_scorer_loop_decoder_qat_smoke_nes1pair_segslack_20260602T113400Z.json",
+            "sha256": "a112bcd00c93cfd347f616d399039bec9871277ed12c11603ff434e3b7db5c77"
+          },
+          {
+            "bytes": 16055,
+            "path": ".omx/research/snerv_scorer_loop_qat_local_trainer_20260602T160500Z_codex_false_authority.json",
+            "sha256": "3b7a8b2b706922925ed42ede81fa5c73316bd887ea642b03349470c4896dcf4f"
+          },
+          {
+            "bytes": 699,
+            "path": ".omx/research/snerv_scorer_loop_qat_local_trainer_20260602T160500Z_codex_false_authority.md",
+            "sha256": "6022b915cabb78470b9a4eb4d1eba5ba33dee83613d2015286f9f00af92247d5"
+          },
+          {
+            "bytes": 11383,
+            "path": ".omx/research/snerv_scorer_loop_qat_local_trainer_smoke_20260602T160300Z_false_authority.json",
+            "sha256": "2c7ea90ba34365ff21162fa16fb0ddbb679ede8fb36fe072ecc1c71071eb2be8"
+          },
+          {
+            "bytes": 699,
+            "path": ".omx/research/snerv_scorer_loop_qat_local_trainer_smoke_20260602T160300Z_false_authority.md",
+            "sha256": "08209b2affdc2f1c23a55dbe6c2a304921b9b63dc0f05cda35b88ff823ffacd4"
+          },
+          {
+            "bytes": 875,
+            "path": ".omx/research/snerv_step_map_coder_probe_20260601T211000Z.json",
+            "sha256": "62f04c0840e6644f930e6ca66aa8c034988ba76bb7d2e400e4ee22afdd6443a5"
+          },
+          {
+            "bytes": 18564,
+            "path": ".omx/research/snerv_step_map_coder_waterfill_probe_20260601T221042Z.json",
+            "sha256": "6947cdb43bcadf97ac4653e5e9faa97e6e36e1831d265c2f1bf6a5b4975ff7fd"
+          },
+          {
+            "bytes": 4280,
+            "path": ".omx/research/snerv_trained_ladder_row_advisory_bridge_no_go_20260602T171500Z.json",
+            "sha256": "c970ca59e0abb0d26207e535d0aa512f123087da409a40c929d67263ad30f51d"
+          },
+          {
+            "bytes": 4468,
+            "path": ".omx/research/snerv_trained_ladder_row_emitter_current_no_go_20260602T160000Z.json",
+            "sha256": "2e649a30361e12241ee2a426024c33a914f198d08eedb5a620f64f3f467e7d03"
+          },
+          {
+            "bytes": 36635,
+            "path": ".omx/research/snerv_trained_ladder_waterfill_20260602T174500Z_real_archive_false_authority.json",
+            "sha256": "25cc1963abd38f5a04e2dd0ba034404a4df6cfb32e20c00afd7c156e006a60b8"
+          },
+          {
+            "bytes": 916,
+            "path": ".omx/research/snerv_trained_ladder_waterfill_20260602T174500Z_real_archive_false_authority.md",
+            "sha256": "8679d39c934bd1c8859b93334bc45d24090502f7827c55bd25690b680fae3b26"
+          },
+          {
+            "bytes": 5705,
+            "path": ".omx/research/snerv_waterfill_mode_assignment_20260602T150421Z_real_archive_false_authority.json",
+            "sha256": "83be351abab2192bcb542075c58cddb5fb12799d53e25234bc7ec42fd8d81309"
+          },
+          {
+            "bytes": 1086,
+            "path": ".omx/research/snerv_waterfill_mode_assignment_20260602T150421Z_real_archive_false_authority.md",
+            "sha256": "c1689dec05d0fae742458203d609d7c62ad110f70565bd68939a7b80fa1924c5"
+          },
+          {
+            "bytes": 5059,
+            "path": ".omx/research/snerv_waterfill_mode_assignment_20260602T175800Z_real_archive_false_authority.json",
+            "sha256": "06d67e6922a4773b3dae10603e8ee88e23db967a7455e24c7ed685800c938b0c"
+          },
+          {
+            "bytes": 1086,
+            "path": ".omx/research/snerv_waterfill_mode_assignment_20260602T175800Z_real_archive_false_authority.md",
+            "sha256": "c1689dec05d0fae742458203d609d7c62ad110f70565bd68939a7b80fa1924c5"
+          },
+          {
+            "bytes": 3617,
+            "path": ".omx/research/snerv_waterfill_mode_assignment_probe_20260602T180100Z_real_archive_false_authority.json",
+            "sha256": "69b3ffa297876d6d90cb834bcc62caee3b16ed9a30aa7306283ffc3c77a56355"
+          }
+        ],
+        "memos": [
+          ".omx/research/apple_local_compute_readiness_20260602T153647Z_hinerv_snerv_codex.json",
+          ".omx/research/apple_local_compute_readiness_20260602T153647Z_hinerv_snerv_codex.md",
+          ".omx/research/apple_local_compute_readiness_20260602T153706Z_hinerv_snerv_codex.json",
+          ".omx/research/apple_local_compute_readiness_20260602T153706Z_hinerv_snerv_codex.md",
+          ".omx/research/carrier_training_modelsize_gate_proof_20260602T130023Z.json",
+          ".omx/research/codex_findings_carrier_training_modelsize_gate_20260602T130023Z_codex.md",
+          ".omx/research/codex_findings_hinerv_snerv_execute_family_gate_20260601T211525Z_codex.md",
+          ".omx/research/codex_findings_nerv_modelsize_budget_receiver_split_20260602T125333Z_codex.md",
+          ".omx/research/codex_findings_nerv_modelsize_control_surface_20260602T115741Z_codex.md",
+          ".omx/research/codex_findings_nerv_modelsize_ladder_receiver_hardening_20260602T123014Z_codex.md",
+          ".omx/research/codex_findings_rnerv_full_video_variational_20260531T174138Z_codex.md",
+          ".omx/research/codex_findings_rnerv_pact_z8_residual_lane_research_20260531T223036Z_subagent.md",
+          ".omx/research/codex_findings_rnerv_snerv_hinerv_carrier_routing_20260601T204316Z_codex.md",
+          ".omx/research/codex_findings_snerv_coordinate_decoder_qat_2pair_continuation_20260601T2355Z_codex.md",
+          ".omx/research/codex_findings_snerv_coordinate_decoder_qat_gate_go_20260601T2349Z_codex.md",
+          ".omx/research/codex_findings_snerv_coordinate_decoder_qat_pair_delta_continuation_20260602T010623Z_codex.md",
+          ".omx/research/codex_findings_snerv_current_limitations_and_candidate_feedback_scope_20260602T124542Z_codex.md",
+          ".omx/research/codex_findings_snerv_decoder_mode_assignment_probe_20260602T0315Z_codex.md",
+          ".omx/research/codex_findings_snerv_decoder_payload_codec_20260602T0252Z_codex.md",
+          ".omx/research/codex_findings_snerv_explicit_decoder_modes_20260602T0305Z_codex.md",
+          ".omx/research/codex_findings_snerv_fresh_eyes_guardrail_hardening_20260602T023200Z_codex.md",
+          ".omx/research/codex_findings_snerv_full600_lf_predictor_profile_20260602T111906Z_codex.md",
+          ".omx/research/codex_findings_snerv_hf_decoder_component_sweeps_20260601T223927Z_codex.md",
+          ".omx/research/codex_findings_snerv_hinerv_byte_price_controller_binding_20260602T125202Z_codex.md",
+          ".omx/research/codex_findings_snerv_hinerv_byte_price_queue_ingest_20260602T125817Z_codex.md",
+          ".omx/research/codex_findings_snerv_learned_subspace_pair_guard_smoke_20260602T020802Z_codex.md",
+          ".omx/research/codex_findings_snerv_mixed_decoder_payload_20260602T0303Z_codex.md",
+          ".omx/research/codex_findings_snerv_nes_pair_robust_4pair_contraction_20260602T022900Z_codex.md",
+          ".omx/research/codex_findings_snerv_nes_pair_robust_reuse_map_20260602T022000Z_codex.md",
+          ".omx/research/codex_findings_snerv_pose_guarded_decoder_gate_20260601T2324Z_codex.md",
+          ".omx/research/codex_findings_snerv_pose_hard_seg_slack_decoder_qat_smoke_20260602T113400Z_codex.md",
+          ".omx/research/codex_findings_snerv_rate_blocker_truth_assessment_20260602T124609Z_codex.md",
+          ".omx/research/codex_findings_snerv_receiver_archive_proof_20260601T215500Z_codex.md",
+          ".omx/research/codex_findings_snerv_runtime_package_closure_20260601T223000Z_codex.md",
+          ".omx/research/codex_findings_snerv_score_aware_decoder_fit_work_order_20260601T222123Z_codex.md",
+          ".omx/research/codex_findings_snerv_score_weighted_decoder_gain_sweep_20260601T223158Z_codex.md",
+          ".omx/research/codex_findings_snerv_score_weighted_hf_decoder_fit_smoke_20260601T222541Z_codex.md",
+          ".omx/research/codex_findings_snerv_scorer_loop_decoder_qat_contract_20260601T2330Z_codex.md",
+          ".omx/research/codex_findings_snerv_scorer_loop_decoder_qat_smoke_20260601T2339Z_codex.md",
+          ".omx/research/codex_findings_snerv_stepmap_waterfill_precision_ladder_20260601T221200Z_codex.md",
+          ".omx/research/codex_findings_sr_nerv_resolution_axis_enhancer_20260601T204414Z_codex.md",
+          ".omx/research/codex_rnerv_srneerv_byte_grammar_stack_design_20260601T122839Z_subagentB.md",
+          ".omx/research/nerv_control_inventory_20260602T135555Z_snerv_modelsize_closed_codex.json",
+          ".omx/research/nerv_control_inventory_20260602T135555Z_snerv_modelsize_closed_codex.md",
+          ".omx/research/nerv_control_inventory_20260602T145324Z_hinerv_snerv_saliency_mode_probe_bound_codex.json",
+          ".omx/research/nerv_control_inventory_20260602T145324Z_hinerv_snerv_saliency_mode_probe_bound_codex.md",
+          ".omx/research/nerv_control_inventory_20260602T154100Z_hinerv_snerv_source_replay_bound_codex.json",
+          ".omx/research/nerv_control_inventory_20260602T154100Z_hinerv_snerv_source_replay_bound_codex.md",
+          ".omx/research/nerv_control_inventory_20260602T174700Z_hinerv_snerv_waterfill_bound_codex.json",
+          ".omx/research/nerv_control_inventory_20260602T174700Z_hinerv_snerv_waterfill_bound_codex.md",
+          ".omx/research/nerv_control_inventory_20260602T180300Z_hinerv_snerv_mode_probe_bound_codex.json",
+          ".omx/research/nerv_control_inventory_20260602T180300Z_hinerv_snerv_mode_probe_bound_codex.md",
+          ".omx/research/nerv_ladder_row_emission_contract_20260602T151018Z_snerv_packet_export_bound.json",
+          ".omx/research/nerv_ladder_row_emission_contract_20260602T152103Z_snerv_packet_hinerv_archive_bound.json",
+          ".omx/research/nerv_ladder_row_emission_contract_snerv_hinerv_20260602T153000Z.json",
+          ".omx/research/nerv_master_consumer_bridge_20260602T150126Z_snerv_mode_evidence_units.json",
+          ".omx/research/nerv_modelsize_archive_curve_20260602T122010Z.json",
+          ".omx/research/nerv_modelsize_archive_curve_20260602T124222Z.json",
+          ".omx/research/nerv_modelsize_budget_receiver_split_proof_20260602T125333Z.json",
+          ".omx/research/nerv_modelsize_ladder_20260602T122618Z.json",
+          ".omx/research/nerv_modelsize_ladder_20260602T122618Z.md",
+          ".omx/research/nerv_rate_allocator_bridge_20260602T150126Z_snerv_mode_evidence_units.json",
+          ".omx/research/nerv_rate_allocator_queue_20260602T125817Z_snerv_hinerv_byte_price.json",
+          ".omx/research/nerv_rate_allocator_queue_20260602T131342Z_snerv16_hinerv_byte_price.json",
+          ".omx/research/nerv_rate_allocator_queue_20260602T131700Z_snerv16_hinerv_byte_price.json",
+          ".omx/research/nerv_rate_allocator_queue_20260602T150126Z_snerv_mode_evidence_units.json",
+          ".omx/research/nerv_rate_allocator_queue_20260602T_unsigned_modes_snerv16_hinerv_byte_price.json",
+          ".omx/research/nerv_receiver_closed_ladder_row_harvest_snerv_local_smokes_20260602T151500Z.json",
+          ".omx/research/nerv_receiver_closed_modelsize_ladder_hinerv_from_curve_20260602T130900Z.json",
+          ".omx/research/nerv_receiver_closed_modelsize_ladder_hinerv_from_harvest_20260602T151500Z.json",
+          ".omx/research/nerv_receiver_closed_modelsize_ladder_snerv_from_curve_20260602T130900Z.json",
+          ".omx/research/nerv_receiver_closed_modelsize_ladder_snerv_from_harvest_20260602T151500Z.json",
+          ".omx/research/nerv_source_parity_contract_20260602T133203Z_tightened_hi_snerv_codex.json",
+          ".omx/research/nerv_source_parity_contract_20260602T133203Z_tightened_hi_snerv_codex.md",
+          ".omx/research/nerv_source_parity_contract_20260602T135554Z_snerv_modelsize_closed_codex.json",
+          ".omx/research/nerv_source_parity_contract_20260602T135554Z_snerv_modelsize_closed_codex.md",
+          ".omx/research/nerv_source_parity_contract_20260602T_snerv_qat_entry_closed_codex.json",
+          ".omx/research/nerv_source_parity_contract_20260602T_snerv_qat_entry_closed_codex.md",
+          ".omx/research/nerv_source_parity_contract_20260602T_tightened_hi_snerv_codex.json",
+          ".omx/research/nerv_source_parity_contract_20260602T_tightened_hi_snerv_codex.md",
+          ".omx/research/rnerv_pact_z8_residual_lane_design_20260531T222520Z_codex.md",
+          ".omx/research/snerv_binary_profile_full600_20260602T130529Z.json",
+          ".omx/research/snerv_decoder_mode_assignment_probe_1pair_20260602T0315Z.json",
+          ".omx/research/snerv_decoder_mode_assignment_probe_20260602T150440Z_ssd_packet_false_authority.json",
+          ".omx/research/snerv_decoder_payload_codec_int8_1pair_smoke_20260602T024507Z.json",
+          ".omx/research/snerv_decoder_payload_codec_int8_receiver_scored_1pair_smoke_20260602T0250Z.json",
+          ".omx/research/snerv_decoder_payload_codec_mixed_header_receiver_scored_1pair_smoke_20260602T0300Z.json",
+          ".omx/research/snerv_decoder_payload_explicit_modes_receiver_scored_1pair_smoke_20260602T030144Z.json",
+          ".omx/research/snerv_full600_lf_predictor_profile_20260602T111906Z.json",
+          ".omx/research/snerv_haar_j1_modelsize_advisory_1pair_20260602T135447Z.json",
+          ".omx/research/snerv_hf_decoder_component_combined_gain0p25_advisory_20260601T223741Z.json",
+          ".omx/research/snerv_hf_decoder_component_pose_gain0p25_advisory_20260601T223741Z.json",
+          ".omx/research/snerv_hf_decoder_component_seg_gain0p25_advisory_20260601T223741Z.json",
+          ".omx/research/snerv_hf_decoder_pose_gain0p01_advisory_20260601T223927Z.json",
+          ".omx/research/snerv_hf_decoder_pose_gain0p05_advisory_20260601T223927Z.json",
+          ".omx/research/snerv_hf_decoder_pose_gain0p1_advisory_20260601T223927Z.json",
+          ".omx/research/snerv_hf_decoder_pose_gain0p2_advisory_20260601T223927Z.json",
+          ".omx/research/snerv_hf_decoder_pose_saliency_gain_sweep_20260601T223927Z.json",
+          ".omx/research/snerv_hf_decoder_pose_saliency_gain_sweep_adjudication_20260601T223927Z.json",
+          ".omx/research/snerv_hf_decoder_saliency_component_sweep_20260601T223741Z.json",
+          ".omx/research/snerv_hf_decoder_saliency_component_sweep_adjudication_20260601T223741Z.json",
+          ".omx/research/snerv_inverse_steg_advisory_16pair_20260602T130014Z.json",
+          ".omx/research/snerv_inverse_steg_advisory_20260601.json",
+          ".omx/research/snerv_inverse_steg_advisory_2pair_20260602T130731Z.json",
+          ".omx/research/snerv_inverse_steg_advisory_trained_ladder_bridge_20260602T171500Z.json",
+          ".omx/research/snerv_inverse_steg_advisory_trained_ladder_bridge_20260602T171500Z.snar",
+          ".omx/research/snerv_inverse_steg_advisory_waterfill_20260601T221200Z.json",
+          ".omx/research/snerv_inverse_steg_advisory_waterfill_adjudication_20260601T221200Z.json",
+          ".omx/research/snerv_inverse_steg_carrier_real_frame_smoke_20260601.json",
+          ".omx/research/snerv_inverse_steganalysis_carrier_landed_20260601.md",
+          ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T130907Z.json",
+          ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T130907Z.md",
+          ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T131612Z.json",
+          ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T131612Z.md",
+          ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T_unsigned_modes.json",
+          ".omx/research/snerv_lf_payload_codec_sweep_16pair_20260602T_unsigned_modes.md",
+          ".omx/research/snerv_lf_payload_codec_sweep_20260602T125127Z.json",
+          ".omx/research/snerv_lf_payload_codec_sweep_20260602T125127Z.md",
+          ".omx/research/snerv_lf_payload_codec_sweep_20260602T125202Z.json",
+          ".omx/research/snerv_lf_payload_codec_sweep_20260602T125202Z.md",
+          ".omx/research/snerv_lf_payload_codec_sweep_2pair_20260602T130907Z.json",
+          ".omx/research/snerv_lf_payload_codec_sweep_2pair_20260602T130907Z.md",
+          ".omx/research/snerv_pose_guarded_decoder_gate_20260601T2324Z.json",
+          ".omx/research/snerv_rate_sweep_20260601.json",
+          ".omx/research/snerv_rate_sweep_adjudication_20260601T205538Z.json",
+          ".omx/research/snerv_rate_sweep_charged_adjudication_20260601T210518Z.json",
+          ".omx/research/snerv_rate_sweep_legacy_undercharged_adjudication_20260601T205538Z.json",
+          ".omx/research/snerv_rate_sweep_legacy_undercharged_adjudication_20260601T210518Z.json",
+          ".omx/research/snerv_receiver_archive_proof_20260601T215200Z.json",
+          ".omx/research/snerv_receiver_archive_proof_bins4_20260601T215000Z.json",
+          ".omx/research/snerv_receiver_archive_proof_bins4_20260601T215000Z.snar",
+          ".omx/research/snerv_score_aware_decoder_fit_work_order_20260601T222123Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_gain0p0_advisory_20260601T223158Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_gain0p25_advisory_20260601T223158Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_gain0p5_advisory_20260601T223158Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_gain1p0_advisory_20260601T223158Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_gain2p0_advisory_20260601T223158Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_gain_sweep_20260601T223158Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_gain_sweep_adjudication_20260601T223158Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_waterfill_adjudication_20260601T222541Z.json",
+          ".omx/research/snerv_score_weighted_decoder_fit_waterfill_advisory_20260601T222541Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_contract_20260601T2330Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_pose_gate_20260601T2355Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_smoke_20260601T2353Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_strided_pose_gate_20260602T0001Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_2pair_strided_smoke_20260601T2359Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_4pair_strided_pose_gate_20260602T0007Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_4pair_strided_smoke_20260602T0003Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_pose_gate_20260601T2349Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_coordinate_smoke_20260601T2348Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_learned_subspace_2pair_strided_pose_gate_20260602T0202Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_learned_subspace_2pair_strided_smoke_20260602T0200Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_nes_pair_robust_2pair_strided_pose_gate_20260602T0219Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_nes_pair_robust_2pair_strided_smoke_20260602T0218Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_nes_pair_robust_4pair_strided_pose_gate_20260602T0228Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_nes_pair_robust_4pair_strided_smoke_20260602T0225Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_pose_gate_20260601T2339Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_smoke_20260601T2338Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_smoke_nes1pair_20260602T112900Z.json",
+          ".omx/research/snerv_scorer_loop_decoder_qat_smoke_nes1pair_segslack_20260602T113400Z.json",
+          ".omx/research/snerv_scorer_loop_qat_local_trainer_20260602T160500Z_codex_false_authority.json",
+          ".omx/research/snerv_scorer_loop_qat_local_trainer_20260602T160500Z_codex_false_authority.md",
+          ".omx/research/snerv_scorer_loop_qat_local_trainer_smoke_20260602T160300Z_false_authority.json",
+          ".omx/research/snerv_scorer_loop_qat_local_trainer_smoke_20260602T160300Z_false_authority.md",
+          ".omx/research/snerv_step_map_coder_probe_20260601T211000Z.json",
+          ".omx/research/snerv_step_map_coder_waterfill_probe_20260601T221042Z.json",
+          ".omx/research/snerv_trained_ladder_row_advisory_bridge_no_go_20260602T171500Z.json",
+          ".omx/research/snerv_trained_ladder_row_emitter_current_no_go_20260602T160000Z.json",
+          ".omx/research/snerv_trained_ladder_waterfill_20260602T174500Z_real_archive_false_authority.json",
+          ".omx/research/snerv_trained_ladder_waterfill_20260602T174500Z_real_archive_false_authority.md",
+          ".omx/research/snerv_waterfill_mode_assignment_20260602T150421Z_real_archive_false_authority.json",
+          ".omx/research/snerv_waterfill_mode_assignment_20260602T150421Z_real_archive_false_authority.md",
+          ".omx/research/snerv_waterfill_mode_assignment_20260602T175800Z_real_archive_false_authority.json",
+          ".omx/research/snerv_waterfill_mode_assignment_20260602T175800Z_real_archive_false_authority.md",
+          ".omx/research/snerv_waterfill_mode_assignment_probe_20260602T180100Z_real_archive_false_authority.json"
+        ],
+        "truncated": false
+      }
+    },
+    "dispatch_attempted": false,
+    "focus_families": [
+      "snerv"
+    ],
+    "gpu_launched": false,
+    "online_research_sources": [
+      {
+        "control_signal": "public frontier ordering; PR95/98/101/103/105/106 remain same-axis control inputs, not inferred-equivalence authority",
+        "id": "comma_leaderboard_video_compression",
+        "url": "https://comma.ai/leaderboard"
+      },
+      {
+        "control_signal": "HNeRV-shaped contest specialization: 178417-byte archive, 8-stage scorer/rate curriculum, C1a entropy shaping, QAT, sigma sweep, Muon, and documented CPU/CUDA discrepancy",
+        "id": "pr95_public_control",
+        "url": "https://github.com/commaai/comma_video_compression_challenge/pull/95"
+      },
+      {
+        "control_signal": "architecture size, pruning, quantization, model bpp",
+        "id": "hnerv_official",
+        "url": "https://github.com/haochen-rye/HNeRV"
+      },
+      {
+        "control_signal": "HiNeRV S/M/L configs, patch/frame flexibility, deepspeed/timm/torchac code path, pruning, quantization, and bitstream-q",
+        "id": "hinerv_official",
+        "url": "https://github.com/hmkx/HiNeRV"
+      },
+      {
+        "control_signal": "hierarchical encodings plus pruning and quantization pipeline",
+        "id": "hinerv_paper",
+        "url": "https://arxiv.org/abs/2306.09818"
+      },
+      {
+        "control_signal": "spectra-preserving SNeRV: Haar/DWT LF/HF, enc/dec strides, fc_dim, emb_size, MFU, HFR, and temporal extension",
+        "id": "snerv_official",
+        "url": "https://github.com/qwertja/SNeRV"
+      },
+      {
+        "control_signal": "spectral split, HFR/MFU/TUB controls",
+        "id": "snerv_paper",
+        "url": "https://arxiv.org/abs/2501.01681"
+      },
+      {
+        "control_signal": "separate Scalable Neural Representation paper; useful for layered bitstream thinking, not the spectra-preserving DWT/MFU/HFR carrier target",
+        "id": "snerv_scalable_disambiguation",
+        "url": "https://openreview.net/forum?id=ZqN4bnXSSY"
+      },
+      {
+        "control_signal": "low-detail INR representation plus super-resolution",
+        "id": "sr_nerv_paper",
+        "url": "https://arxiv.org/abs/2505.00046"
+      },
+      {
+        "control_signal": "shallow residual/inter-frame VQ codebook controls",
+        "id": "vq_nerv_paper",
+        "url": "https://arxiv.org/abs/2403.12401"
+      },
+      {
+        "control_signal": "per-video design and training search over NeRV components",
+        "id": "rnerv_paper",
+        "url": "https://arxiv.org/abs/2506.24127"
+      },
+      {
+        "control_signal": "official VINRB/RNeRV implementation and ablation framework; use as source-parity input for NeRV-family component controls",
+        "id": "rnerv_vinrb_oss",
+        "url": "https://github.com/mgwillia/vinrb"
+      },
+      {
+        "control_signal": "flow-guided temporal redundancy and compact convolutional architecture",
+        "id": "ffnerv_paper",
+        "url": "https://arxiv.org/abs/2212.12294"
+      },
+      {
+        "control_signal": "project/code surface for flow-guided pose-channel enhancer and compact grouped/pointwise convolution ideas",
+        "id": "ffnerv_project",
+        "url": "https://maincold2.github.io/ffnerv/"
+      },
+      {
+        "control_signal": "conditional decoder and temporal-aware affine enhancer; treat as a carrier enhancer only after receiver-byte custody",
+        "id": "boost_nerv_official",
+        "url": "https://github.com/Xinjie-Q/Boosting-NeRV"
+      },
+      {
+        "control_signal": "separable residual decoder blocks and skip-layer capacity",
+        "id": "nervplusplus_paper",
+        "url": "https://arxiv.org/abs/2402.18305"
+      },
+      {
+        "control_signal": "overfitted hierarchical latents and entropy-model bytes",
+        "id": "c3_paper",
+        "url": "https://arxiv.org/abs/2312.02753"
+      },
+      {
+        "control_signal": "per-video small-model latent/entropy-model codec; useful for section-value-priced latent/codebook controls",
+        "id": "c3_project",
+        "url": "https://c3-neural-compression.github.io/"
+      },
+      {
+        "control_signal": "hierarchical latent grids and autoregressive entropy model",
+        "id": "cool_chic_docs",
+        "url": "https://orange-opensource.github.io/Cool-Chic/encoding/architecture.html"
+      },
+      {
+        "control_signal": "end-to-end neural representation quantization and entropy coding",
+        "id": "nvrc_paper",
+        "url": "https://arxiv.org/abs/2409.07414"
+      }
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repo_root": "/Users/adpena/Projects/pact",
+    "schema": "nerv_design_implementation_sweep.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "stack_rows": [
+      {
+        "blocking_gaps": [
+          "snerv_official_symbol_parity_map_missing",
+          "snerv_tiny_forward_parity_against_oss_missing",
+          "snerv_quantized_checkpoint_payload_replay_missing",
+          "snerv_scorer_loop_decoder_qat_full_video_missing",
+          "snerv_mlx_native_train_export_missing",
+          "snerv_measured_modelsize_ladder_missing",
+          "snerv_receiver_closed_learned_hfr_missing",
+          "snerv_full600_receiver_proven_candidate_missing",
+          "snerv_same_axis_pr95_control_missing",
+          "snerv_missing_official_stride_stack_parity",
+          "snerv_partial_native_dwt_present_hfr_receiver_not_source_faithful",
+          "snerv_missing_mfu_blocks",
+          "snerv_missing_official_hfr_heads",
+          "snerv_missing_snerv_t_temporal_path_or_no_go",
+          "snerv_missing_measured_fc_dim_modelsize_ladder",
+          "snerv_missing_quant_payload_receiver_replay"
+        ],
+        "category_rows": [
+          {
+            "blocking_gaps": [
+              "snerv_official_symbol_parity_map_missing",
+              "snerv_tiny_forward_parity_against_oss_missing",
+              "snerv_quantized_checkpoint_payload_replay_missing"
+            ],
+            "category": "oss_source_fidelity",
+            "dispatch_attempted": false,
+            "family": "snerv",
+            "gpu_launched": false,
+            "marker_rows": [
+              {
+                "hits": [],
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+                "present": true
+              },
+              {
+                "hits": [
+                  {
+                    "count": 16,
+                    "gap_id": "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py:smoke_marker_not_promotion_authority",
+                    "needle": "smoke",
+                    "severity": "warning"
+                  },
+                  {
+                    "count": 6,
+                    "gap_id": "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py:random_search_mode_requires_measured_successor",
+                    "needle": "random_signed",
+                    "severity": "warning"
+                  }
+                ],
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+                "present": true
+              }
+            ],
+            "missing_files": [],
+            "next_action": "bind official MFU/HFR/TUB features or explicitly block them before treating local inverse-steg carrier as source-faithful",
+            "oss_or_design_reference": "SNeRV official DWT LF/HF, MFU, HFR, SNeRV-T temporal extension",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "required_files": [
+              {
+                "kind": "file",
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/dwt.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/inflate.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/analysis/nerv_top_priority_stack_seam.py",
+                "present": true
+              }
+            ],
+            "score_claim": false,
+            "score_claim_valid": false,
+            "status": "present_but_incomplete_or_not_source_faithful"
+          },
+          {
+            "blocking_gaps": [
+              "snerv_scorer_loop_decoder_qat_full_video_missing",
+              "snerv_mlx_native_train_export_missing"
+            ],
+            "category": "score_aware_training",
+            "dispatch_attempted": false,
+            "family": "snerv",
+            "gpu_launched": false,
+            "marker_rows": [
+              {
+                "hits": [
+                  {
+                    "count": 16,
+                    "gap_id": "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py:smoke_marker_not_promotion_authority",
+                    "needle": "smoke",
+                    "severity": "warning"
+                  },
+                  {
+                    "count": 6,
+                    "gap_id": "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py:random_search_mode_requires_measured_successor",
+                    "needle": "random_signed",
+                    "severity": "warning"
+                  }
+                ],
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+                "present": true
+              },
+              {
+                "hits": [
+                  {
+                    "count": 5,
+                    "gap_id": "tools/run_snerv_scorer_loop_decoder_qat_smoke.py:smoke_marker_not_promotion_authority",
+                    "needle": "smoke",
+                    "severity": "warning"
+                  },
+                  {
+                    "count": 2,
+                    "gap_id": "tools/run_snerv_scorer_loop_decoder_qat_smoke.py:random_search_mode_requires_measured_successor",
+                    "needle": "random_signed",
+                    "severity": "warning"
+                  },
+                  {
+                    "count": 4,
+                    "gap_id": "tools/run_snerv_scorer_loop_decoder_qat_smoke.py:zero_default_requires_config_justification",
+                    "needle": "default=0.0",
+                    "severity": "warning"
+                  }
+                ],
+                "path": "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
+                "present": true
+              }
+            ],
+            "missing_files": [],
+            "next_action": "replace bounded smoke-only QAT with full-video MLX-native trained HFR/MFU export before promotion work",
+            "oss_or_design_reference": "SNeRV HFR/MFU plus scorer-loop QAT and P18/P19 pose guard",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "required_files": [
+              {
+                "kind": "file",
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/analysis/snerv_scorer_loop_decoder_qat_contract.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/analysis/snerv_pose_guarded_decoder_gate.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
+                "present": true
+              }
+            ],
+            "score_claim": false,
+            "score_claim_valid": false,
+            "status": "present_but_incomplete_or_not_source_faithful"
+          },
+          {
+            "blocking_gaps": [
+              "snerv_measured_modelsize_ladder_missing",
+              "snerv_receiver_closed_learned_hfr_missing"
+            ],
+            "category": "frequency_and_packet_codec",
+            "dispatch_attempted": false,
+            "family": "snerv",
+            "gpu_launched": false,
+            "marker_rows": [
+              {
+                "hits": [],
+                "path": "src/tac/analysis/snerv_step_map_coder.py",
+                "present": true
+              },
+              {
+                "hits": [],
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/receiver_proof.py",
+                "present": true
+              }
+            ],
+            "missing_files": [],
+            "next_action": "make mixed LF/HF packet modes receiver-decoded and priced by full-video section value before another scalar sweep",
+            "oss_or_design_reference": "SNeRV spectral split plus waterfilled intN/zero/RLE packet grammar",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "required_files": [
+              {
+                "kind": "file",
+                "path": "src/tac/analysis/snerv_step_map_coder.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/analysis/snerv_decoder_mode_assignment_probe.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/allocation.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/substrates/snerv_inverse_steg_carrier/receiver_proof.py",
+                "present": true
+              }
+            ],
+            "score_claim": false,
+            "score_claim_valid": false,
+            "status": "present_but_incomplete_or_not_source_faithful"
+          },
+          {
+            "blocking_gaps": [
+              "snerv_full600_receiver_proven_candidate_missing",
+              "snerv_same_axis_pr95_control_missing"
+            ],
+            "category": "receiver_exact_custody",
+            "dispatch_attempted": false,
+            "family": "snerv",
+            "gpu_launched": false,
+            "marker_rows": [],
+            "missing_files": [],
+            "next_action": "emit archive-bound contract rows and receiver proof for every full-coverage survivor before exact gating",
+            "oss_or_design_reference": "AGENTS.md archive-custody and exact-axis non-negotiables",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "required_files": [
+              {
+                "kind": "file",
+                "path": "src/tac/substrates/hprc/archive_candidate.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/submission_packet/archive_grammar.py",
+                "present": true
+              },
+              {
+                "kind": "file",
+                "path": "src/tac/submission_packet/paired_auth_eval.py",
+                "present": true
+              }
+            ],
+            "score_claim": false,
+            "score_claim_valid": false,
+            "status": "present_but_incomplete_or_not_source_faithful"
+          }
+        ],
+        "dispatch_attempted": false,
+        "family": "snerv",
+        "gpu_launched": false,
+        "official_feature_rows": [
+          {
+            "dispatch_attempted": false,
+            "feature_id": "official_encoder_decoder_stride_stack",
+            "gap_id": "snerv_missing_official_stride_stack_parity",
+            "gpu_launched": false,
+            "local_binding_status": "missing_or_partial",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_claim": false,
+            "score_claim_valid": false,
+            "score_interpretation": "bad local scores are implementation/config signals until this official feature is either source-faithfully implemented or explicitly blocked by a receiver-closed proof"
+          },
+          {
+            "dispatch_attempted": false,
+            "feature_id": "official_haar_dwt_idwt_low_high_frequency_reconstruction",
+            "gap_id": "snerv_partial_native_dwt_present_hfr_receiver_not_source_faithful",
+            "gpu_launched": false,
+            "local_binding_status": "missing_or_partial",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_claim": false,
+            "score_claim_valid": false,
+            "score_interpretation": "bad local scores are implementation/config signals until this official feature is either source-faithfully implemented or explicitly blocked by a receiver-closed proof"
+          },
+          {
+            "dispatch_attempted": false,
+            "feature_id": "official_multi_resolution_fusion_blocks",
+            "gap_id": "snerv_missing_mfu_blocks",
+            "gpu_launched": false,
+            "local_binding_status": "missing_or_partial",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_claim": false,
+            "score_claim_valid": false,
+            "score_interpretation": "bad local scores are implementation/config signals until this official feature is either source-faithfully implemented or explicitly blocked by a receiver-closed proof"
+          },
+          {
+            "dispatch_attempted": false,
+            "feature_id": "official_high_frequency_restoration_heads",
+            "gap_id": "snerv_missing_official_hfr_heads",
+            "gpu_launched": false,
+            "local_binding_status": "missing_or_partial",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_claim": false,
+            "score_claim_valid": false,
+            "score_interpretation": "bad local scores are implementation/config signals until this official feature is either source-faithfully implemented or explicitly blocked by a receiver-closed proof"
+          },
+          {
+            "dispatch_attempted": false,
+            "feature_id": "official_temporal_extension_snerv_t",
+            "gap_id": "snerv_missing_snerv_t_temporal_path_or_no_go",
+            "gpu_launched": false,
+            "local_binding_status": "missing_or_partial",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_claim": false,
+            "score_claim_valid": false,
+            "score_interpretation": "bad local scores are implementation/config signals until this official feature is either source-faithfully implemented or explicitly blocked by a receiver-closed proof"
+          },
+          {
+            "dispatch_attempted": false,
+            "feature_id": "official_modelsize_fc_dim_budget_binding",
+            "gap_id": "snerv_missing_measured_fc_dim_modelsize_ladder",
+            "gpu_launched": false,
+            "local_binding_status": "missing_or_partial",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_claim": false,
+            "score_claim_valid": false,
+            "score_interpretation": "bad local scores are implementation/config signals until this official feature is either source-faithfully implemented or explicitly blocked by a receiver-closed proof"
+          },
+          {
+            "dispatch_attempted": false,
+            "feature_id": "official_quant_model_embedding_payload_accounting",
+            "gap_id": "snerv_missing_quant_payload_receiver_replay",
+            "gpu_launched": false,
+            "local_binding_status": "missing_or_partial",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "score_claim": false,
+            "score_claim_valid": false,
+            "score_interpretation": "bad local scores are implementation/config signals until this official feature is either source-faithfully implemented or explicitly blocked by a receiver-closed proof"
+          }
+        ],
+        "overall_status": "local_implementation_has_blocking_gaps_no_method_negative",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "score_lowering_rule": "after source-fidelity blockers close, train with scorer-aware loss and admit bytes only through measured value-per-byte",
+        "source_fidelity_rule": "bad scores from non-OSS-faithful adapters are config or wiring signals until official feature parity, tiny forward parity, and receiver byte grammar pass"
+      }
+    ],
+    "status": "implementation_sweep_completed_false_authority"
+  },
+  "local_binding_surfaces": {
+    "nerv_carriers": [
+      "experiments/train_substrate_hi_nerv_mlx_local.py",
+      "experiments/train_substrate_snerv_scorer_loop_local.py",
+      "tools/run_compact_renderer_mlx_spine_runner.py",
+      "src/tac/substrates/hi_nerv",
+      "src/tac/analysis/snerv_step_map_coder.py",
+      "src/tac/analysis/sr_nerv_resolution_axis_mirror.py",
+      "src/tac/local_acceleration/pr95_hnerv_mlx.py"
+    ],
+    "newly_required_gates": [
+      "src/tac/analysis/mlx_cache_quality_gate.py",
+      "src/tac/substrates/_shared/mlx_score_aware/modelsize_budget_plan.py"
+    ],
+    "receiver_and_exact_custody": [
+      "src/tac/substrates/hprc/archive_candidate.py",
+      "src/tac/submission_packet/archive_grammar.py",
+      "src/tac/submission_packet/paired_auth_eval.py",
+      "tools/run_contest_oracle_batch.py"
+    ],
+    "scorer_and_saliency": [
+      "src/tac/analysis/score_exact_saliency.py",
+      "src/tac/analysis/hprc_saliency_rd_allocation.py",
+      "src/tac/analysis/segnet_boundary_marginals.py",
+      "src/tac/optimization/joint_p18_p19_waterfill.py",
+      "src/tac/analysis/inverse_steganalysis_linf_vs_l2_gate.py"
+    ],
+    "section_value_and_codebook": [
+      "tools/profile_pact_nerv_selector_v3_mlx_section_value.py",
+      "src/tac/substrates/pact_nerv_vq",
+      "src/tac/analysis/hnerv_packet_sections.py",
+      "src/tac/analysis/scorer_conditional_mdl.py",
+      "src/tac/analysis/nerv_decoder_weight_waterfill.py",
+      "src/tac/analysis/hinerv_archive_ladder_waterfill.py",
+      "src/tac/analysis/hinerv_archive_backend_drift.py",
+      "src/tac/analysis/snerv_trained_ladder_waterfill.py",
+      "src/tac/analysis/hinerv_decoder_weight_saliency_replay.py",
+      "src/tac/analysis/snerv_waterfill_mode_assignment.py",
+      "tools/build_nerv_decoder_weight_waterfill_plan.py",
+      "tools/build_hinerv_archive_ladder_waterfill.py",
+      "tools/build_hinerv_archive_backend_drift.py",
+      "tools/build_snerv_trained_ladder_waterfill.py",
+      "tools/build_hinerv_decoder_weight_saliency_replay.py",
+      "tools/build_snerv_waterfill_mode_assignment.py"
+    ],
+    "xray_and_master_gradient": [
+      "src/tac/master_gradient.py",
+      "src/tac/master_gradient_consumers.py",
+      "src/tac/master_gradient_mlx_pipeline.py",
+      "tools/build_pair_frame_scorer_geometry_lattice.py",
+      "tools/cpu_cuda_xray_loader_drift.py",
+      "tools/xray_hardpair_hitlist.py"
+    ]
+  },
+  "markdown_report_path": "/Users/adpena/Projects/pact/.omx/research/nerv_control_inventory_20260602T160300Z_snerv_scorer_loop_qat_codex.md",
+  "measured_archive_size_ladders": {},
+  "modelsize_ladder": {
+    "authority": "false_authority_modelsize_ladder_no_score_claim",
+    "blockers": [
+      "snerv_measured_nonrate_modelsize_ladder_missing",
+      "snerv_byte_closed_modelsize_ladder_missing",
+      "modelsize_ladder_false_authority_no_nonrate_score",
+      "archive_zip_runtime_overhead_not_in_payload_projection"
+    ],
+    "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+    "dispatch_attempted": false,
+    "family_rows": [
+      {
+        "blockers": [
+          "snerv_measured_nonrate_modelsize_ladder_missing",
+          "snerv_byte_closed_modelsize_ladder_missing"
+        ],
+        "dispatch_attempted": false,
+        "family": "snerv",
+        "gpu_launched": false,
+        "ladder_kind": "lf_depth_quant_and_shared_decoder_payload_ladder",
+        "ladder_rows": [
+          {
+            "blockers": [
+              "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+              "snerv_payload_estimate_not_archive_zip_measurement"
+            ],
+            "config": {
+              "decoder_feature_count": 4,
+              "decoder_quant_bits": 4,
+              "levels": 4,
+              "lf_quant_bits": 2,
+              "n_pairs": 600,
+              "scorer_input_hw": [
+                384,
+                512
+              ],
+              "snerv_emb_size": 0,
+              "snerv_fc_dim": 4,
+              "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+              "snerv_patch_radius": 1
+            },
+            "family": "snerv",
+            "lf_shape": [
+              24,
+              32
+            ],
+            "main_control": "levels=4, lf_bits=2, decoder_bits=4",
+            "nonrate_score_required": true,
+            "quantized_payload_estimates": {
+              "configured": {
+                "decoder_quant_bits": 4,
+                "lf_quant_bits": 2,
+                "payload_bytes": 792026,
+                "rate_score_at_contest_price": 0.527377603205541,
+                "section_bytes": {
+                  "hf_decoder_parameters": 26,
+                  "lf_coefficients": 777600,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp16": {
+                "bits_per_scalar": 16,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 5544096,
+                "rate_score_at_contest_price": 3.691585958568818,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 96,
+                  "lf_coefficients": 5529600,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp32": {
+                "bits_per_scalar": 32,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 11088192,
+                "rate_score_at_contest_price": 7.383171917137636,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 192,
+                  "lf_coefficients": 11059200,
+                  "metadata_scalars": 28800
+                }
+              },
+              "int2": {
+                "bits_per_scalar": 2,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 779640,
+                "rate_score_at_contest_price": 0.5191302742121697,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 14,
+                  "lf_coefficients": 777600,
+                  "metadata_scalars": 2026
+                }
+              },
+              "int4": {
+                "bits_per_scalar": 4,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 1472652,
+                "rate_score_at_contest_price": 0.980578519033272,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 26,
+                  "lf_coefficients": 1468800,
+                  "metadata_scalars": 3826
+                }
+              },
+              "int8": {
+                "bits_per_scalar": 8,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 2858676,
+                "rate_score_at_contest_price": 1.9034750086754764,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 50,
+                  "lf_coefficients": 2851200,
+                  "metadata_scalars": 7426
+                }
+              }
+            },
+            "row_id": "snerv_l4_lf2_fc4e0_decoder_int4",
+            "section_scalar_counts": {
+              "hf_decoder_parameters": 48,
+              "lf_coefficients": 2764800,
+              "metadata_scalars": 7200
+            }
+          },
+          {
+            "blockers": [
+              "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+              "snerv_payload_estimate_not_archive_zip_measurement"
+            ],
+            "config": {
+              "decoder_feature_count": 9,
+              "decoder_quant_bits": 4,
+              "levels": 4,
+              "lf_quant_bits": 2,
+              "n_pairs": 600,
+              "scorer_input_hw": [
+                384,
+                512
+              ],
+              "snerv_emb_size": 0,
+              "snerv_fc_dim": 9,
+              "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+              "snerv_patch_radius": 1
+            },
+            "family": "snerv",
+            "lf_shape": [
+              24,
+              32
+            ],
+            "main_control": "levels=4, lf_bits=2, decoder_bits=4",
+            "nonrate_score_required": true,
+            "quantized_payload_estimates": {
+              "configured": {
+                "decoder_quant_bits": 4,
+                "lf_quant_bits": 2,
+                "payload_bytes": 792058,
+                "rate_score_at_contest_price": 0.5273989106920408,
+                "section_bytes": {
+                  "hf_decoder_parameters": 58,
+                  "lf_coefficients": 777600,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp16": {
+                "bits_per_scalar": 16,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 5544216,
+                "rate_score_at_contest_price": 3.6916658616431928,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 216,
+                  "lf_coefficients": 5529600,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp32": {
+                "bits_per_scalar": 32,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 11088432,
+                "rate_score_at_contest_price": 7.3833317232863855,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 432,
+                  "lf_coefficients": 11059200,
+                  "metadata_scalars": 28800
+                }
+              },
+              "int2": {
+                "bits_per_scalar": 2,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 779657,
+                "rate_score_at_contest_price": 0.5191415938143727,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 31,
+                  "lf_coefficients": 777600,
+                  "metadata_scalars": 2026
+                }
+              },
+              "int4": {
+                "bits_per_scalar": 4,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 1472684,
+                "rate_score_at_contest_price": 0.9805998265197718,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 58,
+                  "lf_coefficients": 1468800,
+                  "metadata_scalars": 3826
+                }
+              },
+              "int8": {
+                "bits_per_scalar": 8,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 2858738,
+                "rate_score_at_contest_price": 1.90351629193057,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 112,
+                  "lf_coefficients": 2851200,
+                  "metadata_scalars": 7426
+                }
+              }
+            },
+            "row_id": "snerv_l4_lf2_fc9e0_decoder_int4",
+            "section_scalar_counts": {
+              "hf_decoder_parameters": 108,
+              "lf_coefficients": 2764800,
+              "metadata_scalars": 7200
+            }
+          },
+          {
+            "blockers": [
+              "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+              "snerv_payload_estimate_not_archive_zip_measurement"
+            ],
+            "config": {
+              "decoder_feature_count": 16,
+              "decoder_quant_bits": 4,
+              "levels": 4,
+              "lf_quant_bits": 2,
+              "n_pairs": 600,
+              "scorer_input_hw": [
+                384,
+                512
+              ],
+              "snerv_emb_size": 4,
+              "snerv_fc_dim": 12,
+              "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+              "snerv_patch_radius": 1
+            },
+            "family": "snerv",
+            "lf_shape": [
+              24,
+              32
+            ],
+            "main_control": "levels=4, lf_bits=2, decoder_bits=4",
+            "nonrate_score_required": true,
+            "quantized_payload_estimates": {
+              "configured": {
+                "decoder_quant_bits": 4,
+                "lf_quant_bits": 2,
+                "payload_bytes": 792102,
+                "rate_score_at_contest_price": 0.5274282084859782,
+                "section_bytes": {
+                  "hf_decoder_parameters": 102,
+                  "lf_coefficients": 777600,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp16": {
+                "bits_per_scalar": 16,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 5544384,
+                "rate_score_at_contest_price": 3.691777725947317,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 384,
+                  "lf_coefficients": 5529600,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp32": {
+                "bits_per_scalar": 32,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 11088768,
+                "rate_score_at_contest_price": 7.383555451894634,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 768,
+                  "lf_coefficients": 11059200,
+                  "metadata_scalars": 28800
+                }
+              },
+              "int2": {
+                "bits_per_scalar": 2,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 779680,
+                "rate_score_at_contest_price": 0.5191569085702946,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 54,
+                  "lf_coefficients": 777600,
+                  "metadata_scalars": 2026
+                }
+              },
+              "int4": {
+                "bits_per_scalar": 4,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 1472728,
+                "rate_score_at_contest_price": 0.9806291243137092,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 102,
+                  "lf_coefficients": 1468800,
+                  "metadata_scalars": 3826
+                }
+              },
+              "int8": {
+                "bits_per_scalar": 8,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 2858824,
+                "rate_score_at_contest_price": 1.9035735558005384,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 198,
+                  "lf_coefficients": 2851200,
+                  "metadata_scalars": 7426
+                }
+              }
+            },
+            "row_id": "snerv_l4_lf2_fc12e4_decoder_int4",
+            "section_scalar_counts": {
+              "hf_decoder_parameters": 192,
+              "lf_coefficients": 2764800,
+              "metadata_scalars": 7200
+            }
+          },
+          {
+            "blockers": [
+              "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+              "snerv_payload_estimate_not_archive_zip_measurement"
+            ],
+            "config": {
+              "decoder_feature_count": 9,
+              "decoder_quant_bits": 4,
+              "levels": 3,
+              "lf_quant_bits": 2,
+              "n_pairs": 600,
+              "scorer_input_hw": [
+                384,
+                512
+              ],
+              "snerv_emb_size": 0,
+              "snerv_fc_dim": 9,
+              "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+              "snerv_patch_radius": 1
+            },
+            "family": "snerv",
+            "lf_shape": [
+              48,
+              64
+            ],
+            "main_control": "levels=3, lf_bits=2, decoder_bits=4",
+            "nonrate_score_required": true,
+            "quantized_payload_estimates": {
+              "configured": {
+                "decoder_quant_bits": 4,
+                "lf_quant_bits": 2,
+                "payload_bytes": 3124845,
+                "rate_score_at_contest_price": 2.0807060203690515,
+                "section_bytes": {
+                  "hf_decoder_parameters": 45,
+                  "lf_coefficients": 3110400,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp16": {
+                "bits_per_scalar": 16,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 22132962,
+                "rate_score_at_contest_price": 14.7374309068128,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 162,
+                  "lf_coefficients": 22118400,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp32": {
+                "bits_per_scalar": 32,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 44265924,
+                "rate_score_at_contest_price": 29.4748618136256,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 324,
+                  "lf_coefficients": 44236800,
+                  "metadata_scalars": 28800
+                }
+              },
+              "int2": {
+                "bits_per_scalar": 2,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 3112451,
+                "rate_score_at_contest_price": 2.0724533645040553,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 25,
+                  "lf_coefficients": 3110400,
+                  "metadata_scalars": 2026
+                }
+              },
+              "int4": {
+                "bits_per_scalar": 4,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 5879071,
+                "rate_score_at_contest_price": 3.9146320613909174,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 45,
+                  "lf_coefficients": 5875200,
+                  "metadata_scalars": 3826
+                }
+              },
+              "int8": {
+                "bits_per_scalar": 8,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 11412311,
+                "rate_score_at_contest_price": 7.598989455164641,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 85,
+                  "lf_coefficients": 11404800,
+                  "metadata_scalars": 7426
+                }
+              }
+            },
+            "row_id": "snerv_l3_lf2_fc9e0_decoder_int4",
+            "section_scalar_counts": {
+              "hf_decoder_parameters": 81,
+              "lf_coefficients": 11059200,
+              "metadata_scalars": 7200
+            }
+          },
+          {
+            "blockers": [
+              "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+              "snerv_payload_estimate_not_archive_zip_measurement"
+            ],
+            "config": {
+              "decoder_feature_count": 9,
+              "decoder_quant_bits": 4,
+              "levels": 3,
+              "lf_quant_bits": 4,
+              "n_pairs": 600,
+              "scorer_input_hw": [
+                384,
+                512
+              ],
+              "snerv_emb_size": 0,
+              "snerv_fc_dim": 9,
+              "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+              "snerv_patch_radius": 1
+            },
+            "family": "snerv",
+            "lf_shape": [
+              48,
+              64
+            ],
+            "main_control": "levels=3, lf_bits=4, decoder_bits=4",
+            "nonrate_score_required": true,
+            "quantized_payload_estimates": {
+              "configured": {
+                "decoder_quant_bits": 4,
+                "lf_quant_bits": 4,
+                "payload_bytes": 5889645,
+                "rate_score_at_contest_price": 3.921672853961231,
+                "section_bytes": {
+                  "hf_decoder_parameters": 45,
+                  "lf_coefficients": 5875200,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp16": {
+                "bits_per_scalar": 16,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 22132962,
+                "rate_score_at_contest_price": 14.7374309068128,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 162,
+                  "lf_coefficients": 22118400,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp32": {
+                "bits_per_scalar": 32,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 44265924,
+                "rate_score_at_contest_price": 29.4748618136256,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 324,
+                  "lf_coefficients": 44236800,
+                  "metadata_scalars": 28800
+                }
+              },
+              "int2": {
+                "bits_per_scalar": 2,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 3112451,
+                "rate_score_at_contest_price": 2.0724533645040553,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 25,
+                  "lf_coefficients": 3110400,
+                  "metadata_scalars": 2026
+                }
+              },
+              "int4": {
+                "bits_per_scalar": 4,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 5879071,
+                "rate_score_at_contest_price": 3.9146320613909174,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 45,
+                  "lf_coefficients": 5875200,
+                  "metadata_scalars": 3826
+                }
+              },
+              "int8": {
+                "bits_per_scalar": 8,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 11412311,
+                "rate_score_at_contest_price": 7.598989455164641,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 85,
+                  "lf_coefficients": 11404800,
+                  "metadata_scalars": 7426
+                }
+              }
+            },
+            "row_id": "snerv_l3_lf4_fc9e0_decoder_int4",
+            "section_scalar_counts": {
+              "hf_decoder_parameters": 81,
+              "lf_coefficients": 11059200,
+              "metadata_scalars": 7200
+            }
+          },
+          {
+            "blockers": [
+              "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+              "snerv_payload_estimate_not_archive_zip_measurement"
+            ],
+            "config": {
+              "decoder_feature_count": 9,
+              "decoder_quant_bits": 4,
+              "levels": 2,
+              "lf_quant_bits": 4,
+              "n_pairs": 600,
+              "scorer_input_hw": [
+                384,
+                512
+              ],
+              "snerv_emb_size": 0,
+              "snerv_fc_dim": 9,
+              "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+              "snerv_patch_radius": 1
+            },
+            "family": "snerv",
+            "lf_shape": [
+              96,
+              128
+            ],
+            "main_control": "levels=2, lf_bits=4, decoder_bits=4",
+            "nonrate_score_required": true,
+            "quantized_payload_estimates": {
+              "configured": {
+                "decoder_quant_bits": 4,
+                "lf_quant_bits": 4,
+                "payload_bytes": 23515229,
+                "rate_score_at_contest_price": 15.657825764368125,
+                "section_bytes": {
+                  "hf_decoder_parameters": 29,
+                  "lf_coefficients": 23500800,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp16": {
+                "bits_per_scalar": 16,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 88488108,
+                "rate_score_at_contest_price": 58.92059895664164,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 108,
+                  "lf_coefficients": 88473600,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp32": {
+                "bits_per_scalar": 32,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 176976216,
+                "rate_score_at_contest_price": 117.84119791328328,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 216,
+                  "lf_coefficients": 176947200,
+                  "metadata_scalars": 28800
+                }
+              },
+              "int2": {
+                "bits_per_scalar": 2,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 12443642,
+                "rate_score_at_contest_price": 8.285710435147083,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 16,
+                  "lf_coefficients": 12441600,
+                  "metadata_scalars": 2026
+                }
+              },
+              "int4": {
+                "bits_per_scalar": 4,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 23504655,
+                "rate_score_at_contest_price": 15.650784971797812,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 29,
+                  "lf_coefficients": 23500800,
+                  "metadata_scalars": 3826
+                }
+              },
+              "int8": {
+                "bits_per_scalar": 8,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 45626682,
+                "rate_score_at_contest_price": 30.380934710958222,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 56,
+                  "lf_coefficients": 45619200,
+                  "metadata_scalars": 7426
+                }
+              }
+            },
+            "row_id": "snerv_l2_lf4_fc9e0_decoder_int4",
+            "section_scalar_counts": {
+              "hf_decoder_parameters": 54,
+              "lf_coefficients": 44236800,
+              "metadata_scalars": 7200
+            }
+          },
+          {
+            "blockers": [
+              "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+              "snerv_payload_estimate_not_archive_zip_measurement"
+            ],
+            "config": {
+              "decoder_feature_count": 9,
+              "decoder_quant_bits": 8,
+              "levels": 2,
+              "lf_quant_bits": 8,
+              "n_pairs": 600,
+              "scorer_input_hw": [
+                384,
+                512
+              ],
+              "snerv_emb_size": 0,
+              "snerv_fc_dim": 9,
+              "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+              "snerv_patch_radius": 1
+            },
+            "family": "snerv",
+            "lf_shape": [
+              96,
+              128
+            ],
+            "main_control": "levels=2, lf_bits=8, decoder_bits=8",
+            "nonrate_score_required": true,
+            "quantized_payload_estimates": {
+              "configured": {
+                "decoder_quant_bits": 8,
+                "lf_quant_bits": 8,
+                "payload_bytes": 45633656,
+                "rate_score_at_contest_price": 30.385578411297296,
+                "section_bytes": {
+                  "hf_decoder_parameters": 56,
+                  "lf_coefficients": 45619200,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp16": {
+                "bits_per_scalar": 16,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 88488108,
+                "rate_score_at_contest_price": 58.92059895664164,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 108,
+                  "lf_coefficients": 88473600,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp32": {
+                "bits_per_scalar": 32,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 176976216,
+                "rate_score_at_contest_price": 117.84119791328328,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 216,
+                  "lf_coefficients": 176947200,
+                  "metadata_scalars": 28800
+                }
+              },
+              "int2": {
+                "bits_per_scalar": 2,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 12443642,
+                "rate_score_at_contest_price": 8.285710435147083,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 16,
+                  "lf_coefficients": 12441600,
+                  "metadata_scalars": 2026
+                }
+              },
+              "int4": {
+                "bits_per_scalar": 4,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 23504655,
+                "rate_score_at_contest_price": 15.650784971797812,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 29,
+                  "lf_coefficients": 23500800,
+                  "metadata_scalars": 3826
+                }
+              },
+              "int8": {
+                "bits_per_scalar": 8,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 45626682,
+                "rate_score_at_contest_price": 30.380934710958222,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 56,
+                  "lf_coefficients": 45619200,
+                  "metadata_scalars": 7426
+                }
+              }
+            },
+            "row_id": "snerv_l2_lf8_fc9e0_decoder_int8",
+            "section_scalar_counts": {
+              "hf_decoder_parameters": 54,
+              "lf_coefficients": 44236800,
+              "metadata_scalars": 7200
+            }
+          },
+          {
+            "blockers": [
+              "snerv_nonrate_score_missing_for_modelsize_budget_plan",
+              "snerv_payload_estimate_not_archive_zip_measurement"
+            ],
+            "config": {
+              "decoder_feature_count": 9,
+              "decoder_quant_bits": 8,
+              "levels": 1,
+              "lf_quant_bits": 8,
+              "n_pairs": 600,
+              "scorer_input_hw": [
+                384,
+                512
+              ],
+              "snerv_emb_size": 0,
+              "snerv_fc_dim": 9,
+              "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+              "snerv_patch_radius": 1
+            },
+            "family": "snerv",
+            "lf_shape": [
+              192,
+              256
+            ],
+            "main_control": "levels=1, lf_bits=8, decoder_bits=8",
+            "nonrate_score_required": true,
+            "quantized_payload_estimates": {
+              "configured": {
+                "decoder_quant_bits": 8,
+                "lf_quant_bits": 8,
+                "payload_bytes": 182491229,
+                "rate_score_at_contest_price": 121.51341869591845,
+                "section_bytes": {
+                  "hf_decoder_parameters": 29,
+                  "lf_coefficients": 182476800,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp16": {
+                "bits_per_scalar": 16,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 353908854,
+                "rate_score_at_contest_price": 235.6533790251074,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 54,
+                  "lf_coefficients": 353894400,
+                  "metadata_scalars": 14400
+                }
+              },
+              "fp32": {
+                "bits_per_scalar": 32,
+                "group_size": null,
+                "grouped_scale_overhead": false,
+                "payload_bytes": 707817708,
+                "rate_score_at_contest_price": 471.3067580502148,
+                "scale_bytes_per_group": 0,
+                "section_bytes": {
+                  "hf_decoder_parameters": 108,
+                  "lf_coefficients": 707788800,
+                  "metadata_scalars": 28800
+                }
+              },
+              "int2": {
+                "bits_per_scalar": 2,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 49768435,
+                "rate_score_at_contest_price": 33.13875802762883,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 9,
+                  "lf_coefficients": 49766400,
+                  "metadata_scalars": 2026
+                }
+              },
+              "int4": {
+                "bits_per_scalar": 4,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 94007042,
+                "rate_score_at_contest_price": 62.595430572232,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 16,
+                  "lf_coefficients": 94003200,
+                  "metadata_scalars": 3826
+                }
+              },
+              "int8": {
+                "bits_per_scalar": 8,
+                "group_size": 64,
+                "grouped_scale_overhead": true,
+                "payload_bytes": 182484255,
+                "rate_score_at_contest_price": 121.50877499557937,
+                "scale_bytes_per_group": 2,
+                "section_bytes": {
+                  "hf_decoder_parameters": 29,
+                  "lf_coefficients": 182476800,
+                  "metadata_scalars": 7426
+                }
+              }
+            },
+            "row_id": "snerv_l1_lf8_fc9e0_decoder_int8",
+            "section_scalar_counts": {
+              "hf_decoder_parameters": 27,
+              "lf_coefficients": 176947200,
+              "metadata_scalars": 7200
+            }
+          }
+        ],
+        "marginal_gates": [
+          {
+            "bytes_added": 32,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 792026,
+            "from_row_id": "snerv_l4_lf2_fc4e0_decoder_int4",
+            "quant_mode": "configured",
+            "required_nonrate_score_improvement": 2.1307486499909485e-05,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 792058,
+            "to_row_id": "snerv_l4_lf2_fc9e0_decoder_int4"
+          },
+          {
+            "bytes_added": 44,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 792058,
+            "from_row_id": "snerv_l4_lf2_fc9e0_decoder_int4",
+            "quant_mode": "configured",
+            "required_nonrate_score_improvement": 2.929779393737554e-05,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 792102,
+            "to_row_id": "snerv_l4_lf2_fc12e4_decoder_int4"
+          },
+          {
+            "bytes_added": 2332743,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 792102,
+            "from_row_id": "snerv_l4_lf2_fc12e4_decoder_int4",
+            "quant_mode": "configured",
+            "required_nonrate_score_improvement": 1.5532778118830735,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 3124845,
+            "to_row_id": "snerv_l3_lf2_fc9e0_decoder_int4"
+          },
+          {
+            "bytes_added": 2764800,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 3124845,
+            "from_row_id": "snerv_l3_lf2_fc9e0_decoder_int4",
+            "quant_mode": "configured",
+            "required_nonrate_score_improvement": 1.8409668335921794,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 5889645,
+            "to_row_id": "snerv_l3_lf4_fc9e0_decoder_int4"
+          },
+          {
+            "bytes_added": 17625584,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 5889645,
+            "from_row_id": "snerv_l3_lf4_fc9e0_decoder_int4",
+            "quant_mode": "configured",
+            "required_nonrate_score_improvement": 11.736152910406894,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 23515229,
+            "to_row_id": "snerv_l2_lf4_fc9e0_decoder_int4"
+          },
+          {
+            "bytes_added": 22118427,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 23515229,
+            "from_row_id": "snerv_l2_lf4_fc9e0_decoder_int4",
+            "quant_mode": "configured",
+            "required_nonrate_score_improvement": 14.72775264692917,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 45633656,
+            "to_row_id": "snerv_l2_lf8_fc9e0_decoder_int8"
+          },
+          {
+            "bytes_added": 136857573,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 45633656,
+            "from_row_id": "snerv_l2_lf8_fc9e0_decoder_int8",
+            "quant_mode": "configured",
+            "required_nonrate_score_improvement": 91.12784028462114,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 182491229,
+            "to_row_id": "snerv_l1_lf8_fc9e0_decoder_int8"
+          },
+          {
+            "bytes_added": 32,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 1472652,
+            "from_row_id": "snerv_l4_lf2_fc4e0_decoder_int4",
+            "quant_mode": "int4",
+            "required_nonrate_score_improvement": 2.1307486499909485e-05,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 1472684,
+            "to_row_id": "snerv_l4_lf2_fc9e0_decoder_int4"
+          },
+          {
+            "bytes_added": 44,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 1472684,
+            "from_row_id": "snerv_l4_lf2_fc9e0_decoder_int4",
+            "quant_mode": "int4",
+            "required_nonrate_score_improvement": 2.929779393737554e-05,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 1472728,
+            "to_row_id": "snerv_l4_lf2_fc12e4_decoder_int4"
+          },
+          {
+            "bytes_added": 4406343,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 1472728,
+            "from_row_id": "snerv_l4_lf2_fc12e4_decoder_int4",
+            "quant_mode": "int4",
+            "required_nonrate_score_improvement": 2.9340029370772083,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 5879071,
+            "to_row_id": "snerv_l3_lf2_fc9e0_decoder_int4"
+          },
+          {
+            "bytes_added": 17625584,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 5879071,
+            "from_row_id": "snerv_l3_lf4_fc9e0_decoder_int4",
+            "quant_mode": "int4",
+            "required_nonrate_score_improvement": 11.736152910406894,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 23504655,
+            "to_row_id": "snerv_l2_lf4_fc9e0_decoder_int4"
+          },
+          {
+            "bytes_added": 70502387,
+            "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+            "from_payload_bytes": 23504655,
+            "from_row_id": "snerv_l2_lf8_fc9e0_decoder_int8",
+            "quant_mode": "int4",
+            "required_nonrate_score_improvement": 46.944645600434185,
+            "spend_rule": "spend_only_if_measured_nonrate_drop_exceeds_required_improvement",
+            "to_payload_bytes": 94007042,
+            "to_row_id": "snerv_l1_lf8_fc9e0_decoder_int8"
+          }
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_next_actions": [
+          "attach_full_video_advisory_nonrate_score_to_each_snerv_ladder_row",
+          "replace_payload_projection_with_receiver_closed_archive_bytes",
+          "sweep_receiver_visible_snerv_fc_dim_emb_size_against_full_video_score",
+          "push_wavelet_group_saliency_into_lf_depth_and_quant_selection"
+        ],
+        "score_claim": false,
+        "score_claim_valid": false,
+        "source_fidelity_note": "local inverse-steg SNeRV estimates LF/depth payloads; official DWT/MFU/HFR/SNeRV-T parity remains a separate blocker"
+      }
+    ],
+    "focus_families": [
+      "snerv"
+    ],
+    "frames": 1200,
+    "gpu_launched": false,
+    "num_pairs": 600,
+    "objective_authority": {
+      "allowed_selection_terms": [
+        "SegNet_last_frame_distortion",
+        "PoseNet_pair_distortion",
+        "archive_zip_bytes_rate_term"
+      ],
+      "forbidden_selection_terms": [
+        "human_visual_fidelity",
+        "PSNR",
+        "SSIM",
+        "LPIPS",
+        "perceptual_quality_unless_proven_scorer_causal"
+      ],
+      "objective": "contest_auth_eval_scorer_only",
+      "rule": "human visual fidelity is not an authority surface; optimize only the contest auth eval scorer and byte price"
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "nerv_modelsize_ladder.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "scorer_input_hw": [
+      384,
+      512
+    ],
+    "section_payload_rule": "payload byte estimates exclude ZIP/runtime overhead and require receiver-closed archive measurement before promotion"
+  },
+  "objective_authority": {
+    "allowed_selection_terms": [
+      "SegNet_last_frame_distortion",
+      "PoseNet_pair_distortion",
+      "archive_zip_bytes_rate_term"
+    ],
+    "forbidden_selection_terms": [
+      "human_visual_fidelity",
+      "PSNR",
+      "SSIM",
+      "LPIPS",
+      "perceptual_quality_unless_proven_scorer_causal"
+    ],
+    "objective": "contest_auth_eval_scorer_only",
+    "rule": "human visual fidelity is not an authority surface; optimize only the contest auth eval scorer and byte price"
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_constraint": {
+    "constraint_id": "fixed_contest_byte_price",
+    "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "implication": "large NeRV-family capacity is admissible only when measured non-rate improvement per added archive byte exceeds the fixed contest byte price",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "required_large_model_escape_hatches": [
+      "quantization_aware_training",
+      "coder_aware_regularization",
+      "weight_or_wavelet_group_ablation",
+      "waterfilled_int8_int4_int2_zero_allocation",
+      "packed_zero_run_or_entropy_coded_packet_layout",
+      "receiver_generated_low_resolution_or_symbolic_components"
+    ],
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_work_orders": [
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "snerv",
+        "blocks_score_lowering": true,
+        "control_id": "snerv_frequency_split",
+        "gap_id": "mlx_native_snerv_train_export",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "mlx_native_snerv_train_export"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "snerv",
+        "blocks_score_lowering": true,
+        "control_id": "snerv_lf_modelsize_and_stepmap",
+        "gap_id": "snerv_measured_modelsize_ladder",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "snerv_measured_modelsize_ladder"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "snerv",
+        "blocks_score_lowering": true,
+        "control_id": "snerv_lf_modelsize_and_stepmap",
+        "gap_id": "decoder_weight_waterfill_plan_for_snerv_receiver_rows",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "decoder_weight_waterfill_plan_for_snerv_receiver_rows"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "cross_stack",
+        "blocks_score_lowering": true,
+        "control_id": "vq_c3_cool_chic_latent_codebook",
+        "gap_id": "full_video_section_value_for_vq_codebook_indices",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "full_video_section_value_for_vq_codebook_indices"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "cross_stack",
+        "blocks_score_lowering": true,
+        "control_id": "full_video_vjp_master_gradient_authority",
+        "gap_id": "full_video_vjp_bundle_as_budget_spend_prerequisite",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "full_video_vjp_bundle_as_budget_spend_prerequisite"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "cross_stack",
+        "blocks_score_lowering": true,
+        "control_id": "inverse_steganalysis_saliency_stack",
+        "gap_id": "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "push_saliency_into_hi_nerv_weight_groups_and_snerv_wavelet_groups"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "cross_stack",
+        "blocks_score_lowering": true,
+        "control_id": "rnerv_config_optimizer",
+        "gap_id": "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "runnable_rnerv_style_config_search_over_hi_nerv_snerv_controls"
+    },
+    {
+      "authority": "implementation_or_measurement_only_no_score_claim",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_gap": {
+        "applies_to": "cross_stack",
+        "blocks_score_lowering": true,
+        "control_id": "receiver_exact_custody_gate",
+        "gap_id": "all_compact_carrier_emitters_on_shared_archive_bound_contract",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      "work_order_id": "all_compact_carrier_emitters_on_shared_archive_bound_contract"
+    }
+  ],
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/nerv_control_inventory_20260602T160300Z_snerv_scorer_loop_qat_codex.json",
+  "runner_policy": {
+    "bounded_runner_must_select_from_inventory_rows": true,
+    "currently_unresolved_controls": [
+      "sr_nerv_lowres_receiver_axis",
+      "snerv_frequency_split",
+      "snerv_lf_modelsize_and_stepmap",
+      "snerv_pose_guarded_hf_restoration",
+      "rnerv_config_optimizer",
+      "ffnerv_flow_temporal_redundancy",
+      "nervplusplus_decoder_efficiency_blocks",
+      "vq_c3_cool_chic_latent_codebook",
+      "inverse_steganalysis_saliency_stack",
+      "master_gradient_xray_stack",
+      "full_video_vjp_master_gradient_authority",
+      "bitmask_and_zero_packing"
+    ],
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "mlx_authority": "training and acquisition prefilter only",
+    "non_contract_candidates_allowed_only_as_migration_work": true,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "required_controls_before_long_training_spend": [
+      "hnerv_modelsize_control",
+      "hi_nerv_hierarchical_capacity",
+      "snerv_lf_modelsize_and_stepmap",
+      "inverse_steganalysis_saliency_stack",
+      "receiver_exact_custody_gate"
+    ],
+    "schema": "nerv_control_runner_policy.v1",
+    "score_authority": "contest CPU/CUDA exact replay only",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "runner_spend_rule": {
+    "contest_byte_price_score_per_byte": 6.658589531221714e-07,
+    "dispatch_attempted": false,
+    "exact_axis_required_for_score_claim": true,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rule": "admit a control only when measured delta_nonrate_score + contest_byte_price_score_per_byte * delta_archive_bytes < 0 on the matching evidence axis; MLX rows can route training budget but never claim score or promotion",
+    "schema": "nerv_control_runner_spend_rule.v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "schema": "nerv_control_inventory.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "snerv_scorer_loop_qat_reports": {
+    "snerv": {
+      "accepted_improvement": false,
+      "axis_tag": "[macOS-CPU advisory]",
+      "baseline_archive_bytes": 929937,
+      "baseline_score_linf": 0.854580455551196,
+      "best_archive_bytes": 929937,
+      "best_score_linf": 0.854580455551196,
+      "blockers": [
+        "no_quantized_decoder_trial_improved_score_under_pose_guard",
+        "local_smoke_only_not_full_600_pairs",
+        "paired_contest_cpu_cuda_pass_missing",
+        "mixed_precision_decoder_payload_grammar_not_byte_optimized",
+        "full_600_pair_receiver_proof_missing",
+        "official_snerv_mfu_hfr_tub_parity_not_proven"
+      ],
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "levels": 1,
+      "n_pairs": 1,
+      "promotable": false,
+      "promotion_eligible": false,
+      "qat_bits": 8,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_pose_guard_gate": false,
+      "receiver_contract_satisfied": true,
+      "report_path": "/Users/adpena/Projects/pact/.omx/research/snerv_scorer_loop_qat_local_trainer_smoke_20260602T160300Z_false_authority.json",
+      "research_json_path": "/Users/adpena/Projects/pact/.omx/research/snerv_scorer_loop_qat_local_trainer_smoke_20260602T160300Z_false_authority.json",
+      "research_markdown_path": "/Users/adpena/Projects/pact/.omx/research/snerv_scorer_loop_qat_local_trainer_smoke_20260602T160300Z_false_authority.md",
+      "result_path": "/Volumes/VertigoDataTier/pact/snerv_scorer_loop_qat_local_smoke_20260602T160300Z_codex/snerv_scorer_loop_qat_result.json",
+      "result_sha256": "064e764cd0282ca6b7b58f20346ddc938f8c92b4750fcdfb5438f0b1c70c6092",
+      "schema": "snerv_scorer_loop_qat_local_trainer.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "scorer_loop_evaluations": 1,
+      "search_mode": "random_signed",
+      "status": "snerv_scorer_loop_qat_report_available_false_authority",
+      "wavelet": "haar"
+    }
+  },
+  "source_review_policy": {
+    "disambiguations": [
+      {
+        "not_primary": "scalable_layered_snerv_neurips_compression_workshop_2024",
+        "primary_for_this_stack": "spectra_preserving_snerv_eccv_2024",
+        "term": "SNeRV"
+      },
+      {
+        "baseline_control": "PR95_HNeRV_hnerv_muon_public_submission",
+        "primary_for_hi_nerv": "hierarchical_encoding_based_neural_representation",
+        "term": "HiNeRV_vs_HNeRV"
+      }
+    ],
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "hard_rules": [
+      "paper/OSS evidence is research context only until tiny forward parity and receiver byte grammar pass",
+      "SNeRV means spectra-preserving DWT/MFU/HFR/TUB carrier unless a row explicitly says scalable-layered SNeRV",
+      "HiNeRV and HNeRV are distinct; HNeRV/PR95 transfers must be priced as controls, not source parity",
+      "PR95 is the same-axis public control arm; reproduce its archive/runtime/eval axis before beat claims",
+      "CPU, CUDA, and MLX observations stay separate even when the archive and report text look identical"
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "purpose": "force every online paper or OSS finding into a carrier control, enhancer, baseline/control, or explicit no-go/disambiguation row",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "refresh_triggers": [
+      "before changing official HiNeRV or SNeRV architecture/export code",
+      "before interpreting any bad HiNeRV/SNeRV score as method evidence",
+      "before beat-PR95 claims or PR95-derived config changes",
+      "when adding an enhancer from HNeRV/SR-NeRV/RNeRV/FFNeRV/BoostNeRV/NeRV++"
+    ],
+    "schema": "nerv_source_review_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "stack_transfer_matrix": [
+    {
+      "from_family": "PR95/HNeRV",
+      "guard": "source/runtime parity and CPU/CUDA axis custody before beat claims or method negatives",
+      "to_families": [
+        "hi_nerv",
+        "snerv"
+      ],
+      "transfers": [
+        "modelsize-budgeted decoder bytes",
+        "PR95-style 8-stage scorer/rate curriculum",
+        "C1a entropy-shaping regularizer before brotli",
+        "QAT plus sigma sweep plus Muon optimizer final stage",
+        "quantized decoder and latent packet grammar",
+        "same-axis control replay discipline"
+      ]
+    },
+    {
+      "from_family": "SR-NeRV",
+      "guard": "SR bytes are charged; interpolation-only probes stay advisory",
+      "to_families": [
+        "hi_nerv",
+        "snerv"
+      ],
+      "transfers": [
+        "low internal resolution",
+        "trained scorer-preserving upsample",
+        "resolution-axis byte dead-zone"
+      ]
+    },
+    {
+      "from_family": "RNeRV",
+      "guard": "configuration search must produce trained archive-bound rows",
+      "to_families": [
+        "hi_nerv",
+        "snerv"
+      ],
+      "transfers": [
+        "per-video component search",
+        "training-time versus size-quality accounting",
+        "carrier configuration as an acquisition surface"
+      ]
+    },
+    {
+      "from_family": "VQ-NeRV/C3/Cool-Chic/NVRC",
+      "guard": "codebook, entropy-model, index, and synthesis bytes are all charged",
+      "to_families": [
+        "hi_nerv",
+        "snerv"
+      ],
+      "transfers": [
+        "discrete latent/codebook grammar",
+        "hierarchical latent grids",
+        "learned entropy model",
+        "end-to-end quantization/rate loss"
+      ]
+    }
+  ],
+  "status_counts": {
+    "advisory_only_needs_scorer_loop_training": 1,
+    "architecture_candidate_needs_rate_priced_ladder": 1,
+    "available_must_remain_hard_gate": 1,
+    "available_needs_carrier_domain_binding": 1,
+    "available_needs_exact_reduced_bundle_consumer": 1,
+    "available_needs_family_specific_packet_layout": 1,
+    "available_needs_nerv_control_consumer": 1,
+    "control_baseline_available": 1,
+    "design_knob_needs_receiver_closed_training": 1,
+    "needs_representation_change": 1,
+    "not_wired_into_compact_carrier_training": 1,
+    "partially_wired_cpu_advisory_mlx_missing": 1,
+    "partially_wired_needs_full_video_section_pricing": 1,
+    "planner_missing": 1
+  },
+  "upstream_sources_checked": [
+    {
+      "control_signal": "public frontier ordering; PR95/98/101/103/105/106 remain same-axis control inputs, not inferred-equivalence authority",
+      "id": "comma_leaderboard_video_compression",
+      "url": "https://comma.ai/leaderboard"
+    },
+    {
+      "control_signal": "HNeRV-shaped contest specialization: 178417-byte archive, 8-stage scorer/rate curriculum, C1a entropy shaping, QAT, sigma sweep, Muon, and documented CPU/CUDA discrepancy",
+      "id": "pr95_public_control",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/95"
+    },
+    {
+      "control_signal": "architecture size, pruning, quantization, model bpp",
+      "id": "hnerv_official",
+      "url": "https://github.com/haochen-rye/HNeRV"
+    },
+    {
+      "control_signal": "HiNeRV S/M/L configs, patch/frame flexibility, deepspeed/timm/torchac code path, pruning, quantization, and bitstream-q",
+      "id": "hinerv_official",
+      "url": "https://github.com/hmkx/HiNeRV"
+    },
+    {
+      "control_signal": "hierarchical encodings plus pruning and quantization pipeline",
+      "id": "hinerv_paper",
+      "url": "https://arxiv.org/abs/2306.09818"
+    },
+    {
+      "control_signal": "spectra-preserving SNeRV: Haar/DWT LF/HF, enc/dec strides, fc_dim, emb_size, MFU, HFR, and temporal extension",
+      "id": "snerv_official",
+      "url": "https://github.com/qwertja/SNeRV"
+    },
+    {
+      "control_signal": "spectral split, HFR/MFU/TUB controls",
+      "id": "snerv_paper",
+      "url": "https://arxiv.org/abs/2501.01681"
+    },
+    {
+      "control_signal": "separate Scalable Neural Representation paper; useful for layered bitstream thinking, not the spectra-preserving DWT/MFU/HFR carrier target",
+      "id": "snerv_scalable_disambiguation",
+      "url": "https://openreview.net/forum?id=ZqN4bnXSSY"
+    },
+    {
+      "control_signal": "low-detail INR representation plus super-resolution",
+      "id": "sr_nerv_paper",
+      "url": "https://arxiv.org/abs/2505.00046"
+    },
+    {
+      "control_signal": "shallow residual/inter-frame VQ codebook controls",
+      "id": "vq_nerv_paper",
+      "url": "https://arxiv.org/abs/2403.12401"
+    },
+    {
+      "control_signal": "per-video design and training search over NeRV components",
+      "id": "rnerv_paper",
+      "url": "https://arxiv.org/abs/2506.24127"
+    },
+    {
+      "control_signal": "official VINRB/RNeRV implementation and ablation framework; use as source-parity input for NeRV-family component controls",
+      "id": "rnerv_vinrb_oss",
+      "url": "https://github.com/mgwillia/vinrb"
+    },
+    {
+      "control_signal": "flow-guided temporal redundancy and compact convolutional architecture",
+      "id": "ffnerv_paper",
+      "url": "https://arxiv.org/abs/2212.12294"
+    },
+    {
+      "control_signal": "project/code surface for flow-guided pose-channel enhancer and compact grouped/pointwise convolution ideas",
+      "id": "ffnerv_project",
+      "url": "https://maincold2.github.io/ffnerv/"
+    },
+    {
+      "control_signal": "conditional decoder and temporal-aware affine enhancer; treat as a carrier enhancer only after receiver-byte custody",
+      "id": "boost_nerv_official",
+      "url": "https://github.com/Xinjie-Q/Boosting-NeRV"
+    },
+    {
+      "control_signal": "separable residual decoder blocks and skip-layer capacity",
+      "id": "nervplusplus_paper",
+      "url": "https://arxiv.org/abs/2402.18305"
+    },
+    {
+      "control_signal": "overfitted hierarchical latents and entropy-model bytes",
+      "id": "c3_paper",
+      "url": "https://arxiv.org/abs/2312.02753"
+    },
+    {
+      "control_signal": "per-video small-model latent/entropy-model codec; useful for section-value-priced latent/codebook controls",
+      "id": "c3_project",
+      "url": "https://c3-neural-compression.github.io/"
+    },
+    {
+      "control_signal": "hierarchical latent grids and autoregressive entropy model",
+      "id": "cool_chic_docs",
+      "url": "https://orange-opensource.github.io/Cool-Chic/encoding/architecture.html"
+    },
+    {
+      "control_signal": "end-to-end neural representation quantization and entropy coding",
+      "id": "nvrc_paper",
+      "url": "https://arxiv.org/abs/2409.07414"
+    }
+  ]
+}
