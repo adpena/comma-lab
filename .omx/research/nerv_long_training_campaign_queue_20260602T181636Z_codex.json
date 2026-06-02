@@ -76,7 +76,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -158,6 +158,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -237,7 +241,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -319,6 +323,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -398,7 +406,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -480,6 +488,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -559,7 +571,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -641,6 +653,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -720,7 +736,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -802,6 +818,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -881,7 +901,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -963,6 +983,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -1042,7 +1066,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -1124,6 +1148,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -1203,7 +1231,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -1285,6 +1313,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -1364,7 +1396,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -1446,6 +1478,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -1525,7 +1561,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -1607,6 +1643,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -1686,7 +1726,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -1768,6 +1808,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -1847,7 +1891,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "ready",
+      "status": "queued",
       "steps": [
         {
           "command": [
@@ -1929,6 +1973,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -2045,7 +2093,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "blocked_dependency",
+      "status": "disabled",
       "steps": [
         {
           "command": [
@@ -2119,6 +2167,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -2235,7 +2287,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "blocked_dependency",
+      "status": "disabled",
       "steps": [
         {
           "command": [
@@ -2309,6 +2361,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]
@@ -2425,7 +2481,7 @@
         "score_claim": false,
         "score_claim_valid": false
       },
-      "status": "blocked_dependency",
+      "status": "disabled",
       "steps": [
         {
           "command": [
@@ -2499,6 +2555,10 @@
           ],
           "promotion_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
           "score_claim": false
         }
       ]

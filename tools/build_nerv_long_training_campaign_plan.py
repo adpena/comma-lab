@@ -26,7 +26,7 @@ from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
     build_nerv_long_training_campaign_plan,
     render_nerv_long_training_campaign_plan_markdown,
 )
-from tac.repo_io import write_json, write_text_artifact  # noqa: E402
+from tac.repo_io import write_json_artifact, write_text_artifact  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -36,6 +36,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument("--output-md", type=Path)
     parser.add_argument("--output-queue", type=Path)
+    parser.add_argument("--expected-output-json-sha256")
+    parser.add_argument("--expected-output-md-sha256")
+    parser.add_argument("--expected-output-queue-sha256")
     parser.add_argument("--optimizer-kind", action="append", default=None)
     parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
     parser.add_argument("--batch-pairs", type=int, default=DEFAULT_BATCH_PAIRS)
@@ -57,14 +60,25 @@ def main(argv: list[str] | None = None) -> int:
         output_root=args.output_root,
         max_candidates_per_family=args.max_candidates_per_family,
     )
-    write_json(args.output_json, report)
+    write_json_artifact(
+        args.output_json,
+        report,
+        allow_overwrite=args.expected_output_json_sha256 is not None,
+        expected_existing_sha256=args.expected_output_json_sha256,
+    )
     if args.output_queue:
-        write_json(args.output_queue, report["experiment_queue"])
+        write_json_artifact(
+            args.output_queue,
+            report["experiment_queue"],
+            allow_overwrite=args.expected_output_queue_sha256 is not None,
+            expected_existing_sha256=args.expected_output_queue_sha256,
+        )
     if args.output_md:
         write_text_artifact(
             args.output_md,
             render_nerv_long_training_campaign_plan_markdown(report),
-            allow_overwrite=True,
+            allow_overwrite=args.expected_output_md_sha256 is not None,
+            expected_existing_sha256=args.expected_output_md_sha256,
         )
     print(
         json.dumps(

@@ -527,11 +527,7 @@ def _experiment_for_row(
         "id": _safe_path_token(row_id),
         "family": str(family),
         "priority": int(priority),
-        "status": (
-            "ready"
-            if bool(local_mlx_launch_command_ready)
-            else "blocked_dependency"
-        ),
+        "status": "queued" if bool(local_mlx_launch_command_ready) else "disabled",
         "blocked": not bool(local_mlx_launch_command_ready),
         "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
         "score_lowering_gate": dict(score_lowering_gate),
@@ -541,6 +537,10 @@ def _experiment_for_row(
             {
                 "id": "run_mlx_first_campaign_row",
                 "command": list(command_argv),
+                "resources": {
+                    "kind": "local_mlx",
+                    "max_parallel_group": "local_mlx_training",
+                },
                 "postconditions": postconditions,
                 "on_postcondition_failure": "failed",
                 "score_claim": False,

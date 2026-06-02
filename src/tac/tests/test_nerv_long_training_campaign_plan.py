@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
 
+from comma_lab.scheduler.experiment_queue import load_queue_definition
 from tac.analysis.nerv_long_training_campaign_plan import (
     NervLongTrainingCampaignPlanError,
     build_nerv_long_training_campaign_plan,
@@ -65,9 +67,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         "hi_nerv_byte_closed_archive_export_missing" in row["promotion_blockers"]
         for row in hi_rows
     )
-    assert all(
-        row["experiment_queue_entry"]["status"] == "ready" for row in hi_rows
-    )
+    assert all(row["experiment_queue_entry"]["status"] == "queued" for row in hi_rows)
     assert all(
         row["experiment_queue_entry"]["cpu_replay_ready"] is False
         for row in hi_rows
@@ -78,6 +78,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     )
     hi_step = hi_rows[0]["experiment_queue_entry"]["steps"][0]
     assert hi_step["command"] == hi_rows[0]["command_argv"]
+    assert hi_step["resources"]["kind"] == "local_mlx"
     assert {
         (condition["key"], condition.get("equals"))
         for condition in hi_step["postconditions"]
@@ -96,7 +97,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
     assert snerv_row["cpu_replay_ready"] is False
     assert snerv_row["exact_gate_ready"] is False
-    assert snerv_row["experiment_queue_entry"]["status"] == "blocked_dependency"
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
     assert snerv_row["experiment_queue_entry"]["blocked"] is True
     assert "snerv_shared_mlx_scoreaware_long_training_harness_not_bound" in snerv_row[
         "blockers"
@@ -156,9 +157,40 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
     assert queue == payload["experiment_queue"]
     assert queue["experiments"][0]["steps"][0]["postconditions"]
+    loaded_queue = load_queue_definition(out_queue)
+    assert loaded_queue["schema"] == "experiment_queue.v1"
+    assert loaded_queue["experiments"][0]["status"] == "queued"
+    assert loaded_queue["experiments"][0]["steps"][0]["resources"]["kind"] == "local_mlx"
     assert out_md.read_text(encoding="utf-8").startswith(
         "# NeRV Long-Training Campaign Plan"
     )
+
+    rc = cli.main(
+        [
+            "--hinerv-modelsize-budget",
+            str(hinerv),
+            "--snerv-modelsize-budget",
+            str(snerv),
+            "--optimizer-kind",
+            "lion",
+            "--epochs",
+            "16",
+            "--output-json",
+            str(out_json),
+            "--output-md",
+            str(out_md),
+            "--output-queue",
+            str(out_queue),
+            "--expected-output-json-sha256",
+            _sha256(out_json),
+            "--expected-output-md-sha256",
+            _sha256(out_md),
+            "--expected-output-queue-sha256",
+            _sha256(out_queue),
+        ]
+    )
+
+    assert rc == 0
 
 
 def _hinerv_budget() -> dict:
@@ -201,3 +233,7 @@ def _snerv_budget() -> dict:
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _sha256(path: Path) -> str:
+    return sha256(path.read_bytes()).hexdigest()
