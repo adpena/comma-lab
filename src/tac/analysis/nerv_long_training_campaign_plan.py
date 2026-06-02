@@ -50,9 +50,10 @@ DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaign
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
 DEFAULT_LEARNING_RATE = 1.0e-3
-# First pose-instability feedback at 9e-5 should recover to the measured
-# recommendation, 2.7e-5. Only repeated instability at or below this lower
-# floor switches from more LR ratcheting to the robust pose-protected path.
+# Do not classify the first 9e-5 pose-spike as repeated low-LR failure: its
+# telemetry explicitly requested a 2.7e-5 recovery run. The Huber path is real,
+# but it is reserved for repeated instability at or below that recovered regime;
+# otherwise the planner skips a measured LR recovery and confounds two causes.
 HINERV_POSE_INSTABILITY_LOW_LR_FLOOR = 3.0e-5
 HINERV_POSE_INSTABILITY_POLICY_LOGIC = (
     "pose instability above low_learning_rate_floor applies the measured lower "

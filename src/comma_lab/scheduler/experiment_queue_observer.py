@@ -253,16 +253,40 @@ def _false_authority_payload_blockers(
     required_false = tuple(dict.fromkeys(required_false))
     false_or_missing = tuple(dict.fromkeys(false_or_missing))
     for key in required_false:
-        if payload.get(key) is not False:
+        if _payload_path_get(payload, key) is not False:
             blockers.append(f"{context}_{key}_must_be_false")
     for key in false_or_missing:
         if allow_materializer_effect_flags and key in MATERIALIZER_EFFECT_FLAG_FIELDS:
             continue
-        if key in payload and payload.get(key) is not False:
+        value = _payload_path_get(payload, key)
+        if value is not _MISSING and value is not False:
             blockers.append(f"{context}_{key}_must_be_false_or_missing")
     for violation in truthy_authority_field_violations(payload):
         blockers.append(f"{context}_truthy_authority:{violation}")
     return blockers
+
+
+_MISSING = object()
+
+
+def _payload_path_get(
+    payload: Mapping[str, Any],
+    key: str,
+    *,
+    missing: Any = _MISSING,
+) -> Any:
+    """Return ``payload[key]`` with dotted-path support for queue postconditions."""
+
+    if key in payload:
+        return payload[key]
+    if "." not in key:
+        return missing
+    current: Any = payload
+    for part in key.split("."):
+        if not isinstance(current, Mapping) or part not in current:
+            return missing
+        current = current[part]
+    return current
 
 
 def _false_authority_revalidation(

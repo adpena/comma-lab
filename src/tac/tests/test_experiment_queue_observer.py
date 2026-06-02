@@ -806,6 +806,129 @@ def test_observer_honors_queue_false_authority_override_but_rejects_nested_truth
     )
 
 
+def test_observer_json_false_authority_supports_dotted_required_paths(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "cleanup.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "cleanup_fixture.v1",
+                "plan": {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_false_authority",
+            "path": artifact.as_posix(),
+            "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch",
+            ],
+            "false_or_missing": [],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-06-02T20:20:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    assert observation["blockers"] == []
+    assert observation["succeeded_artifact_failure_steps"] == []
+
+
+def test_observer_json_false_authority_rejects_truthy_dotted_required_path(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "cleanup.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "cleanup_fixture.v1",
+                "plan": {
+                    "score_claim": True,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"] = [
+        {
+            "type": "json_false_authority",
+            "path": artifact.as_posix(),
+            "required_false": ["plan.score_claim"],
+            "false_or_missing": [],
+        }
+    ]
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-06-02T20:21:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is False
+    artifact_record = observation["succeeded_artifact_failure_steps"][0][
+        "expected_artifacts"
+    ][0]
+    assert (
+        "json_false_authority_plan.score_claim_must_be_false"
+        in artifact_record["artifact_revalidation_blockers"]
+    )
+
+
 def test_observer_does_not_treat_archive_sha256_only_as_custody_claim(
     tmp_path: Path,
 ) -> None:
