@@ -269,7 +269,12 @@ class MlxScoreAwareAdapter:
         return eval_targets, metrics
 
     def _score_aware_loss_part_metrics(self, batch: Any) -> dict[str, float]:
-        """Expose active score-aware loss terms in training telemetry."""
+        """Return machine-checkable telemetry for active score-aware terms.
+
+        The canonical loss already owns the math. This helper only exposes its
+        parts after a step so long runs cannot advertise SegNet/PoseNet coupling
+        while logging only substrate-local metrics such as VQ EMA updates.
+        """
 
         mx = self._mx
         try:
