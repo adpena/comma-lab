@@ -119,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         else _resolve(args.video_names_file, base=repo_root)
     )
     reference_cache_dir = _resolve(args.reference_cache_dir, base=repo_root)
+    resolved_reference_cache_dir = _resolve_reference_cache_dir(reference_cache_dir)
     projection_manifest = (
         None
         if args.projection_manifest is None
@@ -160,7 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=output_dir,
         repo_root=repo_root,
         upstream_dir=upstream_dir,
-        reference_cache_dir=reference_cache_dir,
+        reference_cache_dir=resolved_reference_cache_dir,
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
         scorer_batch_pairs=int(args.scorer_batch_pairs),
@@ -182,6 +183,7 @@ def main(argv: list[str] | None = None) -> int:
         archive=archive,
         projection_manifest=projection_manifest,
         reference_cache_dir=reference_cache_dir,
+        resolved_reference_cache_dir=resolved_reference_cache_dir,
         max_pairs=int(args.max_pairs),
         window_pairs=int(args.window_pairs),
         scorer_batch_pairs=int(args.scorer_batch_pairs),
@@ -334,6 +336,17 @@ def _materialize_caches(
         cache_dir = output_dir / "mlx_caches" / variant.variant_id
         work_dir = output_dir / "mlx_work" / variant.variant_id
         report_output = output_dir / "mlx_cache_reports" / f"{variant.variant_id}.json"
+        reusable_row = _reusable_cache_row(
+            variant=variant,
+            cache_dir=cache_dir,
+            work_dir=work_dir,
+            report_output=report_output,
+            upstream_dir=upstream_dir,
+            video_names_file=video_names_file,
+        )
+        if reusable_row is not None:
+            rows[variant.variant_id] = reusable_row
+            continue
         cmd = [
             sys.executable,
             tool.as_posix(),
@@ -380,6 +393,71 @@ def _materialize_caches(
     return rows
 
 
+def _resolve_reference_cache_dir(reference_cache_dir: Path) -> Path:
+    direct_manifest = reference_cache_dir / "manifest.json"
+    if direct_manifest.is_file():
+        return reference_cache_dir
+    baseline_dir = reference_cache_dir / "baseline"
+    baseline_manifest = baseline_dir / "manifest.json"
+    if baseline_manifest.is_file():
+        return baseline_dir
+    raise FileNotFoundError(
+        "reference cache directory must contain manifest.json directly or "
+        f"baseline/manifest.json under profile-root cache dir: {reference_cache_dir}"
+    )
+
+
+def _reusable_cache_row(
+    *,
+    variant: VariantSpec,
+    cache_dir: Path,
+    work_dir: Path,
+    report_output: Path,
+    upstream_dir: Path,
+    video_names_file: Path | None,
+) -> dict[str, Any] | None:
+    manifest = cache_dir / "manifest.json"
+    if not manifest.is_file() or not report_output.is_file():
+        return None
+    try:
+        report = json.loads(report_output.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    archive = report.get("archive")
+    if not isinstance(archive, dict):
+        return None
+    if int(archive.get("bytes", -1)) != int(variant.archive_bytes):
+        return None
+    if str(archive.get("sha256", "")) != str(variant.archive_sha256):
+        return None
+    reported_manifest = report.get("cache_manifest")
+    if reported_manifest is not None:
+        try:
+            if Path(str(reported_manifest)).resolve() != manifest.resolve():
+                return None
+        except OSError:
+            return None
+    return {
+        "cache_dir": cache_dir.as_posix(),
+        "work_dir": work_dir.as_posix(),
+        "report_output": report_output.as_posix(),
+        "argv": [],
+        "upstream_dir": upstream_dir.as_posix(),
+        "video_names_file": (
+            None if video_names_file is None else video_names_file.as_posix()
+        ),
+        "stdout": "",
+        "stderr_tail": "",
+        "reused_existing_cache_report": True,
+        "reuse_integrity": {
+            "archive_bytes": int(variant.archive_bytes),
+            "archive_sha256": variant.archive_sha256,
+            "cache_manifest": manifest.as_posix(),
+            "cache_report": report_output.as_posix(),
+        },
+    }
+
+
 def _run_mlx_responses(
     *,
     variants: list[VariantSpec],
@@ -395,6 +473,7 @@ def _run_mlx_responses(
     allow_batch_shape_research_signal: bool,
     response_family_prefix: str = "pact_nerv_selector_v3_section_value",
 ) -> dict[str, dict[str, Any]]:
+    reference_cache_dir = _resolve_reference_cache_dir(reference_cache_dir)
     jobs = [
         MLXScorerResponseBatchJob(
             candidate_cache_dir=output_dir / "mlx_caches" / variant.variant_id,
@@ -458,6 +537,7 @@ def _build_report(
     layout_key: str = "psv3_section_layout",
     residual_policy_schema: str = "pact_nerv_selector_v3_residual_admission_policy.v1",
     tool_path: Path | None = None,
+    resolved_reference_cache_dir: Path | None = None,
 ) -> dict[str, Any]:
     baseline = payloads["baseline"]
     baseline_variant = variants[0]
@@ -514,6 +594,11 @@ def _build_report(
             "sha256": _sha256_file(archive),
         },
         "reference_cache_dir": reference_cache_dir.as_posix(),
+        "resolved_reference_cache_dir": (
+            reference_cache_dir
+            if resolved_reference_cache_dir is None
+            else resolved_reference_cache_dir
+        ).as_posix(),
         layout_key: layout,
         "cache_materialization_rows": cache_rows,
         "max_pairs": int(max_pairs),

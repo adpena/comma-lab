@@ -73,6 +73,12 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
     upstream_dir.mkdir()
     video_names_file = tmp_path / "video_names.txt"
     video_names_file.write_text("0.raw\n", encoding="utf-8")
+    reference_cache_root = tmp_path / "reference_cache_root"
+    (reference_cache_root / "baseline").mkdir(parents=True)
+    (reference_cache_root / "baseline" / "manifest.json").write_text(
+        '{"schema":"cache_manifest.v1"}\n',
+        encoding="utf-8",
+    )
 
     def fake_materialize_caches(**kwargs):
         assert Path(kwargs["upstream_dir"]) == upstream_dir
@@ -95,6 +101,7 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
 
     def fake_mlx_responses(**kwargs):
         output_dir = Path(kwargs["output_dir"])
+        assert Path(kwargs["reference_cache_dir"]) == reference_cache_root / "baseline"
         assert kwargs["response_family_prefix"] == "pact_nerv_selector_v4_section_value"
         rows = {}
         for index, variant in enumerate(kwargs["variants"]):
@@ -139,6 +146,8 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
             upstream_dir.as_posix(),
             "--video-names-file",
             video_names_file.as_posix(),
+            "--reference-cache-dir",
+            reference_cache_root.as_posix(),
             "--sections",
             "decoder_qw",
             "latents_rc",
@@ -163,6 +172,10 @@ def test_v4_profiler_emits_hprc_component_profile_with_psv4_layout(
     assert profile["source_schema"] == "pact_nerv_selector_v4_section_value_profile.v1"
     assert profile["upstream_dir"] == upstream_dir.as_posix()
     assert profile["video_names_file"] == video_names_file.as_posix()
+    assert profile["reference_cache_dir"] == reference_cache_root.as_posix()
+    assert profile["resolved_reference_cache_dir"] == (
+        reference_cache_root / "baseline"
+    ).as_posix()
     assert "psv4_section_layout" in profile
     assert "psv3_section_layout" not in profile
     assert profile["residual_admission_policy"]["schema"] == (
