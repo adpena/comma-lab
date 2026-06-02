@@ -103,6 +103,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-large-tensor-cache", action="store_true")
     parser.add_argument("--allow-batch-shape-research-signal", action="store_true")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--preserve-existing-cache-reports",
+        action="store_true",
+        help=(
+            "With --force on an owned output dir, keep mlx_caches, mlx_work, "
+            "and mlx_cache_reports so archive-matched cache rows can be reused."
+        ),
+    )
     return parser
 
 
@@ -135,7 +143,11 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "--scorer-batch-pairs > 1 requires --allow-batch-shape-research-signal"
         )
-    _prepare_owned_dir(output_dir, force=bool(args.force))
+    _prepare_owned_dir(
+        output_dir,
+        force=bool(args.force),
+        preserve_cache_artifacts=bool(args.preserve_existing_cache_reports),
+    )
 
     started = time.time()
     baseline_blob = _read_archive_member(archive, "0.bin")
@@ -809,21 +821,47 @@ def _read_archive_member(archive: Path, member: str) -> bytes:
         return zf.read(member)
 
 
-def _prepare_owned_dir(path: Path, *, force: bool) -> None:
+def _prepare_owned_dir(
+    path: Path,
+    *,
+    force: bool,
+    preserve_cache_artifacts: bool = False,
+    owned_marker: str = OWNED_MARKER,
+    tool_name: str | None = None,
+) -> None:
     if path.exists():
-        marker = path / OWNED_MARKER
+        marker = path / owned_marker
         if not force and any(path.iterdir()):
             raise SystemExit(f"output dir exists; pass --force: {path}")
         if force:
             if not marker.exists() and any(path.iterdir()):
                 raise SystemExit(f"refusing --force on non-owned output dir: {path}")
-            shutil.rmtree(path)
+            if preserve_cache_artifacts:
+                _clean_owned_dir_preserving_cache_artifacts(path, marker=marker)
+            else:
+                shutil.rmtree(path)
     path.mkdir(parents=True, exist_ok=True)
-    (path / OWNED_MARKER).write_text(
-        json.dumps({"schema": "owned_directory_marker.v1", "tool": Path(__file__).name})
+    (path / owned_marker).write_text(
+        json.dumps(
+            {
+                "schema": "owned_directory_marker.v1",
+                "tool": tool_name or Path(__file__).name,
+            }
+        )
         + "\n",
         encoding="utf-8",
     )
+
+
+def _clean_owned_dir_preserving_cache_artifacts(path: Path, *, marker: Path) -> None:
+    preserved = {"mlx_caches", "mlx_work", "mlx_cache_reports", marker.name}
+    for child in path.iterdir():
+        if child.name in preserved:
+            continue
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
 
 
 def _resolve(path: Path, *, base: Path) -> Path:

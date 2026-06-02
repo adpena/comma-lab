@@ -115,6 +115,38 @@ def test_materialize_caches_reuses_archive_matched_existing_cache_report(
     assert row["reuse_integrity"]["archive_sha256"] == variant.archive_sha256
 
 
+def test_force_preserve_existing_cache_reports_keeps_only_cache_artifacts(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "profile"
+    output_dir.mkdir()
+    marker = output_dir / profiler.OWNED_MARKER
+    marker.write_text('{"schema":"owned_directory_marker.v1"}\n', encoding="utf-8")
+    for dirname in ("mlx_caches", "mlx_work", "mlx_cache_reports"):
+        kept = output_dir / dirname
+        kept.mkdir()
+        (kept / "keep.json").write_text('{"keep":true}\n', encoding="utf-8")
+    stale_dir = output_dir / "mlx_responses"
+    stale_dir.mkdir()
+    (stale_dir / "stale.json").write_text('{"stale":true}\n', encoding="utf-8")
+    stale_file = output_dir / "hprc_mlx_component_neutralization_profile.json"
+    stale_file.write_text('{"stale":true}\n', encoding="utf-8")
+
+    profiler._prepare_owned_dir(
+        output_dir,
+        force=True,
+        preserve_cache_artifacts=True,
+        owned_marker=profiler.OWNED_MARKER,
+        tool_name="test-profiler",
+    )
+
+    assert marker.is_file()
+    assert not stale_dir.exists()
+    assert not stale_file.exists()
+    for dirname in ("mlx_caches", "mlx_work", "mlx_cache_reports"):
+        assert (output_dir / dirname / "keep.json").is_file()
+
+
 def test_materialize_variants_builds_parseable_pvq_neutralizations(
     tmp_path: Path,
 ) -> None:
@@ -235,6 +267,7 @@ def test_vq_profiler_emits_hprc_component_profile_with_pvq_layout(
             video_names_file.as_posix(),
             "--reference-cache-dir",
             reference_cache_root.as_posix(),
+            "--preserve-existing-cache-reports",
             "--sections",
             "decoder_qw",
             "codebooks_q",

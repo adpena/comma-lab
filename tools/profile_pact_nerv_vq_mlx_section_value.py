@@ -7,7 +7,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
 import sys
 import time
 import zipfile
@@ -39,6 +38,7 @@ from tools.profile_pact_nerv_selector_v3_mlx_section_value import (  # noqa: E40
     _build_report,
     _extract_submission,
     _materialize_caches,
+    _prepare_owned_dir,
     _read_archive_member,
     _resolve,
     _resolve_reference_cache_dir,
@@ -85,6 +85,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-large-tensor-cache", action="store_true")
     parser.add_argument("--allow-batch-shape-research-signal", action="store_true")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--preserve-existing-cache-reports",
+        action="store_true",
+        help=(
+            "With --force on an owned output dir, keep mlx_caches, mlx_work, "
+            "and mlx_cache_reports so archive-matched cache rows can be reused."
+        ),
+    )
     return parser
 
 
@@ -117,7 +125,13 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "--scorer-batch-pairs > 1 requires --allow-batch-shape-research-signal"
         )
-    _prepare_owned_dir(output_dir, force=bool(args.force))
+    _prepare_owned_dir(
+        output_dir,
+        force=bool(args.force),
+        preserve_cache_artifacts=bool(args.preserve_existing_cache_reports),
+        owned_marker=OWNED_MARKER,
+        tool_name=Path(__file__).name,
+    )
 
     started = time.time()
     baseline_blob = _read_archive_member(archive, "0.bin")
@@ -367,23 +381,6 @@ def _write_zip_replacing_member(
         "copied_members": copied,
         **FALSE_AUTHORITY,
     }
-
-
-def _prepare_owned_dir(path: Path, *, force: bool) -> None:
-    if path.exists():
-        marker = path / OWNED_MARKER
-        if not force and any(path.iterdir()):
-            raise SystemExit(f"output dir exists; pass --force: {path}")
-        if force:
-            if not marker.exists() and any(path.iterdir()):
-                raise SystemExit(f"refusing --force on non-owned output dir: {path}")
-            shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
-    (path / OWNED_MARKER).write_text(
-        json.dumps({"schema": "owned_directory_marker.v1", "tool": Path(__file__).name})
-        + "\n",
-        encoding="utf-8",
-    )
 
 
 def _file_row(path: Path) -> dict[str, Any]:
