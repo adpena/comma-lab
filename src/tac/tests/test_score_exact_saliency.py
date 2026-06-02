@@ -27,10 +27,12 @@ torch = pytest.importorskip("torch")
 
 from tac.analysis.score_exact_saliency import (  # noqa: E402
     PoseFisher,
+    ProducerProfile,
     SegFlipRisk,
     build_producer_provenance,
     compute_s_pose_fisher,
     compute_s_seg_flip_risk,
+    profile_producer,
     saliency_concentration,
     stream_real_pairs,
 )
@@ -104,6 +106,51 @@ def test_concentration_top_k_monotone():
     c = saliency_concentration(sal)
     assert c.top_k_pct_mass[1.0] <= c.top_k_pct_mass[5.0] + 1e-9
     assert c.top_k_pct_mass[5.0] <= c.top_k_pct_mass[10.0] + 1e-9
+
+
+def test_profile_producer_uses_diagnostics_free_hot_path_by_default(monkeypatch):
+    """Campaign profiling must not force scalar diagnostic sync by default."""
+    import tac.analysis.score_exact_saliency as saliency_mod
+
+    calls: list[tuple[str, bool | None]] = []
+
+    def fake_seg(_segnet, pair, *, diagnostics=True):
+        calls.append(("seg", diagnostics))
+        h, w = pair.shape[-2:]
+        return SegFlipRisk(
+            flip_risk=torch.ones(h, w),
+            grad_energy=torch.ones(h, w),
+            margin=torch.ones(h, w),
+            grad_finite=bool(diagnostics),
+            grad_nonzero_frac=1.0 if diagnostics else float("nan"),
+            scorer_input_hw=(h, w),
+        )
+
+    def fake_pose(_posenet, pair, *, method="batched_vjp", diagnostics=True):
+        calls.append((f"pose:{method}", diagnostics))
+        h, w = pair.shape[-2:]
+        return PoseFisher(
+            s_pose=torch.ones(h, w),
+            s_pose_per_frame=torch.ones(2, h, w),
+            grad_finite=bool(diagnostics),
+            s_pose_nonzero_frac=1.0 if diagnostics else float("nan"),
+            method=method,
+            scorer_input_hw=(h, w),
+        )
+
+    monkeypatch.setattr(saliency_mod, "compute_s_seg_flip_risk", fake_seg)
+    monkeypatch.setattr(saliency_mod, "compute_s_pose_fisher", fake_pose)
+
+    pairs = torch.zeros(2, 2, 3, 4, 5)
+    profile = profile_producer(object(), object(), pairs)
+
+    assert isinstance(profile, ProducerProfile)
+    assert calls == [
+        ("seg", False),
+        ("pose:batched_vjp", False),
+        ("seg", False),
+        ("pose:batched_vjp", False),
+    ]
 
 
 def test_concentration_gini_bounded():

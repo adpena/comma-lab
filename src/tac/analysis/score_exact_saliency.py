@@ -667,8 +667,15 @@ def profile_producer(
     *,
     s_pose_method: str = "batched_vjp",
     total_pairs_in_video: int = 600,
+    diagnostics: bool = False,
 ) -> ProducerProfile:
-    """Measure per-pair wall-clock for s_seg and s_pose over the given pairs."""
+    """Measure per-pair wall-clock for s_seg and s_pose over the given pairs.
+
+    ``diagnostics`` defaults to ``False`` for campaign profiling because the
+    scalar finite/nonzero checks force device synchronization while preserving no
+    saliency tensor needed by the allocator. Dedicated verifier tests still run
+    the diagnostic path explicitly.
+    """
     num_pairs = pairs_btchw.shape[0]
     seg_times: list[float] = []
     pose_times: list[float] = []
@@ -676,13 +683,20 @@ def profile_producer(
     for i in range(num_pairs):
         pair = pairs_btchw[i : i + 1]
         t0 = time.perf_counter()
-        compute_s_seg_flip_risk(segnet, pair)
+        compute_s_seg_flip_risk(segnet, pair, diagnostics=diagnostics)
         t1 = time.perf_counter()
-        compute_s_pose_fisher(posenet, pair, method=s_pose_method)
+        compute_s_pose_fisher(
+            posenet,
+            pair,
+            method=s_pose_method,
+            diagnostics=diagnostics,
+        )
         t2 = time.perf_counter()
         seg_times.append(t1 - t0)
         pose_times.append(t2 - t1)
-        breakdown.append({"pair_index": float(i), "s_seg_s": t1 - t0, "s_pose_s": t2 - t1})
+        breakdown.append(
+            {"pair_index": float(i), "s_seg_s": t1 - t0, "s_pose_s": t2 - t1}
+        )
     mean = lambda xs: sum(xs) / len(xs) if xs else 0.0  # noqa: E731
     return ProducerProfile(
         s_seg_seconds_per_pair=mean(seg_times),
