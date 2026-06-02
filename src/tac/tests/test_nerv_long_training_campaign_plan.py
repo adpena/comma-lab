@@ -261,6 +261,14 @@ def test_long_training_campaign_plan_applies_hinerv_pose_instability_feedback(
     argv = hi["command_argv"]
     lr = argv[argv.index("--learning-rate") + 1]
     assert lr == "0.0003"
+    output_dir = argv[argv.index("--output-dir") + 1]
+    output_name = Path(output_dir).name
+    assert output_name.startswith("hi_nerv_hinerv_tiny_adamw_feedback")
+    assert "pose_instability" in output_name
+    assert "lr0.0003" in output_name
+    assert "lower_learning_rate_from_pose_instability" in output_name
+    assert hi["output_dir_basename"] == output_name
+    assert hi["output_dir_reuse_policy"] == "fresh_feedback_mutation_path"
     adjustment = hi["feedback_launch_adjustment"]
     assert adjustment["schema"] == "hinerv_feedback_launch_adjustment.v1"
     assert adjustment["applied"] is True

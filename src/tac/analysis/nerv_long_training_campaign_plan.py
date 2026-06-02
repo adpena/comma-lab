@@ -266,6 +266,10 @@ def _hinerv_campaign_row(
     effective_learning_rate = float(
         launch_feedback_adjustment.get("learning_rate") or learning_rate
     )
+    output_dir_basename = _campaign_output_basename(
+        row_id=f"hi_nerv::{candidate_id}::{optimizer_kind}",
+        launch_feedback_adjustment=launch_feedback_adjustment,
+    )
     curriculum = build_hinerv_candidate_curriculum_plan(
         candidate=candidate,
         requested_epochs=int(epochs),
@@ -323,7 +327,7 @@ def _hinerv_campaign_row(
         str(optimizer_kind),
         "--run-post-export-materializers",
         "--output-dir",
-        (output_root / _safe_path_token(row_id)).as_posix(),
+        (output_root / output_dir_basename).as_posix(),
     ]
     if joint_recon_weight:
         command.extend(
@@ -369,6 +373,12 @@ def _hinerv_campaign_row(
             "joint_recon_pixel_weight_artifact": joint_recon_weight or None,
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
+            "output_dir_basename": output_dir_basename,
+            "output_dir_reuse_policy": (
+                "fresh_feedback_mutation_path"
+                if launch_feedback_adjustment.get("applied")
+                else "stable_candidate_optimizer_path"
+            ),
         },
     )
 
@@ -1091,6 +1101,30 @@ def _safe_path_token(value: str) -> str:
     token = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value)
     token = "_".join(part for part in token.split("_") if part)
     return token.strip("._-")[:180] or "campaign"
+
+
+def _campaign_output_basename(
+    *,
+    row_id: str,
+    launch_feedback_adjustment: Mapping[str, Any],
+) -> str:
+    base = _safe_path_token(row_id)
+    if not launch_feedback_adjustment.get("applied"):
+        return base
+    suffix_parts = ["feedback"]
+    if launch_feedback_adjustment.get("pose_instability_detected"):
+        suffix_parts.append("pose_instability")
+    learning_rate = _float_or_none(launch_feedback_adjustment.get("learning_rate"))
+    if learning_rate is not None:
+        suffix_parts.append(f"lr{_safe_path_token(_float_token(learning_rate))}")
+    mutations = [
+        _safe_path_token(str(mutation))[:48]
+        for mutation in (launch_feedback_adjustment.get("launch_mutations") or [])
+        if str(mutation).strip()
+    ]
+    suffix_parts.extend(mutations[:2])
+    suffix = "_".join(part for part in suffix_parts if part)
+    return _safe_path_token(f"{base}__{suffix}")
 
 
 def _float_token(value: float) -> str:

@@ -412,6 +412,9 @@ def _row_record(
         resolved_output = output_dir.expanduser().resolve(strict=False)
         if not any(_is_relative_to(resolved_output, root) for root in allowed_roots):
             blockers.append("selected_row_output_dir_not_on_allowed_ssd_tier")
+        collision_paths = _existing_output_artifact_paths(resolved_output)
+        if collision_paths:
+            blockers.append("selected_row_output_dir_contains_prior_training_artifacts")
     gate = row.get("score_lowering_gate")
     if isinstance(gate, Mapping):
         try:
@@ -429,6 +432,16 @@ def _row_record(
         "priority": row.get("priority"),
         "output_dir": None if output_dir is None else output_dir.as_posix(),
         "output_report_path": _output_report_path(command),
+        "existing_output_artifact_paths": (
+            []
+            if output_dir is None
+            else [
+                path.as_posix()
+                for path in _existing_output_artifact_paths(
+                    output_dir.expanduser().resolve(strict=False)
+                )
+            ]
+        ),
         "command": command,
         "admitted": not blockers,
         "blockers": _dedupe(blockers),
@@ -470,6 +483,17 @@ def _output_report_path(command: Sequence[str]) -> str:
     if out_dir is None:
         return ""
     return (out_dir / "compact_renderer_mlx_spine_runner_report.json").as_posix()
+
+
+def _existing_output_artifact_paths(output_dir: Path) -> list[Path]:
+    candidates = (
+        output_dir / "compact_renderer_mlx_spine_runner_report.json",
+        output_dir / "hi_nerv_mlx_training" / "telemetry.jsonl",
+        output_dir / "snerv_mlx_training" / "telemetry.jsonl",
+        output_dir / "nerv_candidate_byte_feedback_row.json",
+        output_dir / "nerv_candidate_byte_feedback.jsonl",
+    )
+    return [path for path in candidates if path.exists()]
 
 
 def _command_contains_forbidden_exact_or_remote_tokens(command: Sequence[str]) -> bool:

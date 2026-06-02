@@ -116,6 +116,45 @@ def test_nerv_long_training_campaign_admission_blocks_non_ssd_output(
     assert "selected_row_output_dir_not_on_allowed_ssd_tier" in admission["blockers"]
 
 
+def test_nerv_long_training_campaign_admission_blocks_existing_output_artifacts(
+    tmp_path: Path,
+) -> None:
+    verdict = dict(consume_candidate(_campaign_plan(tmp_path / "ssd")))
+    selected = verdict["selected_local_mlx_experiments"][0]
+    command = selected["command"]
+    out_dir = Path(command[command.index("--output-dir") + 1])
+    telemetry = out_dir / "hi_nerv_mlx_training" / "telemetry.jsonl"
+    telemetry.parent.mkdir(parents=True)
+    telemetry.write_text('{"epoch": 1}\n', encoding="utf-8")
+    claims = _claims_file(
+        tmp_path,
+        lane_id="lane_nerv_local_mlx",
+        instance_job_id="job_first",
+    )
+
+    admission = build_nerv_long_training_campaign_execution_admission(
+        verdict,
+        repo_root=tmp_path,
+        active_claims_path=claims,
+        lane_id="lane_nerv_local_mlx",
+        instance_job_id="job_first",
+        limit=1,
+        storage_expected_bytes_per_row=1024,
+        storage_reserve_free_gb=0.0,
+        allowed_output_roots=(tmp_path / "ssd",),
+        now_utc="2026-06-02T18:40:00Z",
+    )
+
+    assert admission["experiment_queue_ready"] is False
+    assert admission["admitted_experiment_count"] == 0
+    assert "selected_row_output_dir_contains_prior_training_artifacts" in admission[
+        "blockers"
+    ]
+    row = admission["selected_rows"][0]
+    assert telemetry.as_posix() in row["existing_output_artifact_paths"]
+    assert row["admitted"] is False
+
+
 def test_nerv_long_training_campaign_admission_cli_writes_artifacts(
     tmp_path: Path,
 ) -> None:
