@@ -1,0 +1,79 @@
+{
+  "schema": "modal_claim_recovery_reconciliation.v1",
+  "generated_at_utc": "2026-06-02T03:22:22Z",
+  "score_claim": false,
+  "frontier_score_claim": false,
+  "rank_or_kill_eligible": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "exact_or_full_video_launched": false,
+  "clean_worktree": "/Volumes/VertigoDataTier/pact/worktrees/pact-main-z5-claim-recover-20260602T0330Z",
+  "head_sha": "a272f454f9afb60fde899454894071e87bb606f5",
+  "claim_summary_after_reconciliation": {
+    "active": 1,
+    "stale_nonterminal": 8,
+    "terminal_latest": 723,
+    "unparsable_timestamp": 0,
+    "invalid_lane_id": 0
+  },
+  "pr101_storage_order_cpu": {
+    "lane_id": "lane_pr101_storage_order_len24_exact_cpu_20260601",
+    "instance_job_id": "pr101_storage_order_len24_exact_cpu_20260601",
+    "platform": "modal",
+    "call_id": "fc-01KT2BZT54G6CXPMD94SY43MMH",
+    "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval_cpu/pr101_storage_order_len24_cpu_20260601T1955Z",
+    "canonical_recovery_status": "pending",
+    "canonical_recovered_at_utc": "2026-06-02T03:17:34Z",
+    "claim_row_restored_to_main": true,
+    "restored_claim_status": "active_modal_cpu_auth_eval_pending_recovery_poll",
+    "restored_claim_timestamp_utc": "2026-06-02T03:22:22Z",
+    "restored_claim_predicted_eta_utc": "2026-06-02T06:17:34Z",
+    "terminalized": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false
+  },
+  "z5_wave2a_cpu": {
+    "lane_id": "lane_z5_rao_ballard_paired_cuda_ratification_wave2a_20260531_contest_cpu",
+    "instance_job_id": "z5_rao_ballard_ratification_wave2a_paired_modal_auth_20260531T143101Z_cpu",
+    "platform": "modal",
+    "call_id": "fc-01KSZ74F7PDTC0T7N9B7AV30PR",
+    "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval_cpu/z5_rao_ballard_ratification_wave2a_paired_modal_auth_20260531T143101Z_cpu",
+    "canonical_recovery_status": "pending",
+    "canonical_recovered_at_utc": "2026-06-02T03:20:45Z",
+    "refresh_claim_attempted": true,
+    "refresh_claim_result": "refused_stale_nonterminal_requires_terminal_closure",
+    "terminalized": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false
+  },
+  "z5_wave2a_cuda": {
+    "lane_id": "lane_z5_rao_ballard_paired_cuda_ratification_wave2a_20260531_contest_cuda",
+    "instance_job_id": "z5_rao_ballard_ratification_wave2a_paired_modal_auth_20260531T143101Z_cuda",
+    "platform": "modal",
+    "call_id": "fc-01KSZ7438Z9T0WXB22AN6D5H0T",
+    "output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/z5_rao_ballard_ratification_wave2a_paired_modal_auth_20260531T143101Z_cuda",
+    "canonical_recovery_status": "pending",
+    "canonical_recovered_at_utc": "2026-06-02T03:20:45Z",
+    "refresh_claim_attempted": true,
+    "refresh_claim_result": "refused_stale_nonterminal_requires_terminal_closure",
+    "terminalized": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false
+  },
+  "blockers": [
+    "pr101_cpu_modal_call_pending",
+    "z5_wave2a_cpu_modal_call_pending",
+    "z5_wave2a_cuda_modal_call_pending",
+    "z5_stale_nonterminal_refresh_refused_without_terminal_closure",
+    "eight_stale_nonterminal_claim_rows_remain",
+    "no_new_full_video_exact_cuda_until_pr101_cpu_terminal_or_operator_override"
+  ],
+  "next_actions": [
+    "Poll PR101 CPU with tools/recover_modal_auth_eval.py until terminal; then terminalize through canonical recovery.",
+    "Poll Z5 CPU/CUDA with tools/recover_modal_auth_eval.py until terminal; do not close as stale while Modal recovery reports pending.",
+    "Audit the other six stale nonterminal rows with lane-specific recovery paths before exact-eval planning relies on the ledger."
+  ]
+}
