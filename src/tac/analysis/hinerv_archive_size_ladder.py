@@ -14,6 +14,14 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
+from comma_lab.storage_tiers import (
+    DEFAULT_RESERVE_FREE_GB,
+    StorageTierError,
+    StorageTierSpec,
+    bytes_from_gib,
+    plan_experiment_storage,
+    require_selected_storage,
+)
 from tac.analysis.nerv_modelsize_ladder import (
     SCORER_ONLY_OBJECTIVE_AUTHORITY,
     hi_nerv_modelsize_config_rows,
@@ -45,15 +53,23 @@ def build_hinerv_archive_size_ladder(
     decoder_codec: str = "int8_mixed",
     emit_receiver_proof: bool = False,
     retain_receiver_proof_output: bool = False,
+    allow_local_output_dir: bool = False,
+    storage_expected_bytes: int = 512 * 1024 * 1024,
+    storage_reserve_free_gb: float = DEFAULT_RESERVE_FREE_GB,
 ) -> dict[str, Any]:
     """Export measured archive ZIP rows for the local HiNeRV size ladder."""
 
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    out, storage_plan = _resolve_output_dir(
+        output_dir=output_dir,
+        repo_root=root,
+        allow_local_output_dir=bool(allow_local_output_dir),
+        storage_expected_bytes=int(storage_expected_bytes),
+        storage_reserve_free_gb=float(storage_reserve_free_gb),
+    )
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
 
-    root = Path(repo_root).expanduser().resolve(strict=False)
-    out = Path(output_dir).expanduser().resolve(strict=False)
-    out.mkdir(parents=True, exist_ok=True)
     selected = {str(row_id) for row_id in row_ids} if row_ids is not None else None
     specs = [
         spec
@@ -138,6 +154,15 @@ def build_hinerv_archive_size_ladder(
         "axis_tag": "[planning/control]",
         "repo_root": root.as_posix(),
         "output_dir": out.as_posix(),
+        "storage_preflight": storage_plan.to_dict(),
+        "local_output_explicitly_allowed": bool(allow_local_output_dir),
+        "storage_expected_bytes": int(storage_expected_bytes),
+        "storage_reserve_free_gb": float(storage_reserve_free_gb),
+        "artifact_retention_policy": (
+            "durable_evidence_on_selected_storage; archive rows preserve bytes, "
+            "sha256, paths, false-authority flags, and blockers; local output "
+            "requires explicit opt-in"
+        ),
         "num_pairs": int(num_pairs),
         "decoder_codec": str(decoder_codec),
         "emit_receiver_proof": bool(emit_receiver_proof),
@@ -159,6 +184,55 @@ def build_hinerv_archive_size_ladder(
     }
     report["byte_price_plan"] = build_nerv_byte_price_plan(report)
     return report
+
+
+def _resolve_output_dir(
+    *,
+    output_dir: str | Path,
+    repo_root: Path,
+    allow_local_output_dir: bool,
+    storage_expected_bytes: int,
+    storage_reserve_free_gb: float,
+) -> tuple[Path, Any]:
+    output = Path(output_dir).expanduser()
+    if not output.is_absolute():
+        output = repo_root / output
+    output = output.resolve(strict=False)
+    if _looks_like_local_output(output) and not allow_local_output_dir:
+        raise StorageTierError(
+            "hinerv_archive_size_ladder_output_storage_preflight_failed: "
+            "local_disk_tier_disabled; choose /Volumes/VertigoDataTier/pact or "
+            "/Volumes/APDataStore/pact, or pass allow_local_output_dir=True"
+        )
+    plan = plan_experiment_storage(
+        (
+            StorageTierSpec(
+                name="explicit_hinerv_archive_size_ladder_output",
+                root=output,
+                priority=0,
+                reserve_free_bytes=bytes_from_gib(float(storage_reserve_free_gb)),
+                allow_create=True,
+                allow_local_disk=bool(allow_local_output_dir),
+            ),
+        ),
+        workload_subdir=".",
+        requested_bytes=int(storage_expected_bytes),
+        min_free_bytes=0,
+        create=True,
+        probe_writable=True,
+    )
+    try:
+        selected = require_selected_storage(plan)
+    except StorageTierError as exc:
+        raise StorageTierError(
+            "hinerv_archive_size_ladder_output_storage_preflight_failed: "
+            f"{exc}"
+        ) from exc
+    return selected, plan
+
+
+def _looks_like_local_output(path: Path) -> bool:
+    return not str(path.expanduser().resolve(strict=False)).startswith("/Volumes/")
 
 
 def render_hinerv_archive_size_ladder_markdown(report: Mapping[str, Any]) -> str:

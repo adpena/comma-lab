@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from comma_lab.storage_tiers import StorageTierError
 from tac.analysis.hinerv_archive_size_ladder import (
     HINERV_ARCHIVE_SIZE_LADDER_SCHEMA,
     build_hinerv_archive_size_ladder,
@@ -29,12 +30,15 @@ except ImportError:
 
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required for archive export")
 def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None:
+    output_dir = tmp_path / "archive_ladder"
     report = build_hinerv_archive_size_ladder(
-        output_dir=tmp_path / "archive_ladder",
+        output_dir=output_dir,
         repo_root=REPO_ROOT,
         num_pairs=1,
         row_ids=("hi_nerv_local_tiny",),
         emit_receiver_proof=False,
+        allow_local_output_dir=True,
+        storage_reserve_free_gb=0.0,
     )
 
     assert report["schema"] == HINERV_ARCHIVE_SIZE_LADDER_SCHEMA
@@ -43,6 +47,15 @@ def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None
     assert report["row_count"] == 1
     assert report["objective_authority"]["objective"] == "contest_auth_eval_scorer_only"
     assert "LPIPS" in report["objective_authority"]["forbidden_selection_terms"]
+    assert report["local_output_explicitly_allowed"] is True
+    assert report["storage_reserve_free_gb"] == 0.0
+    assert report["storage_preflight"]["selected_workload_root"] == str(
+        output_dir.resolve(strict=False)
+    )
+    assert report["storage_preflight"]["score_claim"] is False
+    assert "durable_evidence_on_selected_storage" in report[
+        "artifact_retention_policy"
+    ]
     assert "waterfill_group_bits_against_fixed_contest_byte_price" in report[
         "required_allocator_bindings"
     ]
@@ -77,11 +90,29 @@ def test_hinerv_archive_size_ladder_reports_missing_requested_row(tmp_path: Path
         repo_root=REPO_ROOT,
         num_pairs=1,
         row_ids=("does_not_exist",),
+        allow_local_output_dir=True,
+        storage_reserve_free_gb=0.0,
     )
 
     assert report["row_count"] == 0
     assert report["missing_requested_row_ids"] == ["does_not_exist"]
     assert "hinerv_archive_size_ladder_requested_rows_missing" in report["blockers"]
+
+
+def test_hinerv_archive_size_ladder_rejects_local_output_by_default(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "archive_ladder"
+
+    with pytest.raises(StorageTierError, match="local_disk_tier_disabled"):
+        build_hinerv_archive_size_ladder(
+            output_dir=output_dir,
+            repo_root=REPO_ROOT,
+            num_pairs=1,
+            row_ids=("does_not_exist",),
+        )
+
+    assert not output_dir.exists()
 
 
 def test_hinerv_modelsize_increment_rows_feed_byte_price_controller() -> None:

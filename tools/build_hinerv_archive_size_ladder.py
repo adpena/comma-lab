@@ -17,12 +17,15 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB  # noqa: E402
 from tac.analysis.hinerv_archive_size_ladder import (  # noqa: E402
     HINERV_ARCHIVE_SIZE_LADDER_SCHEMA,
     build_hinerv_archive_size_ladder,
     render_hinerv_archive_size_ladder_markdown,
 )
 from tac.repo_io import write_json  # noqa: E402
+
+DEFAULT_STORAGE_EXPECTED_BYTES = 512 * 1024 * 1024
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -36,6 +39,26 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--decoder-codec", default="int8_mixed")
     parser.add_argument("--emit-receiver-proof", action="store_true")
     parser.add_argument("--retain-receiver-proof-output", action="store_true")
+    parser.add_argument(
+        "--allow-local-output-dir",
+        action="store_true",
+        help=(
+            "Permit archive ladder artifacts on local disk. Default refuses local "
+            "outputs so bulky rebuildable archives land on the SSD tier."
+        ),
+    )
+    parser.add_argument(
+        "--storage-expected-bytes",
+        default=DEFAULT_STORAGE_EXPECTED_BYTES,
+        type=int,
+        help="Expected output bytes for the storage preflight.",
+    )
+    parser.add_argument(
+        "--storage-reserve-free-gb",
+        default=DEFAULT_RESERVE_FREE_GB,
+        type=float,
+        help="Free-space reserve required after expected output bytes.",
+    )
     args = parser.parse_args(argv)
 
     report = build_hinerv_archive_size_ladder(
@@ -46,6 +69,9 @@ def main(argv: list[str] | None = None) -> int:
         decoder_codec=str(args.decoder_codec),
         emit_receiver_proof=bool(args.emit_receiver_proof),
         retain_receiver_proof_output=bool(args.retain_receiver_proof_output),
+        allow_local_output_dir=bool(args.allow_local_output_dir),
+        storage_expected_bytes=int(args.storage_expected_bytes),
+        storage_reserve_free_gb=float(args.storage_reserve_free_gb),
     )
     output = args.output_json.expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)
