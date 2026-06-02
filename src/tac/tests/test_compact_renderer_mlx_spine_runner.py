@@ -1538,6 +1538,8 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
         mlx_prefilter_scorer_batch_pairs=4,
         mlx_prefilter_progress_every=7,
         upstream_dir=tmp_path / "canonical_upstream",
@@ -1632,6 +1634,8 @@ def test_hinerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
         repo_root=REPO_ROOT,
     )
 
@@ -1639,13 +1643,94 @@ def test_hinerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
     assert out["training_executed"] is False
     assert "pr95_long_campaign_prelaunch_gate_failed" in out["blockers"]
     assert "hi_nerv_modelsize_archive_budget_missing" in out["blockers"]
-    assert "hi_nerv_real_posenet_teacher_missing" in out["blockers"]
     gate = out["candidate_curriculum_plan"]["long_campaign_prelaunch_gate"]
     assert gate["launch_allowed"] is False
     assert "receiver_proof" in gate["post_run_requirements_excluded"]
     assert out["candidate_feedback"]["row"][
         "long_campaign_prelaunch_launch_allowed"
     ] is False
+    assert Path(out["report_path"]).is_file()
+
+
+def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fail_train(**_kwargs):
+        raise AssertionError("unscored HiNeRV launch must refuse before training")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+    ladder = tmp_path / "hinerv_receiver_closed_ladder.json"
+    ladder.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_receiver_closed_modelsize_ladder.v1",
+                "carrier_id": "hi_nerv",
+                "modelsize_budget_rows": [
+                    {
+                        "row_id": "tiny",
+                        "archive_bytes": 40_000,
+                        "nonrate_score": 95.0,
+                        "modelsize_mparams": 0.02,
+                        "fc_dim": 8,
+                        "receiver_closed": True,
+                        "receiver_proof_passed": True,
+                        "receiver_archive_replay_verified": True,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                    {
+                        "row_id": "small",
+                        "archive_bytes": 80_000,
+                        "nonrate_score": 80.0,
+                        "modelsize_mparams": 0.04,
+                        "fc_dim": 16,
+                        "receiver_closed": True,
+                        "receiver_proof_passed": True,
+                        "receiver_archive_replay_verified": True,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_refusal",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        modelsize_budget_json_paths=(ladder,),
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "hi_nerv_mlx_scoreaware_launch_refused"
+    assert out["training_executed"] is False
+    assert "hi_nerv_real_segnet_teacher_missing" in out["blockers"]
+    assert "hi_nerv_real_posenet_teacher_missing" in out["blockers"]
+    assert out["modelsize_budget_evidence"]["row_count"] == 2
+    assert out["modelsize_budget_evidence"]["sources"][0]["rows_added"] == 2
+    plan = out["score_aware_carrier_training_plan"]
+    assert plan["planner_action"] == "run_score_aware_decoder_weight_training_full_main"
+    assert plan["modelsize_budget_receiver_closed_ready"] is True
+    assert plan["evidence_summary"]["receiver_closed_selected_modelsize_archive_bytes"] == 80_000
+    assert out["score_aware_training_config_gate"]["launch_allowed"] is False
+    assert out["score_claim"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
     assert Path(out["report_path"]).is_file()
 
 
@@ -1746,6 +1831,8 @@ def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
         repo_root=REPO_ROOT,
     )
 
@@ -1822,6 +1909,8 @@ def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
         repo_root=REPO_ROOT,
     )
 
@@ -1898,6 +1987,8 @@ def test_hinerv_full_video_bad_mlx_score_does_not_unlock_default_cpu_replay(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
         repo_root=REPO_ROOT,
     )
 
@@ -1942,6 +2033,8 @@ def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
         repo_root=REPO_ROOT,
     )
 
@@ -2027,6 +2120,8 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         embed_dim=4,
         decoder_channel=4,
         decoder_codec="int2_scale_bundled",
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
         modelsize_candidate={
             "schema": "hinerv_modelsize_candidate.v1",
             "family": "hi_nerv",
@@ -2137,6 +2232,7 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
+        allow_unscored_research_smoke=True,
         repo_root=REPO_ROOT,
     )
 

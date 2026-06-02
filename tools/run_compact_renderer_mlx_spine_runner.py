@@ -3515,6 +3515,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     decoder_channel: int = 8,
     decoder_codec: str = "portfolio_auto",
     modelsize_candidate: Mapping[str, Any] | None = None,
+    allow_unscored_research_smoke: bool = False,
+    modelsize_budget_json_paths: tuple[str | Path, ...] = (),
+    receiver_closed_ladder_json_paths: tuple[str | Path, ...] = (),
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
@@ -3558,6 +3561,79 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             f"output dir is non-empty; pass --overwrite: {out}"
         )
     out.mkdir(parents=True, exist_ok=True)
+    modelsize_budget_rows, modelsize_budget_sources = (
+        _load_compact_modelsize_budget_rows(
+            (*modelsize_budget_json_paths, *receiver_closed_ladder_json_paths),
+            base=root,
+        )
+    )
+    score_aware_evidence = (
+        {"modelsize_budget_rows": modelsize_budget_rows}
+        if modelsize_budget_rows
+        else {}
+    )
+    score_aware_training_plan = _score_aware_carrier_training_plan(
+        "hi_nerv",
+        _backend_with_score_aware_evidence("hi_nerv", score_aware_evidence),
+    )
+    modelsize_budget_evidence = {
+        "schema": "compact_hi_nerv_modelsize_budget_evidence.v1",
+        "source_count": len(modelsize_budget_sources),
+        "row_count": len(modelsize_budget_rows),
+        "sources": modelsize_budget_sources,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    config_gate = _validate_hi_nerv_frontier_training_config(
+        segnet_distillation_weight=segnet_distillation_weight,
+        pose_distillation_weight=pose_distillation_weight,
+        allow_segnet_only_research=allow_segnet_only_research,
+        allow_unscored_research_smoke=allow_unscored_research_smoke,
+        score_aware_training_plan=score_aware_training_plan,
+    )
+    if not config_gate["launch_allowed"]:
+        refusal = _base_report(
+            output_dir=out,
+            mode="hi_nerv_mlx_scoreaware_launch_refused",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        refusal.update(
+            {
+                "execute_family": "hi_nerv",
+                "num_pairs": int(num_pairs),
+                "epochs_requested": int(epochs),
+                "training_executed": False,
+                "launch_refusal_reason": (
+                    "HiNeRV frontier runs require real SegNet and PoseNet "
+                    "score-aware loss weights unless explicitly marked as an "
+                    "unscored research smoke"
+                ),
+                "score_aware_training_config_gate": config_gate,
+                "score_aware_carrier_training_plan": score_aware_training_plan,
+                "modelsize_budget_evidence": modelsize_budget_evidence,
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
+                "blockers": _dedupe(
+                    [
+                        *config_gate.get("blockers", []),
+                        *score_aware_training_plan.get("blockers", []),
+                        "hi_nerv_training_not_launched",
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                    ]
+                ),
+            }
+        )
+        refusal["candidate_feedback"] = write_nerv_candidate_feedback_files(
+            runner_report=refusal,
+            output_dir=out,
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, refusal)
+        return {**refusal, "report_path": path.as_posix()}
     candidate = dict(modelsize_candidate or {})
     launch_latent_dim = int(candidate.get("latent_dim", latent_dim))
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
@@ -3622,6 +3698,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "ready_for_exact_eval_dispatch": False,
                 },
                 "candidate_curriculum_plan": launch_curriculum_plan,
+                "score_aware_training_config_gate": config_gate,
+                "score_aware_carrier_training_plan": score_aware_training_plan,
+                "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": prelaunch_blockers,
             }
         )
@@ -3700,6 +3779,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
+                "score_aware_training_config_gate": config_gate,
+                "score_aware_carrier_training_plan": score_aware_training_plan,
+                "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": ["hi_nerv_mlx_scoreaware_or_export_failed"],
             }
         )
@@ -3779,6 +3861,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers: list[Any] = [
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    blockers.extend(config_gate.get("blockers") or [])
+    blockers.extend(score_aware_training_plan.get("blockers") or [])
     blockers.extend(candidate_curriculum_plan.get("blockers") or [])
     blockers.extend(local_cpu_replay_blockers)
     pr95_curriculum_enabled = int(epochs) >= 8
@@ -3865,6 +3949,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "archive_sha256": artifact_dict.get("archive_sha256"),
             "training_artifact": artifact_dict,
             "candidate_curriculum_plan": candidate_curriculum_plan,
+            "score_aware_training_config_gate": config_gate,
+            "score_aware_carrier_training_plan": score_aware_training_plan,
+            "modelsize_budget_evidence": modelsize_budget_evidence,
             "score_aware_training": {
                 "schema": "compact_hi_nerv_score_aware_training.v1",
                 "status": "executed_mlx_local_false_authority",
@@ -3876,6 +3963,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "allow_unscored_research_smoke": bool(allow_unscored_research_smoke),
+                "config_gate": config_gate,
                 "decoder_codec": str(launch_decoder_codec),
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
                 "coder_aware_qat": _coder_qat_report_metadata(
@@ -4849,6 +4938,144 @@ def _score_aware_carrier_training_plan(
         carrier_id=family,
         baseline_id="pr95_hnerv",
     )
+
+
+def _backend_with_score_aware_evidence(
+    family: str,
+    evidence_updates: Mapping[str, Any],
+) -> dict[str, Any]:
+    backend = dict(COMPACT_FAMILY_BACKENDS.get(family) or {})
+    existing = dict(backend.get("score_aware_training_evidence") or {})
+    existing.update(dict(evidence_updates))
+    backend["score_aware_training_evidence"] = existing
+    return backend
+
+
+def _load_compact_modelsize_budget_rows(
+    paths: tuple[str | Path, ...],
+    *,
+    base: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    rows: list[dict[str, Any]] = []
+    sources: list[dict[str, Any]] = []
+    for path in paths:
+        resolved = _resolve(path, base=base)
+        record: dict[str, Any] = {
+            "path": resolved.as_posix(),
+            "exists": resolved.is_file(),
+            "rows_added": 0,
+            "blockers": [],
+        }
+        if not resolved.is_file():
+            record["blockers"].append("modelsize_budget_json_missing")
+            sources.append(record)
+            continue
+        try:
+            payload = json.loads(resolved.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            record["blockers"].append("modelsize_budget_json_unreadable")
+            record["error"] = repr(exc)
+            sources.append(record)
+            continue
+        extracted = _modelsize_budget_rows_from_payload(
+            payload,
+            source_path=resolved,
+        )
+        rows.extend(extracted)
+        record["rows_added"] = len(extracted)
+        if not extracted:
+            record["blockers"].append("modelsize_budget_json_rows_missing")
+        sources.append(record)
+    return rows, sources
+
+
+def _modelsize_budget_rows_from_payload(
+    payload: Any,
+    *,
+    source_path: Path,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if isinstance(payload, list):
+        source_rows = payload
+    elif isinstance(payload, Mapping):
+        source_rows = payload.get("modelsize_budget_rows")
+        if not isinstance(source_rows, list):
+            source_rows = _modelsize_budget_rows_from_plan(
+                payload.get("modelsize_budget_plan")
+            )
+        if not source_rows and isinstance(payload.get("rows"), list):
+            source_rows = payload["rows"]
+    else:
+        source_rows = []
+    if not isinstance(source_rows, list):
+        return rows
+    for index, row in enumerate(source_rows):
+        if not isinstance(row, Mapping):
+            continue
+        normalized = dict(row)
+        normalized.setdefault("source_modelsize_budget_json", source_path.as_posix())
+        normalized.setdefault("source_modelsize_budget_row_index", index)
+        rows.append(normalized)
+    return rows
+
+
+def _modelsize_budget_rows_from_plan(plan: Any) -> list[dict[str, Any]]:
+    if not isinstance(plan, Mapping):
+        return []
+    source_rows = plan.get("receiver_closed_points") or plan.get("points") or []
+    if not isinstance(source_rows, list):
+        return []
+    rows: list[dict[str, Any]] = []
+    for point in source_rows:
+        if not isinstance(point, Mapping):
+            continue
+        row = dict(point.get("source") or {})
+        row.setdefault("row_id", point.get("row_id"))
+        row.setdefault("archive_bytes", point.get("archive_bytes"))
+        row.setdefault("nonrate_score", point.get("nonrate_score"))
+        row.setdefault("receiver_closed", point.get("receiver_closed_bytes"))
+        row.setdefault("receiver_proof_passed", point.get("receiver_closed_bytes"))
+        rows.append(row)
+    return rows
+
+
+def _validate_hi_nerv_frontier_training_config(
+    *,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    allow_segnet_only_research: bool,
+    allow_unscored_research_smoke: bool,
+    score_aware_training_plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    segnet_attached = float(segnet_distillation_weight) > 0.0
+    posenet_attached = float(pose_distillation_weight) > 0.0
+    if not segnet_attached:
+        blockers.append("hi_nerv_real_segnet_teacher_missing")
+    if not posenet_attached:
+        blockers.append("hi_nerv_real_posenet_teacher_missing")
+    if allow_segnet_only_research and segnet_attached and not posenet_attached:
+        blockers.append("hi_nerv_segnet_only_research_not_frontier_targeting")
+    unscored_smoke = bool(allow_unscored_research_smoke)
+    launch_allowed = (segnet_attached and posenet_attached) or unscored_smoke
+    return {
+        "schema": "compact_hi_nerv_score_aware_training_config_gate.v1",
+        "launch_allowed": launch_allowed,
+        "frontier_targeting": segnet_attached and posenet_attached,
+        "allow_segnet_only_research": bool(allow_segnet_only_research),
+        "allow_unscored_research_smoke": unscored_smoke,
+        "real_segnet_teacher_attached": segnet_attached,
+        "real_posenet_teacher_attached": posenet_attached,
+        "modelsize_budget_receiver_closed_ready": bool(
+            score_aware_training_plan.get("modelsize_budget_receiver_closed_ready")
+        ),
+        "planner_action": score_aware_training_plan.get("planner_action"),
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _run_hi_nerv_mlx_scoreaware_smoke(
@@ -6255,6 +6482,35 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--allow-unscored-research-smoke",
+        action="store_true",
+        help=(
+            "Permit tiny adapter/runtime smokes without real SegNet/PoseNet "
+            "loss weights. Default frontier-targeting HiNeRV runs refuse "
+            "unscored launches."
+        ),
+    )
+    parser.add_argument(
+        "--modelsize-budget-json",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Receiver-closed or advisory modelsize budget JSON to feed the "
+            "HiNeRV score-aware training planner. Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-closed-ladder-json",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Receiver-closed NeRV modelsize ladder JSON. Rows become the "
+            "byte-price authority for HiNeRV long-run size selection."
+        ),
+    )
+    parser.add_argument(
         "--run-local-cpu-replay",
         dest="run_local_cpu_replay",
         action="store_true",
@@ -6755,6 +7011,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
             allow_segnet_only_research=args.allow_segnet_only_research,
+            allow_unscored_research_smoke=args.allow_unscored_research_smoke,
+            modelsize_budget_json_paths=tuple(args.modelsize_budget_json),
+            receiver_closed_ladder_json_paths=tuple(args.receiver_closed_ladder_json),
             coder_aware_qat=args.coder_aware_qat,
             coder_qat_quant_bits=args.coder_qat_quant_bits,
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
