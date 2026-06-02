@@ -8,7 +8,9 @@ from pathlib import Path
 
 from tac.analysis.nerv_candidate_feedback import (
     build_nerv_candidate_feedback_row,
+    refresh_nerv_candidate_feedback_report,
     write_nerv_candidate_feedback_files,
+    write_refreshed_nerv_candidate_feedback_files,
 )
 
 
@@ -198,3 +200,139 @@ def test_write_nerv_candidate_feedback_files_writes_json_and_append_ledger(
     assert ledger_rows == [row]
     assert output["score_claim"] is False
     assert output["promotion_eligible"] is False
+
+
+def test_refresh_nerv_candidate_feedback_report_repairs_batched_mlx_signal(
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "batched_mlx_profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "max_pairs": 600,
+                "num_pairs": 600,
+                "n_samples": 600,
+                "scorer_batch_pairs": 8,
+                "scope_status": {"full_video": "executed"},
+                "score_components": {"canonical_score": 91.0},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    report = _runner_report(tmp_path)
+    report["num_pairs"] = 600
+    report["mlx_profile_paths"] = [profile.as_posix()]
+    report["local_cpu_replay_gate"] = {
+        "schema": "compact_runner_local_cpu_replay_gate.v1",
+        "requested": None,
+        "default_enabled_for_full_coverage": False,
+        "has_full_video_mlx_prefilter": False,
+        "local_replay_mlx_prefilter_passed": False,
+        "coverage_valid_for_replay": True,
+        "executed": False,
+    }
+    report["blockers"] = [
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "full_video_mlx_scorer_replay_not_attached",
+        "local_cpu_replay_waiting_for_full_video_mlx_prefilter",
+        "hi_nerv_full_video_local_prefilter_missing",
+    ]
+    report["candidate_curriculum_plan"]["pr95_stack_binding"] = {
+        "schema": "pr95_stack_binding_requirements.v1",
+        "satisfied_count": 15,
+        "missing_count": 2,
+        "complete": False,
+        "blockers": [
+            "hi_nerv_full_video_local_prefilter_missing",
+            "hi_nerv_local_cpu_replay_gate_missing",
+        ],
+    }
+
+    refreshed, refresh = refresh_nerv_candidate_feedback_report(
+        runner_report=report,
+        repo_root=tmp_path,
+    )
+
+    assert refresh["has_full_video_mlx_prefilter"] is True
+    assert refresh["local_replay_mlx_prefilter_passed"] is False
+    assert refresh["removed_stale_blockers"] == [
+        "full_video_mlx_scorer_replay_not_attached",
+        "local_cpu_replay_waiting_for_full_video_mlx_prefilter",
+        "hi_nerv_full_video_local_prefilter_missing",
+    ]
+    assert refresh["removed_nested_pr95_stack_binding_blockers"] == [
+        "hi_nerv_full_video_local_prefilter_missing"
+    ]
+    assert refreshed["local_cpu_replay_gate"][
+        "has_full_video_mlx_prefilter"
+    ] is True
+    assert refreshed["local_cpu_replay_gate"][
+        "local_replay_mlx_prefilter_passed"
+    ] is False
+    assert "full_video_mlx_scorer_replay_not_attached" not in refreshed["blockers"]
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" not in refreshed[
+        "blockers"
+    ]
+    assert "mlx_profile_batch_pairs_not_singleton" in refreshed["blockers"]
+    assert "local_cpu_replay_blocked_by_mlx_prefilter_score" in refreshed[
+        "blockers"
+    ]
+    pr95_binding = refreshed["candidate_curriculum_plan"]["pr95_stack_binding"]
+    assert pr95_binding["blockers"] == ["hi_nerv_local_cpu_replay_gate_missing"]
+    assert pr95_binding["missing_count"] == 1
+    assert pr95_binding["satisfied_count"] == 16
+    assert pr95_binding["complete"] is False
+
+
+def test_write_refreshed_nerv_candidate_feedback_files_writes_manifest(
+    tmp_path: Path,
+) -> None:
+    profile = tmp_path / "batched_mlx_profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "hprc_mlx_component_neutralization_profile.v1",
+                "max_pairs": 600,
+                "num_pairs": 600,
+                "n_samples": 600,
+                "scorer_batch_pairs": 8,
+                "scope_status": {"full_video": "executed"},
+                "score_components": {"canonical_score": 91.0},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    report = _runner_report(tmp_path)
+    report["num_pairs"] = 600
+    source = tmp_path / "runner_report.json"
+    source.write_text(json.dumps(report, sort_keys=True), encoding="utf-8")
+
+    output = write_refreshed_nerv_candidate_feedback_files(
+        runner_report=report,
+        output_dir=tmp_path / "feedback_refresh",
+        repo_root=tmp_path,
+        source_report_path=source,
+        mlx_profile_paths=(profile,),
+    )
+
+    refresh_path = Path(output["refresh_path"])
+    refreshed_report_path = Path(output["refreshed_runner_report_path"])
+    row_path = Path(output["candidate_feedback"]["row_path"])
+    assert refresh_path.is_file()
+    assert refreshed_report_path.is_file()
+    assert row_path.is_file()
+    row = json.loads(row_path.read_text(encoding="utf-8"))
+    refresh = json.loads(refresh_path.read_text(encoding="utf-8"))
+    assert row["mlx_prefilter_has_full_video"] is True
+    assert row["mlx_prefilter_blockers"] == ["mlx_profile_batch_pairs_not_singleton"]
+    assert refresh["candidate_feedback_row_path"] == row_path.as_posix()
+    assert output["score_claim"] is False

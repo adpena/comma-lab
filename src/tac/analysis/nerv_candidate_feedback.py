@@ -9,8 +9,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.substrates.hprc.mlx_prefilter_coverage import (
+    DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY,
+    summarize_mlx_prefilter_coverage,
+)
+from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
+
 SCHEMA = "nerv_candidate_feedback_row.v1"
 LEDGER_SCHEMA = "nerv_candidate_byte_feedback_ledger.v1"
+REFRESH_SCHEMA = "nerv_candidate_feedback_refresh.v1"
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -19,6 +26,19 @@ FALSE_AUTHORITY = {
     "promotion_eligible": False,
     "ready_for_exact_eval_dispatch": False,
 }
+
+_MLX_PREFILTER_MISSING_BLOCKERS = {
+    "full_video_mlx_scorer_replay_not_attached",
+    "local_cpu_replay_waiting_for_full_video_mlx_prefilter",
+    "hi_nerv_full_video_local_prefilter_missing",
+    "snerv_full_video_local_prefilter_missing",
+    "mlx_prefilter_not_full_video",
+    "sampled_mlx_prefilter_requires_full_video_rerun",
+}
+
+_LOCAL_REPLAY_BLOCKED_BY_MLX_SCORE = (
+    "local_cpu_replay_blocked_by_mlx_prefilter_score"
+)
 
 
 def _sha256_file(path: Path) -> str | None:
@@ -166,6 +186,98 @@ def build_nerv_candidate_feedback_row(
     }
 
 
+def refresh_nerv_candidate_feedback_report(
+    *,
+    runner_report: Mapping[str, Any],
+    repo_root: str | Path,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
+    required_pairs: int = CONTEST_PAIR_COUNT,
+    max_mlx_score_for_local_replay: float | None = (
+        DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY
+    ),
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return a feedback-safe runner report with refreshed MLX gate evidence.
+
+    This is a backfill helper for reports produced before the batched-MLX
+    acquisition/replay split existed. It does not rewrite the source report or
+    grant authority; it only recomputes typed coverage from file-backed profile
+    paths so candidate-feedback ledgers do not lose useful full-video GPU
+    acquisition signal.
+    """
+
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    selected_profiles = _dedupe_strings(
+        [
+            *(str(path) for path in mlx_profile_paths),
+            *_infer_mlx_profile_paths(runner_report),
+        ]
+    )
+    refreshed = json.loads(json.dumps(dict(runner_report), sort_keys=True, default=str))
+    old_blockers = list(refreshed.get("blockers") or [])
+    coverage = summarize_mlx_prefilter_coverage(
+        tuple(selected_profiles),
+        root=root,
+        required_pairs=int(required_pairs),
+        max_mlx_score_for_local_replay=max_mlx_score_for_local_replay,
+    )
+    refreshed["mlx_profile_paths"] = [
+        str(path) for path in coverage.get("full_video_profile_paths") or selected_profiles
+    ]
+    refreshed["mlx_prefilter_coverage"] = coverage
+    has_full = bool(coverage.get("has_full_video_mlx_prefilter"))
+    replay_passed = bool(coverage.get("local_replay_mlx_prefilter_passed"))
+    num_pairs = _int_or_none(refreshed.get("num_pairs")) or 0
+    coverage_valid_for_replay = int(num_pairs) >= int(required_pairs)
+    gate = dict(refreshed.get("local_cpu_replay_gate") or {})
+    gate.setdefault("schema", "compact_runner_local_cpu_replay_gate.v1")
+    gate["has_full_video_mlx_prefilter"] = has_full
+    gate["local_replay_mlx_prefilter_passed"] = replay_passed
+    gate["coverage_valid_for_replay"] = coverage_valid_for_replay
+    gate["default_enabled_for_full_coverage"] = bool(
+        coverage_valid_for_replay and replay_passed
+    )
+    gate.setdefault("requested", None)
+    gate.setdefault(
+        "executed",
+        isinstance(refreshed.get("local_cpu_replay_summary"), Mapping),
+    )
+    refreshed["local_cpu_replay_gate"] = gate
+
+    blockers = list(old_blockers)
+    removed_blockers: list[str] = []
+    if has_full:
+        kept: list[str] = []
+        for blocker in blockers:
+            if blocker in _MLX_PREFILTER_MISSING_BLOCKERS:
+                removed_blockers.append(str(blocker))
+            else:
+                kept.append(str(blocker))
+        blockers = kept
+    blockers.extend(str(blocker) for blocker in coverage.get("blockers") or [])
+    if has_full and coverage_valid_for_replay and not replay_passed:
+        blockers.append(_LOCAL_REPLAY_BLOCKED_BY_MLX_SCORE)
+    refreshed["blockers"] = _dedupe_strings(blockers)
+    nested_removed = (
+        _refresh_nested_pr95_stack_binding_blockers(refreshed) if has_full else []
+    )
+
+    refresh = {
+        "schema": REFRESH_SCHEMA,
+        "profile_paths": selected_profiles,
+        "required_pairs": int(required_pairs),
+        "max_mlx_score_for_local_replay": max_mlx_score_for_local_replay,
+        "has_full_video_mlx_prefilter": has_full,
+        "local_replay_mlx_prefilter_passed": replay_passed,
+        "old_blockers": old_blockers,
+        "removed_stale_blockers": removed_blockers,
+        "removed_nested_pr95_stack_binding_blockers": nested_removed,
+        "new_blockers": refreshed["blockers"],
+        "mlx_prefilter_coverage": coverage,
+        **FALSE_AUTHORITY,
+    }
+    return refreshed, refresh
+
+
 def write_nerv_candidate_feedback_files(
     *,
     runner_report: Mapping[str, Any],
@@ -195,9 +307,147 @@ def write_nerv_candidate_feedback_files(
     }
 
 
+def write_refreshed_nerv_candidate_feedback_files(
+    *,
+    runner_report: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    source_report_path: str | Path | None = None,
+    mlx_profile_paths: tuple[str | Path, ...] = (),
+    required_pairs: int = CONTEST_PAIR_COUNT,
+    max_mlx_score_for_local_replay: float | None = (
+        DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY
+    ),
+) -> dict[str, Any]:
+    """Refresh MLX coverage and write a feedback row plus refresh manifest."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    refreshed, refresh = refresh_nerv_candidate_feedback_report(
+        runner_report=runner_report,
+        repo_root=repo_root,
+        mlx_profile_paths=mlx_profile_paths,
+        required_pairs=int(required_pairs),
+        max_mlx_score_for_local_replay=max_mlx_score_for_local_replay,
+    )
+    refreshed_report_path = out / "refreshed_runner_report_for_feedback.json"
+    refreshed_report_path.write_text(
+        json.dumps(refreshed, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    feedback = write_nerv_candidate_feedback_files(
+        runner_report=refreshed,
+        output_dir=out,
+        source_report_path=source_report_path,
+    )
+    refresh_path = out / "nerv_candidate_feedback_refresh.json"
+    refresh.update(
+        {
+            "refreshed_runner_report_path": refreshed_report_path.as_posix(),
+            "candidate_feedback_row_path": feedback["row_path"],
+            "candidate_feedback_ledger_path": feedback["ledger_path"],
+        }
+    )
+    refresh_path.write_text(
+        json.dumps(refresh, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "schema": REFRESH_SCHEMA,
+        "refresh": refresh,
+        "refresh_path": refresh_path.as_posix(),
+        "refreshed_runner_report_path": refreshed_report_path.as_posix(),
+        "candidate_feedback": feedback,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _infer_mlx_profile_paths(runner_report: Mapping[str, Any]) -> list[str]:
+    paths: list[str] = []
+    for key in ("mlx_profile_paths", "local_mlx_prefilter_profile_paths"):
+        value = runner_report.get(key)
+        if isinstance(value, (list, tuple)):
+            paths.extend(str(path) for path in value if path)
+    auto_path = runner_report.get("auto_mlx_prefilter_profile_path")
+    if auto_path:
+        paths.append(str(auto_path))
+    coverage = runner_report.get("mlx_prefilter_coverage")
+    if isinstance(coverage, Mapping):
+        for key in ("full_video_profile_paths", "local_replay_profile_paths"):
+            value = coverage.get(key)
+            if isinstance(value, (list, tuple)):
+                paths.extend(str(path) for path in value if path)
+    return _dedupe_strings(paths)
+
+
+def _refresh_nested_pr95_stack_binding_blockers(report: dict[str, Any]) -> list[str]:
+    removed: list[str] = []
+    candidate_paths = [
+        ("candidate_curriculum_plan", "pr95_stack_binding"),
+        (
+            "modelsize_candidate_selection",
+            "candidate_curriculum_plan",
+            "pr95_stack_binding",
+        ),
+        ("modelsize_candidate_selection", "pr95_stack_binding"),
+    ]
+    for path in candidate_paths:
+        container = report
+        for key in path:
+            next_value = container.get(key) if isinstance(container, dict) else None
+            if not isinstance(next_value, dict):
+                container = {}
+                break
+            container = next_value
+        if not container:
+            continue
+        blockers = list(container.get("blockers") or [])
+        kept = [
+            str(blocker)
+            for blocker in blockers
+            if blocker not in _MLX_PREFILTER_MISSING_BLOCKERS
+        ]
+        path_removed = [
+            str(blocker)
+            for blocker in blockers
+            if blocker in _MLX_PREFILTER_MISSING_BLOCKERS
+        ]
+        if not path_removed:
+            continue
+        container["blockers"] = _dedupe_strings(kept)
+        container["missing_count"] = len(container["blockers"])
+        satisfied = _int_or_none(container.get("satisfied_count"))
+        if satisfied is not None:
+            container["satisfied_count"] = satisfied + len(path_removed)
+        container["complete"] = not container["blockers"]
+        removed.extend(path_removed)
+    return _dedupe_strings(removed)
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        text = str(value)
+        if text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 __all__ = [
     "LEDGER_SCHEMA",
+    "REFRESH_SCHEMA",
     "SCHEMA",
     "build_nerv_candidate_feedback_row",
+    "refresh_nerv_candidate_feedback_report",
     "write_nerv_candidate_feedback_files",
+    "write_refreshed_nerv_candidate_feedback_files",
 ]
