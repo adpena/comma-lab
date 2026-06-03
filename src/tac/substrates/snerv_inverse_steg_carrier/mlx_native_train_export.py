@@ -3716,7 +3716,15 @@ def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
                 "blockers": ["snerv_official_receiver_tensor_map_malformed_row"],
             }
         name = str(raw_row.get("name") or "")
-        nbytes = int(raw_row.get("bytes") or 0)
+        try:
+            nbytes, byte_key = _official_receiver_tensor_manifest_nbytes(raw_row)
+        except (TypeError, ValueError) as exc:
+            return {
+                **base,
+                "official_decoder_payload_selected": True,
+                "blockers": ["snerv_official_receiver_tensor_map_invalid_tensor_bytes"],
+                "error": str(exc),
+            }
         category = _official_receiver_tensor_category(name)
         row = {
             "name": name,
@@ -3724,6 +3732,7 @@ def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
             "shape": [int(value) for value in raw_row.get("shape") or ()],
             "dtype": str(raw_row.get("dtype") or ""),
             "bytes": nbytes,
+            "manifest_byte_key": byte_key,
             "sha256": str(raw_row.get("sha256") or ""),
         }
         rows.append(row)
@@ -3746,6 +3755,41 @@ def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
         "rows": rows,
         "blockers": [],
     }
+
+
+def _official_receiver_tensor_manifest_nbytes(
+    raw_row: Mapping[str, Any],
+) -> tuple[int, str]:
+    """Read official tensor byte count across manifest dialects.
+
+    The active receiver encoder emits ``bytes``.  Earlier source-parity helpers
+    and some audit artifacts used ``nbytes``.  The tensor map is a custody
+    profiler, so it must accept either dialect while refusing ambiguous or
+    missing accounting.
+    """
+
+    has_bytes = raw_row.get("bytes") is not None
+    has_nbytes = raw_row.get("nbytes") is not None
+    if not has_bytes and not has_nbytes:
+        raise ValueError("official tensor manifest row missing bytes/nbytes")
+    bytes_value = int(raw_row["bytes"]) if has_bytes else None
+    nbytes_value = int(raw_row["nbytes"]) if has_nbytes else None
+    if bytes_value is not None and nbytes_value is not None:
+        if bytes_value != nbytes_value:
+            raise ValueError(
+                "official tensor manifest row has mismatched bytes and nbytes"
+            )
+        value = bytes_value
+        key = "bytes+nbytes"
+    elif bytes_value is not None:
+        value = bytes_value
+        key = "bytes"
+    else:
+        value = int(nbytes_value)
+        key = "nbytes"
+    if value <= 0:
+        raise ValueError("official tensor manifest row has non-positive byte count")
+    return int(value), key
 
 
 def _official_receiver_tensor_category(name: str) -> str:

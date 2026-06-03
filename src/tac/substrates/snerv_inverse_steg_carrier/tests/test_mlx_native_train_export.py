@@ -2145,3 +2145,91 @@ def test_prefilter_profile_accepts_receiver_proven_full_video_artifact(
     assert profile["prefilter_ready_for_cpu_replay"] is True
     assert profile["blockers"] == []
     assert profile["score_claim"] is False
+
+
+def test_official_receiver_tensor_map_accepts_nbytes_manifest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    def fake_unpack(packet: bytes):
+        assert packet == b"packet"
+        return type("Decoded", (), {"sections": {"decoder_payload": b"decoder"}})()
+
+    def fake_header(payload: bytes) -> dict[str, object]:
+        assert payload == b"decoder"
+        return {
+            "schema": mod.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+            "codec": "lzma_raw_tensor_payload",
+            "tensor_manifest": [
+                {
+                    "name": "mfu.blocks.0.weight",
+                    "shape": [2, 2],
+                    "dtype": "float64_le",
+                    "nbytes": 32,
+                    "sha256": "a" * 64,
+                },
+                {
+                    "name": "hfr.heads.0.bias",
+                    "shape": [4],
+                    "dtype": "float64_le",
+                    "bytes": 32,
+                    "nbytes": 32,
+                    "sha256": "b" * 64,
+                },
+            ],
+        }
+
+    monkeypatch.setattr(mod, "unpack_snerv_archive", fake_unpack)
+    monkeypatch.setattr(mod, "inspect_decoder_payload_header", fake_header)
+
+    tensor_map = mod._official_receiver_tensor_map_from_packet(b"packet")
+
+    assert tensor_map["receiver_tensor_map_verified"] is True
+    assert tensor_map["blockers"] == []
+    assert tensor_map["total_tensor_bytes"] == 64
+    assert tensor_map["category_bytes"]["official_mfu_weight_payload"] == 32
+    assert tensor_map["category_bytes"]["official_hfr_weight_payload"] == 32
+    rows = {row["name"]: row for row in tensor_map["rows"]}
+    assert rows["mfu.blocks.0.weight"]["manifest_byte_key"] == "nbytes"
+    assert rows["hfr.heads.0.bias"]["manifest_byte_key"] == "bytes+nbytes"
+
+
+def test_official_receiver_tensor_map_blocks_mismatched_byte_dialects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    monkeypatch.setattr(
+        mod,
+        "unpack_snerv_archive",
+        lambda _packet: type(
+            "Decoded", (), {"sections": {"decoder_payload": b"decoder"}}
+        )(),
+    )
+    monkeypatch.setattr(
+        mod,
+        "inspect_decoder_payload_header",
+        lambda _payload: {
+            "schema": mod.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+            "tensor_manifest": [
+                {
+                    "name": "mfu.blocks.0.weight",
+                    "shape": [2, 2],
+                    "dtype": "float64_le",
+                    "bytes": 32,
+                    "nbytes": 24,
+                    "sha256": "a" * 64,
+                }
+            ],
+        },
+    )
+
+    tensor_map = mod._official_receiver_tensor_map_from_packet(b"packet")
+
+    assert tensor_map["receiver_tensor_map_verified"] is False
+    assert tensor_map["official_decoder_payload_selected"] is True
+    assert tensor_map["blockers"] == [
+        "snerv_official_receiver_tensor_map_invalid_tensor_bytes"
+    ]
+    assert "mismatched bytes and nbytes" in tensor_map["error"]
