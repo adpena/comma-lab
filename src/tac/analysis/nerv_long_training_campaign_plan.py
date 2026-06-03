@@ -263,13 +263,12 @@ def build_nerv_long_training_campaign_plan(
         "candidate_feedback_source_count": len(candidate_feedback_sources),
         "snerv_bounded_proof_only": bool(snerv_bounded_proof_only),
         "snerv_bounded_proof_epochs": int(snerv_bounded_proof_epochs),
-        "candidate_feedback_row_count": sum(
-            len(rows_for_key) for rows_for_key in candidate_feedback_index.values()
+        "candidate_feedback_row_count": _unique_index_row_count(
+            candidate_feedback_index
         ),
         "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
-        "decoder_weight_waterfill_row_count": sum(
-            len(rows_for_key)
-            for rows_for_key in decoder_weight_waterfill_index.values()
+        "decoder_weight_waterfill_row_count": _unique_index_row_count(
+            decoder_weight_waterfill_index
         ),
         "decoder_weight_waterfill_unattached_source_count": len(
             decoder_weight_waterfill_unattached_sources
@@ -1400,10 +1399,10 @@ def _candidate_feedback_index(
     for source in sources:
         row = _normalize_candidate_feedback_source(source)
         family = _feedback_family(row)
-        candidate_id = str(row.get("candidate_id") or "").strip()
-        if not family or not candidate_id:
+        if not family:
             continue
-        index.setdefault((family, candidate_id), []).append(row)
+        for candidate_key in _candidate_index_keys(row):
+            index.setdefault((family, candidate_key), []).append(row)
     return {
         key: sorted(
             rows,
@@ -1896,6 +1895,16 @@ def _candidate_index_keys(row: Mapping[str, Any]) -> tuple[str, ...]:
             continue
         keys.extend(_candidate_id_aliases(text))
     return tuple(_dedupe(keys))
+
+
+def _unique_index_row_count(
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]],
+) -> int:
+    seen: set[int] = set()
+    for rows in index.values():
+        for row in rows:
+            seen.add(id(row))
+    return len(seen)
 
 
 def _candidate_id_aliases(value: str) -> tuple[str, ...]:
