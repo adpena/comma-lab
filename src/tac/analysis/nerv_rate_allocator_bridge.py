@@ -87,6 +87,7 @@ def build_nerv_rate_allocator_bridge(
             *_modelsize_work_orders(units),
             *_control_row_work_orders(units),
             *_evidence_work_orders(units),
+            *_source_parity_analogue_work_orders(units),
             *_implementation_gate_work_orders(units),
         ]
     )
@@ -281,6 +282,60 @@ def _implementation_gate_work_orders(
                 ),
                 payload={"stack_id": stack_id},
                 blockers=rate_blockers,
+            )
+        )
+    return orders
+
+
+def _source_parity_analogue_work_orders(
+    units: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    orders = []
+    for unit in units:
+        if unit.get("unit_type") != "source_parity_analogue_risk_route":
+            continue
+        surface_id = str(unit.get("surface_id") or "unknown")
+        family = str(unit.get("family") or "unknown")
+        blockers = _string_list(unit.get("blockers"))
+        orders.append(
+            _work_order(
+                work_order_id=f"close_{surface_id}_analogue_authority_gap",
+                work_order_type="source_parity_analogue_authority_gate",
+                target_consumers=[
+                    "final_rate_attack",
+                    "bit_allocator",
+                    "cathedral_autopilot",
+                    "continual_learning_posterior",
+                ],
+                planner_action="replace_or_prove_analogue_before_rate_spend",
+                source_unit_id=str(unit.get("unit_id") or ""),
+                priority=7 if family in {"snerv", "hi_nerv", "hinerv"} else 12,
+                receiver_precision_modes=[
+                    "fp16_protected",
+                    "int8_protected",
+                    "int4",
+                    "int2",
+                    "zero",
+                    "rle_only",
+                ],
+                rationale=(
+                    "prevent receiver-safe or MLX-local analogue surfaces from "
+                    "entering byte allocation, exact dispatch, or promotion "
+                    "without source-forward replay, receiver runtime proof, and "
+                    "paired contest-axis evidence"
+                ),
+                payload={
+                    "family": family,
+                    "surface_id": surface_id,
+                    "analogue_surface": unit.get("analogue_surface"),
+                    "insufficient_for": unit.get("insufficient_for"),
+                    "why": unit.get("why"),
+                    "contract_schema": unit.get("contract_schema"),
+                },
+                blockers=[
+                    *blockers,
+                    "analogue_surface_not_rate_spend_authority",
+                ],
             )
         )
     return orders

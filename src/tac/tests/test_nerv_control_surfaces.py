@@ -233,6 +233,18 @@ def test_master_consumer_bridge_and_cathedral_consumer_are_no_authority() -> Non
     )
     assert parity_unit["required_for_long_training"] is False
     assert "snerv_official_mfu_hfr_tub_parity_missing" in parity_unit["blockers"]
+    analogue_units = {
+        unit["surface_id"]: unit
+        for unit in bridge["master_consumer_units"]
+        if unit["unit_type"] == "source_parity_analogue_risk_route"
+    }
+    assert "snerv_official_mfu_hfr_tub_numeric_primitives" in analogue_units
+    assert analogue_units["snerv_official_mfu_hfr_tub_numeric_primitives"][
+        "planner_action"
+    ] == "close_analogue_authority_gap_before_spend"
+    assert "source_parity_analogue_risk_requires_exact_replay" in analogue_units[
+        "snerv_official_mfu_hfr_tub_numeric_primitives"
+    ]["blockers"]
 
     result = nerv_top_priority_stack_consumer.consume_candidate(bridge)
     assert result["schema"] == "nerv_top_priority_stack_consumer_result.v1"
@@ -348,6 +360,20 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     } <= modes
     orders = {row["work_order_id"]: row for row in rate_bridge["rate_allocator_work_orders"]}
     assert "close_snerv_receiver_rate_promotion_gates" in orders
+    assert (
+        "close_snerv_official_mfu_hfr_tub_numeric_primitives_analogue_authority_gap"
+        in orders
+    )
+    analogue_order = orders[
+        "close_snerv_official_mfu_hfr_tub_numeric_primitives_analogue_authority_gap"
+    ]
+    assert analogue_order["work_order_type"] == (
+        "source_parity_analogue_authority_gate"
+    )
+    assert "analogue_surface_not_rate_spend_authority" in analogue_order["blockers"]
+    assert analogue_order["payload"]["insufficient_for"] == (
+        "byte_closed_official_snerv_export_runtime"
+    )
     assert "route_bitmask_and_zero_packing_to_rate_allocator" in orders
     assert "route_master_gradient_xray_stack_to_rate_allocator" in orders
     assert any(
@@ -1251,11 +1277,16 @@ def _synthetic_rate_bridge() -> dict:
         byte_caps=(178_417,),
         resolution_modes={"scorer_internal_384x512": 384 * 512},
     )
+    source_parity = build_nerv_source_parity_contract(
+        repo_root=Path(__file__).resolve().parents[3],
+        families=("snerv", "hi_nerv"),
+    )
     bridge = build_nerv_master_consumer_bridge(
         seam=seam,
         control_inventory=control_inventory,
         implementation_sweep=implementation_sweep,
         modelsize_curve=modelsize_curve,
+        source_parity_contract=source_parity,
     )
 
     return build_nerv_rate_allocator_bridge(master_bridge=bridge)

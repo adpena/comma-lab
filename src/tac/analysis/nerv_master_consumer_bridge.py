@@ -261,6 +261,7 @@ def _source_parity_units(report: Mapping[str, Any]) -> list[dict[str, Any]]:
     contract_blockers = _string_list(report.get("blockers"))
     contract_nonblocking = _string_list(report.get("nonblocking_gaps"))
     units: list[dict[str, Any]] = []
+    units.extend(_source_parity_analogue_risk_units(report))
     for row in _mapping_list(report.get("feature_rows")):
         feature_id = str(row.get("feature_id") or "unknown")
         family = str(row.get("family") or "unknown")
@@ -317,6 +318,46 @@ def _source_parity_units(report: Mapping[str, Any]) -> list[dict[str, Any]]:
                         *contract_blockers,
                         *contract_nonblocking,
                         "source_parity_feature_rows_missing",
+                    ]
+                ),
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return units
+
+
+def _source_parity_analogue_risk_units(
+    report: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    units: list[dict[str, Any]] = []
+    for row in _mapping_list(report.get("analogue_risk_rows")):
+        surface_id = str(row.get("surface_id") or "unknown")
+        family = str(row.get("family") or "unknown")
+        remaining = _string_list(row.get("remaining_blockers"))
+        units.append(
+            {
+                "unit_id": f"{surface_id}_analogue_risk",
+                "unit_type": "source_parity_analogue_risk_route",
+                "family": family,
+                "surface_id": surface_id,
+                "analogue_surface": row.get("analogue_surface"),
+                "insufficient_for": row.get("insufficient_for"),
+                "why": row.get("why"),
+                "contract_schema": report.get("schema"),
+                "target_consumers": [
+                    "cathedral_autopilot",
+                    "final_rate_attack",
+                    "bit_allocator",
+                    "sensitivity_map",
+                    "probe_disambiguator",
+                    "continual_learning_posterior",
+                ],
+                "planner_action": "close_analogue_authority_gap_before_spend",
+                "blockers": _unique(
+                    [
+                        *remaining,
+                        "source_parity_analogue_risk_requires_exact_replay",
                     ]
                 ),
                 "predicted_delta_adjustment": 0.0,
