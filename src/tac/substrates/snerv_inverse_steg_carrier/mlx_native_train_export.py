@@ -25,6 +25,9 @@ from typing import Any
 import numpy as np
 
 from tac.adaptation.hard_pair_indices import normalize_pair_indices
+from tac.analysis.snerv_official_primitive_replay import (
+    build_snerv_official_receiver_runtime_decode_contract,
+)
 from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill
 from tac.contest_eval_contract import build_upstream_eval_contract
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
@@ -41,6 +44,7 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
     allocate_lf_linf,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
     SnervArchivePacket,
     decode_snerv_archive_frames,
     encode_decoder_payload,
@@ -75,6 +79,9 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     WaveletPyramid,
     dwt2_native_synthesis_adjoint,
     idwt2_multilevel,
+)
+from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (
+    build_snerv_mlx_native_training_export_guard,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     OFFICIAL_SNERV_HFR_SOURCE_CONTRACT,
@@ -237,6 +244,7 @@ def train_export_snerv_mlx_native(
     official_primitives_blockers = list(model_size.official_mfu_hfr_tub_export_blockers)
     official_binding = (
         _official_primitives_export_binding(
+            repo_root=root,
             model_size=model_size,
             candidate=candidate,
             blockers=official_primitives_blockers,
@@ -475,6 +483,21 @@ def train_export_snerv_mlx_native(
             )
     receiver_proof = dict(package.get("receiver_proof") or {}) if package else {}
     selected_archive_metadata = unpack_snerv_archive(selected_packet).metadata
+    native_training_export_guard = build_snerv_mlx_native_training_export_guard(
+        {
+            "native_mlx_training_executed": selected_archive_metadata.get(
+                "native_mlx_training_executed"
+            ),
+            "native_mlx_hf_decoder_training": selected_archive_metadata.get(
+                "native_mlx_hf_decoder_training"
+            ),
+            "packet_source": selected_packet_source,
+        }
+    )
+    blockers.extend(
+        str(blocker)
+        for blocker in native_training_export_guard.get("blockers") or ()
+    )
 
     artifact = SnervMlxNativeArtifact(
         schema=SNERV_MLX_NATIVE_TRAIN_EXPORT_SCHEMA,
@@ -528,6 +551,7 @@ def train_export_snerv_mlx_native(
     payload["native_mlx_hf_decoder_training"] = dict(
         selected_archive_metadata.get("native_mlx_hf_decoder_training") or {}
     )
+    payload["native_mlx_training_export_guard"] = native_training_export_guard
     if selected_recon_consumed:
         payload["recon_pixel_weight"] = {
             **dict(selected_recon_metadata),
@@ -1071,6 +1095,12 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         target_bits_per_coeff=float(step_map_bits_per_coeff),
     )
     decoder_payload = encode_decoder_payload(decoder, codec=decoder_payload_codec)
+    native_training_export_guard = build_snerv_mlx_native_training_export_guard(
+        {
+            "native_mlx_training_executed": bool(mlx_training_report.get("executed") is True),
+            "native_mlx_hf_decoder_training": mlx_training_report,
+        }
+    )
     verified_recon_weight = _recon_pixel_weight_metadata_is_verified_gradient_manifest(recon_pixel_weight_metadata)
     metadata = {
         "n_pairs": n_pairs,
@@ -1115,6 +1145,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": float(hf_decoder_saliency_gain),
         "native_mlx_hf_decoder_training": mlx_training_report,
+        "native_mlx_training_export_guard": native_training_export_guard,
         "hf_decoder_weight_domain": (
             "dwt_adjoint_detail_saliency_diagonal" if weighted_fit_enabled else "unweighted_least_squares"
         ),
@@ -1977,7 +2008,16 @@ def _receiver_bound_official_primitives_export_binding(
     out["export_consumed_official_hfr"] = False
     out["export_consumed_official_tub"] = False
     out["source_forward_replay_authority"] = False
-    out["receiver_runtime_decode_authority"] = False
+    out["official_receiver_runtime_decode_contract_proven"] = bool(
+        dict(out.get("official_receiver_runtime_decode_contract") or {}).get(
+            "receiver_runtime_decode_proven"
+        )
+        is True
+    )
+    out["receiver_runtime_decode_authority"] = bool(
+        out["official_receiver_runtime_decode_contract_proven"]
+    )
+    out["selected_packet_official_payload_runtime_decode_authority"] = False
     out.update(FALSE_AUTHORITY)
     return out
 
@@ -1989,17 +2029,24 @@ def _official_primitives_blocker_evidence(
     surrogate_receiver_contract_satisfied: bool,
 ) -> list[dict[str, Any]]:
     specs = {
-        "snerv_official_neural_decoder_payload_grammar_missing": {
-            "missing_artifact": ("receiver-visible official decoder graph topology and section grammar"),
-            "current_evidence": ("SNAR1 decoder_payload stores HfGenerationDecoder linear kernels only"),
+        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload": {
+            "missing_artifact": ("native MLX train/export selected packet with official MFU/HFR/TUB decoder payload"),
+            "current_evidence": (
+                "receiver-visible official decoder payload grammar exists, but "
+                "native MLX export still selects the linear HfGenerationDecoder surrogate"
+            ),
             "closure_test": (
-                "decode official graph payload into executable MFU/HFR/TUB/T-output "
-                "receiver objects without scorer or torch sidecars"
+                "train/export writes decoder_payload schema "
+                f"{DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA} and generated "
+                "inflate consumes it into 0.raw"
             ),
         },
         "snerv_official_mfu_hfr_tub_weight_mapping_missing": {
             "missing_artifact": ("official state_dict-to-receiver tensor map with per-tensor bytes and sha256"),
-            "current_evidence": ("portable MFU/HFR/TUB primitives exist, but export does not consume official weights"),
+            "current_evidence": (
+                "portable MFU/HFR/TUB primitives and receiver payload grammar exist, "
+                "but native export does not consume trained official weights"
+            ),
             "closure_test": (
                 "map official encoder/MFU/HFR/TUB/residual-block tensors into the "
                 "receiver payload and verify every mapped tensor hash"
@@ -2011,13 +2058,6 @@ def _official_primitives_blocker_evidence(
             "closure_test": (
                 "run official source forward and portable receiver forward on the "
                 "same frames/weights and record max error plus output sha256"
-            ),
-        },
-        "snerv_official_receiver_runtime_decode_missing": {
-            "missing_artifact": ("inflate runtime that consumes official neural graph sections"),
-            "current_evidence": ("existing runtime consumes linear SNAR1 sections only"),
-            "closure_test": (
-                "generated inflate.sh decodes official graph payload sections into 0.raw with matching receiver proof"
             ),
         },
     }
@@ -2054,6 +2094,7 @@ def _blocked_official_primitives_native_export(
 ) -> dict[str, Any]:
     blockers = list(model_size.official_mfu_hfr_tub_export_blockers)
     official_binding = _official_primitives_export_binding(
+        repo_root=_repo_root(None),
         model_size=model_size,
         candidate=candidate,
         blockers=blockers,
@@ -2110,6 +2151,7 @@ def _blocked_official_primitives_native_export(
 
 def _official_primitives_export_binding(
     *,
+    repo_root: str | Path,
     model_size: SnervModelSizeConfig,
     candidate: Mapping[str, Any],
     blockers: Sequence[str],
@@ -2135,13 +2177,21 @@ def _official_primitives_export_binding(
         "candidate_id": candidate.get("candidate_id"),
         "official_modelsize_solution": candidate.get("official_modelsize_solution"),
     }
+    receiver_contract = build_snerv_official_receiver_runtime_decode_contract(
+        repo_root=repo_root,
+    )
     return {
         "schema": "snerv_official_mfu_hfr_tub_export_binding.v2",
         "adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
         "primitive_modules_available": True,
         "current_snar_decoder_payload_schema": "linear_hf_generation_decoder_only",
+        "available_official_decoder_payload_schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
         "linear_hf_generation_decoder_compatible_with_official_neural_graph": False,
         "receiver_payload_contract_emitted": True,
+        "official_receiver_payload_contract_available": bool(
+            receiver_contract.get("receiver_archive_payload_bound") is True
+        ),
+        "official_receiver_runtime_decode_contract": receiver_contract,
         "required_receiver_payload_sections": list(required_sections),
         "missing_receiver_payload_sections": list(required_sections),
         "source_pins": {
@@ -2160,7 +2210,10 @@ def _official_primitives_export_binding(
         "export_consumed_official_hfr": False,
         "export_consumed_official_tub": False,
         "source_forward_replay_authority": False,
-        "receiver_runtime_decode_authority": False,
+        "receiver_runtime_decode_authority": bool(
+            receiver_contract.get("receiver_runtime_decode_proven") is True
+        ),
+        "native_mlx_export_bound_to_official_payload": False,
         "blockers": list(blockers),
         **FALSE_AUTHORITY,
     }

@@ -25,10 +25,9 @@ SNERV_ADVISORY_TRAINER_METADATA_SCHEMA = (
 SNERV_ADVISORY_SCORER_EVAL_SCHEMA = "snerv_advisory_component_eval.v1"
 SNERV_PACKET_RECEIVER_PROOF_SCHEMA = "snerv_advisory_packet_receiver_replay.v1"
 SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS = (
-    "snerv_official_neural_decoder_payload_grammar_missing",
+    "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
     "snerv_official_mfu_hfr_tub_weight_mapping_missing",
     "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
-    "snerv_official_receiver_runtime_decode_missing",
 )
 PROTECTED_OFFICIAL_CONTROL_FIELDS = frozenset(
     (

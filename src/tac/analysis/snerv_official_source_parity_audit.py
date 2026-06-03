@@ -462,6 +462,10 @@ def summarize_snerv_official_source_audit(report: Mapping[str, Any]) -> dict[str
         "official_receiver_runtime_decode_proven": bool(
             receiver_runtime.get("receiver_runtime_decode_proven")
         ),
+        "official_receiver_source_forward_replay_bound": bool(
+            receiver_runtime.get("receiver_source_forward_replay_bound")
+            or primitive_binding.get("receiver_source_forward_replay_bound")
+        ),
         "official_receiver_runtime_decode_blockers": list(
             receiver_runtime.get("blockers") or ()
         ),
@@ -518,6 +522,7 @@ def render_snerv_official_source_parity_markdown(report: Mapping[str, Any]) -> s
         f"- local receiver-safe adapter present: `{bool(report.get('local_receiver_safe_adapter_present'))}`",
         f"- official MFU/HFR/TUB primitive replay proven: `{bool(primitive_binding.get('all_primitive_source_replay_proven'))}`",
         f"- official receiver runtime decode proven: `{bool(receiver_runtime.get('receiver_runtime_decode_proven'))}`",
+        f"- official receiver source-forward replay bound: `{bool(receiver_runtime.get('receiver_source_forward_replay_bound') or primitive_binding.get('receiver_source_forward_replay_bound'))}`",
         f"- official MFU/HFR/TUB parity proven: `{bool(report.get('official_mfu_hfr_tub_parity_proven'))}`",
         f"- official MFU/HFR/TUB parity falsified: `{bool(forward_row.get('parity_falsified'))}`",
         f"- score claim: `{bool(report.get('score_claim'))}`",
@@ -788,6 +793,10 @@ def _forward_parity_receiver_runtime_blockers(payload: Mapping[str, Any]) -> lis
         blockers.append("snerv_official_forward_parity_receiver_runtime_schema_invalid")
     if receiver_runtime.get("receiver_runtime_decode_proven") is not True:
         blockers.append("snerv_official_forward_parity_receiver_runtime_not_proven")
+    if receiver_runtime.get("receiver_source_forward_replay_bound") is not True:
+        blockers.append(
+            "snerv_official_forward_parity_receiver_source_forward_replay_not_bound"
+        )
     if receiver_runtime.get("score_claim") is not False:
         blockers.append("snerv_official_forward_parity_receiver_runtime_score_claim_not_false")
     if receiver_runtime.get("ready_for_exact_eval_dispatch") is not False:
@@ -815,6 +824,8 @@ def _receiver_runtime_component_blockers(row: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
     if row.get("receiver_runtime_decode_proven") is not True:
         blockers.append("receiver_runtime_decode_component_not_proven")
+    if row.get("receiver_source_forward_replay_bound") is not True:
+        blockers.append("receiver_source_forward_replay_component_not_bound")
     for field in (
         "runtime_module_sha256",
         "numeric_test_sha256",

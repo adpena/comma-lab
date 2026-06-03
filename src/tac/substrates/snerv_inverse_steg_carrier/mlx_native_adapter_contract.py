@@ -20,6 +20,9 @@ from pathlib import Path
 from typing import Any
 
 SNERV_MLX_NATIVE_ADAPTER_CONTRACT_SCHEMA = "snerv_mlx_native_adapter_contract.v1"
+SNERV_MLX_NATIVE_TRAINING_EXPORT_GUARD_SCHEMA = (
+    "snerv_mlx_native_training_export_guard.v1"
+)
 DEFAULT_SNERV_MLX_NATIVE_ADAPTER_MODULE = (
     "tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export"
 )
@@ -194,6 +197,113 @@ def _merged_artifact_mapping(artifact: Mapping[str, Any] | None) -> dict[str, An
     return art
 
 
+def _native_training_payload(art: Mapping[str, Any], *, base_dir: str | Path | None) -> dict[str, Any]:
+    report_path = (
+        art.get("artifact_report_path")
+        or art.get("report_path")
+        or (
+            dict(art.get("report_file") or {}).get("path")
+            if isinstance(art.get("report_file"), Mapping)
+            else None
+        )
+    )
+    report_payload = _load_json_file(_resolve_evidence_path(report_path, base_dir=base_dir))
+    merged = dict(report_payload)
+    merged.update({key: value for key, value in art.items() if value is not None})
+    nested = merged.get("artifact")
+    if isinstance(nested, Mapping):
+        nested_payload = dict(nested)
+        nested_payload.update(merged)
+        merged = nested_payload
+    return merged
+
+
+def build_snerv_mlx_native_training_export_guard(
+    artifact: Mapping[str, Any] | None,
+    *,
+    base_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    """Fail closed when a requested native MLX decoder step was rejected.
+
+    The native exporter may still emit the closed-form fallback packet after a
+    divergent MLX refinement. That file-backed packet is useful forensic
+    evidence, but it is not a learned-training candidate and must not unlock
+    planner/export success surfaces.
+    """
+
+    art = _native_training_payload(
+        _merged_artifact_mapping(artifact),
+        base_dir=base_dir,
+    )
+    training = art.get("native_mlx_hf_decoder_training")
+    training = dict(training) if isinstance(training, Mapping) else {}
+    source_blockers = [
+        str(blocker)
+        for blocker in (
+            list(training.get("blockers") or ())
+            + list(art.get("native_mlx_training_blockers") or ())
+        )
+        if blocker
+    ]
+    requested_steps = _int_or_none(
+        training.get("requested_steps")
+        if training.get("requested_steps") is not None
+        else training.get("steps")
+    )
+    attempted = bool(
+        training.get("attempted") is True
+        or (requested_steps is not None and requested_steps > 0)
+        or art.get("native_mlx_training_requested") is True
+    )
+    training_executed = bool(
+        training.get("executed") is True
+        or art.get("native_mlx_training_executed") is True
+    )
+    loss_worsened = bool(
+        training.get("any_loss_worsened") is True
+        or "snerv_native_mlx_decoder_loss_worsened" in source_blockers
+    )
+    final_nonfinite = bool(
+        training.get("all_final_losses_finite") is False
+        or "snerv_native_mlx_decoder_final_loss_nonfinite" in source_blockers
+    )
+    accepted_value = training.get("accepted")
+    accepted = bool(
+        accepted_value is True
+        or (
+            accepted_value is None
+            and training_executed
+            and not source_blockers
+            and not loss_worsened
+            and not final_nonfinite
+        )
+    )
+    blockers: list[str] = []
+    if attempted and not accepted:
+        if loss_worsened:
+            blockers.append("snerv_native_mlx_decoder_loss_worsened_export_blocked")
+        if final_nonfinite:
+            blockers.append("snerv_native_mlx_decoder_final_loss_nonfinite_export_blocked")
+        if not blockers:
+            blockers.append("snerv_native_mlx_decoder_training_rejected_export_blocked")
+    if attempted and accepted and not training_executed:
+        blockers.append("snerv_native_mlx_decoder_training_acceptance_mismatch")
+    return {
+        "schema": SNERV_MLX_NATIVE_TRAINING_EXPORT_GUARD_SCHEMA,
+        "training_attempted": attempted,
+        "requested_steps": requested_steps,
+        "training_executed": training_executed,
+        "training_accepted": accepted,
+        "loss_worsened": loss_worsened,
+        "final_losses_finite": None if "all_final_losses_finite" not in training else bool(training.get("all_final_losses_finite")),
+        "source_training_blockers": list(dict.fromkeys(source_blockers)),
+        "worsened_level_subband_rows": list(training.get("worsened_level_subband_rows") or ()),
+        "export_guard_passed": not blockers,
+        "blockers": list(dict.fromkeys(blockers)),
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_snerv_mlx_native_file_backed_evidence(
     artifact: Mapping[str, Any] | None,
     *,
@@ -262,6 +372,11 @@ def build_snerv_mlx_native_file_backed_evidence(
         blockers.append("snerv_mlx_native_receiver_contract_file_not_satisfied")
     if not required_pair_coverage_passed:
         blockers.append("snerv_mlx_native_file_backed_export_not_full600")
+    training_guard = build_snerv_mlx_native_training_export_guard(
+        art,
+        base_dir=base_dir,
+    )
+    blockers.extend(str(blocker) for blocker in training_guard.get("blockers") or ())
     file_backed_export_proof_passed = bool(
         rows["report"]["exists"]
         and rows["packet"]["sha256_matches"]
@@ -269,6 +384,7 @@ def build_snerv_mlx_native_file_backed_evidence(
         and rows["receiver_proof"]["exists"]
         and receiver_proof_passed
         and receiver_contract_satisfied
+        and training_guard.get("export_guard_passed") is True
     )
     scorer_loop = art.get("scorer_loop_qat")
     scorer_loop = dict(scorer_loop) if isinstance(scorer_loop, Mapping) else {}
@@ -289,6 +405,10 @@ def build_snerv_mlx_native_file_backed_evidence(
             art.get("receiver_contract_satisfied")
         ),
         "required_pair_coverage_passed": required_pair_coverage_passed,
+        "native_mlx_training_export_guard": training_guard,
+        "native_mlx_training_export_guard_passed": bool(
+            training_guard.get("export_guard_passed")
+        ),
         "file_backed_export_proof_passed": file_backed_export_proof_passed,
         "required_pair_file_backed_export_proof_passed": bool(
             file_backed_export_proof_passed and required_pair_coverage_passed
@@ -439,7 +559,9 @@ __all__ = [
     "DEFAULT_SNERV_MLX_NATIVE_ADAPTER_MODULE",
     "REQUIRED_SURFACES",
     "SNERV_MLX_NATIVE_ADAPTER_CONTRACT_SCHEMA",
+    "SNERV_MLX_NATIVE_TRAINING_EXPORT_GUARD_SCHEMA",
     "RequiredSurface",
     "build_snerv_mlx_native_adapter_contract",
     "build_snerv_mlx_native_file_backed_evidence",
+    "build_snerv_mlx_native_training_export_guard",
 ]

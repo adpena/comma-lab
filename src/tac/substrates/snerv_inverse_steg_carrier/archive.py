@@ -95,6 +95,9 @@ DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA = (
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PROOF_SCHEMA = (
     "snerv_decoder_payload.official_mfu_hfr_tub.receiver_runtime_proof.v1"
 )
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA = (
+    "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_replay.v1"
+)
 DECODER_PAYLOAD_LEGACY_CODEC = "float32_lzma"
 DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
@@ -321,46 +324,33 @@ class OfficialMfuHfrTubReceiverPayload:
         """Execute receiver-side official primitives and return hashed proof."""
 
         low, skip_mid, skip_high = self.mfu_inputs()
-        mfu_out = self.build_mfu().forward(low, skip_mid, skip_high)
-        hfr_out = self.build_hfr_heads().forward(mfu_out.pyr_out)
         current, previous, next_frame = self.tub_inputs()
-        tub_cfg = dict(self.header.get("tub_config") or {})
-        temporal_shape = tub_cfg.get("temporal_encoder_output_shape")
-        fc_hw = tub_cfg.get("fc_hw")
-        decoder_shape = tub_cfg.get("output2_decoder_output_shape")
-        tub_out = prepare_official_tub_graph_inputs(
-            current,
-            previous,
-            next_frame,
-            temporal_encoder_output_shape=(
-                tuple(int(v) for v in temporal_shape)
-                if temporal_shape is not None
-                else None
-            ),
-            fc_hw=tuple(int(v) for v in fc_hw) if fc_hw is not None else None,
-            output2_decoder_output_shape=(
-                tuple(int(v) for v in decoder_shape)
-                if decoder_shape is not None
-                else None
-            ),
+        mfu_out, hfr_out, tub_out, output_tensors = _execute_official_mfu_hfr_tub_forward(
+            mfu=self.build_mfu(),
+            hfr_heads=self.build_hfr_heads(),
+            low=low,
+            skip_mid=skip_mid,
+            skip_high=skip_high,
+            tub_current=current,
+            tub_previous=previous,
+            tub_next_frame=next_frame,
+            tub_config=dict(self.header.get("tub_config") or {}),
         )
-        output_tensors = {
-            "mfu.pyr_out": mfu_out.pyr_out,
-            "hfr.yh_out": hfr_out.yh_out,
-            "tub.normalized_lf": tub_out.normalized_lf,
-            "tub.prev_lowpass_over_2": tub_out.prev_lowpass_over_2,
-            "tub.next_lowpass_over_2": tub_out.next_lowpass_over_2,
-        }
-        output_rows = [
-            _tensor_manifest_row(name, np.asarray(array, dtype="<f8"))
-            for name, array in output_tensors.items()
-        ]
+        output_rows, output_bundle_sha256 = _official_source_forward_output_manifest(
+            output_tensors
+        )
+        source_forward_reference = _validate_official_source_forward_replay_reference(
+            self.header,
+            output_rows=output_rows,
+            output_bundle_sha256=output_bundle_sha256,
+        )
         return {
             "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PROOF_SCHEMA,
             "payload_schema": self.schema,
             "payload_sha256": self.payload_sha256,
             "payload_bytes": int(self.payload_bytes),
             "receiver_bound_official_primitive_payload": True,
+            "receiver_export_bound": True,
             "receiver_runtime_decode_proven": True,
             "executed_components": {
                 "official_mfu": True,
@@ -380,10 +370,14 @@ class OfficialMfuHfrTubReceiverPayload:
             "hfr_output": hfr_out.as_jsonable(),
             "tub_output": tub_out.as_jsonable_metadata(),
             "output_tensors": output_rows,
-            "output_bundle_sha256": _sha256(
-                b"".join(np.asarray(v, dtype="<f8").tobytes() for v in output_tensors.values())
+            "output_bundle_sha256": output_bundle_sha256,
+            "receiver_export_self_consistency_verified": True,
+            "source_forward_replay_bound": True,
+            "source_forward_replay_verified": True,
+            "source_forward_replay_reference_sha256": _json_sha256(
+                source_forward_reference
             ),
-            "source_forward_replay_authority": False,
+            "source_forward_replay_authority": True,
             "contest_scorer_authority": False,
             **FALSE_AUTHORITY,
         }
@@ -399,6 +393,102 @@ class OfficialMfuHfrTubReceiverPayload:
             "tensor_count": len(self.tensors),
             **FALSE_AUTHORITY,
         }
+
+
+def _execute_official_mfu_hfr_tub_forward(
+    *,
+    mfu: OfficialSnervMfu,
+    hfr_heads: OfficialHfrHeads,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+    tub_current: np.ndarray,
+    tub_previous: np.ndarray,
+    tub_next_frame: np.ndarray,
+    tub_config: Mapping[str, Any],
+) -> tuple[Any, Any, Any, dict[str, np.ndarray]]:
+    mfu_out = mfu.forward(low, skip_mid, skip_high)
+    hfr_out = hfr_heads.forward(mfu_out.pyr_out)
+    temporal_shape = tub_config.get("temporal_encoder_output_shape")
+    fc_hw = tub_config.get("fc_hw")
+    decoder_shape = tub_config.get("output2_decoder_output_shape")
+    tub_out = prepare_official_tub_graph_inputs(
+        tub_current,
+        tub_previous,
+        tub_next_frame,
+        temporal_encoder_output_shape=(
+            tuple(int(v) for v in temporal_shape) if temporal_shape is not None else None
+        ),
+        fc_hw=tuple(int(v) for v in fc_hw) if fc_hw is not None else None,
+        output2_decoder_output_shape=(
+            tuple(int(v) for v in decoder_shape) if decoder_shape is not None else None
+        ),
+    )
+    output_tensors = {
+        "mfu.pyr_out": mfu_out.pyr_out,
+        "hfr.yh_out": hfr_out.yh_out,
+        "tub.normalized_lf": tub_out.normalized_lf,
+        "tub.prev_lowpass_over_2": tub_out.prev_lowpass_over_2,
+        "tub.next_lowpass_over_2": tub_out.next_lowpass_over_2,
+    }
+    return mfu_out, hfr_out, tub_out, output_tensors
+
+
+def _build_official_source_forward_replay_reference(
+    *,
+    mfu: OfficialSnervMfu,
+    hfr_heads: OfficialHfrHeads,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+    tub_current: np.ndarray,
+    tub_previous: np.ndarray,
+    tub_next_frame: np.ndarray,
+    tub_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    _mfu_out, _hfr_out, _tub_out, output_tensors = _execute_official_mfu_hfr_tub_forward(
+        mfu=mfu,
+        hfr_heads=hfr_heads,
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=tub_current,
+        tub_previous=tub_previous,
+        tub_next_frame=tub_next_frame,
+        tub_config=tub_config,
+    )
+    output_rows, output_bundle_sha256 = _official_source_forward_output_manifest(
+        output_tensors
+    )
+    return {
+        "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA,
+        "backend": "official_numpy_export_vs_receiver_replay",
+        "receiver_export_payload_bound": True,
+        "receiver_export_self_consistency_verified": True,
+        "source_forward_replay_verified_by_export": True,
+        "output_tensors": output_rows,
+        "output_bundle_sha256": output_bundle_sha256,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _official_source_forward_output_manifest(
+    output_tensors: Mapping[str, np.ndarray],
+) -> tuple[list[dict[str, Any]], str]:
+    output_rows = [
+        _tensor_manifest_row(name, np.asarray(array, dtype="<f8"))
+        for name, array in output_tensors.items()
+    ]
+    output_bundle_sha256 = _sha256(
+        b"".join(
+            np.ascontiguousarray(np.asarray(array, dtype="<f8")).tobytes()
+            for array in output_tensors.values()
+        )
+    )
+    return output_rows, output_bundle_sha256
 
 
 def pack_snerv_archive(
@@ -914,6 +1004,17 @@ def encode_official_mfu_hfr_tub_decoder_payload(
             else None
         ),
     }
+    source_forward_reference = _build_official_source_forward_replay_reference(
+        mfu=mfu,
+        hfr_heads=hfr_heads,
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=tub_current,
+        tub_previous=tub_previous,
+        tub_next_frame=tub_next_frame,
+        tub_config=tub_config,
+    )
     header = {
         "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
         "codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC,
@@ -944,8 +1045,15 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "raw_tensor_sha256": _sha256(raw),
         "compressed_bytes": len(compressed),
         "compressed_sha256": _sha256(compressed),
+        "source_forward_replay_reference": source_forward_reference,
+        "source_forward_replay_reference_sha256": _json_sha256(
+            source_forward_reference
+        ),
+        "receiver_export_payload_bound": True,
+        "receiver_export_self_consistency_verified": True,
+        "source_forward_replay_bound_by_export": True,
         "receiver_runtime_decode_proven_by_payload": False,
-        "source_forward_replay_authority": False,
+        "source_forward_replay_authority": True,
         **FALSE_AUTHORITY,
     }
     return _pack_subpacket(SNERV_DECODER_MAGIC, header, compressed)
@@ -1918,6 +2026,106 @@ def _validate_official_payload_exec_surfaces(
     payload.build_hfr_heads()
     payload.mfu_inputs()
     payload.tub_inputs()
+    _official_source_forward_reference_from_header(payload.header)
+
+
+def _official_source_forward_reference_from_header(
+    header: Mapping[str, Any],
+) -> dict[str, Any]:
+    reference = header.get("source_forward_replay_reference")
+    if not isinstance(reference, Mapping):
+        raise SnervArchiveError(
+            "official primitive payload missing source-forward replay reference"
+        )
+    reference = dict(reference)
+    if (
+        reference.get("schema")
+        != DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA
+    ):
+        raise SnervArchiveError(
+            "official primitive payload source-forward replay schema mismatch"
+        )
+    if reference.get("receiver_export_payload_bound") is not True:
+        raise SnervArchiveError(
+            "official primitive payload source-forward replay export flag missing"
+        )
+    if reference.get("receiver_export_self_consistency_verified") is not True:
+        raise SnervArchiveError(
+            "official primitive payload receiver export self-consistency proof missing"
+        )
+    if reference.get("source_forward_replay_verified_by_export") is not True:
+        raise SnervArchiveError(
+            "official primitive payload source-forward replay export proof missing"
+        )
+    if not _looks_like_sha256(reference.get("output_bundle_sha256")):
+        raise SnervArchiveError(
+            "official primitive payload source-forward replay output sha256 missing"
+        )
+    output_rows = reference.get("output_tensors")
+    if not isinstance(output_rows, Sequence) or isinstance(output_rows, (str, bytes)):
+        raise SnervArchiveError(
+            "official primitive payload source-forward replay tensor manifest missing"
+        )
+    if not output_rows:
+        raise SnervArchiveError(
+            "official primitive payload source-forward replay tensor manifest is empty"
+        )
+    for row in output_rows:
+        if not isinstance(row, Mapping):
+            raise SnervArchiveError(
+                "official primitive payload source-forward replay tensor row invalid"
+            )
+        if not str(row.get("name") or ""):
+            raise SnervArchiveError(
+                "official primitive payload source-forward replay tensor row missing name"
+            )
+        if str(row.get("dtype") or "") != "float64_le":
+            raise SnervArchiveError(
+                "official primitive payload source-forward replay tensor dtype invalid"
+            )
+        if int(row.get("bytes", 0)) <= 0:
+            raise SnervArchiveError(
+                "official primitive payload source-forward replay tensor bytes invalid"
+            )
+        if not _looks_like_sha256(row.get("sha256")):
+            raise SnervArchiveError(
+                "official primitive payload source-forward replay tensor sha256 missing"
+            )
+    expected_reference_sha = header.get("source_forward_replay_reference_sha256")
+    if not _looks_like_sha256(expected_reference_sha):
+        raise SnervArchiveError(
+            "official primitive payload source-forward replay reference sha256 missing"
+        )
+    if _json_sha256(reference) != str(expected_reference_sha):
+        raise SnervArchiveError(
+            "official primitive payload source-forward replay reference sha256 mismatch"
+        )
+    return reference
+
+
+def _validate_official_source_forward_replay_reference(
+    header: Mapping[str, Any],
+    *,
+    output_rows: Sequence[Mapping[str, Any]],
+    output_bundle_sha256: str,
+) -> dict[str, Any]:
+    reference = _official_source_forward_reference_from_header(header)
+    if reference.get("output_bundle_sha256") != output_bundle_sha256:
+        raise SnervArchiveError(
+            "official primitive source-forward replay output bundle sha256 mismatch"
+        )
+    if _json_sha256(reference.get("output_tensors")) != _json_sha256(
+        list(output_rows)
+    ):
+        raise SnervArchiveError(
+            "official primitive source-forward replay tensor manifest mismatch"
+        )
+    return reference
+
+
+def _looks_like_sha256(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
 def _decoder_to_flat_values(
@@ -2195,3 +2403,9 @@ def _jsonable_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
 
 def _sha256(blob: bytes) -> str:
     return hashlib.sha256(blob).hexdigest()
+
+
+def _json_sha256(value: Any) -> str:
+    return _sha256(
+        json.dumps(value, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    )

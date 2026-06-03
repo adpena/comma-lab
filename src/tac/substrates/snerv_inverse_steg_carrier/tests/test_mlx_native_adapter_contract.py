@@ -14,6 +14,7 @@ from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract impor
     SNERV_MLX_NATIVE_ADAPTER_CONTRACT_SCHEMA,
     build_snerv_mlx_native_adapter_contract,
     build_snerv_mlx_native_file_backed_evidence,
+    build_snerv_mlx_native_training_export_guard,
 )
 
 
@@ -142,6 +143,56 @@ def test_full600_file_backed_export_unlocks_native_contract(
     assert contract["required_pair_file_backed_export_proof_passed"] is True
     assert contract["full600_campaign_ready"] is True
     assert contract["blockers"] == []
+
+
+def test_loss_worsened_native_training_blocks_file_backed_export(tmp_path: Path) -> None:
+    report = tmp_path / "report.json"
+    packet = tmp_path / "candidate.snar"
+    archive = tmp_path / "archive.zip"
+    proof = tmp_path / "receiver_proof.json"
+    report.write_text('{"schema":"unit_report"}\n', encoding="utf-8")
+    packet.write_bytes(b"packet")
+    archive.write_bytes(b"archive")
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_receiver_proof.v1",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact = {
+        "num_pairs": 600,
+        "artifact_report_path": report.as_posix(),
+        "packet_path": packet.as_posix(),
+        "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+        "archive_path": archive.as_posix(),
+        "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "receiver_proof_path": proof.as_posix(),
+        "native_mlx_training_executed": False,
+        "native_mlx_hf_decoder_training": {
+            "schema": "snerv_native_mlx_hf_decoder_training.v1",
+            "attempted": True,
+            "requested_steps": 2,
+            "executed": False,
+            "accepted": False,
+            "any_loss_worsened": True,
+            "all_final_losses_finite": True,
+            "blockers": ["snerv_native_mlx_decoder_loss_worsened"],
+        },
+    }
+
+    guard = build_snerv_mlx_native_training_export_guard(artifact)
+    evidence = build_snerv_mlx_native_file_backed_evidence(artifact)
+
+    assert guard["export_guard_passed"] is False
+    assert "snerv_native_mlx_decoder_loss_worsened_export_blocked" in guard["blockers"]
+    assert evidence["file_backed_export_proof_passed"] is False
+    assert evidence["required_pair_file_backed_export_proof_passed"] is False
+    assert "snerv_native_mlx_decoder_loss_worsened_export_blocked" in evidence["blockers"]
+    assert evidence["score_claim"] is False
 
 
 def test_file_backed_export_rejects_spoofed_receiver_booleans(tmp_path: Path) -> None:

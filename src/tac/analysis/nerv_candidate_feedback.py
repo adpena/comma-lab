@@ -19,6 +19,9 @@ from tac.substrates.hprc.mlx_prefilter_coverage import (
     summarize_mlx_prefilter_coverage,
 )
 from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
+from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (
+    build_snerv_mlx_native_training_export_guard,
+)
 
 SCHEMA = "nerv_candidate_feedback_row.v1"
 LEDGER_SCHEMA = "nerv_candidate_byte_feedback_ledger.v1"
@@ -197,6 +200,11 @@ def build_nerv_candidate_feedback_row(
     snerv_native_scorer_loop = _mapping_or_empty(
         snerv_native_export.get("scorer_loop_qat")
     )
+    snerv_native_training_guard = (
+        build_snerv_mlx_native_training_export_guard(snerv_native_export)
+        if snerv_native_export
+        else {}
+    )
     native_byte_feedback = _snerv_native_file_backed_byte_feedback(
         family=runner_report.get("execute_family"),
         candidate_row=candidate_row,
@@ -246,6 +254,10 @@ def build_nerv_candidate_feedback_row(
         [
             *[str(blocker) for blocker in runner_report.get("blockers") or []],
             *sample_generalization_gate["blockers"],
+            *[
+                str(blocker)
+                for blocker in snerv_native_training_guard.get("blockers") or []
+            ],
         ]
     )
     return {
@@ -299,6 +311,26 @@ def build_nerv_candidate_feedback_row(
         ),
         "snerv_mlx_native_export_packet_source": snerv_native_export.get(
             "packet_source"
+        ),
+        "snerv_mlx_native_training_executed": snerv_native_export.get(
+            "native_mlx_training_executed"
+        ),
+        "snerv_mlx_native_training_kind": snerv_native_export.get(
+            "native_mlx_training_kind"
+        ),
+        "snerv_mlx_native_hf_decoder_training": (
+            snerv_native_export.get("native_mlx_hf_decoder_training")
+        ),
+        "snerv_mlx_native_training_export_guard": (
+            snerv_native_training_guard or None
+        ),
+        "snerv_mlx_native_training_export_guard_passed": (
+            snerv_native_training_guard.get("export_guard_passed")
+            if snerv_native_training_guard
+            else None
+        ),
+        "snerv_mlx_native_training_export_guard_blockers": list(
+            snerv_native_training_guard.get("blockers") or []
         ),
         "snerv_mlx_native_export_blockers": list(
             snerv_native_export.get("blockers") or []
@@ -878,6 +910,9 @@ def _snerv_native_file_backed_byte_feedback(
     if _family_key(str(family)) != "snerv":
         return {}
     if not native_export or not native_evidence:
+        return {}
+    training_guard = build_snerv_mlx_native_training_export_guard(native_export)
+    if training_guard.get("export_guard_passed") is not True:
         return {}
     if native_evidence.get("required_pair_file_backed_export_proof_passed") is not True:
         return {}

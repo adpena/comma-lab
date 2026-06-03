@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import os
 import signal
@@ -71,6 +72,33 @@ def _write_synthetic_pr95_archive(path: Path, *, pairs: int = 600) -> Path:
         chunks.append(payload)
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("0.bin", b"".join(chunks))
+    return path
+
+
+def _write_hinerv_receiver_proof(
+    path: Path,
+    *,
+    archive_bytes: int,
+    archive_sha256: str,
+) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_mlx_generated_receiver_proof.v1",
+                "runtime_consumption_proof_ready": True,
+                "receiver_archive_replay_verified": True,
+                "archive_bytes": int(archive_bytes),
+                "archive_sha256": archive_sha256,
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
     return path
 
 
@@ -3772,6 +3800,67 @@ def test_hinerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
     assert Path(out["report_path"]).is_file()
 
 
+def test_hinerv_trained_archive_byte_oracle_writes_receiver_closed_ladder(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"hi-nerv-byte-closed-candidate")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_receiver_proof.v1",
+                "receiver_archive_replay_verified": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    oracle = runner_mod._write_hi_nerv_trained_archive_byte_oracle(
+        output_dir=tmp_path,
+        artifact_dict={
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": archive_sha,
+        },
+        modelsize_candidate={
+            "candidate_id": "hi_nerv_oracle_tiny",
+            "modelsize_mparams": 0.02,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 40_000,
+        },
+        num_pairs=2,
+        receiver_proof_path=proof,
+        local_cpu_replay_summary={
+            "axis_tag": "[macOS-CPU advisory]",
+            "score_claim": False,
+            "blockers": [],
+        },
+        mlx_prefilter_coverage={"has_full_video_mlx_prefilter": False},
+        repo_root=REPO_ROOT,
+    )
+
+    oracle_path = Path(oracle["path"])
+    ladder_path = Path(oracle["receiver_closed_modelsize_ladder_path"])
+    assert oracle_path.is_file()
+    assert ladder_path.is_file()
+    assert oracle["schema"] == "hi_nerv_trained_archive_byte_oracle.v1"
+    assert oracle["row"]["receiver_proof_passed"] is True
+    assert oracle["row"]["measured_archive_bytes"] == archive.stat().st_size
+    assert oracle["row"]["archive_sha256"] == archive_sha
+    assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in oracle[
+        "blockers"
+    ]
+    assert "hi_nerv_local_cpu_replay_not_contest_auth_axis" in oracle["blockers"]
+    assert oracle["receiver_closed_modelsize_ladder"]["schema"] == (
+        "nerv_receiver_closed_modelsize_ladder.v1"
+    )
+    assert oracle["score_claim"] is False
+    assert oracle["ready_for_exact_eval_dispatch"] is False
+
+
 def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
     tmp_path: Path,
     monkeypatch,
@@ -4208,6 +4297,145 @@ def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
     assert "hi_nerv_local_cpu_replay_gate_missing" not in out["candidate_feedback"][
         "row"
     ]["pr95_stack_binding_blockers"]
+
+
+def test_hinerv_execute_emits_trained_archive_byte_oracle_feedback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    candidate = {
+        "candidate_id": "unit_hinerv_candidate",
+        "family": "hi_nerv",
+        "num_pairs": 600,
+        "latent_dim": 4,
+        "embed_dim": 8,
+        "decoder_channel": 8,
+        "decoder_codec": "int4_mixed",
+        "hard_byte_ceiling": 178_000,
+        "nominal_total_payload_bytes": 70_000,
+        "modelsize_mparams": 0.031,
+        "use_hierarchical_feature_grid": True,
+        "use_convnext_blocks": True,
+    }
+
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=600)
+        archive_sha = runner_mod._sha256_file(archive)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        _write_hinerv_receiver_proof(
+            out / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json",
+            archive_bytes=archive.stat().st_size,
+            archive_sha256=archive_sha,
+        )
+        (out / "local_mlx_prefilter_profile.json").write_text(
+            json.dumps(
+                {
+                    "schema": "hprc_mlx_component_neutralization_profile.v1",
+                    "producer": "tac.local_acceleration.mlx_renderer_prefilter_profile",
+                    "max_pairs": 600,
+                    "num_pairs": 600,
+                    "n_samples": 600,
+                    "scorer_batch_pairs": 1,
+                    "scope_status": {"full_video": "executed"},
+                    "score_components": {"canonical_score": 0.1},
+                    "mlx_response_summary": {
+                        "batch_pairs": 1,
+                        "max_pairs": 600,
+                        "n_samples": 600,
+                    },
+                    "section_value_rows": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": archive_sha,
+        }
+
+    def fake_stage_local_replay_submission(**kwargs):
+        staged = Path(kwargs["output_dir"]) / "submission"
+        staged.mkdir(parents=True)
+        (staged / "archive.zip").write_bytes(b"archive")
+        (staged / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return staged
+
+    class FakeReplaySummary:
+        def to_json(self) -> str:
+            return json.dumps(
+                {
+                    "schema": "local_submission_replay.v1",
+                    "evaluation_passed": True,
+                    "device": "cpu",
+                    "axis_tag": "[macOS-CPU advisory]",
+                    "local_score_estimate": 1.234,
+                    "blockers": [],
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            )
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+    monkeypatch.setattr(
+        runner_mod,
+        "stage_local_replay_submission",
+        fake_stage_local_replay_submission,
+    )
+    monkeypatch.setattr(
+        runner_mod,
+        "run_local_submission_replay",
+        lambda **_kwargs: FakeReplaySummary(),
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_byte_oracle",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        modelsize_candidate=candidate,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        repo_root=REPO_ROOT,
+    )
+
+    oracle = out["trained_archive_byte_oracle"]
+    assert oracle["schema"] == "hi_nerv_trained_archive_byte_oracle.v1"
+    assert oracle["measured_archive_bytes"] == out["archive_bytes"]
+    assert oracle["row"]["receiver_proof_passed"] is True
+    assert oracle["row"]["archive_bytes"] == out["archive_bytes"]
+    assert oracle["row"]["nominal_total_payload_bytes"] == 70_000
+    assert Path(oracle["path"]).is_file()
+    assert Path(oracle["receiver_closed_modelsize_ladder_path"]).is_file()
+    byte_feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
+    assert byte_feedback["byte_feedback_source"] == (
+        "hi_nerv_trained_archive_byte_oracle"
+    )
+    assert byte_feedback["measured_archive_bytes"] == out["archive_bytes"]
+    assert byte_feedback["trained_archive_byte_oracle_path"] == oracle["path"]
+    assert out["candidate_feedback"]["row"]["measured_archive_bytes"] == out[
+        "archive_bytes"
+    ]
+    assert out["score_claim"] is False
+    assert out["promotion_eligible"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
+    assert "hi_nerv_local_cpu_replay_not_contest_auth_axis" in out["blockers"]
 
 
 def test_hinerv_auto_joint_recon_weight_flows_to_training(

@@ -2263,6 +2263,43 @@ def _augment_feedback_row(
             "native_mlx_scorer_loop_qat_best_materialized",
             bool(native.get("scorer_loop_qat_best_materialized")),
         )
+        out.setdefault(
+            "snerv_mlx_native_hf_decoder_training",
+            native.get("native_mlx_hf_decoder_training"),
+        )
+        out.setdefault(
+            "snerv_mlx_native_training_executed",
+            native.get("native_mlx_training_executed"),
+        )
+        out.setdefault(
+            "snerv_mlx_native_training_kind",
+            native.get("native_mlx_training_kind"),
+        )
+        out.setdefault(
+            "snerv_mlx_native_training_export_guard",
+            native.get("native_mlx_training_export_guard"),
+        )
+        out.setdefault(
+            "snerv_mlx_native_training_export_guard_passed",
+            (
+                dict(native.get("native_mlx_training_export_guard") or {}).get(
+                    "export_guard_passed"
+                )
+                if isinstance(native.get("native_mlx_training_export_guard"), Mapping)
+                else None
+            ),
+        )
+        out.setdefault(
+            "snerv_mlx_native_training_export_guard_blockers",
+            list(
+                dict(native.get("native_mlx_training_export_guard") or {}).get(
+                    "blockers"
+                )
+                or []
+            )
+            if isinstance(native.get("native_mlx_training_export_guard"), Mapping)
+            else [],
+        )
         out.setdefault("snerv_mlx_native_export_executed", native.get("executed"))
         out.setdefault(
             "snerv_mlx_native_export_artifact_report_path",
@@ -2312,6 +2349,11 @@ def _snerv_native_artifact_evidence_from_feedback(
         "receiver_proof_passed": feedback.get("snerv_mlx_native_export_receiver_proof_passed")
         or feedback.get("native_mlx_receiver_proof_passed"),
         "receiver_contract_satisfied": feedback.get("snerv_mlx_native_export_receiver_contract_satisfied"),
+        "native_mlx_training_executed": feedback.get("snerv_mlx_native_training_executed"),
+        "native_mlx_hf_decoder_training": feedback.get("snerv_mlx_native_hf_decoder_training"),
+        "native_mlx_training_export_guard": feedback.get(
+            "snerv_mlx_native_training_export_guard"
+        ),
         "scorer_loop_qat": {
             "executed": feedback.get("native_mlx_scorer_loop_qat_attached"),
             "receiver_contract_satisfied": feedback.get("native_mlx_scorer_loop_qat_receiver_contract_satisfied"),

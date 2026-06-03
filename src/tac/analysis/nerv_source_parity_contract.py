@@ -907,9 +907,8 @@ def _analogue_risk_rows(families: tuple[str, ...]) -> tuple[dict[str, Any], ...]
                         "the upstream neural graph"
                     ),
                     remaining_blockers=(
-                        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
-                        "snerv_official_neural_decoder_payload_grammar_missing",
-                        "snerv_official_receiver_runtime_decode_missing",
+                        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
+                        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
                     ),
                 ),
                 _analogue_risk_row(
@@ -925,9 +924,8 @@ def _analogue_risk_rows(families: tuple[str, ...]) -> tuple[dict[str, Any], ...]
                         "forward replay"
                     ),
                     remaining_blockers=(
+                        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
                         "snerv_official_mfu_hfr_tub_weight_mapping_missing",
-                        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
-                        "snerv_official_receiver_runtime_decode_missing",
                     ),
                 ),
                 _analogue_risk_row(
@@ -945,7 +943,7 @@ def _analogue_risk_rows(families: tuple[str, ...]) -> tuple[dict[str, Any], ...]
                     ),
                     remaining_blockers=(
                         "snerv_official_stride_stack_parity_missing",
-                        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                        "snerv_official_mfu_hfr_tub_full_stack_source_forward_parity_missing",
                         "snerv_measured_fc_dim_modelsize_ladder_missing",
                     ),
                 ),

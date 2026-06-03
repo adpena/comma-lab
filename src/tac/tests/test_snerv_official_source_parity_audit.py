@@ -38,13 +38,23 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     primitive = report["official_mfu_hfr_tub_primitive_replay_binding"]
     assert primitive["all_primitive_source_replay_proven"] is True
     assert primitive["full_stack_source_forward_replay_proven"] is False
-    assert primitive["receiver_export_bound"] is False
+    assert primitive["receiver_export_self_consistency_verified"] is True
+    assert primitive["receiver_source_forward_replay_bound"] is True
+    assert primitive["receiver_export_bound"] is True
     runtime = report["official_receiver_runtime_decode_contract"]
     assert runtime["schema"] == RECEIVER_RUNTIME_DECODE_SCHEMA
     assert runtime["all_runtime_modules_import_safe"] is True
     assert runtime["all_numeric_source_replay_tests_hashed"] is True
-    assert runtime["receiver_runtime_decode_proven"] is False
-    assert "snerv_tub_official_output2_packet_decode_missing" in runtime["blockers"]
+    assert runtime["receiver_runtime_decode_proven"] is True
+    assert runtime["receiver_export_self_consistency_verified"] is True
+    assert runtime["receiver_source_forward_replay_bound"] is True
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" not in (
+        runtime["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
+        in runtime["blockers"]
+    )
     assert report["official_mfu_hfr_tub_parity_proven"] is False
     assert report["blockers"] == ["snerv_official_mfu_hfr_tub_parity_missing"]
     assert report["official_forward_parity_artifact_row"]["status"] == "missing"
@@ -71,10 +81,11 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     summary = summarize_snerv_official_source_audit(report)
     assert summary["official_source_markers_present"] is True
     assert summary["official_mfu_hfr_tub_primitives_proven"] is True
-    assert summary["official_receiver_runtime_decode_proven"] is False
-    assert "snerv_mfu_official_weight_packet_decode_missing" in summary[
-        "official_receiver_runtime_decode_blockers"
-    ]
+    assert summary["official_receiver_runtime_decode_proven"] is True
+    assert summary["official_receiver_source_forward_replay_bound"] is True
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" not in (
+        summary["official_receiver_runtime_decode_blockers"]
+    )
     assert summary["full_stack_source_forward_replay_proven"] is False
     assert summary["official_mfu_hfr_tub_parity_proven"] is False
     assert {row["classification"] for row in summary["component_states"]} == {
@@ -87,7 +98,8 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     assert "SNeRV Official Source-Parity Audit" in md
     assert "official MFU/HFR/TUB parity proven: `False`" in md
     assert "official MFU/HFR/TUB primitive replay proven: `True`" in md
-    assert "official receiver runtime decode proven: `False`" in md
+    assert "official receiver runtime decode proven: `True`" in md
+    assert "official receiver source-forward replay bound: `True`" in md
     assert "official MFU/HFR/TUB parity falsified: `False`" in md
     assert (
         "| `tub` | "
@@ -360,6 +372,7 @@ def _receiver_runtime_decode_contract() -> dict[str, object]:
     return {
         "schema": RECEIVER_RUNTIME_DECODE_SCHEMA,
         "receiver_runtime_decode_proven": True,
+        "receiver_source_forward_replay_bound": True,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
         "component_rows": [
@@ -374,6 +387,7 @@ def _receiver_runtime_decode_row(component_id: str) -> dict[str, object]:
     return {
         "component_id": component_id,
         "receiver_runtime_decode_proven": True,
+        "receiver_source_forward_replay_bound": True,
         "runtime_module_import_safe": True,
         "runtime_module_sha256": "6" * 64,
         "numeric_test_sha256": "7" * 64,

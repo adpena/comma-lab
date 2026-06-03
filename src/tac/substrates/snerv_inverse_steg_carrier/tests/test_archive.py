@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import struct
 
@@ -14,6 +15,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     HEADER_LEN_FMT,
     SECTION_ORDER,
     SNERV_ARCHIVE_MAGIC,
+    SNERV_DECODER_MAGIC,
     SnervArchiveError,
     decode_decoder_payload,
     decode_lf_metadata_payload,
@@ -370,9 +372,20 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert header["schema"] == "snerv_decoder_payload.official_mfu_hfr_tub.v1"
     assert header["codec"] == "official_numpy_float64_lzma"
     assert header["tensor_count"] == len(header["tensor_manifest"])
+    assert header["receiver_export_payload_bound"] is True
+    assert header["receiver_export_self_consistency_verified"] is True
+    assert header["source_forward_replay_bound_by_export"] is True
+    assert header["source_forward_replay_authority"] is True
+    assert header["source_forward_replay_reference"]["schema"] == (
+        "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_replay.v1"
+    )
     assert decoded.schema == header["schema"]
     assert proof["schema"].endswith("receiver_runtime_proof.v1")
+    assert proof["receiver_export_bound"] is True
     assert proof["receiver_runtime_decode_proven"] is True
+    assert proof["receiver_export_self_consistency_verified"] is True
+    assert proof["source_forward_replay_bound"] is True
+    assert proof["source_forward_replay_verified"] is True
     assert proof["executed_components"] == {
         "official_mfu": True,
         "official_hfr": True,
@@ -380,8 +393,15 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     }
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
-    assert proof["source_forward_replay_authority"] is False
+    assert proof["source_forward_replay_authority"] is True
+    assert proof["contest_scorer_authority"] is False
+    assert proof["source_forward_replay_reference_sha256"] == header[
+        "source_forward_replay_reference_sha256"
+    ]
     assert proof["output_bundle_sha256"] == proof2["output_bundle_sha256"]
+    assert proof["output_bundle_sha256"] == header["source_forward_replay_reference"][
+        "output_bundle_sha256"
+    ]
     assert proof["mfu_output"]["pyr_out_shape"] == [1, 1, 8, 8]
     assert proof["hfr_output"]["yh_out_shape"] == [1, 3, 3, 8, 8]
     assert proof["tub_output"]["shape_metadata"]["temporal_encoder_input_count"] == 2
@@ -424,6 +444,20 @@ def test_official_mfu_hfr_tub_decoder_payload_is_hash_checked() -> None:
 
     with pytest.raises(SnervArchiveError, match="compressed sha256 mismatch"):
         decode_official_mfu_hfr_tub_decoder_payload(bytes(payload))
+
+
+def test_official_mfu_hfr_tub_source_forward_reference_is_fail_closed() -> None:
+    payload = encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())
+    missing_reference = _rewrite_subpacket_header(
+        payload,
+        lambda header: header.pop("source_forward_replay_reference"),
+    )
+    with pytest.raises(SnervArchiveError, match="source-forward replay reference"):
+        decode_official_mfu_hfr_tub_decoder_payload(missing_reference)
+
+    bad_reference = _rewrite_subpacket_header(payload, _corrupt_source_forward_reference)
+    with pytest.raises(SnervArchiveError, match="output bundle sha256 mismatch"):
+        execute_official_mfu_hfr_tub_decoder_payload(bad_reference)
 
 
 def test_official_mfu_hfr_tub_payload_bytes_change_receiver_output() -> None:
@@ -813,6 +847,38 @@ def _rewrite_header(packet: bytes, mutator) -> bytes:
         + header_bytes
         + packet[header_end:]
     )
+
+
+def _rewrite_subpacket_header(packet: bytes, mutator) -> bytes:
+    offset = len(SNERV_DECODER_MAGIC)
+    (header_len,) = struct.unpack(
+        HEADER_LEN_FMT,
+        packet[offset : offset + struct.calcsize(HEADER_LEN_FMT)],
+    )
+    header_start = offset + struct.calcsize(HEADER_LEN_FMT)
+    header_end = header_start + int(header_len)
+    header = json.loads(packet[header_start:header_end].decode("utf-8"))
+    mutator(header)
+    header_bytes = json.dumps(
+        header,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return (
+        SNERV_DECODER_MAGIC
+        + struct.pack(HEADER_LEN_FMT, len(header_bytes))
+        + header_bytes
+        + packet[header_end:]
+    )
+
+
+def _corrupt_source_forward_reference(header: dict[str, object]) -> None:
+    reference = dict(header["source_forward_replay_reference"])
+    reference["output_bundle_sha256"] = "0" * 64
+    header["source_forward_replay_reference"] = reference
+    header["source_forward_replay_reference_sha256"] = hashlib.sha256(
+        json.dumps(reference, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    ).hexdigest()
 
 
 def _read_subpacket_header(packet: bytes) -> dict[str, object]:

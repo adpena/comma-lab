@@ -321,6 +321,23 @@ def _normalize_row(
         "fc_dim": fc_dim,
         "archive_sha256": archive_sha,
         "axis_tag": source_axis_tag,
+        "num_pairs": _first_int(
+            source,
+            (
+                "num_pairs",
+                "n_pairs",
+                "pair_count",
+                "sample_pair_count",
+                "sample_pairs",
+                "sample_count",
+                "n_samples",
+            ),
+        ),
+        "full_video_coverage": bool(
+            source.get("full_video_coverage")
+            or source.get("full600_coverage")
+            or source.get("full_sample_coverage")
+        ),
         "receiver_proof_passed": receiver_closed_modelsize_row,
         "receiver_closed": receiver_closed_modelsize_row,
         "byte_closed_receiver_proof": receiver_closed_modelsize_row,

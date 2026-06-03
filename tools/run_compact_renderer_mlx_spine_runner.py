@@ -85,6 +85,9 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     snerv_temporal_mode_from_id_token,
     tag_hinerv_target_modelsize_candidate,
 )
+from tac.analysis.nerv_receiver_closed_modelsize_ladder import (  # noqa: E402
+    build_nerv_receiver_closed_modelsize_ladder,
+)
 from tac.analysis.nerv_source_parity_contract import (  # noqa: E402
     build_nerv_source_parity_contract,
 )
@@ -136,6 +139,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (  # noqa: E402
     build_snerv_mlx_native_adapter_contract,
     build_snerv_mlx_native_file_backed_evidence,
+    build_snerv_mlx_native_training_export_guard,
 )
 from tac.training.long_training_canonical import (  # noqa: E402
     DEFAULT_CHECKPOINT_INTERVAL_EPOCHS,
@@ -2683,7 +2687,13 @@ def _run_snerv_native_mlx_export_attachment(
             native_mlx_decoder_train_ridge=float(native_mlx_decoder_train_ridge),
             allow_overwrite=bool(allow_overwrite),
         )
-        blockers = list(artifact.get("blockers") or [])
+        native_training_export_guard = build_snerv_mlx_native_training_export_guard(
+            artifact
+        )
+        blockers = [
+            *list(artifact.get("blockers") or []),
+            *list(native_training_export_guard.get("blockers") or []),
+        ]
         if int(num_pairs) < CONTEST_PAIR_COUNT:
             blockers.append("snerv_mlx_native_export_partial_pair_coverage")
         if artifact.get("receiver_proof_passed") is not True:
@@ -2692,6 +2702,7 @@ def _run_snerv_native_mlx_export_attachment(
         native_mlx_full600_export_proof_ready = int(num_pairs) >= CONTEST_PAIR_COUNT
         native_mlx_full600_campaign_ready = bool(
             native_mlx_full600_export_proof_ready
+            and native_training_export_guard.get("export_guard_passed") is True
             and artifact.get("score_aware_long_training_executed") is True
             and artifact.get("native_mlx_training_executed") is True
             and artifact.get("receiver_proof_passed") is True
@@ -2729,6 +2740,7 @@ def _run_snerv_native_mlx_export_attachment(
             "native_mlx_hf_decoder_training": artifact.get(
                 "native_mlx_hf_decoder_training"
             ),
+            "native_mlx_training_export_guard": native_training_export_guard,
             "artifact_report_path": artifact.get("report_path"),
             "packet_path": artifact.get("packet_path"),
             "packet_bytes": artifact.get("packet_bytes"),
@@ -6475,6 +6487,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
             repo_root=root,
         )
+    trained_archive_byte_oracle = _write_hi_nerv_trained_archive_byte_oracle(
+        output_dir=out,
+        artifact_dict=artifact_dict,
+        modelsize_candidate=candidate or None,
+        num_pairs=int(num_pairs),
+        receiver_proof_path=receiver_proof_path,
+        local_cpu_replay_summary=local_cpu_replay_summary,
+        mlx_prefilter_coverage=mlx_prefilter_coverage,
+        repo_root=root,
+    )
     candidate_curriculum_plan = build_hinerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
@@ -6494,11 +6516,48 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         full_video_local_prefilter_attached=has_full_video_mlx_prefilter,
         local_cpu_replay_gate_attached=local_cpu_replay_summary is not None,
         measured_archive_bytes=(
-            int(artifact_dict["archive_bytes"])
-            if artifact_dict.get("archive_bytes") is not None
+            int(trained_archive_byte_oracle["measured_archive_bytes"])
+            if trained_archive_byte_oracle.get("measured_archive_bytes") is not None
             else None
         ),
     )
+    if isinstance(candidate_curriculum_plan.get("byte_oracle_logging"), dict):
+        candidate_curriculum_plan["byte_oracle_logging"].update(
+            {
+                "byte_feedback_source": "hi_nerv_trained_archive_byte_oracle",
+                "trained_archive_byte_oracle_path": trained_archive_byte_oracle[
+                    "path"
+                ],
+                "trained_archive_byte_oracle_sha256": trained_archive_byte_oracle[
+                    "sha256"
+                ],
+                "receiver_closed_modelsize_ladder_path": (
+                    trained_archive_byte_oracle[
+                        "receiver_closed_modelsize_ladder_path"
+                    ]
+                ),
+                "receiver_closed_modelsize_ladder_sha256": (
+                    trained_archive_byte_oracle[
+                        "receiver_closed_modelsize_ladder_sha256"
+                    ]
+                ),
+                "receiver_proof_passed": trained_archive_byte_oracle["row"][
+                    "receiver_proof_passed"
+                ],
+                "local_cpu_replay_executed": trained_archive_byte_oracle["row"][
+                    "local_cpu_replay_executed"
+                ],
+                "local_cpu_replay_axis_tag": trained_archive_byte_oracle["row"][
+                    "local_cpu_replay_axis_tag"
+                ],
+                "byte_oracle_feedback_ready": trained_archive_byte_oracle[
+                    "feedback_ready"
+                ],
+                "byte_oracle_blockers": list(
+                    trained_archive_byte_oracle.get("blockers") or []
+                ),
+            }
+        )
     acquisition_path = out / "hprc_spine_acquisition_report.json"
     runner_plan_path = out / "hprc_spine_bounded_runner_plan.json"
     selected_runner_rows: list[dict[str, Any]] = []
@@ -6513,6 +6572,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers.extend(config_gate.get("blockers") or [])
     blockers.extend(score_aware_training_plan.get("blockers") or [])
     blockers.extend(candidate_curriculum_plan.get("blockers") or [])
+    blockers.extend(trained_archive_byte_oracle.get("blockers") or [])
     blockers.extend(local_cpu_replay_blockers)
     if not decoder_weight_saliency_artifact.get("written"):
         blockers.append(
@@ -6622,6 +6682,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 scorer_upstream
             ),
             "training_artifact": artifact_dict,
+            "trained_archive_byte_oracle": trained_archive_byte_oracle,
+            "receiver_closed_modelsize_ladder_path": (
+                trained_archive_byte_oracle[
+                    "receiver_closed_modelsize_ladder_path"
+                ]
+            ),
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_training_config_gate": config_gate,
             "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
@@ -6756,6 +6822,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 path.as_posix() for path in local_cpu_replay_paths
             ],
             "local_cpu_replay_summary": local_cpu_replay_summary,
+            "hi_nerv_trained_archive_byte_oracle": trained_archive_byte_oracle,
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
             "local_cpu_replay_gate": {
@@ -8454,6 +8521,174 @@ def _compact_modelsize_budget_row_blockers(row: Mapping[str, Any]) -> list[str]:
     if not _compact_modelsize_row_has_nonrate_signal(row):
         blockers.append("modelsize_budget_row_missing_nonrate_score")
     return blockers
+
+
+def _write_hi_nerv_trained_archive_byte_oracle(
+    *,
+    output_dir: Path,
+    artifact_dict: Mapping[str, Any],
+    modelsize_candidate: Mapping[str, Any] | None,
+    num_pairs: int,
+    receiver_proof_path: Path | None,
+    local_cpu_replay_summary: Mapping[str, Any] | None,
+    mlx_prefilter_coverage: Mapping[str, Any],
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Write planner-facing measured archive bytes for a trained HiNeRV row."""
+
+    candidate = dict(modelsize_candidate or {})
+    archive_path_raw = artifact_dict.get("archive_path")
+    archive_path = Path(str(archive_path_raw)) if archive_path_raw else None
+    archive_bytes = _compact_positive_int_from_keys(
+        artifact_dict,
+        ("archive_bytes", "archive_zip_bytes", "measured_archive_bytes"),
+    )
+    archive_sha256 = _compact_first_present_str(
+        artifact_dict,
+        ("archive_sha256", "archive_zip_sha256", "candidate_archive_sha256"),
+    )
+    proof_sha256 = (
+        _sha256_file(receiver_proof_path)
+        if receiver_proof_path is not None and receiver_proof_path.is_file()
+        else None
+    )
+    proof_payload = (
+        _load_json(receiver_proof_path)
+        if receiver_proof_path is not None and receiver_proof_path.is_file()
+        else {}
+    )
+    proof_passed = bool(
+        isinstance(proof_payload, Mapping)
+        and (
+            proof_payload.get("runtime_consumption_proof_ready") is True
+            or proof_payload.get("receiver_archive_replay_verified") is True
+            or proof_payload.get("runtime_consumption_proof_passed") is True
+            or proof_payload.get("receiver_proof_passed") is True
+        )
+        and not proof_payload.get("blockers")
+    )
+    local_replay_axis = (
+        str(local_cpu_replay_summary.get("axis_tag") or "")
+        if isinstance(local_cpu_replay_summary, Mapping)
+        else ""
+    )
+    local_replay_executed = isinstance(local_cpu_replay_summary, Mapping)
+    local_replay_passed = bool(
+        local_replay_executed
+        and not local_cpu_replay_summary.get("blockers")
+        and (
+            local_cpu_replay_summary.get("local_receiver_archive_replay_verified")
+            is True
+            or local_cpu_replay_summary.get("receiver_archive_replay_verified")
+            is True
+            or local_cpu_replay_summary.get("score_claim_valid") is True
+            or local_cpu_replay_summary.get("score_claim") is False
+        )
+    )
+    candidate_id = str(candidate.get("candidate_id") or "manual_cli_hi_nerv")
+    modelsize_mparams = _compact_finite_float_from_keys(
+        candidate,
+        (
+            "modelsize_mparams",
+            "target_modelsize_mparams",
+        ),
+    )
+    row: dict[str, Any] = {
+        "schema": "hi_nerv_trained_archive_byte_oracle_row.v1",
+        "row_id": candidate_id,
+        "family": "hi_nerv",
+        "carrier_id": "hi_nerv",
+        "candidate_id": candidate_id,
+        "num_pairs": int(num_pairs),
+        "sample_count": int(num_pairs),
+        "modelsize_mparams": modelsize_mparams,
+        "hard_byte_ceiling": _compact_first_present_int(
+            candidate,
+            ("hard_byte_ceiling",),
+        ),
+        "nominal_total_payload_bytes": _compact_first_present_int(
+            candidate,
+            ("nominal_total_payload_bytes",),
+        ),
+        "archive_path": archive_path.as_posix() if archive_path is not None else None,
+        "archive_bytes": archive_bytes,
+        "measured_archive_bytes": archive_bytes,
+        "archive_sha256": archive_sha256,
+        "receiver_proof_path": (
+            receiver_proof_path.as_posix()
+            if receiver_proof_path is not None and receiver_proof_path.is_file()
+            else None
+        ),
+        "receiver_proof_sha256": proof_sha256,
+        "receiver_proof_passed": proof_passed,
+        "receiver_closed": proof_passed,
+        "byte_closed_receiver_proof": proof_passed,
+        "receiver_archive_replay_verified": proof_passed,
+        "local_cpu_replay_executed": local_replay_executed,
+        "local_cpu_replay_passed": local_replay_passed,
+        "local_cpu_replay_axis_tag": local_replay_axis or None,
+        "full_video_mlx_prefilter_attached": bool(
+            mlx_prefilter_coverage.get("has_full_video_mlx_prefilter")
+        ),
+        "axis_tag": "[planning/control]",
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    blockers: list[str] = []
+    if not candidate:
+        blockers.append("hi_nerv_modelsize_candidate_not_selected")
+    if archive_bytes is None:
+        blockers.append("hi_nerv_trained_archive_byte_oracle_archive_bytes_missing")
+    if not _compact_is_sha256_hex(archive_sha256):
+        blockers.append("hi_nerv_trained_archive_byte_oracle_archive_sha_missing")
+    if not proof_passed:
+        blockers.append("hi_nerv_receiver_proof_missing_or_not_passed")
+    if int(num_pairs) < CONTEST_PAIR_COUNT:
+        blockers.append("hi_nerv_trained_archive_byte_oracle_partial_pair_scope")
+    if not local_replay_executed:
+        blockers.append("hi_nerv_local_cpu_replay_gate_missing")
+    if local_replay_axis and not local_replay_axis.lower().startswith("[contest-"):
+        blockers.append("hi_nerv_local_cpu_replay_not_contest_auth_axis")
+    row["blockers"] = _dedupe(blockers)
+
+    ladder = build_nerv_receiver_closed_modelsize_ladder(
+        [row],
+        carrier_id="hi_nerv",
+        source_artifact_path=(archive_path.as_posix() if archive_path is not None else None),
+        repo_root=repo_root,
+    )
+    ladder_path = output_dir / "hi_nerv_receiver_closed_modelsize_ladder.json"
+    _write_json(ladder_path, ladder)
+    oracle = {
+        "schema": "hi_nerv_trained_archive_byte_oracle.v1",
+        "family": "hi_nerv",
+        "candidate_id": candidate_id,
+        "row": row,
+        "receiver_closed_modelsize_ladder_path": ladder_path.as_posix(),
+        "receiver_closed_modelsize_ladder_status": ladder.get("status"),
+        "receiver_closed_modelsize_ladder_ready": bool(
+            ladder.get("ready_for_carrier_training_plan")
+        ),
+        "measured_archive_bytes": archive_bytes,
+        "archive_sha256": archive_sha256,
+        "feedback_ready": bool(
+            archive_bytes is not None
+            and _compact_is_sha256_hex(archive_sha256)
+            and proof_passed
+            and int(num_pairs) >= CONTEST_PAIR_COUNT
+        ),
+        "blockers": _dedupe([*blockers, *(ladder.get("blockers") or [])]),
+        **FALSE_AUTHORITY,
+    }
+    oracle_path = output_dir / "hi_nerv_trained_archive_byte_oracle.json"
+    _write_json(oracle_path, oracle)
+    return {
+        **oracle,
+        "path": oracle_path.as_posix(),
+        "sha256": _sha256_file(oracle_path),
+        "receiver_closed_modelsize_ladder_sha256": _sha256_file(ladder_path),
+        "receiver_closed_modelsize_ladder": ladder,
+    }
 
 
 def _compact_receiver_closed_identity_blockers(row: Mapping[str, Any]) -> list[str]:

@@ -460,6 +460,7 @@ def _snerv_native_runner_report(
     *,
     required_pair_proof: bool,
     native_num_pairs: int = 600,
+    loss_worsened_training: bool = False,
 ) -> dict[str, object]:
     packet = tmp_path / "packet.snar"
     packet.write_bytes(b"snerv-native-packet")
@@ -467,6 +468,36 @@ def _snerv_native_runner_report(
     archive.write_bytes(b"snerv-native-archive")
     packet_sha = hashlib.sha256(packet.read_bytes()).hexdigest()
     archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    native_export = {
+        "executed": True,
+        "candidate_id": "snerv-native-full600",
+        "num_pairs": native_num_pairs,
+        "packet_path": packet.as_posix(),
+        "packet_bytes": packet.stat().st_size,
+        "packet_sha256": packet_sha,
+        "archive_path": archive.as_posix(),
+        "archive_bytes": archive.stat().st_size,
+        "archive_sha256": archive_sha,
+        "receiver_proof_passed": True,
+        "receiver_contract_satisfied": True,
+        "blockers": [],
+    }
+    if loss_worsened_training:
+        native_export.update(
+            {
+                "native_mlx_training_executed": False,
+                "native_mlx_hf_decoder_training": {
+                    "schema": "snerv_native_mlx_hf_decoder_training.v1",
+                    "attempted": True,
+                    "requested_steps": 2,
+                    "executed": False,
+                    "accepted": False,
+                    "any_loss_worsened": True,
+                    "all_final_losses_finite": True,
+                    "blockers": ["snerv_native_mlx_decoder_loss_worsened"],
+                },
+            }
+        )
     return {
         "mode": "executed_snerv_native_mlx_and_exported",
         "execute_family": "snerv",
@@ -492,20 +523,7 @@ def _snerv_native_runner_report(
                 "measured_minus_nominal_bytes": None,
             },
         },
-        "snerv_mlx_native_export": {
-            "executed": True,
-            "candidate_id": "snerv-native-full600",
-            "num_pairs": native_num_pairs,
-            "packet_path": packet.as_posix(),
-            "packet_bytes": packet.stat().st_size,
-            "packet_sha256": packet_sha,
-            "archive_path": archive.as_posix(),
-            "archive_bytes": archive.stat().st_size,
-            "archive_sha256": archive_sha,
-            "receiver_proof_passed": True,
-            "receiver_contract_satisfied": True,
-            "blockers": [],
-        },
+        "snerv_mlx_native_export": native_export,
         "snerv_mlx_native_file_backed_export_evidence": {
             "file_backed_export_proof_passed": True,
             "required_pair_file_backed_export_proof_passed": required_pair_proof,
@@ -569,6 +587,29 @@ def test_snerv_native_file_backed_bytes_require_matching_file_hashes(
     assert row["byte_feedback_source"] is None
     assert row["feedback_ready"] is False
     assert row["snerv_mlx_native_file_backed_byte_feedback"] is None
+
+
+def test_snerv_native_loss_worsened_training_blocks_byte_feedback(
+    tmp_path: Path,
+) -> None:
+    row = build_nerv_candidate_feedback_row(
+        runner_report=_snerv_native_runner_report(
+            tmp_path,
+            required_pair_proof=True,
+            native_num_pairs=600,
+            loss_worsened_training=True,
+        )
+    )
+
+    assert row["byte_feedback_source"] is None
+    assert row["feedback_ready"] is False
+    assert row["snerv_mlx_native_file_backed_byte_feedback"] is None
+    assert row["snerv_mlx_native_training_export_guard_passed"] is False
+    assert "snerv_native_mlx_decoder_loss_worsened_export_blocked" in row[
+        "snerv_mlx_native_training_export_guard_blockers"
+    ]
+    assert "snerv_native_mlx_decoder_loss_worsened_export_blocked" in row["blockers"]
+    assert row["score_claim"] is False
 
 
 def test_snerv_native_partial_file_backed_bytes_do_not_unblock_feedback(

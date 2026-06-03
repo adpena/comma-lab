@@ -198,13 +198,14 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing"
         in stacks["snerv"]["blockers"]
     )
-    assert "snerv_official_mfu_hfr_tub_receiver_export_not_bound" in stacks[
+    assert "snerv_official_mfu_hfr_tub_receiver_export_not_bound" not in stacks[
         "snerv"
     ]["blockers"]
     replay = stacks["snerv"]["official_mfu_hfr_tub_primitive_replay_binding"]
     assert replay["all_primitive_source_replay_proven"] is True
     assert replay["full_stack_source_forward_replay_proven"] is False
-    assert replay["receiver_export_bound"] is False
+    assert replay["receiver_export_bound"] is True
+    assert replay["receiver_source_forward_replay_bound"] is False
     replay_rows = {row["component_id"]: row for row in replay["component_rows"]}
     assert set(replay_rows) == {"mfu", "hfr", "tub"}
     assert all(row["primitive_source_replay_proven"] for row in replay_rows.values())

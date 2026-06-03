@@ -261,10 +261,9 @@ def test_bridge_records_official_mfu_hfr_tub_primitives_fail_closed_until_export
         "and_source_forward_replay_required"
     )
     assert controls["official_mfu_hfr_tub_export_blockers"] == [
-        "snerv_official_neural_decoder_payload_grammar_missing",
+        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
         "snerv_official_mfu_hfr_tub_weight_mapping_missing",
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
-        "snerv_official_receiver_runtime_decode_missing",
     ]
     assert controls["hfr_enabled"] is True
     assert controls["snerv_t_enabled"] is True

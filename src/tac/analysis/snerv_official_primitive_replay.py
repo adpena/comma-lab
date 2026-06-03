@@ -37,8 +37,11 @@ RECEIVER_ARCHIVE_TEST_PATH = (
     "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py"
 )
 RECEIVER_EXPORT_BLOCKERS_AFTER_RUNTIME_DECODE: tuple[str, ...] = (
-    "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
     "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+    "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
+)
+RECEIVER_EXPORT_BLOCKERS_AFTER_SOURCE_FORWARD_REPLAY: tuple[str, ...] = (
+    "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
 )
 FORBIDDEN_RECEIVER_IMPORT_MARKERS: tuple[str, ...] = (
     "import torch",
@@ -89,11 +92,15 @@ SNERV_OFFICIAL_PRIMITIVE_REPLAY_SPECS: tuple[SnervPrimitiveReplaySpec, ...] = (
         ),
         receiver_archive_runtime_markers=(
             "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA",
             "encode_official_mfu_hfr_tub_decoder_payload",
             "decode_official_mfu_hfr_tub_decoder_payload",
             "execute_official_mfu_hfr_tub_decoder_payload",
             "class OfficialMfuHfrTubReceiverPayload",
             "def build_mfu",
+            "source_forward_replay_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_source_forward_replay_reference",
             "OfficialSnervMfu",
             '"mfu.upsample_mid.weight"',
             '"inputs.mfu.low"',
@@ -101,6 +108,7 @@ SNERV_OFFICIAL_PRIMITIVE_REPLAY_SPECS: tuple[SnervPrimitiveReplaySpec, ...] = (
         receiver_archive_test_markers=(
             "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
             "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_source_forward_reference_is_fail_closed",
             "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output",
         ),
         receiver_decode_blockers=(
@@ -132,11 +140,15 @@ SNERV_OFFICIAL_PRIMITIVE_REPLAY_SPECS: tuple[SnervPrimitiveReplaySpec, ...] = (
         ),
         receiver_archive_runtime_markers=(
             "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA",
             "encode_official_mfu_hfr_tub_decoder_payload",
             "decode_official_mfu_hfr_tub_decoder_payload",
             "execute_official_mfu_hfr_tub_decoder_payload",
             "class OfficialMfuHfrTubReceiverPayload",
             "def build_hfr_heads",
+            "source_forward_replay_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_source_forward_replay_reference",
             "OfficialHfrHeads",
             '"hfr.lh.conv1.weight"',
             '"hfr.hh.conv2.bias"',
@@ -144,6 +156,7 @@ SNERV_OFFICIAL_PRIMITIVE_REPLAY_SPECS: tuple[SnervPrimitiveReplaySpec, ...] = (
         receiver_archive_test_markers=(
             "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
             "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_source_forward_reference_is_fail_closed",
             "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output",
         ),
         receiver_decode_blockers=(
@@ -174,18 +187,23 @@ SNERV_OFFICIAL_PRIMITIVE_REPLAY_SPECS: tuple[SnervPrimitiveReplaySpec, ...] = (
         ),
         receiver_archive_runtime_markers=(
             "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA",
             "encode_official_mfu_hfr_tub_decoder_payload",
             "decode_official_mfu_hfr_tub_decoder_payload",
             "execute_official_mfu_hfr_tub_decoder_payload",
             "class OfficialMfuHfrTubReceiverPayload",
             "prepare_official_tub_graph_inputs",
             "def tub_inputs",
+            "source_forward_replay_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_source_forward_replay_reference",
             '"inputs.tub.current"',
             '"inputs.tub.next_frame"',
         ),
         receiver_archive_test_markers=(
             "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
             "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_source_forward_reference_is_fail_closed",
             "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output",
         ),
         receiver_decode_blockers=(
@@ -212,17 +230,23 @@ def build_snerv_official_primitive_replay_binding(*, repo_root: str | Path) -> d
         "component_rows": rows,
         "all_primitive_source_replay_proven": all_proven,
         "full_stack_source_forward_replay_proven": False,
+        "receiver_export_self_consistency_verified": bool(
+            receiver_contract["receiver_export_self_consistency_verified"]
+        ),
+        "receiver_source_forward_replay_bound": bool(
+            receiver_contract["receiver_source_forward_replay_bound"]
+        ),
         "official_receiver_runtime_decode_contract": receiver_contract,
         "receiver_archive_payload_bound": bool(
             receiver_contract["receiver_runtime_decode_proven"]
         ),
         "receiver_export_bound": bool(
-            receiver_contract["receiver_archive_payload_bound"]
+            receiver_contract["receiver_source_forward_replay_bound"]
         ),
         "native_mlx_export_bound": False,
         "official_export_bound": False,
-        "blockers": list(RECEIVER_EXPORT_BLOCKERS_AFTER_RUNTIME_DECODE),
-        "authority": "false_authority_primitive_replay_not_receiver_export",
+        "blockers": list(receiver_contract["blockers"]),
+        "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
         **FALSE_AUTHORITY,
     }
 
@@ -255,8 +279,20 @@ def build_snerv_official_receiver_runtime_decode_contract(
         bool(row["numeric_source_replay_test_present"]) for row in rows
     )
     decode_proven = all(bool(row["receiver_runtime_decode_proven"]) for row in rows)
+    self_consistency_verified = all(
+        bool(row["receiver_export_self_consistency_verified"]) for row in rows
+    )
+    source_forward_bound = all(
+        bool(row["receiver_source_forward_replay_bound"]) for row in rows
+    )
     post_decode_blockers = (
-        list(RECEIVER_EXPORT_BLOCKERS_AFTER_RUNTIME_DECODE) if decode_proven else []
+        list(RECEIVER_EXPORT_BLOCKERS_AFTER_SOURCE_FORWARD_REPLAY)
+        if source_forward_bound
+        else (
+            list(RECEIVER_EXPORT_BLOCKERS_AFTER_RUNTIME_DECODE)
+            if decode_proven
+            else []
+        )
     )
     return {
         "schema": RECEIVER_RUNTIME_DECODE_SCHEMA,
@@ -264,12 +300,14 @@ def build_snerv_official_receiver_runtime_decode_contract(
         "all_runtime_modules_import_safe": runtime_safe,
         "all_numeric_source_replay_tests_hashed": numeric_bound,
         "receiver_runtime_decode_proven": decode_proven,
+        "receiver_export_self_consistency_verified": self_consistency_verified,
+        "receiver_source_forward_replay_bound": source_forward_bound,
         "receiver_archive_payload_bound": decode_proven,
-        "receiver_export_bound": decode_proven,
+        "receiver_export_bound": source_forward_bound,
         "native_mlx_export_bound": False,
         "official_export_bound": False,
         "blockers": blockers + post_decode_blockers,
-        "authority": "false_authority_runtime_decode_contract_not_source_forward_or_scorer",
+        "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
         **FALSE_AUTHORITY,
     }
 
@@ -482,12 +520,14 @@ def _receiver_runtime_decode_row(
         "numeric_source_replay_test_present": numeric_test_present,
         "receiver_archive_payload_decode_present": archive_decode_present,
         "receiver_runtime_decode_proven": decode_proven,
+        "receiver_export_self_consistency_verified": decode_proven,
+        "receiver_source_forward_replay_bound": decode_proven,
         "receiver_archive_payload_bound": decode_proven,
         "receiver_export_bound": decode_proven,
         "native_mlx_export_bound": False,
         "blockers": blockers,
         "status": (
-            "receiver_runtime_decode_proven_source_forward_missing"
+            "receiver_export_source_forward_replay_bound"
             if decode_proven
             else (
                 "numeric_source_replay_bound_receiver_decode_missing"
@@ -495,7 +535,7 @@ def _receiver_runtime_decode_row(
                 else "receiver_runtime_decode_contract_incomplete"
             )
         ),
-        "authority": "false_authority_runtime_decode_contract_not_source_forward_or_scorer",
+        "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
         **FALSE_AUTHORITY,
     }
 

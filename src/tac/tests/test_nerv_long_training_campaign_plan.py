@@ -2355,6 +2355,107 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert snerv["ready_for_exact_eval_dispatch"] is False
 
 
+def test_long_training_campaign_plan_blocks_loss_worsened_snerv_native_export(
+    tmp_path: Path,
+) -> None:
+    runner = _snerv_partial_compact_runner_report()
+    report_path = tmp_path / "snerv_mlx_native_train_export.json"
+    packet_path = tmp_path / "packet.snar1"
+    archive_path = tmp_path / "archive.zip"
+    proof_path = tmp_path / "receiver_proof.json"
+    report_path.write_text('{"schema":"snerv_mlx_native_train_export.v1"}', encoding="utf-8")
+    packet_path.write_bytes(b"SNAR1 packet bytes")
+    archive_path.write_bytes(b"archive bytes")
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_inverse_steg_receiver_proof.v1",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_ready": True,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    rejected_training = {
+        "schema": "snerv_native_mlx_hf_decoder_training.v1",
+        "attempted": True,
+        "requested_steps": 2,
+        "executed": False,
+        "accepted": False,
+        "any_loss_worsened": True,
+        "all_final_losses_finite": True,
+        "blockers": ["snerv_native_mlx_decoder_loss_worsened"],
+    }
+    runner["num_pairs"] = 600
+    runner["snerv_mlx_native_export"].update(
+        {
+            "executed": True,
+            "candidate_id": _snerv_candidate_id(),
+            "num_pairs": 600,
+            "artifact_report_path": report_path.as_posix(),
+            "packet_path": packet_path.as_posix(),
+            "packet_bytes": packet_path.stat().st_size,
+            "packet_sha256": _sha256(packet_path),
+            "archive_path": archive_path.as_posix(),
+            "archive_bytes": archive_path.stat().st_size,
+            "archive_sha256": _sha256(archive_path),
+            "receiver_proof_path": proof_path.as_posix(),
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "native_mlx_full600_campaign_ready": True,
+            "native_mlx_training_executed": False,
+            "native_mlx_hf_decoder_training": rejected_training,
+        }
+    )
+    runner["snerv_mlx_native_file_backed_export_evidence"] = {
+        "schema": "snerv_mlx_native_train_export.v1",
+        "executed": True,
+        "num_pairs": 600,
+        "candidate_id": _snerv_candidate_id(),
+        "artifact_report_path": report_path.as_posix(),
+        "packet_path": packet_path.as_posix(),
+        "packet_sha256": _sha256(packet_path),
+        "archive_path": archive_path.as_posix(),
+        "archive_sha256": _sha256(archive_path),
+        "receiver_proof_path": proof_path.as_posix(),
+        "receiver_proof_passed": True,
+        "receiver_contract_satisfied": True,
+        "file_backed_export_proof_passed": True,
+        "required_pair_file_backed_export_proof_passed": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(runner,),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    feedback = snerv["candidate_feedback"]
+    assert feedback["byte_feedback_source"] is None
+    assert feedback["feedback_ready"] is False
+    assert feedback["snerv_mlx_native_training_export_guard_passed"] is False
+    assert "snerv_native_mlx_decoder_loss_worsened_export_blocked" in feedback[
+        "snerv_mlx_native_training_export_guard_blockers"
+    ]
+    assert "snerv_native_mlx_decoder_loss_worsened_export_blocked" in snerv["blockers"]
+    training_plan = snerv["curriculum_plan"]["training_plan"]
+    assert training_plan["native_mlx_train_export_verified"] is False
+    assert training_plan["native_mlx_file_backed_export_proof_passed"] is False
+    assert "snerv_mlx_native_file_backed_export_proof_missing_or_failed" in snerv["blockers"]
+    assert snerv["score_claim"] is False
+    assert snerv["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_plan_rejects_unknown_optimizer() -> None:
     with pytest.raises(NervLongTrainingCampaignPlanError, match="unsupported"):
         build_nerv_long_training_campaign_plan(

@@ -138,8 +138,14 @@ def test_source_parity_contract_records_insufficient_analogue_surfaces() -> None
     assert risks["snerv_receiver_safe_mfu_hfr_temporal_adapter"][
         "insufficient_for"
     ] == "official_spectra_preserving_snerv_source_forward"
-    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in risks[
-        "snerv_receiver_safe_mfu_hfr_temporal_adapter"
+    assert (
+        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
+        in risks["snerv_receiver_safe_mfu_hfr_temporal_adapter"][
+            "remaining_blockers"
+        ]
+    )
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" not in risks[
+        "snerv_official_mfu_hfr_tub_numeric_primitives"
     ]["remaining_blockers"]
     assert risks["snerv_official_mfu_hfr_tub_numeric_primitives"][
         "insufficient_for"
