@@ -1,0 +1,24 @@
+{
+  "archive_bytes": 121690,
+  "archive_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_epoch009499/archive.zip",
+  "archive_sha256": "094031b0563b4e278c0a75e83e11a40a2c4c1cc2b3465b880bd632e989197dea",
+  "blockers": [
+    "receiver_proof_process_exited_code_143_before_report_json",
+    "receiver_proof_not_ready",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "full_video_scorer_replay_not_executed"
+  ],
+  "candidate_id": "hinerv_np600_ld16_ed8_dc16_mi1fi4_hfg_cnx_lg2c4_cx2k7_int7_mixed_ceil178000",
+  "checkpoint_epoch": 9499,
+  "checkpoint_state_kind": "ema",
+  "created_utc": "2026-06-03T20:19:58Z",
+  "family": "hi_nerv",
+  "partial_runtime_output_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_epoch009499/receiver_proof/runtime_out/0.raw",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_ready": false,
+  "schema": "hinerv_checkpoint_archive_export_interrupted.v1",
+  "score_claim": false,
+  "source_command": "uv run python tools/export_hinerv_checkpoint_archive.py --startup-json /Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/compact_renderer_mlx_spine_runner_startup.json --checkpoint-meta /Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/hi_nerv_mlx_training/checkpoints/epoch009499_20260603T201619Z.meta.json --output-dir /Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_epoch009499 --state-kind ema --decoder-codec portfolio_auto --latent-codec int16_brotli_q11 --emit-receiver-proof --output-json .omx/research/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_codex.json"
+}

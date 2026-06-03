@@ -1,0 +1,38 @@
+{
+  "archive_bytes": 214597,
+  "archive_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_exports/hinerv_epoch8499_ema_20260603T201240Z/archive.zip",
+  "archive_sha256": "8716373ba3f3148b2bb8d7f5f56b5d8f63b11bf9717d664894d7318e0e4e3796",
+  "blockers": [
+    "macos_mlx_checkpoint_export_false_authority",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "full_video_scorer_replay_not_executed",
+    "archive_bytes_exceed_tightest_hard_ceiling"
+  ],
+  "candidate_id": "hinerv_np600_ld16_ed8_dc16_mi1fi4_hfg_cnx_lg2c4_cx2k7_int7_mixed_ceil178000",
+  "checkpoint_epoch": 8499,
+  "checkpoint_meta_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/hi_nerv_mlx_training/checkpoints/epoch008499_20260603T200917Z.meta.json",
+  "checkpoint_meta_sha256": "1bf39ea0da90441eddc67a32ad5ae01669fc44f13c791db9f0e895d9818b29bd",
+  "checkpoint_state_kind": "ema",
+  "checkpoint_state_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/hi_nerv_mlx_training/checkpoints/epoch008499_20260603T200917Z.ema_shadow.state.npsd",
+  "checkpoint_state_sha256": "b10f4d07e8092af8a2fcd1566d05eed4e2bd8146de5cac8b7fb2350310301a04",
+  "decoder_codec": "int7_mixed",
+  "family": "hi_nerv",
+  "hard_byte_ceilings": [
+    178000,
+    216000,
+    285000
+  ],
+  "latent_codec": "int16_brotli_q11",
+  "output_dir": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_exports/hinerv_epoch8499_ema_20260603T201240Z",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_exports/hinerv_epoch8499_ema_20260603T201240Z/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+  "receiver_proof_ready": true,
+  "receiver_proof_sha256": "2bb360ebc4feb8b8781f8eb091b68b1bee1b881831b45d288bc54042939c2b7a",
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_checkpoint_archive_export_20260603T201240Z_codex.json",
+  "schema": "hinerv_checkpoint_archive_export.v1",
+  "score_claim": false,
+  "startup_json_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/compact_renderer_mlx_spine_runner_startup.json",
+  "startup_json_sha256": "3e22d92a48adc9b1f300da19a046e42786ecb9eb902dc85a8ba4d6ee2e15ff97"
+}

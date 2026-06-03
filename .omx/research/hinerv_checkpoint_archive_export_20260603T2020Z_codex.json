@@ -1,0 +1,109 @@
+{
+  "archive_bytes": 214654,
+  "archive_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_exports/hinerv_epoch9499_ema_receiverproof_20260603T2020Z/archive.zip",
+  "archive_sha256": "b30723dc40b9549a7998868bb44facd4eb8b04de414a1d8408f24c056571e944",
+  "blockers": [
+    "macos_mlx_checkpoint_export_false_authority",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "full_video_scorer_replay_not_executed",
+    "archive_bytes_exceed_tightest_hard_ceiling"
+  ],
+  "candidate_id": "hinerv_np600_ld16_ed8_dc16_mi1fi4_hfg_cnx_lg2c4_cx2k7_int7_mixed_ceil178000",
+  "checkpoint_epoch": 9499,
+  "checkpoint_meta_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/hi_nerv_mlx_training/checkpoints/epoch009499_20260603T201619Z.meta.json",
+  "checkpoint_meta_sha256": "2ff60fcd71c5023b274b496a965ebad82fc5059eed4a486b344df667bff53e27",
+  "checkpoint_state_kind": "ema",
+  "checkpoint_state_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/hi_nerv_mlx_training/checkpoints/epoch009499_20260603T201619Z.ema_shadow.state.npsd",
+  "checkpoint_state_sha256": "955b2a55dbaf4b5db19c620b6907e0f293323fa82146ccbaf3e3f5d8e7748cf8",
+  "decoder_codec": "int7_mixed",
+  "family": "hi_nerv",
+  "hard_byte_ceilings": [
+    178000,
+    216000,
+    285000
+  ],
+  "latent_codec": "int16_brotli_q11",
+  "output_dir": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_exports/hinerv_epoch9499_ema_receiverproof_20260603T2020Z",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_byte_profile": {
+    "archive_bytes": 214654,
+    "archive_overhead_and_manifest_bytes": 24852,
+    "blockers": [],
+    "dominant_sections": [
+      {
+        "archive_fraction": 0.5737326115516133,
+        "bytes": 123154,
+        "name": "decoder_qw",
+        "role": "charged_decoder_or_program_weights",
+        "sha256": "a09cdf060f92c77352a7eb7e8fbae22cb6c3c6b9d6882f79960dbd4de6d914a0"
+      },
+      {
+        "archive_fraction": 0.3040008571934369,
+        "bytes": 65255,
+        "name": "latents_rc",
+        "role": "charged_latent_stream",
+        "sha256": "4900e50537118b525568944592bd4bb4b7fbae75942c08c328373199958a4bea"
+      },
+      {
+        "archive_fraction": 0.004197452644721272,
+        "bytes": 901,
+        "name": "receiver_state",
+        "role": "charged_decode_constants_or_headers",
+        "sha256": "0d581a85229c9142bc4670c3a5f3036d644f9110205d4082cda9f766e6206c68"
+      },
+      {
+        "archive_fraction": 0.002292060711656899,
+        "bytes": 492,
+        "name": "rdo_plan",
+        "role": "charged_allocation_hints_no_authority",
+        "sha256": "312715fb80b7e719643b3d74a943ad83eefdc2eb746e4ce43416a857ca9cb4dc"
+      }
+    ],
+    "hprc_bin_bytes": 196778,
+    "manifest_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_exports/hinerv_epoch9499_ema_receiverproof_20260603T2020Z/hprc_representation_spine_hi_nerv_manifest.json",
+    "manifest_sha256": "6436a09a74ff57778404973f6b73ac80b383c43485ea91906f14b285d25f89a7",
+    "profile_ready": true,
+    "schema": "hinerv_checkpoint_archive_rate_byte_profile.v1",
+    "section_payload_bytes": 189802,
+    "sections": [
+      {
+        "archive_fraction": 0.5737326115516133,
+        "bytes": 123154,
+        "name": "decoder_qw",
+        "role": "charged_decoder_or_program_weights",
+        "sha256": "a09cdf060f92c77352a7eb7e8fbae22cb6c3c6b9d6882f79960dbd4de6d914a0"
+      },
+      {
+        "archive_fraction": 0.3040008571934369,
+        "bytes": 65255,
+        "name": "latents_rc",
+        "role": "charged_latent_stream",
+        "sha256": "4900e50537118b525568944592bd4bb4b7fbae75942c08c328373199958a4bea"
+      },
+      {
+        "archive_fraction": 0.002292060711656899,
+        "bytes": 492,
+        "name": "rdo_plan",
+        "role": "charged_allocation_hints_no_authority",
+        "sha256": "312715fb80b7e719643b3d74a943ad83eefdc2eb746e4ce43416a857ca9cb4dc"
+      },
+      {
+        "archive_fraction": 0.004197452644721272,
+        "bytes": 901,
+        "name": "receiver_state",
+        "role": "charged_decode_constants_or_headers",
+        "sha256": "0d581a85229c9142bc4670c3a5f3036d644f9110205d4082cda9f766e6206c68"
+      }
+    ]
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_exports/hinerv_epoch9499_ema_receiverproof_20260603T2020Z/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+  "receiver_proof_ready": true,
+  "receiver_proof_sha256": "6ac670e67ad64c7d6cd5ddd1e7b050c7e817eeceff29b3668a46ace1856c7559",
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_checkpoint_archive_export_20260603T2020Z_codex.json",
+  "schema": "hinerv_checkpoint_archive_export.v1",
+  "score_claim": false,
+  "startup_json_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/compact_renderer_mlx_spine_runner_startup.json",
+  "startup_json_sha256": "3e22d92a48adc9b1f300da19a046e42786ecb9eb902dc85a8ba4d6ee2e15ff97"
+}
