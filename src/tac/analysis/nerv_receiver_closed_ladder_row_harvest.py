@@ -40,6 +40,7 @@ _ADVISORY_AXIS_TOKENS = (
     "macos",
     "mps",
 )
+_CONTEST_AUTH_AXIS_PREFIXES = ("[contest-cpu", "[contest-cuda")
 
 
 class NervReceiverClosedLadderRowHarvestError(ValueError):
@@ -354,7 +355,8 @@ def _harvest_row(
     family = _string_or_none(
         candidate.get("family") or candidate.get("carrier_id") or source_family
     )
-    axis_blocked = _axis_is_advisory_or_projected(source_axis_tag)
+    axis_authorized = _axis_is_receiver_closed_authority(source_axis_tag)
+    axis_blocked = not axis_authorized
     authority_blockers = _authority_claim_blockers(candidate, source_payload)
     full600_receiver_proof = bool(
         local_receiver_replay
@@ -389,7 +391,7 @@ def _harvest_row(
         blockers.append("local_smoke_only_not_full600_receiver_proof")
     if axis_blocked:
         blockers.append(
-            "source_axis_advisory_or_projected_not_receiver_closed_ladder_authority"
+            "source_axis_not_receiver_closed_contest_authority"
         )
     blockers.extend(authority_blockers)
 
@@ -400,6 +402,7 @@ def _harvest_row(
         "source_artifact_path": source_path,
         "source_schema": source_schema,
         "source_axis_tag": source_axis_tag,
+        "source_axis_receiver_closed_authority": axis_authorized,
         "source_candidate_index": candidate_index,
         "source_label": _string_or_none(
             candidate.get("sweep_label")
@@ -616,11 +619,13 @@ def _truthy(value: Any) -> bool:
     return False
 
 
-def _axis_is_advisory_or_projected(axis_tag: str | None) -> bool:
+def _axis_is_receiver_closed_authority(axis_tag: str | None) -> bool:
     if axis_tag is None:
         return False
     text = axis_tag.strip().lower()
-    return any(token in text for token in _ADVISORY_AXIS_TOKENS)
+    if any(token in text for token in _ADVISORY_AXIS_TOKENS):
+        return False
+    return text.startswith(_CONTEST_AUTH_AXIS_PREFIXES)
 
 
 def _authority_claim_blockers(*rows: Mapping[str, Any]) -> list[str]:

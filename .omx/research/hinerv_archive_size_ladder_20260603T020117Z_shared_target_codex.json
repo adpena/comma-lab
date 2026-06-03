@@ -4,11 +4,11 @@
   },
   "archive_rows": [
     {
-      "archive_bytes": 61923,
+      "archive_bytes": 61929,
       "archive_export_backend": "mlx",
       "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260603T020117Z_shared_target_codex/hinerv_np600_ld8_ed16_dc6_int2_mixed_ceil178000_tgtmp0p03/archive.zip",
-      "archive_rate_score_at_contest_price": 0.04123198395418422,
-      "archive_sha256": "37fcd64e5eabb611ae73548a9866aa951976aa18518d59f395ea1b5d5abcc0d3",
+      "archive_rate_score_at_contest_price": 0.04123597910790295,
+      "archive_sha256": "51e00e218dd1e546fae4bf8a2e14820f1404f6eedbc190772b3f016f32498d82",
       "backend_claim_blockers": [],
       "blockers": [
         "hinerv_archive_size_row_has_no_nonrate_score",
@@ -68,7 +68,7 @@
       "dispatch_attempted": false,
       "family": "hi_nerv",
       "gpu_launched": false,
-      "measured_minus_nominal_bytes": 25111,
+      "measured_minus_nominal_bytes": 25117,
       "modelsize_candidate": {
         "byte_headroom": 141188,
         "candidate_id": "hinerv_np600_ld8_ed16_dc6_int2_mixed_ceil178000_tgtmp0p03",
@@ -215,6 +215,7 @@
   "hinerv_modelsize_budget_schema": "nerv_modelsize_budget.v1",
   "local_output_explicitly_allowed": false,
   "marginal_archive_gates": [],
+  "markdown_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_archive_size_ladder_20260603T020117Z_shared_target_codex.md",
   "missing_requested_row_ids": [],
   "num_pairs": 600,
   "objective_authority": {
@@ -259,7 +260,7 @@
     "dispatch_attempted": false,
     "exact_cuda_auth_eval": false,
     "field_selection_ready_for_exact_eval_dispatch": false,
-    "generated_at_utc": "20260603T020709Z",
+    "generated_at_utc": "20260603T024131Z",
     "gpu_launched": false,
     "min_free_bytes": 0,
     "promotable": false,
@@ -280,7 +281,7 @@
         "blockers": [],
         "eligible": true,
         "exists": true,
-        "free_bytes": 1266733899776,
+        "free_bytes": 1266729697280,
         "name": "explicit_hinerv_archive_size_ladder_output",
         "parent_exists": true,
         "priority": 0,
@@ -288,7 +289,7 @@
         "reserve_free_bytes": 42949672960,
         "root": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260603T020117Z_shared_target_codex",
         "total_bytes": 2000189177856,
-        "usable_bytes": 1223784226816,
+        "usable_bytes": 1223780024320,
         "workload_root": "/Volumes/VertigoDataTier/pact/hinerv_archive_size_ladder_20260603T020117Z_shared_target_codex",
         "workload_root_exists": true,
         "writable": true
@@ -320,6 +321,18 @@
       "0,2,4,8,16,32"
     ],
     "hinerv_modelsize_budget_json": "/Users/adpena/Projects/pact/.omx/research/nerv_modelsize_budget_20260603T020117Z_shared_target_hinerv_codex.json",
+    "input_files": {
+      "decoder_weight_saliency_json": null,
+      "hinerv_modelsize_budget_json": {
+        "bytes": 32788,
+        "exists": true,
+        "path": "/Users/adpena/Projects/pact/.omx/research/nerv_modelsize_budget_20260603T020117Z_shared_target_hinerv_codex.json",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "sha256": "324459687ec2fddc45b5e0a5df6d87ee127c372a2461ae67022295d1e90e908d"
+      }
+    },
     "promotion_eligible": false,
     "ready_for_exact_eval_dispatch": false,
     "schema": "hinerv_archive_size_ladder_tool_invocation.v1",

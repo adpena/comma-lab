@@ -363,6 +363,12 @@ def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> 
     assert "snerv_source_bound_control_missing:wavelet" in snerv_row["blockers"]
     assert "snerv_source_bound_control_missing:fc_dim" in snerv_row["blockers"]
     assert snerv_row["source_bound_capacity_control_blockers"]
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+    assert (
+        snerv_row["implementation_status"]
+        == "source_bound_capacity_controls_incomplete"
+    )
 
 
 def test_long_training_campaign_plan_blocks_snerv_id_control_mismatch() -> None:
@@ -397,6 +403,70 @@ def test_long_training_campaign_plan_blocks_snerv_id_control_mismatch() -> None:
         snerv_row["source_bound_capacity_controls"]["expected_candidate_id"]
         != snerv_row["candidate_id"]
     )
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+
+
+def test_long_training_campaign_plan_scrubs_nested_candidate_authority() -> None:
+    snerv_budget = _snerv_budget()
+    candidate = dict(snerv_budget["selected_candidates"][0])
+    candidate["score_claim"] = True
+    candidate["ready_for_exact_eval_dispatch"] = True
+    snerv_budget["selected_candidates"] = [candidate]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv_row["candidate"]["score_claim"] is False
+    assert snerv_row["candidate"]["ready_for_exact_eval_dispatch"] is False
+    assert "selected_candidate_authority_flag_true:score_claim" in snerv_row[
+        "blockers"
+    ]
+    assert "selected_candidate_authority_flag_true:ready_for_exact_eval_dispatch" in (
+        snerv_row["blockers"]
+    )
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+
+
+def test_long_training_campaign_plan_blocks_hinerv_candidate_authority_launch(
+    tmp_path: Path,
+) -> None:
+    hinerv_budget = _hinerv_budget()
+    candidate = dict(hinerv_budget["selected_candidates"][0])
+    candidate["score_claim"] = True
+    candidate["promotion_eligible"] = "true"
+    hinerv_budget["selected_candidates"] = [candidate]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=hinerv_budget,
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        joint_recon_weight_manifest_paths=(
+            _joint_recon_weight_manifest(tmp_path, num_pairs=600),
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["candidate"]["score_claim"] is False
+    assert hi["candidate"]["promotion_eligible"] is False
+    assert hi["local_mlx_launch_command_ready"] is False
+    assert hi["implementation_status"] == "selected_candidate_authority_flags_block_launch"
+    assert "selected_candidate_authority_flag_true:score_claim" in hi["blockers"]
+    assert "selected_candidate_authority_flag_true:promotion_eligible" in hi[
+        "blockers"
+    ]
+    assert hi["experiment_queue_entry"]["status"] == "disabled"
 
 
 def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None:
@@ -618,7 +688,7 @@ def test_long_training_campaign_plan_attaches_hinerv_decoder_weight_waterfill(
     assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
     assert (
         "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted"
-        in hi["blockers"]
+        not in hi["blockers"]
     )
     assert report["decoder_weight_waterfill_source_count"] == 1
     assert report["decoder_weight_waterfill_attached_row_count"] == 1
@@ -845,9 +915,12 @@ def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> No
     assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in hi[
         "blockers"
     ]
-    assert "hi_nerv_receiver_proof_missing" not in hi["blockers"]
-    assert "hi_nerv_full_video_local_prefilter_missing" not in hi["blockers"]
-    assert "hi_nerv_local_cpu_replay_gate_missing" not in hi["blockers"]
+    assert "hi_nerv_receiver_proof_missing" in hi["blockers"]
+    assert "hi_nerv_full_video_local_prefilter_missing" in hi["blockers"]
+    assert "hi_nerv_local_cpu_replay_gate_missing" in hi["blockers"]
+    assert "direct_feedback_receiver_proof_file_missing" in hi[
+        "candidate_feedback"
+    ]["direct_feedback_blockers"]
     assert hi["candidate_feedback"]["measured_num_pairs"] == 600
 
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
@@ -855,12 +928,15 @@ def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> No
     assert snerv_curriculum["byte_oracle_logging"]["feedback_ready"] is True
     assert snerv_curriculum["byte_oracle_logging"]["measured_payload_bytes"] == 175_000
     assert "snerv_snar1_byte_feedback_missing" not in snerv["blockers"]
-    assert "snerv_receiver_proof_missing" not in snerv["blockers"]
-    assert "snerv_full_video_local_prefilter_missing" not in snerv["blockers"]
-    assert "snerv_local_cpu_replay_gate_missing" not in snerv["blockers"]
+    assert "snerv_receiver_proof_missing" in snerv["blockers"]
+    assert "snerv_full_video_local_prefilter_missing" in snerv["blockers"]
+    assert "snerv_local_cpu_replay_gate_missing" in snerv["blockers"]
     assert "snerv_scorer_loop_qat_receiver_contract_failed" not in snerv["blockers"]
     assert "snerv_scorer_loop_qat_no_accepted_improvement" not in snerv["blockers"]
     assert snerv["candidate_feedback"]["measured_archive_bytes"] == 176_000
+    assert "direct_feedback_native_receiver_proof_file_missing" in snerv[
+        "candidate_feedback"
+    ]["direct_feedback_blockers"]
     assert (
         "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
         not in snerv["blockers"]
@@ -899,9 +975,9 @@ def test_long_training_campaign_plan_consumes_hinerv_feedback_from_full_row_id()
     assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in hi[
         "blockers"
     ]
-    assert "hi_nerv_receiver_proof_missing" not in hi["blockers"]
-    assert "hi_nerv_full_video_local_prefilter_missing" not in hi["blockers"]
-    assert "hi_nerv_local_cpu_replay_gate_missing" not in hi["blockers"]
+    assert "hi_nerv_receiver_proof_missing" in hi["blockers"]
+    assert "hi_nerv_full_video_local_prefilter_missing" in hi["blockers"]
+    assert "hi_nerv_local_cpu_replay_gate_missing" in hi["blockers"]
 
 
 def test_long_training_campaign_plan_applies_hinerv_pose_instability_feedback(
@@ -1636,13 +1712,14 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     runner["snerv_mlx_native_export"].update(
         {
             "executed": True,
+            "candidate_id": _snerv_candidate_id(),
             "num_pairs": 600,
             "artifact_report_path": report_path.as_posix(),
             "packet_path": packet_path.as_posix(),
-            "packet_bytes": 141_180,
+            "packet_bytes": packet_path.stat().st_size,
             "packet_sha256": _sha256(packet_path),
             "archive_path": archive_path.as_posix(),
-            "archive_bytes": 142_004,
+            "archive_bytes": archive_path.stat().st_size,
             "archive_sha256": _sha256(archive_path),
             "receiver_proof_path": proof_path.as_posix(),
             "receiver_proof_passed": True,
@@ -1654,6 +1731,7 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         "schema": "snerv_mlx_native_train_export.v1",
         "executed": True,
         "num_pairs": 600,
+        "candidate_id": _snerv_candidate_id(),
         "artifact_report_path": report_path.as_posix(),
         "packet_path": packet_path.as_posix(),
         "packet_sha256": _sha256(packet_path),
@@ -1687,8 +1765,8 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert feedback["feedback_ready"] is True
     assert feedback["scope_matches_candidate"] is True
     assert feedback["measured_num_pairs"] == 600
-    assert feedback["measured_payload_bytes"] == 141_180
-    assert feedback["measured_archive_bytes"] == 142_004
+    assert feedback["measured_payload_bytes"] == packet_path.stat().st_size
+    assert feedback["measured_archive_bytes"] == archive_path.stat().st_size
     assert "partial_pair_byte_feedback_only" not in snerv["blockers"]
     assert "snerv_snar1_byte_feedback_missing" not in snerv["blockers"]
     assert "snerv_archive_in_loop_byte_oracle_missing" not in snerv["blockers"]

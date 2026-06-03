@@ -78,6 +78,15 @@ HINERV_POSE_INSTABILITY_POLICY_LOGIC = (
 )
 HINERV_POSE_PROTECTED_LOSS = "huber"
 HINERV_POSE_PROTECTED_HUBER_DELTA = 1.0
+_AUTHORITY_TRUE_KEYS: tuple[str, ...] = (
+    "score_claim",
+    "score_claim_valid",
+    "frontier_score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "production_hardened_claim",
+    "ready_for_exact_eval_dispatch",
+)
 HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION = (
     "switch_to_hinerv_official_feature_grid_convnext_controls"
 )
@@ -511,6 +520,7 @@ def _hinerv_campaign_row(
                 ),
             ]
         )
+    candidate_authority_blockers = list(candidate.get("_candidate_authority_blockers") or [])
     blockers = [
         (
             ""
@@ -522,16 +532,9 @@ def _hinerv_campaign_row(
             if decoder_weight_waterfill
             else "hinerv_decoder_weight_waterfill_plan_missing"
         ),
-        (
-            ""
-            if (
-                not decoder_weight_waterfill
-                or decoder_weight_waterfill_runner_admitted
-            )
-            else "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted"
-        ),
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
+        *candidate_authority_blockers,
         *list(curriculum.get("blockers") or []),
     ]
     if feedback.get("pose_instability_detected") is True and not (
@@ -555,8 +558,10 @@ def _hinerv_campaign_row(
         blockers.append("hinerv_candidate_nominal_over_byte_ceiling")
     blockers = _dedupe(blockers)
     prelaunch_gate = dict(curriculum.get("long_campaign_prelaunch_gate") or {})
-    launch_ready = bool(prelaunch_gate.get("launch_allowed")) and bool(
-        joint_recon_weight
+    launch_ready = bool(
+        prelaunch_gate.get("launch_allowed")
+        and joint_recon_weight
+        and not candidate_authority_blockers
     )
     return _row(
         row_id=row_id,
@@ -567,9 +572,13 @@ def _hinerv_campaign_row(
         command_argv=command,
         local_mlx_launch_command_ready=launch_ready,
         implementation_status=(
-            "shared_mlx_scoreaware_runner_launchable"
-            if launch_ready
-            else "shared_mlx_scoreaware_runner_waiting_for_verified_joint_recon_weight"
+            "selected_candidate_authority_flags_block_launch"
+            if candidate_authority_blockers
+            else (
+                "shared_mlx_scoreaware_runner_launchable"
+                if launch_ready
+                else "shared_mlx_scoreaware_runner_waiting_for_verified_joint_recon_weight"
+            )
         ),
         blockers=blockers,
         extra={
@@ -748,9 +757,17 @@ def _snerv_campaign_row(
             if candidate.get("nominal_under_ceiling") is not True
             else "",
             "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
+            *list(candidate.get("_candidate_authority_blockers") or []),
             *source_control_blockers,
             *list(curriculum.get("blockers") or []),
         ]
+    )
+    source_controls_ready = not source_control_blockers and not candidate.get(
+        "_candidate_authority_blockers"
+    )
+    launch_ready = bool(
+        source_controls_ready
+        and (True if bounded_proof_only else bool(rate_plausible_for_long_training))
     )
     return _row(
         row_id=row_id,
@@ -759,16 +776,18 @@ def _snerv_campaign_row(
         candidate=candidate,
         curriculum_plan=curriculum,
         command_argv=command,
-        local_mlx_launch_command_ready=(
-            True if bounded_proof_only else bool(rate_plausible_for_long_training)
-        ),
+        local_mlx_launch_command_ready=launch_ready,
         implementation_status=(
-            "bounded_native_export_scorer_loop_stage_ready"
-            if bounded_proof_only
+            "source_bound_capacity_controls_incomplete"
+            if not source_controls_ready
             else (
-                "native_rate_aware_long_training_queue_ready"
-                if rate_plausible_for_long_training
-                else "native_rate_aware_long_training_rate_blocked"
+                "bounded_native_export_scorer_loop_stage_ready"
+                if bounded_proof_only
+                else (
+                    "native_rate_aware_long_training_queue_ready"
+                    if rate_plausible_for_long_training
+                    else "native_rate_aware_long_training_rate_blocked"
+                )
             )
         ),
         blockers=blockers,
@@ -1121,11 +1140,18 @@ def _selected_candidates(
     family: str,
     limit: int,
 ) -> list[dict[str, Any]]:
-    rows = [
-        dict(row)
-        for row in payload.get("selected_candidates", [])
-        if isinstance(row, Mapping) and row.get("family") == family
-    ]
+    rows: list[dict[str, Any]] = []
+    for row in payload.get("selected_candidates", []):
+        if not isinstance(row, Mapping) or row.get("family") != family:
+            continue
+        candidate = dict(row)
+        authority_blockers = _candidate_authority_blockers(candidate)
+        if authority_blockers:
+            candidate["_candidate_authority_blockers"] = authority_blockers
+            for key in _AUTHORITY_TRUE_KEYS:
+                if key in candidate:
+                    candidate[key] = False
+        rows.append(candidate)
     if family == "snerv":
         rows.sort(key=_snerv_long_training_candidate_sort_key)
     elif family == "hi_nerv":
@@ -1136,6 +1162,28 @@ def _selected_candidates(
         deduped.setdefault(candidate_id, row)
     rows = list(deduped.values())
     return rows[: max(1, int(limit))]
+
+
+def _candidate_authority_blockers(candidate: Mapping[str, Any]) -> list[str]:
+    return _dedupe(
+        [
+            f"selected_candidate_authority_flag_true:{key}"
+            for key in _AUTHORITY_TRUE_KEYS
+            if _truthy_authority_value(candidate.get(key))
+        ]
+    )
+
+
+def _truthy_authority_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() not in {"", "0", "false", "no", "none", "null"}
+    return bool(value)
 
 
 def _snerv_rate_plausible_for_long_training(candidate: Mapping[str, Any]) -> bool:
@@ -1459,7 +1507,7 @@ def _candidate_feedback_sort_key(
 
 def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str, Any]:
     if source.get("schema") == NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA:
-        row = dict(source)
+        row = _sanitize_direct_candidate_feedback_row(source)
     elif source.get("schema") == "hinerv_training_telemetry_feedback.v1":
         row = _normalize_hinerv_training_telemetry_feedback(source)
     elif source.get("schema") == "compact_renderer_mlx_spine_runner.v1":
@@ -1470,6 +1518,96 @@ def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str,
     else:
         row = dict(source)
     return _augment_feedback_row(row, source)
+
+
+def _sanitize_direct_candidate_feedback_row(source: Mapping[str, Any]) -> dict[str, Any]:
+    row = dict(source)
+    if row.get("feedback_kind") == "training_telemetry":
+        return row
+    blockers = [str(blocker) for blocker in row.get("direct_feedback_blockers") or []]
+    _guard_direct_feedback_bool(
+        row,
+        bool_key="receiver_proof_attached",
+        path_keys=("receiver_proof_path", "receiver_proof_report_path"),
+        sha_keys=("receiver_proof_sha256",),
+        blocker="direct_feedback_receiver_proof_file_missing",
+        blockers=blockers,
+    )
+    _guard_direct_feedback_bool(
+        row,
+        bool_key="full_video_local_prefilter_attached",
+        path_keys=("full_video_local_prefilter_path", "mlx_prefilter_path"),
+        sha_keys=("full_video_local_prefilter_sha256", "mlx_prefilter_sha256"),
+        blocker="direct_feedback_full_video_prefilter_file_missing",
+        blockers=blockers,
+    )
+    _guard_direct_feedback_bool(
+        row,
+        bool_key="local_cpu_replay_gate_attached",
+        path_keys=("local_cpu_replay_summary_path", "local_cpu_replay_gate_path"),
+        sha_keys=("local_cpu_replay_summary_sha256", "local_cpu_replay_gate_sha256"),
+        blocker="direct_feedback_local_cpu_replay_file_missing",
+        blockers=blockers,
+    )
+    _guard_direct_feedback_bool(
+        row,
+        bool_key="native_mlx_receiver_proof_passed",
+        path_keys=(
+            "snerv_mlx_native_export_receiver_proof_path",
+            "receiver_proof_path",
+        ),
+        sha_keys=("snerv_mlx_native_export_receiver_proof_sha256",),
+        blocker="direct_feedback_native_receiver_proof_file_missing",
+        blockers=blockers,
+    )
+    evidence = row.get("snerv_mlx_native_file_backed_export_evidence")
+    file_backed_ready = bool(
+        isinstance(evidence, Mapping)
+        and evidence.get("required_pair_file_backed_export_proof_passed") is True
+    )
+    if row.get("native_mlx_full600_campaign_ready") is True and not file_backed_ready:
+        row["native_mlx_full600_campaign_ready"] = False
+        blockers.append("direct_feedback_native_full600_file_backed_evidence_missing")
+    row["direct_feedback_blockers"] = _dedupe(blockers)
+    return row
+
+
+def _guard_direct_feedback_bool(
+    row: dict[str, Any],
+    *,
+    bool_key: str,
+    path_keys: Sequence[str],
+    sha_keys: Sequence[str],
+    blocker: str,
+    blockers: list[str],
+) -> None:
+    if row.get(bool_key) is not True:
+        return
+    if _direct_feedback_file_evidence_valid(row, path_keys=path_keys, sha_keys=sha_keys):
+        return
+    row[bool_key] = False
+    blockers.append(blocker)
+
+
+def _direct_feedback_file_evidence_valid(
+    row: Mapping[str, Any],
+    *,
+    path_keys: Sequence[str],
+    sha_keys: Sequence[str],
+) -> bool:
+    for path_key in path_keys:
+        raw = row.get(path_key)
+        if not raw:
+            continue
+        path = Path(str(raw)).expanduser().resolve(strict=False)
+        if not path.is_file():
+            continue
+        expected_sha = next(
+            (str(row.get(key)) for key in sha_keys if row.get(key)),
+            "",
+        )
+        return not expected_sha or _sha256_file(path) == expected_sha
+    return False
 
 
 def _normalize_hinerv_training_telemetry_feedback(

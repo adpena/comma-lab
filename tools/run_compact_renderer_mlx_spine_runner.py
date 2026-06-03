@@ -7474,9 +7474,11 @@ def _modelsize_budget_rows_from_payload(
     source_path: Path,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    source_schema = None
     if isinstance(payload, list):
         source_rows = payload
     elif isinstance(payload, Mapping):
+        source_schema = str(payload.get("schema") or "")
         source_rows = payload.get("modelsize_budget_rows")
         if not isinstance(source_rows, list):
             source_rows = _modelsize_budget_rows_from_plan(
@@ -7493,6 +7495,8 @@ def _modelsize_budget_rows_from_payload(
             continue
         normalized = dict(row)
         normalized.setdefault("source_modelsize_budget_json", source_path.as_posix())
+        if source_schema:
+            normalized.setdefault("source_modelsize_budget_schema", source_schema)
         normalized.setdefault("source_modelsize_budget_row_index", index)
         rows.append(normalized)
     return rows
@@ -7500,6 +7504,11 @@ def _modelsize_budget_rows_from_payload(
 
 def _compact_modelsize_budget_row_blockers(row: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
+    source_schema = str(
+        row.get("source_modelsize_budget_schema") or row.get("schema") or ""
+    )
+    if source_schema != "nerv_receiver_closed_modelsize_ladder.v1":
+        blockers.append("receiver_closed_modelsize_ladder_schema_required")
     archive_bytes = _compact_positive_int_from_keys(
         row,
         (
@@ -7508,12 +7517,18 @@ def _compact_modelsize_budget_row_blockers(row: Mapping[str, Any]) -> list[str]:
             "archive_bytes_total",
             "measured_archive_bytes",
             "archive_size_bytes",
-            "projected_archive_bytes",
-            "nominal_total_payload_bytes",
         ),
     )
     if archive_bytes is None:
-        blockers.append("modelsize_budget_row_missing_positive_archive_bytes")
+        blockers.append("modelsize_budget_row_missing_measured_receiver_archive_bytes")
+    if not (
+        row.get("receiver_closed") is True
+        and (
+            row.get("receiver_proof_passed") is True
+            or row.get("receiver_archive_replay_verified") is True
+        )
+    ):
+        blockers.append("receiver_closed_byte_proof_missing")
     if not _compact_modelsize_row_has_nonrate_signal(row):
         blockers.append("modelsize_budget_row_missing_nonrate_score")
     return blockers
@@ -7522,7 +7537,7 @@ def _compact_modelsize_budget_row_blockers(row: Mapping[str, Any]) -> list[str]:
 def _compact_modelsize_row_has_nonrate_signal(row: Mapping[str, Any]) -> bool:
     if _compact_finite_float_from_keys(
         row,
-        ("nonrate_score", "nonrate_score_value", "nonrate_score_advisory"),
+        ("nonrate_score", "nonrate_score_value"),
     ) is not None:
         return True
     if _compact_finite_float_from_keys(row, ("avg_segnet_dist", "d_seg")) is not None:

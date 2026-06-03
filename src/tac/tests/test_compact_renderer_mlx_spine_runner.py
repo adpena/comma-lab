@@ -3048,7 +3048,9 @@ def test_hinerv_refusal_filters_modelsize_rows_without_nonrate_score(
     assert source["rows_rejected"] == 1
     assert "modelsize_budget_json_rows_rejected" in source["blockers"]
     assert source["rejected_rows"][0]["blockers"] == [
-        "modelsize_budget_row_missing_nonrate_score"
+        "receiver_closed_modelsize_ladder_schema_required",
+        "receiver_closed_byte_proof_missing",
+        "modelsize_budget_row_missing_nonrate_score",
     ]
     assert "hi_nerv_real_segnet_teacher_missing" in out["blockers"]
     assert "hi_nerv_real_posenet_teacher_missing" in out["blockers"]
@@ -3195,9 +3197,10 @@ def test_hinerv_refusal_rejects_canonical_score_only_modelsize_rows(
     assert out["modelsize_budget_evidence"]["row_count"] == 0
     assert source["rows_seen"] == 1
     assert source["rows_rejected"] == 1
-    assert source["rejected_rows"][0]["blockers"] == [
-        "modelsize_budget_row_missing_nonrate_score"
-    ]
+    assert set(source["rejected_rows"][0]["blockers"]) == {
+        "receiver_closed_modelsize_ladder_schema_required",
+        "modelsize_budget_row_missing_nonrate_score",
+    }
 
 
 def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(

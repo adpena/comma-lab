@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -197,6 +198,8 @@ def _snerv_native_runner_report(
     packet.write_bytes(b"snerv-native-packet")
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"snerv-native-archive")
+    packet_sha = hashlib.sha256(packet.read_bytes()).hexdigest()
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
     return {
         "mode": "executed_snerv_native_mlx_and_exported",
         "execute_family": "snerv",
@@ -228,10 +231,10 @@ def _snerv_native_runner_report(
             "num_pairs": native_num_pairs,
             "packet_path": packet.as_posix(),
             "packet_bytes": packet.stat().st_size,
-            "packet_sha256": "p" * 64,
+            "packet_sha256": packet_sha,
             "archive_path": archive.as_posix(),
             "archive_bytes": archive.stat().st_size,
-            "archive_sha256": "a" * 64,
+            "archive_sha256": archive_sha,
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
             "blockers": [],
@@ -272,12 +275,33 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
         len(b"snerv-native-packet") - 150_000
     )
     native_feedback = row["snerv_mlx_native_file_backed_byte_feedback"]
-    assert native_feedback["packet_sha256"] == "p" * 64
-    assert native_feedback["archive_sha256"] == "a" * 64
+    assert native_feedback["packet_sha256"] == hashlib.sha256(
+        b"snerv-native-packet"
+    ).hexdigest()
+    assert native_feedback["archive_sha256"] == hashlib.sha256(
+        b"snerv-native-archive"
+    ).hexdigest()
     assert native_feedback["score_claim"] is False
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_native_file_backed_bytes_require_matching_file_hashes(
+    tmp_path: Path,
+) -> None:
+    report = _snerv_native_runner_report(
+        tmp_path,
+        required_pair_proof=True,
+        native_num_pairs=600,
+    )
+    report["snerv_mlx_native_export"]["packet_sha256"] = "0" * 64
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    assert row["byte_feedback_source"] is None
+    assert row["feedback_ready"] is False
+    assert row["snerv_mlx_native_file_backed_byte_feedback"] is None
 
 
 def test_snerv_native_partial_file_backed_bytes_do_not_unblock_feedback(

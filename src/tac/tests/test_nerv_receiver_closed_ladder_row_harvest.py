@@ -108,10 +108,10 @@ def test_advisory_axis_full600_rows_do_not_unlock_ladder_candidates() -> None:
     assert payload["receiver_proof_row_count"] == 0
     assert payload["ladder_candidate_row_count"] == 0
     row = payload["harvested_rows"][0]
-    assert row["source_axis_is_advisory_or_projected"] is True
+    assert row["source_axis_receiver_closed_authority"] is False
     assert row["receiver_closed"] is False
     assert (
-        "source_axis_advisory_or_projected_not_receiver_closed_ladder_authority"
+        "source_axis_not_receiver_closed_contest_authority"
         in row["harvest_blockers"]
     )
 
@@ -283,6 +283,7 @@ def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis(
         [
             {
                 "schema": "hinerv_archive_size_ladder.v1",
+                "axis_tag": "[contest-CPU]",
                 "family": "hi_nerv",
                 "num_pairs": 600,
                 "archive_rows": [

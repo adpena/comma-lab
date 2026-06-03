@@ -65,6 +65,24 @@ _NESTED_AUTHORITY_FIELDS: tuple[str, ...] = (
     "production_hardened_claim",
     "ready_for_exact_eval_dispatch",
 )
+_TRUSTED_SCORE_ROW_SCHEMAS = frozenset(
+    {
+        "hinerv_full_video_mlx_score_rows.v1",
+        "compact_renderer_full_video_mlx_replay.v1",
+        "nerv_full_video_mlx_section_value_profile.v1",
+        "nerv_section_value_profile.v1",
+    }
+)
+_SCORE_PROVENANCE_HASH_KEYS: tuple[str, ...] = (
+    "archive_sha256",
+    "archive_zip_sha256",
+    "candidate_archive_sha256",
+    "source_archive_sha256",
+    "runtime_tree_sha256",
+    "scorer_profile_sha256",
+    "source_report_sha256",
+    "receiver_proof_sha256",
+)
 
 
 def build_hinerv_archive_size_ladder(
@@ -778,6 +796,7 @@ def attach_hinerv_archive_ladder_score_rows(
     updated_rows = []
     rows_with_score = 0
     rows_with_full_video = 0
+    rows_with_trusted_score = 0
     for row in report.get("archive_rows", ()):
         updated = dict(row)
         row_id = str(updated.get("row_id") or "")
@@ -796,6 +815,12 @@ def attach_hinerv_archive_ladder_score_rows(
                     "avg_posenet_dist": score.get("avg_posenet_dist"),
                     "measured_score_axis_tag": score["axis_tag"],
                     "measured_score_full_video_coverage": score["full_video_coverage"],
+                    "measured_score_custody_trusted": score[
+                        "trusted_score_custody"
+                    ],
+                    "measured_score_trust_blockers": list(
+                        score.get("trust_blockers") or []
+                    ),
                     "measured_score_source_row_id": score["source_row_id"],
                     "measured_score_source_schema": score.get("source_schema"),
                     "measured_score_source_path": (
@@ -805,7 +830,11 @@ def attach_hinerv_archive_ladder_score_rows(
                     ),
                 }
             )
-            if score["full_video_coverage"]:
+            if score["trusted_score_custody"]:
+                rows_with_trusted_score += 1
+            else:
+                blockers.append("hinerv_archive_size_row_measured_score_untrusted")
+            if score["full_video_coverage"] and score["trusted_score_custody"]:
                 rows_with_full_video += 1
                 blockers = [
                     blocker
@@ -826,7 +855,7 @@ def attach_hinerv_archive_ladder_score_rows(
     blockers = [
         str(blocker) for blocker in report.get("blockers") or () if blocker
     ]
-    if rows_with_score:
+    if rows_with_trusted_score:
         blockers = [
             blocker
             for blocker in blockers
@@ -834,6 +863,8 @@ def attach_hinerv_archive_ladder_score_rows(
         ]
     else:
         blockers.append("hinerv_archive_size_ladder_measured_scores_missing")
+    if rows_with_score and rows_with_trusted_score != rows_with_score:
+        blockers.append("hinerv_archive_size_ladder_measured_scores_untrusted")
     if require_full_video and rows_with_full_video != len(updated_rows):
         blockers.append("hinerv_archive_size_ladder_full_video_scores_incomplete")
     report.update(
@@ -851,6 +882,7 @@ def attach_hinerv_archive_ladder_score_rows(
                 "input_score_row_count": len(score_rows),
                 "matched_archive_row_count": rows_with_score,
                 "matched_full_video_row_count": rows_with_full_video,
+                "trusted_score_row_count": rows_with_trusted_score,
                 "require_full_video": bool(require_full_video),
                 **FALSE_AUTHORITY,
             },
@@ -879,6 +911,8 @@ def _measured_hinerv_increment_section_value_rows(
         to_nonrate = _finite_float(to_row.get("nonrate_score"))
         from_full = from_row.get("measured_score_full_video_coverage") is True
         to_full = to_row.get("measured_score_full_video_coverage") is True
+        from_trusted = from_row.get("measured_score_custody_trusted") is True
+        to_trusted = to_row.get("measured_score_custody_trusted") is True
         proof_ready = (
             from_row.get("runtime_consumption_proof_ready") is True
             and to_row.get("runtime_consumption_proof_ready") is True
@@ -888,6 +922,8 @@ def _measured_hinerv_increment_section_value_rows(
             blockers.append("hinerv_modelsize_increment_measured_nonrate_missing")
         if require_full_video and not (from_full and to_full):
             blockers.append("hinerv_modelsize_increment_full_video_score_missing")
+        if not (from_trusted and to_trusted):
+            blockers.append("hinerv_modelsize_increment_measured_score_untrusted")
         if not proof_ready:
             blockers.append("hinerv_modelsize_increment_receiver_proof_missing")
         delta_nonrate = (
@@ -918,6 +954,7 @@ def _measured_hinerv_increment_section_value_rows(
                     "runtime_consumption_proof_ready" if proof_ready else "missing"
                 ),
                 "full_video_coverage": bool(from_full and to_full),
+                "measured_score_custody_trusted": bool(from_trusted and to_trusted),
                 "blockers": blockers,
                 **FALSE_AUTHORITY,
             }
@@ -1019,12 +1056,15 @@ def _normalize_score_row(
         nonrate = float(100.0 * d_seg + math.sqrt(10.0 * d_pose))
     if nonrate is None:
         return None
+    trust_blockers = _score_row_trust_blockers(row, source_schema=source_schema)
     return {
         "source_row_id": str(row_id),
         "nonrate_score": float(nonrate),
         "avg_segnet_dist": d_seg,
         "avg_posenet_dist": d_pose,
         "full_video_coverage": _score_row_full_video(row),
+        "trusted_score_custody": not trust_blockers,
+        "trust_blockers": trust_blockers,
         "axis_tag": str(
             row.get("axis_tag")
             or row.get("score_axis")
@@ -1034,6 +1074,26 @@ def _normalize_score_row(
         ),
         "source_schema": source_schema,
     }
+
+
+def _score_row_trust_blockers(
+    row: Mapping[str, Any],
+    *,
+    source_schema: Any,
+) -> list[str]:
+    blockers: list[str] = []
+    if str(source_schema or "") not in _TRUSTED_SCORE_ROW_SCHEMAS:
+        blockers.append("score_row_source_schema_not_allowlisted")
+    if not any(_nonempty_string(row.get(key)) for key in _SCORE_PROVENANCE_HASH_KEYS):
+        blockers.append("score_row_provenance_hash_missing")
+    return blockers
+
+
+def _nonempty_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _score_rows_by_id(rows: Sequence[Mapping[str, Any]]) -> dict[str, Mapping[str, Any]]:

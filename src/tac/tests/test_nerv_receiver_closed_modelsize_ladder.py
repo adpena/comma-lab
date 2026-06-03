@@ -40,6 +40,7 @@ def test_advisory_or_projected_rows_do_not_open_receiver_ladder() -> None:
         [
             {
                 "row_id": "projected",
+                "axis_tag": "[contest-CPU]",
                 "modelsize_mparams": 0.03,
                 "fc_dim": 24,
                 "projected_archive_bytes_600pair": 20_000,
@@ -67,6 +68,7 @@ def test_advisory_nonrate_score_does_not_open_receiver_ladder() -> None:
         [
             {
                 "row_id": "tiny_advisory",
+                "axis_tag": "[contest-CPU]",
                 "modelsize_mparams": 0.03,
                 "fc_dim": 24,
                 "archive_bytes": 20_000,
@@ -75,6 +77,7 @@ def test_advisory_nonrate_score_does_not_open_receiver_ladder() -> None:
             },
             {
                 "row_id": "small_advisory",
+                "axis_tag": "[contest-CPU]",
                 "modelsize_mparams": 0.06,
                 "fc_dim": 48,
                 "archive_bytes": 40_000,
@@ -93,6 +96,23 @@ def test_advisory_nonrate_score_does_not_open_receiver_ladder() -> None:
     assert rows["tiny_advisory"]["nonrate_score_key"] == "nonrate_score_advisory"
     assert rows["tiny_advisory"]["nonrate_score_evidence_kind"] == "advisory"
     assert "advisory_nonrate_score_not_receiver_closed" in rows["tiny_advisory"][
+        "blockers"
+    ]
+    assert payload["ready_for_carrier_training_plan"] is False
+
+
+def test_missing_axis_does_not_open_receiver_ladder() -> None:
+    row = _row("tiny", 0.03, 24, 20_000, 0.240, proof=True)
+    row.pop("axis_tag")
+
+    payload = build_nerv_receiver_closed_modelsize_ladder([row], carrier_id="snerv")
+
+    normalized = payload["normalized_rows"][0]
+    assert payload["status"] == "receiver_closed_modelsize_ladder_blocked"
+    assert payload["budget_row_count"] == 0
+    assert payload["receiver_closed_row_count"] == 0
+    assert normalized["source_axis_receiver_closed_authority"] is False
+    assert "source_axis_not_receiver_closed_contest_authority" in normalized[
         "blockers"
     ]
     assert payload["ready_for_carrier_training_plan"] is False
@@ -124,6 +144,7 @@ def test_missing_modelsize_and_fc_dim_blocks_budget_row() -> None:
         [
             {
                 "row_id": "bytes_only",
+                "axis_tag": "[contest-CPU]",
                 "archive_bytes": 20_000,
                 "nonrate_score": 0.220,
                 "receiver_proof_passed": True,
@@ -217,6 +238,7 @@ def test_archive_path_bytes_and_sha_can_back_receiver_closed_row(tmp_path: Path)
         [
             {
                 "row_id": "path_backed",
+                "axis_tag": "[contest-CPU]",
                 "modelsize_mparams": 0.03,
                 "fc_dim": 24,
                 "archive_path": "candidate.zip",
@@ -250,6 +272,7 @@ def _row(
 ) -> dict[str, object]:
     return {
         "row_id": row_id,
+        "axis_tag": "[contest-CPU]",
         "modelsize_mparams": modelsize,
         "fc_dim": fc_dim,
         "archive_bytes": archive_bytes,

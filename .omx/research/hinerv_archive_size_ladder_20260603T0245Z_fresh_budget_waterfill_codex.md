@@ -9,7 +9,7 @@ Modelsize budget schema: `nerv_modelsize_budget.v1`
 
 | row | params | nominal bytes | archive bytes | measured-minus-nominal | rate score [planning/control] | proof ready |
 |---|---:|---:|---:|---:|---:|---:|
-| hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02 | 20022 | 28422 | 54461 | 26039 | 0.036263 | None |
+| hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02 | 20022 | 28422 | 54460 | 26038 | 0.036263 | None |
 
 ## Marginal Gates
 

@@ -55,9 +55,9 @@ def test_long_training_campaign_consumer_preserves_hinerv_supersession_metadata(
 
     assert verdict["family_summary"]["hi_nerv"]["ready_local_mlx_count"] == 0
     assert verdict["family_summary"]["hi_nerv"]["blocked_count"] == 1
-    assert verdict["selected_local_mlx_experiment_ids"] == [
-        "snerv_snerv_tiny_native_rate_aware_training"
-    ]
+    [snerv_experiment_id] = verdict["selected_local_mlx_experiment_ids"]
+    assert snerv_experiment_id.startswith("snerv_snerv_np600_haar_lv2_")
+    assert snerv_experiment_id.endswith("_native_rate_aware_training")
 
 
 def test_long_training_campaign_consumer_accepts_extracted_experiment_queue() -> None:
@@ -233,10 +233,25 @@ def _snerv_budget() -> dict:
             {
                 "schema": "snerv_modelsize_candidate.v1",
                 "family": "snerv",
-                "candidate_id": "snerv_tiny",
+                "candidate_id": (
+                    "snerv_np600_haar_lv2_lfb1p5_stepb0p5_"
+                    "fc11e2_p1_mfu1-2-4_hfr0_t0_adbase_int4_symmetric_ceil178000"
+                ),
                 "num_pairs": 600,
                 "hard_byte_ceiling": 178_000,
+                "wavelet": "haar",
+                "levels": 2,
+                "bits_per_coeff": 1.5,
+                "step_map_bits_per_coeff": 0.5,
                 "decoder_payload_codec": "int4_symmetric",
+                "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+                "fc_dim": 11,
+                "emb_size": 2,
+                "patch_radius": 1,
+                "mfu_scales": [1, 2, 4],
+                "hfr_gain": 0.0,
+                "temporal_context": 0,
+                "decoder_feature_count": 16,
                 "nominal_total_payload_bytes": 190_000,
                 "nominal_under_ceiling": False,
             }

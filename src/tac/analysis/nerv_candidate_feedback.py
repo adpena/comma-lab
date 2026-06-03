@@ -360,12 +360,31 @@ def _snerv_native_file_backed_byte_feedback(
     if native_pairs is None or native_pairs < max(candidate_pairs, CONTEST_PAIR_COUNT):
         return {}
     candidate_id = str(candidate_row.get("candidate_id") or "").strip()
+    if not candidate_id:
+        return {}
     native_candidate_id = str(
         native_export.get("candidate_id")
         or native_export.get("modelsize_candidate_id")
         or ""
     ).strip()
-    if native_candidate_id and candidate_id and native_candidate_id != candidate_id:
+    if not native_candidate_id or native_candidate_id != candidate_id:
+        return {}
+    packet_path = Path(str(native_export.get("packet_path") or "")).expanduser()
+    archive_path = Path(str(native_export.get("archive_path") or "")).expanduser()
+    packet_sha = str(native_export.get("packet_sha256") or "").strip()
+    archive_sha = str(native_export.get("archive_sha256") or "").strip()
+    if (
+        not _file_matches_declared_bytes_and_sha(
+            packet_path,
+            declared_bytes=packet_bytes,
+            declared_sha256=packet_sha,
+        )
+        or not _file_matches_declared_bytes_and_sha(
+            archive_path,
+            declared_bytes=archive_bytes,
+            declared_sha256=archive_sha,
+        )
+    ):
         return {}
     nominal_payload = _int_or_none(byte_feedback.get("nominal_total_payload_bytes"))
     measured_minus_nominal = (
@@ -383,12 +402,25 @@ def _snerv_native_file_backed_byte_feedback(
         "measured_payload_bytes": int(packet_bytes),
         "measured_archive_bytes": int(archive_bytes),
         "measured_minus_nominal_bytes": measured_minus_nominal,
-        "packet_path": native_export.get("packet_path"),
-        "packet_sha256": native_export.get("packet_sha256"),
-        "archive_path": native_export.get("archive_path"),
-        "archive_sha256": native_export.get("archive_sha256"),
+        "packet_path": packet_path.as_posix(),
+        "packet_sha256": packet_sha,
+        "archive_path": archive_path.as_posix(),
+        "archive_sha256": archive_sha,
         **FALSE_AUTHORITY,
     }
+
+
+def _file_matches_declared_bytes_and_sha(
+    path: Path,
+    *,
+    declared_bytes: int,
+    declared_sha256: str,
+) -> bool:
+    if not path.is_file():
+        return False
+    if path.stat().st_size != int(declared_bytes):
+        return False
+    return bool(declared_sha256 and _sha256_file(path) == declared_sha256)
 
 
 def build_nerv_training_telemetry_feedback_row(

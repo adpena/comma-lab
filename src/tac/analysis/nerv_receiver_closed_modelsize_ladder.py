@@ -51,6 +51,17 @@ _AUTHORITY_TRUE_KEYS = (
     "ready_for_exact_eval_dispatch",
 )
 _NONRATE_ADVISORY_KEYS = {"nonrate_score_advisory"}
+_ADVISORY_AXIS_TOKENS = (
+    "advisory",
+    "projected",
+    "predicted",
+    "proxy",
+    "research-signal",
+    "macos",
+    "mps",
+    "planning",
+)
+_CONTEST_AUTH_AXIS_PREFIXES = ("[contest-cpu", "[contest-cuda")
 
 
 class NervReceiverClosedModelsizeLadderError(ValueError):
@@ -212,6 +223,10 @@ def _normalize_row(
     archive_sha = _archive_sha(source, repo_root=repo_root)
     authority_blockers = _authority_claim_blockers(source)
     advisory_nonrate = nonrate_score_key in _NONRATE_ADVISORY_KEYS
+    source_axis_tag = _string_or_none(
+        source.get("axis_tag") or source.get("score_axis") or source.get("evidence_axis")
+    )
+    source_axis_authorized = _axis_is_receiver_closed_authority(source_axis_tag)
 
     blockers: list[str] = []
     if modelsize is None and fc_dim is None:
@@ -226,6 +241,8 @@ def _normalize_row(
         blockers.append("nonrate_score_or_component_distortions_missing")
     if advisory_nonrate:
         blockers.append("advisory_nonrate_score_not_receiver_closed")
+    if not source_axis_authorized:
+        blockers.append("source_axis_not_receiver_closed_contest_authority")
     if not receiver_proof:
         blockers.append("receiver_closed_byte_proof_missing")
     blockers.extend(authority_blockers)
@@ -236,6 +253,7 @@ def _normalize_row(
         and archive_bytes is not None
         and nonrate_score is not None
         and not advisory_nonrate
+        and source_axis_authorized
         and not authority_blockers
     )
     receiver_closed_modelsize_row = complete_budget_shape and receiver_proof and (
@@ -263,6 +281,8 @@ def _normalize_row(
             or source.get("candidate_archive_path")
         ),
         "nonrate_score": nonrate_score,
+        "source_axis_tag": source_axis_tag,
+        "source_axis_receiver_closed_authority": source_axis_authorized,
         "nonrate_score_key": nonrate_score_key,
         "nonrate_score_evidence_kind": (
             "advisory"
@@ -286,6 +306,7 @@ def _normalize_row(
         "modelsize_mparams": modelsize,
         "fc_dim": fc_dim,
         "archive_sha256": archive_sha,
+        "axis_tag": source_axis_tag,
         "receiver_proof_passed": receiver_closed_modelsize_row,
         "receiver_closed": receiver_closed_modelsize_row,
         "receiver_archive_replay_verified": receiver_closed_modelsize_row,
@@ -560,6 +581,15 @@ def _authority_claim_blockers(row: Mapping[str, Any]) -> list[str]:
         for key in _AUTHORITY_TRUE_KEYS
         if _truthy(row.get(key))
     )
+
+
+def _axis_is_receiver_closed_authority(axis_tag: str | None) -> bool:
+    if axis_tag is None:
+        return False
+    text = axis_tag.strip().lower()
+    if any(token in text for token in _ADVISORY_AXIS_TOKENS):
+        return False
+    return text.startswith(_CONTEST_AUTH_AXIS_PREFIXES)
 
 
 def _path_label(path: Any) -> str:

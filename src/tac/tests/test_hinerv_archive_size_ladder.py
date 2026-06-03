@@ -569,6 +569,7 @@ def test_hinerv_archive_ladder_score_attachment_prices_measured_increments() -> 
                     "avg_segnet_dist": 0.001,
                     "avg_posenet_dist": 0.00169,
                     "num_pairs": 600,
+                    "source_report_sha256": "a" * 64,
                 },
                 {
                     "row_id": "small",
@@ -576,6 +577,7 @@ def test_hinerv_archive_ladder_score_attachment_prices_measured_increments() -> 
                     "avg_segnet_dist": 0.0007,
                     "avg_posenet_dist": 0.00121,
                     "num_pairs": 600,
+                    "source_report_sha256": "b" * 64,
                 },
             ],
         },
@@ -585,17 +587,20 @@ def test_hinerv_archive_ladder_score_attachment_prices_measured_increments() -> 
     rows = {row["row_id"]: row for row in attached["archive_rows"]}
     assert rows["tiny"]["nonrate_score"] == pytest.approx(0.230)
     assert rows["small"]["measured_score_full_video_coverage"] is True
+    assert rows["small"]["measured_score_custody_trusted"] is True
     assert "hinerv_archive_size_row_has_no_nonrate_score" not in rows["tiny"][
         "blockers"
     ]
     assert attached["score_attachment"]["matched_archive_row_count"] == 2
     assert attached["score_attachment"]["matched_full_video_row_count"] == 2
+    assert attached["score_attachment"]["trusted_score_row_count"] == 2
     section = attached["section_value_rows"][0]
     assert section["section_id"] == "hinerv_modelsize_increment:tiny->small"
     assert section["delta_nonrate_score"] == pytest.approx(-0.05)
     assert section["byte_delta"] == 10_000
     assert section["receiver_proof_status"] == "runtime_consumption_proof_ready"
     assert section["full_video_coverage"] is True
+    assert section["measured_score_custody_trusted"] is True
     assert section["blockers"] == []
     plan_row = attached["byte_price_plan"]["decision_rows"][0]
     assert plan_row["delta_nonrate_score"] == pytest.approx(-0.05)
@@ -605,6 +610,38 @@ def test_hinerv_archive_ladder_score_attachment_prices_measured_increments() -> 
     assert "advisory_or_proxy_axis_not_promotion_authority" in plan_row["blockers"]
     assert attached["score_claim"] is False
     assert attached["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_archive_ladder_score_attachment_blocks_untrusted_score_rows() -> None:
+    ladder = _ladder_for_score_attachment()
+
+    attached = attach_hinerv_archive_ladder_score_rows(
+        ladder,
+        {
+            "schema": "hinerv_full_video_mlx_score_rows.v1",
+            "axis_tag": "[macOS-MLX research-signal]",
+            "score_rows": [
+                {"row_id": "tiny", "nonrate_score": 0.230, "num_pairs": 600},
+                {"row_id": "small", "nonrate_score": 0.180, "num_pairs": 600},
+            ],
+        },
+    )
+
+    rows = {row["row_id"]: row for row in attached["archive_rows"]}
+    assert rows["tiny"]["measured_score_custody_trusted"] is False
+    assert "hinerv_archive_size_row_measured_score_untrusted" in rows["tiny"][
+        "blockers"
+    ]
+    assert attached["score_attachment"]["matched_archive_row_count"] == 2
+    assert attached["score_attachment"]["trusted_score_row_count"] == 0
+    assert "hinerv_archive_size_ladder_measured_scores_untrusted" in attached[
+        "blockers"
+    ]
+    section = attached["section_value_rows"][0]
+    assert "hinerv_modelsize_increment_measured_score_untrusted" in section[
+        "blockers"
+    ]
+    assert attached["byte_price_plan"]["decision_rows"][0]["decision"] == DEMOTE
 
 
 def test_hinerv_archive_ladder_score_attachment_blocks_partial_scores() -> None:
@@ -628,6 +665,9 @@ def test_hinerv_archive_ladder_score_attachment_blocks_partial_scores() -> None:
     assert "hinerv_archive_size_row_measured_score_not_full_video" in rows["tiny"][
         "blockers"
     ]
+    assert "hinerv_archive_size_row_measured_score_untrusted" in rows["tiny"][
+        "blockers"
+    ]
     assert "hinerv_archive_size_row_measured_score_missing" in rows["small"][
         "blockers"
     ]
@@ -642,9 +682,52 @@ def test_hinerv_archive_ladder_score_attachment_blocks_partial_scores() -> None:
     assert "hinerv_modelsize_increment_full_video_score_missing" in section[
         "blockers"
     ]
+    assert "hinerv_modelsize_increment_measured_score_untrusted" in section[
+        "blockers"
+    ]
     plan_row = attached["byte_price_plan"]["decision_rows"][0]
     assert plan_row["decision"] == DEMOTE
     assert "delta_nonrate_score_missing" in plan_row["blockers"]
+
+
+def test_hinerv_archive_ladder_score_attachment_blocks_untrusted_full_video_scores() -> None:
+    ladder = _ladder_for_score_attachment()
+
+    attached = attach_hinerv_archive_ladder_score_rows(
+        ladder,
+        {
+            "schema": "hinerv_full_video_mlx_score_rows.v1",
+            "axis_tag": "[macOS-MLX research-signal]",
+            "score_rows": [
+                {"row_id": "tiny", "nonrate_score": 0.230, "num_pairs": 600},
+                {"row_id": "small", "nonrate_score": 0.180, "num_pairs": 600},
+            ],
+        },
+    )
+
+    rows = {row["row_id"]: row for row in attached["archive_rows"]}
+    assert rows["tiny"]["measured_score_full_video_coverage"] is True
+    assert rows["tiny"]["measured_score_custody_trusted"] is False
+    assert rows["tiny"]["measured_score_trust_blockers"] == [
+        "score_row_provenance_hash_missing"
+    ]
+    assert "hinerv_archive_size_row_measured_score_untrusted" in rows["tiny"][
+        "blockers"
+    ]
+    assert "hinerv_archive_size_row_has_no_nonrate_score" in rows["tiny"][
+        "blockers"
+    ]
+    assert attached["score_attachment"]["matched_archive_row_count"] == 2
+    assert attached["score_attachment"]["matched_full_video_row_count"] == 0
+    assert attached["score_attachment"]["trusted_score_row_count"] == 0
+    assert "hinerv_archive_size_ladder_measured_scores_untrusted" in attached[
+        "blockers"
+    ]
+    section = attached["section_value_rows"][0]
+    assert section["delta_nonrate_score"] == pytest.approx(-0.05)
+    assert "hinerv_modelsize_increment_measured_score_untrusted" in section[
+        "blockers"
+    ]
 
 
 def test_attach_hinerv_archive_ladder_scores_cli_writes_artifact(tmp_path: Path) -> None:
@@ -657,8 +740,18 @@ def test_attach_hinerv_archive_ladder_scores_cli_writes_artifact(tmp_path: Path)
             {
                 "schema": "hinerv_full_video_mlx_score_rows.v1",
                 "score_rows": [
-                    {"row_id": "tiny", "nonrate_score": 0.23, "num_pairs": 600},
-                    {"row_id": "small", "nonrate_score": 0.18, "num_pairs": 600},
+                    {
+                        "row_id": "tiny",
+                        "nonrate_score": 0.23,
+                        "num_pairs": 600,
+                        "source_report_sha256": "a" * 64,
+                    },
+                    {
+                        "row_id": "small",
+                        "nonrate_score": 0.18,
+                        "num_pairs": 600,
+                        "source_report_sha256": "b" * 64,
+                    },
                 ],
             }
         ),

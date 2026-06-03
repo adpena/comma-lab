@@ -4,11 +4,11 @@
   },
   "archive_rows": [
     {
-      "archive_bytes": 54461,
+      "archive_bytes": 54460,
       "archive_export_backend": "mlx",
       "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_modelsize_budget_waterfill_20260603T0245Z/hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02/archive.zip",
-      "archive_rate_score_at_contest_price": 0.03626334444598658,
-      "archive_sha256": "fe37e664c8ea5a4d3b011ae24bca776a8358582fd35d65b359085c64d00bd0b0",
+      "archive_rate_score_at_contest_price": 0.036262678587033456,
+      "archive_sha256": "615a9a2333aec8be007eb961f48b4ef455285c6e813a7c9a78e318527ee1296d",
       "backend_claim_blockers": [],
       "blockers": [
         "hinerv_archive_size_row_has_no_nonrate_score",
@@ -68,7 +68,7 @@
       "dispatch_attempted": false,
       "family": "hi_nerv",
       "gpu_launched": false,
-      "measured_minus_nominal_bytes": 26039,
+      "measured_minus_nominal_bytes": 26038,
       "modelsize_candidate": {
         "byte_headroom": 7578,
         "candidate_id": "hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02",
@@ -260,7 +260,7 @@
     "dispatch_attempted": false,
     "exact_cuda_auth_eval": false,
     "field_selection_ready_for_exact_eval_dispatch": false,
-    "generated_at_utc": "20260603T022319Z",
+    "generated_at_utc": "20260603T024111Z",
     "gpu_launched": false,
     "min_free_bytes": 0,
     "promotable": false,
@@ -281,7 +281,7 @@
         "blockers": [],
         "eligible": true,
         "exists": true,
-        "free_bytes": 1266732843008,
+        "free_bytes": 1266729709568,
         "name": "explicit_hinerv_archive_size_ladder_output",
         "parent_exists": true,
         "priority": 0,
@@ -289,7 +289,7 @@
         "reserve_free_bytes": 1073741824,
         "root": "/Volumes/VertigoDataTier/pact/hinerv_modelsize_budget_waterfill_20260603T0245Z",
         "total_bytes": 2000189177856,
-        "usable_bytes": 1265659101184,
+        "usable_bytes": 1265655967744,
         "workload_root": "/Volumes/VertigoDataTier/pact/hinerv_modelsize_budget_waterfill_20260603T0245Z",
         "workload_root_exists": true,
         "writable": true
