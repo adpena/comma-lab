@@ -43,6 +43,10 @@ def test_hinerv_archive_ladder_waterfill_consumes_state_npz_manifest(
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["row_count"] == 1
     assert report["rows"][0]["row_id"] == "tiny"
+    waterfill_plan = report["rows"][0]["waterfill_plan"]
+    assert waterfill_plan["full_video_coverage"] is True
+    assert waterfill_plan["receiver_proof_status"] == "runtime_consumption_proof_ready"
+    assert waterfill_plan["archive_sha256"] == "a" * 64
     assert report["rows"][0]["waterfill_summary"]["group_count"] == 1
     assert report["rows"][0]["waterfill_summary"]["total_selected_byte_delta"] < 0
     assert report["section_value_rows"][0]["archive_ladder_row_id"] == "tiny"
@@ -144,6 +148,11 @@ def test_build_hinerv_archive_ladder_waterfill_cli_smoke(tmp_path: Path) -> None
     assert payload["row_count"] == 1
     assert payload["section_value_rows"][0]["archive_ladder_row_id"] == "tiny"
     row = payload["rows"][0]
+    assert row["waterfill_plan"]["full_video_coverage"] is True
+    assert row["waterfill_plan"]["receiver_proof_status"] == (
+        "runtime_consumption_proof_ready"
+    )
+    assert row["waterfill_plan"]["archive_sha256"] == "a" * 64
     assert row["archive_ladder_replay_command_axis_tag"] == (
         "[planning/control:false-authority]"
     )
