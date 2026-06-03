@@ -1232,7 +1232,7 @@ def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
 
 
 def _optimizer_priority(optimizer_kind: str) -> int:
-    kind = str(optimizer_kind)
+    kind = str(optimizer_kind).strip().lower()
     if kind == "pact_muon_adamw":
         return 9
     return 10 if kind in FIRST_PASS_OPTIMIZER_KINDS else 11
@@ -1244,13 +1244,27 @@ def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
         raise NervLongTrainingCampaignPlanError(
             f"unsupported optimizer kind: {optimizer_kind!r}"
         )
+    is_pact_default = kind == "pact_muon_adamw"
     return {
         "schema": OPTIMIZER_CONTROL_SCHEMA,
         "optimizer_kind": kind,
-        "backend": "mlx.optimizers",
+        "backend": (
+            "tac.local_acceleration.pr95_hnerv_mlx"
+            if is_pact_default
+            else "mlx.optimizers"
+        ),
         "native_mlx_on_apple_silicon": True,
         "apple_specific_algorithm_claim": False,
         "first_pass_priority": kind in FIRST_PASS_OPTIMIZER_KINDS,
+        "borrowed_from_pr95": is_pact_default,
+        "original_pact_contest_adaptation": is_pact_default,
+        "provenance_note": (
+            "Pact default borrows PR95's Muon-vs-AdamW partition rule and "
+            "the existing MLX Newton-Schulz step, then applies it to the "
+            "score-aware NeRV train loop with false-authority telemetry."
+            if is_pact_default
+            else "Direct native MLX optimizer control row."
+        ),
         "default_hinerv_optimizer_policy": _hinerv_optimizer_policy_for_kind(kind),
         "pr95_curriculum_optimizer_swallow_guard": (
             kind != "adamw"

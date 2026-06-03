@@ -1468,6 +1468,65 @@ def test_pact_vq_runner_forwards_pr95_curriculum_kwargs() -> None:
     assert "grad_clip_max_norm" in kw_names
 
 
+def test_mlx_optimizer_controls_default_to_pact_muon_adamw() -> None:
+    controls = runner_mod._resolve_mlx_score_aware_optimizer_controls(
+        optimizer_kind="pact_muon_adamw",
+        requested_weight_decay=None,
+        grad_clip_max_norm=1.0,
+        warmup_epochs=0,
+        warmup_steps_per_epoch=1,
+        cosine_decay_enabled=False,
+        cosine_decay_total_epochs=None,
+        cosine_decay_min_lr_ratio=1e-2,
+        run_epochs=128,
+    )
+
+    assert controls["optimizer_kind"] == "pact_muon_adamw"
+    assert controls["weight_decay_effective"] == pytest.approx(1.0e-4)
+    assert controls["weight_decay_defaulted"] is True
+    assert controls["grad_clip_max_norm"] == pytest.approx(1.0)
+    assert controls["borrowed_pr95_partition_rule"] is True
+    assert controls["score_claim"] is False
+    assert controls["ready_for_exact_eval_dispatch"] is False
+
+
+def test_mlx_optimizer_controls_reject_weight_decay_for_no_decay_kind() -> None:
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="weight-decay"):
+        runner_mod._resolve_mlx_score_aware_optimizer_controls(
+            optimizer_kind="adam",
+            requested_weight_decay=1.0e-4,
+            grad_clip_max_norm=1.0,
+            warmup_epochs=0,
+            warmup_steps_per_epoch=1,
+            cosine_decay_enabled=False,
+            cosine_decay_total_epochs=None,
+            cosine_decay_min_lr_ratio=1e-2,
+            run_epochs=128,
+        )
+
+
+def test_mlx_optimizer_controls_default_cosine_total_to_run_epochs() -> None:
+    controls = runner_mod._resolve_mlx_score_aware_optimizer_controls(
+        optimizer_kind="pact_muon_adamw",
+        requested_weight_decay=2.0e-4,
+        grad_clip_max_norm=0.5,
+        warmup_epochs=5,
+        warmup_steps_per_epoch=7,
+        cosine_decay_enabled=True,
+        cosine_decay_total_epochs=None,
+        cosine_decay_min_lr_ratio=5.0e-2,
+        run_epochs=128,
+    )
+
+    assert controls["weight_decay_effective"] == pytest.approx(2.0e-4)
+    assert controls["warmup_epochs"] == 5
+    assert controls["warmup_steps_per_epoch"] == 7
+    assert controls["cosine_decay_enabled"] is True
+    assert controls["cosine_decay_total_epochs"] == 128
+    assert controls["cosine_decay_total_epochs_defaulted_to_run_epochs"] is True
+    assert controls["cosine_decay_min_lr_ratio"] == pytest.approx(5.0e-2)
+
+
 def test_default_source_video_resolves_from_external_upstream(
     tmp_path: Path,
 ) -> None:
@@ -2566,11 +2625,17 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert captured_train_kwargs["mlx_prefilter_scorer_batch_pairs"] == 4
     assert captured_train_kwargs["mlx_prefilter_progress_every"] == 7
     assert captured_train_kwargs["optimizer_kind"] == "lion"
+    optimizer_controls = captured_train_kwargs["optimizer_controls"]
+    assert optimizer_controls["optimizer_kind"] == "lion"
+    assert optimizer_controls["weight_decay_effective"] == pytest.approx(1.0e-4)
+    assert optimizer_controls["weight_decay_defaulted"] is True
+    assert optimizer_controls["grad_clip_max_norm"] == pytest.approx(1.0)
     optimizer_policy = captured_train_kwargs["hi_nerv_optimizer_policy"]
     assert optimizer_policy["resolved_policy"] == "native_optimizer"
     assert optimizer_policy["optimizer_kind_consumed_by_native_mlx"] is True
     assert optimizer_policy["pr95_faithful_curriculum_enabled"] is False
     assert out["score_aware_training"]["optimizer_policy"] == optimizer_policy
+    assert out["score_aware_training"]["optimizer_controls"] == optimizer_controls
     assert out["score_aware_training"]["local_mlx_prefilter"] == {
         "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
         "scorer_device": "cpu",
@@ -3659,6 +3724,8 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     )
 
     assert captured_train_kwargs["optimizer_kind"] == "adafactor"
+    assert captured_train_kwargs["optimizer_controls"]["optimizer_kind"] == "adafactor"
+    assert captured_train_kwargs["optimizer_controls"]["weight_decay_effective"] == pytest.approx(1.0e-4)
     assert captured_train_kwargs["segnet_distillation_weight"] == 1.0
     assert captured_train_kwargs["pose_distillation_weight"] == 1.0
     assert captured_train_kwargs["mid_injection_block_index"] == 2
@@ -3691,6 +3758,9 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert out["score_aware_training"]["segnet_distillation_weight"] == 1.0
     assert out["score_aware_training"]["pose_distillation_weight"] == 1.0
     assert out["score_aware_training"]["optimizer_kind"] == "adafactor"
+    assert out["score_aware_training"]["optimizer_controls"]["optimizer_kind"] == (
+        "adafactor"
+    )
     assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (
         "native_optimizer"
     )
@@ -3732,6 +3802,44 @@ def test_hinerv_optimizer_policy_refuses_pr95_curriculum_swallowing_non_adamw() 
     )
     assert pr95["resolved_policy"] == "pr95_curriculum"
     assert pr95["pr95_faithful_curriculum_enabled"] is True
+
+
+def test_hinerv_optimizer_controls_default_to_pact_muon_adamw() -> None:
+    controls = runner_mod._resolve_mlx_score_aware_optimizer_controls(
+        optimizer_kind="pact_muon_adamw",
+        requested_weight_decay=None,
+        grad_clip_max_norm=1.0,
+        warmup_epochs=0,
+        warmup_steps_per_epoch=1,
+        cosine_decay_enabled=False,
+        cosine_decay_total_epochs=None,
+        cosine_decay_min_lr_ratio=1e-2,
+        run_epochs=29_650,
+    )
+
+    assert controls["optimizer_kind"] == "pact_muon_adamw"
+    assert controls["weight_decay_effective"] == pytest.approx(1.0e-4)
+    assert controls["weight_decay_defaulted"] is True
+    assert controls["borrowed_pr95_partition_rule"] is True
+    assert controls["original_pact_default_optimizer"] is True
+
+
+def test_hinerv_optimizer_controls_refuse_silent_decay_drop() -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="optimizer-weight-decay is only supported",
+    ):
+        runner_mod._resolve_mlx_score_aware_optimizer_controls(
+            optimizer_kind="adamax",
+            requested_weight_decay=1.0e-4,
+            grad_clip_max_norm=1.0,
+            warmup_epochs=0,
+            warmup_steps_per_epoch=1,
+            cosine_decay_enabled=False,
+            cosine_decay_total_epochs=None,
+            cosine_decay_min_lr_ratio=1e-2,
+            run_epochs=64,
+        )
 
 
 @pytest.mark.skipif(

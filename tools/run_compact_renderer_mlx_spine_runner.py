@@ -5465,15 +5465,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     optimizer_policy.get("optimizer_kind") or optimizer_kind
                 ),
                 "optimizer_policy": optimizer_policy,
+                "optimizer_controls": optimizer_controls,
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
                 "native_optimizer_active": bool(
                     optimizer_policy.get("native_optimizer_active")
                 ),
                 "effective_weight_decay": (
-                    1.0e-4
-                    if str(optimizer_policy.get("optimizer_kind") or optimizer_kind)
-                    in MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS
-                    else None
+                    optimizer_controls.get("weight_decay_effective")
                 ),
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
@@ -7061,6 +7059,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     telemetry_flush_interval_epochs: int,
     optimizer_kind: str,
     hi_nerv_optimizer_policy: Mapping[str, Any],
+    optimizer_controls: Mapping[str, Any],
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -7163,6 +7162,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
     model = HinervSubstrateMLX(cfg)
     optimizer_policy = dict(hi_nerv_optimizer_policy or {})
+    optimizer_control = dict(optimizer_controls or {})
     pr95_curriculum_enabled = bool(
         optimizer_policy.get("pr95_faithful_curriculum_enabled")
     )
@@ -7170,11 +7170,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     effective_optimizer_kind = str(
         optimizer_policy.get("optimizer_kind") or optimizer_kind
     )
-    effective_weight_decay = (
-        1.0e-4
-        if effective_optimizer_kind in MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS
-        else None
-    )
+    effective_weight_decay = optimizer_control.get("weight_decay_effective")
     coder_qat_cfg = CoderAwareQATConfig(
         enabled=bool(coder_aware_qat),
         quant_bits=int(coder_qat_quant_bits),
@@ -7266,6 +7262,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "native_optimizer_active": native_optimizer_active,
             "optimizer_kind": effective_optimizer_kind,
+            "optimizer_controls": optimizer_control,
             "effective_weight_decay": effective_weight_decay,
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_fake_quant_forward": {
@@ -7438,9 +7435,18 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
         ema_archive_selection_enabled=True,
-        grad_clip_max_norm=1.0,
+        grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
         weight_decay=effective_weight_decay,
         optimizer_kind=effective_optimizer_kind,
+        warmup_epochs=int(optimizer_control.get("warmup_epochs", 0)),
+        warmup_steps_per_epoch=max(
+            1, int(optimizer_control.get("warmup_steps_per_epoch", 1))
+        ),
+        cosine_decay_enabled=bool(optimizer_control.get("cosine_decay_enabled")),
+        cosine_decay_total_epochs=optimizer_control.get("cosine_decay_total_epochs"),
+        cosine_decay_min_lr_ratio=float(
+            optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
+        ),
         on_epoch_end=pose_instability_monitor,
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
@@ -8824,6 +8830,45 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "--optimizer-kind to be consumed directly."
         ),
     )
+    parser.add_argument(
+        "--optimizer-grad-clip-max-norm",
+        default=DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM,
+        type=float,
+        help=(
+            "MLX score-aware optimizer gradient clip. Applies to the Pact "
+            "Muon+AdamW default and native optimizer controls."
+        ),
+    )
+    parser.add_argument(
+        "--optimizer-weight-decay",
+        default=None,
+        type=float,
+        help=(
+            "Optional explicit decoupled weight decay for optimizer kinds that "
+            "support it. Omitted means the runner applies the Pact default "
+            "1e-4 for supported optimizers and None for no-decay controls."
+        ),
+    )
+    parser.add_argument("--optimizer-warmup-epochs", default=0, type=int)
+    parser.add_argument("--optimizer-warmup-steps-per-epoch", default=1, type=int)
+    parser.add_argument(
+        "--optimizer-cosine-decay-enabled",
+        action="store_true",
+        help=(
+            "Enable MLX warmup plus cosine decay for optimizer controls. "
+            "Requires --optimizer-warmup-epochs > 0."
+        ),
+    )
+    parser.add_argument(
+        "--optimizer-cosine-decay-total-epochs",
+        default=None,
+        type=int,
+    )
+    parser.add_argument(
+        "--optimizer-cosine-decay-min-lr-ratio",
+        default=1e-2,
+        type=float,
+    )
     parser.add_argument("--compact-latent-dim", default=8, type=int)
     parser.add_argument("--compact-embed-dim", default=8, type=int)
     parser.add_argument("--compact-codebook-size", default=16, type=int)
@@ -9801,6 +9846,17 @@ def main(argv: list[str] | None = None) -> int:
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             optimizer_kind=args.optimizer_kind,
             hi_nerv_optimizer_policy=args.hi_nerv_optimizer_policy,
+            optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,
+            optimizer_weight_decay=args.optimizer_weight_decay,
+            optimizer_warmup_epochs=args.optimizer_warmup_epochs,
+            optimizer_warmup_steps_per_epoch=args.optimizer_warmup_steps_per_epoch,
+            optimizer_cosine_decay_enabled=args.optimizer_cosine_decay_enabled,
+            optimizer_cosine_decay_total_epochs=(
+                args.optimizer_cosine_decay_total_epochs
+            ),
+            optimizer_cosine_decay_min_lr_ratio=(
+                args.optimizer_cosine_decay_min_lr_ratio
+            ),
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,

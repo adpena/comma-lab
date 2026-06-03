@@ -1433,6 +1433,11 @@ def test_pact_muon_adamw_hinerv_row_is_default_first_priority() -> None:
     hi_rows = [row for row in report["campaign_rows"] if row["family"] == "hi_nerv"]
     assert hi_rows[0]["optimizer_kind"] == "pact_muon_adamw"
     assert hi_rows[0]["priority"] == 9
+    assert hi_rows[0]["optimizer_control"]["backend"] == (
+        "tac.local_acceleration.pr95_hnerv_mlx"
+    )
+    assert hi_rows[0]["optimizer_control"]["borrowed_from_pr95"] is True
+    assert hi_rows[0]["optimizer_control"]["original_pact_contest_adaptation"] is True
     assert hi_rows[0]["optimizer_policy"]["requested_policy"] == "native_optimizer"
 
 
