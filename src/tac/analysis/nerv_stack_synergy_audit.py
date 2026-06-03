@@ -216,10 +216,23 @@ def _hi_nerv_stack_audit(
     )
     quantnoise_binding = _hi_nerv_quantnoise_control_binding(root)
     official_grid_binding = _hi_nerv_official_grid_binding(root)
+    official_feature_grid_convnext_binding = (
+        _hi_nerv_official_feature_grid_convnext_binding(root)
+    )
+    official_patch_binding = _hi_nerv_official_patch_binding(root)
     blockers = [
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle",
         "hinerv_local_architecture_not_source_faithful_upstream_hinerv_feature_grid",
-        "hinerv_official_convnext_feature_grid_path_missing",
+        (
+            ""
+            if official_feature_grid_convnext_binding["bound"]
+            else "hinerv_official_convnext_feature_grid_path_missing"
+        ),
+        (
+            ""
+            if official_patch_binding["bound"]
+            else "hinerv_official_patch_index_path_missing"
+        ),
         (
             ""
             if official_grid_binding["bound"]
@@ -253,14 +266,26 @@ def _hi_nerv_stack_audit(
             "source_faithful_upstream_hinerv": False,
             "local_role": "contest_adapter_with_hierarchical_latent_pyramid",
             "missing_upstream_axes": [
-                "hierarchical feature-grid encoding",
-                "official ConvNeXt-style feature-grid path",
+                (
+                    "full official hierarchical feature-grid source-forward replay artifact"
+                    if official_feature_grid_convnext_binding["bound"]
+                    else "hierarchical feature-grid encoding"
+                ),
+                (
+                    "full official ConvNeXt source-forward replay artifact"
+                    if official_feature_grid_convnext_binding["bound"]
+                    else "official ConvNeXt-style feature-grid path"
+                ),
                 (
                     "full official GridTrilinear3D forward replay artifact"
                     if official_grid_binding["bound"]
                     else "official trilinear feature interpolation path"
                 ),
-                "patch/frame unified training and eval",
+                (
+                    "full official patch/frame equivalence replay artifact"
+                    if official_patch_binding["bound"]
+                    else "patch/frame unified training and eval"
+                ),
                 "adaptive pruning schedule",
                 "QuantNoise-controlled source-faithful training path",
                 "QAT bitstream-q torchac-style entropy closure",
@@ -277,6 +302,8 @@ def _hi_nerv_stack_audit(
         "modelsize_budget": budget,
         "quantnoise_control_binding": quantnoise_binding,
         "official_grid_trilinear_binding": official_grid_binding,
+        "official_feature_grid_convnext_binding": official_feature_grid_convnext_binding,
+        "official_patch_index_binding": official_patch_binding,
         "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "byte ceiling selects capacity candidate before launch",
@@ -409,6 +436,111 @@ def _hi_nerv_official_grid_binding(root: Path) -> dict[str, Any]:
         "authority": "false_authority_component_binding_no_full_forward_parity_claim",
         **FALSE_AUTHORITY,
     }
+
+
+def _hi_nerv_official_feature_grid_convnext_binding(root: Path) -> dict[str, Any]:
+    """Return whether local HiNeRV feature-grid/ConvNeXt surfaces are bound."""
+
+    source_specs = {
+        "architecture": (
+            "src/tac/substrates/hi_nerv/architecture.py",
+            (
+                "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
+                "class HierarchicalFeatureGrid",
+                "class ConvNeXtBlock",
+                "trilinear_upsample",
+            ),
+        ),
+        "mlx_renderer": (
+            "src/tac/substrates/hi_nerv/mlx_renderer.py",
+            ("class ConvNeXtBlockMLX", "trilinear_upsample_mlx"),
+        ),
+        "archive_roundtrip_tests": (
+            "src/tac/substrates/hi_nerv/tests/test_hi_nerv_roundtrip.py",
+            (
+                "test_official_feature_grid_convnext_mode_is_receiver_visible",
+                "test_official_feature_grid_convnext_archive_roundtrip_preserves_forward",
+            ),
+        ),
+    }
+    rows = _marker_binding_rows(root, source_specs)
+    blockers = [
+        f"hinerv_feature_grid_convnext_binding_marker_missing:{row['source_id']}:{marker}"
+        for row in rows
+        for marker in row["missing_markers"]
+    ]
+    return {
+        "schema": "hinerv_official_feature_grid_convnext_binding.v1",
+        "bound": not blockers,
+        "full_upstream_source_forward_replay_proven": False,
+        "source_rows": rows,
+        "blockers": blockers,
+        "authority": "false_authority_receiver_binding_no_full_forward_parity_claim",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hi_nerv_official_patch_binding(root: Path) -> dict[str, Any]:
+    """Return whether official HiNeRV patch/index NumPy primitives are bound."""
+
+    source_specs = {
+        "official_patch": (
+            "src/tac/substrates/hi_nerv/official_patch.py",
+            (
+                "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+                "official_video_to_patch",
+                "official_patch_to_video",
+                "official_vidx_to_pidx",
+                "official_compute_pixel_idx_3d",
+                "official_flat_patch_index_to_thw",
+            ),
+        ),
+        "official_patch_tests": (
+            "src/tac/substrates/hi_nerv/tests/test_official_patch.py",
+            (
+                "test_official_vidx_to_pidx_expands_child_patch_grid",
+                "test_official_compute_pixel_idx_3d_matches_padding_and_clipping_contract",
+                "test_official_flat_patch_index_to_thw_matches_dataset_mapping",
+                "test_official_patch_contract_is_false_authority",
+            ),
+        ),
+    }
+    rows = _marker_binding_rows(root, source_specs)
+    blockers = [
+        f"hinerv_patch_binding_marker_missing:{row['source_id']}:{marker}"
+        for row in rows
+        for marker in row["missing_markers"]
+    ]
+    return {
+        "schema": "hinerv_official_patch_index_binding.v1",
+        "bound": not blockers,
+        "full_patch_frame_equivalence_replay_proven": False,
+        "source_rows": rows,
+        "blockers": blockers,
+        "authority": "false_authority_receiver_binding_no_full_patch_replay_claim",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _marker_binding_rows(
+    root: Path,
+    source_specs: dict[str, tuple[str, tuple[str, ...]]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for source_id, (rel_path, required_markers) in source_specs.items():
+        path = root / rel_path
+        text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+        missing = [marker for marker in required_markers if marker not in text]
+        rows.append(
+            {
+                "source_id": source_id,
+                "rel_path": rel_path,
+                "present": path.is_file(),
+                "required_markers": list(required_markers),
+                "missing_markers": missing,
+            }
+        )
+    return rows
 
 
 def _snerv_stack_audit(

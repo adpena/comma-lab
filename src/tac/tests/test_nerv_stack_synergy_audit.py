@@ -63,10 +63,38 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle"
         in stacks["hi_nerv"]["blockers"]
     )
-    assert "hinerv_official_convnext_feature_grid_path_missing" in stacks["hi_nerv"]["blockers"]
+    assert "hinerv_official_convnext_feature_grid_path_missing" not in stacks[
+        "hi_nerv"
+    ]["blockers"]
+    assert "hinerv_official_patch_index_path_missing" not in stacks["hi_nerv"][
+        "blockers"
+    ]
     assert "hinerv_official_trilinear_feature_interpolation_path_missing" not in stacks["hi_nerv"]["blockers"]
+    feature_grid_binding = stacks["hi_nerv"][
+        "official_feature_grid_convnext_binding"
+    ]
+    assert feature_grid_binding["schema"] == (
+        "hinerv_official_feature_grid_convnext_binding.v1"
+    )
+    assert feature_grid_binding["bound"] is True
+    assert feature_grid_binding["full_upstream_source_forward_replay_proven"] is False
+    assert not feature_grid_binding["blockers"]
+    assert {row["source_id"] for row in feature_grid_binding["source_rows"]} == {
+        "architecture",
+        "mlx_renderer",
+        "archive_roundtrip_tests",
+    }
     assert stacks["hi_nerv"]["official_grid_trilinear_binding"]["bound"] is True
     assert stacks["hi_nerv"]["official_grid_trilinear_binding"]["score_claim"] is False
+    patch_binding = stacks["hi_nerv"]["official_patch_index_binding"]
+    assert patch_binding["schema"] == "hinerv_official_patch_index_binding.v1"
+    assert patch_binding["bound"] is True
+    assert patch_binding["full_patch_frame_equivalence_replay_proven"] is False
+    assert not patch_binding["blockers"]
+    assert {row["source_id"] for row in patch_binding["source_rows"]} == {
+        "official_patch",
+        "official_patch_tests",
+    }
     assert (
         "hinerv_official_quantnoise_control_not_bound_to_mlx_trainer"
         not in stacks["hi_nerv"]["blockers"]
