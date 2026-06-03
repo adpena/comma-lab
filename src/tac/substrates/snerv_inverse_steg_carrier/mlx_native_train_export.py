@@ -68,6 +68,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     encode_frame_lf,
     fit_hf_decoder_least_squares,
     fit_hf_decoder_weighted_least_squares,
+    official_snerv_modelsize_to_fc_dim,
     quantize_lf,
 )
 from tac.substrates.snerv_inverse_steg_carrier.dwt import (
@@ -2255,8 +2256,9 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
         )
     ):
         adapter = SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    fc_dim = _fc_dim_from_candidate(candidate)
     return SnervModelSizeConfig(
-        fc_dim=int(candidate.get("fc_dim", candidate.get("snerv_fc_dim", 9))),
+        fc_dim=fc_dim,
         emb_size=int(candidate.get("emb_size", candidate.get("snerv_emb_size", 0))),
         patch_radius=int(
             candidate.get("patch_radius", candidate.get("snerv_patch_radius", 1))
@@ -2277,6 +2279,63 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
         ),
         adapter=adapter,
     )
+
+
+def _fc_dim_from_candidate(candidate: Mapping[str, Any]) -> int:
+    if candidate.get("fc_dim") is not None:
+        return int(candidate["fc_dim"])
+    if candidate.get("snerv_fc_dim") is not None:
+        return int(candidate["snerv_fc_dim"])
+    solution = candidate.get("official_modelsize_solution")
+    if isinstance(solution, Mapping) and solution.get("fc_dim") is not None:
+        return int(solution["fc_dim"])
+    modelsize = candidate.get("modelsize_mparams", candidate.get("official_modelsize_mparams"))
+    if modelsize is not None:
+        full_data_length = candidate.get("full_data_length")
+        final_size = candidate.get("final_size")
+        enc_strds = candidate.get("enc_strds", candidate.get("official_enc_strds"))
+        dec_strds = candidate.get("dec_strds", candidate.get("official_dec_strds"))
+        if (
+            full_data_length is not None
+            and final_size is not None
+            and enc_strds is not None
+            and dec_strds is not None
+        ):
+            return int(
+                official_snerv_modelsize_to_fc_dim(
+                    modelsize_mparams=float(modelsize),
+                    full_data_length=int(full_data_length),
+                    final_size=int(final_size),
+                    enc_strds=tuple(int(v) for v in enc_strds),
+                    dec_strds=tuple(int(v) for v in dec_strds),
+                    ks=_int_tuple_or_default(candidate.get("ks"), (0, 1, 5)),
+                    enc_dim=_float_tuple_or_default(
+                        candidate.get("enc_dim"),
+                        (64.0, 16.0),
+                    ),
+                    emb_size=int(candidate.get("emb_size", candidate.get("snerv_emb_size", 0))),
+                    reduce=float(candidate.get("reduce", 1.2)),
+                    lower_width=int(candidate.get("lower_width", 12)),
+                    saturate_stages=int(candidate.get("saturate_stages", -1)),
+                ).fc_dim
+            )
+    return 9
+
+
+def _int_tuple_or_default(value: Any, default: tuple[int, ...]) -> tuple[int, ...]:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return tuple(int(v) for v in value.split(",") if v.strip())
+    return tuple(int(v) for v in value)
+
+
+def _float_tuple_or_default(value: Any, default: tuple[float, ...]) -> tuple[float, ...]:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return tuple(float(v) for v in value.split(",") if v.strip())
+    return tuple(float(v) for v in value)
 
 
 def _packet_bytes_from_artifact(model_or_artifact: Any) -> bytes:

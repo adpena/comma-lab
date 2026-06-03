@@ -20,6 +20,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
     SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
     SNERV_MLX_NATIVE_REPORT_FILENAME,
+    _model_size_from_candidate,
     build_snerv_mlx_native_packet_from_numpy_pairs,
     train_export_snerv_mlx_native,
     write_snerv_mlx_prefilter_profile,
@@ -537,6 +538,39 @@ def test_train_export_blocks_official_primitives_mode_before_surrogate_hydration
     assert binding["source_forward_replay_authority"] is False
     assert binding["receiver_runtime_decode_authority"] is False
     assert Path(report["report_path"]).is_file()
+
+
+def test_native_export_modelsize_candidate_consumes_official_fc_dim_solution() -> None:
+    model_size = _model_size_from_candidate(
+        {
+            "candidate_id": "official-modelsize-only",
+            "modelsize_mparams": 0.05,
+            "official_modelsize_solution": {
+                "schema": "official_snerv_modelsize_to_fc_dim.v1",
+                "modelsize_mparams": 0.05,
+                "fc_dim": 11,
+            },
+        }
+    )
+
+    assert model_size.fc_dim == 11
+    assert model_size.feature_count == 11
+
+
+def test_native_export_modelsize_candidate_recomputes_fc_dim_when_formula_inputs_exist() -> None:
+    model_size = _model_size_from_candidate(
+        {
+            "candidate_id": "official-modelsize-formula",
+            "modelsize_mparams": 0.05,
+            "full_data_length": 1200,
+            "final_size": 384 * 512,
+            "enc_strds": [5, 4, 2, 2, 2],
+            "dec_strds": [5, 4, 2, 2, 2],
+        }
+    )
+
+    assert model_size.fc_dim == 11
+    assert model_size.feature_count == 11
 
 
 def test_train_export_preserves_explicit_source_pair_indices(
