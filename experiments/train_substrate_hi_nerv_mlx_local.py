@@ -353,6 +353,13 @@ def _full_main(args: argparse.Namespace) -> int:
             enabled=True,
             quant_bits=int(train_time_controls.decoder_fake_quant_bits),
         )
+    projection_hook = _build_train_time_decoder_control_callback(
+        model=model,
+        controls=train_time_controls,
+        output_dir=output_dir,
+    )
+    if projection_hook is not None:
+        model.post_optimizer_projection = projection_hook
     coder_qat_cfg = _coder_qat_config_from_args(args)
     extra_loss_terms = None
     if coder_qat_cfg.enabled:
@@ -527,11 +534,6 @@ def _full_main(args: argparse.Namespace) -> int:
         cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         ema_archive_selection_enabled=bool(args.ema_archive_selection),
         prioritized_pair_indices=local_training_pair_indices,
-        on_epoch_end=_build_train_time_decoder_control_callback(
-            model=model,
-            controls=train_time_controls,
-            output_dir=output_dir,
-        ),
         notes=(
             "HiNeRV MLX-local score-aware training through the canonical "
             "mlx_score_aware harness, with optional real SegNet/PoseNet teacher "
@@ -937,16 +939,17 @@ def _build_train_time_decoder_control_callback(
         return None
     path = output_dir / "hi_nerv_train_time_decoder_controls.jsonl"
 
-    def _callback(metrics: Any) -> None:
+    def _callback(*, epoch: int) -> dict[str, Any]:
         report = _apply_train_time_decoder_controls(
             model,
             controls,
-            epoch=int(metrics.epoch),
+            epoch=int(epoch),
         )
         if bool(report.get("applied")):
             path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(report, sort_keys=True) + "\n")
+        return report
 
     return _callback
 

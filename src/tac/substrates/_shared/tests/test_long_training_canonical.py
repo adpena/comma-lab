@@ -764,6 +764,48 @@ def test_run_long_training_emits_telemetry_jsonl(tmp_path: Path) -> None:
         assert row["batch_observability"]["ready_for_exact_eval_dispatch"] is False
 
 
+def test_run_long_training_records_post_optimizer_projection(
+    tmp_path: Path,
+) -> None:
+    class _ProjectionAdapter(_MockSubstrateAdapter):
+        def __init__(self) -> None:
+            super().__init__()
+            self.projection_epochs: list[int] = []
+
+        def post_optimizer_projection(self, *, epoch: int) -> Mapping[str, Any]:
+            self.projection_epochs.append(int(epoch))
+            self.model._params["w_0"][0] = 0.0
+            return {
+                "schema": "mock_post_optimizer_projection.v1",
+                "epoch": int(epoch),
+                "applied": True,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+    config = _make_simple_config(tmp_path, epochs=2, checkpoint_interval=1)
+    adapter = _ProjectionAdapter()
+
+    artifact = run_long_training(adapter, config)
+
+    assert adapter.projection_epochs == [0, 1]
+    assert adapter.model._params["w_0"][0] == 0.0
+    lines = [
+        json.loads(line)
+        for line in artifact.telemetry_path.read_text().strip().split("\n")
+        if line
+    ]
+    projection_rows = [
+        row["batch_observability"]["post_optimizer_projection"]
+        for row in lines
+        if row.get("batch_observability")
+    ]
+    assert projection_rows
+    assert all(row["schema"] == "mock_post_optimizer_projection.v1" for row in projection_rows)
+    assert all(row["score_claim"] is False for row in projection_rows)
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in projection_rows)
+
+
 def test_run_long_training_typed_callback_stop_preserves_artifact(
     tmp_path: Path,
 ) -> None:

@@ -681,6 +681,98 @@ def test_pr95_stage_dispatch_makes_stage_1_2_5_losses_behaviorally_distinct() ->
 
 
 @requires_mlx
+def test_pr95_stage_4_consumes_real_coder_qat_terms_NO_FAKE() -> None:
+    """Stage-4 QAT must affect the PR95 renderer loss, not just metadata."""
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.coder_qat import (
+        CoderAwareQATConfig,
+        build_decoder_coder_qat_terms,
+        coder_qat_loss_weights,
+    )
+
+    qat_cfg = CoderAwareQATConfig(
+        enabled=True,
+        quant_bits=2,
+        quant_residual_weight=0.5,
+        magnitude_weight=0.125,
+        delta_weight=0.0625,
+        c1a_entropy_weight=0.0,
+    ).validated()
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.model.decoder_weight = mx.reshape(
+        mx.array(
+            [
+                -0.37,
+                -0.19,
+                0.08,
+                0.41,
+                -0.12,
+                0.27,
+                -0.31,
+                0.53,
+                0.02,
+                -0.44,
+                0.16,
+                -0.07,
+                0.33,
+                -0.25,
+                0.49,
+                -0.58,
+            ],
+            dtype=mx.float32,
+        ),
+        (4, 4),
+    )
+    bundle.extra_loss_terms = lambda model, _idx: build_decoder_coder_qat_terms(
+        model,
+        qat_cfg,
+    )
+    bundle.extra_loss_weights = coder_qat_loss_weights(qat_cfg)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    batch = adapter.sample_batch(batch_size=4, seed=4)
+    stage_starts = {
+        int(stage_index): int(start_epoch)
+        for stage_index, start_epoch, _end_epoch in (
+            adapter._pr95_curriculum_factory.stage_epoch_boundaries
+        )
+    }
+    stage_4 = adapter._pr95_curriculum_factory.current_stage_verdict(
+        stage_starts[4]
+    )
+    assert stage_4.qat_active is True
+    assert stage_4.cat_lambda == pytest.approx(0.0)
+
+    total_with_qat, parts_with_qat = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage_4,
+        model=adapter.model,
+    )
+    bundle.extra_loss_terms = None
+    bundle.extra_loss_weights = {}
+    total_without_qat, parts_without_qat = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage_4,
+        model=adapter.model,
+    )
+    mx.eval(total_with_qat, total_without_qat, *parts_with_qat.values())
+
+    assert "coder_qat_quant_residual" in parts_with_qat
+    assert "coder_qat_magnitude" in parts_with_qat
+    assert "coder_qat_delta" in parts_with_qat
+    assert "coder_qat_quant_residual" not in parts_without_qat
+    assert float(total_with_qat.item()) != pytest.approx(
+        float(total_without_qat.item())
+    )
+
+
+@requires_mlx
 def test_pr95_curriculum_path_trains_student_heads_when_stage_weight_active() -> None:
     import mlx.core as mx
 

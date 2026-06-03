@@ -1079,6 +1079,12 @@ class SubstrateLongTrainingAdapter(Protocol):
             same dict shape as loss_fn (REQUIRED ``"total"`` key).
             Used by MLX adapters where ``mlx.nn.value_and_grad`` requires
             closure over both forward + backward.
+        post_optimizer_projection(epoch) -> Mapping | None:
+            optional proximal projection hook called immediately after the
+            optimizer step and before EMA, scorer-component probes, metrics,
+            checkpoints, and archive export. Use this for real weight-space
+            projections such as train-time quantization/pruning controls; do
+            not put parameter mutation in on_epoch_end observability callbacks.
         artifact_metadata() -> Mapping[str, Any] | None:
             optional non-authority metadata threaded into TrainingArtifact
             JSON and MLX posterior rows. This may carry substrate lineage or
@@ -2466,6 +2472,18 @@ def run_long_training(
             early_stopped = True
             early_stop_reason = f"oom_safe_runner_exhausted:{exc!s}"
             break
+        projection_report: Mapping[str, Any] | None = None
+        projection_fn = getattr(adapter, "post_optimizer_projection", None)
+        if callable(projection_fn):
+            try:
+                raw_projection_report = projection_fn(epoch=epoch)
+                if isinstance(raw_projection_report, Mapping):
+                    projection_report = raw_projection_report
+            except Exception as exc:
+                early_stopped = True
+                early_stop_reason = f"post_optimizer_projection_failed:{exc!s}"
+                traceback.print_exc()
+                break
         train_batch_observability = _adapter_batch_observability(adapter)
 
         # 4) EMA update post-optimizer-step per canonical Polyak pattern.
@@ -2512,6 +2530,11 @@ def run_long_training(
                 "schema": "long_training_batch_observability.v1",
                 "train_batch": train_batch_observability,
                 "per_axis_batch": per_axis_batch_observability,
+                "post_optimizer_projection": (
+                    _jsonable_mapping(projection_report)
+                    if projection_report is not None
+                    else None
+                ),
                 "actual_train_batch_size": int(actual_bs),
                 "requested_batch_size": int(config.batch_pair_indices_per_step),
                 "coverage_scope": "sampled_pair_indices_not_full_video_replay",
