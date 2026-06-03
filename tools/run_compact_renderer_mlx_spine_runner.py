@@ -4084,7 +4084,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                         "score_aware_hf_decoder_fit_executed"
                     )
                 ),
-                "mlx_native_receiver_proof_passed": snerv_mlx_native_export_verified,
+                "mlx_native_receiver_proof_passed": (
+                    snerv_mlx_native_receiver_proof_passed
+                ),
+                "mlx_native_full600_export_verified": snerv_mlx_native_export_verified,
                 "mlx_native_training_required_next": (
                     not bool(
                         snerv_mlx_native_export.get(

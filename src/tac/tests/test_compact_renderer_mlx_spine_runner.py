@@ -6227,7 +6227,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         "snerv_advisory_archive_packet_not_native_mlx_export"
     )
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
-    assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is False
+    assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is True
+    assert out["score_aware_training"]["mlx_native_full600_export_verified"] is False
     top_prioritized = out["score_aware_training"]["prioritized_pair_training"]
     assert top_prioritized["consumed_by_mlx_native_export"] is True
     assert top_prioritized["mlx_native_export_blocker"] is None
