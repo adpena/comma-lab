@@ -716,6 +716,83 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                     ],
                 )
             )
+            continue
+        if unit_type == "snerv_lf_payload_codec_sweep_result":
+            selected_mode = str(unit.get("selected_mode") or "unknown")
+            token = _safe_work_order_token(
+                f"{unit.get('unit_id') or family}_{selected_mode}"
+            )
+            orders.append(
+                _work_order(
+                    work_order_id=f"replay_{family}_{token}_lf_payload_codec_full_archive",
+                    work_order_type="snerv_lf_payload_codec_full_archive_replay",
+                    target_consumers=[
+                        "final_rate_attack",
+                        "bit_allocator",
+                        "cathedral_autopilot",
+                        "continual_learning_posterior",
+                    ],
+                    planner_action=(
+                        "replay_snerv_lf_payload_codec_inside_full_archive"
+                    ),
+                    source_unit_id=str(unit.get("unit_id") or ""),
+                    priority=9,
+                    receiver_precision_modes=[
+                        "int8_protected",
+                        "int4",
+                        "int2",
+                        "zero",
+                        "rle_only",
+                    ],
+                    rationale=(
+                        "turn exact LF packet byte savings into full archive "
+                        "receiver replay and full-video section-value evidence "
+                        "before any SNeRV rate-axis promotion"
+                    ),
+                    payload={
+                        "family": family,
+                        "report_path": unit.get("report_path"),
+                        "source_artifact_path": unit.get("source_artifact_path"),
+                        "source_artifact_bytes": unit.get("source_artifact_bytes"),
+                        "source_artifact_sha256": unit.get(
+                            "source_artifact_sha256"
+                        ),
+                        "selection_policy": unit.get("selection_policy"),
+                        "history_count": unit.get("history_count"),
+                        "plane_count": unit.get("plane_count"),
+                        "raw_i64_bytes": unit.get("raw_i64_bytes"),
+                        "baseline_mode": unit.get("baseline_mode"),
+                        "baseline_payload_bytes": unit.get(
+                            "baseline_payload_bytes"
+                        ),
+                        "selected_mode": unit.get("selected_mode"),
+                        "selected_payload_bytes": unit.get(
+                            "selected_payload_bytes"
+                        ),
+                        "selected_packet_schema": unit.get(
+                            "selected_packet_schema"
+                        ),
+                        "row_count": unit.get("row_count"),
+                        "section_value_row_count": unit.get(
+                            "section_value_row_count"
+                        ),
+                        "byte_price_decision_counts": dict(
+                            unit.get("byte_price_decision_counts") or {}
+                        ),
+                        "codec_rows": _mapping_list(unit.get("codec_rows")),
+                        "section_value_rows": _mapping_list(
+                            unit.get("section_value_rows")
+                        ),
+                        "byte_price_plan": dict(unit.get("byte_price_plan") or {}),
+                    },
+                    blockers=[
+                        *blockers,
+                        "full_archive_receiver_replay_required",
+                        "full_video_section_value_required",
+                        "paired_contest_cpu_cuda_auth_eval_missing",
+                    ],
+                )
+            )
     return orders
 
 

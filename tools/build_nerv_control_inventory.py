@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,16 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         help="Optional false-authority SNeRV scorer-loop QAT local trainer JSON.",
     )
+    parser.add_argument(
+        "--snerv-lf-payload-codec-sweep-json",
+        default=None,
+        type=Path,
+        action="append",
+        help=(
+            "Optional false-authority SNeRV LF payload codec sweep JSON. "
+            "Defaults to all latest matching research reports."
+        ),
+    )
     args = parser.parse_args(argv)
 
     focus = tuple(args.focus_family or ("hi_nerv", "snerv"))
@@ -159,6 +170,11 @@ def main(argv: list[str] | None = None) -> int:
         pattern="snerv_scorer_loop_qat_local_trainer*.json",
         schema="snerv_scorer_loop_qat_local_trainer.v1",
     )
+    snerv_lf_payload_codec_sweep_reports = _load_optional_reports(
+        args.snerv_lf_payload_codec_sweep_json,
+        pattern="snerv_lf_payload_codec_sweep*.json",
+        schema="snerv_lf_payload_codec_sweep.v1",
+    )
     report = build_nerv_control_inventory(
         focus_families=focus,
         repo_root=args.repo_root,
@@ -181,6 +197,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         snerv_decoder_mode_probe_report=snerv_decoder_mode_probe_report,
         snerv_scorer_loop_qat_reports=snerv_scorer_loop_qat_reports,
+        snerv_lf_payload_codec_sweep_reports=snerv_lf_payload_codec_sweep_reports,
     )
     output = Path(args.output_json).expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -236,10 +253,13 @@ def _load_json(path: Path) -> dict[str, Any]:
     source = path.expanduser()
     if not source.is_absolute():
         source = REPO_ROOT / source
-    payload = json.loads(source.read_text(encoding="utf-8"))
+    raw = source.read_bytes()
+    payload = json.loads(raw.decode("utf-8"))
     if not isinstance(payload, dict):
         raise SystemExit(f"{source}: expected JSON object")
     payload.setdefault("source_artifact_path", source.as_posix())
+    payload.setdefault("source_artifact_bytes", len(raw))
+    payload.setdefault("source_artifact_sha256", hashlib.sha256(raw).hexdigest())
     return payload
 
 
@@ -251,6 +271,11 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         "control_count": len(report["control_rows"]),
         "binding_gap_count": len(report["binding_gap_rows"]),
         "work_order_count": len(report["recommended_next_work_orders"]),
+        "snerv_lf_payload_codec_sweep_report_count": report.get(
+            "snerv_lf_payload_codec_sweep_reports", {}
+        )
+        .get("snerv", {})
+        .get("history_count", 0),
         "implementation_sweep_status": report["implementation_sweep"]["status"],
         "score_claim": report["score_claim"],
         "ready_for_exact_eval_dispatch": report["ready_for_exact_eval_dispatch"],

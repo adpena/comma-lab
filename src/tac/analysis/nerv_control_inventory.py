@@ -42,6 +42,7 @@ def build_nerv_control_inventory(
     snerv_decoder_mode_probe_report: Mapping[str, Any] | None = None,
     snerv_scorer_loop_qat_report: Mapping[str, Any] | None = None,
     snerv_scorer_loop_qat_reports: Iterable[Mapping[str, Any]] | None = None,
+    snerv_lf_payload_codec_sweep_reports: Iterable[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return a machine-readable map of NeRV controls and required bindings."""
 
@@ -112,6 +113,14 @@ def build_nerv_control_inventory(
             snerv_scorer_loop_qat_report=snerv_scorer_loop_qat_report,
             snerv_scorer_loop_qat_reports=snerv_scorer_loop_qat_reports,
             focus_families=focus,
+        ),
+        "snerv_lf_payload_codec_sweep_reports": (
+            _snerv_lf_payload_codec_sweep_reports(
+                snerv_lf_payload_codec_sweep_reports=(
+                    snerv_lf_payload_codec_sweep_reports
+                ),
+                focus_families=focus,
+            )
         ),
         "control_rows": controls,
         "binding_gap_rows": gaps,
@@ -250,6 +259,16 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
                 f"accepted={scorer_row.get('accepted_improvement')}, "
                 f"history={scorer_row.get('history_count', 0)}, "
                 f"delta={scorer_row.get('score_delta_linf')})"
+            )
+    lf_codec_reports = report.get("snerv_lf_payload_codec_sweep_reports")
+    if isinstance(lf_codec_reports, Mapping):
+        lines.extend(["", "## SNeRV LF Payload Codec", ""])
+        for family, codec_row in lf_codec_reports.items():
+            lines.append(
+                f"- `{family}`: `{codec_row.get('status')}` "
+                f"({codec_row.get('history_count', 0)} reports, "
+                f"selected={codec_row.get('selected_mode')}, "
+                f"bytes={codec_row.get('selected_payload_bytes')})"
             )
     policy = report.get("source_review_policy")
     if isinstance(policy, Mapping):
@@ -870,6 +889,138 @@ def _best_pair_deltas(report: Mapping[str, Any]) -> list[dict[str, Any]]:
         for row in result.get("best_pair_deltas", ())
         if isinstance(row, Mapping)
     ]
+
+
+def _snerv_lf_payload_codec_sweep_reports(
+    *,
+    snerv_lf_payload_codec_sweep_reports: Iterable[Mapping[str, Any]] | None,
+    focus_families: Iterable[str],
+) -> dict[str, Any]:
+    focus = {str(family) for family in focus_families}
+    rows: dict[str, Any] = {}
+    reports = [
+        report
+        for report in snerv_lf_payload_codec_sweep_reports or ()
+        if isinstance(report, Mapping)
+    ]
+    if not reports or (focus and "snerv" not in focus):
+        return rows
+    selected_report = min(
+        reports,
+        key=lambda report: (
+            -_int_or_zero(report.get("plane_count")),
+            -len(report.get("section_value_rows") or ()),
+            -len(report.get("rows") or ()),
+            _selected_payload_bytes(report),
+            str(report.get("report_path") or report.get("source_artifact_path") or ""),
+        ),
+    )
+    selected_row = (
+        selected_report.get("selected_rate_only_row")
+        if isinstance(selected_report.get("selected_rate_only_row"), Mapping)
+        else {}
+    )
+    byte_price_plan = (
+        selected_report.get("byte_price_plan")
+        if isinstance(selected_report.get("byte_price_plan"), Mapping)
+        else {}
+    )
+    section_value_rows = _mapping_list(selected_report.get("section_value_rows"))
+    rows["snerv"] = {
+        "schema": selected_report.get("schema"),
+        "status": "snerv_lf_payload_codec_sweep_rows_available_false_authority",
+        "selection_policy": (
+            "largest_plane_count_then_richest_section_value_then_lowest_selected_payload_bytes"
+        ),
+        "history_count": len(reports),
+        "history_rows": [
+            _snerv_lf_payload_codec_history_row(report) for report in reports
+        ],
+        "report_path": selected_report.get("report_path")
+        or selected_report.get("source_artifact_path"),
+        "source_artifact_path": selected_report.get("source_artifact_path"),
+        "source_artifact_bytes": selected_report.get("source_artifact_bytes"),
+        "source_artifact_sha256": selected_report.get("source_artifact_sha256"),
+        "axis_tag": selected_report.get("axis_tag"),
+        "plane_count": selected_report.get("plane_count"),
+        "plane_shapes": list(selected_report.get("plane_shapes") or ()),
+        "raw_i64_bytes": selected_report.get("raw_i64_bytes"),
+        "baseline_mode": selected_report.get("baseline_mode"),
+        "baseline_payload_bytes": selected_report.get("baseline_payload_bytes"),
+        "selected_mode": selected_row.get("mode"),
+        "selected_payload_bytes": selected_row.get("payload_bytes"),
+        "selected_packet_schema": selected_row.get("packet_schema"),
+        "selected_mode_histogram": dict(selected_row.get("mode_histogram") or {}),
+        "row_count": len(_mapping_list(selected_report.get("rows"))),
+        "section_value_row_count": len(section_value_rows),
+        "section_value_rows": section_value_rows,
+        "byte_price_plan": dict(byte_price_plan),
+        "byte_price_decision_counts": _byte_price_decision_counts(byte_price_plan),
+        "codec_rows": [
+            {
+                "mode": row.get("mode"),
+                "payload_bytes": row.get("payload_bytes"),
+                "packet_schema": row.get("packet_schema"),
+                "mode_histogram": row.get("mode_histogram"),
+                "error": row.get("error"),
+                "blockers": list(row.get("blockers") or ()),
+            }
+            for row in _mapping_list(selected_report.get("rows"))
+        ],
+        "blockers": list(selected_report.get("blockers") or ()),
+        **FALSE_AUTHORITY,
+    }
+    return rows
+
+
+def _selected_payload_bytes(report: Mapping[str, Any]) -> int:
+    selected = report.get("selected_rate_only_row")
+    if not isinstance(selected, Mapping):
+        return 2**63 - 1
+    value = _int_or_zero(selected.get("payload_bytes"))
+    return value if value > 0 else 2**63 - 1
+
+
+def _snerv_lf_payload_codec_history_row(report: Mapping[str, Any]) -> dict[str, Any]:
+    selected = (
+        report.get("selected_rate_only_row")
+        if isinstance(report.get("selected_rate_only_row"), Mapping)
+        else {}
+    )
+    return {
+        "report_path": report.get("report_path") or report.get("source_artifact_path"),
+        "source_artifact_path": report.get("source_artifact_path"),
+        "source_artifact_bytes": report.get("source_artifact_bytes"),
+        "source_artifact_sha256": report.get("source_artifact_sha256"),
+        "schema": report.get("schema"),
+        "plane_count": report.get("plane_count"),
+        "baseline_mode": report.get("baseline_mode"),
+        "baseline_payload_bytes": report.get("baseline_payload_bytes"),
+        "selected_mode": selected.get("mode"),
+        "selected_payload_bytes": selected.get("payload_bytes"),
+        "section_value_row_count": len(report.get("section_value_rows") or ()),
+        "byte_price_decision_counts": _byte_price_decision_counts(
+            report.get("byte_price_plan")
+            if isinstance(report.get("byte_price_plan"), Mapping)
+            else {}
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _byte_price_decision_counts(plan: Mapping[str, Any]) -> dict[str, int]:
+    counts: Counter[str] = Counter()
+    for row in _mapping_list(plan.get("decision_rows")):
+        decision = str(row.get("decision") or row.get("economic_decision") or "")
+        if decision:
+            counts[decision] += 1
+    return dict(sorted(counts.items()))
+
+
+def _mapping_list(value: Any) -> list[Mapping[str, Any]]:
+    if not isinstance(value, Iterable) or isinstance(value, (str, bytes, Mapping)):
+        return []
+    return [row for row in value if isinstance(row, Mapping)]
 
 
 def _int_or_zero(value: Any) -> int:
@@ -1861,12 +2012,14 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "src/tac/analysis/snerv_trained_ladder_waterfill.py",
             "src/tac/analysis/hinerv_decoder_weight_saliency_replay.py",
             "src/tac/analysis/snerv_waterfill_mode_assignment.py",
+            "src/tac/analysis/snerv_lf_payload_codec_sweep.py",
             "tools/build_nerv_decoder_weight_waterfill_plan.py",
             "tools/build_hinerv_archive_ladder_waterfill.py",
             "tools/build_hinerv_archive_backend_drift.py",
             "tools/build_snerv_trained_ladder_waterfill.py",
             "tools/build_hinerv_decoder_weight_saliency_replay.py",
             "tools/build_snerv_waterfill_mode_assignment.py",
+            "tools/build_snerv_lf_payload_codec_sweep.py",
         ],
         "receiver_and_exact_custody": [
             "src/tac/substrates/hprc/archive_candidate.py",

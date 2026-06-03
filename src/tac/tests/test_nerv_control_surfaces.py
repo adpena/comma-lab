@@ -334,6 +334,10 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
         row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
         for row in orders.values()
     )
+    assert any(
+        row["work_order_type"] == "snerv_lf_payload_codec_full_archive_replay"
+        for row in orders.values()
+    )
     zero_order = orders["route_bitmask_and_zero_packing_to_rate_allocator"]
     assert {"zero", "rle_only", "int2", "int4"} <= set(
         zero_order["receiver_precision_modes"]
@@ -411,6 +415,23 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     assert qat_order["payload"]["best_pair_deltas"][0]["pair_index"] == 0
     assert qat_order["payload"]["receiver_contract_satisfied"] is True
     assert "snerv_scorer_loop_qat_full600_missing" in qat_order["blockers"]
+    lf_codec_order = next(
+        row
+        for row in orders.values()
+        if row["work_order_type"] == "snerv_lf_payload_codec_full_archive_replay"
+    )
+    assert lf_codec_order["payload"]["selected_mode"] == "portfolio_auto"
+    assert lf_codec_order["payload"]["selected_payload_bytes"] == 72
+    assert lf_codec_order["payload"]["source_artifact_path"].endswith(
+        "snerv_lf_payload_codec_sweep.json"
+    )
+    assert lf_codec_order["payload"]["source_artifact_bytes"] == 1234
+    assert lf_codec_order["payload"]["source_artifact_sha256"] == "a" * 64
+    assert lf_codec_order["payload"]["section_value_row_count"] == 1
+    assert lf_codec_order["payload"]["byte_price_plan"]["schema"] == (
+        "compact_nerv_byte_price_controller.v1"
+    )
+    assert "full_archive_receiver_replay_required" in lf_codec_order["blockers"]
     for order in orders.values():
         assert order["score_claim"] is False
         assert order["score_claim_valid"] is False
@@ -470,11 +491,11 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     assert queue["queue_row_count"] == rate_bridge["work_order_count"]
     assert queue["blocked_queue_row_count"] > 0
     assert queue["local_planning_ready_row_count"] >= 0
-    assert queue["section_admission_plan_count"] == 1
-    assert queue["section_admission_queue_row_count"] == 3
+    assert queue["section_admission_plan_count"] == 2
+    assert queue["section_admission_queue_row_count"] == 4
     assert queue["section_admission_decision_counts"]["admit"] == 1
     assert queue["section_admission_decision_counts"]["cut"] == 1
-    assert queue["section_admission_decision_counts"]["demote"] == 1
+    assert queue["section_admission_decision_counts"]["demote"] == 2
     assert queue["score_claim"] is False
     assert queue["score_claim_valid"] is False
     assert queue["promotion_eligible"] is False
@@ -624,6 +645,41 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         ]
         is False
     )
+    lf_codec_row = next(
+        row
+        for row in rows.values()
+        if row["work_order_type"] == "snerv_lf_payload_codec_full_archive_replay"
+    )
+    assert lf_codec_row["planner_ingest"]["ingest_kind"] == (
+        "snerv_lf_payload_codec_full_archive_replay"
+    )
+    assert lf_codec_row["planner_ingest"]["producer_tool"] == (
+        "tools/build_snerv_lf_payload_codec_sweep.py"
+    )
+    assert lf_codec_row["planner_ingest"]["source_selected_mode"] == (
+        "portfolio_auto"
+    )
+    assert lf_codec_row["planner_ingest"]["source_selected_payload_bytes"] == 72
+    assert lf_codec_row["planner_ingest"]["source_artifact_path"].endswith(
+        "snerv_lf_payload_codec_sweep.json"
+    )
+    assert lf_codec_row["planner_ingest"]["source_artifact_bytes"] == 1234
+    assert lf_codec_row["planner_ingest"]["source_artifact_sha256"] == "a" * 64
+    assert lf_codec_row["planner_ingest"]["source_byte_price_plan_schema"] == (
+        "compact_nerv_byte_price_controller.v1"
+    )
+    assert (
+        lf_codec_row["planner_ingest"][
+            "local_lf_codec_packet_sweep_is_promotion_authority"
+        ]
+        is False
+    )
+    assert (
+        lf_codec_row["planner_ingest"]["local_full_archive_replay_runnable_now"]
+        is False
+    )
+    assert "" not in lf_codec_row["pipeline_custody"]["canonical_ingress_paths"]
+    assert "" not in lf_codec_row["pipeline_custody"]["canonical_ingest_sequence"]
     gate_row = rows["close_snerv_receiver_rate_promotion_gates"]
     assert gate_row["status"] == "blocked_until_prerequisite_evidence"
     assert gate_row["planner_ingest"]["runnable_now"] is False
@@ -725,9 +781,18 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     assert admission_rows["cut_selector"]["decision"] == "cut"
     assert admission_rows["admit_residual"]["decision"] == "admit"
     assert admission_rows["sampled_residual"]["decision"] == "demote"
+    assert admission_rows["snerv_lf_payload_codec_portfolio_auto"]["decision"] == (
+        "demote"
+    )
+    assert admission_rows["snerv_lf_payload_codec_portfolio_auto"][
+        "economic_decision"
+    ] == "cut"
     assert "full_video_coverage_missing" in admission_rows["sampled_residual"][
         "blockers"
     ]
+    assert "full_video_coverage_missing" in admission_rows[
+        "snerv_lf_payload_codec_portfolio_auto"
+    ]["blockers"]
     for row in queue["section_admission_queue_rows"]:
         assert row["score_claim"] is False
         assert row["promotion_eligible"] is False
@@ -1022,6 +1087,80 @@ def _synthetic_rate_bridge() -> dict:
                 "blockers": [
                     "local_smoke_only_not_full_600_pairs",
                     "paired_contest_cpu_cuda_pass_missing",
+                ],
+            }
+        },
+        "snerv_lf_payload_codec_sweep_reports": {
+            "snerv": {
+                "schema": "snerv_lf_payload_codec_sweep.v1",
+                "status": "snerv_lf_payload_codec_sweep_rows_available_false_authority",
+                "report_path": ".omx/research/snerv_lf_payload_codec_sweep.json",
+                "source_artifact_path": ".omx/research/snerv_lf_payload_codec_sweep.json",
+                "source_artifact_bytes": 1234,
+                "source_artifact_sha256": "a" * 64,
+                "selection_policy": (
+                    "largest_plane_count_then_richest_section_value_then_lowest_selected_payload_bytes"
+                ),
+                "history_count": 1,
+                "plane_count": 16,
+                "raw_i64_bytes": 512,
+                "baseline_mode": "int64_lzma",
+                "baseline_payload_bytes": 300,
+                "selected_mode": "portfolio_auto",
+                "selected_payload_bytes": 72,
+                "selected_packet_schema": "snerv_lf_quant_payload.v2",
+                "row_count": 1,
+                "section_value_row_count": 1,
+                "byte_price_decision_counts": {"demote": 1},
+                "codec_rows": [
+                    {
+                        "mode": "portfolio_auto",
+                        "payload_bytes": 72,
+                        "packet_schema": "snerv_lf_quant_payload.v2",
+                        "blockers": [
+                            "snerv_lf_payload_codec_row_has_no_scorer_replay"
+                        ],
+                    }
+                ],
+                "section_value_rows": [
+                    {
+                        "row_id": "snerv_lf_payload_codec_portfolio_auto",
+                        "section_id": "snerv_lf_payload",
+                        "family": "snerv",
+                        "scope": "lf_payload_codec_replacement",
+                        "row_kind": "existing_section_cut",
+                        "candidate_mode": "portfolio_auto",
+                        "baseline_mode": "int64_lzma",
+                        "baseline_payload_bytes": 300,
+                        "payload_bytes": 72,
+                        "byte_delta": -228,
+                        "delta_nonrate_score": 0.0,
+                        "axis_tag": "[planning/control]",
+                        "receiver_proof_status": (
+                            "packet_exact_only_full_archive_replay_missing"
+                        ),
+                        "full_video_coverage": False,
+                        "blockers": ["full_video_coverage_missing"],
+                    }
+                ],
+                "byte_price_plan": {
+                    "schema": "compact_nerv_byte_price_controller.v1",
+                    "decision_rows": [
+                        {
+                            "row_id": "snerv_lf_payload_codec_portfolio_auto",
+                            "section_id": "snerv_lf_payload",
+                            "row_kind": "existing_section_cut",
+                            "decision": "demote",
+                            "economic_decision": "cut",
+                            "byte_delta": -228,
+                            "delta_nonrate_score": 0.0,
+                            "source": {"candidate_mode": "portfolio_auto"},
+                            "blockers": ["full_video_coverage_missing"],
+                        }
+                    ],
+                },
+                "blockers": [
+                    "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay"
                 ],
             }
         },

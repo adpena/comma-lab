@@ -54,6 +54,10 @@ def test_snerv_lf_payload_codec_sweep_is_rate_only_and_scorer_only() -> None:
     by_mode = {
         row["source"]["candidate_mode"]: row for row in plan["decision_rows"]
     }
+    assert by_mode["portfolio_auto"]["receiver_proof_status"] == (
+        "packet_exact_only_full_archive_replay_missing"
+    )
+    assert "receiver_proof_not_satisfied" in by_mode["portfolio_auto"]["blockers"]
     for row in by_mode.values():
         assert row["decision"] == DEMOTE
         if row["delta_total_score"] is None:

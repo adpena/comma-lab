@@ -1820,6 +1820,23 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
         if not isinstance(memo_count, int) or memo_count <= 0:
             failures.append("master_consumer_bridge:omx_memo_refs_missing")
 
+        control_payload = payloads["control_inventory"]
+        lf_codec_report = {}
+        lf_codec_reports = control_payload.get("snerv_lf_payload_codec_sweep_reports")
+        if isinstance(lf_codec_reports, dict):
+            candidate_report = lf_codec_reports.get("snerv")
+            if isinstance(candidate_report, dict):
+                lf_codec_report = candidate_report
+        lf_codec_report_present = int(lf_codec_report.get("history_count") or 0) > 0
+        if lf_codec_report_present and not any(
+            unit.get("unit_type") == "snerv_lf_payload_codec_sweep_result"
+            for unit in units
+            if isinstance(unit, dict)
+        ):
+            failures.append(
+                "master_consumer_bridge:snerv_lf_payload_codec_sweep_unit_missing"
+            )
+
         rate_payload = payloads["rate_allocator_bridge"]
         work_orders = rate_payload.get("rate_allocator_work_orders")
         if not isinstance(work_orders, list) or not work_orders:
@@ -1852,6 +1869,15 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             failures.append(
                 "rate_allocator_bridge:precision_modes_missing:"
                 + ",".join(missing_modes)
+            )
+        if lf_codec_report_present and not any(
+            order.get("work_order_type")
+            == "snerv_lf_payload_codec_full_archive_replay"
+            for order in work_orders
+            if isinstance(order, dict)
+        ):
+            failures.append(
+                "rate_allocator_bridge:snerv_lf_payload_codec_full_archive_replay_order_missing"
             )
 
         queue_payload = payloads["rate_allocator_queue"]
@@ -1888,6 +1914,14 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
                 failures.append(
                     f"rate_allocator_queue.row_{index}:planner_ingest_runnable_now_not_false"
                 )
+            custody = row.get("pipeline_custody")
+            if isinstance(custody, dict):
+                for key in ("canonical_ingress_paths", "canonical_ingest_sequence"):
+                    values = custody.get(key)
+                    if isinstance(values, list) and "" in values:
+                        failures.append(
+                            f"rate_allocator_queue.row_{index}:empty_{key}"
+                        )
         queue_precision_modes = set(
             queue_payload.get("precision_mode_index", {}).keys()
             if isinstance(queue_payload.get("precision_mode_index"), dict)
@@ -1899,6 +1933,26 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
                 "rate_allocator_queue:precision_modes_missing:"
                 + ",".join(missing_queue_modes)
             )
+        if lf_codec_report_present:
+            lf_queue_rows = [
+                row
+                for row in queue_rows
+                if isinstance(row, dict)
+                and row.get("work_order_type")
+                == "snerv_lf_payload_codec_full_archive_replay"
+            ]
+            if not lf_queue_rows:
+                failures.append(
+                    "rate_allocator_queue:snerv_lf_payload_codec_full_archive_replay_row_missing"
+                )
+            admission_rows = queue_payload.get("section_admission_queue_rows")
+            if not isinstance(admission_rows, list) or not any(
+                isinstance(row, dict) and row.get("section_id") == "snerv_lf_payload"
+                for row in admission_rows
+            ):
+                failures.append(
+                    "rate_allocator_queue:snerv_lf_payload_section_admission_rows_missing"
+                )
 
         ladder_contract_payload = payloads["ladder_row_emission_contract"]
         family_rows = ladder_contract_payload.get("family_rows")

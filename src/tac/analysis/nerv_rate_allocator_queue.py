@@ -483,6 +483,56 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "local_full600_continuation_output_is_promotion_authority": False,
             "runnable_now": False,
         }
+    if work_order_type == "snerv_lf_payload_codec_full_archive_replay":
+        payload = (
+            work_order.get("payload", {})
+            if isinstance(work_order.get("payload"), Mapping)
+            else {}
+        )
+        byte_price_plan = (
+            payload.get("byte_price_plan")
+            if isinstance(payload.get("byte_price_plan"), Mapping)
+            else {}
+        )
+        return {
+            "ingest_kind": "snerv_lf_payload_codec_full_archive_replay",
+            "planner_action": planner_action,
+            "producer_tool": "tools/build_snerv_lf_payload_codec_sweep.py",
+            "existing_tool_ingress": "tools/build_nerv_control_inventory.py",
+            "missing_tool_or_proof": (
+                "full_archive_receiver_replay_full_video_section_value_and_paired_exact_axes"
+            ),
+            "source_report_path": payload.get("report_path"),
+            "source_artifact_path": payload.get("source_artifact_path"),
+            "source_artifact_bytes": payload.get("source_artifact_bytes"),
+            "source_artifact_sha256": payload.get("source_artifact_sha256"),
+            "source_selection_policy": payload.get("selection_policy"),
+            "source_history_count": payload.get("history_count"),
+            "source_plane_count": payload.get("plane_count"),
+            "source_raw_i64_bytes": payload.get("raw_i64_bytes"),
+            "source_baseline_mode": payload.get("baseline_mode"),
+            "source_baseline_payload_bytes": payload.get(
+                "baseline_payload_bytes"
+            ),
+            "source_selected_mode": payload.get("selected_mode"),
+            "source_selected_payload_bytes": payload.get(
+                "selected_payload_bytes"
+            ),
+            "source_selected_packet_schema": payload.get(
+                "selected_packet_schema"
+            ),
+            "source_codec_rows": _mapping_list(payload.get("codec_rows")),
+            "source_section_value_rows": _mapping_list(
+                payload.get("section_value_rows")
+            ),
+            "source_byte_price_plan_schema": byte_price_plan.get("schema"),
+            "source_byte_price_decision_rows": _mapping_list(
+                byte_price_plan.get("decision_rows")
+            ),
+            "local_lf_codec_packet_sweep_is_promotion_authority": False,
+            "local_full_archive_replay_runnable_now": False,
+            "runnable_now": False,
+        }
     if work_order_type == "receiver_visible_decoder_mode_assignment":
         payload = (
             work_order.get("payload", {})
@@ -844,6 +894,8 @@ def _dedupe_strings(values: Sequence[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for value in values:
+        if not value:
+            continue
         if value not in seen:
             out.append(value)
             seen.add(value)

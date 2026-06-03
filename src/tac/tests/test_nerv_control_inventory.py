@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -129,6 +130,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "src/tac/analysis/snerv_waterfill_mode_assignment.py" in surfaces[
         "section_value_and_codebook"
     ]
+    assert "src/tac/analysis/snerv_lf_payload_codec_sweep.py" in surfaces[
+        "section_value_and_codebook"
+    ]
     assert "tools/build_nerv_decoder_weight_waterfill_plan.py" in surfaces[
         "section_value_and_codebook"
     ]
@@ -148,6 +152,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "section_value_and_codebook"
     ]
     assert "tools/build_snerv_waterfill_mode_assignment.py" in surfaces[
+        "section_value_and_codebook"
+    ]
+    assert "tools/build_snerv_lf_payload_codec_sweep.py" in surfaces[
         "section_value_and_codebook"
     ]
     assert "src/tac/submission_packet/paired_auth_eval.py" in surfaces[
@@ -740,6 +747,121 @@ def test_nerv_control_inventory_preserves_snerv_scorer_loop_qat_history() -> Non
     assert [row["n_pairs"] for row in measured["history_rows"]] == [1, 2]
 
 
+def test_nerv_control_inventory_accepts_snerv_lf_payload_codec_sweep_reports() -> None:
+    older_report = {
+        "schema": "snerv_lf_payload_codec_sweep.v1",
+        "report_path": ".omx/research/snerv_lf_payload_codec_sweep_2pair.json",
+        "source_artifact_path": ".omx/research/snerv_lf_payload_codec_sweep_2pair.json",
+        "source_artifact_bytes": 111,
+        "source_artifact_sha256": "1" * 64,
+        "axis_tag": "[planning/control]",
+        "plane_count": 2,
+        "plane_shapes": [[2, 2], [2, 2]],
+        "raw_i64_bytes": 64,
+        "baseline_mode": "int64_lzma",
+        "baseline_payload_bytes": 48,
+        "selected_rate_only_row": {
+            "mode": "zero_run",
+            "payload_bytes": 12,
+            "packet_schema": "snerv_lf_quant_payload.v2",
+            "mode_histogram": {"zero_run": 2},
+        },
+        "rows": [
+            {"mode": "zero_run", "payload_bytes": 12, "packet_schema": "v2"}
+        ],
+        "section_value_rows": [
+            {
+                "row_id": "snerv_lf_payload_codec_zero_run",
+                "section_id": "snerv_lf_payload",
+                "candidate_mode": "zero_run",
+                "byte_delta": -36,
+                "delta_nonrate_score": 0.0,
+            }
+        ],
+        "byte_price_plan": {
+            "schema": "compact_nerv_byte_price_controller.v1",
+            "decision_rows": [
+                {
+                    "row_id": "snerv_lf_payload_codec_zero_run",
+                    "decision": "demote",
+                    "economic_decision": "cut",
+                    "source": {"candidate_mode": "zero_run"},
+                    "blockers": ["full_video_coverage_missing"],
+                }
+            ],
+        },
+        "blockers": ["snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay"],
+    }
+    newer_fuller_report = {
+        **older_report,
+        "report_path": ".omx/research/snerv_lf_payload_codec_sweep_16pair.json",
+        "source_artifact_path": ".omx/research/snerv_lf_payload_codec_sweep_16pair.json",
+        "source_artifact_bytes": 222,
+        "source_artifact_sha256": "2" * 64,
+        "plane_count": 16,
+        "raw_i64_bytes": 512,
+        "baseline_payload_bytes": 384,
+        "selected_rate_only_row": {
+            "mode": "portfolio_auto",
+            "payload_bytes": 80,
+            "packet_schema": "snerv_lf_quant_payload.v2",
+            "mode_histogram": {"uint4_escape": 4},
+        },
+        "rows": [
+            {
+                "mode": "portfolio_auto",
+                "payload_bytes": 80,
+                "packet_schema": "snerv_lf_quant_payload.v2",
+            }
+        ],
+    }
+    newest_but_thinner_report = {
+        **newer_fuller_report,
+        "report_path": ".omx/research/snerv_lf_payload_codec_sweep_unsigned.json",
+        "source_artifact_path": ".omx/research/snerv_lf_payload_codec_sweep_unsigned.json",
+        "source_artifact_bytes": 333,
+        "source_artifact_sha256": "3" * 64,
+        "selected_rate_only_row": {
+            "mode": "int64_lzma",
+            "payload_bytes": 80,
+            "packet_schema": "snerv_lf_quant_payload.v1",
+            "mode_histogram": {},
+        },
+        "section_value_rows": [],
+        "rows": [],
+    }
+
+    report = build_nerv_control_inventory(
+        focus_families=("snerv",),
+        snerv_lf_payload_codec_sweep_reports=(
+            older_report,
+            newer_fuller_report,
+            newest_but_thinner_report,
+        ),
+    )
+
+    measured = report["snerv_lf_payload_codec_sweep_reports"]["snerv"]
+    assert measured["schema"] == "snerv_lf_payload_codec_sweep.v1"
+    assert measured["selection_policy"] == (
+        "largest_plane_count_then_richest_section_value_then_lowest_selected_payload_bytes"
+    )
+    assert measured["history_count"] == 3
+    assert measured["report_path"].endswith("snerv_lf_payload_codec_sweep_16pair.json")
+    assert measured["source_artifact_path"].endswith(
+        "snerv_lf_payload_codec_sweep_16pair.json"
+    )
+    assert measured["source_artifact_bytes"] == 222
+    assert measured["source_artifact_sha256"] == "2" * 64
+    assert measured["selected_mode"] == "portfolio_auto"
+    assert measured["selected_payload_bytes"] == 80
+    assert measured["section_value_row_count"] == 1
+    assert measured["byte_price_decision_counts"] == {"demote": 1}
+    assert measured["score_claim"] is False
+    markdown = render_nerv_control_inventory_markdown(report)
+    assert "## SNeRV LF Payload Codec" in markdown
+    assert "portfolio_auto" in markdown
+
+
 def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
     tmp_path: Path,
 ) -> None:
@@ -1272,3 +1394,88 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_scorer_loop_qat_report(
     assert measured["result_sha256"] == "b" * 64
     assert measured["score_delta_linf"] == pytest.approx(-0.04)
     assert measured["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_snerv_lf_payload_codec_sweep(
+    tmp_path: Path,
+) -> None:
+    sweep_path = tmp_path / "snerv_lf_payload_codec_sweep.json"
+    output_json = tmp_path / "inventory.json"
+    sweep_payload = {
+        "schema": "snerv_lf_payload_codec_sweep.v1",
+        "report_path": ".omx/research/snerv_lf_payload_codec_sweep_fake.json",
+        "axis_tag": "[planning/control]",
+        "plane_count": 16,
+        "plane_shapes": [[8, 8]],
+        "raw_i64_bytes": 512,
+        "baseline_mode": "int64_lzma",
+        "baseline_payload_bytes": 300,
+        "selected_rate_only_row": {
+            "mode": "portfolio_auto",
+            "payload_bytes": 72,
+            "packet_schema": "snerv_lf_quant_payload.v2",
+            "mode_histogram": {"uint4_escape": 1},
+        },
+        "rows": [
+            {
+                "mode": "portfolio_auto",
+                "payload_bytes": 72,
+                "packet_schema": "snerv_lf_quant_payload.v2",
+            }
+        ],
+        "section_value_rows": [
+            {
+                "row_id": "snerv_lf_payload_codec_portfolio_auto",
+                "section_id": "snerv_lf_payload",
+                "candidate_mode": "portfolio_auto",
+                "byte_delta": -228,
+                "delta_nonrate_score": 0.0,
+            }
+        ],
+        "byte_price_plan": {
+            "schema": "compact_nerv_byte_price_controller.v1",
+            "decision_rows": [
+                {
+                    "row_id": "snerv_lf_payload_codec_portfolio_auto",
+                    "decision": "demote",
+                    "economic_decision": "cut",
+                    "source": {"candidate_mode": "portfolio_auto"},
+                    "blockers": ["full_video_coverage_missing"],
+                }
+            ],
+        },
+        "blockers": [
+            "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay"
+        ],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    sweep_text = json.dumps(sweep_payload)
+    sweep_path.write_text(sweep_text, encoding="utf-8")
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "snerv",
+            "--repo-root",
+            str(REPO),
+            "--snerv-lf-payload-codec-sweep-json",
+            str(sweep_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    measured = payload["snerv_lf_payload_codec_sweep_reports"]["snerv"]
+    assert measured["history_count"] == 1
+    assert measured["selected_mode"] == "portfolio_auto"
+    assert measured["selected_payload_bytes"] == 72
+    assert measured["source_artifact_path"] == sweep_path.as_posix()
+    assert measured["source_artifact_bytes"] == len(sweep_text.encode("utf-8"))
+    assert measured["source_artifact_sha256"] == hashlib.sha256(
+        sweep_text.encode("utf-8")
+    ).hexdigest()
+    assert measured["byte_price_decision_counts"] == {"demote": 1}
+    assert payload["score_claim"] is False

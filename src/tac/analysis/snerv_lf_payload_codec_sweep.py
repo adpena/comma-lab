@@ -238,7 +238,9 @@ def _section_value_rows(
                 "delta_nonrate_score": 0.0 if valid_lossless_packet else None,
                 "axis_tag": "[planning/control]",
                 "receiver_proof_status": (
-                    "receiver_proof_valid" if valid_lossless_packet else "missing"
+                    "packet_exact_only_full_archive_replay_missing"
+                    if valid_lossless_packet
+                    else "missing"
                 ),
                 "full_video_coverage": False,
                 "exact_lossless_lf_packet_codec": bool(valid_lossless_packet),

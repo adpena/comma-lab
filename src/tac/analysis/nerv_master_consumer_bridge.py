@@ -684,6 +684,61 @@ def _control_inventory_evidence_units(
                 **FALSE_AUTHORITY,
             }
         )
+    for family, report in _mapping_items(
+        control_inventory.get("snerv_lf_payload_codec_sweep_reports")
+    ):
+        blockers = _string_list(report.get("blockers"))
+        blockers.extend(
+            [
+                "snerv_lf_payload_codec_full_archive_replay_missing",
+                "snerv_lf_payload_codec_full_video_scorer_replay_missing",
+                "paired_contest_cpu_cuda_auth_eval_missing",
+            ]
+        )
+        rows = _mapping_list(report.get("codec_rows"))
+        selected_mode = str(report.get("selected_mode") or "unknown")
+        units.append(
+            {
+                "unit_id": f"{family}_{selected_mode}_lf_payload_codec_sweep",
+                "unit_type": "snerv_lf_payload_codec_sweep_result",
+                "family": str(family),
+                "report_path": report.get("report_path"),
+                "source_artifact_path": report.get("source_artifact_path"),
+                "source_artifact_bytes": report.get("source_artifact_bytes"),
+                "source_artifact_sha256": report.get("source_artifact_sha256"),
+                "selection_policy": report.get("selection_policy"),
+                "history_count": report.get("history_count"),
+                "plane_count": report.get("plane_count"),
+                "raw_i64_bytes": report.get("raw_i64_bytes"),
+                "baseline_mode": report.get("baseline_mode"),
+                "baseline_payload_bytes": report.get("baseline_payload_bytes"),
+                "selected_mode": report.get("selected_mode"),
+                "selected_payload_bytes": report.get("selected_payload_bytes"),
+                "selected_packet_schema": report.get("selected_packet_schema"),
+                "row_count": report.get("row_count"),
+                "section_value_row_count": report.get("section_value_row_count"),
+                "byte_price_decision_counts": dict(
+                    report.get("byte_price_decision_counts") or {}
+                ),
+                "codec_rows": rows,
+                "section_value_rows": _mapping_list(
+                    report.get("section_value_rows")
+                ),
+                "byte_price_plan": dict(report.get("byte_price_plan") or {}),
+                "target_consumers": [
+                    "final_rate_attack",
+                    "bit_allocator",
+                    "cathedral_autopilot",
+                    "continual_learning_posterior",
+                ],
+                "planner_action": (
+                    "replay_snerv_lf_payload_codec_inside_full_archive"
+                ),
+                "blockers": _unique(blockers),
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
     return units
 
 
