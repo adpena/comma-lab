@@ -267,6 +267,17 @@ def test_hinerv_target_modelsize_rows_are_false_authority_nearest_rows() -> None
     )
     assert contract["modelsize_mparams_is_official_upstream_flag"] is False
     assert contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert contract["authority_split"]["schema"] == (
+        "nerv_modelsize_control_authority_split.v1"
+    )
+    assert contract["authority_split"]["modelsize_mparams_semantics"] == (
+        "local_nearest_parameter_count_target"
+    )
+    assert contract["authority_split"]["archive_byte_authority_surface"] == (
+        MODELSIZE_RATE_AUTHORITY_SURFACE
+    )
+    assert contract["authority_split"]["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert contract["authority_split"]["score_claim"] is False
     assert contract["nominal_payload_bytes_are_planner_prior_only"] is True
     assert contract["nominal_under_ceiling_is_not_promotion_authority"] is True
     assert (
@@ -325,6 +336,10 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
         "manual_receiver_visible_fc_dim_feature_basis"
     )
     assert row_contract["modelsize_mparams_is_official_upstream_flag"] is False
+    assert row_contract["authority_split"]["modelsize_mparams_semantics"] == (
+        "absent_or_measured_parameter_count_metadata"
+    )
+    assert row_contract["authority_split"]["modelsize_mparams_caps_archive_zip_bytes"] is False
     assert row_contract["nominal_payload_bytes_are_planner_prior_only"] is True
     assert row_contract["nominal_under_ceiling_is_not_promotion_authority"] is True
     assert (
@@ -439,6 +454,15 @@ def test_snerv_modelsize_candidate_id_tokens_losslessly_bind_receiver_controls()
     )
     assert official_contract["modelsize_mparams_is_official_upstream_flag"] is True
     assert official_contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert official_contract["authority_split"]["modelsize_mparams_semantics"] == (
+        "official_upstream_parameter_budget_control"
+    )
+    assert official_contract["authority_split"][
+        "same_numeric_target_can_feed_family_specific_controls"
+    ] is True
+    assert official_contract["authority_split"]["archive_byte_authority_surface"] == (
+        MODELSIZE_RATE_AUTHORITY_SURFACE
+    )
     assert official_contract["nominal_payload_bytes_are_planner_prior_only"] is True
     assert official_contract["nominal_under_ceiling_is_not_promotion_authority"] is True
     assert (
@@ -636,6 +660,11 @@ def test_snerv_modelsize_budget_records_invalid_official_modelsize_without_abort
     )
     assert contract["modelsize_mparams_is_official_upstream_flag"] is True
     assert contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert contract["authority_split"]["modelsize_mparams_semantics"] == (
+        "official_upstream_parameter_budget_control"
+    )
+    assert contract["authority_split"]["invalid_control_row"] is True
+    assert contract["authority_split"]["ready_for_exact_eval_dispatch"] is False
     assert contract["nominal_payload_bytes_are_planner_prior_only"] is True
     assert contract["receiver_closed_archive_bytes_required_for_under_ceiling_claim"]
     assert contract["archive_bytes_authority_required"] is True

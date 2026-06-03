@@ -42,6 +42,45 @@ MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS = (
     "trained_archive_export_required_for_score_or_rate_claim",
     "archive_bytes_authority_required",
 )
+MODELSIZE_CONTROL_AUTHORITY_SPLIT_SCHEMA = "nerv_modelsize_control_authority_split.v1"
+
+
+def modelsize_control_authority_split(
+    *,
+    family: str,
+    control_semantics: str,
+    modelsize_mparams_is_official_upstream_flag: bool,
+    target_modelsize_mparams_present: bool,
+    invalid_control_row: bool = False,
+) -> dict[str, Any]:
+    """Make size-control semantics machine-checkable and fail-closed."""
+
+    if modelsize_mparams_is_official_upstream_flag:
+        mparams_semantics = "official_upstream_parameter_budget_control"
+    elif target_modelsize_mparams_present:
+        mparams_semantics = "local_nearest_parameter_count_target"
+    else:
+        mparams_semantics = "absent_or_measured_parameter_count_metadata"
+    return {
+        "schema": MODELSIZE_CONTROL_AUTHORITY_SPLIT_SCHEMA,
+        "family": str(family),
+        "control_semantics": str(control_semantics),
+        "modelsize_mparams_semantics": mparams_semantics,
+        "target_modelsize_mparams_present": bool(target_modelsize_mparams_present),
+        "modelsize_mparams_is_official_upstream_flag": bool(
+            modelsize_mparams_is_official_upstream_flag
+        ),
+        "modelsize_mparams_caps_archive_zip_bytes": False,
+        "archive_byte_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
+        "archive_byte_cap_semantics": (
+            "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes"
+        ),
+        "same_numeric_target_can_feed_family_specific_controls": True,
+        "invalid_control_row": bool(invalid_control_row),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def modelsize_control_precedence_contract(candidate: Mapping[str, Any]) -> dict[str, Any]:
@@ -443,6 +482,18 @@ class HinervModelSizeCandidate:
             ),
             "modelsize_mparams_is_official_upstream_flag": False,
             "modelsize_mparams_caps_archive_zip_bytes": False,
+            "authority_split": modelsize_control_authority_split(
+                family="hi_nerv",
+                control_semantics=(
+                    "local_receiver_visible_grid_search_nearest_target"
+                    if self.capacity_source == "local_hinerv_target_modelsize"
+                    else "manual_receiver_visible_architecture_knobs"
+                ),
+                modelsize_mparams_is_official_upstream_flag=False,
+                target_modelsize_mparams_present=(
+                    self.target_modelsize_mparams is not None
+                ),
+            ),
             **dict.fromkeys(MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS, True),
             "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
             "mutates_receiver_visible_architecture": True,
@@ -526,6 +577,16 @@ class SnervModelSizeCandidate:
             "modelsize_control_profile_id": self.modelsize_control_profile_id,
             "modelsize_control_profile": dict(self.modelsize_control_profile),
             "modelsize_mparams_caps_archive_zip_bytes": False,
+            "authority_split": modelsize_control_authority_split(
+                family="snerv",
+                control_semantics=(
+                    "official_snerv_modelsize_quadratic_fc_dim_solve"
+                    if official
+                    else "manual_receiver_visible_fc_dim_feature_basis"
+                ),
+                modelsize_mparams_is_official_upstream_flag=bool(official),
+                target_modelsize_mparams_present=bool(official),
+            ),
             **dict.fromkeys(MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS, True),
             "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
             "mutates_receiver_visible_architecture": True,
@@ -1451,6 +1512,15 @@ def _invalid_snerv_official_modelsize_row(
             "modelsize_control_profile_id": str(profile["profile_id"]),
             "modelsize_control_profile": profile,
             "modelsize_mparams_caps_archive_zip_bytes": False,
+            "authority_split": modelsize_control_authority_split(
+                family="snerv",
+                control_semantics=(
+                    "invalid_official_snerv_modelsize_quadratic_fc_dim_solve"
+                ),
+                modelsize_mparams_is_official_upstream_flag=True,
+                target_modelsize_mparams_present=True,
+                invalid_control_row=True,
+            ),
             **dict.fromkeys(MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS, True),
             "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
             "mutates_receiver_visible_architecture": False,
@@ -1978,6 +2048,7 @@ __all__ = [
     "DEFAULT_SNERV_OFFICIAL_DEC_STRDS",
     "DEFAULT_SNERV_OFFICIAL_ENC_STRDS",
     "DEFAULT_SNERV_TEMPORAL_MODE",
+    "MODELSIZE_CONTROL_AUTHORITY_SPLIT_SCHEMA",
     "SNERV_CONTEST_RECEIVER_PROFILE_ID",
     "SNERV_MANUAL_STRIDE_OVERRIDE_PROFILE_ID",
     "SNERV_MODELSIZE_CONTROL_PROFILES",
@@ -1994,6 +2065,7 @@ __all__ = [
     "decoder_codec_nominal_bits",
     "enumerate_hinerv_modelsize_candidates",
     "enumerate_snerv_modelsize_candidates",
+    "modelsize_control_authority_split",
     "modelsize_control_precedence_contract",
     "official_nerv_oss_flag_audit",
     "select_hinerv_modelsize_candidates",
